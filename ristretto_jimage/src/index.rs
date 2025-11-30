@@ -61,18 +61,51 @@ impl Index {
         let hash = Self::hash(name, HASH_MULTIPLIER);
         let redirect_index = hash % resources_count;
         let redirect_offset = Self::get_redirect_offset::<T>(image, redirect_index)?;
-        match redirect_offset {
-            value if value < 0 =>
-            {
+        let resource_index = match redirect_offset {
+            value if value < 0 => {
                 #[expect(clippy::cast_sign_loss)]
-                Ok((-1 - value) as usize)
+                {
+                    (-1 - value) as usize
+                }
             }
             value if value > 0 => {
                 #[expect(clippy::cast_sign_loss)]
-                let hash = Self::hash(name, value as usize);
-                Ok(hash % resources_count)
+                {
+                    let hash = Self::hash(name, value as usize);
+                    hash % resources_count
+                }
             }
-            _ => Err(InvalidIndex(redirect_index)),
+            _ => redirect_index,
+        };
+
+        // Validate that the resource exists by checking if we can get valid attributes
+        let attribute_offset = Self::get_attribute_offset::<T>(image, resource_index)?;
+        let attributes = Self::get_attributes(image, attribute_offset)?;
+
+        // Reconstruct the resource name from attributes and validate
+        let module = Self::get_string(image, attributes.module_offset())?;
+        let parent = Self::get_string(image, attributes.parent_offset())?;
+        let base = Self::get_string(image, attributes.base_offset())?;
+        let extension = Self::get_string(image, attributes.extension_offset())?;
+
+        // Build the reconstructed name. Since it must match the input name for success,
+        // we can use name.len() as the exact capacity needed.
+        let mut reconstructed_name = String::with_capacity(name.len());
+        reconstructed_name.push('/');
+        reconstructed_name.push_str(&module);
+        reconstructed_name.push('/');
+        if !parent.is_empty() {
+            reconstructed_name.push_str(&parent);
+            reconstructed_name.push('/');
+        }
+        reconstructed_name.push_str(&base);
+        reconstructed_name.push('.');
+        reconstructed_name.push_str(&extension);
+
+        if reconstructed_name == name {
+            Ok(resource_index)
+        } else {
+            Err(InvalidIndex(resource_index))
         }
     }
 
@@ -196,12 +229,12 @@ mod tests {
         #[cfg(target_endian = "little")]
         let result = Index::get_resource_offset::<byteorder::LittleEndian>(
             &image,
-            "java.base/java/lang/Object.class",
+            "/java.base/java/lang/Object.class",
         );
         #[cfg(target_endian = "big")]
-        let offset = Index::get_resource_offset::<byteorder::BigEndian>(
+        let result = Index::get_resource_offset::<byteorder::BigEndian>(
             &image,
-            "java.base/java/lang/Object.class",
+            "/java.base/java/lang/Object.class",
         );
         assert!(result.is_ok());
         Ok(())
@@ -210,7 +243,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_resource_offset_invalid() -> Result<()> {
         let image = get_test_image().await?;
-        let result = Index::get_resource_offset::<byteorder::LittleEndian>(&image, "foo/42");
+        let result = Index::get_resource_offset::<byteorder::LittleEndian>(&image, "/foo/42");
         assert!(matches!(result, Err(InvalidIndex(_))));
         Ok(())
     }
@@ -222,7 +255,7 @@ mod tests {
         let result = {
             let resource_offset = Index::get_resource_offset::<byteorder::LittleEndian>(
                 &image,
-                "java.base/java/lang/Object.class",
+                "/java.base/java/lang/Object.class",
             )?;
             Index::get_attribute_offset::<byteorder::LittleEndian>(&image, resource_offset)
         };
@@ -230,7 +263,7 @@ mod tests {
         let result = {
             let resource_offset = Index::get_resource_offset::<byteorder::BigEndian>(
                 &image,
-                "java.base/java/lang/Object.class",
+                "/java.base/java/lang/Object.class",
             )?;
             Index::get_attribute_offset::<byteorder::BigEndian>(&image, resource_offset)
         };
@@ -245,7 +278,7 @@ mod tests {
         let attribute_offset = {
             let resource_offset = Index::get_resource_offset::<byteorder::LittleEndian>(
                 &image,
-                "java.base/java/lang/Object.class",
+                "/java.base/java/lang/Object.class",
             )?;
             Index::get_attribute_offset::<byteorder::LittleEndian>(&image, resource_offset)?
         };
@@ -253,7 +286,7 @@ mod tests {
         let attribute_offset = {
             let resource_offset = Index::get_resource_offset::<byteorder::BigEndian>(
                 &image,
-                "java.base/java/lang/Object.class",
+                "/java.base/java/lang/Object.class",
             )?;
             Index::get_attribute_offset::<byteorder::BigEndian>(&image, resource_offset)?
         };
