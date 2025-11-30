@@ -2,8 +2,8 @@ use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
-use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-use ristretto_classfile::{JAVA_11, JAVA_25};
+use ristretto_classfile::VersionSpecification::{Between, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -106,7 +106,7 @@ pub(crate) async fn write(_thread: Arc<Thread>, _parameters: Parameters) -> Resu
 
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.checkCatchesAndSendQuitTo(IZ)Z",
-    GreaterThanOrEqual(JAVA_25)
+    Between(JAVA_17, JAVA_25)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn check_catches_and_send_quit_to(

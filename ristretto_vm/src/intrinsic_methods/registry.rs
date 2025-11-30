@@ -255,26 +255,26 @@ mod tests {
 
     #[tokio::test]
     async fn test_runtime_v8() -> Result<()> {
-        test_runtime("8.462.08.1").await
+        test_runtime("8.472.08.1").await
     }
 
     #[tokio::test]
     async fn test_runtime_v11() -> Result<()> {
-        test_runtime("11.0.28.6.1").await
+        test_runtime("11.0.29.7.1").await
     }
 
     #[tokio::test]
     async fn test_runtime_v17() -> Result<()> {
-        test_runtime("17.0.16.8.1").await
+        test_runtime("17.0.17.10.1").await
     }
 
     #[tokio::test]
     async fn test_runtime_v21() -> Result<()> {
-        test_runtime("21.0.8.9.1").await
+        test_runtime("21.0.9.10.1").await
     }
 
     #[tokio::test]
     async fn test_runtime_v25() -> Result<()> {
-        test_runtime("25.0.0.36.1").await
+        test_runtime("25.0.1.8.1").await
     }
 }
