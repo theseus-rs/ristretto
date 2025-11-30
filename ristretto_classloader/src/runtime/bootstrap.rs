@@ -11,7 +11,7 @@ use tracing::{debug, warn};
 
 /// The default Java version used by the class loader. This is the version that will be used if no
 /// version is specified when creating a class loader.
-pub const DEFAULT_JAVA_VERSION: &str = "21.0.8.9.1";
+pub const DEFAULT_JAVA_VERSION: &str = "21.0.9.10.1";
 
 /// The access flags for primitive classes in the Java runtime. These classes are public, final, and
 /// abstract, meaning they cannot be instantiated and do not have any methods or fields.
@@ -277,7 +277,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_class_loader_v8() -> Result<()> {
-        let version = "8.462.08.1";
+        let version = "8.472.08.1";
         let (_java_home, java_version, class_loader) = version_class_loader(version).await?;
         assert_eq!(version, java_version);
         assert_eq!("bootstrap", class_loader.name());
@@ -286,7 +286,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_class_loader_v21() -> Result<()> {
-        let version = "21.0.8.9.1";
+        let version = "21.0.9.10.1";
         let (_java_home, java_version, class_loader) = version_class_loader(version).await?;
         assert_eq!(version, java_version);
         assert_eq!("bootstrap", class_loader.name());

@@ -249,7 +249,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_image_for_all_java_lts_versions() -> Result<()> {
-        let versions = ["11.0.28.6.1", "17.0.16.8.1", "21.0.8.9.1", "25.0.0.36.1"];
+        let versions = ["11.0.29.7.1", "17.0.17.10.1", "21.0.9.10.1", "25.0.1.8.1"];
         for version in &versions {
             let (java_home, _java_version, _class_loader) =
                 version_class_loader(version).await.expect("java home");
