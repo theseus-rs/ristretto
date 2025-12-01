@@ -1,5 +1,6 @@
 use ristretto_vm::Error::InternalError;
 use ristretto_vm::Result;
+use std::io::IsTerminal;
 use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::fmt;
 
@@ -11,7 +12,10 @@ pub(crate) fn initialize() -> Result<()> {
         return Ok(());
     }
 
+    let enable_ansi = std::io::stdout().is_terminal();
+
     let format = tracing_subscriber::fmt::format()
+        .with_ansi(enable_ansi)
         .with_level(true)
         .with_target(false)
         .with_thread_ids(false)
