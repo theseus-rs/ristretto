@@ -623,7 +623,7 @@ fn put_reference_type(
 ) -> Result<Option<Value>> {
     let value = parameters.pop()?;
     // validate the value type
-    match (base_type, &value) {
+    match (&base_type, &value) {
         (
             Some(
                 BaseType::Boolean
@@ -655,24 +655,47 @@ fn put_reference_type(
 
     match &mut reference {
         Reference::ByteArray(array) => {
-            let byte_value = match value {
-                Value::Int(int_val) => i8::try_from(int_val)?,
+            let bytes: &[u8] = match (base_type, &value) {
+                (Some(BaseType::Boolean) | Some(BaseType::Byte), Value::Int(v)) => {
+                    let v = i8::try_from(*v)?;
+                    &v.to_be_bytes()
+                }
+                (Some(BaseType::Char), Value::Int(v)) => {
+                    let v = u16::try_from(*v)?;
+                    &v.to_be_bytes()
+                }
+                (Some(BaseType::Short), Value::Int(v)) => {
+                    let v = i16::try_from(*v)?;
+                    &v.to_be_bytes()
+                }
+                (Some(BaseType::Int), Value::Int(v)) => &v.to_be_bytes(),
+                (Some(BaseType::Float), Value::Float(v)) => &v.to_be_bytes(),
+                (Some(BaseType::Long), Value::Long(v)) => &v.to_be_bytes(),
+                (Some(BaseType::Double), Value::Double(v)) => &v.to_be_bytes(),
                 _ => {
                     return Err(InternalError(
                         "putReferenceType: Invalid value type for byte array".to_string(),
                     ));
                 }
             };
+
             let mut array = array.write();
-            if let Some(element) = array.get_mut(offset) {
-                *element = byte_value;
-            } else {
+            let bytes: &[i8] = bytemuck::cast_slice(bytes);
+            let Some(end) = offset.checked_add(bytes.len()) else {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            };
+            if end > array.len() {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
                     length: array.len(),
                 }
                 .into());
             }
+            array[offset..end].copy_from_slice(bytes);
         }
         Reference::CharArray(array) => {
             let char_value = match value {
