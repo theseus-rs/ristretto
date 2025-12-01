@@ -26,6 +26,7 @@ walkdir = { workspace = true }
 async-recursion = { workspace = true }
 bitflags = { workspace = true }
 byte-unit = { workspace = true }
+bytemuck = { workspace = true }
 byteorder = { workspace = true }
 console = { workspace = true }
 dashmap = { workspace = true }
