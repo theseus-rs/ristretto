@@ -61,18 +61,31 @@ pub(crate) async fn get_process_pids_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let Some(Reference::LongArray(start_times)) = parameters.pop_reference()? else {
+    let Some(start_times_ref) = parameters.pop_reference()? else {
         return Ok(Some(Value::Int(-1)));
     };
-    let Some(Reference::LongArray(ppids)) = parameters.pop_reference()? else {
+    let Some(ppids_ref) = parameters.pop_reference()? else {
         return Ok(Some(Value::Int(-1)));
     };
-    let Some(Reference::LongArray(pids)) = parameters.pop_reference()? else {
+    let Some(pids_ref) = parameters.pop_reference()? else {
         return Ok(Some(Value::Int(-1)));
     };
-    let mut start_times = start_times.write();
-    let mut ppids = ppids.write();
-    let mut pids = pids.write();
+
+    let mut start_times_guard = start_times_ref.write();
+    let Reference::LongArray(start_times) = &mut *start_times_guard else {
+        return Ok(Some(Value::Int(-1)));
+    };
+
+    let mut ppids_guard = ppids_ref.write();
+    let Reference::LongArray(ppids) = &mut *ppids_guard else {
+        return Ok(Some(Value::Int(-1)));
+    };
+
+    let mut pids_guard = pids_ref.write();
+    let Reference::LongArray(pids) = &mut *pids_guard else {
+        return Ok(Some(Value::Int(-1)));
+    };
+
     let pid = parameters.pop_long()?;
     let mut system = System::new_all();
 

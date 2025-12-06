@@ -37,8 +37,11 @@ pub(crate) async fn invokevirtual(
     let (class, method) = if resolved_method.is_private() {
         (resolved_class, resolved_method)
     } else {
-        let class_name = reference.class_name()?;
-        let object_class = thread.class(class_name).await?;
+        let class_name = {
+            let guard = reference.read();
+            guard.class_name()?.to_string()
+        };
+        let object_class = thread.class(&class_name).await?;
         resolve_method(&object_class, method_name, method_descriptor)?
     };
 

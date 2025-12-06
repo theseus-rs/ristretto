@@ -479,7 +479,7 @@ pub(crate) mod tests {
         BaseType, ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, FieldType,
         MethodAccessFlags,
     };
-    use ristretto_classloader::{Class, Object, Reference};
+    use ristretto_classloader::{Class, Object};
 
     pub(crate) async fn test_object() -> Result<(Arc<VM>, Arc<Thread>, Value)> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
@@ -733,16 +733,11 @@ pub(crate) mod tests {
             .await?
             .expect("value");
         let (class, values) = value.as_class_vec_ref()?;
-        let references = values
-            .iter()
-            .cloned()
-            .map(|reference| reference.expect("reference"))
-            .collect::<Vec<Reference>>();
         assert_eq!("java/lang/String", class.name());
         assert_eq!(3, values.len());
-        let class_name = references.first().expect("reference").as_string()?;
-        let name = references.get(1).expect("reference").as_string()?;
-        let descriptor = references.get(2).expect("reference").as_string()?;
+        let class_name = values.first().expect("class_name").as_string()?;
+        let name = values.get(1).expect("name").as_string()?;
+        let descriptor = values.get(2).expect("descriptor").as_string()?;
         assert_eq!("TestClass", class_name);
         assert_eq!("x", name);
         assert_eq!("I", descriptor);
@@ -763,16 +758,11 @@ pub(crate) mod tests {
             .await?
             .expect("value");
         let (class, values) = value.as_class_vec_ref()?;
-        let references = values
-            .iter()
-            .cloned()
-            .map(|reference| reference.expect("reference"))
-            .collect::<Vec<Reference>>();
         assert_eq!("java/lang/String", class.name());
         assert_eq!(3, values.len());
-        let class_name = references.first().expect("value").as_string()?;
-        let name = references.get(1).expect("value").as_string()?;
-        let descriptor = references.get(2).expect("value").as_string()?;
+        let class_name = values.first().expect("class_name").as_string()?;
+        let name = values.get(1).expect("name").as_string()?;
+        let descriptor = values.get(2).expect("descriptor").as_string()?;
         assert_eq!("java/lang/Object", class_name);
         assert_eq!("<init>", name);
         assert_eq!("()V", descriptor);
@@ -890,15 +880,10 @@ pub(crate) mod tests {
             .await?
             .expect("value");
         let (class, values) = value.as_class_vec_ref()?;
-        let references = values
-            .iter()
-            .cloned()
-            .map(|reference| reference.expect("reference"))
-            .collect::<Vec<Reference>>();
         assert_eq!("java/lang/String", class.name());
         assert_eq!(2, values.len());
-        let name = references.first().expect("value").as_string()?;
-        let descriptor = references.get(1).expect("value").as_string()?;
+        let name = values.first().expect("name").as_string()?;
+        let descriptor = values.get(1).expect("descriptor").as_string()?;
         assert_eq!("x", name);
         assert_eq!("I", descriptor);
         Ok(())
@@ -912,15 +897,10 @@ pub(crate) mod tests {
             .await?
             .expect("value");
         let (class, values) = value.as_class_vec_ref()?;
-        let references = values
-            .iter()
-            .cloned()
-            .map(|reference| reference.expect("reference"))
-            .collect::<Vec<Reference>>();
         assert_eq!("java/lang/String", class.name());
         assert_eq!(2, values.len());
-        let name = references.first().expect("value").as_string()?;
-        let descriptor = references.get(1).expect("value").as_string()?;
+        let name = values.first().expect("name").as_string()?;
+        let descriptor = values.get(1).expect("descriptor").as_string()?;
         assert_eq!("<init>", name);
         assert_eq!("()V", descriptor);
         Ok(())

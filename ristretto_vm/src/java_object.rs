@@ -1,10 +1,8 @@
 use crate::Error::InternalError;
 use crate::Result;
 use crate::thread::Thread;
-use parking_lot::RwLock;
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25};
 use ristretto_classloader::{Class, ClassLoader, Object, Reference, Value};
-use ristretto_gc::Gc;
 use std::sync::Arc;
 
 /// Trait for converting a Rust value to a Java object.  Converts to objects of the primitive
@@ -162,7 +160,7 @@ impl JavaObject for &str {
         let array = if java_class_file_version <= &JAVA_8 {
             // Java 8 and below: store as UTF-16 char array
             let chars = self.encode_utf16().collect::<Vec<u16>>();
-            Value::from(Reference::CharArray(Gc::new(RwLock::new(chars))))
+            Value::from(Reference::CharArray(chars))
         } else {
             if java_class_file_version >= &JAVA_17 {
                 object.set_value("hashIsZero", Value::Int(0))?;

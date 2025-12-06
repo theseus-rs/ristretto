@@ -856,3 +856,25 @@ where
         // If we can't lock, skip tracing for this cycle
     }
 }
+
+impl<T> Trace for parking_lot::Mutex<T>
+where
+    T: Trace,
+{
+    fn trace(&self, collector: &GarbageCollector) {
+        if let Some(inner) = self.try_lock() {
+            inner.trace(collector);
+        }
+    }
+}
+
+impl<T> Trace for parking_lot::RwLock<T>
+where
+    T: Trace,
+{
+    fn trace(&self, collector: &GarbageCollector) {
+        if let Some(inner) = self.try_read() {
+            inner.trace(collector);
+        }
+    }
+}

@@ -7,7 +7,9 @@ use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use crate::{Result, Value};
+use parking_lot::RwLock;
 use ristretto_classloader::{Class, Object, Reference};
+use ristretto_gc::Gc;
 use std::sync::Arc;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aconst_null>
@@ -159,31 +161,39 @@ pub(crate) fn astore_3(
 #[inline]
 pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
-    match stack.pop_object()? {
-        None => Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::Array(object_array)) => {
-            let array = object_array.elements.read();
-            let original_index = index;
-            let length = array.len();
-            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
-                index: original_index,
-                length,
-            })?;
-            let Some(value) = array.get(index) else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: original_index,
-                    length,
-                }
-                .into());
-            };
-            stack.push_object(value.clone())?;
-            Ok(Continue)
-        }
-        Some(object) => Err(InvalidStackValue {
+    let Some(reference) = stack.pop_object()? else {
+        return Err(NullPointerException("array cannot be null".to_string()).into());
+    };
+    let guard = reference.read();
+    let Reference::Array(object_array) = &*guard else {
+        return Err(InvalidStackValue {
             expected: "reference array".to_string(),
-            actual: object.to_string(),
-        }),
-    }
+            actual: guard.to_string(),
+        });
+    };
+
+    let array = &object_array.elements;
+    let original_index = index;
+    let length = array.len();
+    let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+        index: original_index,
+        length,
+    })?;
+    let Some(value) = array.get(index) else {
+        return Err(ArrayIndexOutOfBoundsException {
+            index: original_index,
+            length,
+        }
+        .into());
+    };
+    let Value::Object(reference) = value else {
+        return Err(InvalidStackValue {
+            expected: "object".to_string(),
+            actual: value.to_string(),
+        });
+    };
+    stack.push_object(reference.clone())?;
+    Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aastore>
@@ -191,34 +201,36 @@ pub(crate) fn aaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_object()?;
     let index = stack.pop_int()?;
-    match stack.pop_object()? {
-        None => Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::Array(object_array)) => {
-            let mut array = object_array.elements.write();
-            let length = array.capacity();
-            let original_index = index;
-            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
-                index: original_index,
-                length,
-            })?;
-            // TODO: validate object type is compatible with array type
-            // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aastore
-            if let Some(element) = array.get_mut(index) {
-                *element = value;
-            } else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: original_index,
-                    length,
-                }
-                .into());
-            }
-            Ok(Continue)
-        }
-        Some(object) => Err(InvalidStackValue {
+    let Some(reference) = stack.pop_object()? else {
+        return Err(NullPointerException("array cannot be null".to_string()).into());
+    };
+    let mut guard = reference.write();
+    let Reference::Array(object_array) = &mut *guard else {
+        return Err(InvalidStackValue {
             expected: "reference array".to_string(),
-            actual: object.to_string(),
-        }),
+            actual: guard.to_string(),
+        });
+    };
+
+    let array = &mut object_array.elements;
+    let length = array.capacity();
+    let original_index = index;
+    let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+        index: original_index,
+        length,
+    })?;
+    // TODO: validate object type is compatible with array type
+    // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.aastore
+    if let Some(element) = array.get_mut(index) {
+        *element = Value::Object(value);
+    } else {
+        return Err(ArrayIndexOutOfBoundsException {
+            index: original_index,
+            length,
+        }
+        .into());
     }
+    Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.areturn>
@@ -265,6 +277,7 @@ pub(crate) async fn checkcast(
     let thread = frame.thread()?;
     let class = thread.class(class_name).await?;
     if !is_instance_of(&thread, &object, &class).await? {
+        let object = object.read();
         let source_class_name = object.class_name()?.replace('/', ".");
         let target_class_name = class_name.replace('/', ".");
         return Err(ClassCastException {
@@ -303,30 +316,35 @@ pub(crate) async fn instanceof(
 }
 
 #[inline]
-async fn is_instance_of(thread: &Thread, object: &Reference, class: &Arc<Class>) -> Result<bool> {
-    match object {
-        Reference::ByteArray(_)
-        | Reference::CharArray(_)
-        | Reference::ShortArray(_)
-        | Reference::IntArray(_)
-        | Reference::LongArray(_)
-        | Reference::FloatArray(_)
-        | Reference::DoubleArray(_) => {
-            let reference_class_name = object.class_name()?;
-            let object_class = thread.class(reference_class_name).await?;
-            Ok(class.is_assignable_from(thread, &object_class).await?)
+async fn is_instance_of(
+    thread: &Thread,
+    object: &Gc<RwLock<Reference>>,
+    class: &Arc<Class>,
+) -> Result<bool> {
+    let (class_name, resolved_class) = {
+        let object = object.read();
+        match &*object {
+            Reference::ByteArray(_)
+            | Reference::CharArray(_)
+            | Reference::ShortArray(_)
+            | Reference::IntArray(_)
+            | Reference::LongArray(_)
+            | Reference::FloatArray(_)
+            | Reference::DoubleArray(_) => (Some(object.class_name()?.to_string()), None),
+            Reference::Array(object_array) => (None, Some(object_array.class.clone())),
+            Reference::Object(object) => (None, Some(object.class().clone())),
         }
-        Reference::Array(object_array) => Ok(class
-            .is_assignable_from(thread, &object_array.class)
-            .await?),
-        Reference::Object(object) => {
-            let object_class = {
-                let object = object.read();
-                object.class().clone()
-            };
-            Ok(class.is_assignable_from(thread, &object_class).await?)
-        }
-    }
+    };
+
+    let object_class = if let Some(name) = class_name {
+        thread.class(&name).await?
+    } else {
+        resolved_class.ok_or_else(|| {
+            InternalError("resolved_class must be set if class_name is None".to_string())
+        })?
+    };
+
+    class.is_assignable_from(thread, &object_class).await
 }
 
 #[cfg(test)]
@@ -353,7 +371,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload(&locals, stack, 0)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, stack.pop_object()?);
+        assert!(stack.pop_object()?.is_none());
         Ok(())
     }
 
@@ -364,7 +382,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload_w(&locals, stack, 0)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, stack.pop_object()?);
+        assert!(stack.pop_object()?.is_none());
         Ok(())
     }
 
@@ -375,7 +393,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload_0(&locals, stack)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, stack.pop_object()?);
+        assert!(stack.pop_object()?.is_none());
         Ok(())
     }
 
@@ -386,7 +404,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload_1(&locals, stack)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, stack.pop_object()?);
+        assert!(stack.pop_object()?.is_none());
         Ok(())
     }
 
@@ -397,7 +415,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload_2(&locals, stack)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, stack.pop_object()?);
+        assert!(stack.pop_object()?.is_none());
         Ok(())
     }
 
@@ -408,7 +426,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let result = aload_3(&locals, stack)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, stack.pop_object()?);
+        assert!(stack.pop_object()?.is_none());
         Ok(())
     }
 
@@ -419,7 +437,7 @@ mod tests {
         stack.push_object(None)?;
         let result = astore(locals, stack, 0)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, locals.get_object(0)?);
+        assert!(locals.get_object(0)?.is_none());
         Ok(())
     }
 
@@ -430,7 +448,7 @@ mod tests {
         stack.push_object(None)?;
         let result = astore_w(locals, stack, 0)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, locals.get_object(0)?);
+        assert!(locals.get_object(0)?.is_none());
         Ok(())
     }
 
@@ -441,7 +459,7 @@ mod tests {
         stack.push_object(None)?;
         let result = astore_0(locals, stack)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, locals.get_object(0)?);
+        assert!(locals.get_object(0)?.is_none());
         Ok(())
     }
 
@@ -452,7 +470,7 @@ mod tests {
         stack.push_object(None)?;
         let result = astore_1(locals, stack)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, locals.get_object(1)?);
+        assert!(locals.get_object(1)?.is_none());
         Ok(())
     }
 
@@ -463,7 +481,7 @@ mod tests {
         stack.push_object(None)?;
         let result = astore_2(locals, stack)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, locals.get_object(2)?);
+        assert!(locals.get_object(2)?.is_none());
         Ok(())
     }
 
@@ -474,7 +492,7 @@ mod tests {
         stack.push_object(None)?;
         let result = astore_3(locals, stack)?;
         assert_eq!(Continue, result);
-        assert_eq!(None, locals.get_object(3)?);
+        assert!(locals.get_object(3)?.is_none());
         Ok(())
     }
 
@@ -683,7 +701,11 @@ mod tests {
         let process_result = new(&frame, stack, class_index).await?;
         assert_eq!(process_result, Continue);
         let object = stack.pop()?;
-        assert!(matches!(object, Value::Object(Some(Reference::Object(_)))));
+        let Value::Object(Some(reference)) = object else {
+            panic!("Expected object");
+        };
+        let guard = reference.read();
+        assert!(matches!(*guard, Reference::Object(_)));
         Ok(())
     }
 

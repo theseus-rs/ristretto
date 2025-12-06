@@ -44,8 +44,11 @@ pub(crate) async fn invokeinterface(
 
     let object_class = match parameters.first() {
         Some(Value::Object(Some(reference))) => {
-            let class_name = reference.class_name()?;
-            thread.class(class_name).await?
+            let class_name = {
+                let guard = reference.read();
+                guard.class_name()?.to_string()
+            };
+            thread.class(&class_name).await?
         }
         Some(Value::Object(None)) => {
             return Err(NullPointerException("null 'this' reference".to_string()).into());

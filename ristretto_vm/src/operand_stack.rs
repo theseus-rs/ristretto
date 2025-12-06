@@ -1,6 +1,8 @@
 use crate::Error::{InvalidOperand, OperandStackOverflow, OperandStackUnderflow};
 use crate::Result;
+use parking_lot::RwLock;
 use ristretto_classloader::{Reference, Value};
+use ristretto_gc::Gc;
 use std::fmt::Display;
 
 /// Operand stack for the Ristretto VM
@@ -56,7 +58,7 @@ impl OperandStack {
     }
 
     /// Push a reference onto the operand stack.
-    pub fn push_object(&mut self, value: Option<Reference>) -> Result<()> {
+    pub fn push_object(&mut self, value: Option<Gc<RwLock<Reference>>>) -> Result<()> {
         self.push(Value::Object(value))
     }
 
@@ -120,7 +122,7 @@ impl OperandStack {
     }
 
     /// Pop a null or object from the operand stack.
-    pub fn pop_object(&mut self) -> Result<Option<Reference>> {
+    pub fn pop_object(&mut self) -> Result<Option<Gc<RwLock<Reference>>>> {
         let value = self.pop()?;
         match value {
             Value::Object(reference) => Ok(reference),
@@ -296,9 +298,12 @@ mod tests {
         let mut stack = OperandStack::with_max_size(2);
         let object = Reference::from(vec![42i8]);
         stack.push_object(None)?;
-        stack.push_object(Some(object.clone()))?;
-        assert_eq!(stack.pop_object()?, Some(object));
-        assert_eq!(stack.pop_object()?, None);
+        let wrapped_object = Gc::new(RwLock::new(object.clone()));
+        stack.push_object(Some(wrapped_object))?;
+        let popped = stack.pop_object()?;
+        assert!(popped.is_some());
+        assert_eq!(*popped.expect("popped object").read(), object);
+        assert!(stack.pop_object()?.is_none());
         Ok(())
     }
 

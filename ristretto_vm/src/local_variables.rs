@@ -1,6 +1,8 @@
 use crate::Error::{InvalidLocalVariable, InvalidLocalVariableIndex};
 use crate::Result;
+use parking_lot::RwLock;
 use ristretto_classloader::{Reference, Value};
+use ristretto_gc::Gc;
 use std::fmt::Display;
 
 /// Represents the local variables in a frame.
@@ -102,7 +104,7 @@ impl LocalVariables {
     ///
     /// if the local variable at the given index was not found or if the value is not a null or
     /// object.
-    pub fn get_object(&self, index: usize) -> Result<Option<Reference>> {
+    pub fn get_object(&self, index: usize) -> Result<Option<Gc<RwLock<Reference>>>> {
         match self.locals.get(index) {
             Some(Value::Object(reference)) => Ok(reference.clone()),
             Some(value) => Err(InvalidLocalVariable {
@@ -169,7 +171,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the index is out of bounds or if the value is not a null or object.
-    pub fn set_object(&mut self, index: usize, value: Option<Reference>) -> Result<()> {
+    pub fn set_object(&mut self, index: usize, value: Option<Gc<RwLock<Reference>>>) -> Result<()> {
         self.set(index, Value::Object(value))
     }
 
@@ -350,7 +352,7 @@ mod tests {
         let object = Value::from(vec![42i8]);
         locals.set_object(0, None)?;
         locals.set(1, object.clone())?;
-        assert_eq!(locals.get_object(0)?, None);
+        assert!(locals.get_object(0)?.is_none());
         assert_eq!(locals.get(1)?, object);
         Ok(())
     }
@@ -468,9 +470,12 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(2);
         let object = Reference::from(vec![42i8]);
         locals.set_object(0, None)?;
-        locals.set_object(1, Some(object.clone()))?;
-        assert_eq!(locals.get_object(0)?, None);
-        assert_eq!(locals.get_object(1)?, Some(object));
+        let wrapped_object = Gc::new(RwLock::new(object.clone()));
+        locals.set_object(1, Some(wrapped_object))?;
+        assert!(locals.get_object(0)?.is_none());
+        let retrieved = locals.get_object(1)?;
+        assert!(retrieved.is_some());
+        assert_eq!(*retrieved.expect("retrieved object").read(), object);
         Ok(())
     }
 

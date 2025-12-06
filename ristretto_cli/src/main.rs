@@ -148,7 +148,8 @@ fn process_error(error: Error) -> Result<()> {
             let Value::Object(Some(reference)) = stack_trace_element else {
                 continue;
             };
-            let stack_trace_element = reference.as_object_ref()?;
+            let guard = reference.read();
+            let stack_trace_element = guard.as_object_ref()?;
             let class = stack_trace_element.value("declaringClass")?.as_string()?;
             let method = stack_trace_element.value("methodName")?.as_string()?;
 

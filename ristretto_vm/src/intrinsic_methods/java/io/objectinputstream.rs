@@ -23,12 +23,14 @@ pub(crate) async fn bytes_to_doubles(
     let Some(destination) = parameters.pop_reference()? else {
         return Err(NullPointerException("destination cannot be null".into()).into());
     };
-    let mut destination = destination.as_double_vec_mut()?;
+    let mut destination_guard = destination.write();
+    let destination = destination_guard.as_double_vec_mut()?;
     let source_position = usize::try_from(parameters.pop_int()?)?;
     let Some(source) = parameters.pop_reference()? else {
         return Err(NullPointerException("source cannot be null".into()).into());
     };
-    let source = source.as_byte_vec_ref()?;
+    let source_guard = source.read();
+    let source = source_guard.as_byte_vec_ref()?;
 
     if source_position.saturating_add(number_of_doubles) > source.len() {
         return Err(IllegalArgumentException("source index out of bounds".into()).into());
@@ -64,12 +66,14 @@ pub(crate) async fn bytes_to_floats(
     let Some(destination) = parameters.pop_reference()? else {
         return Err(NullPointerException("destination cannot be null".into()).into());
     };
-    let mut destination = destination.as_float_vec_mut()?;
+    let mut destination_guard = destination.write();
+    let destination = destination_guard.as_float_vec_mut()?;
     let source_position = usize::try_from(parameters.pop_int()?)?;
     let Some(source) = parameters.pop_reference()? else {
         return Err(NullPointerException("source cannot be null".into()).into());
     };
-    let source = source.as_byte_vec_ref()?;
+    let source_guard = source.read();
+    let source = source_guard.as_byte_vec_ref()?;
 
     if source_position.saturating_add(number_of_floats) > source.len() {
         return Err(IllegalArgumentException("source index out of bounds".into()).into());

@@ -1057,7 +1057,6 @@ mod tests {
     use super::*;
     use crate::Error::JavaError;
     use ristretto_classfile::Version;
-    use ristretto_classloader::Reference;
 
     #[tokio::test]
     async fn test_desired_assertion_status_0() -> Result<()> {
@@ -1217,9 +1216,8 @@ mod tests {
         let (class, values) = value.as_class_vec_ref()?;
         assert_eq!(class.name(), "[Ljava/lang/Class;");
         let mut class_names = Vec::new();
-        for reference in values.iter().cloned() {
-            let reference = reference.expect("interfaces");
-            let object = reference.as_object_ref()?;
+        for value in values.iter() {
+            let object = value.as_object_ref()?;
             let class_name = object.value("name")?;
             let class_name = class_name.as_string()?;
             class_names.push(class_name);
@@ -1278,19 +1276,13 @@ mod tests {
         let value = get_declared_fields_0(thread, parameters)
             .await?
             .expect("fields");
-        let (class, references) = {
-            let (class, values) = value.as_class_vec_ref()?;
-            let references = values
-                .iter()
-                .cloned()
-                .map(|reference| reference.expect("reference"))
-                .collect::<Vec<Reference>>();
-            (class, references)
+        let (class, values) = {
+            let (class, values_guard) = value.as_class_vec_ref()?;
+            (class.clone(), values_guard.to_vec())
         };
         assert_eq!(class.name(), "[Ljava/lang/reflect/Field;");
         let mut signatures = Vec::new();
-        for reference in references {
-            let value = Value::from(reference);
+        for value in values.into_iter() {
             let result = vm
                 .invoke(
                     "java.lang.reflect.Field",
@@ -1329,19 +1321,13 @@ mod tests {
         let value = get_declared_methods_0(thread, parameters)
             .await?
             .expect("methods");
-        let (class, references) = {
-            let (class, values) = value.as_class_vec_ref()?;
-            let references = values
-                .iter()
-                .cloned()
-                .map(|reference| reference.expect("reference"))
-                .collect::<Vec<Reference>>();
-            (class, references)
+        let (class, values) = {
+            let (class, values_guard) = value.as_class_vec_ref()?;
+            (class.clone(), values_guard.to_vec())
         };
         assert_eq!(class.name(), "[Ljava/lang/reflect/Method;");
         let mut method_names = Vec::new();
-        for reference in references {
-            let value = Value::from(reference);
+        for value in values.into_iter() {
             let result = vm
                 .invoke(
                     "java.lang.reflect.Method",
@@ -1481,9 +1467,8 @@ mod tests {
         let (class, values) = value.as_class_vec_ref()?;
         assert_eq!(class.name(), "[Ljava/lang/Class;");
         let mut class_names = Vec::new();
-        for reference in values.iter().cloned() {
-            let reference = reference.expect("reference");
-            let object = reference.as_object_ref()?;
+        for value in values.iter() {
+            let object = value.as_object_ref()?;
             let class_name = object.value("name")?;
             let class_name = class_name.as_string()?;
             class_names.push(class_name);

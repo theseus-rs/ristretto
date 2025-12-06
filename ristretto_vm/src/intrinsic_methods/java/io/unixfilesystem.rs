@@ -1091,8 +1091,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         let value = list_0(thread, parameters).await?.expect("paths");
-        let reference = value.as_reference()?;
-        let class_name = reference.class_name()?;
+        let class_name = value.as_reference()?.class_name()?;
         let elements: Vec<Value> = value.try_into()?;
         assert_eq!(class_name, "java/lang/String");
         assert!(!elements.is_empty());

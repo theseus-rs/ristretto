@@ -1,6 +1,8 @@
 use crate::Error::{InvalidOperand, ParametersUnderflow};
 use crate::Result;
+use parking_lot::RwLock;
 use ristretto_classloader::{Reference, Value};
+use ristretto_gc::Gc;
 use std::fmt::Display;
 
 /// Parameters for Ristretto VM methods
@@ -47,7 +49,7 @@ impl Parameters {
     }
 
     /// Push a reference onto the parameters.
-    pub fn push_reference(&mut self, value: Option<Reference>) {
+    pub fn push_reference(&mut self, value: Option<Gc<RwLock<Reference>>>) {
         self.push(Value::Object(value));
     }
 
@@ -111,7 +113,7 @@ impl Parameters {
     }
 
     /// Pop a null or reference from the parameters.
-    pub fn pop_reference(&mut self) -> Result<Option<Reference>> {
+    pub fn pop_reference(&mut self) -> Result<Option<Gc<RwLock<Reference>>>> {
         let value = self.pop()?;
         match value {
             Value::Object(reference) => Ok(reference),
@@ -292,9 +294,12 @@ mod tests {
         let mut parameters = Parameters::default();
         let object = Reference::from(vec![42i8]);
         parameters.push_reference(None);
-        parameters.push_reference(Some(object.clone()));
-        assert_eq!(parameters.pop_reference()?, Some(object));
-        assert_eq!(parameters.pop_reference()?, None);
+        let wrapped_object = Gc::new(RwLock::new(object.clone()));
+        parameters.push_reference(Some(wrapped_object));
+        let popped = parameters.pop_reference()?;
+        assert!(popped.is_some());
+        assert_eq!(*popped.expect("popped object").read(), object);
+        assert!(parameters.pop_reference()?.is_none());
         Ok(())
     }
 

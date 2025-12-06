@@ -2,7 +2,7 @@ use crate::java_object::JavaObject;
 use crate::thread::Thread;
 use crate::{Result, Value};
 use ristretto_classfile::{ClassFile, ConstantPool};
-use ristretto_classloader::{Class, Object, Reference};
+use ristretto_classloader::{Class, Object};
 use std::fmt::Debug;
 
 const STRING_PREFIX: &str = "str:";
@@ -219,28 +219,20 @@ pub async fn process_values(thread: &Thread, values: &[impl RustValue]) -> Resul
     let mut results = Vec::with_capacity(values.len());
     for value in values {
         let value = value.to_value();
-        if !matches!(value, Value::Object(Some(Reference::Object(_)))) {
-            results.push(value);
-            continue;
-        }
 
-        let push_value = {
-            let class = {
-                let object = value.as_object_ref()?;
-                object.class().clone()
-            };
-            let class_name = class.name();
-            if class_name.starts_with(STRING_PREFIX) {
-                let string_value = class_name.strip_prefix(STRING_PREFIX).unwrap_or_default();
-                let value = string_value.to_object(thread).await?;
-                results.push(value);
-                false
-            } else {
-                true
-            }
+        let is_string_proxy = if let Ok(object) = value.as_object_ref() {
+            object.class().name().starts_with(STRING_PREFIX)
+        } else {
+            false
         };
 
-        if push_value {
+        if is_string_proxy {
+            let object = value.as_object_ref()?;
+            let class_name = object.class().name();
+            let string_value = class_name.strip_prefix(STRING_PREFIX).unwrap_or_default();
+            let value = string_value.to_object(thread).await?;
+            results.push(value);
+        } else {
             results.push(value);
         }
     }

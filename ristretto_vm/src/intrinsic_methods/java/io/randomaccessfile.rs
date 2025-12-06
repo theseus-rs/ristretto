@@ -351,13 +351,16 @@ pub(crate) async fn read_bytes_0(
             .map_err(|error| IoException(error.to_string()))?;
     }
 
-    let Some(Reference::ByteArray(bytes)) = bytes else {
+    let Some(bytes_ref) = bytes else {
+        return Err(IoException("Cannot read bytes from reference".to_string()).into());
+    };
+    let mut bytes_guard = bytes_ref.write();
+    let Reference::ByteArray(ref mut bytes) = *bytes_guard else {
         return Err(IoException("Cannot read bytes from reference".to_string()).into());
     };
     let bytes_read = if bytes_read == 0 && length > 0 {
         -1
     } else {
-        let mut bytes = bytes.write();
         let buffer: &[i8] = transmute_ref!(buffer.as_slice());
         if bytes_read > 0 {
             bytes[offset..offset + bytes_read].copy_from_slice(&buffer[..bytes_read]);

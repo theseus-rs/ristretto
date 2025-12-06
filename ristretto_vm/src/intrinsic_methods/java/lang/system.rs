@@ -25,77 +25,62 @@ fn arraycopy_vec<T: Clone + Debug + PartialEq + Send + Sync>(
     destination_position: usize,
     length: usize,
 ) -> Result<()> {
-    // Early return for zero-length copies
-    if length == 0 {
-        return Ok(());
-    }
-
-    // Validate bounds before copying; get lengths once to avoid multiple lock acquisitions
-    let source_len = {
+    if Gc::ptr_eq(source, destination) {
+        let mut array = source.write();
+        arraycopy_within_helper(&mut array, source_position, destination_position, length)
+    } else {
         let source = source.read();
-        source.len()
-    };
-    let destination_len = {
-        let destination = destination.read();
-        destination.len()
-    };
+        let mut destination = destination.write();
+        arraycopy_helper(
+            &source,
+            source_position,
+            &mut destination,
+            destination_position,
+            length,
+        )
+    }
+}
 
-    if source_position + length > source_len {
+fn arraycopy_helper<T: Clone>(
+    source: &[T],
+    source_position: usize,
+    destination: &mut [T],
+    destination_position: usize,
+    length: usize,
+) -> Result<()> {
+    if source_position + length > source.len() {
         return Err(
             IllegalArgumentException("source array index out of bounds".to_string()).into(),
         );
     }
-    if destination_position + length > destination_len {
+    if destination_position + length > destination.len() {
         return Err(
             IllegalArgumentException("destination array index out of bounds".to_string()).into(),
         );
     }
+    destination[destination_position..destination_position + length]
+        .clone_from_slice(&source[source_position..source_position + length]);
+    Ok(())
+}
 
-    // Check if source and destination are the same array
-    if source.ptr_eq(destination) {
-        // Same array; need to handle overlapping regions
-        let mut array = destination.write();
-
-        // Handle overlapping regions correctly
-        let regions_overlap = (source_position < destination_position
-            && source_position + length > destination_position)
-            || (destination_position < source_position
-                && destination_position + length > source_position);
-
-        if regions_overlap && destination_position > source_position {
-            // Copy backwards to avoid overwriting source elements
-            for i in (0..length).rev() {
-                let value = array[source_position + i].clone();
-                array[destination_position + i] = value;
-            }
-        } else if regions_overlap {
-            // Copy forwards for left shift or other overlapping cases
-            for i in 0..length {
-                let value = array[source_position + i].clone();
-                array[destination_position + i] = value;
-            }
-        } else {
-            // Non-overlapping regions in same array; use slice operations for better performance
-            let (src_start, src_end) = (source_position, source_position + length);
-            let (dst_start, dst_end) = (destination_position, destination_position + length);
-
-            // Create a temporary vector to hold the source elements
-            let temp: Vec<T> = array[src_start..src_end].to_vec();
-            array[dst_start..dst_end].clone_from_slice(&temp);
-        }
-    } else {
-        // Different arrays; can optimize with bulk operations
-        let source = source.read();
-        let mut destination = destination.write();
-
-        // Use slice operations for maximum efficiency
-        let source_slice = &source[source_position..source_position + length];
-        let destination_slice =
-            &mut destination[destination_position..destination_position + length];
-
-        destination_slice.clone_from_slice(source_slice);
+fn arraycopy_within_helper<T: Clone>(
+    array: &mut [T],
+    source_position: usize,
+    destination_position: usize,
+    length: usize,
+) -> Result<()> {
+    if source_position + length > array.len() {
+        return Err(
+            IllegalArgumentException("source array index out of bounds".to_string()).into(),
+        );
     }
-
+    if destination_position + length > array.len() {
+        return Err(
+            IllegalArgumentException("destination array index out of bounds".to_string()).into(),
+        );
+    }
+    let temp = array[source_position..source_position + length].to_vec();
+    array[destination_position..destination_position + length].clone_from_slice(&temp);
     Ok(())
 }
 
@@ -122,85 +107,82 @@ pub(crate) async fn arraycopy(
     let destination_position = usize::try_from(destination_position)?;
     let length = usize::try_from(length)?;
 
-    match (source, destination) {
-        (Reference::ByteArray(source), Reference::ByteArray(destination)) => {
-            arraycopy_vec(
-                &source,
-                source_position,
-                &destination,
-                destination_position,
-                length,
-            )?;
+    if Gc::ptr_eq(&source, &destination) {
+        let mut guard = source.write();
+        match &mut *guard {
+            Reference::ByteArray(array) => {
+                arraycopy_within_helper(array, source_position, destination_position, length)?;
+            }
+            Reference::CharArray(array) => {
+                arraycopy_within_helper(array, source_position, destination_position, length)?;
+            }
+            Reference::ShortArray(array) => {
+                arraycopy_within_helper(array, source_position, destination_position, length)?;
+            }
+            Reference::IntArray(array) => {
+                arraycopy_within_helper(array, source_position, destination_position, length)?;
+            }
+            Reference::LongArray(array) => {
+                arraycopy_within_helper(array, source_position, destination_position, length)?;
+            }
+            Reference::FloatArray(array) => {
+                arraycopy_within_helper(array, source_position, destination_position, length)?;
+            }
+            Reference::DoubleArray(array) => {
+                arraycopy_within_helper(array, source_position, destination_position, length)?;
+            }
+            Reference::Array(array) => {
+                arraycopy_within_helper(
+                    &mut array.elements,
+                    source_position,
+                    destination_position,
+                    length,
+                )?;
+            }
+            _ => return Err(InternalError("source must be an array".to_string())),
         }
-        (Reference::CharArray(source), Reference::CharArray(destination)) => {
-            arraycopy_vec(
-                &source,
-                source_position,
-                &destination,
-                destination_position,
-                length,
-            )?;
-        }
-        (Reference::DoubleArray(source), Reference::DoubleArray(destination)) => {
-            arraycopy_vec(
-                &source,
-                source_position,
-                &destination,
-                destination_position,
-                length,
-            )?;
-        }
-        (Reference::FloatArray(source), Reference::FloatArray(destination)) => {
-            arraycopy_vec(
-                &source,
-                source_position,
-                &destination,
-                destination_position,
-                length,
-            )?;
-        }
-        (Reference::IntArray(source), Reference::IntArray(destination)) => {
-            arraycopy_vec(
-                &source,
-                source_position,
-                &destination,
-                destination_position,
-                length,
-            )?;
-        }
-        (Reference::LongArray(source), Reference::LongArray(destination)) => {
-            arraycopy_vec(
-                &source,
-                source_position,
-                &destination,
-                destination_position,
-                length,
-            )?;
-        }
-        (Reference::ShortArray(source), Reference::ShortArray(destination)) => {
-            arraycopy_vec(
-                &source,
-                source_position,
-                &destination,
-                destination_position,
-                length,
-            )?;
-        }
-        (Reference::Array(source), Reference::Array(destination)) => {
-            arraycopy_vec(
-                &source.elements,
-                source_position,
-                &destination.elements,
-                destination_position,
-                length,
-            )?;
-        }
-        _ => {
-            return Err(InternalError(
-                "source and destination must be arrays of the same type".to_string(),
-            ));
+    } else {
+        let source_guard = source.read();
+        let mut destination_guard = destination.write();
+        match (&*source_guard, &mut *destination_guard) {
+            (Reference::ByteArray(src), Reference::ByteArray(dst)) => {
+                arraycopy_helper(src, source_position, dst, destination_position, length)?;
+            }
+            (Reference::CharArray(src), Reference::CharArray(dst)) => {
+                arraycopy_helper(src, source_position, dst, destination_position, length)?;
+            }
+            (Reference::ShortArray(src), Reference::ShortArray(dst)) => {
+                arraycopy_helper(src, source_position, dst, destination_position, length)?;
+            }
+            (Reference::IntArray(src), Reference::IntArray(dst)) => {
+                arraycopy_helper(src, source_position, dst, destination_position, length)?;
+            }
+            (Reference::LongArray(src), Reference::LongArray(dst)) => {
+                arraycopy_helper(src, source_position, dst, destination_position, length)?;
+            }
+            (Reference::FloatArray(src), Reference::FloatArray(dst)) => {
+                arraycopy_helper(src, source_position, dst, destination_position, length)?;
+            }
+            (Reference::DoubleArray(src), Reference::DoubleArray(dst)) => {
+                arraycopy_helper(src, source_position, dst, destination_position, length)?;
+            }
+            (Reference::Array(src), Reference::Array(dst)) => {
+                arraycopy_helper(
+                    &src.elements,
+                    source_position,
+                    &mut dst.elements,
+                    destination_position,
+                    length,
+                )?;
+            }
+            _ => {
+                return Err(InternalError(
+                    "source and destination must be arrays of the same type".to_string(),
+                ));
+            }
         }
     }
+
     Ok(None)
 }
 
