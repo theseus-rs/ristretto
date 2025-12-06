@@ -27,7 +27,7 @@ public class Test {
             String result = normalStr.concat(null);
             System.out.println("concat(null) succeeded: " + result);
         } catch (NullPointerException e) {
-            System.out.println("concat(null) threw NullPointerException: " + e.getMessage());
+            System.out.println("concat(null) threw NullPointerException");
         }
 
         // Test equals with null

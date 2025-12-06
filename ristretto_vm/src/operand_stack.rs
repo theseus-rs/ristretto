@@ -27,6 +27,11 @@ impl OperandStack {
         self.stack.split_off(split_idx)
     }
 
+    /// Clear the operand stack.
+    pub fn clear(&mut self) {
+        self.stack.clear();
+    }
+
     /// Push a value onto the operand stack.
     #[inline]
     pub fn push(&mut self, value: Value) -> Result<()> {

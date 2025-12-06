@@ -1,2 +1,1 @@
-thread '<unknown>' has overflowed its stack
-fatal runtime error: stack overflow, aborting
+illegal lookupClass: class java.lang.invoke.LambdaMetafactory
