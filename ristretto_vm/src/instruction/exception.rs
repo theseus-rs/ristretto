@@ -61,6 +61,7 @@ pub(crate) async fn process_throwable(
 
         if matching_exception_handler {
             let handler_program_counter = usize::from(exception_table_entry.handler_pc);
+            stack.clear();
             stack.push(throwable)?;
             return Ok(handler_program_counter);
         }

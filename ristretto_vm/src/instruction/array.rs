@@ -1,5 +1,5 @@
 use crate::Error::InvalidStackValue;
-use crate::JavaError::NullPointerException;
+use crate::JavaError::{NegativeArraySizeException, NullPointerException};
 use crate::Result;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
@@ -16,6 +16,9 @@ pub(crate) fn newarray(
     array_type: &ArrayType,
 ) -> Result<ExecutionResult> {
     let count = stack.pop_int()?;
+    if count < 0 {
+        return Err(NegativeArraySizeException(count.to_string()).into());
+    }
     let count = usize::try_from(count)?;
     let array = match array_type {
         ArrayType::Char => Value::from(vec![0 as char; count]),
@@ -48,6 +51,9 @@ pub(crate) async fn anewarray(
 
     let class = thread.class(array_class_name.as_str()).await?;
     let count = stack.pop_int()?;
+    if count < 0 {
+        return Err(NegativeArraySizeException(count.to_string()).into());
+    }
     let count = usize::try_from(count)?;
     let array = Value::try_from((class, vec![Value::Object(None); count]))?;
     stack.push(array)?;
@@ -98,6 +104,9 @@ pub(crate) async fn multianewarray(
     let mut dimension_sizes = Vec::new();
     for _ in 0..dimensions {
         let count = stack.pop_int()?;
+        if count < 0 {
+            return Err(NegativeArraySizeException(count.to_string()).into());
+        }
         let count = usize::try_from(count)?;
         dimension_sizes.push(count);
     }

@@ -72,6 +72,10 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NoSuchMethodError.html>
     #[error("{0}")]
     NoSuchMethodError(String),
+    /// `NegativeArraySizeException`
+    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NegativeArraySizeException.html>
+    #[error("{0}")]
+    NegativeArraySizeException(String),
     /// `NullPointerException`
     /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NullPointerException.html>
     #[error("{0}")]
@@ -110,6 +114,7 @@ impl JavaError {
             JavaError::IoException(_) => "java.io.IOException",
             JavaError::NoClassDefFoundError(_) => "java.lang.NoClassDefFoundError",
             JavaError::NoSuchMethodError(_) => "java.lang.NoSuchMethodError",
+            JavaError::NegativeArraySizeException(_) => "java.lang.NegativeArraySizeException",
             JavaError::NullPointerException(_) => "java.lang.NullPointerException",
             JavaError::RuntimeException(_) => "java.lang.RuntimeException",
             JavaError::UnsupportedOperationException(_) => {
@@ -258,6 +263,13 @@ mod tests {
         let error = JavaError::NoSuchMethodError("foo".to_string());
         assert_eq!(error.class_name(), "java.lang.NoSuchMethodError");
         assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
+    fn test_negative_array_size_exception() {
+        let error = JavaError::NegativeArraySizeException("-1".to_string());
+        assert_eq!(error.class_name(), "java.lang.NegativeArraySizeException");
+        assert_eq!(error.message(), "-1");
     }
 
     #[test]
