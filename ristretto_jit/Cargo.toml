@@ -11,7 +11,7 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.26.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.27.0" }
 thiserror = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
