@@ -11,7 +11,6 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
-use zerocopy::transmute_ref;
 
 pub(crate) const BOOLEAN_SIZE: usize = 1;
 pub(crate) const BYTE_SIZE: usize = 1;
@@ -458,9 +457,42 @@ fn get_reference_type(
     };
 
     let offset = usize::try_from(offset)?;
-    let value = match &*reference.read() {
-        Reference::ByteArray(array) => {
-            let array: &[u8] = transmute_ref!(array.as_slice());
+    let guard = reference.read();
+    match &*guard {
+        Reference::Array(object_array) => {
+            let array = &object_array.elements;
+            let offset = offset / REFERENCE_SIZE;
+            let Some(value) = array.get(offset) else {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            };
+            Ok(Some(value.clone()))
+        }
+        Reference::Object(object) => {
+            let class = object.class();
+            let field_name = class.field_name(offset)?;
+            let field = class.declared_field(&field_name)?;
+            if field.access_flags().contains(FieldAccessFlags::STATIC) {
+                Ok(Some(class.static_value(&field_name)?))
+            } else {
+                Ok(Some(object.value(&field_name)?))
+            }
+        }
+        primitive_array => {
+            let array: &[u8] = match primitive_array {
+                Reference::ByteArray(array) => bytemuck::cast_slice(array.as_slice()),
+                Reference::CharArray(array) => bytemuck::cast_slice(array.as_slice()),
+                Reference::ShortArray(array) => bytemuck::cast_slice(array.as_slice()),
+                Reference::IntArray(array) => bytemuck::cast_slice(array.as_slice()),
+                Reference::LongArray(array) => bytemuck::cast_slice(array.as_slice()),
+                Reference::FloatArray(array) => bytemuck::cast_slice(array.as_slice()),
+                Reference::DoubleArray(array) => bytemuck::cast_slice(array.as_slice()),
+                _ => unreachable!("Reference type should be handled"),
+            };
+
             let Some(base_type) = base_type else {
                 return Err(InternalError(
                     "getReferenceType: Invalid base type".to_string(),
@@ -485,11 +517,12 @@ fn get_reference_type(
             }
 
             // Create a zero-filled buffer and copy available bytes
-            let mut buffer = vec![0u8; required_bytes];
-            let available_bytes = (array.len() - offset).min(required_bytes);
-            buffer[..available_bytes].copy_from_slice(&array[offset..offset + available_bytes]);
+            let mut buffer = [0u8; 8];
+            let slice = &array[offset..];
+            let available_bytes = slice.len().min(required_bytes);
+            buffer[..available_bytes].copy_from_slice(&slice[..available_bytes]);
 
-            match base_type {
+            let value = match base_type {
                 BaseType::Boolean | BaseType::Byte => {
                     let value = buffer[0];
                     Value::Int(i32::from(value))
@@ -507,10 +540,7 @@ fn get_reference_type(
                     Value::Int(i32::from(value))
                 }
                 BaseType::Long => {
-                    let value = i64::from_be_bytes([
-                        buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5],
-                        buffer[6], buffer[7],
-                    ]);
+                    let value = i64::from_be_bytes(buffer);
                     Value::Long(value)
                 }
                 BaseType::Float => {
@@ -519,105 +549,14 @@ fn get_reference_type(
                     Value::Float(value)
                 }
                 BaseType::Double => {
-                    let bits = u64::from_be_bytes([
-                        buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5],
-                        buffer[6], buffer[7],
-                    ]);
+                    let bits = u64::from_be_bytes(buffer);
                     let value = f64::from_bits(bits);
                     Value::Double(value)
                 }
-            }
-        }
-        Reference::CharArray(array) => {
-            let offset = offset / CHAR_SIZE;
-            let Some(char) = array.get(offset) else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
             };
-            Value::Int(i32::from(*char))
+            Ok(Some(value))
         }
-        Reference::ShortArray(array) => {
-            let offset = offset / SHORT_SIZE;
-            let Some(short) = array.get(offset) else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            };
-            Value::Int(i32::from(*short))
-        }
-        Reference::IntArray(array) => {
-            let offset = offset / INT_SIZE;
-            let Some(int) = array.get(offset) else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            };
-            Value::Int(*int)
-        }
-        Reference::LongArray(array) => {
-            let offset = offset / LONG_SIZE;
-            let Some(long) = array.get(offset) else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            };
-            Value::Long(*long)
-        }
-        Reference::FloatArray(array) => {
-            let offset = offset / FLOAT_SIZE;
-            let Some(float) = array.get(offset) else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            };
-            Value::Float(*float)
-        }
-        Reference::DoubleArray(array) => {
-            let offset = offset / DOUBLE_SIZE;
-            let Some(double) = array.get(offset) else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            };
-            Value::Double(*double)
-        }
-        Reference::Array(object_array) => {
-            let array = &object_array.elements;
-            let offset = offset / REFERENCE_SIZE;
-            let Some(value) = array.get(offset) else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            };
-            value.clone()
-        }
-        Reference::Object(object) => {
-            let class = object.class();
-            let field_name = class.field_name(offset)?;
-            let field = class.declared_field(&field_name)?;
-            if field.access_flags().contains(FieldAccessFlags::STATIC) {
-                class.static_value(&field_name)?
-            } else {
-                object.value(&field_name)?
-            }
-        }
-    };
-    Ok(Some(value))
+    }
 }
 
 #[expect(clippy::too_many_lines)]
@@ -658,157 +597,8 @@ fn put_reference_type(
 
     let offset = usize::try_from(offset)?;
 
-    match &mut *reference.write() {
-        Reference::ByteArray(array) => {
-            let bytes: &[u8] = match (base_type, &value) {
-                (Some(BaseType::Boolean) | Some(BaseType::Byte), Value::Int(v)) => {
-                    let v = i8::try_from(*v)?;
-                    &v.to_be_bytes()
-                }
-                (Some(BaseType::Char), Value::Int(v)) => {
-                    let v = u16::try_from(*v)?;
-                    &v.to_be_bytes()
-                }
-                (Some(BaseType::Short), Value::Int(v)) => {
-                    let v = i16::try_from(*v)?;
-                    &v.to_be_bytes()
-                }
-                (Some(BaseType::Int), Value::Int(v)) => &v.to_be_bytes(),
-                (Some(BaseType::Float), Value::Float(v)) => &v.to_be_bytes(),
-                (Some(BaseType::Long), Value::Long(v)) => &v.to_be_bytes(),
-                (Some(BaseType::Double), Value::Double(v)) => &v.to_be_bytes(),
-                _ => {
-                    return Err(InternalError(
-                        "putReferenceType: Invalid value type for byte array".to_string(),
-                    ));
-                }
-            };
-
-            let bytes: &[i8] = bytemuck::cast_slice(bytes);
-            let Some(end) = offset.checked_add(bytes.len()) else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            };
-            if end > array.len() {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            }
-            array[offset..end].copy_from_slice(bytes);
-        }
-        Reference::CharArray(array) => {
-            let char_value = match value {
-                Value::Int(int_val) => u16::try_from(int_val)?,
-                _ => {
-                    return Err(InternalError(
-                        "putReferenceType: Invalid value type for char array".to_string(),
-                    ));
-                }
-            };
-            let offset = offset / CHAR_SIZE;
-            if let Some(element) = array.get_mut(offset) {
-                *element = char_value;
-            } else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            }
-        }
-        Reference::ShortArray(array) => {
-            let short_value = match value {
-                Value::Int(int_val) => i16::try_from(int_val)?,
-                _ => {
-                    return Err(InternalError(
-                        "putReferenceType: Invalid value type for short array".to_string(),
-                    ));
-                }
-            };
-            let offset = offset / SHORT_SIZE;
-            if let Some(element) = array.get_mut(offset) {
-                *element = short_value;
-            } else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            }
-        }
-        Reference::IntArray(array) => {
-            let Value::Int(int_value) = value else {
-                return Err(InternalError(
-                    "putReferenceType: Invalid value type for int array".to_string(),
-                ));
-            };
-            let offset = offset / INT_SIZE;
-            if let Some(element) = array.get_mut(offset) {
-                *element = int_value;
-            } else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            }
-        }
-        Reference::LongArray(array) => {
-            let Value::Long(long_value) = value else {
-                return Err(InternalError(
-                    "putReferenceType: Invalid value type for long array".to_string(),
-                ));
-            };
-            let offset = offset / LONG_SIZE;
-            if let Some(element) = array.get_mut(offset) {
-                *element = long_value;
-            } else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            }
-        }
-        Reference::FloatArray(array) => {
-            let Value::Float(float_value) = value else {
-                return Err(InternalError(
-                    "putReferenceType: Invalid value type for float array".to_string(),
-                ));
-            };
-            let offset = offset / FLOAT_SIZE;
-            if let Some(element) = array.get_mut(offset) {
-                *element = float_value;
-            } else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            }
-        }
-        Reference::DoubleArray(array) => {
-            let Value::Double(double_value) = value else {
-                return Err(InternalError(
-                    "putReferenceType: Invalid value type for double array".to_string(),
-                ));
-            };
-            let offset = offset / DOUBLE_SIZE;
-            if let Some(element) = array.get_mut(offset) {
-                *element = double_value;
-            } else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: i32::try_from(offset)?,
-                    length: array.len(),
-                }
-                .into());
-            }
-        }
+    let mut guard = reference.write();
+    match &mut *guard {
         Reference::Array(object_array) => {
             let Value::Object(object_value) = value else {
                 return Err(InternalError(
@@ -836,6 +626,58 @@ fn put_reference_type(
             } else {
                 object.set_value(&field_name, value)?;
             }
+        }
+        primitive_array => {
+            let array: &mut [u8] = match primitive_array {
+                Reference::ByteArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
+                Reference::CharArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
+                Reference::ShortArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
+                Reference::IntArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
+                Reference::LongArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
+                Reference::FloatArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
+                Reference::DoubleArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
+                _ => unreachable!("Reference type should be handled"),
+            };
+
+            let bytes = match (base_type, &value) {
+                (Some(BaseType::Boolean) | Some(BaseType::Byte), Value::Int(v)) => {
+                    let v = i8::try_from(*v)?;
+                    v.to_be_bytes().to_vec()
+                }
+                (Some(BaseType::Char), Value::Int(v)) => {
+                    let v = u16::try_from(*v)?;
+                    v.to_be_bytes().to_vec()
+                }
+                (Some(BaseType::Short), Value::Int(v)) => {
+                    let v = i16::try_from(*v)?;
+                    v.to_be_bytes().to_vec()
+                }
+                (Some(BaseType::Int), Value::Int(v)) => v.to_be_bytes().to_vec(),
+                (Some(BaseType::Float), Value::Float(v)) => v.to_be_bytes().to_vec(),
+                (Some(BaseType::Long), Value::Long(v)) => v.to_be_bytes().to_vec(),
+                (Some(BaseType::Double), Value::Double(v)) => v.to_be_bytes().to_vec(),
+                _ => {
+                    return Err(InternalError(
+                        "putReferenceType: Invalid value type".to_string(),
+                    ));
+                }
+            };
+
+            let Some(end) = offset.checked_add(bytes.len()) else {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            };
+            if end > array.len() {
+                return Err(ArrayIndexOutOfBoundsException {
+                    index: i32::try_from(offset)?,
+                    length: array.len(),
+                }
+                .into());
+            }
+            array[offset..end].copy_from_slice(&bytes);
         }
     }
 
