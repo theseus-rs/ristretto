@@ -3,8 +3,8 @@ use crate::Result;
 use ristretto_classfile::ClassFile;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
+use std::io;
 use std::path::PathBuf;
-use std::{fs, io};
 use walkdir::WalkDir;
 
 /// A directory in the class path.
@@ -35,18 +35,31 @@ impl Directory {
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
-    pub fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
+    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         let name = name.as_ref();
         let parts = name.split('.').collect::<Vec<_>>();
         let path = self.path.clone();
         let path = parts.iter().fold(path, |path, part| path.join(part));
         let path = path.with_extension("class");
 
-        if !path.is_file() {
-            return Err(ClassNotFound(name.to_string()));
-        }
+        #[cfg(not(target_family = "wasm"))]
+        let bytes = tokio::fs::read(path).await.map_err(|error| {
+            if error.kind() == io::ErrorKind::NotFound {
+                ClassNotFound(name.to_string())
+            } else {
+                crate::Error::IoError(error)
+            }
+        })?;
 
-        let bytes = fs::read(path)?;
+        #[cfg(target_family = "wasm")]
+        let bytes = std::fs::read(path).map_err(|error| {
+            if error.kind() == io::ErrorKind::NotFound {
+                ClassNotFound(name.to_string())
+            } else {
+                crate::Error::IoError(error)
+            }
+        })?;
+
         let mut cursor = io::Cursor::new(bytes);
         let class_file = ClassFile::from_bytes(&mut cursor)?;
         Ok(class_file)
@@ -108,32 +121,32 @@ mod tests {
         assert_ne!(directory1, directory2);
     }
 
-    #[test]
-    fn test_read_class_invalid_directory() {
+    #[tokio::test]
+    async fn test_read_class_invalid_directory() {
         let directory = Directory::new("foo");
-        let result = directory.read_class("HelloWorld");
+        let result = directory.read_class("HelloWorld").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
     }
 
-    #[test]
-    fn test_read_class() -> Result<()> {
+    #[tokio::test]
+    async fn test_read_class() -> Result<()> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
         let directory = Directory::new(classes_directory);
         // Read the class file twice to test caching
         for _ in 0..2 {
-            let class_file = directory.read_class("HelloWorld")?;
+            let class_file = directory.read_class("HelloWorld").await?;
             assert_eq!("HelloWorld", class_file.class_name()?);
         }
         Ok(())
     }
 
-    #[test]
-    fn test_read_class_invalid_class_name() {
+    #[tokio::test]
+    async fn test_read_class_invalid_class_name() {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_directory = cargo_manifest.join("..").join("classes");
         let directory = Directory::new(classes_directory);
-        let result = directory.read_class("Foo");
+        let result = directory.read_class("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
     }
 
