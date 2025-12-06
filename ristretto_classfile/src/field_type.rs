@@ -88,7 +88,7 @@ use std::{fmt, io};
 ///
 /// # References
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.3.2>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.3.2>
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FieldType {
     Base(BaseType),

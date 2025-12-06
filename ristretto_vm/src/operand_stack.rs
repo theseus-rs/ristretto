@@ -7,7 +7,7 @@ use std::fmt::Display;
 
 /// Operand stack for the Ristretto VM
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6.2>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.2>
 #[derive(Debug)]
 pub struct OperandStack {
     stack: Vec<Value>,

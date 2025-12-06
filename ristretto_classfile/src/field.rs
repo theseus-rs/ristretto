@@ -36,7 +36,7 @@ use std::io::Cursor;
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.5>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.5>
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Field {
     pub access_flags: FieldAccessFlags,

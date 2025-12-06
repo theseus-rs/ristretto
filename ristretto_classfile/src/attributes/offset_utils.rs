@@ -78,7 +78,7 @@ pub(crate) fn instructions_from_bytes(
             Instruction::Goto_w(offset) | Instruction::Jsr_w(offset) => {
                 // Note the map may need to be updated to use 32-bit offsets if/when the JVM spec
                 // is updated to support 32-bit offsets for goto_w and jsr_w.
-                // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.goto_w
+                // See: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w
                 let map_offset = u16::try_from(*offset)?;
                 *offset = i32::from(
                     *byte_to_instruction_map
@@ -192,7 +192,7 @@ pub(crate) fn instructions_to_bytes(
             Instruction::Goto_w(offset) | Instruction::Jsr_w(offset) => {
                 // Note the map may need to be updated to use 32-bit offsets if/when the JVM spec
                 // is updated to support 32-bit offsets for goto_w and jsr_w.
-                // See: https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.goto_w
+                // See: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w
                 let map_offset = u16::try_from(*offset)?;
                 *offset = i32::from(
                     *instruction_to_byte_map

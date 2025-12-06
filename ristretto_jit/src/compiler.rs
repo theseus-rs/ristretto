@@ -278,7 +278,7 @@ impl Compiler {
             // locals list when passed to a method. This method adjusts the variables index
             // to account for this.
             //
-            // See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6.1>
+            // See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.1>
             //
             // NOTE: if the jit compiler is ever updated to re-write the original instructions, this
             //       logic should probably be removed and the instructions should be rewritten to

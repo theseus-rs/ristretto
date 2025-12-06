@@ -11,7 +11,7 @@ use crate::operand_stack::OperandStack;
 use ristretto_classfile::FieldType;
 use ristretto_classloader::Value;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.invokeinterface>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface>
 #[inline]
 pub(crate) async fn invokeinterface(
     frame: &Frame,

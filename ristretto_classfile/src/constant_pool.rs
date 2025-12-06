@@ -25,7 +25,7 @@ use std::{fmt, io};
 ///
 ///  # References
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4>
 #[derive(Clone, Debug, PartialEq)]
 pub struct ConstantPool {
     constants: Vec<ConstantEntry>,
@@ -117,7 +117,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
     #[must_use]
     pub fn get(&self, index: u16) -> Option<&Constant> {
         self.try_get(index).ok()
@@ -144,7 +144,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
     pub fn try_get(&self, index: u16) -> Result<&Constant> {
         let constant_entry = self.constants.get(index as usize);
         match constant_entry {
@@ -292,7 +292,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.7>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7>
     pub fn add_utf8<S: AsRef<str>>(&mut self, value: S) -> Result<u16> {
         let value = value.as_ref().to_string();
         self.add(Constant::Utf8(value))
@@ -317,7 +317,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.7>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7>
     pub fn try_get_utf8(&self, index: u16) -> Result<&str> {
         match self.try_get(index)? {
             Constant::Utf8(value) => Ok(value),
@@ -344,7 +344,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.4>
     pub fn add_integer(&mut self, value: i32) -> Result<u16> {
         self.add(Constant::Integer(value))
     }
@@ -368,7 +368,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.4>
     pub fn try_get_integer(&self, index: u16) -> Result<&i32> {
         match self.try_get(index)? {
             Constant::Integer(value) => Ok(value),
@@ -395,7 +395,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.4>
     pub fn add_float(&mut self, value: f32) -> Result<u16> {
         self.add(Constant::Float(value))
     }
@@ -419,7 +419,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.4>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.4>
     pub fn try_get_float(&self, index: u16) -> Result<&f32> {
         match self.try_get(index)? {
             Constant::Float(value) => Ok(value),
@@ -449,7 +449,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.5>
     pub fn add_long(&mut self, value: i64) -> Result<u16> {
         self.add(Constant::Long(value))
     }
@@ -473,7 +473,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.5>
     pub fn try_get_long(&self, index: u16) -> Result<&i64> {
         match self.try_get(index)? {
             Constant::Long(value) => Ok(value),
@@ -503,7 +503,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.5>
     pub fn add_double(&mut self, value: f64) -> Result<u16> {
         self.add(Constant::Double(value))
     }
@@ -527,7 +527,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.5>
     pub fn try_get_double(&self, index: u16) -> Result<&f64> {
         match self.try_get(index)? {
             Constant::Double(value) => Ok(value),
@@ -554,7 +554,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.1>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.1>
     pub fn add_class<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
         let utf8_index = self.add_utf8(name)?;
         self.add(Constant::Class(utf8_index))
@@ -579,7 +579,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.1>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.1>
     pub fn try_get_class(&self, index: u16) -> Result<&str> {
         match self.try_get(index)? {
             Constant::Class(utf8_index) => self.try_get_utf8(*utf8_index),
@@ -606,7 +606,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.3>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.3>
     pub fn add_string<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
         let utf8_index = self.add_utf8(name)?;
         self.add(Constant::String(utf8_index))
@@ -631,7 +631,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.3>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.3>
     pub fn try_get_string(&self, index: u16) -> Result<&str> {
         match self.try_get(index)? {
             Constant::String(value) => self.try_get_utf8(*value),
@@ -658,7 +658,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.2>
     pub fn add_field_ref<S: AsRef<str>>(
         &mut self,
         class_index: u16,
@@ -693,7 +693,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.2>
     pub fn try_get_field_ref(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::FieldRef {
@@ -723,7 +723,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.2>
     pub fn add_method_ref<S: AsRef<str>>(
         &mut self,
         class_index: u16,
@@ -758,7 +758,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.2>
     pub fn try_get_method_ref(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::MethodRef {
@@ -789,7 +789,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.2>
     pub fn add_interface_method_ref<S: AsRef<str>>(
         &mut self,
         class_index: u16,
@@ -825,7 +825,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.2>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.2>
     pub fn try_get_interface_method_ref(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::InterfaceMethodRef {
@@ -855,7 +855,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.6>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.6>
     pub fn add_name_and_type<S: AsRef<str>>(&mut self, name: S, descriptor: S) -> Result<u16> {
         let name_index = self.add_utf8(name)?;
         let descriptor_index = self.add_utf8(descriptor)?;
@@ -887,7 +887,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.6>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.6>
     pub fn try_get_name_and_type(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::NameAndType {
@@ -919,7 +919,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.8>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.8>
     pub fn add_method_handle(
         &mut self,
         reference_kind: ReferenceKind,
@@ -954,7 +954,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.8>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.8>
     pub fn try_get_method_handle(&self, index: u16) -> Result<(&ReferenceKind, &u16)> {
         match self.try_get(index)? {
             Constant::MethodHandle {
@@ -984,7 +984,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.9>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.9>
     pub fn add_method_type<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
         let utf8_index = self.add_utf8(name)?;
         self.add(Constant::MethodType(utf8_index))
@@ -1012,7 +1012,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.9>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.9>
     pub fn try_get_method_type(&self, index: u16) -> Result<&u16> {
         match self.try_get(index)? {
             Constant::MethodType(name_and_type_index) => Ok(name_and_type_index),
@@ -1040,7 +1040,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.10>
     pub fn add_dynamic<S: AsRef<str>>(
         &mut self,
         bootstrap_method_attr_index: u16,
@@ -1075,7 +1075,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.10>
     pub fn try_get_dynamic(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::Dynamic {
@@ -1106,7 +1106,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.10>
     pub fn add_invoke_dynamic<S: AsRef<str>>(
         &mut self,
         bootstrap_method_attr_index: u16,
@@ -1142,7 +1142,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.10>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.10>
     pub fn try_get_invoke_dynamic(&self, index: u16) -> Result<(&u16, &u16)> {
         match self.try_get(index)? {
             Constant::InvokeDynamic {
@@ -1172,7 +1172,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.11>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.11>
     pub fn add_module<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
         let utf8_index = self.add_utf8(name)?;
         self.add(Constant::Module(utf8_index))
@@ -1198,7 +1198,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.11>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.11>
     pub fn try_get_module(&self, index: u16) -> Result<&str> {
         match self.try_get(index)? {
             Constant::Module(name_index) => self.try_get_utf8(*name_index),
@@ -1225,7 +1225,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.12>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.12>
     pub fn add_package<S: AsRef<str>>(&mut self, name: S) -> Result<u16> {
         let utf8_index = self.add_utf8(name)?;
         self.add(Constant::Package(utf8_index))
@@ -1251,7 +1251,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.12>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.12>
     pub fn try_get_package(&self, index: u16) -> Result<&str> {
         match self.try_get(index)? {
             Constant::Package(name_index) => self.try_get_utf8(*name_index),
@@ -1419,7 +1419,7 @@ impl Default for ConstantPool {
 ///
 /// # References
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.5>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.5>
 #[derive(Clone, Debug, PartialEq)]
 enum ConstantEntry {
     /// An actual constant in the pool.
@@ -1465,7 +1465,7 @@ impl fmt::Display for ConstantEntry {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4>
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ConstantEntry::Constant(constant) => write!(f, "{constant}"),

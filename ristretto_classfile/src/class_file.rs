@@ -50,7 +50,7 @@ const MAGIC: u32 = 0xCAFE_BABE;
 ///
 /// # References
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1>
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct ClassFile {
     pub version: Version,

@@ -76,8 +76,8 @@ use crate::{BaseType, ConstantPool, FieldType, Method, MethodAccessFlags, Result
 ///
 /// # References
 ///
-/// - [JVM Specification §2.6.1](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.6.1)
-/// - [JVM Specification §4.7.3](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.3)
+/// - [JVM Specification §2.6.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.1)
+/// - [JVM Specification §4.7.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3)
 pub trait MaxLocals {
     /// Calculates the maximum number of local variable slots required by the method's code.
     ///

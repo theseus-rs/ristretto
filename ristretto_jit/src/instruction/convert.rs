@@ -3,7 +3,7 @@ use crate::operand_stack::OperandStack;
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{InstBuilder, types};
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2l>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2l>
 pub(crate) fn i2l(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_int(function_builder)?;
     let value = function_builder.ins().sextend(types::I64, value);
@@ -11,7 +11,7 @@ pub(crate) fn i2l(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2f>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2f>
 pub(crate) fn i2f(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_int(function_builder)?;
     let value = function_builder.ins().fcvt_from_sint(types::F32, value);
@@ -19,7 +19,7 @@ pub(crate) fn i2f(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2d>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2d>
 pub(crate) fn i2d(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_int(function_builder)?;
     let value = function_builder.ins().fcvt_from_sint(types::F64, value);
@@ -27,7 +27,7 @@ pub(crate) fn i2d(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.l2i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2i>
 pub(crate) fn l2i(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_long(function_builder)?;
     let value = function_builder.ins().ireduce(types::I32, value);
@@ -35,7 +35,7 @@ pub(crate) fn l2i(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.l2f>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2f>
 pub(crate) fn l2f(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_long(function_builder)?;
     let value = function_builder.ins().fcvt_from_sint(types::F32, value);
@@ -43,7 +43,7 @@ pub(crate) fn l2f(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.l2d>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2d>
 pub(crate) fn l2d(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_long(function_builder)?;
     let value = function_builder.ins().fcvt_from_sint(types::F64, value);
@@ -51,7 +51,7 @@ pub(crate) fn l2d(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.f2i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2i>
 pub(crate) fn f2i(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_float(function_builder)?;
     let value = function_builder.ins().fcvt_to_sint(types::I32, value);
@@ -59,7 +59,7 @@ pub(crate) fn f2i(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.f2l>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2l>
 pub(crate) fn f2l(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_float(function_builder)?;
     let value = function_builder.ins().fcvt_to_sint(types::I64, value);
@@ -67,7 +67,7 @@ pub(crate) fn f2l(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.f2d>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2d>
 pub(crate) fn f2d(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_float(function_builder)?;
     let value = function_builder.ins().fpromote(types::F64, value);
@@ -75,7 +75,7 @@ pub(crate) fn f2d(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.d2i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2i>
 pub(crate) fn d2i(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_double(function_builder)?;
     let value = function_builder.ins().fcvt_to_sint(types::I32, value);
@@ -83,7 +83,7 @@ pub(crate) fn d2i(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.d2l>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2l>
 pub(crate) fn d2l(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_double(function_builder)?;
     let value = function_builder.ins().fcvt_to_sint(types::I64, value);
@@ -91,7 +91,7 @@ pub(crate) fn d2l(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.d2f>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2f>
 pub(crate) fn d2f(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_double(function_builder)?;
     let value = function_builder.ins().fdemote(types::F32, value);
@@ -99,7 +99,7 @@ pub(crate) fn d2f(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2b>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2b>
 pub(crate) fn i2b(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_int(function_builder)?;
     let value = function_builder.ins().ireduce(types::I8, value);
@@ -108,7 +108,7 @@ pub(crate) fn i2b(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2c>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2c>
 pub(crate) fn i2c(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_int(function_builder)?;
     // TODO: verify i2c unsigned conversion
@@ -118,7 +118,7 @@ pub(crate) fn i2c(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.i2s>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2s>
 pub(crate) fn i2s(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_int(function_builder)?;
     let value = function_builder.ins().ireduce(types::I16, value);

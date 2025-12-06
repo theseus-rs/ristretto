@@ -30,7 +30,7 @@ use std::io::Cursor;
 ///
 /// # References
 ///
-/// - [JVM Specification §4.7.20.2](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.20.2)
+/// - [JVM Specification §4.7.20.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20.2)
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TargetPath {
     pub type_path_kind: u8,

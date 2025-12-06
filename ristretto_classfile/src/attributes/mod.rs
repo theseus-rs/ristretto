@@ -30,7 +30,7 @@
 //! - `BootstrapMethods`: Used by `invokedynamic` instructions.
 //!
 //! For a comprehensive list and detailed descriptions, refer to the
-//! [JVM Specification, Chapter 4: The class File Format](https://docs.oracle.com/javase/specs/jvms/se17/html/jvms-4.html#jvms-4.7).
+//! [JVM Specification, Chapter 4: The class File Format](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7).
 
 /// Represents a Java annotation, a form of metadata that can be added to Java code elements.
 /// Annotations are used by the compiler, runtime, or other tools.

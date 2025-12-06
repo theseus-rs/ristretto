@@ -4,7 +4,7 @@ use crate::{Result, jit_value};
 use cranelift::codegen::ir::Value;
 use cranelift::prelude::{FunctionBuilder, InstBuilder, MemFlags, types};
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
 pub(crate) fn iconst_m1(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -14,7 +14,7 @@ pub(crate) fn iconst_m1(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
 pub(crate) fn iconst_0(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -24,7 +24,7 @@ pub(crate) fn iconst_0(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
 pub(crate) fn iconst_1(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -34,7 +34,7 @@ pub(crate) fn iconst_1(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
 pub(crate) fn iconst_2(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -44,7 +44,7 @@ pub(crate) fn iconst_2(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
 pub(crate) fn iconst_3(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -54,7 +54,7 @@ pub(crate) fn iconst_3(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
 pub(crate) fn iconst_4(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -64,7 +64,7 @@ pub(crate) fn iconst_4(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iconst_i>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
 pub(crate) fn iconst_5(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -74,7 +74,7 @@ pub(crate) fn iconst_5(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload>
 pub(crate) fn iload(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -87,8 +87,8 @@ pub(crate) fn iload(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
 pub(crate) fn iload_w(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -101,7 +101,7 @@ pub(crate) fn iload_w(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n>
 pub(crate) fn iload_0(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -112,7 +112,7 @@ pub(crate) fn iload_0(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n>
 pub(crate) fn iload_1(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -123,7 +123,7 @@ pub(crate) fn iload_1(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n>
 pub(crate) fn iload_2(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -134,7 +134,7 @@ pub(crate) fn iload_2(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iload_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n>
 pub(crate) fn iload_3(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -145,7 +145,7 @@ pub(crate) fn iload_3(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore>
 pub(crate) fn istore(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -158,8 +158,8 @@ pub(crate) fn istore(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
 pub(crate) fn istore_w(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -172,7 +172,7 @@ pub(crate) fn istore_w(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n>
 pub(crate) fn istore_0(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -183,7 +183,7 @@ pub(crate) fn istore_0(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n>
 pub(crate) fn istore_1(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -194,7 +194,7 @@ pub(crate) fn istore_1(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n>
 pub(crate) fn istore_2(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -205,7 +205,7 @@ pub(crate) fn istore_2(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.istore_n>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n>
 pub(crate) fn istore_3(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -216,7 +216,7 @@ pub(crate) fn istore_3(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iadd>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iadd>
 pub(crate) fn iadd(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
@@ -225,7 +225,7 @@ pub(crate) fn iadd(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.isub>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.isub>
 pub(crate) fn isub(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
@@ -234,7 +234,7 @@ pub(crate) fn isub(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.imul>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.imul>
 pub(crate) fn imul(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
@@ -243,7 +243,7 @@ pub(crate) fn imul(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.idiv>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.idiv>
 pub(crate) fn idiv(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
@@ -258,7 +258,7 @@ pub(crate) fn idiv(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.irem>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.irem>
 pub(crate) fn irem(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
@@ -273,7 +273,7 @@ pub(crate) fn irem(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ineg>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ineg>
 pub(crate) fn ineg(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_int(function_builder)?;
     let value = function_builder.ins().ineg(value);
@@ -281,7 +281,7 @@ pub(crate) fn ineg(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ishl>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ishl>
 pub(crate) fn ishl(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
@@ -292,7 +292,7 @@ pub(crate) fn ishl(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ishr>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ishr>
 pub(crate) fn ishr(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
@@ -303,7 +303,7 @@ pub(crate) fn ishr(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iushr>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iushr>
 pub(crate) fn iushr(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -317,7 +317,7 @@ pub(crate) fn iushr(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iand>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iand>
 pub(crate) fn iand(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
@@ -326,7 +326,7 @@ pub(crate) fn iand(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ior>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ior>
 pub(crate) fn ior(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
@@ -335,7 +335,7 @@ pub(crate) fn ior(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ixor>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ixor>
 pub(crate) fn ixor(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_int(function_builder)?;
@@ -344,7 +344,7 @@ pub(crate) fn ixor(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iinc>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iinc>
 pub(crate) fn iinc(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -359,8 +359,8 @@ pub(crate) fn iinc(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iinc>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.wide>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iinc>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
 pub(crate) fn iinc_w(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -375,7 +375,7 @@ pub(crate) fn iinc_w(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ireturn>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ireturn>
 pub(crate) fn ireturn(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,

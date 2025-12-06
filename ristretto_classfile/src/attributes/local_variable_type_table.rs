@@ -13,7 +13,7 @@ use std::io::Cursor;
 /// **Note on PC representation:** Similar to `LocalVariableTable`, `start_pc` and `length` define
 /// a range of instruction indices.
 ///
-/// See the [JVM specification for the LocalVariableTypeTable attribute](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.14)
+/// See the [JVM specification for the LocalVariableTypeTable attribute](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.14)
 /// for more details.
 ///
 /// # Fields

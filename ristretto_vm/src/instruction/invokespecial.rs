@@ -6,7 +6,7 @@ use crate::operand_stack::OperandStack;
 use ristretto_classfile::Constant;
 use ristretto_classfile::Error::InvalidConstantPoolIndexType;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.invokespecial>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial>
 #[inline]
 pub(crate) async fn invokespecial(
     frame: &Frame,

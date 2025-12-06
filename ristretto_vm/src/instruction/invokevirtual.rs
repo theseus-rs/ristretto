@@ -7,7 +7,7 @@ use crate::operand_stack::OperandStack;
 use ristretto_classloader::{Class, Method, Value};
 use std::sync::Arc;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.invokevirtual>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual>
 #[inline]
 pub(crate) async fn invokevirtual(
     frame: &Frame,

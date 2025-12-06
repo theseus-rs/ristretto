@@ -14,7 +14,7 @@ use std::io::Cursor;
 /// and `start_pc + length` is the first instruction index where it is no longer in scope. This
 /// differs from the raw byte offsets in the class file format.
 ///
-/// See the [JVM Specification §4.7.13](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.13)
+/// See the [JVM Specification §4.7.13](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.13)
 /// for more details.
 ///
 /// # Fields

@@ -13,7 +13,7 @@ use std::io::Cursor;
 /// logical sequence of `Instruction`s within the `Code` attribute, rather than a raw byte offset as
 /// in the class file format. This abstraction simplifies instruction manipulation.
 ///
-/// See the [JVM Specification §4.7.12](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.12)
+/// See the [JVM Specification §4.7.12](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.12)
 /// for more details.
 ///
 /// # Fields

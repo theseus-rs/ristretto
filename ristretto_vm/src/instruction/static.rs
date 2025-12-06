@@ -4,7 +4,7 @@ use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 use ristretto_classfile::FieldType;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.getstatic>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic>
 #[inline]
 pub(crate) async fn getstatic(
     frame: &Frame,
@@ -23,7 +23,7 @@ pub(crate) async fn getstatic(
     let field = class.static_field(field_name)?;
     if let FieldType::Object(class_name) = field.field_type() {
         // Load the class of the field value if it is an object.
-        // https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html#jvms-5.4.3
+        // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3
         thread.class(class_name).await?;
     }
 
@@ -32,7 +32,7 @@ pub(crate) async fn getstatic(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.putstatic>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic>
 #[inline]
 pub(crate) async fn putstatic(
     frame: &Frame,
@@ -51,7 +51,7 @@ pub(crate) async fn putstatic(
     let field = class.static_field(field_name)?;
     if let FieldType::Object(class_name) = field.field_type() {
         // Load the class of the field value if it is an object.
-        // https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-5.html#jvms-5.4.3
+        // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3
         thread.class(class_name).await?;
     }
     let value = stack.pop()?;

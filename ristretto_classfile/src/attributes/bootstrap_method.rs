@@ -9,7 +9,7 @@ use std::io::Cursor;
 /// `invokedynamic` instruction refers to one of these bootstrap methods by index. The bootstrap
 /// method is responsible for resolving the dynamic call site and linking it.
 ///
-/// See the [JVM Specification §4.7.23](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.23)
+/// See the [JVM Specification §4.7.23](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.23)
 /// for more details.
 ///
 /// # Examples

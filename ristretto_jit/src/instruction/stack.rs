@@ -6,19 +6,19 @@ use cranelift::prelude::types;
 
 /// Determine if a value is a category 1 value.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-2.html#jvms-2.11.1-320>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.11.1-320>
 fn is_category_1(function_builder: &mut FunctionBuilder, value: Value) -> bool {
     let value_type = function_builder.func.dfg.value_type(value);
     value_type != types::I64 && value_type != types::F64
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.pop>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop>
 pub(crate) fn pop(stack: &mut OperandStack) -> Result<()> {
     let _ = stack.pop()?;
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.pop2>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop2>
 pub(crate) fn pop2(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop()?;
     if is_category_1(function_builder, value) {
@@ -27,7 +27,7 @@ pub(crate) fn pop2(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup>
 pub(crate) fn dup(stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop()?;
     stack.push(value)?;
@@ -35,7 +35,7 @@ pub(crate) fn dup(stack: &mut OperandStack) -> Result<()> {
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup_x1>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x1>
 pub(crate) fn dup_x1(stack: &mut OperandStack) -> Result<()> {
     let value1 = stack.pop()?;
     let value2 = stack.pop()?;
@@ -45,7 +45,7 @@ pub(crate) fn dup_x1(stack: &mut OperandStack) -> Result<()> {
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup_x2>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x2>
 pub(crate) fn dup_x2(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -66,7 +66,7 @@ pub(crate) fn dup_x2(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup2>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2>
 pub(crate) fn dup2(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value1 = stack.pop()?;
     if is_category_1(function_builder, value1) {
@@ -82,7 +82,7 @@ pub(crate) fn dup2(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup2_x1>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x1>
 pub(crate) fn dup2_x1(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -104,7 +104,7 @@ pub(crate) fn dup2_x1(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.dup2_x2>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x2>
 pub(crate) fn dup2_x2(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -138,7 +138,7 @@ pub(crate) fn dup2_x2(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.swap>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.swap>
 pub(crate) fn swap(stack: &mut OperandStack) -> Result<()> {
     // Swapping category 2 values (Double and Long) is not supported by the JVM specification and
     // there is no mention of what should happen in this case. We will just swap the values and

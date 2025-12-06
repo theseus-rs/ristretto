@@ -9,7 +9,7 @@ use std::io::Cursor;
 /// Each variant corresponds to a specific primitive type that an array can hold in Java. The
 /// `newarray` instruction takes an `atype` operand, which is represented by this enum.
 ///
-/// See the [JVM Specification on `newarray`](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.newarray)
+/// See the [JVM Specification on `newarray`](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray)
 /// for more details on the instruction and type codes.
 ///
 /// # Examples

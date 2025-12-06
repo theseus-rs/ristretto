@@ -4,7 +4,7 @@ use crate::operand_stack::OperandStack;
 use cranelift::prelude::{FunctionBuilder, InstBuilder, types};
 use ristretto_classfile::{Constant, ConstantPool};
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ldc>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc>
 pub(crate) fn ldc(
     constant_pool: &ConstantPool,
     function_builder: &mut FunctionBuilder,
@@ -15,7 +15,7 @@ pub(crate) fn ldc(
     load_constant(constant_pool, function_builder, stack, index)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ldc_w>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc_w>
 pub(crate) fn ldc_w(
     constant_pool: &ConstantPool,
     function_builder: &mut FunctionBuilder,
@@ -72,7 +72,7 @@ fn load_constant(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ldc2_w>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc2_w>
 pub(crate) fn ldc2_w(
     constant_pool: &ConstantPool,
     function_builder: &mut FunctionBuilder,

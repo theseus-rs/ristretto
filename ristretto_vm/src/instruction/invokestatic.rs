@@ -9,7 +9,7 @@ use ristretto_classfile::Error::InvalidConstantPoolIndexType;
 use ristretto_classloader::{Class, Method};
 use std::sync::Arc;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.invokestatic>
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokestatic>
 #[inline]
 pub(crate) async fn invokestatic(
     frame: &Frame,

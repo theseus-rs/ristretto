@@ -17,7 +17,7 @@ use std::io::Cursor;
 ///
 /// # References
 ///
-/// - [JVM Specification §4.7.20.1](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.20.1)
+/// - [JVM Specification §4.7.20.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20.1)
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TargetType {
     /// `target_type` value `0x00`.

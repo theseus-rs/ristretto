@@ -9,7 +9,7 @@ use std::io::Cursor;
 /// Annotations are a form of metadata that can be added to Java code. They are read by the JVM at
 /// runtime and can be used to alter program behavior or provide additional information.
 ///
-/// See the [JVM Specification §4.1.16](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.16)
+/// See the [JVM Specification §4.1.16](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.16)
 /// for more details on the `RuntimeVisibleAnnotations` attribute and the `annotation` structure.
 ///
 /// # Examples

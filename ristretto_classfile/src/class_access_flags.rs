@@ -44,7 +44,7 @@ bitflags! {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.1:~:text=constant_pool_count%20%2D%201.-,access_flags,-The%20value%20of>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1:~:text=constant_pool_count%20%2D%201.-,access_flags,-The%20value%20of>
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ClassAccessFlags: u16 {
         /// Declared public; may be accessed from outside its package.

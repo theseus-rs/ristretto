@@ -10,7 +10,7 @@ use std::io::Cursor;
 /// This enum corresponds to the `element_value` structure in the JVM specification. Each variant
 /// represents a different type of value that an annotation element can have.
 ///
-/// See the [JVM Specification §4.7.16.1](https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.7.16.1)
+/// See the [JVM Specification §4.7.16.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.16.1)
 /// for more details on the `element_value` structure.
 ///
 /// # Examples

@@ -35,7 +35,7 @@
 //!
 //! # References
 //!
-//! See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.7>
+//! See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7>
 
 use crate::Error::FromUtf8Error;
 use crate::Result;
@@ -189,7 +189,7 @@ mod tests {
 
     /// Test all valid UTF-8 characters, the only two invalid characters are U+D800 and U+DFFF
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-4.html#jvms-4.4.7:~:text=the%20resulting%20string).-,bytes%5B%5D,-The%20bytes%20array>
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7:~:text=the%20resulting%20string).-,bytes%5B%5D,-The%20bytes%20array>
     #[test]
     fn test_all_utf8_chars() -> Result<()> {
         for i in 0..=0x10_FFFF {
