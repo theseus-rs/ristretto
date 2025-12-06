@@ -294,7 +294,7 @@ mod tests {
         let mut parameters = Parameters::default();
         let object = Reference::from(vec![42i8]);
         parameters.push_reference(None);
-        let wrapped_object = Gc::new(RwLock::new(object.clone()));
+        let wrapped_object = Gc::new(RwLock::new(object.clone())).clone_gc();
         parameters.push_reference(Some(wrapped_object));
         let popped = parameters.pop_reference()?;
         assert!(popped.is_some());

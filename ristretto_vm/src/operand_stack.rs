@@ -298,7 +298,7 @@ mod tests {
         let mut stack = OperandStack::with_max_size(2);
         let object = Reference::from(vec![42i8]);
         stack.push_object(None)?;
-        let wrapped_object = Gc::new(RwLock::new(object.clone()));
+        let wrapped_object = Gc::new(RwLock::new(object.clone())).clone_gc();
         stack.push_object(Some(wrapped_object))?;
         let popped = stack.pop_object()?;
         assert!(popped.is_some());

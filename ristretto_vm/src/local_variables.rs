@@ -470,7 +470,7 @@ mod tests {
         let mut locals = LocalVariables::with_max_size(2);
         let object = Reference::from(vec![42i8]);
         locals.set_object(0, None)?;
-        let wrapped_object = Gc::new(RwLock::new(object.clone()));
+        let wrapped_object = Gc::new(RwLock::new(object.clone())).clone_gc();
         locals.set_object(1, Some(wrapped_object))?;
         assert!(locals.get_object(0)?.is_none());
         let retrieved = locals.get_object(1)?;

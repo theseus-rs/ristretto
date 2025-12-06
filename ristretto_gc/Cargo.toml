@@ -11,7 +11,7 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
-dashmap = { workspace = true }
+dashmap = { workspace = true, features = ["rayon"] }
 rayon = { workspace = true }
 parking_lot = { workspace = true }
 sysinfo = { workspace = true }

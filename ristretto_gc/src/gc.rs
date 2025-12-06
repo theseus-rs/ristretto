@@ -23,28 +23,66 @@ pub struct Gc<T> {
 }
 
 impl<T> Gc<T> {
-    /// Constructs a new `Gc<T>`.
-    pub fn new(data: T) -> Self
+    /// Constructs a new `Gc<T>` and registers it as a root.
+    ///
+    /// This returns a `GcRootGuard<T>` which ensures the object is rooted.
+    /// To get the inner `Gc<T>` for use in data structures, use `guard.clone_gc()`.
+    #[expect(clippy::new_ret_no_self)]
+    pub fn new(data: T) -> GcRootGuard<T>
     where
-        T: Send + Sync,
+        T: Send + Sync + Trace,
     {
         Self::with_collector(&GC, data)
     }
 
-    /// Constructs a new `Gc<T>` with finalization support.
-    pub fn new_with_finalizer(data: T) -> Self
+    /// Constructs a new `Gc<T>` without rooting it.
+    ///
+    /// # Safety
+    ///
+    /// The returned `Gc<T>` is not rooted. If a garbage collection cycle occurs before this `Gc<T>`
+    /// is reachable from a root, it may be collected. Use this only when you are sure the object
+    /// will be immediately rooted or stored in a reachable object.
+    pub unsafe fn new_unrooted(data: T) -> Self
     where
-        T: Send + Sync + Finalize,
+        T: Send + Sync,
+    {
+        // Safety: The caller guarantees that the returned Gc<T> will be rooted immediately
+        unsafe { Self::with_collector_unrooted(&GC, data) }
+    }
+
+    /// Constructs a new `Gc<T>` with finalization support and registers it as a root.
+    pub fn new_with_finalizer(data: T) -> GcRootGuard<T>
+    where
+        T: Send + Sync + Finalize + Trace,
     {
         Self::with_collector_and_finalizer(&GC, data)
     }
 
-    /// Constructs a new `Gc<T>` with a specific garbage collector.
+    /// Constructs a new `Gc<T>` with a specific garbage collector and registers it as a root.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the collector fails to create a root guard.
+    pub fn with_collector(collector: &GarbageCollector, data: T) -> GcRootGuard<T>
+    where
+        T: Send + Sync + Trace,
+    {
+        let gc = unsafe { Self::with_collector_unrooted(collector, data) };
+        collector
+            .create_root_guard(gc)
+            .expect("failed to create root guard")
+    }
+
+    /// Constructs a new `Gc<T>` with a specific garbage collector without rooting it.
+    ///
+    /// # Safety
+    ///
+    /// The returned `Gc<T>` is not rooted.
     ///
     /// # Panics
     ///
     /// if `Box::into_raw` returns a null pointer, which should never happen
-    pub fn with_collector(collector: &GarbageCollector, data: T) -> Self
+    pub unsafe fn with_collector_unrooted(collector: &GarbageCollector, data: T) -> Self
     where
         T: Send + Sync,
     {
@@ -72,8 +110,31 @@ impl<T> Gc<T> {
     ///
     /// # Panics
     ///
-    /// if `Box::into_raw` returns a null pointer, which should never happen
-    pub fn with_collector_and_finalizer(collector: &GarbageCollector, data: T) -> Self
+    /// Panics if the collector fails to create a root guard.
+    pub fn with_collector_and_finalizer(collector: &GarbageCollector, data: T) -> GcRootGuard<T>
+    where
+        T: Send + Sync + Finalize + Trace,
+    {
+        let gc = unsafe { Self::with_collector_and_finalizer_unrooted(collector, data) };
+        collector
+            .create_root_guard(gc)
+            .expect("failed to create root guard")
+    }
+
+    /// Constructs a new `Gc<T>` with a specific garbage collector and finalization support without
+    /// rooting.
+    ///
+    /// # Safety
+    ///
+    /// The returned `Gc<T>` is not rooted.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `Box::into_raw` returns a null pointer.
+    pub unsafe fn with_collector_and_finalizer_unrooted(
+        collector: &GarbageCollector,
+        data: T,
+    ) -> Self
     where
         T: Send + Sync + Finalize,
     {
@@ -143,6 +204,17 @@ impl<T> Gc<T> {
     {
         collector.create_root_guard(self.clone())
     }
+
+    /// Triggers a write barrier for this `Gc`.
+    ///
+    /// This must be called whenever a reference to a `Gc` object is written into
+    /// a field of another object during concurrent execution.
+    pub fn write_barrier(&self)
+    where
+        T: Trace,
+    {
+        GC.write_barrier(self);
+    }
 }
 
 impl<T> Clone for Gc<T> {
@@ -183,9 +255,9 @@ unsafe impl<T: Sync + Send> Send for Gc<T> {}
 // 4. The garbage collector handles thread safety for the underlying data
 unsafe impl<T: Sync + Send> Sync for Gc<T> {}
 
-impl<T: Default + Send + Sync> Default for Gc<T> {
+impl<T: Default + Send + Sync + Trace> Default for GcRootGuard<T> {
     fn default() -> Self {
-        Self::new(T::default())
+        Gc::new(T::default())
     }
 }
 
@@ -245,9 +317,9 @@ impl<T> AsRef<T> for Gc<T> {
     }
 }
 
-impl<T: Send + Sync> From<T> for Gc<T> {
+impl<T: Send + Sync + Trace> From<T> for GcRootGuard<T> {
     fn from(value: T) -> Self {
-        Self::new(value)
+        Gc::new(value)
     }
 }
 
@@ -273,7 +345,7 @@ mod tests {
     #[test]
     fn test_creation_and_access() {
         let gc = Gc::new(42);
-        assert_eq!(*gc, 42);
+        assert_eq!(**gc, 42);
     }
 
     #[test]
@@ -283,10 +355,10 @@ mod tests {
         let gc_vec = Gc::new(vec![1, 2, 3, 4, 5]);
         let gc_tuple = Gc::new((1, "test", 1.23));
 
-        assert_eq!(*gc_int, 123);
-        assert_eq!(*gc_string, "Hello, World!");
-        assert_eq!(*gc_vec, vec![1, 2, 3, 4, 5]);
-        assert_eq!(*gc_tuple, (1, "test", 1.23));
+        assert_eq!(**gc_int, 123);
+        assert_eq!(**gc_string, "Hello, World!");
+        assert_eq!(**gc_vec, vec![1, 2, 3, 4, 5]);
+        assert_eq!(**gc_tuple, (1, "test", 1.23));
     }
 
     #[test]
@@ -294,8 +366,8 @@ mod tests {
         let gc1 = Gc::new(42);
         let gc2 = gc1.clone();
 
-        assert_eq!(*gc1, 42);
-        assert_eq!(*gc2, 42);
+        assert_eq!(**gc1, 42);
+        assert_eq!(**gc2, 42);
         // Clones point to the same object
         assert!(Gc::ptr_eq(&gc1, &gc2));
     }
@@ -313,10 +385,10 @@ mod tests {
         assert!(Gc::ptr_eq(&gc1, &gc4));
 
         // Verify data access works correctly
-        assert_eq!(*gc1, "shared data");
-        assert_eq!(*gc2, "shared data");
-        assert_eq!(*gc3, "shared data");
-        assert_eq!(*gc4, "shared data");
+        assert_eq!(**gc1, "shared data");
+        assert_eq!(**gc2, "shared data");
+        assert_eq!(**gc3, "shared data");
+        assert_eq!(**gc4, "shared data");
     }
 
     #[test]
@@ -327,7 +399,7 @@ mod tests {
 
         drop(gc1);
         // gc2 should still be accessible
-        assert_eq!(*gc2, vec![1, 2, 3]);
+        assert_eq!(**gc2, vec![1, 2, 3]);
     }
 
     #[test]
@@ -356,7 +428,7 @@ mod tests {
 
         assert_eq!(gc_map.get("key1"), Some(&10));
         assert_eq!(gc_map_clone.get("key2"), Some(&20));
-        assert!(Gc::ptr_eq(&gc_map, &gc_map_clone));
+        assert!(Gc::ptr_eq(&*gc_map, &*gc_map_clone));
     }
 
     #[test]
@@ -375,8 +447,8 @@ mod tests {
         let gc2 = Gc::new(42);
         let gc3 = gc1.clone();
 
-        assert!(gc1.ptr_eq(&gc3)); // Same allocation
-        assert!(!gc1.ptr_eq(&gc2)); // Different allocations
+        assert!(Gc::ptr_eq(&*gc1, &*gc3)); // Same allocation
+        assert!(!Gc::ptr_eq(&*gc1, &*gc2)); // Different allocations
     }
 
     #[test]
@@ -399,8 +471,8 @@ mod tests {
 
     #[test]
     fn test_from_trait() {
-        let gc: Gc<i32> = 42.into();
-        assert_eq!(*gc, 42);
+        let gc: GcRootGuard<i32> = 42.into();
+        assert_eq!(**gc, 42);
     }
 
     #[test]
@@ -416,7 +488,7 @@ mod tests {
     #[test]
     fn test_pointer_format() {
         let gc = Gc::new(42);
-        let ptr_str = format!("{gc:p}");
+        let ptr_str = format!("{:p}", &*gc);
 
         // Should format as a pointer (starts with 0x)
         assert!(ptr_str.starts_with("0x"));
@@ -434,6 +506,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::mutable_key_type)]
     fn test_hash() {
         let gc1 = Gc::new(42);
         let gc2 = Gc::new(42);

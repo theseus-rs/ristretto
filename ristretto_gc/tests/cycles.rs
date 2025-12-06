@@ -46,8 +46,8 @@ fn test_cyclic_gc_collection() -> Result<()> {
         );
 
         // Set up the cycle using Mutex's lock
-        a.inner.lock().unwrap().other = Some(b.clone());
-        b.inner.lock().unwrap().other = Some(a.clone());
+        a.inner.lock().unwrap().other = Some(b.clone_gc());
+        b.inner.lock().unwrap().other = Some(a.clone_gc());
 
         // Objects are now in a cycle - verify they're accessible
         assert!(a.inner.lock().unwrap().other.is_some());
@@ -105,7 +105,7 @@ fn test_complex_cyclic_structure() {
             Node {
                 id: 1,
                 children: Vec::new(),
-                parent: Some(root.clone()),
+                parent: Some(root.clone_gc()),
             },
         );
 
@@ -114,7 +114,7 @@ fn test_complex_cyclic_structure() {
             Node {
                 id: 2,
                 children: Vec::new(),
-                parent: Some(root.clone()),
+                parent: Some(root.clone_gc()),
             },
         );
 
@@ -127,8 +127,8 @@ fn test_complex_cyclic_structure() {
         // 4. The mutation happens before any concurrent access
         unsafe {
             let root_mut = root.get_mut_unchecked();
-            root_mut.children.push(child1.clone());
-            root_mut.children.push(child2.clone());
+            root_mut.children.push(child1.clone_gc());
+            root_mut.children.push(child2.clone_gc());
         }
 
         // Verify the structure is accessible
@@ -173,7 +173,7 @@ fn test_self_referencing_object() {
 
         // Create self-reference using a scope to avoid borrow checker issues
         {
-            let obj_clone = object.clone();
+            let obj_clone = object.clone_gc();
             // Safety: This is safe because:
             // 1. We have exclusive access to the test environment
             // 2. No other threads are accessing this object

@@ -57,8 +57,8 @@ fn test_global_collector() -> Result<()> {
     assert!(stats.bytes_allocated > 0);
 
     // Objects should be accessible
-    assert_eq!(*gc1, "global test 1");
-    assert_eq!(*gc2, "global test 2");
+    assert_eq!(**gc1, "global test 1");
+    assert_eq!(**gc2, "global test 2");
     Ok(())
 }
 
@@ -80,7 +80,7 @@ fn test_garbage_collector_does_not_free_root() -> Result<()> {
     assert_eq!(stats.bytes_allocated, 4);
     assert_eq!(stats.bytes_freed, 0);
 
-    assert_eq!(*root, 42);
+    assert_eq!(**root, 42);
     Ok(())
 }
 
@@ -166,7 +166,7 @@ fn test_gc_statistics() -> Result<()> {
 
     // Objects should still be accessible
     for (i, obj) in objects.iter().enumerate() {
-        assert_eq!(**obj, format!("object-{i}"));
+        assert_eq!(***obj, format!("object-{i}"));
     }
 
     Ok(())
@@ -306,7 +306,7 @@ fn test_reachability_analysis() -> Result<()> {
         &collector,
         Node {
             id: 10,
-            children: vec![leaf1.clone(), leaf2.clone()],
+            children: vec![leaf1.clone_gc(), leaf2.clone_gc()],
         },
     );
 
@@ -314,7 +314,7 @@ fn test_reachability_analysis() -> Result<()> {
         &collector,
         Node {
             id: 20,
-            children: vec![leaf3.clone()],
+            children: vec![leaf3.clone_gc()],
         },
     );
 
@@ -322,7 +322,7 @@ fn test_reachability_analysis() -> Result<()> {
         &collector,
         Node {
             id: 100,
-            children: vec![branch1.clone(), branch2.clone()],
+            children: vec![branch1.clone_gc(), branch2.clone_gc()],
         },
     );
 
@@ -370,7 +370,7 @@ fn test_collection_phases() -> Result<()> {
 
     // All objects should still be accessible
     for (i, obj) in objects.iter().enumerate() {
-        assert_eq!(**obj, i);
+        assert_eq!(***obj, i);
     }
 
     Ok(())
@@ -496,7 +496,7 @@ fn test_collector_stress() -> Result<()> {
     for (i, obj) in all_objects.iter().enumerate() {
         let batch = i / 50;
         let item = i % 50;
-        assert_eq!(**obj, format!("batch-{batch}-item-{item}"));
+        assert_eq!(***obj, format!("batch-{batch}-item-{item}"));
     }
 
     Ok(())

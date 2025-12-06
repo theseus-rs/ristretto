@@ -71,7 +71,7 @@ fn test_concurrent_collection_triggers() {
         let handle = thread::spawn(move || {
             for i in 0..100 {
                 let index = (thread_id * 100 + i) % objects.len();
-                let _value = *objects[index];
+                let _value = **objects[index];
                 thread::sleep(Duration::from_millis(5));
             }
         });
@@ -84,7 +84,7 @@ fn test_concurrent_collection_triggers() {
 
     // All objects should still be accessible
     for (i, obj) in gc_objects.iter().enumerate() {
-        assert_eq!(**obj, i);
+        assert_eq!(***obj, i);
     }
 }
 
@@ -255,7 +255,7 @@ fn test_concurrent_complex_graph() -> Result<()> {
                 let to_idx = (from_idx + thread_id + 1) % thread_nodes.len();
 
                 if let Ok(mut connections) = thread_nodes[from_idx].connections.lock() {
-                    connections.push(thread_nodes[to_idx].clone());
+                    connections.push(thread_nodes[to_idx].clone_gc());
                 }
 
                 thread::sleep(Duration::from_millis(2));
