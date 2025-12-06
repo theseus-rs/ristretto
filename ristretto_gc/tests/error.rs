@@ -146,11 +146,11 @@ fn test_graceful_degradation() {
     let gc3 = Gc::with_collector(&collector, 3);
 
     // Even if some operations might have issues, basic functionality should work
-    assert_eq!(*gc1, 1);
-    assert_eq!(*gc2, 2);
-    assert_eq!(*gc3, 3);
+    assert_eq!(**gc1, 1);
+    assert_eq!(**gc2, 2);
+    assert_eq!(**gc3, 3);
 
     // All objects should be accessible in reachability analysis
-    assert!(Gc::ptr_eq(&gc1, &gc1));
-    assert!(!Gc::ptr_eq(&gc1, &gc2));
+    assert!(Gc::ptr_eq(&*gc1, &*gc1));
+    assert!(!Gc::ptr_eq(&*gc1, &*gc2));
 }

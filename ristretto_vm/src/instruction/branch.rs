@@ -688,9 +688,9 @@ mod test {
 
         let stack = &mut OperandStack::with_max_size(2);
         let class1 = class1.as_reference()?.clone();
-        stack.push_object(Some(Gc::new(RwLock::new(class1))))?;
+        stack.push_object(Some(Gc::new(RwLock::new(class1)).clone_gc()))?;
         let class2 = class2.as_reference()?.clone();
-        stack.push_object(Some(Gc::new(RwLock::new(class2))))?;
+        stack.push_object(Some(Gc::new(RwLock::new(class2)).clone_gc()))?;
         let result = if_acmpne(stack, 3)?;
         assert_eq!(ContinueAtPosition(3), result);
         Ok(())

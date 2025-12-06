@@ -51,7 +51,7 @@ fn test_option_trace() -> Result<()> {
         &collector,
         TestNode {
             value: 2,
-            next: Some(node1.clone()),
+            next: Some(node1.clone_gc()),
         },
     );
 
@@ -85,7 +85,7 @@ fn test_vec_trace() {
     let container = Gc::with_collector(
         &collector,
         Container {
-            items: vec![item1, item2, item3],
+            items: vec![item1.clone_gc(), item2.clone_gc(), item3.clone_gc()],
         },
     );
 
@@ -132,7 +132,7 @@ fn test_custom_trace_implementation() -> Result<()> {
         TreeNode {
             value: "child1".to_string(),
             children: Vec::new(),
-            parent: Some(root.clone()),
+            parent: Some(root.clone_gc()),
         },
     );
 
@@ -141,7 +141,7 @@ fn test_custom_trace_implementation() -> Result<()> {
         TreeNode {
             value: "child2".to_string(),
             children: Vec::new(),
-            parent: Some(root.clone()),
+            parent: Some(root.clone_gc()),
         },
     );
 
@@ -153,8 +153,8 @@ fn test_custom_trace_implementation() -> Result<()> {
     // 4. The mutation happens before any concurrent access
     unsafe {
         let root_mut = root.get_mut_unchecked();
-        root_mut.children.push(child1.clone());
-        root_mut.children.push(child2.clone());
+        root_mut.children.push(child1.clone_gc());
+        root_mut.children.push(child2.clone_gc());
     }
 
     // Add root to keep tree reachable
@@ -212,10 +212,10 @@ fn test_complex_nested_trace() -> Result<()> {
     // 4. The mutations happen in a single-threaded test context
     unsafe {
         let a_mut = node_a.get_mut_unchecked();
-        a_mut.neighbors.push(node_b.clone());
+        a_mut.neighbors.push(node_b.clone_gc());
 
         let b_mut = node_b.get_mut_unchecked();
-        b_mut.neighbors.push(node_a.clone());
+        b_mut.neighbors.push(node_a.clone_gc());
     }
 
     // Add one as root to keep graph reachable
@@ -254,12 +254,12 @@ fn test_mixed_types_trace() {
     let container = Gc::with_collector(
         &collector,
         MixedContainer {
-            number: Gc::with_collector(&collector, 42),
-            text: Gc::with_collector(&collector, "hello".to_string()),
-            optional: Some(Gc::with_collector(&collector, 1.23)),
+            number: Gc::with_collector(&collector, 42).clone_gc(),
+            text: Gc::with_collector(&collector, "hello".to_string()).clone_gc(),
+            optional: Some(Gc::with_collector(&collector, 1.23).clone_gc()),
             list: vec![
-                Gc::with_collector(&collector, true),
-                Gc::with_collector(&collector, false),
+                Gc::with_collector(&collector, true).clone_gc(),
+                Gc::with_collector(&collector, false).clone_gc(),
             ],
         },
     );
@@ -292,15 +292,10 @@ fn test_deep_nesting_trace() {
     }
 
     // Create deeply nested structure
-    let mut current = None;
+    let mut current: Option<ristretto_gc::GcRootGuard<Nested>> = None;
     for level in (0..10).rev() {
-        current = Some(Gc::with_collector(
-            &collector,
-            Nested {
-                level,
-                inner: current,
-            },
-        ));
+        let inner = current.as_ref().map(|g| g.clone_gc());
+        current = Some(Gc::with_collector(&collector, Nested { level, inner }));
     }
 
     let root = current.unwrap();
@@ -310,11 +305,11 @@ fn test_deep_nesting_trace() {
     assert_eq!(root.level, 0);
 
     // Verify the nested structure
-    let mut current_ref = &root;
+    let mut current_node: &Nested = &root;
     for expected_level in 0..10 {
-        assert_eq!(current_ref.level, expected_level);
-        if let Some(ref inner) = current_ref.inner {
-            current_ref = inner;
+        assert_eq!(current_node.level, expected_level);
+        if let Some(ref inner) = current_node.inner {
+            current_node = inner;
         } else {
             assert_eq!(expected_level, 9); // Should be the last level
         }
@@ -344,12 +339,18 @@ fn test_trace_with_collections() {
     }
 
     let mut map = HashMap::new();
-    map.insert("one".to_string(), Gc::with_collector(&collector, 1));
-    map.insert("two".to_string(), Gc::with_collector(&collector, 2));
+    map.insert(
+        "one".to_string(),
+        Gc::with_collector(&collector, 1).clone_gc(),
+    );
+    map.insert(
+        "two".to_string(),
+        Gc::with_collector(&collector, 2).clone_gc(),
+    );
 
     let mut set = HashSet::new();
-    set.insert(Gc::with_collector(&collector, "hello".to_string()));
-    set.insert(Gc::with_collector(&collector, "world".to_string()));
+    set.insert(Gc::with_collector(&collector, "hello".to_string()).clone_gc());
+    set.insert(Gc::with_collector(&collector, "world".to_string()).clone_gc());
 
     let container = Gc::with_collector(&collector, CollectionContainer { map, set });
 
@@ -390,7 +391,7 @@ fn test_circular_reference_trace() -> Result<()> {
         &collector,
         CircularNode {
             id: 2,
-            partner: Some(node_a.clone()),
+            partner: Some(node_a.clone_gc()),
         },
     );
 
@@ -402,7 +403,7 @@ fn test_circular_reference_trace() -> Result<()> {
     // 4. The mutation happens in a single-threaded test context
     unsafe {
         let a_mut = node_a.get_mut_unchecked();
-        a_mut.partner = Some(node_b.clone());
+        a_mut.partner = Some(node_b.clone_gc());
     }
 
     // Add as root
@@ -450,13 +451,19 @@ fn test_trace_performance() {
     for i in 0..10 {
         let start = i * 10;
         let end = start + 10;
-        level1_nodes.push(Gc::with_collector(
-            &collector,
-            PerfNode {
-                id: 100 + i,
-                children: level2_nodes[start..end].to_vec(),
-            },
-        ));
+        level1_nodes.push(
+            Gc::with_collector(
+                &collector,
+                PerfNode {
+                    id: 100 + i,
+                    children: level2_nodes[start..end]
+                        .iter()
+                        .map(|g| g.clone_gc())
+                        .collect(),
+                },
+            )
+            .clone_gc(),
+        );
     }
 
     let root = Gc::with_collector(

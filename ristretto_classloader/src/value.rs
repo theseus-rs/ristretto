@@ -812,7 +812,7 @@ impl From<Reference> for Value {
 impl From<Option<Reference>> for Value {
     fn from(reference: Option<Reference>) -> Self {
         match reference {
-            Some(reference) => Value::Object(Some(Gc::new(RwLock::new(reference)))),
+            Some(reference) => Value::Object(Some(Gc::new(RwLock::new(reference)).clone_gc())),
             None => Value::Object(None),
         }
     }

@@ -1,5 +1,5 @@
 use criterion::{Criterion, criterion_group, criterion_main};
-use ristretto_gc::{GarbageCollector, Gc, Result};
+use ristretto_gc::{GarbageCollector, Gc, Result, Trace};
 use std::time::Duration;
 
 fn benchmarks(criterion: &mut Criterion) {
@@ -22,6 +22,10 @@ fn bench_lifecycle(_criterion: &mut Criterion) -> Result<()> {
 enum Data {
     Small(i32),
     Large(Vec<u8>),
+}
+
+impl Trace for Data {
+    fn trace(&self, _collector: &GarbageCollector) {}
 }
 
 fn gc_objects(collector: &GarbageCollector) {

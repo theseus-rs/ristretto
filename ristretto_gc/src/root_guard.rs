@@ -5,7 +5,8 @@
 
 use crate::collector::{GarbageCollector, Trace};
 use crate::gc::Gc;
-use std::ops::Deref;
+use std::hash::{Hash, Hasher};
+use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -37,6 +38,17 @@ impl<T: Trace> GcRootGuard<T> {
             ref_count,
         }
     }
+
+    /// Returns a clone of the underlying `Gc<T>` pointer.
+    ///
+    /// This allows the `Gc<T>` to be used in data structures or passed to other functions
+    /// that expect a `Gc<T>`. Note that the returned `Gc<T>` is NOT rooted by itself;
+    /// it relies on the existence of this `GcRootGuard` (or another root) to keep the
+    /// object alive.
+    #[must_use]
+    pub fn clone_gc(&self) -> Gc<T> {
+        self.root.clone()
+    }
 }
 
 impl<T: Trace> Clone for GcRootGuard<T> {
@@ -53,10 +65,22 @@ impl<T: Trace> Clone for GcRootGuard<T> {
 }
 
 impl<T: Trace> Deref for GcRootGuard<T> {
-    type Target = T;
+    type Target = Gc<T>;
 
     fn deref(&self) -> &Self::Target {
         &self.root
+    }
+}
+
+impl<T: Trace> DerefMut for GcRootGuard<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.root
+    }
+}
+
+impl<T: Trace> Trace for GcRootGuard<T> {
+    fn trace(&self, collector: &GarbageCollector) {
+        self.root.trace(collector);
     }
 }
 
@@ -70,5 +94,43 @@ impl<T: Trace> Drop for GcRootGuard<T> {
             // Ignore errors during cleanup - we can't handle them in Drop
             self.gc.remove_root_by_id(self.root_id);
         }
+    }
+}
+
+impl<T: Trace + PartialEq> PartialEq for GcRootGuard<T> {
+    fn eq(&self, other: &Self) -> bool {
+        *self.root == *other.root
+    }
+}
+
+impl<T: Trace + Eq> Eq for GcRootGuard<T> {}
+
+impl<T: Trace + Hash> Hash for GcRootGuard<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.root.hash(state);
+    }
+}
+
+impl<T: Trace + PartialOrd> PartialOrd for GcRootGuard<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.root.partial_cmp(&other.root)
+    }
+}
+
+impl<T: Trace + Ord> Ord for GcRootGuard<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.root.cmp(&other.root)
+    }
+}
+
+impl<T: Trace + std::fmt::Debug> std::fmt::Debug for GcRootGuard<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.root.fmt(f)
+    }
+}
+
+impl<T: Trace + std::fmt::Display> std::fmt::Display for GcRootGuard<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.root.fmt(f)
     }
 }

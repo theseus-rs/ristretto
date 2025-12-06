@@ -2,7 +2,7 @@
 //!
 //! Tests complex scenarios, edge cases, and integration between different components.
 
-use ristretto_gc::{Configuration, GarbageCollector, Gc, Result, Trace};
+use ristretto_gc::{Configuration, GarbageCollector, Gc, GcRootGuard, Result, Trace};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
@@ -42,7 +42,7 @@ fn test_zero_sized_types() {
     let gc_zst = Gc::with_collector(&collector, ZeroSized);
     let gc_zst_clone = gc_zst.clone();
 
-    assert_eq!(*gc_zst, ZeroSized);
+    assert_eq!(**gc_zst, ZeroSized);
     assert!(Gc::ptr_eq(&gc_zst, &gc_zst_clone));
 }
 
@@ -100,8 +100,8 @@ fn test_deeply_nested_structures() -> Result<()> {
     let branch1 = Gc::with_collector(
         &collector,
         NestedEnum::Branch {
-            left: leaf1,
-            right: leaf2,
+            left: leaf1.clone_gc(),
+            right: leaf2.clone_gc(),
             value: "branch1".to_string(),
         },
     );
@@ -109,8 +109,8 @@ fn test_deeply_nested_structures() -> Result<()> {
     let branch2 = Gc::with_collector(
         &collector,
         NestedEnum::Branch {
-            left: leaf3,
-            right: leaf4,
+            left: leaf3.clone_gc(),
+            right: leaf4.clone_gc(),
             value: "branch2".to_string(),
         },
     );
@@ -118,8 +118,8 @@ fn test_deeply_nested_structures() -> Result<()> {
     let root = Gc::with_collector(
         &collector,
         NestedEnum::Branch {
-            left: branch1,
-            right: branch2,
+            left: branch1.clone_gc(),
+            right: branch2.clone_gc(),
             value: "root".to_string(),
         },
     );
@@ -128,7 +128,7 @@ fn test_deeply_nested_structures() -> Result<()> {
     root.as_root(&collector)?;
 
     // Verify the structure is properly accessible
-    match &*root {
+    match &**root {
         NestedEnum::Branch { value, .. } => assert_eq!(value, "root"),
         _ => panic!("Expected root to be a branch"),
     }
@@ -224,8 +224,8 @@ fn test_collector_configuration() -> Result<()> {
     let gc1 = Gc::with_collector(&collector, "test1".to_string());
     let gc2 = Gc::with_collector(&collector, "test2".to_string());
 
-    assert_eq!(*gc1, "test1");
-    assert_eq!(*gc2, "test2");
+    assert_eq!(**gc1, "test1");
+    assert_eq!(**gc2, "test2");
     Ok(())
 }
 
@@ -235,8 +235,8 @@ fn test_gc_with_collections() {
     collector.start();
 
     let mut map = HashMap::new();
-    map.insert("key1", Gc::with_collector(&collector, 42));
-    map.insert("key2", Gc::with_collector(&collector, 84));
+    map.insert("key1", Gc::with_collector(&collector, 42).clone_gc());
+    map.insert("key2", Gc::with_collector(&collector, 84).clone_gc());
 
     let gc_map = Gc::with_collector(&collector, map);
 
@@ -245,8 +245,8 @@ fn test_gc_with_collections() {
     assert_eq!(**gc_map.get("key2").unwrap(), 84);
 
     let mut set = HashSet::new();
-    set.insert(Gc::with_collector(&collector, "item1".to_string()));
-    set.insert(Gc::with_collector(&collector, "item2".to_string()));
+    set.insert(Gc::with_collector(&collector, "item1".to_string()).clone_gc());
+    set.insert(Gc::with_collector(&collector, "item2".to_string()).clone_gc());
 
     let gc_set = Gc::with_collector(&collector, set);
     assert_eq!(gc_set.len(), 2);
@@ -283,9 +283,9 @@ fn test_edge_case_empty_objects() {
 
     // Test with empty objects and containers
     let empty_string = Gc::with_collector(&collector, String::new());
-    let empty_vec: Gc<Vec<i32>> = Gc::with_collector(&collector, Vec::new());
+    let empty_vec: GcRootGuard<Vec<i32>> = Gc::with_collector(&collector, Vec::new());
 
-    assert_eq!(*empty_string, "");
+    assert_eq!(**empty_string, "");
     assert_eq!(empty_vec.len(), 0);
 
     // These should work without issues
@@ -330,7 +330,7 @@ fn test_complex_reachability_scenario() -> Result<()> {
         &collector,
         ComplexObject {
             id: 2,
-            references: vec![obj1.clone()],
+            references: vec![obj1.clone_gc()],
             optional_ref: None,
         },
     );
@@ -339,8 +339,8 @@ fn test_complex_reachability_scenario() -> Result<()> {
         &collector,
         ComplexObject {
             id: 3,
-            references: vec![obj1.clone(), obj2.clone()],
-            optional_ref: Some(obj1.clone()),
+            references: vec![obj1.clone_gc(), obj2.clone_gc()],
+            optional_ref: Some(obj1.clone_gc()),
         },
     );
 

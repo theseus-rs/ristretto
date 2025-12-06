@@ -8,7 +8,7 @@ use crate::root_guard::GcRootGuard;
 use dashmap::DashMap;
 use rayon::prelude::*;
 use rayon::{ThreadPool, ThreadPoolBuilder};
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, LazyLock, Mutex, RwLock, Weak};
 use std::thread;
@@ -35,7 +35,6 @@ pub trait Trace {
     fn trace(&self, collector: &GarbageCollector);
 }
 
-/// Phase of the concurrent garbage collection cycle
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum GcPhase {
     Idle,
@@ -61,7 +60,7 @@ pub struct GarbageCollector {
     next_root_id: AtomicUsize,
 
     // Object registry for reachability analysis
-    objects: Arc<RwLock<HashMap<SafePtr, ObjectMetadata>>>,
+    objects: Arc<DashMap<SafePtr, ObjectMetadata>>,
 
     // Concurrent collection state
     phase: Arc<RwLock<GcPhase>>,
@@ -117,7 +116,7 @@ impl GarbageCollector {
             statistics: Arc::new(RwLock::new(Statistics::default())),
             roots: Arc::new(DashMap::new()),
             next_root_id: AtomicUsize::new(0),
-            objects: Arc::new(RwLock::new(HashMap::new())),
+            objects: Arc::new(DashMap::new()),
             phase: Arc::new(RwLock::new(GcPhase::Idle)),
             collection_active: Arc::new(AtomicBool::new(false)),
             mark_queue: Arc::new(Mutex::new(VecDeque::new())),
@@ -138,9 +137,7 @@ impl GarbageCollector {
         let metadata = ObjectMetadata::new_for_gc::<T>(safe_ptr, size);
 
         trace!("registering object at {:#x} with size {size}", safe_ptr.0);
-        if let Ok(mut objects) = self.objects.write() {
-            objects.insert(safe_ptr, metadata);
-        }
+        self.objects.insert(safe_ptr, metadata);
     }
 
     /// Registers a new object with finalizer support for reachability analysis. This is used when
@@ -158,9 +155,7 @@ impl GarbageCollector {
             "registering object with finalizer at {:#x} with size {size}",
             safe_ptr.0
         );
-        if let Ok(mut objects) = self.objects.write() {
-            objects.insert(safe_ptr, metadata);
-        }
+        self.objects.insert(safe_ptr, metadata);
     }
 
     /// Starts the background collector thread.
@@ -360,9 +355,7 @@ impl GarbageCollector {
     /// Checks if an object is already marked to avoid infinite loops during tracing. Used by
     /// the `Trace` implementations for cycle detection.
     pub(crate) fn is_object_marked(&self, ptr: SafePtr) -> bool {
-        if let Ok(objects) = self.objects.read()
-            && let Some(metadata) = objects.get(&ptr)
-        {
+        if let Some(metadata) = self.objects.get(&ptr) {
             return metadata.is_marked();
         }
         false
@@ -379,9 +372,7 @@ impl GarbageCollector {
     /// Marks an object as reachable in the object registry. Used during garbage collection to mark
     /// objects that are reachable from roots.
     pub(crate) fn mark_object(&self, ptr: SafePtr) {
-        if let Ok(mut objects) = self.objects.write()
-            && let Some(metadata) = objects.get_mut(&ptr)
-        {
+        if let Some(metadata) = self.objects.get(&ptr) {
             trace!("object: {:#x} marked reachable", ptr.0);
             metadata.mark();
         }
@@ -391,9 +382,7 @@ impl GarbageCollector {
     /// the object, `false` if already marked. This is used for cycle detection during tracing to
     /// prevent infinite recursion.
     pub(crate) fn try_mark_object(&self, ptr: SafePtr) -> bool {
-        if let Ok(mut objects) = self.objects.write()
-            && let Some(metadata) = objects.get_mut(&ptr)
-        {
+        if let Some(metadata) = self.objects.get(&ptr) {
             let was_unmarked = metadata.mark();
             if was_unmarked {
                 trace!("object: {:#x} marked reachable (first time)", ptr.0);
@@ -403,6 +392,14 @@ impl GarbageCollector {
             return was_unmarked;
         }
         false
+    }
+
+    /// Write barrier to be called when a `Gc` reference is modified. This ensures that the target
+    /// object is marked if the collector is in the concurrent marking phase.
+    pub fn write_barrier<T: Trace>(&self, obj: &Gc<T>) {
+        if self.is_concurrent_marking().unwrap_or(false) {
+            self.add_to_mark_queue(obj.inner());
+        }
     }
 
     /// Main loop for the background collector thread.
@@ -416,7 +413,7 @@ impl GarbageCollector {
         mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
         shutdown: &Arc<AtomicBool>,
         collection_trigger: &Arc<(Mutex<bool>, Condvar)>,
-        objects: &Arc<RwLock<HashMap<SafePtr, ObjectMetadata>>>,
+        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
         bytes_allocated: &Arc<AtomicUsize>,
     ) {
         debug!(
@@ -486,7 +483,7 @@ impl GarbageCollector {
         phase: &Arc<RwLock<GcPhase>>,
         collection_active: &Arc<AtomicBool>,
         mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
-        objects: &Arc<RwLock<HashMap<SafePtr, ObjectMetadata>>>,
+        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
         bytes_allocated: &Arc<AtomicUsize>,
     ) {
         let start_time = std::time::Instant::now();
@@ -540,7 +537,7 @@ impl GarbageCollector {
         phase: &Arc<RwLock<GcPhase>>,
         roots: &Arc<DashMap<usize, TracePtr>>,
         mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
-        objects: &Arc<RwLock<HashMap<SafePtr, ObjectMetadata>>>,
+        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
     ) {
         if let Ok(mut phase_guard) = phase.write() {
             *phase_guard = GcPhase::InitialMark;
@@ -553,28 +550,20 @@ impl GarbageCollector {
         }
 
         // Unmark all objects first
-        let number_of_objects = if let Ok(objects) = objects.write() {
-            objects.len()
-        } else {
-            0
-        };
+        let number_of_objects = objects.len();
 
         let configuration = &collector.configuration;
         if number_of_objects > configuration.parallel_threshold {
             debug!("unmarking {number_of_objects} objects (parallel)");
             collector.thread_pool.install(|| {
-                if let Ok(mut objects) = objects.write() {
-                    objects.par_iter_mut().for_each(|(_, metadata)| {
-                        metadata.unmark();
-                    });
-                }
+                objects.par_iter().for_each(|entry| {
+                    entry.value().unmark();
+                });
             });
         } else if number_of_objects > 0 {
             debug!("unmarking {number_of_objects} objects (sequential)");
-            if let Ok(mut objects) = objects.write() {
-                for metadata in objects.values_mut() {
-                    metadata.unmark();
-                }
+            for entry in objects.iter() {
+                entry.value().unmark();
             }
         }
 
@@ -594,7 +583,7 @@ impl GarbageCollector {
         collector: &GarbageCollector,
         phase: &Arc<RwLock<GcPhase>>,
         mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
-        objects: &Arc<RwLock<HashMap<SafePtr, ObjectMetadata>>>,
+        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
     ) {
         if let Ok(mut phase_guard) = phase.write() {
             *phase_guard = GcPhase::ConcurrentMark;
@@ -622,12 +611,8 @@ impl GarbageCollector {
 
             // Check if object exists and mark it
             let should_trace = {
-                if let Ok(mut objects_guard) = objects.write() {
-                    if let Some(metadata) = objects_guard.get_mut(&ptr) {
-                        metadata.mark() // Returns true if this is first time marking
-                    } else {
-                        false
-                    }
+                if let Some(metadata) = objects.get(&ptr) {
+                    metadata.mark() // Returns true if this is first time marking
                 } else {
                     false
                 }
@@ -660,7 +645,7 @@ impl GarbageCollector {
     fn final_mark_phase(
         phase: &Arc<RwLock<GcPhase>>,
         mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
-        objects: &Arc<RwLock<HashMap<SafePtr, ObjectMetadata>>>,
+        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
     ) {
         // Set phase to final mark
         if let Ok(mut phase_guard) = phase.write() {
@@ -685,8 +670,7 @@ impl GarbageCollector {
             };
 
             let ptr = SafePtr::from_ptr(gc_trace_ptr.as_raw_ptr());
-            if let Ok(mut objects_guard) = objects.write()
-                && let Some(metadata) = objects_guard.get_mut(&ptr)
+            if let Some(metadata) = objects.get(&ptr)
                 && metadata.mark()
             {
                 final_processed += 1;
@@ -703,7 +687,7 @@ impl GarbageCollector {
     fn concurrent_sweep_phase(
         collector: &GarbageCollector,
         phase: &Arc<RwLock<GcPhase>>,
-        objects: &Arc<RwLock<HashMap<SafePtr, ObjectMetadata>>>,
+        objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
         bytes_allocated: &Arc<AtomicUsize>,
     ) -> (usize, usize) {
         // Set phase to concurrent sweep
@@ -719,56 +703,52 @@ impl GarbageCollector {
 
         // Collect unmarked objects for removal
         let to_remove: Vec<(SafePtr, ObjectMetadata)> = {
-            if let Ok(objects) = objects.read() {
-                let number_of_objects = objects.len();
-                if number_of_objects > configuration.parallel_threshold {
-                    debug!("sweeping {number_of_objects} objects (parallel)");
-                    collector.thread_pool.install(|| {
-                        objects
-                            .par_iter()
-                            .filter_map(|(ptr, metadata)| {
-                                if metadata.is_marked() {
-                                    None // Keep marked objects
-                                } else {
-                                    Some((
-                                        *ptr,
-                                        ObjectMetadata::new_for_gc::<u8>(*ptr, metadata.size()),
-                                    ))
-                                }
-                            })
-                            .collect()
-                    })
-                } else {
-                    debug!("sweeping {number_of_objects} objects (sequential)");
+            let number_of_objects = objects.len();
+            if number_of_objects > configuration.parallel_threshold {
+                debug!("sweeping {number_of_objects} objects (parallel)");
+                collector.thread_pool.install(|| {
                     objects
-                        .iter()
-                        .filter_map(|(ptr, metadata)| {
+                        .par_iter()
+                        .filter_map(|entry| {
+                            let metadata = entry.value();
                             if metadata.is_marked() {
                                 None // Keep marked objects
                             } else {
                                 Some((
-                                    *ptr,
-                                    ObjectMetadata::new_for_gc::<u8>(*ptr, metadata.size()),
+                                    *entry.key(),
+                                    ObjectMetadata::new_for_gc::<u8>(*entry.key(), metadata.size()),
                                 ))
                             }
                         })
                         .collect()
-                }
+                })
             } else {
-                Vec::new()
+                debug!("sweeping {number_of_objects} objects (sequential)");
+                objects
+                    .iter()
+                    .filter_map(|entry| {
+                        let metadata = entry.value();
+                        if metadata.is_marked() {
+                            None // Keep marked objects
+                        } else {
+                            Some((
+                                *entry.key(),
+                                ObjectMetadata::new_for_gc::<u8>(*entry.key(), metadata.size()),
+                            ))
+                        }
+                    })
+                    .collect()
             }
         };
 
         // Remove unmarked objects
-        if let Ok(mut objects_guard) = objects.write() {
-            for (ptr, _metadata) in to_remove {
-                if let Some(removed_metadata) = objects_guard.remove(&ptr) {
-                    bytes_freed += removed_metadata.size();
-                    objects_freed += 1;
+        for (ptr, _metadata) in to_remove {
+            if let Some((_, removed_metadata)) = objects.remove(&ptr) {
+                bytes_freed += removed_metadata.size();
+                objects_freed += 1;
 
-                    // Call the drop function to properly deallocate the object
-                    removed_metadata.drop_object();
-                }
+                // Call the drop function to properly deallocate the object
+                removed_metadata.drop_object();
             }
         }
 
@@ -792,8 +772,63 @@ impl Drop for GarbageCollector {
     }
 }
 
-/// Implement `Trace` for primitive types (no-op)
-macro_rules! impl_gc_trace_noop {
+impl<T: Trace> Trace for Option<T> {
+    fn trace(&self, collector: &GarbageCollector) {
+        if let Some(value) = self {
+            value.trace(collector);
+        }
+    }
+}
+
+impl<T: Trace> Trace for Vec<T> {
+    fn trace(&self, collector: &GarbageCollector) {
+        for item in self {
+            item.trace(collector);
+        }
+    }
+}
+
+impl<K: Trace, V: Trace, S: ::std::hash::BuildHasher> Trace for HashMap<K, V, S> {
+    fn trace(&self, collector: &GarbageCollector) {
+        for (key, value) in self {
+            key.trace(collector);
+            value.trace(collector);
+        }
+    }
+}
+
+impl<T: Trace, S: ::std::hash::BuildHasher> Trace for HashSet<T, S> {
+    fn trace(&self, collector: &GarbageCollector) {
+        for item in self {
+            item.trace(collector);
+        }
+    }
+}
+
+impl<A: Trace, B: Trace> Trace for (A, B) {
+    fn trace(&self, collector: &GarbageCollector) {
+        self.0.trace(collector);
+        self.1.trace(collector);
+    }
+}
+
+impl<A: Trace, B: Trace, C: Trace> Trace for (A, B, C) {
+    fn trace(&self, collector: &GarbageCollector) {
+        self.0.trace(collector);
+        self.1.trace(collector);
+        self.2.trace(collector);
+    }
+}
+
+impl Trace for String {
+    fn trace(&self, _collector: &GarbageCollector) {}
+}
+
+impl Trace for &str {
+    fn trace(&self, _collector: &GarbageCollector) {}
+}
+
+macro_rules! impl_trace_primitive {
     ($($t:ty),*) => {
         $(
             impl Trace for $t {
@@ -803,45 +838,19 @@ macro_rules! impl_gc_trace_noop {
     };
 }
 
-impl_gc_trace_noop!(
-    bool, char, f32, f64, i8, i16, i32, i64, i128, isize, String, u8, u16, u32, u64, u128, usize
+impl_trace_primitive!(
+    bool, char, u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, f32, f64
 );
-
-impl Trace for &str {
-    fn trace(&self, _collector: &GarbageCollector) {}
-}
-
-impl<T> Trace for Option<T>
-where
-    T: Trace,
-{
-    fn trace(&self, collector: &GarbageCollector) {
-        if let Some(ref inner) = *self {
-            inner.trace(collector);
-        }
-    }
-}
-
-impl<T> Trace for Vec<T>
-where
-    T: Trace,
-{
-    fn trace(&self, collector: &GarbageCollector) {
-        for item in self {
-            item.trace(collector);
-        }
-    }
-}
 
 impl<T> Trace for Mutex<T>
 where
     T: Trace,
 {
     fn trace(&self, collector: &GarbageCollector) {
-        if let Ok(inner) = self.try_lock() {
-            inner.trace(collector);
+        match self.lock() {
+            Ok(guard) => guard.trace(collector),
+            Err(poisoned) => poisoned.into_inner().trace(collector),
         }
-        // If we can't lock, skip tracing for this cycle
     }
 }
 
@@ -850,10 +859,10 @@ where
     T: Trace,
 {
     fn trace(&self, collector: &GarbageCollector) {
-        if let Ok(inner) = self.try_write() {
-            inner.trace(collector);
+        match self.read() {
+            Ok(guard) => guard.trace(collector),
+            Err(poisoned) => poisoned.into_inner().trace(collector),
         }
-        // If we can't lock, skip tracing for this cycle
     }
 }
 
@@ -862,9 +871,7 @@ where
     T: Trace,
 {
     fn trace(&self, collector: &GarbageCollector) {
-        if let Some(inner) = self.try_lock() {
-            inner.trace(collector);
-        }
+        self.lock().trace(collector);
     }
 }
 
@@ -873,8 +880,6 @@ where
     T: Trace,
 {
     fn trace(&self, collector: &GarbageCollector) {
-        if let Some(inner) = self.try_read() {
-            inner.trace(collector);
-        }
+        self.read().trace(collector);
     }
 }
