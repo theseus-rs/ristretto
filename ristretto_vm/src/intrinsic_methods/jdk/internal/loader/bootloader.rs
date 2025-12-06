@@ -114,7 +114,7 @@ mod tests {
         let parameters = Parameters::new(vec![package_name]);
         let result = get_system_package_location(thread, parameters).await?;
         let location = result.expect("location").as_string()?;
-        assert!(location.ends_with("java.base.jmod"));
+        assert!(location.ends_with("java.base.jmod") || location.ends_with("modules"));
         Ok(())
     }
 

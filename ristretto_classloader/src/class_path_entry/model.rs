@@ -1,5 +1,6 @@
 use crate::Result;
 use crate::class_path_entry::directory::Directory;
+use crate::class_path_entry::image::Image;
 use crate::class_path_entry::jar::Jar;
 use ristretto_classfile::ClassFile;
 use std::ffi::{OsStr, OsString};
@@ -10,6 +11,7 @@ use std::path::PathBuf;
 #[derive(Clone, Debug, PartialEq)]
 pub enum ClassPathEntry {
     Directory(Directory),
+    Image(Image),
     Jar(Jar),
 }
 
@@ -27,7 +29,14 @@ impl ClassPathEntry {
             }
         }
 
-        if PathBuf::from(path).is_file() {
+        let path_buf = PathBuf::from(path);
+        if path_buf.is_file() {
+            if let Some(file_name) = path_buf.file_name()
+                && file_name == "modules"
+                && let Ok(image) = Image::new(path)
+            {
+                return ClassPathEntry::Image(image);
+            }
             ClassPathEntry::Jar(Jar::new(path))
         } else {
             ClassPathEntry::Directory(Directory::new(path))
@@ -39,6 +48,7 @@ impl ClassPathEntry {
     pub fn name(&self) -> &OsString {
         match self {
             ClassPathEntry::Directory(directory) => directory.name(),
+            ClassPathEntry::Image(image) => image.name(),
             ClassPathEntry::Jar(jar) => jar.name(),
         }
     }
@@ -50,7 +60,8 @@ impl ClassPathEntry {
     /// if the class file cannot be read.
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         match self {
-            ClassPathEntry::Directory(directory) => directory.read_class(name),
+            ClassPathEntry::Directory(directory) => directory.read_class(name).await,
+            ClassPathEntry::Image(image) => image.read_class(name).await,
             ClassPathEntry::Jar(jar) => jar.read_class(name).await,
         }
     }
@@ -63,6 +74,7 @@ impl ClassPathEntry {
     pub async fn class_names(&self) -> Result<Vec<String>> {
         match self {
             ClassPathEntry::Directory(directory) => directory.class_names().await,
+            ClassPathEntry::Image(image) => image.class_names().await,
             ClassPathEntry::Jar(jar) => jar.class_names().await,
         }
     }

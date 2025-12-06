@@ -61,6 +61,7 @@ proc-macro2 = "1.0.103"
 quote = "1.0.42"
 rayon = "1.11.0"
 reqwest = { version = "0.12.24", default-features = false }
+rustc-hash = "2.1.1"
 serde = "1.0.228"
 serde_plain = "1.0.2"
 stacker = "0.1.22"

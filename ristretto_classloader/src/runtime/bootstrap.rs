@@ -151,21 +151,26 @@ fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
         let rt_jar_path = installation_dir.join("jre").join("lib").join("rt.jar");
         vec![rt_jar_path]
     } else {
-        let jmods_path = installation_dir.join("jmods");
-        let jmod_files = std::fs::read_dir(jmods_path)?
-            .filter_map(|entry| {
-                let entry = entry.ok()?;
-                let path = entry.path();
-                if path.extension()?.to_string_lossy() == "jmod" {
-                    Some(path)
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-        let mut class_paths = jmod_files.into_iter().collect::<Vec<_>>();
-        class_paths.sort_by(Ord::cmp);
-        class_paths
+        let modules_path = installation_dir.join("lib").join("modules");
+        if modules_path.exists() {
+            vec![modules_path]
+        } else {
+            let jmods_path = installation_dir.join("jmods");
+            let jmod_files = std::fs::read_dir(jmods_path)?
+                .filter_map(|entry| {
+                    let entry = entry.ok()?;
+                    let path = entry.path();
+                    if path.extension()?.to_string_lossy() == "jmod" {
+                        Some(path)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+            let mut class_paths = jmod_files.into_iter().collect::<Vec<_>>();
+            class_paths.sort_by(Ord::cmp);
+            class_paths
+        }
     };
     Ok(ClassPath::from(&class_path))
 }
