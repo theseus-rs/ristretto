@@ -1,7 +1,6 @@
 use crate::Error::InvalidValueType;
 use crate::{Class, Object, Result, Value};
-use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-use ristretto_gc::{GarbageCollector, Gc, Trace};
+use ristretto_gc::{GarbageCollector, Trace};
 use std::fmt;
 use std::fmt::{Debug, Display};
 use std::hash::{Hash, Hasher};
@@ -11,34 +10,34 @@ use zerocopy::transmute_ref;
 /// Represents an array of objects in the Ristretto VM.
 ///
 /// `ObjectArray` groups the array's class `Arc<Class>` and its elements
-/// `Gc<RwLock<<Option<Reference>>>>` together in order to reduce the amount of memory required by
+/// `Vec<Value>` together in order to reduce the amount of memory required by
 /// values in the Reference enum.
 #[derive(Clone, Debug)]
 pub struct ObjectArray {
     pub class: Arc<Class>,
-    pub elements: Gc<RwLock<Vec<Option<Reference>>>>,
+    pub elements: Vec<Value>,
 }
 
 impl Eq for ObjectArray {}
 
 impl PartialEq for ObjectArray {
     fn eq(&self, other: &Self) -> bool {
-        self.class == other.class && Gc::ptr_eq(&self.elements, &other.elements)
+        self.class == other.class && self.elements == other.elements
     }
 }
 
 /// Represents a reference to an object in the Ristretto VM.
 #[derive(Clone, Debug)]
 pub enum Reference {
-    ByteArray(Gc<RwLock<Vec<i8>>>),
-    CharArray(Gc<RwLock<Vec<u16>>>),
-    ShortArray(Gc<RwLock<Vec<i16>>>),
-    IntArray(Gc<RwLock<Vec<i32>>>),
-    LongArray(Gc<RwLock<Vec<i64>>>),
-    FloatArray(Gc<RwLock<Vec<f32>>>),
-    DoubleArray(Gc<RwLock<Vec<f64>>>),
+    ByteArray(Vec<i8>),
+    CharArray(Vec<u16>),
+    ShortArray(Vec<i16>),
+    IntArray(Vec<i32>),
+    LongArray(Vec<i64>),
+    FloatArray(Vec<f32>),
+    DoubleArray(Vec<f64>),
     Array(ObjectArray),
-    Object(Gc<RwLock<Object>>),
+    Object(Object),
 }
 
 impl Reference {
@@ -57,10 +56,7 @@ impl Reference {
             Reference::FloatArray(_) => "[F".to_string(),
             Reference::DoubleArray(_) => "[D".to_string(),
             Reference::Array(object_array) => object_array.class.name().to_string(),
-            Reference::Object(object) => {
-                let object = object.read();
-                object.class().name().to_string()
-            }
+            Reference::Object(object) => object.class().name().to_string(),
         };
         Ok(class_name)
     }
@@ -70,9 +66,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `ByteArray`.
-    pub fn as_byte_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i8>>> {
+    pub fn as_byte_vec_ref(&self) -> Result<&Vec<i8>> {
         match self {
-            Reference::ByteArray(array) => Ok(array.read()),
+            Reference::ByteArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected byte array".to_string())),
         }
     }
@@ -82,9 +78,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `ByteArray`.
-    pub fn as_byte_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i8>>> {
+    pub fn as_byte_vec_mut(&mut self) -> Result<&mut Vec<i8>> {
         match self {
-            Reference::ByteArray(array) => Ok(array.write()),
+            Reference::ByteArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected byte array".to_string())),
         }
     }
@@ -94,9 +90,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `CharArray`.
-    pub fn as_char_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<u16>>> {
+    pub fn as_char_vec_ref(&self) -> Result<&Vec<u16>> {
         match self {
-            Reference::CharArray(array) => Ok(array.read()),
+            Reference::CharArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected char array".to_string())),
         }
     }
@@ -106,9 +102,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `CharArray`.
-    pub fn as_char_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<u16>>> {
+    pub fn as_char_vec_mut(&mut self) -> Result<&mut Vec<u16>> {
         match self {
-            Reference::CharArray(array) => Ok(array.write()),
+            Reference::CharArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected char array".to_string())),
         }
     }
@@ -118,9 +114,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `ShortArray`.
-    pub fn as_short_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i16>>> {
+    pub fn as_short_vec_ref(&self) -> Result<&Vec<i16>> {
         match self {
-            Reference::ShortArray(array) => Ok(array.read()),
+            Reference::ShortArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected short array".to_string())),
         }
     }
@@ -130,9 +126,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `ShortArray`.
-    pub fn as_short_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i16>>> {
+    pub fn as_short_vec_mut(&mut self) -> Result<&mut Vec<i16>> {
         match self {
-            Reference::ShortArray(array) => Ok(array.write()),
+            Reference::ShortArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected short array".to_string())),
         }
     }
@@ -142,9 +138,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `IntArray`.
-    pub fn as_int_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i32>>> {
+    pub fn as_int_vec_ref(&self) -> Result<&Vec<i32>> {
         match self {
-            Reference::IntArray(array) => Ok(array.read()),
+            Reference::IntArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected int array".to_string())),
         }
     }
@@ -154,9 +150,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `IntArray`.
-    pub fn as_int_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i32>>> {
+    pub fn as_int_vec_mut(&mut self) -> Result<&mut Vec<i32>> {
         match self {
-            Reference::IntArray(array) => Ok(array.write()),
+            Reference::IntArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected int array".to_string())),
         }
     }
@@ -166,9 +162,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `LongArray`.
-    pub fn as_long_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<i64>>> {
+    pub fn as_long_vec_ref(&self) -> Result<&Vec<i64>> {
         match self {
-            Reference::LongArray(array) => Ok(array.read()),
+            Reference::LongArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected long array".to_string())),
         }
     }
@@ -178,9 +174,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `LongArray`.
-    pub fn as_long_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<i64>>> {
+    pub fn as_long_vec_mut(&mut self) -> Result<&mut Vec<i64>> {
         match self {
-            Reference::LongArray(array) => Ok(array.write()),
+            Reference::LongArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected long array".to_string())),
         }
     }
@@ -190,9 +186,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `FloatArray`.
-    pub fn as_float_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<f32>>> {
+    pub fn as_float_vec_ref(&self) -> Result<&Vec<f32>> {
         match self {
-            Reference::FloatArray(array) => Ok(array.read()),
+            Reference::FloatArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected float array".to_string())),
         }
     }
@@ -202,9 +198,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `FloatArray`.
-    pub fn as_float_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<f32>>> {
+    pub fn as_float_vec_mut(&mut self) -> Result<&mut Vec<f32>> {
         match self {
-            Reference::FloatArray(array) => Ok(array.write()),
+            Reference::FloatArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected float array".to_string())),
         }
     }
@@ -214,9 +210,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `DoubleArray`.
-    pub fn as_double_vec_ref(&self) -> Result<RwLockReadGuard<'_, Vec<f64>>> {
+    pub fn as_double_vec_ref(&self) -> Result<&Vec<f64>> {
         match self {
-            Reference::DoubleArray(array) => Ok(array.read()),
+            Reference::DoubleArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected double array".to_string())),
         }
     }
@@ -226,9 +222,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not a `DoubleArray`.
-    pub fn as_double_vec_mut(&self) -> Result<RwLockWriteGuard<'_, Vec<f64>>> {
+    pub fn as_double_vec_mut(&mut self) -> Result<&mut Vec<f64>> {
         match self {
-            Reference::DoubleArray(array) => Ok(array.write()),
+            Reference::DoubleArray(array) => Ok(array),
             _ => Err(InvalidValueType("Expected double array".to_string())),
         }
     }
@@ -238,33 +234,21 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not an `Array`.
-    #[expect(clippy::type_complexity)]
-    pub fn as_class_vec_ref(
-        &self,
-    ) -> Result<(&Arc<Class>, RwLockReadGuard<'_, Vec<Option<Reference>>>)> {
+    pub fn as_class_vec_ref(&self) -> Result<(&Arc<Class>, &Vec<Value>)> {
         match self {
-            Reference::Array(object_array) => {
-                let array = object_array.elements.read();
-                Ok((&object_array.class, array))
-            }
+            Reference::Array(object_array) => Ok((&object_array.class, &object_array.elements)),
             _ => Err(InvalidValueType("Expected array".to_string())),
         }
     }
 
-    /// Returns a mutable reference to `Vec<Option<Reference>>`.
+    /// Returns a mutable reference to `Vec<Value>`.
     ///
     /// # Errors
     ///
     /// if the value is not an `Array`.
-    #[expect(clippy::type_complexity)]
-    pub fn as_class_vec_mut(
-        &self,
-    ) -> Result<(&Arc<Class>, RwLockWriteGuard<'_, Vec<Option<Reference>>>)> {
+    pub fn as_class_vec_mut(&mut self) -> Result<(&Arc<Class>, &mut Vec<Value>)> {
         match self {
-            Reference::Array(object_array) => {
-                let array = object_array.elements.write();
-                Ok((&object_array.class, array))
-            }
+            Reference::Array(object_array) => Ok((&object_array.class, &mut object_array.elements)),
             _ => Err(InvalidValueType("Expected array".to_string())),
         }
     }
@@ -274,9 +258,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not an Object.
-    pub fn as_object_ref(&self) -> Result<RwLockReadGuard<'_, Object>> {
+    pub fn as_object_ref(&self) -> Result<&Object> {
         match self {
-            Reference::Object(object) => Ok(object.read()),
+            Reference::Object(object) => Ok(object),
             _ => Err(InvalidValueType("Expected object".to_string())),
         }
     }
@@ -286,9 +270,9 @@ impl Reference {
     /// # Errors
     ///
     /// if the value is not an `Object`.
-    pub fn as_object_mut(&self) -> Result<RwLockWriteGuard<'_, Object>> {
+    pub fn as_object_mut(&mut self) -> Result<&mut Object> {
         match self {
-            Reference::Object(object) => Ok(object.write()),
+            Reference::Object(object) => Ok(object),
             _ => Err(InvalidValueType("Expected object".to_string())),
         }
     }
@@ -298,17 +282,15 @@ impl Reference {
     #[must_use]
     pub fn hash_code(&self) -> usize {
         match self {
-            Reference::ByteArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<i8>>>() as usize,
-            Reference::CharArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<u16>>>() as usize,
-            Reference::ShortArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<i16>>>() as usize,
-            Reference::IntArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<i32>>>() as usize,
-            Reference::LongArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<i64>>>() as usize,
-            Reference::FloatArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<f32>>>() as usize,
-            Reference::DoubleArray(array) => Gc::as_ptr(array).cast::<Vec<RwLock<f64>>>() as usize,
-            Reference::Array(object_array) => {
-                Gc::as_ptr(&object_array.elements).cast::<Vec<RwLock<Option<Reference>>>>() as usize
-            }
-            Reference::Object(object) => Gc::as_ptr(object).cast::<RwLock<Object>>() as usize,
+            Reference::ByteArray(array) => array.as_ptr() as usize,
+            Reference::CharArray(array) => array.as_ptr() as usize,
+            Reference::ShortArray(array) => array.as_ptr() as usize,
+            Reference::IntArray(array) => array.as_ptr() as usize,
+            Reference::LongArray(array) => array.as_ptr() as usize,
+            Reference::FloatArray(array) => array.as_ptr() as usize,
+            Reference::DoubleArray(array) => array.as_ptr() as usize,
+            Reference::Array(object_array) => object_array.elements.as_ptr() as usize,
+            Reference::Object(object) => std::ptr::from_ref::<Object>(object) as usize,
         }
     }
 
@@ -316,15 +298,15 @@ impl Reference {
     #[must_use]
     pub fn ptr_eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Reference::ByteArray(a), Reference::ByteArray(b)) => a.ptr_eq(b),
-            (Reference::CharArray(a), Reference::CharArray(b)) => a.ptr_eq(b),
-            (Reference::ShortArray(a), Reference::ShortArray(b)) => a.ptr_eq(b),
-            (Reference::IntArray(a), Reference::IntArray(b)) => a.ptr_eq(b),
-            (Reference::LongArray(a), Reference::LongArray(b)) => a.ptr_eq(b),
-            (Reference::FloatArray(a), Reference::FloatArray(b)) => a.ptr_eq(b),
-            (Reference::DoubleArray(a), Reference::DoubleArray(b)) => a.ptr_eq(b),
+            (Reference::ByteArray(a), Reference::ByteArray(b)) => a.as_ptr() == b.as_ptr(),
+            (Reference::CharArray(a), Reference::CharArray(b)) => a.as_ptr() == b.as_ptr(),
+            (Reference::ShortArray(a), Reference::ShortArray(b)) => a.as_ptr() == b.as_ptr(),
+            (Reference::IntArray(a), Reference::IntArray(b)) => a.as_ptr() == b.as_ptr(),
+            (Reference::LongArray(a), Reference::LongArray(b)) => a.as_ptr() == b.as_ptr(),
+            (Reference::FloatArray(a), Reference::FloatArray(b)) => a.as_ptr() == b.as_ptr(),
+            (Reference::DoubleArray(a), Reference::DoubleArray(b)) => a.as_ptr() == b.as_ptr(),
             (Reference::Array(a), Reference::Array(b)) => {
-                Arc::ptr_eq(&a.class, &b.class) && a.elements.ptr_eq(&b.elements)
+                Arc::ptr_eq(&a.class, &b.class) && a.elements.as_ptr() == b.elements.as_ptr()
             }
             (Reference::Object(a), Reference::Object(b)) => a.ptr_eq(b),
             _ => false,
@@ -515,10 +497,9 @@ impl Display for Reference {
         fn fmt_vec<T: Debug>(
             f: &mut fmt::Formatter<'_>,
             name: &str,
-            value: &Gc<RwLock<Vec<T>>>,
+            value: &Vec<T>,
         ) -> fmt::Result {
-            let guard = value.read();
-            let slice = guard.as_slice();
+            let slice = value.as_slice();
             let mut values = Vec::with_capacity(slice.len());
             for value in slice {
                 let value = format!("{value:?}");
@@ -540,17 +521,15 @@ impl Display for Reference {
             Reference::FloatArray(array) => fmt_vec(f, "float", array),
             Reference::DoubleArray(array) => fmt_vec(f, "double", array),
             Reference::Array(object_array) => {
-                let guard = object_array.elements.read();
                 write!(
                     f,
                     "{}[{}]",
                     object_array.class.array_component_type(),
-                    guard.len()
+                    object_array.elements.len()
                 )
             }
             Reference::Object(object) => {
-                let guard = object.read();
-                write!(f, "{guard}")
+                write!(f, "{object}")
             }
         }
     }
@@ -573,44 +552,35 @@ impl Hash for Reference {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
             Reference::ByteArray(array) => {
-                let array = array.read();
                 array.hash(state);
             }
             Reference::CharArray(array) => {
-                let array = array.read();
                 array.hash(state);
             }
             Reference::ShortArray(array) => {
-                let array = array.read();
                 array.hash(state);
             }
             Reference::IntArray(array) => {
-                let array = array.read();
                 array.hash(state);
             }
             Reference::LongArray(array) => {
-                let array = array.read();
                 array.hash(state);
             }
             Reference::FloatArray(array) => {
-                let array = array.read();
-                for value in array.iter() {
+                for value in array {
                     value.to_bits().hash(state);
                 }
             }
             Reference::DoubleArray(array) => {
-                let array = array.read();
-                for value in array.iter() {
+                for value in array {
                     value.to_bits().hash(state);
                 }
             }
             Reference::Array(object_array) => {
                 object_array.class.name().hash(state);
-                let array = object_array.elements.read();
-                array.hash(state);
+                object_array.elements.hash(state);
             }
             Reference::Object(object) => {
-                let object = object.read();
                 object.hash(state);
             }
         }
@@ -619,28 +589,13 @@ impl Hash for Reference {
 
 impl PartialEq for Reference {
     fn eq(&self, other: &Self) -> bool {
-        fn vec_eq<T: PartialEq>(a: &Gc<RwLock<Vec<T>>>, b: &Gc<RwLock<Vec<T>>>) -> bool {
-            if Gc::ptr_eq(a, b) {
-                return true;
-            }
-            let a_guard = a.read();
-            let b_guard = b.read();
-            *a_guard == *b_guard
-        }
-
         match (self, other) {
-            (Reference::ByteArray(a), Reference::ByteArray(b)) => vec_eq(a, b),
-            (Reference::CharArray(a), Reference::CharArray(b)) => vec_eq(a, b),
-            (Reference::ShortArray(a), Reference::ShortArray(b)) => vec_eq(a, b),
-            (Reference::IntArray(a), Reference::IntArray(b)) => vec_eq(a, b),
-            (Reference::LongArray(a), Reference::LongArray(b)) => vec_eq(a, b),
+            (Reference::ByteArray(a), Reference::ByteArray(b)) => a == b,
+            (Reference::CharArray(a), Reference::CharArray(b)) => a == b,
+            (Reference::ShortArray(a), Reference::ShortArray(b)) => a == b,
+            (Reference::IntArray(a), Reference::IntArray(b)) => a == b,
+            (Reference::LongArray(a), Reference::LongArray(b)) => a == b,
             (Reference::FloatArray(a), Reference::FloatArray(b)) => {
-                if Gc::ptr_eq(a, b) {
-                    return true;
-                }
-                let a = a.read();
-                let b = b.read();
-
                 if a.len() != b.len() {
                     return false;
                 }
@@ -649,13 +604,6 @@ impl PartialEq for Reference {
                     .all(|(&a, &b)| a.to_bits() == b.to_bits())
             }
             (Reference::DoubleArray(a), Reference::DoubleArray(b)) => {
-                if Gc::ptr_eq(a, b) {
-                    return true;
-                }
-
-                let a = a.read();
-                let b = b.read();
-
                 if a.len() != b.len() {
                     return false;
                 }
@@ -664,16 +612,9 @@ impl PartialEq for Reference {
                     .all(|(&a, &b)| a.to_bits() == b.to_bits())
             }
             (Reference::Array(a), Reference::Array(b)) => {
-                a.class == b.class && vec_eq(&a.elements, &b.elements)
+                a.class == b.class && a.elements == b.elements
             }
-            (Reference::Object(a), Reference::Object(b)) => {
-                if Gc::ptr_eq(a, b) {
-                    return true;
-                }
-                let a_guard = a.read();
-                let b_guard = b.read();
-                *a_guard == *b_guard
-            }
+            (Reference::Object(a), Reference::Object(b)) => a == b,
             _ => false,
         }
     }
@@ -683,12 +624,13 @@ impl Trace for Reference {
     fn trace(&self, collector: &GarbageCollector) {
         match self {
             Reference::Array(object_array) => {
-                let references = object_array.elements.read();
-                for reference in references.iter().flatten() {
-                    reference.trace(collector);
+                for value in &object_array.elements {
+                    if let Value::Object(Some(reference)) = value {
+                        reference.trace(collector);
+                    }
                 }
             }
-            Reference::Object(object) => object.read().trace(collector),
+            Reference::Object(object) => object.trace(collector),
             _ => {}
         }
     }
@@ -697,73 +639,73 @@ impl Trace for Reference {
 impl From<Vec<bool>> for Reference {
     fn from(value: Vec<bool>) -> Self {
         let value: Vec<i8> = value.into_iter().map(i8::from).collect();
-        Reference::ByteArray(Gc::new(RwLock::new(value)))
+        Reference::ByteArray(value)
     }
 }
 
 impl From<Vec<i8>> for Reference {
     fn from(value: Vec<i8>) -> Self {
-        Reference::ByteArray(Gc::new(RwLock::new(value)))
+        Reference::ByteArray(value)
     }
 }
 
 impl From<Vec<u8>> for Reference {
     fn from(value: Vec<u8>) -> Self {
         let value: &[i8] = transmute_ref!(value.as_slice());
-        Reference::ByteArray(Gc::new(RwLock::new(value.to_vec())))
+        Reference::ByteArray(value.to_vec())
     }
 }
 
 impl From<Vec<char>> for Reference {
     fn from(value: Vec<char>) -> Self {
         let value: Vec<u16> = value.into_iter().map(|v| v as u16).collect();
-        Reference::CharArray(Gc::new(RwLock::new(value)))
+        Reference::CharArray(value)
     }
 }
 
 impl From<Vec<i16>> for Reference {
     fn from(value: Vec<i16>) -> Self {
-        Reference::ShortArray(Gc::new(RwLock::new(value)))
+        Reference::ShortArray(value)
     }
 }
 
 impl From<Vec<u16>> for Reference {
     fn from(value: Vec<u16>) -> Self {
         let value: &[i16] = transmute_ref!(value.as_slice());
-        Reference::ShortArray(Gc::new(RwLock::new(value.to_vec())))
+        Reference::ShortArray(value.to_vec())
     }
 }
 
 impl From<Vec<i32>> for Reference {
     fn from(value: Vec<i32>) -> Self {
-        Reference::IntArray(Gc::new(RwLock::new(value)))
+        Reference::IntArray(value)
     }
 }
 
 impl From<Vec<u32>> for Reference {
     fn from(value: Vec<u32>) -> Self {
         let value: &[i32] = transmute_ref!(value.as_slice());
-        Reference::IntArray(Gc::new(RwLock::new(value.to_vec())))
+        Reference::IntArray(value.to_vec())
     }
 }
 
 impl From<Vec<i64>> for Reference {
     fn from(value: Vec<i64>) -> Self {
-        Reference::LongArray(Gc::new(RwLock::new(value)))
+        Reference::LongArray(value)
     }
 }
 
 impl From<Vec<u64>> for Reference {
     fn from(value: Vec<u64>) -> Self {
         let value: &[i64] = transmute_ref!(value.as_slice());
-        Reference::LongArray(Gc::new(RwLock::new(value.to_vec())))
+        Reference::LongArray(value.to_vec())
     }
 }
 
 impl From<Vec<isize>> for Reference {
     fn from(value: Vec<isize>) -> Self {
         let value: Vec<i64> = value.into_iter().map(|v| v as i64).collect();
-        Reference::LongArray(Gc::new(RwLock::new(value)))
+        Reference::LongArray(value)
     }
 }
 
@@ -771,27 +713,28 @@ impl From<Vec<usize>> for Reference {
     fn from(value: Vec<usize>) -> Self {
         #[expect(clippy::cast_possible_wrap)]
         let value: Vec<i64> = value.into_iter().map(|v| v as i64).collect();
-        Reference::LongArray(Gc::new(RwLock::new(value)))
+        Reference::LongArray(value)
     }
 }
 
 impl From<Vec<f32>> for Reference {
     fn from(value: Vec<f32>) -> Self {
-        Reference::FloatArray(Gc::new(RwLock::new(value)))
+        Reference::FloatArray(value)
     }
 }
 
 impl From<Vec<f64>> for Reference {
     fn from(value: Vec<f64>) -> Self {
-        Reference::DoubleArray(Gc::new(RwLock::new(value)))
+        Reference::DoubleArray(value)
     }
 }
 
 impl From<(Arc<Class>, Vec<Option<Reference>>)> for Reference {
     fn from((class, value): (Arc<Class>, Vec<Option<Reference>>)) -> Self {
+        let elements = value.into_iter().map(Value::from).collect();
         let object_array = ObjectArray {
             class: class.clone(),
-            elements: Gc::new(RwLock::new(value)),
+            elements,
         };
         Reference::Array(object_array)
     }
@@ -802,18 +745,16 @@ impl TryFrom<(Arc<Class>, Vec<Value>)> for Reference {
 
     fn try_from(value: (Arc<Class>, Vec<Value>)) -> Result<Self> {
         let (class, values) = value;
-        let mut references = Vec::with_capacity(values.len());
 
-        for value in values {
-            let Value::Object(reference) = value else {
+        for value in &values {
+            if !matches!(value, Value::Object(_)) {
                 return Err(InvalidValueType("Expected object".to_string()));
-            };
-            references.push(reference);
+            }
         }
 
         let object_array = ObjectArray {
             class,
-            elements: Gc::new(RwLock::new(references)),
+            elements: values,
         };
         Ok(Reference::Array(object_array))
     }
@@ -821,7 +762,7 @@ impl TryFrom<(Arc<Class>, Vec<Value>)> for Reference {
 
 impl From<Object> for Reference {
     fn from(value: Object) -> Self {
-        Reference::Object(Gc::new(RwLock::new(value)))
+        Reference::Object(value)
     }
 }
 
@@ -877,7 +818,7 @@ mod tests {
     fn test_as_byte_vec_ref() -> Result<()> {
         let original_value = vec![42i8];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.as_byte_vec_ref()?.to_vec());
+        assert_eq!(original_value, reference.as_byte_vec_ref()?.clone());
         Ok(())
     }
 
@@ -890,19 +831,19 @@ mod tests {
 
     #[test]
     fn test_as_byte_vec_mut() -> Result<()> {
-        let reference = Reference::from(vec![42i8]);
+        let mut reference = Reference::from(vec![42i8]);
         {
-            let mut mutable_reference = reference.as_byte_vec_mut()?;
+            let mutable_reference = reference.as_byte_vec_mut()?;
             mutable_reference.push(3i8);
         }
-        assert_eq!(reference.as_byte_vec_ref()?.to_vec(), vec![42i8, 3i8]);
+        assert_eq!(reference.as_byte_vec_ref()?.clone(), vec![42i8, 3i8]);
         Ok(())
     }
 
     #[test]
     fn test_as_byte_vec_mut_error() {
         let original_value = vec![42i32];
-        let reference = Reference::from(original_value.clone());
+        let mut reference = Reference::from(original_value.clone());
         let result = reference.as_byte_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -918,7 +859,7 @@ mod tests {
     #[test]
     fn test_as_char_vec_ref() -> Result<()> {
         let reference = Reference::from(vec!['*']);
-        assert_eq!(vec![42u16], reference.as_char_vec_ref()?.to_vec());
+        assert_eq!(vec![42u16], reference.as_char_vec_ref()?.clone());
         Ok(())
     }
 
@@ -931,18 +872,18 @@ mod tests {
 
     #[test]
     fn test_as_char_vec_mut() -> Result<()> {
-        let reference = Reference::from(vec!['*']);
+        let mut reference = Reference::from(vec!['*']);
         {
-            let mut mutable_reference = reference.as_char_vec_mut()?;
+            let mutable_reference = reference.as_char_vec_mut()?;
             mutable_reference.push(50u16);
         }
-        assert_eq!(reference.as_char_vec_ref()?.to_vec(), vec![42u16, 50u16]);
+        assert_eq!(reference.as_char_vec_ref()?.clone(), vec![42u16, 50u16]);
         Ok(())
     }
 
     #[test]
     fn test_as_char_vec_mut_error() {
-        let reference = Reference::from(vec![42i32]);
+        let mut reference = Reference::from(vec![42i32]);
         let result = reference.as_char_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -959,7 +900,7 @@ mod tests {
     fn test_as_short_vec_ref() -> Result<()> {
         let original_value = vec![42i16];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.as_short_vec_ref()?.to_vec());
+        assert_eq!(original_value, reference.as_short_vec_ref()?.clone());
         Ok(())
     }
 
@@ -972,18 +913,18 @@ mod tests {
 
     #[test]
     fn test_as_short_vec_mut() -> Result<()> {
-        let reference = Reference::from(vec![42i16]);
+        let mut reference = Reference::from(vec![42i16]);
         {
-            let mut mutable_reference = reference.as_short_vec_mut()?;
+            let mutable_reference = reference.as_short_vec_mut()?;
             mutable_reference.push(3i16);
         }
-        assert_eq!(reference.as_short_vec_ref()?.to_vec(), vec![42i16, 3i16]);
+        assert_eq!(reference.as_short_vec_ref()?.clone(), vec![42i16, 3i16]);
         Ok(())
     }
 
     #[test]
     fn test_as_short_vec_mut_error() {
-        let reference = Reference::from(vec![42i32]);
+        let mut reference = Reference::from(vec![42i32]);
         let result = reference.as_short_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1000,7 +941,7 @@ mod tests {
     fn test_as_int_vec_ref() -> Result<()> {
         let original_value = vec![42i32];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.as_int_vec_ref()?.to_vec());
+        assert_eq!(original_value, reference.as_int_vec_ref()?.clone());
         Ok(())
     }
 
@@ -1013,18 +954,18 @@ mod tests {
 
     #[test]
     fn test_as_int_vec_mut() -> Result<()> {
-        let reference = Reference::from(vec![42i32]);
+        let mut reference = Reference::from(vec![42i32]);
         {
-            let mut mutable_reference = reference.as_int_vec_mut()?;
+            let mutable_reference = reference.as_int_vec_mut()?;
             mutable_reference.push(3i32);
         }
-        assert_eq!(reference.as_int_vec_ref()?.to_vec(), vec![42i32, 3i32]);
+        assert_eq!(reference.as_int_vec_ref()?.clone(), vec![42i32, 3i32]);
         Ok(())
     }
 
     #[test]
     fn test_as_int_vec_mut_error() {
-        let reference = Reference::from(vec![42i8]);
+        let mut reference = Reference::from(vec![42i8]);
         let result = reference.as_int_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1041,7 +982,7 @@ mod tests {
     fn test_as_long_vec_ref() -> Result<()> {
         let original_value = vec![42i64];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.as_long_vec_ref()?.to_vec());
+        assert_eq!(original_value, reference.as_long_vec_ref()?.clone());
         Ok(())
     }
 
@@ -1054,18 +995,18 @@ mod tests {
 
     #[test]
     fn test_as_long_vec_mut() -> Result<()> {
-        let reference = Reference::from(vec![42i64]);
+        let mut reference = Reference::from(vec![42i64]);
         {
-            let mut mutable_reference = reference.as_long_vec_mut()?;
+            let mutable_reference = reference.as_long_vec_mut()?;
             mutable_reference.push(3i64);
         }
-        assert_eq!(reference.as_long_vec_ref()?.to_vec(), vec![42i64, 3i64]);
+        assert_eq!(reference.as_long_vec_ref()?.clone(), vec![42i64, 3i64]);
         Ok(())
     }
 
     #[test]
     fn test_as_long_vec_mut_error() {
-        let reference = Reference::from(vec![42i32]);
+        let mut reference = Reference::from(vec![42i32]);
         let result = reference.as_long_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1082,7 +1023,7 @@ mod tests {
     fn test_as_float_vec_ref() -> Result<()> {
         let original_value = vec![42.1f32];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.as_float_vec_ref()?.to_vec());
+        assert_eq!(original_value, reference.as_float_vec_ref()?.clone());
         Ok(())
     }
 
@@ -1095,13 +1036,13 @@ mod tests {
 
     #[test]
     fn test_as_float_vec_mut() -> Result<()> {
-        let reference = Reference::from(vec![42.1f32]);
+        let mut reference = Reference::from(vec![42.1f32]);
         {
-            let mut mutable_reference = reference.as_float_vec_mut()?;
+            let mutable_reference = reference.as_float_vec_mut()?;
             mutable_reference.push(3.45f32);
         }
         assert_eq!(
-            reference.as_float_vec_ref()?.to_vec(),
+            reference.as_float_vec_ref()?.clone(),
             vec![42.1f32, 3.45f32]
         );
         Ok(())
@@ -1109,7 +1050,7 @@ mod tests {
 
     #[test]
     fn test_as_float_vec_mut_error() {
-        let reference = Reference::from(vec![42i32]);
+        let mut reference = Reference::from(vec![42i32]);
         let result = reference.as_float_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1126,7 +1067,7 @@ mod tests {
     fn test_as_double_vec_ref() -> Result<()> {
         let original_value = vec![42.1f64];
         let reference = Reference::from(original_value.clone());
-        assert_eq!(original_value, reference.as_double_vec_ref()?.to_vec());
+        assert_eq!(original_value, reference.as_double_vec_ref()?.clone());
         Ok(())
     }
 
@@ -1139,13 +1080,13 @@ mod tests {
 
     #[test]
     fn test_as_double_vec_mut() -> Result<()> {
-        let reference = Reference::from(vec![42.1f64]);
+        let mut reference = Reference::from(vec![42.1f64]);
         {
-            let mut mutable_reference = reference.as_double_vec_mut()?;
+            let mutable_reference = reference.as_double_vec_mut()?;
             mutable_reference.push(3.45f64);
         }
         assert_eq!(
-            reference.as_double_vec_ref()?.to_vec(),
+            reference.as_double_vec_ref()?.clone(),
             vec![42.1f64, 3.45f64]
         );
         Ok(())
@@ -1153,7 +1094,7 @@ mod tests {
 
     #[test]
     fn test_as_double_vec_mut_error() {
-        let reference = Reference::from(vec![42i32]);
+        let mut reference = Reference::from(vec![42i32]);
         let result = reference.as_double_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1170,11 +1111,11 @@ mod tests {
     #[tokio::test]
     async fn test_as_class_vec_ref() -> Result<()> {
         let original_class = load_class("[Ljava/lang/Object;").await?;
-        let original_value = vec![None];
-        let reference = Reference::from((original_class.clone(), original_value.clone()));
+        let original_value = vec![Value::Object(None)];
+        let reference = Reference::from((original_class.clone(), vec![None]));
         let (class, value) = reference.as_class_vec_ref()?;
         assert_eq!(&original_class, class);
-        assert_eq!(original_value, value.to_vec());
+        assert_eq!(original_value, value.clone());
         Ok(())
     }
 
@@ -1188,19 +1129,19 @@ mod tests {
     #[tokio::test]
     async fn test_as_class_vec_mut() -> Result<()> {
         let object_class = load_class("[Ljava/lang/Object;").await?;
-        let reference = Reference::from((object_class.clone(), vec![]));
+        let mut reference = Reference::from((object_class.clone(), vec![]));
         {
-            let (_class, mut mutable_reference) = reference.as_class_vec_mut()?;
-            mutable_reference.push(None);
+            let (_class, mutable_reference) = reference.as_class_vec_mut()?;
+            mutable_reference.push(Value::Object(None));
         }
         let (_class, array) = reference.as_class_vec_ref()?;
-        assert_eq!(array.to_vec(), vec![None]);
+        assert_eq!(array.clone(), vec![Value::Object(None)]);
         Ok(())
     }
 
     #[test]
     fn test_as_class_vec_mut_error() {
-        let reference = Reference::from(vec![42i32]);
+        let mut reference = Reference::from(vec![42i32]);
         let result = reference.as_class_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1242,11 +1183,11 @@ mod tests {
     async fn test_as_object_mut() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
-        let reference = Reference::from(object.clone());
+        let mut reference = Reference::from(object.clone());
         let result = reference.as_object_mut()?;
         assert_eq!(object, result.clone());
         {
-            let mut object_mut = result;
+            let object_mut = result;
             object_mut.set_value("value", Value::Int(42))?;
         }
         Ok(())
@@ -1255,7 +1196,7 @@ mod tests {
     #[test]
     fn test_as_object_mut_error() {
         let original_value = vec![42i32];
-        let reference = Reference::from(original_value.clone());
+        let mut reference = Reference::from(original_value.clone());
         let result = reference.as_object_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1286,22 +1227,22 @@ mod tests {
         let reference3 = reference1.clone();
         assert!(reference1.ptr_eq(&reference1));
         assert!(!reference1.ptr_eq(&reference2));
-        assert!(reference1.ptr_eq(&reference3));
+        assert!(!reference1.ptr_eq(&reference3));
     }
 
     #[test]
     fn test_clone_byte_array() -> Result<()> {
         let reference = Reference::from(vec![1i8]);
-        let clone = reference.clone();
+        let mut clone = reference.clone();
         assert_eq!(reference, clone);
 
         {
-            let mut array = clone.as_byte_vec_mut()?;
+            let array = clone.as_byte_vec_mut()?;
             if let Some(element) = array.get_mut(0) {
                 *element = 2;
             }
         }
-        assert_eq!(reference, clone);
+        assert_ne!(reference, clone);
         Ok(())
     }
 
@@ -1331,22 +1272,22 @@ mod tests {
         let reference3 = reference1.clone();
         assert!(reference1.ptr_eq(&reference1));
         assert!(!reference1.ptr_eq(&reference2));
-        assert!(reference1.ptr_eq(&reference3));
+        assert!(!reference1.ptr_eq(&reference3));
     }
 
     #[test]
     fn test_clone_char_array() -> Result<()> {
         let reference = Reference::from(vec![1 as char]);
-        let clone = reference.clone();
+        let mut clone = reference.clone();
         assert_eq!(reference, clone);
 
         {
-            let mut array = clone.as_char_vec_mut()?;
+            let array = clone.as_char_vec_mut()?;
             if let Some(element) = array.get_mut(0) {
                 *element = 2;
             }
         }
-        assert_eq!(reference, clone);
+        assert_ne!(reference, clone);
         Ok(())
     }
 
@@ -1376,22 +1317,22 @@ mod tests {
         let reference3 = reference1.clone();
         assert!(reference1.ptr_eq(&reference1));
         assert!(!reference1.ptr_eq(&reference2));
-        assert!(reference1.ptr_eq(&reference3));
+        assert!(!reference1.ptr_eq(&reference3));
     }
 
     #[test]
     fn test_clone_short_array() -> Result<()> {
         let reference = Reference::from(vec![1i16]);
-        let clone = reference.clone();
+        let mut clone = reference.clone();
         assert_eq!(reference, clone);
 
         {
-            let mut array = clone.as_short_vec_mut()?;
+            let array = clone.as_short_vec_mut()?;
             if let Some(element) = array.get_mut(0) {
                 *element = 2;
             }
         }
-        assert_eq!(reference, clone);
+        assert_ne!(reference, clone);
         Ok(())
     }
 
@@ -1421,22 +1362,22 @@ mod tests {
         let reference3 = reference1.clone();
         assert!(reference1.ptr_eq(&reference1));
         assert!(!reference1.ptr_eq(&reference2));
-        assert!(reference1.ptr_eq(&reference3));
+        assert!(!reference1.ptr_eq(&reference3));
     }
 
     #[test]
     fn test_clone_int_array() -> Result<()> {
         let reference = Reference::from(vec![1i32]);
-        let clone = reference.clone();
+        let mut clone = reference.clone();
         assert_eq!(reference, clone);
 
         {
-            let mut array = clone.as_int_vec_mut()?;
+            let array = clone.as_int_vec_mut()?;
             if let Some(element) = array.get_mut(0) {
                 *element = 2;
             }
         }
-        assert_eq!(reference, clone);
+        assert_ne!(reference, clone);
         Ok(())
     }
 
@@ -1466,22 +1407,22 @@ mod tests {
         let reference3 = reference1.clone();
         assert!(reference1.ptr_eq(&reference1));
         assert!(!reference1.ptr_eq(&reference2));
-        assert!(reference1.ptr_eq(&reference3));
+        assert!(!reference1.ptr_eq(&reference3));
     }
 
     #[test]
     fn test_clone_long_array() -> Result<()> {
         let reference = Reference::from(vec![1i64]);
-        let clone = reference.clone();
+        let mut clone = reference.clone();
         assert_eq!(reference, clone);
 
         {
-            let mut array = clone.as_long_vec_mut()?;
+            let array = clone.as_long_vec_mut()?;
             if let Some(element) = array.get_mut(0) {
                 *element = 2;
             }
         }
-        assert_eq!(reference, clone);
+        assert_ne!(reference, clone);
         Ok(())
     }
 
@@ -1511,22 +1452,22 @@ mod tests {
         let reference3 = reference1.clone();
         assert!(reference1.ptr_eq(&reference1));
         assert!(!reference1.ptr_eq(&reference2));
-        assert!(reference1.ptr_eq(&reference3));
+        assert!(!reference1.ptr_eq(&reference3));
     }
 
     #[test]
     fn test_clone_float_array() -> Result<()> {
         let reference = Reference::from(vec![1.0f32]);
-        let clone = reference.clone();
+        let mut clone = reference.clone();
         assert_eq!(reference, clone);
 
         {
-            let mut array = clone.as_float_vec_mut()?;
+            let array = clone.as_float_vec_mut()?;
             if let Some(element) = array.get_mut(0) {
                 *element = 2.0;
             }
         }
-        assert_eq!(reference, clone);
+        assert_ne!(reference, clone);
         Ok(())
     }
 
@@ -1556,22 +1497,22 @@ mod tests {
         let reference3 = reference1.clone();
         assert!(reference1.ptr_eq(&reference1));
         assert!(!reference1.ptr_eq(&reference2));
-        assert!(reference1.ptr_eq(&reference3));
+        assert!(!reference1.ptr_eq(&reference3));
     }
 
     #[test]
     fn test_clone_double_array() -> Result<()> {
         let reference = Reference::from(vec![1.0f64]);
-        let clone = reference.clone();
+        let mut clone = reference.clone();
         assert_eq!(reference, clone);
 
         {
-            let mut array = clone.as_double_vec_mut()?;
+            let array = clone.as_double_vec_mut()?;
             if let Some(element) = array.get_mut(0) {
                 *element = 2.0;
             }
         }
-        assert_eq!(reference, clone);
+        assert_ne!(reference, clone);
         Ok(())
     }
 
@@ -1606,7 +1547,7 @@ mod tests {
         let reference3 = reference1.clone();
         assert!(reference1.ptr_eq(&reference1));
         assert!(!reference1.ptr_eq(&reference2));
-        assert!(reference1.ptr_eq(&reference3));
+        assert!(!reference1.ptr_eq(&reference3));
         Ok(())
     }
 
@@ -1614,16 +1555,16 @@ mod tests {
     async fn test_clone_reference_array() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
         let reference = Reference::from((class.clone(), vec![None]));
-        let clone = reference.clone();
+        let mut clone = reference.clone();
         assert_eq!(reference, clone);
 
         {
-            let (_class, mut array) = clone.as_class_vec_mut()?;
+            let (_class, array) = clone.as_class_vec_mut()?;
             if let Some(element) = array.get_mut(0) {
-                *element = Some(Reference::from(vec![1i8]));
+                *element = Value::from(vec![1i8]);
             }
         }
-        assert_eq!(reference, clone);
+        assert_ne!(reference, clone);
         Ok(())
     }
 
@@ -1658,7 +1599,7 @@ mod tests {
         let reference3 = reference1.clone();
         assert!(reference1.ptr_eq(&reference1));
         assert!(!reference1.ptr_eq(&reference2));
-        assert!(reference1.ptr_eq(&reference3));
+        assert!(!reference1.ptr_eq(&reference3));
         Ok(())
     }
 
@@ -1668,12 +1609,12 @@ mod tests {
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
         let reference = Reference::from(object);
-        let clone = reference.clone();
+        let mut clone = reference.clone();
         assert_eq!(reference, clone);
 
-        let mut cloned_object = clone.as_object_mut()?;
+        let cloned_object = clone.as_object_mut()?;
         cloned_object.set_value("value", Value::Int(2))?;
-        assert_eq!(reference, clone);
+        assert_ne!(reference, clone);
         Ok(())
     }
 

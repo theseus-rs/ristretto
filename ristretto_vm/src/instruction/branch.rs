@@ -274,7 +274,9 @@ pub(crate) fn ifnonnull(stack: &mut OperandStack, address: u16) -> Result<Execut
 mod test {
     use super::*;
     use crate::java_object::JavaObject;
+    use parking_lot::RwLock;
     use ristretto_classloader::Value;
+    use ristretto_gc::Gc;
 
     #[test]
     fn test_ifeq_equal() -> Result<()> {
@@ -686,9 +688,9 @@ mod test {
 
         let stack = &mut OperandStack::with_max_size(2);
         let class1 = class1.as_reference()?.clone();
-        stack.push_object(Some(class1))?;
+        stack.push_object(Some(Gc::new(RwLock::new(class1))))?;
         let class2 = class2.as_reference()?.clone();
-        stack.push_object(Some(class2))?;
+        stack.push_object(Some(Gc::new(RwLock::new(class2))))?;
         let result = if_acmpne(stack, 3)?;
         assert_eq!(ContinueAtPosition(3), result);
         Ok(())

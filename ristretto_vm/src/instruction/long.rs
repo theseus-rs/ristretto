@@ -165,31 +165,32 @@ pub(crate) fn lstore_3(
 #[inline]
 pub(crate) fn laload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
-    match stack.pop_object()? {
-        None => Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::LongArray(array)) => {
-            let array = array.read();
-            let original_index = index;
-            let length = array.len();
-            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
-                index: original_index,
-                length,
-            })?;
-            let Some(value) = array.get(index) else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: original_index,
-                    length,
-                }
-                .into());
-            };
-            stack.push_long(*value)?;
-            Ok(Continue)
-        }
-        Some(object) => Err(InvalidStackValue {
+    let Some(reference) = stack.pop_object()? else {
+        return Err(NullPointerException("array cannot be null".to_string()).into());
+    };
+    let guard = reference.read();
+    let Reference::LongArray(array) = &*guard else {
+        return Err(InvalidStackValue {
             expected: "long array".to_string(),
-            actual: object.to_string(),
-        }),
-    }
+            actual: guard.to_string(),
+        });
+    };
+
+    let original_index = index;
+    let length = array.len();
+    let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+        index: original_index,
+        length,
+    })?;
+    let Some(value) = array.get(index) else {
+        return Err(ArrayIndexOutOfBoundsException {
+            index: original_index,
+            length,
+        }
+        .into());
+    };
+    stack.push_long(*value)?;
+    Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.lastore>
@@ -197,32 +198,33 @@ pub(crate) fn laload(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn lastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
     let index = stack.pop_int()?;
-    match stack.pop_object()? {
-        None => Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::LongArray(array)) => {
-            let mut array = array.write();
-            let length = array.capacity();
-            let original_index = index;
-            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
-                index: original_index,
-                length,
-            })?;
-            if let Some(element) = array.get_mut(index) {
-                *element = value;
-            } else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: original_index,
-                    length,
-                }
-                .into());
-            }
-            Ok(Continue)
-        }
-        Some(object) => Err(InvalidStackValue {
+    let Some(reference) = stack.pop_object()? else {
+        return Err(NullPointerException("array cannot be null".to_string()).into());
+    };
+    let mut guard = reference.write();
+    let Reference::LongArray(array) = &mut *guard else {
+        return Err(InvalidStackValue {
             expected: "long array".to_string(),
-            actual: object.to_string(),
-        }),
+            actual: guard.to_string(),
+        });
+    };
+
+    let length = array.capacity();
+    let original_index = index;
+    let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+        index: original_index,
+        length,
+    })?;
+    if let Some(element) = array.get_mut(index) {
+        *element = value;
+    } else {
+        return Err(ArrayIndexOutOfBoundsException {
+            index: original_index,
+            length,
+        }
+        .into());
     }
+    Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.ladd>

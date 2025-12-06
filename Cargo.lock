@@ -2247,6 +2247,7 @@ version = "0.26.0"
 dependencies = [
  "criterion",
  "dashmap",
+ "parking_lot",
  "rayon",
  "sysinfo",
  "test-log",

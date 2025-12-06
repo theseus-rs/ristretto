@@ -8,6 +8,7 @@ use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{BaseType, FieldAccessFlags, JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
+use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 use zerocopy::transmute_ref;
@@ -267,13 +268,13 @@ pub(crate) async fn compare_and_set_reference(
     let offset = parameters.pop_long()?;
     let offset = usize::try_from(offset)?;
     let reference = parameters.pop()?;
-    let reference = reference.as_reference()?;
+    let mut reference = reference.as_reference_mut()?;
 
-    let result = match reference {
+    let result = match &mut *reference {
         Reference::Array(object_array) => {
             let offset = offset / REFERENCE_SIZE;
-            let mut elements = object_array.elements.write();
-            let Some(reference) = elements.get(offset) else {
+            let elements = &mut object_array.elements;
+            let Some(value) = elements.get(offset) else {
                 return Err(InternalError(
                     "compareAndSetReference: Invalid reference index".to_string(),
                 ));
@@ -285,21 +286,33 @@ pub(crate) async fn compare_and_set_reference(
                 });
             };
 
-            if reference == expected_reference {
+            let Value::Object(reference) = value else {
+                return Err(InvalidOperand {
+                    expected: "object".to_string(),
+                    actual: value.to_string(),
+                });
+            };
+
+            let equal = match (reference, expected_reference) {
+                (Some(r1), Some(r2)) => Gc::ptr_eq(r1, r2),
+                (None, None) => true,
+                _ => false,
+            };
+
+            if equal {
                 let Value::Object(x_reference) = x else {
                     return Err(InvalidOperand {
                         expected: "object".to_string(),
                         actual: x.to_string(),
                     });
                 };
-                elements[offset] = x_reference;
+                elements[offset] = Value::Object(x_reference);
                 1
             } else {
                 0
             }
         }
         Reference::Object(object) => {
-            let mut object = object.write();
             let field_name = object.class().field_name(offset)?;
             let value = object.value(&field_name)?;
             if value == expected {
@@ -445,9 +458,8 @@ fn get_reference_type(
     };
 
     let offset = usize::try_from(offset)?;
-    let value = match &reference {
+    let value = match &*reference.read() {
         Reference::ByteArray(array) => {
-            let array = array.read();
             let array: &[u8] = transmute_ref!(array.as_slice());
             let Some(base_type) = base_type else {
                 return Err(InternalError(
@@ -517,7 +529,6 @@ fn get_reference_type(
             }
         }
         Reference::CharArray(array) => {
-            let array = array.read();
             let offset = offset / CHAR_SIZE;
             let Some(char) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -529,7 +540,6 @@ fn get_reference_type(
             Value::Int(i32::from(*char))
         }
         Reference::ShortArray(array) => {
-            let array = array.read();
             let offset = offset / SHORT_SIZE;
             let Some(short) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -541,7 +551,6 @@ fn get_reference_type(
             Value::Int(i32::from(*short))
         }
         Reference::IntArray(array) => {
-            let array = array.read();
             let offset = offset / INT_SIZE;
             let Some(int) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -553,7 +562,6 @@ fn get_reference_type(
             Value::Int(*int)
         }
         Reference::LongArray(array) => {
-            let array = array.read();
             let offset = offset / LONG_SIZE;
             let Some(long) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -565,7 +573,6 @@ fn get_reference_type(
             Value::Long(*long)
         }
         Reference::FloatArray(array) => {
-            let array = array.read();
             let offset = offset / FLOAT_SIZE;
             let Some(float) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -577,7 +584,6 @@ fn get_reference_type(
             Value::Float(*float)
         }
         Reference::DoubleArray(array) => {
-            let array = array.read();
             let offset = offset / DOUBLE_SIZE;
             let Some(double) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -589,19 +595,18 @@ fn get_reference_type(
             Value::Double(*double)
         }
         Reference::Array(object_array) => {
-            let array = object_array.elements.read();
+            let array = &object_array.elements;
             let offset = offset / REFERENCE_SIZE;
-            let Some(reference) = array.get(offset) else {
+            let Some(value) = array.get(offset) else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
                     length: array.len(),
                 }
                 .into());
             };
-            Value::Object(reference.clone())
+            value.clone()
         }
         Reference::Object(object) => {
-            let object = object.read();
             let class = object.class();
             let field_name = class.field_name(offset)?;
             let field = class.declared_field(&field_name)?;
@@ -645,7 +650,7 @@ fn put_reference_type(
         }
     }
     let offset = parameters.pop_long()?;
-    let Some(mut reference) = parameters.pop_reference()? else {
+    let Some(reference) = parameters.pop_reference()? else {
         return Err(InternalError(
             "putReferenceType: Invalid reference".to_string(),
         ));
@@ -653,7 +658,7 @@ fn put_reference_type(
 
     let offset = usize::try_from(offset)?;
 
-    match &mut reference {
+    match &mut *reference.write() {
         Reference::ByteArray(array) => {
             let bytes: &[u8] = match (base_type, &value) {
                 (Some(BaseType::Boolean) | Some(BaseType::Byte), Value::Int(v)) => {
@@ -679,7 +684,6 @@ fn put_reference_type(
                 }
             };
 
-            let mut array = array.write();
             let bytes: &[i8] = bytemuck::cast_slice(bytes);
             let Some(end) = offset.checked_add(bytes.len()) else {
                 return Err(ArrayIndexOutOfBoundsException {
@@ -707,7 +711,6 @@ fn put_reference_type(
                 }
             };
             let offset = offset / CHAR_SIZE;
-            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = char_value;
             } else {
@@ -728,7 +731,6 @@ fn put_reference_type(
                 }
             };
             let offset = offset / SHORT_SIZE;
-            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = short_value;
             } else {
@@ -746,7 +748,6 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / INT_SIZE;
-            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = int_value;
             } else {
@@ -764,7 +765,6 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / LONG_SIZE;
-            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = long_value;
             } else {
@@ -782,7 +782,6 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / FLOAT_SIZE;
-            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = float_value;
             } else {
@@ -800,7 +799,6 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / DOUBLE_SIZE;
-            let mut array = array.write();
             if let Some(element) = array.get_mut(offset) {
                 *element = double_value;
             } else {
@@ -818,9 +816,9 @@ fn put_reference_type(
                 ));
             };
             let offset = offset / REFERENCE_SIZE;
-            let mut array = object_array.elements.write();
+            let array = &mut object_array.elements;
             if let Some(element) = array.get_mut(offset) {
-                *element = object_value;
+                *element = Value::Object(object_value);
             } else {
                 return Err(ArrayIndexOutOfBoundsException {
                     index: i32::try_from(offset)?,
@@ -830,7 +828,6 @@ fn put_reference_type(
             }
         }
         Reference::Object(object) => {
-            let mut object = object.write();
             let class = object.class();
             let field_name = class.field_name(offset)?;
             let field = class.declared_field(&field_name)?;

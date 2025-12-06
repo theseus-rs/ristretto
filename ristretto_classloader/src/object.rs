@@ -279,14 +279,20 @@ impl Object {
                 continue;
             }
             match (self_value, other_value) {
-                (
-                    Value::Object(Some(Reference::Object(self_object))),
-                    Value::Object(Some(Reference::Object(other_object))),
-                ) => {
-                    let self_object = self_object.read();
-                    let other_object = other_object.read();
-                    if !self_object.equal_with_visited(&other_object, visited) {
-                        return false;
+                (Value::Object(Some(self_ref)), Value::Object(Some(other_ref))) => {
+                    let self_ref = self_ref.read();
+                    let other_ref = other_ref.read();
+                    match (&*self_ref, &*other_ref) {
+                        (Reference::Object(self_object), Reference::Object(other_object)) => {
+                            if !self_object.equal_with_visited(other_object, visited) {
+                                return false;
+                            }
+                        }
+                        _ => {
+                            if *self_value != *other_value {
+                                return false;
+                            }
+                        }
                     }
                 }
                 _ => {
@@ -495,18 +501,17 @@ impl Object {
                 "Expected an object field value".to_string(),
             ));
         };
-        match reference {
+        let reference = reference.read();
+        match &*reference {
             ByteArray(bytes) => {
                 let coder = self.value("coder")?.as_i32()?;
                 if coder == 0 {
                     // Latin-1 encoded string
-                    let bytes = bytes.read();
                     #[expect(clippy::cast_sign_loss)]
                     let value = bytes.iter().map(|&byte| char::from(byte as u8)).collect();
                     Ok(value)
                 } else {
                     // UTF-16 encoded string
-                    let bytes = bytes.read();
                     #[expect(clippy::cast_sign_loss)]
                     let code_units = bytes
                         .chunks(2)
@@ -518,9 +523,8 @@ impl Object {
                 }
             }
             CharArray(bytes) => {
-                let bytes = bytes.read();
                 let value =
-                    String::from_utf16(&bytes).map_err(|error| ParseError(error.to_string()))?;
+                    String::from_utf16(bytes).map_err(|error| ParseError(error.to_string()))?;
                 Ok(value)
             }
             _ => {

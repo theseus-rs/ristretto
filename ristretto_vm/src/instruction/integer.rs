@@ -199,31 +199,32 @@ pub(crate) fn istore_3(
 #[inline]
 pub(crate) fn iaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
-    match stack.pop_object()? {
-        None => Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::IntArray(array)) => {
-            let array = array.read();
-            let original_index = index;
-            let length = array.len();
-            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
-                index: original_index,
-                length,
-            })?;
-            let Some(value) = array.get(index) else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: original_index,
-                    length,
-                }
-                .into());
-            };
-            stack.push_int(*value)?;
-            Ok(Continue)
-        }
-        Some(object) => Err(InvalidStackValue {
+    let Some(reference) = stack.pop_object()? else {
+        return Err(NullPointerException("array cannot be null".to_string()).into());
+    };
+    let guard = reference.read();
+    let Reference::IntArray(array) = &*guard else {
+        return Err(InvalidStackValue {
             expected: "int array".to_string(),
-            actual: object.to_string(),
-        }),
-    }
+            actual: guard.to_string(),
+        });
+    };
+
+    let original_index = index;
+    let length = array.len();
+    let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+        index: original_index,
+        length,
+    })?;
+    let Some(value) = array.get(index) else {
+        return Err(ArrayIndexOutOfBoundsException {
+            index: original_index,
+            length,
+        }
+        .into());
+    };
+    stack.push_int(*value)?;
+    Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iastore>
@@ -231,32 +232,33 @@ pub(crate) fn iaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
 pub(crate) fn iastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     let index = stack.pop_int()?;
-    match stack.pop_object()? {
-        None => Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::IntArray(array)) => {
-            let mut array = array.write();
-            let length = array.capacity();
-            let original_index = index;
-            let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
-                index: original_index,
-                length,
-            })?;
-            if let Some(element) = array.get_mut(index) {
-                *element = value;
-            } else {
-                return Err(ArrayIndexOutOfBoundsException {
-                    index: original_index,
-                    length,
-                }
-                .into());
-            }
-            Ok(Continue)
-        }
-        Some(object) => Err(InvalidStackValue {
+    let Some(reference) = stack.pop_object()? else {
+        return Err(NullPointerException("array cannot be null".to_string()).into());
+    };
+    let mut guard = reference.write();
+    let Reference::IntArray(array) = &mut *guard else {
+        return Err(InvalidStackValue {
             expected: "int array".to_string(),
-            actual: object.to_string(),
-        }),
+            actual: guard.to_string(),
+        });
+    };
+
+    let length = array.capacity();
+    let original_index = index;
+    let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
+        index: original_index,
+        length,
+    })?;
+    if let Some(element) = array.get_mut(index) {
+        *element = value;
+    } else {
+        return Err(ArrayIndexOutOfBoundsException {
+            index: original_index,
+            length,
+        }
+        .into());
     }
+    Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.iadd>

@@ -6,11 +6,9 @@ use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
-use parking_lot::RwLock;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{ObjectArray, Reference, Value};
-use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -31,77 +29,61 @@ pub(crate) async fn clone(
         ));
     };
 
-    let reference = match &reference {
-        Reference::ByteArray(array) => {
-            let array = array.read();
-            Reference::ByteArray(Gc::new(RwLock::new(array.clone())))
+    let object_to_clone = {
+        let guard = reference.read();
+        if let Reference::Object(object) = &*guard {
+            Some(object.clone())
+        } else {
+            None
         }
-        Reference::CharArray(array) => {
-            let array = array.read();
-            Reference::CharArray(Gc::new(RwLock::new(array.clone())))
+    };
+
+    if let Some(object) = object_to_clone {
+        let object_class = object.class().clone();
+        if object_class.name() == "java/lang/Class" {
+            return Ok(Some(Value::from(reference.clone())));
         }
-        Reference::ShortArray(array) => {
-            let array = array.read();
-            Reference::ShortArray(Gc::new(RwLock::new(array.clone())))
+        let cloneable_class = thread.class("java.lang.Cloneable").await?;
+        let implements_cloneable = cloneable_class
+            .is_assignable_from(&thread, &object_class)
+            .await?;
+        if !implements_cloneable {
+            let class_name = object_class.name();
+            return Err(CloneNotSupportedException(format!(
+                "class {class_name} does not implement Cloneable"
+            ))
+            .into());
         }
-        Reference::IntArray(array) => {
-            let array = array.read();
-            Reference::IntArray(Gc::new(RwLock::new(array.clone())))
-        }
-        Reference::LongArray(array) => {
-            let array = array.read();
-            Reference::LongArray(Gc::new(RwLock::new(array.clone())))
-        }
-        Reference::FloatArray(array) => {
-            let array = array.read();
-            Reference::FloatArray(Gc::new(RwLock::new(array.clone())))
-        }
-        Reference::DoubleArray(array) => {
-            let array = array.read();
-            Reference::DoubleArray(Gc::new(RwLock::new(array.clone())))
-        }
+        let value = Value::from(Reference::Object(object.clone()));
+        return Ok(Some(value));
+    }
+
+    let guard = reference.read();
+    let reference = match &*guard {
+        Reference::ByteArray(array) => Reference::ByteArray(array.clone()),
+        Reference::CharArray(array) => Reference::CharArray(array.clone()),
+        Reference::ShortArray(array) => Reference::ShortArray(array.clone()),
+        Reference::IntArray(array) => Reference::IntArray(array.clone()),
+        Reference::LongArray(array) => Reference::LongArray(array.clone()),
+        Reference::FloatArray(array) => Reference::FloatArray(array.clone()),
+        Reference::DoubleArray(array) => Reference::DoubleArray(array.clone()),
         Reference::Array(object_array) => {
-            let array = object_array.elements.read();
-            let array = array.clone();
-            let mut cloned_values = Vec::with_capacity(array.len());
-            for value in array {
-                match value {
-                    Some(reference) => cloned_values.push(Some(reference.clone())),
-                    None => cloned_values.push(value),
+            let elements = object_array.elements.clone();
+            let mut cloned_values = Vec::with_capacity(elements.len());
+            for value in elements {
+                if let Value::Object(Some(ref reference)) = value {
+                    cloned_values.push(Value::Object(Some(reference.clone())))
+                } else {
+                    cloned_values.push(value);
                 }
             }
             let object_array = ObjectArray {
                 class: object_array.class.clone(),
-                elements: Gc::new(RwLock::new(cloned_values)),
+                elements: cloned_values,
             };
             Reference::Array(object_array)
         }
-        Reference::Object(object) => {
-            let object_class = {
-                let object = object.read();
-                object.class().clone()
-            };
-            if object_class.name() == "java/lang/Class" {
-                reference.clone()
-            } else {
-                let cloneable_class = thread.class("java.lang.Cloneable").await?;
-                let implements_cloneable = cloneable_class
-                    .is_assignable_from(&thread, &object_class)
-                    .await?;
-                if !implements_cloneable {
-                    let class_name = object_class.name();
-                    return Err(CloneNotSupportedException(format!(
-                        "class {class_name} does not implement Cloneable"
-                    ))
-                    .into());
-                }
-                let object = {
-                    let object = object.read();
-                    object.clone()
-                };
-                Reference::Object(Gc::new(RwLock::new(object.clone())))
-            }
-        }
+        Reference::Object(_) => unreachable!("Handled above"),
     };
     let value = Value::from(reference);
     Ok(Some(value))
@@ -117,8 +99,11 @@ pub(crate) async fn get_class(
         return Err(InternalError("no object reference defined".to_string()));
     };
 
-    let class_name = object.class_name()?;
-    let class = thread.class(class_name).await?;
+    let class_name = {
+        let guard = object.read();
+        guard.class_name()?.to_string()
+    };
+    let class = thread.class(&class_name).await?;
     let class = class.to_object(&thread).await?;
     Ok(Some(class))
 }
@@ -132,7 +117,8 @@ pub(crate) async fn hash_code(
     let Some(reference) = parameters.pop_reference()? else {
         return Err(InternalError("no object reference defined".to_string()));
     };
-    let hash_code = reference.hash_code();
+    let guard = reference.read();
+    let hash_code = guard.hash_code();
     #[expect(clippy::cast_possible_truncation)]
     let hash_code = (hash_code ^ (hash_code >> 32)) as u32;
     #[expect(clippy::cast_possible_wrap)]

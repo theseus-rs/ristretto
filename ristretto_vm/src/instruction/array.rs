@@ -49,7 +49,7 @@ pub(crate) async fn anewarray(
     let class = thread.class(array_class_name.as_str()).await?;
     let count = stack.pop_int()?;
     let count = usize::try_from(count)?;
-    let array = Value::from((class, vec![None; count]));
+    let array = Value::try_from((class, vec![Value::Object(None); count]))?;
     stack.push(array)?;
     Ok(Continue)
 }
@@ -57,41 +57,20 @@ pub(crate) async fn anewarray(
 /// See: <https://docs.oracle.com/javase/specs/jvms/se24/html/jvms-6.html#jvms-6.5.arraylength>
 #[inline]
 pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
-    let length = match stack.pop_object()? {
-        None => return Err(NullPointerException("array cannot be null".to_string()).into()),
-        Some(Reference::ByteArray(array)) => {
-            let guard = array.read();
-            guard.len()
-        }
-        Some(Reference::CharArray(array)) => {
-            let guard = array.read();
-            guard.len()
-        }
-        Some(Reference::FloatArray(array)) => {
-            let guard = array.read();
-            guard.len()
-        }
-        Some(Reference::DoubleArray(array)) => {
-            let guard = array.read();
-            guard.len()
-        }
-        Some(Reference::ShortArray(array)) => {
-            let guard = array.read();
-            guard.len()
-        }
-        Some(Reference::IntArray(array)) => {
-            let guard = array.read();
-            guard.len()
-        }
-        Some(Reference::LongArray(array)) => {
-            let guard = array.read();
-            guard.len()
-        }
-        Some(Reference::Array(object_array)) => {
-            let guard = object_array.elements.read();
-            guard.len()
-        }
-        Some(object) => {
+    let Some(reference) = stack.pop_object()? else {
+        return Err(NullPointerException("array cannot be null".to_string()).into());
+    };
+    let guard = reference.read();
+    let length = match &*guard {
+        Reference::ByteArray(array) => array.len(),
+        Reference::CharArray(array) => array.len(),
+        Reference::FloatArray(array) => array.len(),
+        Reference::DoubleArray(array) => array.len(),
+        Reference::ShortArray(array) => array.len(),
+        Reference::IntArray(array) => array.len(),
+        Reference::LongArray(array) => array.len(),
+        Reference::Array(object_array) => object_array.elements.len(),
+        object => {
             return Err(InvalidStackValue {
                 expected: "array".to_string(),
                 actual: object.to_string(),
@@ -129,7 +108,7 @@ pub(crate) async fn multianewarray(
         create_multidimensional_array(&thread, class.array_component_type(), &dimension_sizes, 0)
             .await?;
 
-    stack.push_object(Some(array))?;
+    stack.push(array)?;
     Ok(Continue)
 }
 
@@ -138,7 +117,7 @@ async fn create_multidimensional_array(
     component_type: &str,
     dimension_sizes: &[usize],
     depth: usize,
-) -> Result<Reference> {
+) -> Result<Value> {
     let current_size = dimension_sizes[depth];
 
     if depth == dimension_sizes.len() - 1 {
@@ -147,20 +126,21 @@ async fn create_multidimensional_array(
             // Primitive array
             let base_type = BaseType::parse(component_type.chars().next().unwrap_or_default())?;
             let array = match base_type {
-                BaseType::Char => Reference::from(vec![0 as char; current_size]),
-                BaseType::Float => Reference::from(vec![0.0f32; current_size]),
-                BaseType::Double => Reference::from(vec![0.0f64; current_size]),
-                BaseType::Boolean | BaseType::Byte => Reference::from(vec![0i8; current_size]),
-                BaseType::Short => Reference::from(vec![0i16; current_size]),
-                BaseType::Int => Reference::from(vec![0i32; current_size]),
-                BaseType::Long => Reference::from(vec![0i64; current_size]),
+                BaseType::Char => Value::from(vec![0 as char; current_size]),
+                BaseType::Float => Value::from(vec![0.0f32; current_size]),
+                BaseType::Double => Value::from(vec![0.0f64; current_size]),
+                BaseType::Boolean | BaseType::Byte => Value::from(vec![0i8; current_size]),
+                BaseType::Short => Value::from(vec![0i16; current_size]),
+                BaseType::Int => Value::from(vec![0i32; current_size]),
+                BaseType::Long => Value::from(vec![0i64; current_size]),
             };
             Ok(array)
         } else {
             // Object array
             let array_class_name = format!("[L{component_type};");
             let array_class = thread.class(&array_class_name).await?;
-            Ok(Reference::from((array_class, vec![None; current_size])))
+            let array = Value::try_from((array_class, vec![Value::Object(None); current_size]))?;
+            Ok(array)
         }
     } else {
         // This is not the innermost dimension; create array of arrays
@@ -173,7 +153,7 @@ async fn create_multidimensional_array(
                 depth + 1,
             ))
             .await?;
-            elements.push(Some(sub_array));
+            elements.push(sub_array);
         }
 
         // Build the array class name for this dimension
@@ -187,7 +167,8 @@ async fn create_multidimensional_array(
         }
 
         let array_class = thread.class(&array_class_name).await?;
-        Ok(Reference::from((array_class, elements)))
+        let array = Value::try_from((array_class, elements))?;
+        Ok(array)
     }
 }
 
@@ -198,7 +179,6 @@ mod tests {
     use crate::frame::ExecutionResult::Continue;
     use crate::java_object::JavaObject;
     use ristretto_classfile::attributes::ArrayType;
-    use ristretto_classloader::Value;
     use std::sync::Arc;
 
     #[test]
@@ -208,10 +188,8 @@ mod tests {
         let result = newarray(stack, &ArrayType::Boolean)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
-        assert!(matches!(
-            object,
-            Value::Object(Some(Reference::ByteArray(_)))
-        ));
+        let reference = object.as_reference()?;
+        assert!(matches!(*reference, Reference::ByteArray(_)));
         Ok(())
     }
 
@@ -222,10 +200,8 @@ mod tests {
         let result = newarray(stack, &ArrayType::Byte)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
-        assert!(matches!(
-            object,
-            Value::Object(Some(Reference::ByteArray(_)))
-        ));
+        let reference = object.as_reference()?;
+        assert!(matches!(*reference, Reference::ByteArray(_)));
         Ok(())
     }
 
@@ -236,10 +212,8 @@ mod tests {
         let result = newarray(stack, &ArrayType::Char)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
-        assert!(matches!(
-            object,
-            Value::Object(Some(Reference::CharArray(_)))
-        ));
+        let reference = object.as_reference()?;
+        assert!(matches!(*reference, Reference::CharArray(_)));
         Ok(())
     }
 
@@ -250,10 +224,8 @@ mod tests {
         let result = newarray(stack, &ArrayType::Double)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
-        assert!(matches!(
-            object,
-            Value::Object(Some(Reference::DoubleArray(_)))
-        ));
+        let reference = object.as_reference()?;
+        assert!(matches!(*reference, Reference::DoubleArray(_)));
         Ok(())
     }
 
@@ -264,10 +236,8 @@ mod tests {
         let result = newarray(stack, &ArrayType::Float)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
-        assert!(matches!(
-            object,
-            Value::Object(Some(Reference::FloatArray(_)))
-        ));
+        let reference = object.as_reference()?;
+        assert!(matches!(*reference, Reference::FloatArray(_)));
         Ok(())
     }
 
@@ -278,10 +248,8 @@ mod tests {
         let result = newarray(stack, &ArrayType::Int)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
-        assert!(matches!(
-            object,
-            Value::Object(Some(Reference::IntArray(_)))
-        ));
+        let reference = object.as_reference()?;
+        assert!(matches!(*reference, Reference::IntArray(_)));
         Ok(())
     }
 
@@ -292,10 +260,8 @@ mod tests {
         let result = newarray(stack, &ArrayType::Long)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
-        assert!(matches!(
-            object,
-            Value::Object(Some(Reference::LongArray(_)))
-        ));
+        let reference = object.as_reference()?;
+        assert!(matches!(*reference, Reference::LongArray(_)));
         Ok(())
     }
 
@@ -306,10 +272,8 @@ mod tests {
         let result = newarray(stack, &ArrayType::Short)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
-        assert!(matches!(
-            object,
-            Value::Object(Some(Reference::ShortArray(_)))
-        ));
+        let reference = object.as_reference()?;
+        assert!(matches!(*reference, Reference::ShortArray(_)));
         Ok(())
     }
 
@@ -323,9 +287,8 @@ mod tests {
         stack.push_int(0)?;
         let result = anewarray(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
-        let Value::Object(Some(reference)) = stack.pop()? else {
-            panic!("expected reference");
-        };
+        let object = stack.pop()?;
+        let reference = object.as_reference()?;
         assert_eq!("[Ljava/lang/Object;", reference.class_name()?);
         Ok(())
     }
@@ -340,9 +303,8 @@ mod tests {
         stack.push_int(0)?;
         let result = anewarray(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
-        let Value::Object(Some(reference)) = stack.pop()? else {
-            panic!("expected reference");
-        };
+        let object = stack.pop()?;
+        let reference = object.as_reference()?;
         assert_eq!("[[Ljava/lang/Object;", reference.class_name()?);
         Ok(())
     }
@@ -496,10 +458,8 @@ mod tests {
         let result = multianewarray(&frame, stack, class_index, 1).await?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
-        assert!(matches!(
-            object,
-            Value::Object(Some(ref reference)) if reference.class_name()? == class_name
-        ));
+        let reference = object.as_reference()?;
+        assert_eq!(class_name, reference.class_name()?);
         Ok(())
     }
 
@@ -559,10 +519,8 @@ mod tests {
         let result = multianewarray(&frame, stack, class_index, 5).await?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
-        assert!(matches!(
-            object,
-            Value::Object(Some(ref reference)) if reference.class_name()? == class_name
-        ));
+        let reference = object.as_reference()?;
+        assert_eq!(class_name, reference.class_name()?);
         Ok(())
     }
 }

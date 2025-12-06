@@ -5,9 +5,11 @@ use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use parking_lot::RwLock;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11};
 use ristretto_classloader::{Class, Reference, Value};
+use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
 use std::io::Cursor;
 use std::sync::Arc;
@@ -18,7 +20,7 @@ use zerocopy::transmute_ref;
 /// The `defineClass0` method is used by Java 8 and earlier versions.
 async fn class_object_from_bytes(
     thread: &Arc<Thread>,
-    source_file: Option<Reference>,
+    source_file: Option<Gc<RwLock<Reference>>>,
     bytes: &[u8],
     offset: i32,
     length: i32,
@@ -46,7 +48,7 @@ async fn class_object_from_bytes(
     }
 
     if let Some(source_file) = source_file {
-        let _source_file = source_file.as_string()?;
+        let _source_file = source_file.read().as_string()?;
         // TODO: implement setting the source file
     }
 
@@ -75,7 +77,7 @@ pub(crate) async fn define_class_0_0(
     };
     let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
-        let expected_class_name = expected_class_name.as_string()?;
+        let expected_class_name = expected_class_name.read().as_string()?;
         let class = class.as_object_ref()?;
         let class_name = class.class().name();
         if class_name != expected_class_name {
@@ -106,7 +108,7 @@ pub(crate) async fn define_class_1_0(
     };
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
-        let expected_class_name = expected_class_name.as_string()?;
+        let expected_class_name = expected_class_name.read().as_string()?;
         let class_object = class.as_object_ref()?;
         let class_name = class_object.class().name();
         if class_name != expected_class_name {
@@ -145,7 +147,7 @@ pub(crate) async fn define_class_2_0(
     let bytes: Vec<u8> = buffer.iter().copied().skip(buffer_offset).collect();
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     if let Some(expected_class_name) = parameters.pop_reference()? {
-        let expected_class_name = expected_class_name.as_string()?;
+        let expected_class_name = expected_class_name.read().as_string()?;
         let class_object = class.as_object_ref()?;
         let class_name = class_object.class().name();
         if class_name != expected_class_name {

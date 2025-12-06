@@ -46,29 +46,43 @@ pub(crate) async fn init_stack_trace_elements_1(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let depth = usize::try_from(parameters.pop_int()?)?;
-    let Some(Reference::Array(back_trace_array)) = parameters.pop_reference()? else {
+    let Some(back_trace_ref) = parameters.pop_reference()? else {
         return Err(InternalError("No back trace object found".to_string()));
     };
-    let Some(Reference::Array(stack_trace_array)) = parameters.pop_reference()? else {
+    let Some(stack_trace_ref) = parameters.pop_reference()? else {
         return Err(InternalError("No stack trace object found".to_string()));
     };
+
+    let back_trace_guard = back_trace_ref.read();
+    let Reference::Array(back_trace_array) = &*back_trace_guard else {
+        return Err(InternalError(
+            "Back trace object is not an array".to_string(),
+        ));
+    };
+
+    let mut stack_trace_guard = stack_trace_ref.write();
+    let Reference::Array(stack_trace_array) = &mut *stack_trace_guard else {
+        return Err(InternalError(
+            "Stack trace object is not an array".to_string(),
+        ));
+    };
+
     for index in 0..depth {
-        // Limit the scope of the read lock on the back_trace_array
         let value = {
-            let back_trace_array = back_trace_array.elements.read();
-            let Some(value) = back_trace_array.get(index) else {
+            let back_trace_elements = &back_trace_array.elements;
+            let Some(value) = back_trace_elements.get(index) else {
                 return Err(InternalError("No back trace element found".to_string()));
             };
             value.clone()
         };
 
-        let mut stack_trace_array = stack_trace_array.elements.write();
-        if let Some(element) = stack_trace_array.get_mut(index) {
+        let stack_trace_elements = &mut stack_trace_array.elements;
+        if let Some(element) = stack_trace_elements.get_mut(index) {
             *element = value;
         } else {
             return Err(ArrayIndexOutOfBoundsException {
                 index: i32::try_from(index)?,
-                length: stack_trace_array.len(),
+                length: stack_trace_elements.len(),
             }
             .into());
         }
