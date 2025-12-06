@@ -483,13 +483,13 @@ fn get_reference_type(
         }
         primitive_array => {
             let array: &[u8] = match primitive_array {
-                Reference::ByteArray(array) => bytemuck::cast_slice(array.as_slice()),
-                Reference::CharArray(array) => bytemuck::cast_slice(array.as_slice()),
-                Reference::ShortArray(array) => bytemuck::cast_slice(array.as_slice()),
-                Reference::IntArray(array) => bytemuck::cast_slice(array.as_slice()),
-                Reference::LongArray(array) => bytemuck::cast_slice(array.as_slice()),
-                Reference::FloatArray(array) => bytemuck::cast_slice(array.as_slice()),
-                Reference::DoubleArray(array) => bytemuck::cast_slice(array.as_slice()),
+                Reference::ByteArray(array) => bytemuck::cast_slice(array.as_ref()),
+                Reference::CharArray(array) => bytemuck::cast_slice(array.as_ref()),
+                Reference::ShortArray(array) => bytemuck::cast_slice(array.as_ref()),
+                Reference::IntArray(array) => bytemuck::cast_slice(array.as_ref()),
+                Reference::LongArray(array) => bytemuck::cast_slice(array.as_ref()),
+                Reference::FloatArray(array) => bytemuck::cast_slice(array.as_ref()),
+                Reference::DoubleArray(array) => bytemuck::cast_slice(array.as_ref()),
                 _ => unreachable!("Reference type should be handled"),
             };
 
@@ -629,13 +629,13 @@ fn put_reference_type(
         }
         primitive_array => {
             let array: &mut [u8] = match primitive_array {
-                Reference::ByteArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
-                Reference::CharArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
-                Reference::ShortArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
-                Reference::IntArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
-                Reference::LongArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
-                Reference::FloatArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
-                Reference::DoubleArray(array) => bytemuck::cast_slice_mut(array.as_mut_slice()),
+                Reference::ByteArray(array) => bytemuck::cast_slice_mut(array.as_mut()),
+                Reference::CharArray(array) => bytemuck::cast_slice_mut(array.as_mut()),
+                Reference::ShortArray(array) => bytemuck::cast_slice_mut(array.as_mut()),
+                Reference::IntArray(array) => bytemuck::cast_slice_mut(array.as_mut()),
+                Reference::LongArray(array) => bytemuck::cast_slice_mut(array.as_mut()),
+                Reference::FloatArray(array) => bytemuck::cast_slice_mut(array.as_mut()),
+                Reference::DoubleArray(array) => bytemuck::cast_slice_mut(array.as_mut()),
                 _ => unreachable!("Reference type should be handled"),
             };
 

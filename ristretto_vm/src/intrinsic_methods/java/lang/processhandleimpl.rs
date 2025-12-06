@@ -94,20 +94,20 @@ pub(crate) async fn get_process_pids_0(
         let processes = system.processes();
         for (index, (pid, process)) in processes.iter().enumerate() {
             // Determine if we have enough space to store the next pid
-            if index > pids.capacity() {
+            if index >= pids.len() {
                 break;
             }
 
             let pid = pid.as_u32();
             let pid = i64::from(pid);
-            pids.push(pid);
+            pids[index] = pid;
             let parent = process.parent().map(Pid::as_u32).unwrap_or_default();
             let parent = i64::from(parent);
-            ppids.push(parent);
+            ppids[index] = parent;
             let run_time = Duration::from_secs(process.run_time());
             let duration = run_time.as_millis();
             let duration = i64::try_from(duration).unwrap_or_default();
-            start_times.push(duration);
+            start_times[index] = duration;
         }
         i32::try_from(processes.len())?
     } else {
@@ -115,16 +115,18 @@ pub(crate) async fn get_process_pids_0(
         let pid = Pid::from(pid);
         system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
         if let Some(process) = system.process(pid) {
-            let pid = pid.as_u32();
-            let pid = i64::from(pid);
-            pids.push(pid);
-            let parent = process.parent().map(Pid::as_u32).unwrap_or_default();
-            let parent = i64::from(parent);
-            ppids.push(parent);
-            let run_time = Duration::from_secs(process.run_time());
-            let duration = run_time.as_millis();
-            let duration = i64::try_from(duration).unwrap_or_default();
-            start_times.push(duration);
+            if !pids.is_empty() {
+                let pid = pid.as_u32();
+                let pid = i64::from(pid);
+                pids[0] = pid;
+                let parent = process.parent().map(Pid::as_u32).unwrap_or_default();
+                let parent = i64::from(parent);
+                ppids[0] = parent;
+                let run_time = Duration::from_secs(process.run_time());
+                let duration = run_time.as_millis();
+                let duration = i64::try_from(duration).unwrap_or_default();
+                start_times[0] = duration;
+            }
             1
         } else {
             -1

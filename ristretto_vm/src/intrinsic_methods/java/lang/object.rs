@@ -79,7 +79,7 @@ pub(crate) async fn clone(
             }
             let object_array = ObjectArray {
                 class: object_array.class.clone(),
-                elements: cloned_values,
+                elements: cloned_values.into(),
             };
             Reference::Array(object_array)
         }

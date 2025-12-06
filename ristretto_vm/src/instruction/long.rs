@@ -209,7 +209,7 @@ pub(crate) fn lastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
         });
     };
 
-    let length = array.capacity();
+    let length = array.len();
     let original_index = index;
     let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
         index: original_index,

@@ -13,7 +13,7 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct Object {
     class: Arc<Class>,
-    values: Vec<Value>,
+    values: Box<[Value]>,
 }
 
 impl Object {
@@ -27,7 +27,8 @@ impl Object {
         let values = object_fields
             .iter()
             .map(|field| field.default_value())
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>()
+            .into_boxed_slice();
         Ok(Self { class, values })
     }
 
@@ -244,18 +245,15 @@ impl Object {
     pub(crate) fn equal_with_visited(
         &self,
         other: &Object,
-        visited: &mut HashSet<(
-            (*const Class, *const Vec<Value>),
-            (*const Class, *const Vec<Value>),
-        )>,
+        visited: &mut HashSet<((*const Class, *const Value), (*const Class, *const Value))>,
     ) -> bool {
         // Optimization for the case where the two objects are the same reference.
         if std::ptr::eq(self, other) {
             return true;
         }
 
-        let self_ptr = (Arc::as_ptr(&self.class), std::ptr::from_ref(&self.values));
-        let other_ptr = (Arc::as_ptr(&other.class), std::ptr::from_ref(&other.values));
+        let self_ptr = (Arc::as_ptr(&self.class), self.values.as_ptr());
+        let other_ptr = (Arc::as_ptr(&other.class), other.values.as_ptr());
         let object_ptr_pair = (self_ptr, other_ptr);
 
         // Check if we've already visited this pair to avoid infinite recursion
@@ -273,7 +271,7 @@ impl Object {
             return false;
         }
 
-        // Compare values by iterating over the Vec<Value>
+        // Compare values by iterating over the Box<[Value]>
         for (self_value, other_value) in self.values.iter().zip(other.values.iter()) {
             if std::ptr::eq(self_value, other_value) {
                 continue;

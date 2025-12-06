@@ -231,7 +231,7 @@ pub(crate) async fn write_bytes(
     let bytes = parameters.pop()?;
     let bytes = {
         let bytes = bytes.as_byte_vec_ref()?;
-        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        let bytes: &[u8] = transmute_ref!(&*bytes);
         bytes.to_vec()
     };
     let file_output_stream = parameters.pop()?;

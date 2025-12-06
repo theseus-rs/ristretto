@@ -265,7 +265,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `ByteArray`.
-    pub fn as_byte_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, Vec<i8>>> {
+    pub fn as_byte_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i8]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_byte_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected byte array".to_string()))
@@ -276,7 +276,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `ByteArray`.
-    pub fn as_byte_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, Vec<i8>>> {
+    pub fn as_byte_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i8]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -292,7 +292,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `CharArray`.
-    pub fn as_char_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, Vec<u16>>> {
+    pub fn as_char_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [u16]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_char_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected char array".to_string()))
@@ -303,7 +303,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `CharArray`.
-    pub fn as_char_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, Vec<u16>>> {
+    pub fn as_char_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [u16]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -319,7 +319,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `ShortArray`.
-    pub fn as_short_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, Vec<i16>>> {
+    pub fn as_short_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i16]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_short_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected short array".to_string()))
@@ -330,7 +330,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `ShortArray`.
-    pub fn as_short_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, Vec<i16>>> {
+    pub fn as_short_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i16]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -346,7 +346,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `IntArray`.
-    pub fn as_int_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, Vec<i32>>> {
+    pub fn as_int_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i32]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_int_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected int array".to_string()))
@@ -357,7 +357,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `IntArray`.
-    pub fn as_int_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, Vec<i32>>> {
+    pub fn as_int_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i32]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -373,7 +373,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `LongArray`.
-    pub fn as_long_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, Vec<i64>>> {
+    pub fn as_long_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [i64]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_long_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected long array".to_string()))
@@ -384,7 +384,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `LongArray`.
-    pub fn as_long_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, Vec<i64>>> {
+    pub fn as_long_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [i64]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -400,7 +400,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `FloatArray`.
-    pub fn as_float_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, Vec<f32>>> {
+    pub fn as_float_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [f32]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_float_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected float array".to_string()))
@@ -411,7 +411,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `FloatArray`.
-    pub fn as_float_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, Vec<f32>>> {
+    pub fn as_float_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [f32]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -427,7 +427,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `DoubleArray`.
-    pub fn as_double_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, Vec<f64>>> {
+    pub fn as_double_vec_ref(&self) -> Result<MappedRwLockReadGuard<'_, [f64]>> {
         let reference = self.as_reference()?;
         RwLockReadGuard::try_map(reference, |r| r.as_double_vec_ref().ok())
             .map_err(|_| InvalidValueType("Expected double array".to_string()))
@@ -438,7 +438,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `DoubleArray`.
-    pub fn as_double_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, Vec<f64>>> {
+    pub fn as_double_vec_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [f64]>> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -454,7 +454,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `Reference::Array`
-    pub fn as_class_vec_ref(&self) -> Result<(Arc<Class>, MappedRwLockReadGuard<'_, Vec<Value>>)> {
+    pub fn as_class_vec_ref(&self) -> Result<(Arc<Class>, MappedRwLockReadGuard<'_, [Value]>)> {
         let reference = self.as_reference()?;
         let mut class = None;
         let guard = RwLockReadGuard::try_map(reference, |r| {
@@ -476,7 +476,7 @@ impl Value {
     /// # Errors
     ///
     /// if the value is not a `Reference::Array`
-    pub fn as_class_vec_mut(&self) -> Result<(Arc<Class>, MappedRwLockWriteGuard<'_, Vec<Value>>)> {
+    pub fn as_class_vec_mut(&self) -> Result<(Arc<Class>, MappedRwLockWriteGuard<'_, [Value]>)> {
         match self {
             Value::Object(Some(reference)) => {
                 let reference = reference.write();
@@ -921,7 +921,7 @@ mod tests {
         let value = Value::from(reference);
         let reference = value.as_reference()?;
         let array = reference.as_byte_vec_ref()?;
-        assert_eq!(array.clone(), vec![1, 2, 3]);
+        assert_eq!(array, vec![1, 2, 3]);
         Ok(())
     }
 
@@ -1653,9 +1653,9 @@ mod tests {
         let value = Value::from(vec![42i8]);
         {
             let mut mutable_value = value.as_byte_vec_mut()?;
-            mutable_value.push(3i8);
+            mutable_value[0] = 3i8;
         }
-        assert_eq!(value.as_byte_vec_ref()?.to_vec(), vec![42i8, 3i8]);
+        assert_eq!(value.as_byte_vec_ref()?.to_vec(), vec![3i8]);
         Ok(())
     }
 
@@ -1686,9 +1686,9 @@ mod tests {
         let value = Value::from(vec!['*']);
         {
             let mut mutable_value = value.as_char_vec_mut()?;
-            mutable_value.push(50u16);
+            mutable_value[0] = 50u16;
         }
-        assert_eq!(value.as_char_vec_ref()?.to_vec(), vec![42u16, 50u16]);
+        assert_eq!(value.as_char_vec_ref()?.to_vec(), vec![50u16]);
         Ok(())
     }
 
@@ -1719,9 +1719,9 @@ mod tests {
         let value = Value::from(vec![42i16]);
         {
             let mut mutable_value = value.as_short_vec_mut()?;
-            mutable_value.push(3i16);
+            mutable_value[0] = 3i16;
         }
-        assert_eq!(value.as_short_vec_ref()?.to_vec(), vec![42i16, 3i16]);
+        assert_eq!(value.as_short_vec_ref()?.to_vec(), vec![3i16]);
         Ok(())
     }
 
@@ -1752,9 +1752,9 @@ mod tests {
         let value = Value::from(vec![42i32]);
         {
             let mut mutable_value = value.as_int_vec_mut()?;
-            mutable_value.push(3i32);
+            mutable_value[0] = 3i32;
         }
-        assert_eq!(value.as_int_vec_ref()?.to_vec(), vec![42i32, 3i32]);
+        assert_eq!(value.as_int_vec_ref()?.to_vec(), vec![3i32]);
         Ok(())
     }
 
@@ -1785,9 +1785,9 @@ mod tests {
         let value = Value::from(vec![42i64]);
         {
             let mut mutable_value = value.as_long_vec_mut()?;
-            mutable_value.push(3i64);
+            mutable_value[0] = 3i64;
         }
-        assert_eq!(value.as_long_vec_ref()?.to_vec(), vec![42i64, 3i64]);
+        assert_eq!(value.as_long_vec_ref()?.to_vec(), vec![3i64]);
         Ok(())
     }
 
@@ -1818,9 +1818,9 @@ mod tests {
         let value = Value::from(vec![42.1f32]);
         {
             let mut mutable_value = value.as_float_vec_mut()?;
-            mutable_value.push(3.45f32);
+            mutable_value[0] = 3.45f32;
         }
-        assert_eq!(value.as_float_vec_ref()?.to_vec(), vec![42.1f32, 3.45f32]);
+        assert_eq!(value.as_float_vec_ref()?.to_vec(), vec![3.45f32]);
         Ok(())
     }
 
@@ -1851,9 +1851,9 @@ mod tests {
         let value = Value::from(vec![42.1f64]);
         {
             let mut mutable_value = value.as_double_vec_mut()?;
-            mutable_value.push(3.45f64);
+            mutable_value[0] = 3.45f64;
         }
-        assert_eq!(value.as_double_vec_ref()?.to_vec(), vec![42.1f64, 3.45f64]);
+        assert_eq!(value.as_double_vec_ref()?.to_vec(), vec![3.45f64]);
         Ok(())
     }
 
@@ -1878,13 +1878,13 @@ mod tests {
     #[tokio::test]
     async fn test_as_class_vec_mut() -> Result<()> {
         let object_class = load_class("[Ljava/lang/Object;").await?;
-        let value = Value::from((object_class.clone(), vec![]));
+        let value = Value::from((object_class.clone(), vec![None]));
         {
             let (_class, mut mutable_reference) = value.as_class_vec_mut()?;
-            mutable_reference.push(Value::Object(None));
+            mutable_reference[0] = Value::Int(42);
         }
         let (_class, array) = value.as_class_vec_ref()?;
-        assert_eq!(array.to_vec(), vec![Value::Object(None)]);
+        assert_eq!(array.to_vec(), vec![Value::Int(42)]);
         Ok(())
     }
 

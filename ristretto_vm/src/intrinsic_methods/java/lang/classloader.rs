@@ -72,7 +72,7 @@ pub(crate) async fn define_class_0_0(
     let bytes = parameters.pop()?;
     let bytes = {
         let bytes = bytes.as_byte_vec_ref()?;
-        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        let bytes: &[u8] = transmute_ref!(&*bytes);
         bytes.to_vec()
     };
     let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
@@ -103,7 +103,7 @@ pub(crate) async fn define_class_1_0(
     let bytes = parameters.pop()?;
     let bytes = {
         let bytes = bytes.as_byte_vec_ref()?;
-        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        let bytes: &[u8] = transmute_ref!(&*bytes);
         bytes.to_vec()
     };
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
@@ -140,7 +140,7 @@ pub(crate) async fn define_class_2_0(
     };
     let buffer = {
         let buffer = buffer.as_byte_vec_ref()?;
-        let buffer: &[u8] = transmute_ref!(buffer.as_slice());
+        let buffer: &[u8] = transmute_ref!(&*buffer);
         buffer.to_vec()
     };
 
@@ -175,7 +175,7 @@ pub(crate) async fn define_class_0_1(
     let bytes = parameters.pop()?;
     let bytes = {
         let bytes = bytes.as_byte_vec_ref()?;
-        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        let bytes: &[u8] = transmute_ref!(&*bytes);
         bytes.to_vec()
     };
     let _name = parameters.pop()?.as_string()?;
@@ -206,7 +206,7 @@ pub(crate) async fn define_class_1_1(
     let bytes = parameters.pop()?;
     let bytes = {
         let bytes = bytes.as_byte_vec_ref()?;
-        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        let bytes: &[u8] = transmute_ref!(&*bytes);
         bytes.to_vec()
     };
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
@@ -240,7 +240,7 @@ pub(crate) async fn define_class_2_1(
     };
     let buffer = {
         let buffer = buffer.as_byte_vec_ref()?;
-        let buffer: &[u8] = transmute_ref!(buffer.as_slice());
+        let buffer: &[u8] = transmute_ref!(&*buffer);
         buffer.to_vec()
     };
 

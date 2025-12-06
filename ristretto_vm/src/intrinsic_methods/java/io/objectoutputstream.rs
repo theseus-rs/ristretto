@@ -109,7 +109,7 @@ mod tests {
         let _ = doubles_to_bytes(thread, parameters).await?;
         let bytes = destination.as_byte_vec_ref()?;
         assert_eq!(
-            bytes.as_slice(),
+            &*bytes,
             vec![64, 8, 0, 0, 0, 0, 0, 0, 64, 69, 0, 0, 0, 0, 0, 0]
         );
         Ok(())
@@ -129,7 +129,7 @@ mod tests {
 
         let _ = floats_to_bytes(thread, parameters).await?;
         let bytes = destination.as_byte_vec_ref()?;
-        assert_eq!(bytes.as_slice(), vec![64, 64, 0, 0, 66, 40, 0, 0]);
+        assert_eq!(&*bytes, vec![64, 64, 0, 0, 66, 40, 0, 0]);
         Ok(())
     }
 }

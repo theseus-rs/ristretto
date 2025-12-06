@@ -213,7 +213,7 @@ pub(crate) fn aastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     };
 
     let array = &mut object_array.elements;
-    let length = array.capacity();
+    let length = array.len();
     let original_index = index;
     let index = usize::try_from(index).map_err(|_| ArrayIndexOutOfBoundsException {
         index: original_index,
