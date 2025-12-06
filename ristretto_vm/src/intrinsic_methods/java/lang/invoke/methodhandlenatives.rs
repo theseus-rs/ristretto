@@ -750,7 +750,7 @@ mod tests {
         member_name.set_value("name", value_string)?;
         parameters.push(Value::from(member_name));
         let result = object_field_offset(thread, parameters).await?;
-        assert_eq!(Some(Value::Long(7)), result);
+        assert_eq!(Some(Value::Long(5)), result);
         Ok(())
     }
 

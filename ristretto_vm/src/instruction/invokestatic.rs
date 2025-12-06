@@ -68,9 +68,7 @@ pub(crate) async fn invokestatic(
     }
 
     let parameters = stack.drain_last(method.parameters().len());
-    let result = thread
-        .execute(&resolved_class, &method, &parameters)
-        .await?;
+    let result = Box::pin(thread.execute(&resolved_class, &method, &parameters)).await?;
     if let Some(value) = result {
         stack.push(value)?;
     }

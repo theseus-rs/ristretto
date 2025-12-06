@@ -186,7 +186,7 @@ impl Frame {
                 self.debug_execute(locals, stack, instruction)?;
             }
 
-            let result = self.process(locals, stack, instruction).await;
+            let result = Box::pin(self.process(locals, stack, instruction)).await;
             match result {
                 Ok(Continue) => {
                     self.program_counter
@@ -348,8 +348,8 @@ impl Frame {
             Instruction::Dconst_1 => dconst_1(stack),
             Instruction::Bipush(value) => bipush(stack, *value),
             Instruction::Sipush(value) => sipush(stack, *value),
-            Instruction::Ldc(index) => ldc(self, stack, *index).await,
-            Instruction::Ldc_w(index) => ldc_w(self, stack, *index).await,
+            Instruction::Ldc(index) => Box::pin(ldc(self, stack, *index)).await,
+            Instruction::Ldc_w(index) => Box::pin(ldc_w(self, stack, *index)).await,
             Instruction::Ldc2_w(index) => ldc2_w(self, stack, *index),
             Instruction::Iload(index) => iload(locals, stack, *index),
             Instruction::Lload(index) => lload(locals, stack, *index),
@@ -519,29 +519,37 @@ impl Frame {
             Instruction::Dreturn => dreturn(stack),
             Instruction::Areturn => areturn(stack),
             Instruction::Return => r#return(),
-            Instruction::Getstatic(index) => getstatic(self, stack, *index).await,
-            Instruction::Putstatic(index) => putstatic(self, stack, *index).await,
-            Instruction::Getfield(index) => getfield(self, stack, &self.class, *index).await,
-            Instruction::Putfield(index) => putfield(self, stack, &self.class, *index).await,
-            Instruction::Invokevirtual(index) => invokevirtual(self, stack, *index).await,
-            Instruction::Invokespecial(index) => invokespecial(self, stack, *index).await,
-            Instruction::Invokestatic(index) => invokestatic(self, stack, *index).await,
-            Instruction::Invokeinterface(index, count) => {
-                invokeinterface(self, stack, *index, *count).await
+            Instruction::Getstatic(index) => Box::pin(getstatic(self, stack, *index)).await,
+            Instruction::Putstatic(index) => Box::pin(putstatic(self, stack, *index)).await,
+            Instruction::Getfield(index) => {
+                Box::pin(getfield(self, stack, &self.class, *index)).await
             }
-            Instruction::Invokedynamic(index) => invokedynamic(self, stack, *index).await,
-            Instruction::New(index) => new(self, stack, *index).await,
+            Instruction::Putfield(index) => {
+                Box::pin(putfield(self, stack, &self.class, *index)).await
+            }
+            Instruction::Invokevirtual(index) => Box::pin(invokevirtual(self, stack, *index)).await,
+            Instruction::Invokespecial(index) => Box::pin(invokespecial(self, stack, *index)).await,
+            Instruction::Invokestatic(index) => Box::pin(invokestatic(self, stack, *index)).await,
+            Instruction::Invokeinterface(index, count) => {
+                Box::pin(invokeinterface(self, stack, *index, *count)).await
+            }
+            Instruction::Invokedynamic(index) => Box::pin(invokedynamic(self, stack, *index)).await,
+            Instruction::New(index) => Box::pin(new(self, stack, *index)).await,
             Instruction::Newarray(array_type) => newarray(stack, array_type),
-            Instruction::Anewarray(index) => anewarray(self, stack, *index).await,
+            Instruction::Anewarray(index) => Box::pin(anewarray(self, stack, *index)).await,
             Instruction::Arraylength => arraylength(stack),
-            Instruction::Athrow => athrow(stack).await,
-            Instruction::Checkcast(class_index) => checkcast(self, stack, *class_index).await,
-            Instruction::Instanceof(class_index) => instanceof(self, stack, *class_index).await,
+            Instruction::Athrow => Box::pin(athrow(stack)).await,
+            Instruction::Checkcast(class_index) => {
+                Box::pin(checkcast(self, stack, *class_index)).await
+            }
+            Instruction::Instanceof(class_index) => {
+                Box::pin(instanceof(self, stack, *class_index)).await
+            }
             Instruction::Monitorenter => monitorenter(stack),
             Instruction::Monitorexit => monitorexit(stack),
             Instruction::Wide => wide(),
             Instruction::Multianewarray(index, dimensions) => {
-                multianewarray(self, stack, *index, *dimensions).await
+                Box::pin(multianewarray(self, stack, *index, *dimensions)).await
             }
             Instruction::Ifnull(address) => ifnull(stack, *address),
             Instruction::Ifnonnull(address) => ifnonnull(stack, *address),
