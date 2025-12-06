@@ -160,7 +160,7 @@ impl JavaObject for &str {
         let array = if java_class_file_version <= &JAVA_8 {
             // Java 8 and below: store as UTF-16 char array
             let chars = self.encode_utf16().collect::<Vec<u16>>();
-            Value::from(Reference::CharArray(chars))
+            Value::from(Reference::CharArray(chars.into()))
         } else {
             if java_class_file_version >= &JAVA_17 {
                 object.set_value("hashIsZero", Value::Int(0))?;

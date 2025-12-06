@@ -113,7 +113,7 @@ mod tests {
 
         let _ = bytes_to_doubles(thread, parameters).await?;
         let bytes = destination.as_double_vec_ref()?;
-        assert_eq!(bytes.as_slice(), vec![3.0f64, 42.0f64]);
+        assert_eq!(&*bytes, vec![3.0f64, 42.0f64]);
         Ok(())
     }
 
@@ -132,7 +132,7 @@ mod tests {
 
         let _ = bytes_to_floats(thread, parameters).await?;
         let bytes = destination.as_float_vec_ref()?;
-        assert_eq!(bytes.as_slice(), vec![3.0f32, 42.0f32]);
+        assert_eq!(&*bytes, vec![3.0f32, 42.0f32]);
         Ok(())
     }
 }

@@ -1566,8 +1566,7 @@ mod tests {
             .await?
             .expect("bytes");
         let bytes = value.as_byte_vec_ref()?;
-        let bytes = bytes.as_slice();
-        assert_eq!(bytes, vec![0, 0]);
+        assert_eq!(*bytes, [0, 0]);
         Ok(())
     }
 
@@ -1581,8 +1580,7 @@ mod tests {
             .await?
             .expect("bytes");
         let bytes = value.as_byte_vec_ref()?;
-        let bytes = bytes.as_slice();
-        assert_eq!(bytes, vec![0, 0]);
+        assert_eq!(*bytes, [0, 0]);
         Ok(())
     }
 

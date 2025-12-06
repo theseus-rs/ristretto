@@ -971,7 +971,7 @@ mod tests {
             .await?
             .expect("array");
         let array = array.as_int_vec_ref()?;
-        assert_eq!(array.as_slice(), vec![0; 5]);
+        assert_eq!(*array, [0; 5]);
         Ok(())
     }
 

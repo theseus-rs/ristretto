@@ -973,7 +973,7 @@ mod tests {
         let result = getcwd(thread, Parameters::default()).await?;
         let bytes = result.expect("cwd");
         let bytes = bytes.as_byte_vec_ref()?;
-        let bytes: &[u8] = transmute_ref!(bytes.as_slice());
+        let bytes: &[u8] = transmute_ref!(&*bytes);
         let cwd = String::from_utf8_lossy(bytes);
         let current_dir_path =
             std::env::current_dir().map_err(|error| InternalError(format!("getcwd: {error}")))?;
