@@ -207,10 +207,15 @@ async fn invoke_special(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn link_to_interface(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandle.linkToInterface([Ljava/lang/Object;)Ljava/lang/Object;")
+    let mut arguments: Vec<Value> = parameters.into_vec();
+    let member = arguments
+        .pop()
+        .ok_or(InternalError("Missing MemberName".to_string()))?;
+    let result = call_method_handle_target(thread, &member, arguments).await?;
+    Ok(Some(result))
 }
 
 #[intrinsic_method(
@@ -219,10 +224,15 @@ pub(crate) async fn link_to_interface(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn link_to_native(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandle.linkToNative([Ljava/lang/Object;)Ljava/lang/Object;")
+    let mut arguments: Vec<Value> = parameters.into_vec();
+    let member = arguments
+        .pop()
+        .ok_or(InternalError("Missing MemberName".to_string()))?;
+    let result = call_method_handle_target(thread, &member, arguments).await?;
+    Ok(Some(result))
 }
 
 #[intrinsic_method(
@@ -231,10 +241,15 @@ pub(crate) async fn link_to_native(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn link_to_special(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandle.linkToSpecial([Ljava/lang/Object;)Ljava/lang/Object;")
+    let mut arguments: Vec<Value> = parameters.into_vec();
+    let member = arguments
+        .pop()
+        .ok_or(InternalError("Missing MemberName".to_string()))?;
+    let result = call_method_handle_target(thread, &member, arguments).await?;
+    Ok(Some(result))
 }
 
 #[intrinsic_method(
@@ -243,10 +258,15 @@ pub(crate) async fn link_to_special(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn link_to_static(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandle.linkToStatic([Ljava/lang/Object;)Ljava/lang/Object;")
+    let mut arguments: Vec<Value> = parameters.into_vec();
+    let member = arguments
+        .pop()
+        .ok_or(InternalError("Missing MemberName".to_string()))?;
+    let result = call_method_handle_target(thread, &member, arguments).await?;
+    Ok(Some(result))
 }
 
 #[intrinsic_method(
@@ -255,58 +275,298 @@ pub(crate) async fn link_to_static(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn link_to_virtual(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandle.linkToVirtual([Ljava/lang/Object;)Ljava/lang/Object;")
+    let mut arguments: Vec<Value> = parameters.into_vec();
+    let member = arguments
+        .pop()
+        .ok_or(InternalError("Missing MemberName".to_string()))?;
+    let result = call_method_handle_target(thread, &member, arguments).await?;
+    Ok(Some(result))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::JavaObject;
+    use ristretto_classfile::{
+        ClassAccessFlags, ClassFile, ConstantPool, Field, FieldAccessFlags, FieldType,
+    };
+    use ristretto_classloader::Object;
 
-    #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandle.linkToInterface([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_link_to_interface() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = link_to_interface(thread, Parameters::default()).await;
+    /// Helper function to create a minimal MemberName object for testing
+    async fn create_test_member_name(
+        thread: &Thread,
+        class_name: &str,
+        member_name: &str,
+        descriptor: &str,
+        reference_kind: ReferenceKind,
+    ) -> Result<Value> {
+        let member_class = thread.class("java/lang/invoke/MemberName").await?;
+        let member = Value::from(Object::new(member_class)?);
+
+        // Set up the MemberName fields
+        let class_name_string = class_name.replace('/', ".");
+        let class_object = thread
+            .invoke(
+                "java/lang/Class",
+                "forName(Ljava/lang/String;)Ljava/lang/Class;",
+                &[class_name_string.to_object(thread).await?],
+            )
+            .await?
+            .unwrap_or(Value::Object(None));
+
+        // Create a MethodType from the descriptor
+        let method_type = thread
+            .invoke(
+                "java/lang/invoke/MethodType",
+                "fromMethodDescriptorString(Ljava/lang/String;Ljava/lang/ClassLoader;)Ljava/lang/invoke/MethodType;",
+                &[descriptor.to_object(thread).await?, Value::Object(None)],
+            )
+            .await?
+            .unwrap_or(Value::Object(None));
+
+        {
+            let mut object = member.as_object_mut()?;
+            object.set_value("clazz", class_object)?;
+            object.set_value("name", member_name.to_object(thread).await?)?;
+            object.set_value("type", method_type)?;
+
+            // Calculate flags with reference kind and IS_METHOD flag
+            let mut flags =
+                i32::from(reference_kind.kind()) << MemberNameFlags::REFERENCE_KIND_SHIFT.bits();
+
+            // Set IS_METHOD flag for method invocations
+            if matches!(
+                reference_kind,
+                ReferenceKind::InvokeVirtual
+                    | ReferenceKind::InvokeStatic
+                    | ReferenceKind::InvokeSpecial
+                    | ReferenceKind::InvokeInterface
+            ) {
+                flags |= MemberNameFlags::IS_METHOD.bits();
+            }
+            object.set_value("flags", Value::Int(flags))?;
+        }
+
+        Ok(member)
+    }
+
+    /// Helper function to register a mock MethodHandle class with a "member" field
+    async fn register_method_handle_class(thread: &Thread) -> Result<Arc<Class>> {
+        let class_name = "java/lang/invoke/MethodHandle";
+        let mut constant_pool = ConstantPool::new();
+        let this_class = constant_pool.add_class(class_name)?;
+        let super_class = constant_pool.add_class("java/lang/Object")?;
+        let member_name_index = constant_pool.add_utf8("member")?;
+        let member_descriptor_index = constant_pool.add_utf8("Ljava/lang/invoke/MemberName;")?;
+
+        let field = Field {
+            access_flags: FieldAccessFlags::PUBLIC,
+            name_index: member_name_index,
+            descriptor_index: member_descriptor_index,
+            field_type: FieldType::Object("java/lang/invoke/MemberName".to_string()),
+            attributes: vec![],
+        };
+
+        let class_file = ClassFile {
+            version: JAVA_17,
+            constant_pool,
+            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::ABSTRACT,
+            this_class,
+            super_class,
+            fields: vec![field],
+            ..Default::default()
+        };
+
+        let vm = thread.vm()?;
+        let class_loader = vm.class_loader().read().await.clone();
+        let class = Class::from(Some(Arc::downgrade(&class_loader)), class_file)?;
+        class_loader.register(class.clone()).await?;
+        Ok(class)
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandle.linkToNative([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_link_to_native() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = link_to_native(thread, Parameters::default()).await;
+    async fn test_invoke() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let member = create_test_member_name(
+            &thread,
+            "java/lang/Integer",
+            "valueOf",
+            "(Ljava/lang/String;)Ljava/lang/Integer;",
+            ReferenceKind::InvokeStatic,
+        )
+        .await?;
+
+        let mh_class = register_method_handle_class(&thread).await?;
+        let method_handle = Value::from(Object::new(mh_class)?);
+        method_handle.as_object_mut()?.set_value("member", member)?;
+
+        let args_class = thread.class("[Ljava/lang/Object;").await?;
+        let arg = "42".to_object(&thread).await?;
+        let args = vec![arg];
+        let arguments = Value::try_from((args_class, args))?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(method_handle);
+        parameters.push(arguments);
+
+        let result = invoke(thread, parameters).await;
+        assert!(result.is_ok(), "invoke failed: {:?}", result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandle.linkToSpecial([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_link_to_special() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = link_to_special(thread, Parameters::default()).await;
+    async fn test_invoke_basic() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let member = create_test_member_name(
+            &thread,
+            "java/lang/Integer",
+            "valueOf",
+            "(Ljava/lang/String;)Ljava/lang/Integer;",
+            ReferenceKind::InvokeStatic,
+        )
+        .await?;
+
+        let mh_class = register_method_handle_class(&thread).await?;
+        let method_handle = Value::from(Object::new(mh_class)?);
+        method_handle.as_object_mut()?.set_value("member", member)?;
+
+        let args_class = thread.class("[Ljava/lang/Object;").await?;
+        let arg = "42".to_object(&thread).await?;
+        let args = vec![arg];
+        let arguments = Value::try_from((args_class, args))?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(method_handle);
+        parameters.push(arguments);
+
+        let result = invoke_basic(thread, parameters).await;
+        assert!(result.is_ok(), "invoke_basic failed: {:?}", result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandle.linkToStatic([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_link_to_static() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = link_to_static(thread, Parameters::default()).await;
+    async fn test_invoke_exact() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let member = create_test_member_name(
+            &thread,
+            "java/lang/String",
+            "valueOf",
+            "(Ljava/lang/Object;)Ljava/lang/String;",
+            ReferenceKind::InvokeStatic,
+        )
+        .await?;
+
+        let mh_class = register_method_handle_class(&thread).await?;
+        let method_handle = Value::from(Object::new(mh_class)?);
+        method_handle.as_object_mut()?.set_value("member", member)?;
+
+        let args_class = thread.class("[Ljava/lang/Object;").await?;
+        let int_obj = thread
+            .object("java/lang/Integer", "I", &[Value::Int(42)])
+            .await?;
+        let args = vec![int_obj];
+        let arguments = Value::try_from((args_class, args))?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(method_handle);
+        parameters.push(arguments);
+
+        let result = invoke_exact(thread, parameters).await;
+        assert!(result.is_ok(), "invoke_exact failed: {:?}", result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandle.linkToVirtual([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_link_to_virtual() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = link_to_virtual(thread, Parameters::default()).await;
+    async fn test_link_to_static() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let member = create_test_member_name(
+            &thread,
+            "java/lang/Integer",
+            "valueOf",
+            "(I)Ljava/lang/Integer;",
+            ReferenceKind::InvokeStatic,
+        )
+        .await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(Value::Int(42));
+        parameters.push(member);
+
+        let result = link_to_static(thread, parameters).await;
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_link_to_virtual() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let string_obj = "test".to_object(&thread).await?;
+
+        let member = create_test_member_name(
+            &thread,
+            "java/lang/String",
+            "toString",
+            "()Ljava/lang/String;",
+            ReferenceKind::InvokeVirtual,
+        )
+        .await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(string_obj);
+        parameters.push(member);
+
+        let result = link_to_virtual(thread, parameters).await;
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_link_to_interface() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let empty_values: &[Value] = &[];
+        let list_obj = thread
+            .object("java/util/ArrayList", "", empty_values)
+            .await?;
+
+        let member = create_test_member_name(
+            &thread,
+            "java/util/ArrayList",
+            "size",
+            "()I",
+            ReferenceKind::InvokeVirtual,
+        )
+        .await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(list_obj);
+        parameters.push(member);
+
+        let result = link_to_interface(thread, parameters).await;
+        assert!(result.is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_link_to_native() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let member = create_test_member_name(
+            &thread,
+            "java/lang/Integer",
+            "valueOf",
+            "(I)Ljava/lang/Integer;",
+            ReferenceKind::InvokeStatic,
+        )
+        .await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(Value::Int(42));
+        parameters.push(member);
+
+        let result = link_to_native(thread, parameters).await;
+        assert!(result.is_ok());
+        Ok(())
     }
 }
