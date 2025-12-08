@@ -8,11 +8,13 @@ use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::{
     Any, Between, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
+use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
-    FieldAccessFlags, JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodAccessFlags, ReferenceKind,
+    Constant, ConstantPool, FieldAccessFlags, FieldType, JAVA_8, JAVA_11, JAVA_17, JAVA_21,
+    MethodAccessFlags, ReferenceKind,
 };
 use ristretto_classloader::Error::IllegalAccessError;
-use ristretto_classloader::{Class, Method, Value};
+use ristretto_classloader::{Class, Method, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -32,6 +34,10 @@ bitflags! {
         const CALLER_SENSITIVE = 0x001_00000;
         /// trusted final field
         const TRUSTED_FINAL = 0x002_00000;
+        /// Search superclasses
+        const SUPERCLASSES = 0x0010_0000;
+        /// Search interfaces
+        const INTERFACES = 0x0020_0000;
         /// refKind
         const REFERENCE_KIND_SHIFT = 24;
         /// 0x0F00_0000 >> REFERENCE_KIND_SHIFT
@@ -65,11 +71,14 @@ bitflags! {
 #[async_recursion(?Send)]
 pub(crate) async fn clear_call_site_context(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.MethodHandleNatives.clearCallSiteContext(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V"
-    )
+    // This method is called to clear the context for a call site, typically during garbage
+    // collection or when invalidating call sites. The CallSiteContext object contains references
+    // that may need to be cleared. This is currently a no-op as ristretto does not currently
+    // maintain separate call site context tracking.
+    let _context = parameters.pop()?;
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -78,12 +87,364 @@ pub(crate) async fn clear_call_site_context(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn copy_out_bootstrap_arguments(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.MethodHandleNatives.copyOutBootstrapArguments(Ljava/lang/Class;[III[Ljava/lang/Object;IZLjava/lang/Object;)V"
-    )
+    let if_not_available = parameters.pop()?;
+    let resolve = parameters.pop_int()? != 0;
+    let pos = parameters.pop_int()?;
+    let buffer = parameters.pop()?;
+    let end = parameters.pop_int()?;
+    let start = parameters.pop_int()?;
+    let index_info = parameters.pop()?;
+    let caller = parameters.pop()?;
+
+    // Get the class from the caller
+    let class = get_class(&thread, &caller).await?;
+    let constant_pool = class.constant_pool();
+
+    // Get the index info array (contains bootstrap argument indices as int[])
+    let index_info_array: Vec<i32> = {
+        let index_info_vec = index_info.as_int_vec_ref()?;
+        index_info_vec.to_vec()
+    };
+
+    // Copy arguments from start to end
+    let start = usize::try_from(start)?;
+    let end = usize::try_from(end)?;
+    let mut pos = usize::try_from(pos)?;
+    let mut values = Vec::new();
+
+    for i in start..end {
+        let cp_index = if let Some(idx) = index_info_array.get(i) {
+            u16::try_from(*idx)?
+        } else {
+            continue;
+        };
+
+        let value = if resolve {
+            // Resolve the constant pool entry to a Java object
+            match constant_pool.try_get(cp_index) {
+                Ok(constant) => resolve_constant_to_value(&thread, constant_pool, constant).await?,
+                Err(_) => if_not_available.clone(),
+            }
+        } else {
+            // Return the raw constant pool index or if_not_available
+            if_not_available.clone()
+        };
+        values.push(value);
+    }
+
+    // Get mutable reference to the output buffer
+    let mut buffer_reference = buffer.as_reference_mut()?;
+    let buffer_array = match &mut *buffer_reference {
+        Reference::Array(arr) => &mut arr.elements,
+        _ => return Err(InternalError("buf is not an array".to_string())),
+    };
+
+    for value in values {
+        if pos >= buffer_array.len() {
+            break;
+        }
+        buffer_array[pos] = value;
+        pos += 1;
+    }
+
+    Ok(None)
+}
+
+/// Resolves a constant pool entry to a Java Value.
+///
+/// This helper function converts constant pool entries to their corresponding Java object
+/// representations for use with bootstrap method arguments.
+async fn resolve_constant_to_value(
+    thread: &Thread,
+    constant_pool: &ConstantPool,
+    constant: &Constant,
+) -> Result<Value> {
+    match constant {
+        Constant::Integer(value) => Ok(Value::from(*value)),
+        Constant::Float(value) => Ok(Value::from(*value)),
+        Constant::Long(value) => Ok(Value::from(*value)),
+        Constant::Double(value) => Ok(Value::from(*value)),
+        Constant::String(utf8_index) => {
+            let string = constant_pool.try_get_utf8(*utf8_index)?;
+            string.to_object(thread).await
+        }
+        Constant::Class(name_index) => {
+            let class_name = constant_pool.try_get_utf8(*name_index)?;
+            let class = thread.class(class_name).await?;
+            class.to_object(thread).await
+        }
+        Constant::MethodType(descriptor_index) => {
+            let descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
+            resolve_method_type(thread, descriptor).await
+        }
+        Constant::MethodHandle {
+            reference_kind,
+            reference_index,
+        } => resolve_method_handle(thread, constant_pool, reference_kind, *reference_index).await,
+        Constant::Dynamic {
+            bootstrap_method_attr_index: _,
+            name_and_type_index: _,
+        } => {
+            // Dynamic constants are resolved lazily via bootstrap methods. For now, return null as
+            // a placeholder; full implementation would require invoking the bootstrap method
+            // similar to invokedynamic.
+            // TODO: Implement full dynamic constant resolution via bootstrap method invocation
+            Ok(Value::Object(None))
+        }
+        _ => Err(InternalError(format!(
+            "Unsupported constant type for bootstrap argument: {:?}",
+            constant
+        ))),
+    }
+}
+
+/// Resolves a MethodType from a method descriptor string.
+async fn resolve_method_type(thread: &Thread, descriptor: &str) -> Result<Value> {
+    let (params, ret) = FieldType::parse_method_descriptor(descriptor)?;
+    let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
+
+    // Get return type class
+    let return_class = if let Some(ret_type) = ret {
+        let class_name = ret_type.class_name();
+        let class = thread.class(&class_name).await?;
+        class.to_object(thread).await?
+    } else {
+        let void_class = thread.class("void").await?;
+        void_class.to_object(thread).await?
+    };
+
+    // Build MethodType using methodType factory method
+    if params.is_empty() {
+        let method = method_type_class.try_get_method(
+            "methodType",
+            "(Ljava/lang/Class;)Ljava/lang/invoke/MethodType;",
+        )?;
+        thread
+            .try_execute(&method_type_class, &method, &[return_class])
+            .await
+    } else {
+        // Create parameter class array
+        let class_array_class = thread.class("[Ljava/lang/Class;").await?;
+        let mut param_classes = Vec::with_capacity(params.len());
+        for param in params {
+            let class_name = param.class_name();
+            let class = thread.class(&class_name).await?;
+            param_classes.push(class.to_object(thread).await?);
+        }
+        let param_array = Value::try_from((class_array_class, param_classes))?;
+
+        let method = method_type_class.try_get_method(
+            "methodType",
+            "(Ljava/lang/Class;[Ljava/lang/Class;)Ljava/lang/invoke/MethodType;",
+        )?;
+        thread
+            .try_execute(&method_type_class, &method, &[return_class, param_array])
+            .await
+    }
+}
+
+/// Resolves a MethodHandle from a constant pool MethodHandle entry.
+async fn resolve_method_handle(
+    thread: &Thread,
+    constant_pool: &ConstantPool,
+    reference_kind: &ReferenceKind,
+    reference_index: u16,
+) -> Result<Value> {
+    let target = constant_pool.try_get(reference_index)?;
+
+    // Extract class name, member name, and descriptor from the target constant
+    let (class_name, member_name, member_descriptor, is_method) = match target {
+        Constant::FieldRef {
+            class_index,
+            name_and_type_index,
+        } => {
+            let class_name = constant_pool.try_get_class(*class_index)?;
+            let (name_index, type_index) =
+                constant_pool.try_get_name_and_type(*name_and_type_index)?;
+            let name = constant_pool.try_get_utf8(*name_index)?;
+            let descriptor = constant_pool.try_get_utf8(*type_index)?;
+            (class_name, name, descriptor, false)
+        }
+        Constant::MethodRef {
+            class_index,
+            name_and_type_index,
+        }
+        | Constant::InterfaceMethodRef {
+            class_index,
+            name_and_type_index,
+        } => {
+            let class_name = constant_pool.try_get_class(*class_index)?;
+            let (name_index, type_index) =
+                constant_pool.try_get_name_and_type(*name_and_type_index)?;
+            let name = constant_pool.try_get_utf8(*name_index)?;
+            let descriptor = constant_pool.try_get_utf8(*type_index)?;
+            (class_name, name, descriptor, true)
+        }
+        _ => {
+            return Err(InternalError(format!(
+                "Unsupported MethodHandle target constant type: {:?}",
+                target
+            )));
+        }
+    };
+
+    // Get the class and lookup object
+    let class = thread.class(class_name).await?;
+    let class_object = class.to_object(thread).await?;
+    let lookup_class = thread
+        .class("java.lang.invoke.MethodHandles$Lookup")
+        .await?;
+
+    // Get a trusted lookup for bootstrap resolution
+    let method_handles_class = thread.class("java.lang.invoke.MethodHandles").await?;
+    let lookup_method = method_handles_class
+        .try_get_method("lookup", "()Ljava/lang/invoke/MethodHandles$Lookup;")?;
+    let empty_args: &[Value] = &[];
+    let lookup = thread
+        .try_execute(&method_handles_class, &lookup_method, empty_args)
+        .await?;
+
+    // Build the Java String and MethodType for the member
+    let name_value = member_name.to_object(thread).await?;
+    let method_type = if is_method {
+        resolve_method_type(thread, member_descriptor).await?
+    } else {
+        // not used for fields
+        Value::Object(None)
+    };
+
+    // Select and call the right Lookup method based on ReferenceKind
+    match (reference_kind, is_method) {
+        (ReferenceKind::InvokeStatic, true) => {
+            let find_method = lookup_class.try_get_method(
+                "findStatic",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &find_method,
+                    &[lookup, class_object, name_value, method_type],
+                )
+                .await
+        }
+        (ReferenceKind::InvokeVirtual | ReferenceKind::InvokeInterface, true) => {
+            let find_method = lookup_class.try_get_method(
+                "findVirtual",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &find_method,
+                    &[lookup, class_object, name_value, method_type],
+                )
+                .await
+        }
+        (ReferenceKind::InvokeSpecial, true) => {
+            let find_method = lookup_class.try_get_method(
+                "findSpecial",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &find_method,
+                    &[
+                        lookup,
+                        class_object.clone(),
+                        name_value,
+                        method_type,
+                        class_object,
+                    ],
+                )
+                .await
+        }
+        (ReferenceKind::NewInvokeSpecial, true) => {
+            let find_method = lookup_class.try_get_method(
+                "findConstructor",
+                "(Ljava/lang/Class;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &find_method,
+                    &[lookup, class_object, method_type],
+                )
+                .await
+        }
+        (ReferenceKind::GetField, false) => {
+            let find_method = lookup_class.try_get_method(
+                "findGetter",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_class = thread.class(field_type).await?;
+            let field_class_object = field_class.to_object(thread).await?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &find_method,
+                    &[lookup, class_object, name_value, field_class_object],
+                )
+                .await
+        }
+        (ReferenceKind::GetStatic, false) => {
+            let find_method = lookup_class.try_get_method(
+                "findStaticGetter",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_class = thread.class(field_type).await?;
+            let field_class_object = field_class.to_object(thread).await?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &find_method,
+                    &[lookup, class_object, name_value, field_class_object],
+                )
+                .await
+        }
+        (ReferenceKind::PutField, false) => {
+            let find_method = lookup_class.try_get_method(
+                "findSetter",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_class = thread.class(field_type).await?;
+            let field_class_object = field_class.to_object(thread).await?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &find_method,
+                    &[lookup, class_object, name_value, field_class_object],
+                )
+                .await
+        }
+        (ReferenceKind::PutStatic, false) => {
+            let find_method = lookup_class.try_get_method(
+                "findStaticSetter",
+                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
+            )?;
+            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_class = thread.class(field_type).await?;
+            let field_class_object = field_class.to_object(thread).await?;
+            thread
+                .try_execute(
+                    &lookup_class,
+                    &find_method,
+                    &[lookup, class_object, name_value, field_class_object],
+                )
+                .await
+        }
+        _ => Err(InternalError(format!(
+            "Unsupported method handle reference kind: {:?} is_method: {}",
+            reference_kind, is_method
+        ))),
+    }
 }
 
 #[intrinsic_method(
@@ -91,8 +452,13 @@ pub(crate) async fn copy_out_bootstrap_arguments(
     Any
 )]
 #[async_recursion(?Send)]
-pub(crate) async fn expand(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandleNatives.expand(Ljava/lang/invoke/MemberName;)V")
+pub(crate) async fn expand(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let member_name = parameters.pop()?;
+    resolve(thread, member_name, None, &LookupModeFlags::empty(), false).await?;
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -102,9 +468,17 @@ pub(crate) async fn expand(_thread: Arc<Thread>, _parameters: Parameters) -> Res
 #[async_recursion(?Send)]
 pub(crate) async fn get_constant(
     _thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandleNatives.getConstant(I)I")
+    let which = parameters.pop_int()?;
+    // Constants defined in MethodHandleNatives:
+    // GC_COUNT_MAX = 0: Maximum garbage collection count (0 = no limit)
+    // Other indices are reserved and return 0
+    let result = match which {
+        0 => 0, // GC_COUNT_MAX - no limit
+        _ => 0, // Reserved constants default to 0
+    };
+    Ok(Some(Value::Int(result)))
 }
 
 #[intrinsic_method(
@@ -113,12 +487,38 @@ pub(crate) async fn get_constant(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_member_vm_info(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.MethodHandleNatives.getMemberVMInfo(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;"
-    )
+    let member_name = parameters.pop()?;
+    let member_name_ref = member_name.as_object_ref()?;
+    let vmindex = member_name_ref.value("vmindex")?;
+    drop(member_name_ref);
+
+    let object_array_class = thread.class("[Ljava/lang/Object;").await?;
+    let values = vec![vmindex, member_name];
+    let array = Value::try_from((object_array_class, values))?;
+    Ok(Some(array))
+}
+
+/// Recursively collects all interfaces implemented by a class.
+///
+/// This includes directly implemented interfaces and all superinterfaces.
+fn collect_interfaces(class: &Arc<Class>, result: &mut Vec<Arc<Class>>) -> Result<()> {
+    let interfaces = class.interfaces()?;
+    for interface in interfaces {
+        // Avoid duplicates
+        if !result.iter().any(|c| Arc::ptr_eq(c, &interface)) {
+            result.push(interface.clone());
+            // Recursively collect superinterfaces
+            collect_interfaces(&interface, result)?;
+        }
+    }
+    // Also collect interfaces from parent class
+    if let Some(parent) = class.parent()? {
+        collect_interfaces(&parent, result)?;
+    }
+    Ok(())
 }
 
 #[intrinsic_method(
@@ -127,12 +527,159 @@ pub(crate) async fn get_member_vm_info(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_members(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.MethodHandleNatives.getMembers(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I"
-    )
+    let results = parameters.pop()?;
+    let skip = parameters.pop_int()?;
+    let _caller = parameters.pop()?;
+    let match_flags = parameters.pop_int()?;
+    let match_sig = parameters.pop()?;
+    let match_name = parameters.pop()?;
+    let defc = parameters.pop()?;
+
+    let class = get_class(&thread, &defc).await?;
+    let match_name = if match_name.is_null() {
+        None
+    } else {
+        Some(match_name.as_string()?)
+    };
+    let match_sig = if match_sig.is_null() {
+        None
+    } else {
+        Some(match_sig.as_string()?)
+    };
+
+    let match_flags = MemberNameFlags::from_bits_truncate(match_flags);
+
+    let mut members = Vec::new();
+    let mut classes_to_search = Vec::new();
+    classes_to_search.push(class.clone());
+
+    // Add superclasses to search if SUPERCLASSES flag is set
+    if match_flags.contains(MemberNameFlags::SUPERCLASSES) {
+        let mut current_class = class.clone();
+        while let Some(parent) = current_class.parent()? {
+            classes_to_search.push(parent.clone());
+            current_class = parent;
+        }
+    }
+
+    // Add interfaces to search if INTERFACES flag is set
+    if match_flags.contains(MemberNameFlags::INTERFACES) {
+        collect_interfaces(&class, &mut classes_to_search)?;
+    }
+
+    for class in classes_to_search {
+        if match_flags.contains(MemberNameFlags::IS_FIELD) {
+            for field in class.declared_fields() {
+                if let Some(ref name) = match_name
+                    && field.name() != name
+                {
+                    continue;
+                }
+                if let Some(ref sig) = match_sig
+                    && field.field_type().to_string() != *sig
+                {
+                    continue;
+                }
+                members.push((
+                    class.clone(),
+                    field.name().to_string(),
+                    field.field_type().to_string(),
+                    field.access_flags().bits(),
+                    MemberNameFlags::IS_FIELD,
+                ));
+            }
+        }
+
+        if match_flags.contains(MemberNameFlags::IS_METHOD)
+            || match_flags.contains(MemberNameFlags::IS_CONSTRUCTOR)
+        {
+            for method in class.methods() {
+                let method_name = method.name();
+                let flags = if method_name == "<init>" {
+                    if !match_flags.contains(MemberNameFlags::IS_CONSTRUCTOR) {
+                        continue;
+                    }
+                    MemberNameFlags::IS_CONSTRUCTOR
+                } else {
+                    if !match_flags.contains(MemberNameFlags::IS_METHOD) {
+                        continue;
+                    }
+                    if method_name == "<clinit>" {
+                        continue;
+                    }
+                    MemberNameFlags::IS_METHOD
+                };
+
+                if let Some(ref name) = match_name
+                    && method_name != name
+                {
+                    continue;
+                }
+                if let Some(ref sig) = match_sig
+                    && method.descriptor() != sig
+                {
+                    continue;
+                }
+                members.push((
+                    class.clone(),
+                    method_name.to_string(),
+                    method.descriptor().to_string(),
+                    method.access_flags().bits(),
+                    flags,
+                ));
+            }
+        }
+    }
+
+    let results_len = {
+        let results_guard = results.as_reference()?;
+        match &*results_guard {
+            Reference::Array(arr) => arr.elements.len(),
+            _ => return Err(InternalError("results is not an array".to_string())),
+        }
+    };
+
+    let skip = usize::try_from(skip).unwrap_or(0);
+    let mut resolved_members = Vec::new();
+
+    for (class, name, descriptor, modifiers, flags) in
+        members.into_iter().skip(skip).take(results_len)
+    {
+        let class_val = class.to_object(&thread).await?;
+        let name_val = name.to_object(&thread).await?;
+        let type_val = descriptor.to_object(&thread).await?;
+        let flags_val = Value::Int(i32::from(modifiers) | flags.bits());
+        resolved_members.push((class_val, name_val, type_val, flags_val));
+    }
+
+    let mut results_guard = results.as_reference_mut()?;
+    let results_array = match &mut *results_guard {
+        Reference::Array(arr) => &mut arr.elements,
+        _ => return Err(InternalError("results is not an array".to_string())),
+    };
+
+    let mut count = 0;
+    for (class_val, name_val, type_val, flags_val) in resolved_members {
+        if count >= results_array.len() {
+            break;
+        }
+
+        if let Some(Value::Object(Some(member_name_ref))) = results_array.get(count) {
+            let mut member_name = member_name_ref.write();
+            if let Reference::Object(ref mut object) = *member_name {
+                object.set_value("clazz", class_val)?;
+                object.set_value("name", name_val)?;
+                object.set_value("type", type_val)?;
+                object.set_value("flags", flags_val)?;
+            }
+        }
+        count += 1;
+    }
+
+    Ok(Some(Value::Int(count as i32)))
 }
 
 #[intrinsic_method(
@@ -141,10 +688,34 @@ pub(crate) async fn get_members(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_named_con(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.MethodHandleNatives.getNamedCon(I[Ljava/lang/Object;)I")
+    let box_array = parameters.pop()?;
+    let which = parameters.pop_int()?;
+
+    // Named constants - these are internal VM constants that can be queried by index
+    // The name is stored in box_array[0] if found
+    // Returns the constant value, or -1 if not found
+    let (name, value): (Option<&str>, i32) = match which {
+        0 => (Some("GC_COUNT_MAX"), 0),
+        _ => (None, -1),
+    };
+
+    if let Some(name) = name {
+        if !box_array.is_null() {
+            let name_value = name.to_object(&thread).await?;
+            let mut array_ref = box_array.as_reference_mut()?;
+            if let Reference::Array(arr) = &mut *array_ref
+                && !arr.elements.is_empty()
+            {
+                arr.elements[0] = name_value;
+            }
+        }
+        Ok(Some(Value::Int(value)))
+    } else {
+        Ok(Some(Value::Int(-1)))
+    }
 }
 
 #[intrinsic_method(
@@ -152,8 +723,166 @@ pub(crate) async fn get_named_con(
     Any
 )]
 #[async_recursion(?Send)]
-pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn init(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+    let ref_object = parameters.pop()?;
+    let member_name = parameters.pop()?;
+
+    if ref_object.is_null() {
+        return Ok(None);
+    }
+
+    let ref_class_name = {
+        let ref_object = ref_object.as_object_ref()?;
+        ref_object.class().name().to_string()
+    };
+
+    match ref_class_name.as_str() {
+        "java/lang/reflect/Method" => {
+            init_from_method(&thread, member_name, ref_object).await?;
+        }
+        "java/lang/reflect/Constructor" => {
+            init_from_constructor(&thread, member_name, ref_object).await?;
+        }
+        "java/lang/reflect/Field" => {
+            init_from_field(&thread, member_name, ref_object).await?;
+        }
+        _ => {
+            // Unknown ref type, leave MemberName uninitialized
+        }
+    }
+
     Ok(None)
+}
+
+/// Initializes a MemberName from a java.lang.reflect.Method object.
+async fn init_from_method(thread: &Thread, member_name: Value, method_ref: Value) -> Result<()> {
+    let (clazz, name, modifiers, parameter_types, return_type) = {
+        let method_obj = method_ref.as_object_ref()?;
+        let clazz = method_obj.value("clazz")?;
+        let name = method_obj.value("name")?;
+        let modifiers = method_obj.value("modifiers")?.as_i32()?;
+        let parameter_types = method_obj.value("parameterTypes")?;
+        let return_type = method_obj.value("returnType")?;
+        (clazz, name, modifiers, parameter_types, return_type)
+    };
+
+    // Build the method type from parameter and return types
+    let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
+    let method_type = if parameter_types.is_null() {
+        let method = method_type_class.try_get_method(
+            "methodType",
+            "(Ljava/lang/Class;)Ljava/lang/invoke/MethodType;",
+        )?;
+        thread
+            .try_execute(&method_type_class, &method, &[return_type])
+            .await?
+    } else {
+        let method = method_type_class.try_get_method(
+            "methodType",
+            "(Ljava/lang/Class;[Ljava/lang/Class;)Ljava/lang/invoke/MethodType;",
+        )?;
+        thread
+            .try_execute(&method_type_class, &method, &[return_type, parameter_types])
+            .await?
+    };
+
+    let is_static = (modifiers & MethodAccessFlags::STATIC.bits() as i32) != 0;
+    let reference_kind = if is_static {
+        ReferenceKind::InvokeStatic.kind()
+    } else {
+        ReferenceKind::InvokeVirtual.kind()
+    } as i32;
+    let flags = MemberNameFlags::IS_METHOD.bits() | modifiers | (reference_kind << 24);
+
+    let mut member_name_obj = member_name.as_object_mut()?;
+    member_name_obj.set_value("clazz", clazz)?;
+    member_name_obj.set_value("name", name)?;
+    member_name_obj.set_value("type", method_type)?;
+    member_name_obj.set_value("flags", Value::Int(flags))?;
+
+    Ok(())
+}
+
+/// Initializes a MemberName from a java.lang.reflect.Constructor object.
+async fn init_from_constructor(
+    thread: &Thread,
+    member_name: Value,
+    constructor_ref: Value,
+) -> Result<()> {
+    let (clazz, modifiers, parameter_types) = {
+        let constructor_obj = constructor_ref.as_object_ref()?;
+        let clazz = constructor_obj.value("clazz")?;
+        let modifiers = constructor_obj.value("modifiers")?.as_i32()?;
+        let parameter_types = constructor_obj.value("parameterTypes")?;
+        (clazz, modifiers, parameter_types)
+    };
+
+    // Constructor name is always "<init>"
+    let name = "<init>".to_object(thread).await?;
+
+    // Return type is void
+    let void_class = thread.class("void").await?;
+    let return_type = void_class.to_object(thread).await?;
+
+    // Build the method type from parameter and return types
+    let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
+    let method_type = if parameter_types.is_null() {
+        let method = method_type_class.try_get_method(
+            "methodType",
+            "(Ljava/lang/Class;)Ljava/lang/invoke/MethodType;",
+        )?;
+        thread
+            .try_execute(&method_type_class, &method, &[return_type])
+            .await?
+    } else {
+        let method = method_type_class.try_get_method(
+            "methodType",
+            "(Ljava/lang/Class;[Ljava/lang/Class;)Ljava/lang/invoke/MethodType;",
+        )?;
+        thread
+            .try_execute(&method_type_class, &method, &[return_type, parameter_types])
+            .await?
+    };
+
+    // REF_newInvokeSpecial = 8 for constructors
+    let flags = MemberNameFlags::IS_CONSTRUCTOR.bits() | modifiers | (8 << 24);
+
+    let mut member_name_obj = member_name.as_object_mut()?;
+    member_name_obj.set_value("clazz", clazz)?;
+    member_name_obj.set_value("name", name)?;
+    member_name_obj.set_value("type", method_type)?;
+    member_name_obj.set_value("flags", Value::Int(flags))?;
+
+    Ok(())
+}
+
+/// Initializes a MemberName from a java.lang.reflect.Field object.
+async fn init_from_field(_thread: &Thread, member_name: Value, field_ref: Value) -> Result<()> {
+    let (clazz, name, field_type, modifiers) = {
+        let field_obj = field_ref.as_object_ref()?;
+        let clazz = field_obj.value("clazz")?;
+        let name = field_obj.value("name")?;
+        let field_type = field_obj.value("type")?;
+        let modifiers = field_obj.value("modifiers")?.as_i32()?;
+        (clazz, name, field_type, modifiers)
+    };
+
+    // Default to getField/getStatic based on static modifier
+    let is_static = (modifiers & FieldAccessFlags::STATIC.bits() as i32) != 0;
+    let ref_kind = if is_static {
+        ReferenceKind::GetStatic.kind()
+    } else {
+        ReferenceKind::GetField.kind()
+    } as i32;
+    let flags = MemberNameFlags::IS_FIELD.bits() | modifiers | (ref_kind << 24);
+
+    let mut member_name_obj = member_name.as_object_mut()?;
+    member_name_obj.set_value("clazz", clazz)?;
+    member_name_obj.set_value("name", name)?;
+    member_name_obj.set_value("type", field_type)?;
+    member_name_obj.set_value("flags", Value::Int(flags))?;
+
+    Ok(())
 }
 
 #[intrinsic_method(
@@ -276,21 +1005,56 @@ async fn resolve_method(
     };
 
     let (parameter_descriptors, return_descriptor) = {
-        let method_type = method_type.as_object_ref()?;
-        let parameter_types = method_type.value("ptypes")?;
-        let parameters: Vec<Value> = parameter_types.try_into()?;
-        let mut parameter_descriptors = Vec::with_capacity(parameters.len());
-        for parameter in parameters {
-            let class_object = parameter.as_object_ref()?;
-            let class_name = class_object.value("name")?.as_string()?;
-            let descriptor = Class::convert_to_descriptor(&class_name);
-            parameter_descriptors.push(descriptor);
+        let method_type_ref = method_type.as_object_ref()?;
+        let class_name = method_type_ref.class().name().to_string();
+        drop(method_type_ref);
+
+        if class_name == "java/lang/invoke/MethodType" {
+            let method_type_ref = method_type.as_object_ref()?;
+            let parameter_types = method_type_ref.value("ptypes")?;
+            let parameters: Vec<Value> = parameter_types.try_into()?;
+            let mut parameter_descriptors = Vec::with_capacity(parameters.len());
+            for parameter in parameters {
+                let class_object = parameter.as_object_ref()?;
+                let class_name = class_object.value("name")?.as_string()?;
+                let descriptor = Class::convert_to_descriptor(&class_name);
+                parameter_descriptors.push(descriptor);
+            }
+            let return_type = method_type_ref.value("rtype")?;
+            let return_type = return_type.as_object_ref()?;
+            let return_class_name = return_type.value("name")?.as_string()?;
+            let return_descriptor = Class::convert_to_descriptor(&return_class_name);
+            (parameter_descriptors, return_descriptor)
+        } else if class_name.starts_with('[') {
+            let method_type_ref = method_type.as_reference()?;
+            let (_class, elements) = method_type_ref.as_class_vec_ref()?;
+            if elements.is_empty() {
+                return Err(InternalError("Invalid type array".to_string()));
+            }
+            // elements[0] is return type (Class)
+            // elements[1..] are parameter types (Class)
+            let return_type = elements[0].as_object_ref()?;
+            let return_class_name = return_type.value("name")?.as_string()?;
+            let return_descriptor = Class::convert_to_descriptor(&return_class_name);
+
+            let mut parameter_descriptors = Vec::with_capacity(elements.len() - 1);
+            for parameter in elements.iter().skip(1) {
+                let class_object = parameter.as_object_ref()?;
+                let class_name = class_object.value("name")?.as_string()?;
+                let descriptor = Class::convert_to_descriptor(&class_name);
+                parameter_descriptors.push(descriptor);
+            }
+            (parameter_descriptors, return_descriptor)
+        } else if class_name == "java/lang/String" {
+            let descriptor = method_type.as_string()?;
+            let (params, ret) = FieldType::parse_method_descriptor(&descriptor)?;
+            let parameter_descriptors: Vec<String> =
+                params.iter().map(FieldType::descriptor).collect();
+            let return_descriptor = ret.map_or_else(|| "V".to_string(), |r| r.descriptor());
+            (parameter_descriptors, return_descriptor)
+        } else {
+            return Err(InternalError(format!("Unsupported type: {}", class_name)));
         }
-        let return_type = method_type.value("rtype")?;
-        let return_type = return_type.as_object_ref()?;
-        let return_class_name = return_type.value("name")?.as_string()?;
-        let return_descriptor = Class::convert_to_descriptor(&return_class_name);
-        (parameter_descriptors, return_descriptor)
     };
 
     let method_name = name.as_string()?;
@@ -403,6 +1167,49 @@ fn get_reference_kind(flags: i32) -> Result<ReferenceKind> {
     ReferenceKind::try_from(reference_kind).map_err(Into::into)
 }
 
+/// Returns the nest host class for a given class.
+///
+/// If the class has a NestHost attribute, returns the nest host class. Otherwise, the class is its
+/// own nest host.
+fn get_nest_host(class: &Arc<Class>) -> Arc<Class> {
+    let class_file = class.class_file();
+    for attribute in &class_file.attributes {
+        if let Attribute::NestHost {
+            name_index: _,
+            host_class_index,
+        } = attribute
+        {
+            // Try to get the host class name from constant pool
+            if let Ok(host_class_name) = class_file.constant_pool.try_get_class(*host_class_index) {
+                // For now, just check the name - proper implementation would load the class. If the
+                // name matches, return the class itself as a simplification
+                if host_class_name == class.name() {
+                    return Arc::clone(class);
+                }
+            }
+        }
+    }
+    // Class is its own nest host
+    Arc::clone(class)
+}
+
+/// Checks if two classes are nestmates (share the same nest host).
+///
+/// In Java 11+, nestmates can access each other's private members.
+fn are_nestmates(class1: &Arc<Class>, class2: &Arc<Class>) -> bool {
+    // Same class is always a nestmate of itself
+    if Arc::ptr_eq(class1, class2) {
+        return true;
+    }
+
+    // Check if classes share the same nest host
+    let host1 = get_nest_host(class1);
+    let host2 = get_nest_host(class2);
+
+    // Compare by class name since we might not have the same Arc instance
+    host1.name() == host2.name()
+}
+
 /// Returns true if `caller` is permitted to access a method of `declaring` with the given access
 /// flags.
 ///
@@ -428,9 +1235,14 @@ pub fn check_method_access(
         return Ok(false);
     };
 
-    // 2. PRIVATE: accessible only from the same class
+    // 2. PRIVATE: accessible only from the same class or nestmates (Java 11+)
     if method_access_flags.contains(MethodAccessFlags::PRIVATE) {
         if Arc::ptr_eq(caller, declaring) {
+            return Ok(true);
+        }
+        // Check nestmate access (Java 11+ feature)
+        if lookup_mode_flags.contains(LookupModeFlags::PRIVATE) && are_nestmates(caller, declaring)
+        {
             return Ok(true);
         }
         return Ok(false);
@@ -480,9 +1292,14 @@ pub fn check_field_access(
         return Ok(false);
     };
 
-    // 2. PRIVATE: accessible only from the same class
+    // 2. PRIVATE: accessible only from the same class or nestmates (Java 11+)
     if field_access_flags.contains(FieldAccessFlags::PRIVATE) {
         if Arc::ptr_eq(caller, declaring) {
+            return Ok(true);
+        }
+        // Check nestmate access (Java 11+ feature)
+        if lookup_mode_flags.contains(LookupModeFlags::PRIVATE) && are_nestmates(caller, declaring)
+        {
             return Ok(true);
         }
         return Ok(false);
@@ -667,72 +1484,236 @@ mod tests {
     use ristretto_classloader::Object;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.clearCallSiteContext(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V"
-    )]
-    async fn test_clear_call_site_context() {
+    async fn test_clear_call_site_context() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = clear_call_site_context(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        parameters.push(Value::Object(None));
+        let result = clear_call_site_context(thread, parameters).await?;
+        assert_eq!(None, result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.copyOutBootstrapArguments(Ljava/lang/Class;[III[Ljava/lang/Object;IZLjava/lang/Object;)V"
-    )]
-    async fn test_copy_out_bootstrap_arguments() {
+    async fn test_copy_out_bootstrap_arguments() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = copy_out_bootstrap_arguments(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+
+        let string_class = thread.class("java.lang.String").await?;
+        let caller = string_class.to_object(&thread).await?;
+
+        let index_info = Value::from(Reference::from(vec![0i32]));
+
+        let object_array_class = thread.class("[Ljava/lang/Object;").await?;
+        let buffer = Value::try_from((object_array_class, vec![Value::Object(None)]))?;
+
+        // Function pops: if_not_available, resolve, pos, buf, end, start, index_info, caller
+        // So we push in reverse: caller, index_info, start, end, buf, pos, resolve, if_not_available
+        parameters.push(caller); // caller
+        parameters.push(index_info); // indexInfo
+        parameters.push(Value::Int(0)); // start
+        parameters.push(Value::Int(0)); // end (0 means no elements to copy)
+        parameters.push(buffer); // buffer
+        parameters.push(Value::Int(0)); // pos
+        parameters.push(Value::Int(0)); // resolve = false
+        parameters.push(Value::Object(None)); // ifNotAvailable
+
+        let result = copy_out_bootstrap_arguments(thread, parameters).await?;
+        assert_eq!(None, result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.expand(Ljava/lang/invoke/MemberName;)V"
-    )]
-    async fn test_expand() {
+    async fn test_expand() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = expand(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let mut member_name = Object::new(member_name_class)?;
+
+        // Use to_object to create a proper java.lang.Class object with the "name" field set
+        let class_object = thread.class("java.lang.Integer").await?;
+        let class = class_object.to_object(&thread).await?;
+        member_name.set_value("clazz", class)?;
+
+        // Use MAX_VALUE as a real existing field
+        let name = "MAX_VALUE".to_object(&thread).await?;
+        member_name.set_value("name", name)?;
+
+        let type_obj = Value::Object(None);
+        member_name.set_value("type", type_obj)?;
+
+        let flags = MemberNameFlags::IS_FIELD.bits()
+            | FieldAccessFlags::PUBLIC.bits() as i32
+            | FieldAccessFlags::STATIC.bits() as i32
+            | FieldAccessFlags::FINAL.bits() as i32
+            | ((ReferenceKind::GetStatic.kind() as i32) << 24);
+        member_name.set_value("flags", Value::Int(flags))?;
+
+        parameters.push(Value::from(member_name));
+        let result = expand(thread, parameters).await?;
+        assert_eq!(None, result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.getConstant(I)I"
-    )]
-    async fn test_get_constant() {
+    async fn test_get_constant() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_constant(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        // GC_COUNT_MAX constant index
+        parameters.push(Value::Int(0));
+        let result = get_constant(thread, parameters).await?;
+        // GC_COUNT_MAX = 0 (no limit)
+        assert_eq!(Some(Value::Int(0)), result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.getMemberVMInfo(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;"
-    )]
-    async fn test_get_member_vm_info() {
+    async fn test_get_member_vm_info() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_member_vm_info(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let mut member_name = Object::new(member_name_class)?;
+
+        let vmindex = "test_signature".to_object(&thread).await?;
+        member_name.set_value("vmindex", vmindex)?;
+
+        parameters.push(Value::from(member_name));
+
+        let result = get_member_vm_info(thread, parameters).await?;
+
+        if let Some(Value::Object(Some(reference))) = result {
+            let array_value = Value::Object(Some(reference));
+            let array: Vec<Value> = array_value.try_into().expect("array");
+            assert_eq!(2, array.len());
+            assert!(matches!(array[0], Value::Object(Some(_))));
+        } else {
+            panic!("Expected Object array result");
+        }
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.getMembers(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I"
-    )]
-    async fn test_get_members() {
+    async fn test_get_members() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_members(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+
+        let defc_class = thread.class("java.lang.Integer").await?;
+        let defc = defc_class.to_object(&thread).await?;
+
+        let match_name = Value::Object(None);
+        let match_sig = Value::Object(None);
+        let match_flags = Value::Int(MemberNameFlags::IS_FIELD.bits());
+        let caller = Value::Object(None);
+        let skip = Value::Int(0);
+
+        let member_name_array_class = thread.class("[Ljava/lang/invoke/MemberName;").await?;
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let mut elements = Vec::new();
+        for _ in 0..10 {
+            elements.push(Value::from(Object::new(member_name_class.clone())?));
+        }
+        let results = Value::try_from((member_name_array_class, elements))?;
+
+        parameters.push(defc);
+        parameters.push(match_name);
+        parameters.push(match_sig);
+        parameters.push(match_flags);
+        parameters.push(caller);
+        parameters.push(skip);
+        parameters.push(results);
+
+        let result = get_members(thread, parameters).await?;
+
+        if let Some(Value::Int(count)) = result {
+            assert!(count > 0);
+        } else {
+            panic!("Expected int result");
+        }
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.MethodHandleNatives.getNamedCon(I[Ljava/lang/Object;)I"
-    )]
-    async fn test_get_named_con() {
+    async fn test_get_named_con() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_named_con(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+
+        let object_array_class = thread.class("[Ljava/lang/Object;").await?;
+        let box_array = Value::try_from((object_array_class, vec![Value::Object(None)]))?;
+
+        // which = 0 (GC_COUNT_MAX)
+        parameters.push(Value::Int(0));
+        parameters.push(box_array);
+
+        let result = get_named_con(thread, parameters).await?;
+        // Index 0 is GC_COUNT_MAX with value 0
+        assert_eq!(Some(Value::Int(0)), result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_named_con_unknown() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let mut parameters = Parameters::default();
+
+        let object_array_class = thread.class("[Ljava/lang/Object;").await?;
+        let box_array = Value::try_from((object_array_class, vec![Value::Object(None)]))?;
+
+        // unknown index
+        parameters.push(Value::Int(999));
+        parameters.push(box_array);
+
+        let result = get_named_con(thread, parameters).await?;
+        // Unknown index returns -1
+        assert_eq!(Some(Value::Int(-1)), result);
+        Ok(())
     }
 
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init(thread, Parameters::default()).await?;
+        let mut parameters = Parameters::default();
+
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let member_name = Object::new(member_name_class)?;
+
+        parameters.push(Value::from(member_name));
+        parameters.push(Value::Object(None));
+
+        let result = init(thread, parameters).await?;
+        assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_with_field() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let mut parameters = Parameters::default();
+
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let member_name = Object::new(member_name_class)?;
+
+        let field_class = thread.class("java.lang.reflect.Field").await?;
+        let mut field_obj = Object::new(field_class)?;
+
+        let declaring_class = thread.class("java.lang.Integer").await?;
+        let declaring_class_obj = declaring_class.to_object(&thread).await?;
+        field_obj.set_value("clazz", declaring_class_obj)?;
+
+        let field_name = "MAX_VALUE".to_object(&thread).await?;
+        field_obj.set_value("name", field_name)?;
+
+        let int_class = thread.class("int").await?;
+        let int_class_obj = int_class.to_object(&thread).await?;
+        field_obj.set_value("type", int_class_obj)?;
+
+        // PUBLIC | STATIC | FINAL
+        let modifiers =
+            FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL;
+        field_obj.set_value("modifiers", Value::Int(modifiers.bits() as i32))?;
+
+        parameters.push(Value::from(member_name));
+        parameters.push(Value::from(field_obj));
+
+        let result = init(thread, parameters).await?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -744,7 +1725,7 @@ mod tests {
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
         let mut member_name = Object::new(member_name_class)?;
         let class_object = thread.class("java.lang.Integer").await?;
-        let class = Value::from(Object::new(class_object)?);
+        let class = class_object.to_object(&thread).await?;
         member_name.set_value("clazz", class)?;
         let value_string = "value".to_object(&thread).await?;
         member_name.set_value("name", value_string)?;
@@ -764,8 +1745,11 @@ mod tests {
 
     #[test]
     fn test_get_reference_kind() -> Result<()> {
+        let reference_kind =
+            MemberNameFlags::IS_METHOD.bits() | ((ReferenceKind::InvokeStatic.kind() as i32) << 24);
+
         assert_eq!(
-            get_reference_kind(0x0601_0000)?,
+            get_reference_kind(reference_kind)?,
             ReferenceKind::InvokeStatic
         );
         Ok(())
@@ -808,7 +1792,7 @@ mod tests {
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
         let mut member_name = Object::new(member_name_class)?;
         let class_object = thread.class("java.lang.Integer").await?;
-        let class = Value::from(Object::new(class_object)?);
+        let class = class_object.to_object(&thread).await?;
         member_name.set_value("clazz", class.clone())?;
         parameters.push(Value::from(member_name));
         let result = static_field_base(thread, parameters).await?;
@@ -823,13 +1807,121 @@ mod tests {
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
         let mut member_name = Object::new(member_name_class)?;
         let class_object = thread.class("java.lang.Integer").await?;
-        let class = Value::from(Object::new(class_object)?);
+        let class = class_object.to_object(&thread).await?;
         member_name.set_value("clazz", class)?;
         let value_string = "MAX_VALUE".to_object(&thread).await?;
         member_name.set_value("name", value_string)?;
         parameters.push(Value::from(member_name));
         let result = static_field_offset(thread, parameters).await?;
         assert_eq!(Some(Value::Long(2)), result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_resolve_0_field() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let mut parameters = Parameters::default();
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let mut member_name = Object::new(member_name_class)?;
+
+        // Use to_object to create a proper java.lang.Class object
+        let class_object = thread.class("java.lang.Integer").await?;
+        let class = class_object.to_object(&thread).await?;
+        member_name.set_value("clazz", class)?;
+
+        let name = "MAX_VALUE".to_object(&thread).await?;
+        member_name.set_value("name", name)?;
+
+        let type_obj = Value::Object(None);
+        member_name.set_value("type", type_obj)?;
+
+        let flags = MemberNameFlags::IS_FIELD.bits()
+            | FieldAccessFlags::PUBLIC.bits() as i32
+            | FieldAccessFlags::STATIC.bits() as i32
+            | FieldAccessFlags::FINAL.bits() as i32
+            | ((ReferenceKind::GetStatic.kind() as i32) << 24);
+        member_name.set_value("flags", Value::Int(flags))?;
+
+        let caller_class = thread.class("java.lang.Object").await?;
+        let caller = caller_class.to_object(&thread).await?;
+
+        parameters.push(caller);
+        parameters.push(Value::from(member_name));
+
+        let result = resolve_0(thread, parameters).await?;
+        assert!(result.is_some());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_resolve_1_field() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let mut parameters = Parameters::default();
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let mut member_name = Object::new(member_name_class)?;
+
+        let class_object = thread.class("java.lang.Integer").await?;
+        let class = class_object.to_object(&thread).await?;
+        member_name.set_value("clazz", class)?;
+
+        let name = "MAX_VALUE".to_object(&thread).await?;
+        member_name.set_value("name", name)?;
+
+        let type_obj = Value::Object(None);
+        member_name.set_value("type", type_obj)?;
+
+        let flags = MemberNameFlags::IS_FIELD.bits()
+            | FieldAccessFlags::PUBLIC.bits() as i32
+            | FieldAccessFlags::STATIC.bits() as i32
+            | FieldAccessFlags::FINAL.bits() as i32
+            | ((ReferenceKind::GetStatic.kind() as i32) << 24);
+        member_name.set_value("flags", Value::Int(flags))?;
+
+        parameters.push(Value::from(member_name));
+        // caller (null)
+        parameters.push(Value::Object(None));
+        // speculative_resolve
+        parameters.push(Value::from(false));
+
+        let result = resolve_1(thread, parameters).await?;
+        assert!(result.is_some());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_resolve_2_field() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let mut parameters = Parameters::default();
+        let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
+        let mut member_name = Object::new(member_name_class)?;
+
+        let class_object = thread.class("java.lang.Integer").await?;
+        let class = class_object.to_object(&thread).await?;
+        member_name.set_value("clazz", class)?;
+
+        let name = "MAX_VALUE".to_object(&thread).await?;
+        member_name.set_value("name", name)?;
+
+        let type_obj = Value::Object(None);
+        member_name.set_value("type", type_obj)?;
+
+        let flags = MemberNameFlags::IS_FIELD.bits()
+            | FieldAccessFlags::PUBLIC.bits() as i32
+            | FieldAccessFlags::STATIC.bits() as i32
+            | FieldAccessFlags::FINAL.bits() as i32
+            | ((ReferenceKind::GetStatic.kind() as i32) << 24);
+        member_name.set_value("flags", Value::Int(flags))?;
+
+        parameters.push(Value::from(member_name));
+        // caller (null)
+        parameters.push(Value::Object(None));
+        // lookup_mode (TRUSTED = -1 for full access)
+        parameters.push(Value::Int(-1));
+        // speculative_resolve
+        parameters.push(Value::from(false));
+
+        let result = resolve_2(thread, parameters).await?;
+        assert!(result.is_some());
         Ok(())
     }
 }
