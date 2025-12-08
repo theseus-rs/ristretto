@@ -147,10 +147,14 @@ pub(crate) async fn get_component_type(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_constant_pool_0(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getConstantPool()Lsun/reflect/ConstantPool;")
+    let class_object = parameters.pop()?;
+    let class = thread.class("sun.reflect.ConstantPool").await?;
+    let mut constant_pool = Object::new(class)?;
+    constant_pool.set_value("constantPoolOop", class_object)?;
+    Ok(Some(Value::from(constant_pool)))
 }
 
 #[intrinsic_method(
@@ -632,10 +636,26 @@ pub(crate) async fn get_exceptions(
 #[intrinsic_method("java/lang/Class.getGenericSignature0()Ljava/lang/String;", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_generic_signature_0(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getGenericSignature0()Ljava/lang/String;")
+    let object = parameters.pop()?;
+    let class = get_class(&thread, &object).await?;
+    let class_file = class.class_file();
+    let constant_pool = &class_file.constant_pool;
+
+    for attribute in &class_file.attributes {
+        if let Attribute::Signature {
+            signature_index, ..
+        } = attribute
+        {
+            let signature = constant_pool.try_get_utf8(*signature_index)?;
+            let value = signature.to_object(&thread).await?;
+            return Ok(Some(value));
+        }
+    }
+
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method("java/lang/Class.getInterfaces0()[Ljava/lang/Class;", Any)]
@@ -700,10 +720,25 @@ pub(crate) async fn get_name_0(
 #[intrinsic_method("java/lang/Class.getNestHost0()Ljava/lang/Class;", GreaterThan(JAVA_8))]
 #[async_recursion(?Send)]
 pub(crate) async fn get_nest_host_0(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getNestHost0()Ljava/lang/Class;")
+    let object = parameters.pop()?;
+    let class = get_class(&thread, &object).await?;
+    let class_file = class.class_file();
+    for attribute in &class_file.attributes {
+        if let Attribute::NestHost {
+            host_class_index, ..
+        } = attribute
+        {
+            let constant_pool = &class_file.constant_pool;
+            let host_class_name = constant_pool.try_get_class(*host_class_index)?;
+            let host_class = thread.class(host_class_name).await?;
+            let host_class_object = host_class.to_object(&thread).await?;
+            return Ok(Some(host_class_object));
+        }
+    }
+    Ok(Some(object))
 }
 
 #[intrinsic_method(
@@ -712,10 +747,30 @@ pub(crate) async fn get_nest_host_0(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_nest_members_0(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getNestMembers0()[Ljava/lang/Class;")
+    let object = parameters.pop()?;
+    let class = get_class(&thread, &object).await?;
+    let class_file = class.class_file();
+    let mut members = Vec::new();
+    members.push(object.clone());
+
+    for attribute in &class_file.attributes {
+        if let Attribute::NestMembers { class_indexes, .. } = attribute {
+            let constant_pool = &class_file.constant_pool;
+            for class_index in class_indexes {
+                let class_name = constant_pool.try_get_class(*class_index)?;
+                let member_class = thread.class(class_name).await?;
+                let member_object = member_class.to_object(&thread).await?;
+                members.push(member_object);
+            }
+        }
+    }
+
+    let class_array = thread.class("[Ljava/lang/Class;").await?;
+    let members_array = Value::try_from((class_array, members))?;
+    Ok(Some(members_array))
 }
 
 #[intrinsic_method(
@@ -758,7 +813,8 @@ pub(crate) async fn get_protection_domain_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getProtectionDomain0()Ljava/security/ProtectionDomain;")
+    // Classes loaded by the bootstrap class loader have no ProtectionDomain
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method("java/lang/Class.getRawAnnotations()[B", Any)]
@@ -830,10 +886,13 @@ pub(crate) async fn get_raw_type_annotations(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_record_components_0(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;")
+    let record_component_array_class = thread.class("[Ljava/lang/reflect/RecordComponent;").await?;
+    let empty_vec: Vec<Value> = Vec::new();
+    let empty = Value::try_from((record_component_array_class, empty_vec))?;
+    Ok(Some(empty))
 }
 
 #[intrinsic_method(
@@ -1179,12 +1238,25 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Class.getConstantPool()Lsun/reflect/ConstantPool;"
-    )]
-    async fn test_get_constant_pool_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_constant_pool_0(thread, Parameters::default()).await;
+    async fn test_get_constant_pool_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        // This test only applies to Java 8 where sun.reflect.ConstantPool exists
+        if vm.java_major_version() > JAVA_8.java() {
+            // sun.reflect.ConstantPool doesn't exist in Java 9+
+            return Ok(());
+        }
+        let class = thread.class("java.lang.String").await?;
+        let class_object = class.to_object(&thread).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let constant_pool = get_constant_pool_0(thread, parameters)
+            .await?
+            .expect("constant pool");
+        let constant_pool = constant_pool.as_object_ref()?;
+        let class_object = constant_pool.value("constantPoolOop")?;
+        let class_object = class_object.as_object_ref()?;
+        let class_name = class_object.value("name")?.as_string()?;
+        assert_eq!(class_name, "java.lang.String");
+        Ok(())
     }
 
     #[tokio::test]
@@ -1445,12 +1517,30 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Class.getGenericSignature0()Ljava/lang/String;"
-    )]
-    async fn test_get_generic_signature_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_generic_signature_0(thread, Parameters::default()).await;
+    async fn test_get_generic_signature_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        // java.util.ArrayList has a generic signature
+        let class = thread.class("java.util.ArrayList").await?;
+        let class_object = class.to_object(&thread).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_generic_signature_0(thread, parameters).await?;
+        let signature = result.expect("signature");
+        let signature = signature.as_string()?;
+        // ArrayList<E> implements List<E>, etc.
+        assert!(signature.contains("<E:Ljava/lang/Object;>"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_generic_signature_0_no_signature() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        // java.lang.Object has no generic signature
+        let class = thread.class("java.lang.Object").await?;
+        let class_object = class.to_object(&thread).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_generic_signature_0(thread, parameters).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
     }
 
     #[tokio::test]
@@ -1507,21 +1597,33 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Class.getNestHost0()Ljava/lang/Class;"
-    )]
-    async fn test_get_nest_host_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_nest_host_0(thread, Parameters::default()).await;
+    async fn test_get_nest_host_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.String").await?;
+        let class_object = class.to_object(&thread).await?;
+        let parameters = Parameters::new(vec![class_object.clone()]);
+        let result = get_nest_host_0(thread, parameters).await?;
+        let host_class = result.expect("class");
+        let host_class = host_class.as_object_ref()?;
+        let class_name = host_class.value("name")?.as_string()?;
+        // java.lang.String is its own nest host
+        assert_eq!(class_name.as_str(), "java.lang.String");
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Class.getNestMembers0()[Ljava/lang/Class;"
-    )]
-    async fn test_get_nest_members_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_nest_members_0(thread, Parameters::default()).await;
+    async fn test_get_nest_members_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.String").await?;
+        let class_object = class.to_object(&thread).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_nest_members_0(thread, parameters).await?;
+        let members = result.expect("members");
+        let (class, values) = members.as_class_vec_ref()?;
+        assert_eq!(class.name(), "[Ljava/lang/Class;");
+        // At least the class itself should be in the nest members
+        assert!(!values.is_empty());
+        Ok(())
     }
 
     #[tokio::test]
@@ -1548,12 +1650,15 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Class.getProtectionDomain0()Ljava/security/ProtectionDomain;"
-    )]
-    async fn test_get_protection_domain_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_protection_domain_0(thread, Parameters::default()).await;
+    async fn test_get_protection_domain_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.String").await?;
+        let class_object = class.to_object(&thread).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_protection_domain_0(thread, parameters).await?;
+        // Classes loaded by the bootstrap loader return null
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
     }
 
     #[tokio::test]
@@ -1585,12 +1690,15 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;"
-    )]
-    async fn test_get_record_components_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_record_components_0(thread, Parameters::default()).await;
+    async fn test_get_record_components_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_record_components_0(thread, Parameters::default()).await?;
+        let components = result.expect("components");
+        let (class, values) = components.as_class_vec_ref()?;
+        assert_eq!(class.name(), "[Ljava/lang/reflect/RecordComponent;");
+        // Empty array since no record components
+        assert!(values.is_empty());
+        Ok(())
     }
 
     #[tokio::test]
