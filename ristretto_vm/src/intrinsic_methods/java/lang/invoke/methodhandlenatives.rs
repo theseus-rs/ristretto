@@ -491,9 +491,10 @@ pub(crate) async fn get_member_vm_info(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let member_name = parameters.pop()?;
-    let member_name_ref = member_name.as_object_ref()?;
-    let vmindex = member_name_ref.value("vmindex")?;
-    drop(member_name_ref);
+    let vmindex = {
+        let member_name_ref = member_name.as_object_ref()?;
+        member_name_ref.value("vmindex")?
+    };
 
     let object_array_class = thread.class("[Ljava/lang/Object;").await?;
     let values = vec![vmindex, member_name];
@@ -1005,9 +1006,10 @@ async fn resolve_method(
     };
 
     let (parameter_descriptors, return_descriptor) = {
-        let method_type_ref = method_type.as_object_ref()?;
-        let class_name = method_type_ref.class().name().to_string();
-        drop(method_type_ref);
+        let class_name = {
+            let method_type_ref = method_type.as_object_ref()?;
+            method_type_ref.class().name().to_string()
+        };
 
         if class_name == "java/lang/invoke/MethodType" {
             let method_type_ref = method_type.as_object_ref()?;

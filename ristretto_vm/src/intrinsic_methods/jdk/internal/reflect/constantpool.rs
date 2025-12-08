@@ -634,7 +634,7 @@ pub(crate) mod tests {
         let result = get_double_at(thread, parameters).await?.expect("value");
         let value = result.as_f64()?;
         let value = value - 4.0f64;
-        assert!(value.abs() < 0.01f64);
+        assert!(value.abs() < f64::EPSILON);
         Ok(())
     }
 
@@ -687,7 +687,7 @@ pub(crate) mod tests {
         let result = get_float_at(thread, parameters).await?.expect("value");
         let value = result.as_f32()?;
         let value = value - 3.0f32;
-        assert!(value.abs() < 0.01f32);
+        assert!(value.abs() < f32::EPSILON);
         Ok(())
     }
 

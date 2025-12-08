@@ -11,6 +11,7 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
+bytemuck = { workspace = true }
 flate2 = { workspace = true }
 indexmap = { workspace = true }
 parking_lot = { workspace = true }

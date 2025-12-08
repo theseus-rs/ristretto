@@ -861,7 +861,7 @@ mod tests {
         let result = get_double(thread, parameters).await?.expect("value");
         let value = result.as_f64()?;
         let value = value - expected;
-        assert!(value.abs() < 0.01f64);
+        assert!(value.abs() < f64::EPSILON);
         Ok(())
     }
 
@@ -877,7 +877,7 @@ mod tests {
         let result = get_float(thread, parameters).await?.expect("value");
         let value = result.as_f32()?;
         let value = value - expected;
-        assert!(value.abs() < 0.01f32);
+        assert!(value.abs() < f32::EPSILON);
         Ok(())
     }
 
