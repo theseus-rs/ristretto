@@ -381,7 +381,7 @@ checksum = "a1d728cc89cf3aee9ff92b05e62b19ee65a02b5702cff7d5a377e32c6ae29d8d"
 
 [[package]]
 name = "class_loader"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "ristretto_classloader",
  "tokio",
@@ -761,7 +761,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "embedded_jvm"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "ristretto_vm",
  "tokio",
@@ -2043,7 +2043,7 @@ dependencies = [
 
 [[package]]
 name = "read_class"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "anyhow",
  "ristretto_classfile",
@@ -2210,7 +2210,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classfile"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "anyhow",
  "bitflags 2.10.0",
@@ -2228,7 +2228,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classloader"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "bytemuck",
  "criterion",
@@ -2255,7 +2255,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_cli"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "anstyle",
  "clap",
@@ -2268,7 +2268,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_gc"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "criterion",
  "dashmap",
@@ -2282,7 +2282,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_jimage"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "byteorder",
  "criterion",
@@ -2297,7 +2297,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_jit"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "cranelift",
  "indexmap",
@@ -2307,7 +2307,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_macros"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2317,7 +2317,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_vm"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "async-recursion",
  "bitflags 2.10.0",
@@ -2387,7 +2387,7 @@ dependencies = [
 
 [[package]]
 name = "runtime_class_loader"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "ristretto_classloader",
  "tokio",
@@ -3660,7 +3660,7 @@ checksum = "f17a85883d4e6d00e8a97c586de764dabcc06133f7f1d55dce5cdc070ad7fe59"
 
 [[package]]
 name = "write_class"
-version = "0.26.0"
+version = "0.27.0"
 dependencies = [
  "ristretto_classfile",
 ]

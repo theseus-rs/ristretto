@@ -16,9 +16,9 @@ flate2 = { workspace = true }
 indexmap = { workspace = true }
 parking_lot = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.26.0" }
-ristretto_gc = { path = "../ristretto_gc", version = "0.26.0" }
-ristretto_jimage = { path = "../ristretto_jimage", version = "0.26.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.27.0" }
+ristretto_gc = { path = "../ristretto_gc", version = "0.27.0" }
+ristretto_jimage = { path = "../ristretto_jimage", version = "0.27.0" }
 rustc-hash = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_plain = { workspace = true }
