@@ -38,7 +38,8 @@ pub(crate) async fn n_is_big_endian(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.media.sound.Platform.nIsBigEndian()Z")
+    let big_endian = cfg!(target_endian = "big");
+    Ok(Some(Value::from(big_endian)))
 }
 
 #[intrinsic_method("com/sun/media/sound/Platform.nIsSigned8()Z", LessThanOrEqual(JAVA_8))]
@@ -73,10 +74,12 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: com.sun.media.sound.Platform.nIsBigEndian()Z")]
-    async fn test_n_is_big_endian() {
+    async fn test_n_is_big_endian() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_is_big_endian(thread, Parameters::default()).await;
+        let result = n_is_big_endian(thread, Parameters::default()).await?;
+        let big_endian = cfg!(target_endian = "big");
+        assert_eq!(result, Some(Value::from(big_endian)));
+        Ok(())
     }
 
     #[tokio::test]

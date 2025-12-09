@@ -14,7 +14,8 @@ pub(crate) async fn is_big_endian(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::from(true)))
+    let big_endian = cfg!(target_endian = "big");
+    Ok(Some(Value::from(big_endian)))
 }
 
 #[cfg(test)]
@@ -25,7 +26,8 @@ mod tests {
     async fn test_is_big_endian() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let value = is_big_endian(thread, Parameters::default()).await?;
-        assert_eq!(value, Some(Value::from(true)));
+        let big_endian = cfg!(target_endian = "big");
+        assert_eq!(value, Some(Value::from(big_endian)));
         Ok(())
     }
 }
