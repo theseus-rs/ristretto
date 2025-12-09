@@ -277,6 +277,44 @@ impl Reference {
         }
     }
 
+    /// Returns a read-only byte slice view of the underlying primitive array data. This provides
+    /// raw byte access to primitive arrays for low-level memory operations.
+    ///
+    /// Returns `None` if the reference is not a primitive array type (i.e., it's an `Object` or
+    /// object `Array`).
+    #[must_use]
+    pub fn as_bytes(&self) -> Option<&[u8]> {
+        match self {
+            Reference::ByteArray(array) => Some(bytemuck::cast_slice(array.as_ref())),
+            Reference::CharArray(array) => Some(bytemuck::cast_slice(array.as_ref())),
+            Reference::ShortArray(array) => Some(bytemuck::cast_slice(array.as_ref())),
+            Reference::IntArray(array) => Some(bytemuck::cast_slice(array.as_ref())),
+            Reference::LongArray(array) => Some(bytemuck::cast_slice(array.as_ref())),
+            Reference::FloatArray(array) => Some(bytemuck::cast_slice(array.as_ref())),
+            Reference::DoubleArray(array) => Some(bytemuck::cast_slice(array.as_ref())),
+            Reference::Array(_) | Reference::Object(_) => None,
+        }
+    }
+
+    /// Returns a mutable byte slice view of the underlying primitive array data. This provides raw
+    /// byte access to primitive arrays for low-level memory operations.
+    ///
+    /// Returns `None` if the reference is not a primitive array type (i.e., it's an `Object`
+    /// or object `Array`).
+    #[must_use]
+    pub fn as_bytes_mut(&mut self) -> Option<&mut [u8]> {
+        match self {
+            Reference::ByteArray(array) => Some(bytemuck::cast_slice_mut(array.as_mut())),
+            Reference::CharArray(array) => Some(bytemuck::cast_slice_mut(array.as_mut())),
+            Reference::ShortArray(array) => Some(bytemuck::cast_slice_mut(array.as_mut())),
+            Reference::IntArray(array) => Some(bytemuck::cast_slice_mut(array.as_mut())),
+            Reference::LongArray(array) => Some(bytemuck::cast_slice_mut(array.as_mut())),
+            Reference::FloatArray(array) => Some(bytemuck::cast_slice_mut(array.as_mut())),
+            Reference::DoubleArray(array) => Some(bytemuck::cast_slice_mut(array.as_mut())),
+            Reference::Array(_) | Reference::Object(_) => None,
+        }
+    }
+
     /// Returns hash code implementation based on memory address. This is used by the Java
     /// `Object.hash_code()` implementation.
     #[must_use]
@@ -2054,5 +2092,252 @@ mod tests {
         let result = reference.as_string()?;
         assert_eq!("foo".to_string(), result);
         Ok(())
+    }
+
+    // Tests for as_bytes()
+
+    #[test]
+    fn test_as_bytes_byte_array() {
+        let reference = Reference::from(vec![1i8, 2i8, 3i8, 4i8]);
+        let bytes = reference.as_bytes().expect("should return bytes");
+        assert_eq!(bytes.len(), 4);
+        // i8 values cast to u8
+        assert_eq!(bytes, &[1u8, 2u8, 3u8, 4u8]);
+    }
+
+    #[test]
+    fn test_as_bytes_byte_array_negative_values() {
+        let reference = Reference::from(vec![-1i8, -128i8, 127i8]);
+        let bytes = reference.as_bytes().expect("should return bytes");
+        assert_eq!(bytes.len(), 3);
+        assert_eq!(bytes, &[255u8, 128u8, 127u8]);
+    }
+
+    #[test]
+    fn test_as_bytes_char_array() {
+        let reference = Reference::from(vec!['A', 'B']); // 65 and 66 as u16
+        let bytes = reference.as_bytes().expect("should return bytes");
+        // 2 chars * 2 bytes each
+        assert_eq!(bytes.len(), 4);
+    }
+
+    #[test]
+    fn test_as_bytes_short_array() {
+        let reference = Reference::from(vec![0x0102i16]);
+        let bytes = reference.as_bytes().expect("should return bytes");
+        assert_eq!(bytes.len(), 2);
+        #[cfg(target_endian = "little")]
+        assert_eq!(bytes, [0x02, 0x01]);
+        #[cfg(target_endian = "big")]
+        assert_eq!(bytes, [0x01, 0x02]);
+    }
+
+    #[test]
+    fn test_as_bytes_int_array() {
+        let reference = Reference::from(vec![0x0102_0304_i32]);
+        let bytes = reference.as_bytes().expect("should return bytes");
+        assert_eq!(bytes.len(), 4);
+    }
+
+    #[test]
+    fn test_as_bytes_long_array() {
+        let reference = Reference::from(vec![0x0102_0304_0506_0708_i64]);
+        let bytes = reference.as_bytes().expect("should return bytes");
+        assert_eq!(bytes.len(), 8);
+    }
+
+    #[test]
+    fn test_as_bytes_float_array() {
+        let reference = Reference::from(vec![1.0f32, 2.0f32]);
+        let bytes = reference.as_bytes().expect("should return bytes");
+        // 2 floats * 4 bytes each
+        assert_eq!(bytes.len(), 8);
+    }
+
+    #[test]
+    fn test_as_bytes_double_array() {
+        let reference = Reference::from(vec![1.0f64, 2.0f64]);
+        let bytes = reference.as_bytes().expect("should return bytes");
+        // 2 doubles * 8 bytes each
+        assert_eq!(bytes.len(), 16);
+    }
+
+    #[test]
+    fn test_as_bytes_empty_array() {
+        let reference = Reference::from(Vec::<i32>::new());
+        let bytes = reference.as_bytes().expect("should return bytes");
+        assert!(bytes.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_as_bytes_object_array_returns_none() -> Result<()> {
+        let class = load_class("[Ljava/lang/Object;").await?;
+        let reference = Reference::from((class, vec![None]));
+        assert!(reference.as_bytes().is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_bytes_object_returns_none() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let object = Object::new(class)?;
+        let reference = Reference::from(object);
+        assert!(reference.as_bytes().is_none());
+        Ok(())
+    }
+
+    // Tests for as_bytes_mut()
+
+    #[test]
+    fn test_as_bytes_mut_byte_array() {
+        let mut reference = Reference::from(vec![1i8, 2i8, 3i8, 4i8]);
+        {
+            let bytes = reference.as_bytes_mut().expect("should return bytes");
+            bytes[0] = 10;
+            bytes[1] = 20;
+        }
+        let bytes = reference.as_bytes().expect("should return bytes");
+        assert_eq!(bytes[0], 10);
+        assert_eq!(bytes[1], 20);
+    }
+
+    #[test]
+    fn test_as_bytes_mut_char_array() {
+        let mut reference = Reference::from(vec!['A', 'B']);
+        {
+            let bytes = reference.as_bytes_mut().expect("should return bytes");
+            // Modify the raw bytes
+            bytes[0] = 0xFF;
+        }
+        let bytes = reference.as_bytes().expect("should return bytes");
+        assert_eq!(bytes[0], 0xFF);
+    }
+
+    #[test]
+    fn test_as_bytes_mut_short_array() {
+        let mut reference = Reference::from(vec![0i16, 0i16]);
+        {
+            let bytes = reference.as_bytes_mut().expect("should return bytes");
+            assert_eq!(bytes.len(), 4);
+            bytes.fill(0xFF);
+        }
+        let shorts = reference.as_short_vec_ref().expect("should return shorts");
+        assert_eq!(shorts[0], -1i16);
+        assert_eq!(shorts[1], -1i16);
+    }
+
+    #[test]
+    fn test_as_bytes_mut_int_array() {
+        let mut reference = Reference::from(vec![0i32]);
+        {
+            let bytes = reference.as_bytes_mut().expect("should return bytes");
+            assert_eq!(bytes.len(), 4);
+            bytes.fill(0xFF);
+        }
+        let ints = reference.as_int_vec_ref().expect("should return ints");
+        assert_eq!(ints[0], -1i32);
+    }
+
+    #[test]
+    fn test_as_bytes_mut_long_array() {
+        let mut reference = Reference::from(vec![0i64]);
+        {
+            let bytes = reference.as_bytes_mut().expect("should return bytes");
+            assert_eq!(bytes.len(), 8);
+            bytes.fill(0xFF);
+        }
+        let longs = reference.as_long_vec_ref().expect("should return longs");
+        assert_eq!(longs[0], -1i64);
+    }
+
+    #[test]
+    fn test_as_bytes_mut_float_array() {
+        let mut reference = Reference::from(vec![0.0f32]);
+        {
+            let bytes = reference.as_bytes_mut().expect("should return bytes");
+            assert_eq!(bytes.len(), 4);
+            // Set to IEEE 754 representation of 1.0f32 (0x3F800000)
+            bytes.copy_from_slice(&1.0f32.to_ne_bytes());
+        }
+        let floats = reference.as_float_vec_ref().expect("should return floats");
+        assert!((floats[0] - 1.0f32).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_as_bytes_mut_double_array() {
+        let mut reference = Reference::from(vec![0.0f64]);
+        {
+            let bytes = reference.as_bytes_mut().expect("should return bytes");
+            assert_eq!(bytes.len(), 8);
+            // Set to IEEE 754 representation of 1.0f64
+            bytes.copy_from_slice(&1.0f64.to_ne_bytes());
+        }
+        let doubles = reference
+            .as_double_vec_ref()
+            .expect("should return doubles");
+        assert!((doubles[0] - 1.0f64).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_as_bytes_mut_empty_array() {
+        let mut reference = Reference::from(Vec::<i32>::new());
+        let bytes = reference.as_bytes_mut().expect("should return bytes");
+        assert!(bytes.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_as_bytes_mut_object_array_returns_none() -> Result<()> {
+        let class = load_class("[Ljava/lang/Object;").await?;
+        let mut reference = Reference::from((class, vec![None]));
+        assert!(reference.as_bytes_mut().is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_bytes_mut_object_returns_none() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let object = Object::new(class)?;
+        let mut reference = Reference::from(object);
+        assert!(reference.as_bytes_mut().is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_roundtrip_preserves_data() {
+        // Test that reading bytes and writing them back preserves the array
+        let original = vec![1i32, 2i32, 3i32, 4i32];
+        let reference = Reference::from(original.clone());
+        let bytes = reference.as_bytes().expect("should return bytes");
+        let bytes_copy = bytes.to_vec();
+
+        let mut new_reference = Reference::from(vec![0i32; 4]);
+        {
+            let new_bytes = new_reference.as_bytes_mut().expect("should return bytes");
+            new_bytes.copy_from_slice(&bytes_copy);
+        }
+
+        let result = new_reference.as_int_vec_ref().expect("should return ints");
+        assert_eq!(result.to_vec(), original);
+    }
+
+    #[test]
+    fn test_as_bytes_mut_partial_write() {
+        let mut reference = Reference::from(vec![0i8; 8]);
+        {
+            let bytes = reference.as_bytes_mut().expect("should return bytes");
+            // Only write to first 4 bytes
+            bytes[0..4].fill(0xAB);
+        }
+        let bytes = reference.as_bytes().expect("should return bytes");
+        assert_eq!(&bytes[0..4], &[0xAB, 0xAB, 0xAB, 0xAB]);
+        assert_eq!(&bytes[4..8], &[0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn test_as_bytes_large_array() {
+        let size = 10000;
+        let reference = Reference::from(vec![42i64; size]);
+        let bytes = reference.as_bytes().expect("should return bytes");
+        assert_eq!(bytes.len(), size * 8); // 8 bytes per i64
     }
 }

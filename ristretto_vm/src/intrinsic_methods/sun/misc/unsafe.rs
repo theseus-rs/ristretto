@@ -957,7 +957,7 @@ mod tests {
     use crate::JavaObject;
     use crate::intrinsic_methods::jdk::internal::misc::r#unsafe::{
         BOOLEAN_SIZE, BYTE_SIZE, CHAR_SIZE, DOUBLE_SIZE, FLOAT_SIZE, INT_SIZE, LONG_SIZE,
-        REFERENCE_SIZE, SHORT_SIZE,
+        REFERENCE_SIZE, SHORT_SIZE, STATIC_FIELD_OFFSET_MASK,
     };
 
     /// Creates a java.lang.reflect.Field for testing purposes.
@@ -990,19 +990,25 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.Unsafe.allocateInstance(Ljava/lang/Class;)Ljava/lang/Object;"
-    )]
-    async fn test_allocate_instance() {
+    async fn test_allocate_instance() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = allocate_instance(thread, Parameters::default()).await;
+        let class = thread.class("java.lang.Object").await?;
+        let class_object = class.to_object(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(class_object);
+        let result = allocate_instance(thread, parameters).await?;
+        assert!(matches!(result, Some(Value::Object(_))));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.internal.misc.Unsafe.allocateMemory0(J)J")]
-    async fn test_allocate_memory() {
+    async fn test_allocate_memory() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = allocate_memory(thread, Parameters::default()).await;
+        let mut parameters = Parameters::default();
+        parameters.push(Value::Long(100)); // bytes to allocate
+        let result = allocate_memory(thread, parameters).await?;
+        assert_eq!(result, Some(Value::Long(0)));
+        Ok(())
     }
 
     #[tokio::test]
@@ -1290,10 +1296,13 @@ mod tests {
         let field = create_field(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(field);
-        let value = static_field_base(thread, parameters)
+        let value = static_field_base(thread.clone(), parameters)
             .await?
             .expect("object");
-        assert_eq!(value, Value::Object(None));
+        // static_field_base returns the declaring class (clazz field) of the Field
+        let string_class = thread.class("java/lang/String").await?;
+        let string_class_object = string_class.to_object(&thread).await?;
+        assert_eq!(value, string_class_object);
         Ok(())
     }
 
@@ -1307,7 +1316,7 @@ mod tests {
             .await?
             .expect("offset");
         let offset = value.as_i64()?;
-        assert_eq!(offset, 0);
+        assert_eq!(offset, STATIC_FIELD_OFFSET_MASK);
         Ok(())
     }
 

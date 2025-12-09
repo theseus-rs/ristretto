@@ -524,6 +524,37 @@ impl Value {
         }
     }
 
+    /// Returns a read-only byte slice view of the underlying primitive array data.
+    /// This provides raw byte access to primitive arrays for low-level memory operations.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value is not an object reference or if the reference
+    /// is not a primitive array type (i.e., it's an `Object` or object `Array`).
+    pub fn as_bytes(&self) -> Result<MappedRwLockReadGuard<'_, [u8]>> {
+        let reference = self.as_reference()?;
+        RwLockReadGuard::try_map(reference, Reference::as_bytes)
+            .map_err(|_| InvalidValueType("Expected primitive array".to_string()))
+    }
+
+    /// Returns a mutable byte slice view of the underlying primitive array data.
+    /// This provides raw byte access to primitive arrays for low-level memory operations.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value is not an object reference or if the reference
+    /// is not a primitive array type (i.e., it's an `Object` or object `Array`).
+    pub fn as_bytes_mut(&self) -> Result<MappedRwLockWriteGuard<'_, [u8]>> {
+        match self {
+            Value::Object(Some(reference)) => {
+                let reference = reference.write();
+                RwLockWriteGuard::try_map(reference, Reference::as_bytes_mut)
+                    .map_err(|_| InvalidValueType("Expected primitive array".to_string()))
+            }
+            _ => Err(InvalidValueType("Expected a reference value".to_string())),
+        }
+    }
+
     /// Returns a reference to a `String`.
     ///
     /// # Errors
@@ -1920,6 +1951,181 @@ mod tests {
         let value = Value::from(object);
         let result = value.as_string()?;
         assert_eq!("foo".to_string(), result);
+        Ok(())
+    }
+
+    // Tests for as_bytes()
+
+    #[test]
+    fn test_as_bytes_byte_array() -> Result<()> {
+        let value = Value::from(vec![1i8, 2i8, 3i8, 4i8]);
+        let bytes = value.as_bytes()?;
+        assert_eq!(bytes.len(), 4);
+        assert_eq!(&*bytes, &[1u8, 2u8, 3u8, 4u8]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_int_array() -> Result<()> {
+        let value = Value::from(vec![0x0102_0304i32]);
+        let bytes = value.as_bytes()?;
+        assert_eq!(bytes.len(), 4);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_long_array() -> Result<()> {
+        let value = Value::from(vec![1i64, 2i64]);
+        let bytes = value.as_bytes()?;
+        assert_eq!(bytes.len(), 16); // 2 longs * 8 bytes each
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_float_array() -> Result<()> {
+        let value = Value::from(vec![1.0f32, 2.0f32]);
+        let bytes = value.as_bytes()?;
+        assert_eq!(bytes.len(), 8); // 2 floats * 4 bytes each
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_double_array() -> Result<()> {
+        let value = Value::from(vec![1.0f64]);
+        let bytes = value.as_bytes()?;
+        assert_eq!(bytes.len(), 8);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_empty_array() -> Result<()> {
+        let value = Value::from(Vec::<i32>::new());
+        let bytes = value.as_bytes()?;
+        assert!(bytes.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_primitive_value_error() {
+        let value = Value::Int(42);
+        let result = value.as_bytes();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_as_bytes_null_error() {
+        let value = Value::Object(None);
+        let result = value.as_bytes();
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_as_bytes_object_error() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let object = Object::new(class)?;
+        let value = Value::from(object);
+        let result = value.as_bytes();
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_as_bytes_object_array_error() -> Result<()> {
+        let class = load_class("[Ljava/lang/Object;").await?;
+        let value = Value::from((class, vec![None]));
+        let result = value.as_bytes();
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_mut_byte_array() -> Result<()> {
+        let value = Value::from(vec![1i8, 2i8, 3i8, 4i8]);
+        {
+            let mut bytes = value.as_bytes_mut()?;
+            bytes[0] = 10;
+            bytes[1] = 20;
+        }
+        let bytes = value.as_bytes()?;
+        assert_eq!(bytes[0], 10);
+        assert_eq!(bytes[1], 20);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_mut_int_array() -> Result<()> {
+        let value = Value::from(vec![0i32]);
+        {
+            let mut bytes = value.as_bytes_mut()?;
+            bytes.fill(0xFF);
+        }
+        let ints = value.as_int_vec_ref()?;
+        assert_eq!(ints[0], -1i32);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_mut_long_array() -> Result<()> {
+        let value = Value::from(vec![0i64]);
+        {
+            let mut bytes = value.as_bytes_mut()?;
+            bytes.fill(0xFF);
+        }
+        let longs = value.as_long_vec_ref()?;
+        assert_eq!(longs[0], -1i64);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_mut_float_array() -> Result<()> {
+        let value = Value::from(vec![0.0f32]);
+        {
+            let mut bytes = value.as_bytes_mut()?;
+            bytes.copy_from_slice(&1.0f32.to_ne_bytes());
+        }
+        let floats = value.as_float_vec_ref()?;
+        assert!((floats[0] - 1.0f32).abs() < f32::EPSILON);
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_mut_primitive_value_error() {
+        let value = Value::Int(42);
+        let result = value.as_bytes_mut();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_as_bytes_mut_null_error() {
+        let value = Value::Object(None);
+        let result = value.as_bytes_mut();
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_as_bytes_mut_object_error() -> Result<()> {
+        let class = load_class("java.lang.Object").await?;
+        let object = Object::new(class)?;
+        let value = Value::from(object);
+        let result = value.as_bytes_mut();
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_as_bytes_roundtrip() -> Result<()> {
+        let original = vec![1i32, 2i32, 3i32, 4i32];
+        let value = Value::from(original.clone());
+        let bytes = value.as_bytes()?.to_vec();
+
+        let new_value = Value::from(vec![0i32; 4]);
+        {
+            let mut new_bytes = new_value.as_bytes_mut()?;
+            new_bytes.copy_from_slice(&bytes);
+        }
+
+        let result = new_value.as_int_vec_ref()?;
+        assert_eq!(result.to_vec(), original);
         Ok(())
     }
 }
