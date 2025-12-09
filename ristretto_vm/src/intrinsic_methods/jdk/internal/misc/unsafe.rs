@@ -989,29 +989,29 @@ async fn get_reference_type(
                         Value::Int(i32::from(value))
                     }
                     BaseType::Char => {
-                        let value = u16::from_be_bytes([buffer[0], buffer[1]]);
+                        let value = u16::from_ne_bytes([buffer[0], buffer[1]]);
                         Value::Int(i32::from(value))
                     }
                     BaseType::Int => {
                         let value =
-                            i32::from_be_bytes([buffer[0], buffer[1], buffer[2], buffer[3]]);
+                            i32::from_ne_bytes([buffer[0], buffer[1], buffer[2], buffer[3]]);
                         Value::Int(value)
                     }
                     BaseType::Short => {
-                        let value = i16::from_be_bytes([buffer[0], buffer[1]]);
+                        let value = i16::from_ne_bytes([buffer[0], buffer[1]]);
                         Value::Int(i32::from(value))
                     }
                     BaseType::Long => {
-                        let value = i64::from_be_bytes(buffer);
+                        let value = i64::from_ne_bytes(buffer);
                         Value::Long(value)
                     }
                     BaseType::Float => {
-                        let bits = u32::from_be_bytes([buffer[0], buffer[1], buffer[2], buffer[3]]);
+                        let bits = u32::from_ne_bytes([buffer[0], buffer[1], buffer[2], buffer[3]]);
                         let value = f32::from_bits(bits);
                         Value::Float(value)
                     }
                     BaseType::Double => {
-                        let bits = u64::from_be_bytes(buffer);
+                        let bits = u64::from_ne_bytes(buffer);
                         let value = f64::from_bits(bits);
                         Value::Double(value)
                     }
@@ -1113,20 +1113,20 @@ async fn put_reference_type(
                 let bytes = match (base_type, &value) {
                     (Some(BaseType::Boolean) | Some(BaseType::Byte), Value::Int(v)) => {
                         let v = i8::try_from(*v)?;
-                        v.to_be_bytes().to_vec()
+                        v.to_ne_bytes().to_vec()
                     }
                     (Some(BaseType::Char), Value::Int(v)) => {
                         let v = u16::try_from(*v)?;
-                        v.to_be_bytes().to_vec()
+                        v.to_ne_bytes().to_vec()
                     }
                     (Some(BaseType::Short), Value::Int(v)) => {
                         let v = i16::try_from(*v)?;
-                        v.to_be_bytes().to_vec()
+                        v.to_ne_bytes().to_vec()
                     }
-                    (Some(BaseType::Int), Value::Int(v)) => v.to_be_bytes().to_vec(),
-                    (Some(BaseType::Float), Value::Float(v)) => v.to_be_bytes().to_vec(),
-                    (Some(BaseType::Long), Value::Long(v)) => v.to_be_bytes().to_vec(),
-                    (Some(BaseType::Double), Value::Double(v)) => v.to_be_bytes().to_vec(),
+                    (Some(BaseType::Int), Value::Int(v)) => v.to_ne_bytes().to_vec(),
+                    (Some(BaseType::Float), Value::Float(v)) => v.to_ne_bytes().to_vec(),
+                    (Some(BaseType::Long), Value::Long(v)) => v.to_ne_bytes().to_vec(),
+                    (Some(BaseType::Double), Value::Double(v)) => v.to_ne_bytes().to_vec(),
                     _ => {
                         return Err(InternalError(
                             "putReferenceType: Invalid value type".to_string(),
@@ -1433,7 +1433,8 @@ pub(crate) async fn is_big_endian_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::from(true)))
+    let big_endian = cfg!(target_endian = "big");
+    Ok(Some(Value::from(big_endian)))
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.loadFence()V", Between(JAVA_11, JAVA_17))]
@@ -1780,7 +1781,8 @@ pub(crate) async fn register_natives(
     if vm.java_major_version() >= 17 {
         // Set the endian to big endian
         let class = thread.class("jdk.internal.misc.UnsafeConstants").await?;
-        class.set_static_value("BIG_ENDIAN", Value::from(true))?;
+        let big_endian = cfg!(target_endian = "big");
+        class.set_static_value("BIG_ENDIAN", Value::from(big_endian))?;
     }
     Ok(None)
 }
@@ -2273,7 +2275,8 @@ mod tests {
     async fn test_is_big_endian_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = is_big_endian_0(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::from(true)));
+        let big_endian = cfg!(target_endian = "big");
+        assert_eq!(result, Some(Value::from(big_endian)));
         Ok(())
     }
 

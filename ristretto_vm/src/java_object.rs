@@ -177,7 +177,7 @@ impl JavaObject for &str {
                 (
                     1,
                     self.encode_utf16()
-                        .flat_map(u16::to_be_bytes)
+                        .flat_map(u16::to_ne_bytes)
                         .map(|b| b as i8)
                         .collect(),
                 )
