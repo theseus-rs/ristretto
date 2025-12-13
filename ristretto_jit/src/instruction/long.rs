@@ -1,4 +1,5 @@
 use crate::control_flow_graph::append_block_params;
+use crate::instruction::object::{aload, astore};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{Result, jit_value};
@@ -165,6 +166,22 @@ pub(crate) fn lstore_3(
     let value = stack.pop_long(function_builder)?;
     locals.set_long(function_builder, 3, value)?;
     Ok(())
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.laload>
+pub(crate) fn laload(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
+    aload(function_builder, stack, types::I64, 8, false, false)
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lastore>
+pub(crate) fn lastore(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
+    astore(function_builder, stack, types::I64, 8)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ladd>

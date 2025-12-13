@@ -1,4 +1,7 @@
+mod array;
 mod branch;
+mod byte;
+mod char;
 mod convert;
 mod debug;
 mod double;
@@ -9,4 +12,5 @@ mod long;
 mod monitor;
 mod nop;
 mod push;
+mod short;
 mod stack;

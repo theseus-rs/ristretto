@@ -1,3 +1,4 @@
+use crate::instruction::object::{aload, astore};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{Result, jit_value};
@@ -214,6 +215,22 @@ pub(crate) fn istore_3(
     let value = stack.pop_int(function_builder)?;
     locals.set_int(function_builder, 3, value)?;
     Ok(())
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iaload>
+pub(crate) fn iaload(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
+    aload(function_builder, stack, types::I32, 4, false, false)
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iastore>
+pub(crate) fn iastore(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
+    astore(function_builder, stack, types::I32, 4)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iadd>
