@@ -7,6 +7,139 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/v0.26.0...v0.27.0) - 2025-12-09
+
+### Added
+- add jimage support
+- implement jdk.internal.misc.Unsafe
+- load classes using JImage
+- add java.lang.Class nestmate support
+- implement java.lang.invoke.MethodHandleNatives
+- implement java.lang.MethodHandle linkTo* methods
+- implement jdk/internal/misc/CDS.logLambdaFormInvoker(Ljava/lang/String;)V
+
+### Fixed
+- disable ansi colors in logs when not writing to the terminal
+- correct logic for determining the latest corretto release to account for missing OS packages
+- fixes endianness handling to be architecture aware instead of hardcoding
+- add check for java.lang.NegativeArraySizeException
+- correct Unsafe get/put primitive array support
+- update unsafe byte array to support all base types
+- correct Java 25 system property definitions
+
+### Other
+- move Gc<RwLock<>> from Reference to Value::Object()
+- address clippy errors
+- update rustdoc references to point to java 25
+- update java version in readme
+- update to java 25.0.0.36.1
+- update array references to Box<[T]> instead of Vec<T>
+- update default java version to 25.0.1.8.1
+- improve GC safety with rooted objects
+- update java versions
+- update gc docs
+- simplify jit branch type casting
+- optimize jit tableswitch instruction
+- update jit docs
+- update Cargo.toml dependencies
+- remove unnecessary mutex and code generation from startup_trace macro
+
+## `ristretto_vm` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.26.0...ristretto_vm-v0.27.0) - 2025-12-09
+
+### Added
+- implement jdk.internal.misc.Unsafe
+- add java.lang.Class nestmate support
+- implement java.lang.invoke.MethodHandleNatives
+- implement java.lang.MethodHandle linkTo* methods
+- load classes using JImage
+- add jimage support
+- implement jdk/internal/misc/CDS.logLambdaFormInvoker(Ljava/lang/String;)V
+
+### Fixed
+- fixes endianness handling to be architecture aware instead of hardcoding
+- add check for java.lang.NegativeArraySizeException
+- correct Unsafe get/put primitive array support
+- update unsafe byte array to support all base types
+- correct Java 25 system property definitions
+
+### Other
+- update rustdoc references to point to java 25
+- update array references to Box<[T]> instead of Vec<T>
+- update default java version to 25.0.1.8.1
+- improve GC safety with rooted objects
+- move Gc<RwLock<>> from Reference to Value::Object()
+- address clippy errors
+- remove unnecessary mutex and code generation from startup_trace macro
+- update to java 25.0.0.36.1
+
+## `ristretto_macros` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.26.0...ristretto_macros-v0.27.0) - 2025-12-09
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_jit` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.26.0...ristretto_jit-v0.27.0) - 2025-12-09
+
+### Added
+- add jimage support
+
+### Other
+- update rustdoc references to point to java 25
+- address clippy errors
+- simplify jit branch type casting
+- optimize jit tableswitch instruction
+- update jit docs
+
+## `ristretto_classloader` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.26.0...ristretto_classloader-v0.27.0) - 2025-12-09
+
+### Added
+- implement jdk.internal.misc.Unsafe
+- load classes using JImage
+- add jimage support
+
+### Fixed
+- correct logic for determining the latest corretto release to account for missing OS packages
+
+### Other
+- update rustdoc references to point to java 25
+- update array references to Box<[T]> instead of Vec<T>
+- update default java version to 25.0.1.8.1
+- improve GC safety with rooted objects
+- move Gc<RwLock<>> from Reference to Value::Object()
+- update java versions
+- address clippy errors
+- update to java 25.0.0.36.1
+
+## `ristretto_jimage` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.26.0...ristretto_jimage-v0.27.0) - 2025-12-09
+
+### Added
+- add jimage support
+
+### Fixed
+- correct JImage get_resource_offset calculation and validation
+
+### Other
+- update java versions
+- address clippy errors
+
+## `ristretto_gc` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.26.0...ristretto_gc-v0.27.0) - 2025-12-09
+
+### Other
+- improve GC safety with rooted objects
+- move Gc<RwLock<>> from Reference to Value::Object()
+- address clippy errors
+- update gc docs
+
+## `ristretto_classfile` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.26.0...ristretto_classfile-v0.27.0) - 2025-12-09
+
+### Added
+- add jimage support
+
+### Other
+- update rustdoc references to point to java 25
+- update java version in readme
+- address clippy errors
+- update to java 25.0.0.36.1
+
 ## `ristretto_cli` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/v0.25.0...v0.26.0) - 2025-08-21
 
 ### Added
