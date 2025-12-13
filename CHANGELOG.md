@@ -38,13 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve GC safety with rooted objects
 - update java versions
 - update gc docs
-- update gc docs
 - simplify jit branch type casting
-- Merge branch 'main' into optimize-jit-tableswitch
 - optimize jit tableswitch instruction
 - update jit docs
 - update Cargo.toml dependencies
-- Merge pull request #582 from theseus-rs/update-unsafe-put-reference-type-byte-array
 - remove unnecessary mutex and code generation from startup_trace macro
 
 ## `ristretto_vm` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.26.0...ristretto_vm-v0.27.0) - 2025-12-09
@@ -71,7 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update default java version to 25.0.1.8.1
 - improve GC safety with rooted objects
 - move Gc<RwLock<>> from Reference to Value::Object()
-- Merge pull request #582 from theseus-rs/update-unsafe-put-reference-type-byte-array
 - address clippy errors
 - remove unnecessary mutex and code generation from startup_trace macro
 - update to java 25.0.0.36.1
@@ -90,7 +86,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update rustdoc references to point to java 25
 - address clippy errors
 - simplify jit branch type casting
-- Merge branch 'main' into optimize-jit-tableswitch
 - optimize jit tableswitch instruction
 - update jit docs
 
@@ -132,7 +127,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve GC safety with rooted objects
 - move Gc<RwLock<>> from Reference to Value::Object()
 - address clippy errors
-- update gc docs
 - update gc docs
 
 ## `ristretto_classfile` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.26.0...ristretto_classfile-v0.27.0) - 2025-12-09
