@@ -12,6 +12,7 @@ changelog_include = [
     "ristretto_classfile",
     "ristretto_classloader",
     "ristretto_gc",
+    "ristretto_jimage",
     "ristretto_jit",
     "ristretto_macros",
     "ristretto_vm",
