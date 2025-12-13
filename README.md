@@ -57,7 +57,7 @@ The Invokedynamic instruction is not implemented.
 #### Just-In-Time (JIT) Compilation
 
 The JIT compiler only supports functions that use primitive type byte codes. The JIT compiler is not implemented for
-functions that use array, reference/object byte codes or call other functions.
+functions that use object byte code or call other functions.
 
 #### Threading
 

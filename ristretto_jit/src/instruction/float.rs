@@ -1,4 +1,5 @@
 use crate::control_flow_graph::append_block_params;
+use crate::instruction::object::{aload, astore};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{Result, jit_value};
@@ -175,6 +176,22 @@ pub(crate) fn fstore_3(
     let value = stack.pop_float(function_builder)?;
     locals.set_float(function_builder, 3, value)?;
     Ok(())
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.faload>
+pub(crate) fn faload(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
+    aload(function_builder, stack, types::F32, 4, false, false)
+}
+
+/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fastore>
+pub(crate) fn fastore(
+    function_builder: &mut FunctionBuilder,
+    stack: &mut OperandStack,
+) -> Result<()> {
+    astore(function_builder, stack, types::F32, 4)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fadd>

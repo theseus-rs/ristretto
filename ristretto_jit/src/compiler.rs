@@ -5,27 +5,28 @@ use crate::Error::{
 use crate::control_flow_graph::InstructionControlFlow;
 use crate::function::Function;
 use crate::instruction::{
-    bipush, breakpoint, d2f, d2i, d2l, dadd, dcmpg, dcmpl, dconst_0, dconst_1, ddiv, dload,
-    dload_0, dload_1, dload_2, dload_3, dload_w, dmul, dneg, drem, dreturn, dstore, dstore_0,
-    dstore_1, dstore_2, dstore_3, dstore_w, dsub, dup, dup_x1, dup_x2, dup2, dup2_x1, dup2_x2, f2d,
-    f2i, f2l, fadd, fcmpg, fcmpl, fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1,
-    fload_2, fload_3, fload_w, fmul, fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2,
-    fstore_3, fstore_w, fsub, goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iand, iconst_0,
-    iconst_1, iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv, if_icmpeq, if_icmpge,
-    if_icmpgt, if_icmple, if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, iinc, iinc_w,
-    iload, iload_0, iload_1, iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, ior, irem,
-    ireturn, ishl, ishr, istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr,
-    ixor, jsr, jsr_w, l2d, l2f, l2i, ladd, land, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w,
-    ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lookupswitch, lor, lrem,
-    lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr,
-    lxor, monitorenter, monitorexit, nop, pop, pop2, ret, ret_w, r#return, sipush, swap,
-    tableswitch, wide,
+    arraylength, baload, bastore, bipush, breakpoint, caload, castore, d2f, d2i, d2l, dadd, daload,
+    dastore, dcmpg, dcmpl, dconst_0, dconst_1, ddiv, dload, dload_0, dload_1, dload_2, dload_3,
+    dload_w, dmul, dneg, drem, dreturn, dstore, dstore_0, dstore_1, dstore_2, dstore_3, dstore_w,
+    dsub, dup, dup_x1, dup_x2, dup2, dup2_x1, dup2_x2, f2d, f2i, f2l, fadd, faload, fastore, fcmpg,
+    fcmpl, fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1, fload_2, fload_3, fload_w,
+    fmul, fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2, fstore_3, fstore_w, fsub,
+    goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iaload, iand, iastore, iconst_0, iconst_1,
+    iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv, if_icmpeq, if_icmpge, if_icmpgt,
+    if_icmple, if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, iinc, iinc_w, iload,
+    iload_0, iload_1, iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, ior, irem, ireturn,
+    ishl, ishr, istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr, ixor, jsr,
+    jsr_w, l2d, l2f, l2i, ladd, laload, land, lastore, lcmp, lconst_0, lconst_1, ldc, ldc_w,
+    ldc2_w, ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lookupswitch,
+    lor, lrem, lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub,
+    lushr, lxor, monitorenter, monitorexit, newarray, nop, pop, pop2, ret, ret_w, r#return, saload,
+    sastore, sipush, swap, tableswitch, wide,
 };
 use crate::local_type::LocalType;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{JitValue, Result, control_flow_graph};
-use cranelift::codegen::ir::UserFuncName;
+use cranelift::codegen::ir::{FuncRef, UserFuncName};
 use cranelift::codegen::settings::Flags;
 use cranelift::jit::{JITBuilder, JITModule};
 use cranelift::module::{Linkage, Module, default_libcall_names};
@@ -83,6 +84,7 @@ impl Compiler {
     /// # Errors
     ///
     /// if the Java byte code cannot be compiled to native code
+    #[expect(clippy::too_many_lines)]
     pub fn compile(&self, class_file: &ClassFile, method: &Method) -> Result<Function> {
         let mut jit_module = Self::jit_module()?;
         let constant_pool = &class_file.constant_pool;
@@ -120,9 +122,20 @@ impl Compiler {
         module_context.func.signature = signature;
         module_context.func.name = UserFuncName::user(0, function.as_u32());
 
+        // Declare malloc
+        let mut malloc_signature = jit_module.make_signature();
+        malloc_signature.params.push(AbiParam::new(types::I64)); // size
+        malloc_signature
+            .returns
+            .push(AbiParam::new(jit_module.target_config().pointer_type())); // pointer
+        let malloc_id =
+            jit_module.declare_function("malloc", Linkage::Import, &malloc_signature)?;
+
         let mut function_context = FunctionBuilderContext::new();
         let mut function_builder =
             FunctionBuilder::new(&mut module_context.func, &mut function_context);
+
+        let malloc = jit_module.declare_func_in_func(malloc_id, function_builder.func);
 
         let blocks = control_flow_graph::get_blocks(
             &mut function_builder,
@@ -173,6 +186,7 @@ impl Compiler {
                 &mut stack,
                 program_counter,
                 return_pointer,
+                malloc,
                 instruction,
             )?;
         }
@@ -381,6 +395,7 @@ impl Compiler {
         stack: &mut OperandStack,
         program_counter: usize,
         return_pointer: Value,
+        malloc: FuncRef,
         instruction: &Instruction,
     ) -> Result<()> {
         match instruction {
@@ -434,14 +449,14 @@ impl Compiler {
             // Instruction::Aload_1 => aload_1(locals, stack),
             // Instruction::Aload_2 => aload_2(locals, stack),
             // Instruction::Aload_3 => aload_3(locals, stack),
-            // Instruction::Iaload => iaload(stack),
-            // Instruction::Laload => laload(stack),
-            // Instruction::Faload => faload(stack),
-            // Instruction::Daload => daload(stack),
+            Instruction::Iaload => iaload(function_builder, stack)?,
+            Instruction::Laload => laload(function_builder, stack)?,
+            Instruction::Faload => faload(function_builder, stack)?,
+            Instruction::Daload => daload(function_builder, stack)?,
             // Instruction::Aaload => aaload(stack),
-            // Instruction::Baload => baload(stack),
-            // Instruction::Caload => caload(stack),
-            // Instruction::Saload => saload(stack),
+            Instruction::Baload => baload(function_builder, stack)?,
+            Instruction::Caload => caload(function_builder, stack)?,
+            Instruction::Saload => saload(function_builder, stack)?,
             Instruction::Istore(index) => istore(function_builder, locals, stack, *index)?,
             Instruction::Lstore(index) => lstore(function_builder, locals, stack, *index)?,
             Instruction::Fstore(index) => fstore(function_builder, locals, stack, *index)?,
@@ -467,14 +482,14 @@ impl Compiler {
             // Instruction::Astore_1 => astore_1(locals, locals, locals, stack),
             // Instruction::Astore_2 => astore_2(locals, locals, locals, stack),
             // Instruction::Astore_3 => astore_3(locals, locals, locals, stack),
-            // Instruction::Iastore => iastore(stack),
-            // Instruction::Lastore => lastore(stack),
-            // Instruction::Fastore => fastore(stack),
-            // Instruction::Dastore => dastore(stack),
+            Instruction::Iastore => iastore(function_builder, stack)?,
+            Instruction::Lastore => lastore(function_builder, stack)?,
+            Instruction::Fastore => fastore(function_builder, stack)?,
+            Instruction::Dastore => dastore(function_builder, stack)?,
             // Instruction::Aastore => aastore(stack),
-            // Instruction::Bastore => bastore(stack),
-            // Instruction::Castore => castore(stack),
-            // Instruction::Sastore => sastore(stack),
+            Instruction::Bastore => bastore(function_builder, stack)?,
+            Instruction::Castore => castore(function_builder, stack)?,
+            Instruction::Sastore => sastore(function_builder, stack)?,
             Instruction::Pop => pop(stack)?,
             Instruction::Pop2 => pop2(function_builder, stack)?,
             Instruction::Dup => dup(stack)?,
@@ -618,9 +633,11 @@ impl Compiler {
             // }
             // Instruction::Invokedynamic(index) => invokedynamic(self, stack, *index).await,
             // Instruction::New(index) => new(self, stack, *index).await,
-            // Instruction::Newarray(array_type) => newarray(stack, array_type),
+            Instruction::Newarray(array_type) => {
+                newarray(function_builder, stack, array_type, malloc)?;
+            }
             // Instruction::Anewarray(index) => anewarray(self, stack, *index).await,
-            // Instruction::Arraylength => arraylength(stack),
+            Instruction::Arraylength => arraylength(function_builder, stack)?,
             // Instruction::Athrow => athrow(stack).await,
             // Instruction::Checkcast(class_index) => checkcast(self, stack, *class_index).await,
             // Instruction::Instanceof(class_index) => instanceof(self, stack, *class_index).await,

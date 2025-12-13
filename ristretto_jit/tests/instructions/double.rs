@@ -1,5 +1,5 @@
 use crate::util::create_function;
-use ristretto_classfile::attributes::Instruction;
+use ristretto_classfile::attributes::{ArrayType, Instruction};
 use ristretto_jit::{Result, Value};
 
 #[test]
@@ -186,6 +186,25 @@ fn dstore_3() -> Result<()> {
     let expected_value = Value::F64(1.0);
     let value = function.execute(vec![])?.expect("value");
     assert_eq!(value, expected_value);
+    Ok(())
+}
+
+#[test]
+fn daload_dastore() -> Result<()> {
+    let instructions = vec![
+        Instruction::Bipush(10),
+        Instruction::Newarray(ArrayType::Double),
+        Instruction::Dup,
+        Instruction::Iconst_0,
+        Instruction::Dconst_1,
+        Instruction::Dastore,
+        Instruction::Iconst_0,
+        Instruction::Daload,
+        Instruction::Dreturn,
+    ];
+    let function = create_function("()D", &instructions)?;
+    let value = function.execute(vec![])?.expect("value");
+    assert_eq!(value, Value::F64(1.0));
     Ok(())
 }
 
