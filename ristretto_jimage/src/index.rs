@@ -204,16 +204,6 @@ impl Index {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ristretto_classloader::runtime::default_class_loader;
-
-    /// Loads the default Image for testing.
-    async fn get_test_image() -> Result<Image> {
-        let (java_home, _java_version, _class_loader) =
-            default_class_loader().await.expect("java home");
-        let path = java_home.join("lib").join("modules");
-        let image = Image::from_file(&path)?;
-        Ok(image)
-    }
 
     #[test]
     fn test_hash() {
@@ -221,77 +211,5 @@ mod tests {
         assert_eq!(Index::hash("a", 42), 704_660_095);
         assert_eq!(Index::hash("42", 0), 872_436_206);
         assert_eq!(Index::hash("Hello, World!", 0), 530_056_657);
-    }
-
-    #[tokio::test]
-    async fn test_get_resource_offset() -> Result<()> {
-        let image = get_test_image().await?;
-        #[cfg(target_endian = "little")]
-        let result = Index::get_resource_offset::<byteorder::LittleEndian>(
-            &image,
-            "/java.base/java/lang/Object.class",
-        );
-        #[cfg(target_endian = "big")]
-        let result = Index::get_resource_offset::<byteorder::BigEndian>(
-            &image,
-            "/java.base/java/lang/Object.class",
-        );
-        assert!(result.is_ok());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_get_resource_offset_invalid() -> Result<()> {
-        let image = get_test_image().await?;
-        let result = Index::get_resource_offset::<byteorder::LittleEndian>(&image, "/foo/42");
-        assert!(matches!(result, Err(InvalidIndex(_))));
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_get_attribute_offset() -> Result<()> {
-        let image = get_test_image().await?;
-        #[cfg(target_endian = "little")]
-        let result = {
-            let resource_offset = Index::get_resource_offset::<byteorder::LittleEndian>(
-                &image,
-                "/java.base/java/lang/Object.class",
-            )?;
-            Index::get_attribute_offset::<byteorder::LittleEndian>(&image, resource_offset)
-        };
-        #[cfg(target_endian = "big")]
-        let result = {
-            let resource_offset = Index::get_resource_offset::<byteorder::BigEndian>(
-                &image,
-                "/java.base/java/lang/Object.class",
-            )?;
-            Index::get_attribute_offset::<byteorder::BigEndian>(&image, resource_offset)
-        };
-        assert!(result.is_ok());
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_get_attributes() -> Result<()> {
-        let image = get_test_image().await?;
-        #[cfg(target_endian = "little")]
-        let attribute_offset = {
-            let resource_offset = Index::get_resource_offset::<byteorder::LittleEndian>(
-                &image,
-                "/java.base/java/lang/Object.class",
-            )?;
-            Index::get_attribute_offset::<byteorder::LittleEndian>(&image, resource_offset)?
-        };
-        #[cfg(target_endian = "big")]
-        let attribute_offset = {
-            let resource_offset = Index::get_resource_offset::<byteorder::BigEndian>(
-                &image,
-                "/java.base/java/lang/Object.class",
-            )?;
-            Index::get_attribute_offset::<byteorder::BigEndian>(&image, resource_offset)?
-        };
-        let result = Index::get_attributes(&image, attribute_offset);
-        assert!(result.is_ok());
-        Ok(())
     }
 }

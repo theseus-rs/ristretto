@@ -60,3 +60,8 @@ url = []
 [[bench]]
 harness = false
 name = "class_loader"
+
+[[bench]]
+harness = false
+name = "jimage"
+

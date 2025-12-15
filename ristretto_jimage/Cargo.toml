@@ -19,12 +19,4 @@ thiserror = { workspace = true }
 memmap2 = { workspace = true }
 
 [dev-dependencies]
-criterion = { workspace = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.27.0" }
-ristretto_classloader = { path = "../ristretto_classloader", version = "0.27.0" }
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread"] }
-
-[[bench]]
-harness = false
-name = "jimage"
