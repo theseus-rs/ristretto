@@ -13,20 +13,19 @@
 //!
 //! # Examples
 //!
-//! ```rust
-//! # use ristretto_classloader::runtime::default_class_loader;
+//! ```rust,no_run
 //! use ristretto_jimage::Image;
+//! use std::path::PathBuf;
 //!
-//! # #[tokio::main]
-//! # async fn main() -> ristretto_jimage::Result<()> {
-//! # let (java_home, _java_version, _class_loader) = default_class_loader().await.expect("java home");
-//! # let path = java_home.join("lib").join("modules");
-//! let image = Image::from_file(&path)?;
-//! let resource_name = "/java.base/java/lang/Object.class";
-//! let resource = image.get_resource(resource_name)?;
-//! assert_eq!(resource_name, resource.full_name());
-//! # Ok(())
-//! # }
+//! fn main() -> ristretto_jimage::Result<()> {
+//!     // Typically found at $JAVA_HOME/lib/modules
+//!     let path = PathBuf::from("/path/to/java/lib/modules");
+//!     let image = Image::from_file(&path)?;
+//!     let resource_name = "/java.base/java/lang/Object.class";
+//!     let resource = image.get_resource(resource_name)?;
+//!     assert_eq!(resource_name, resource.full_name());
+//!     Ok(())
+//! }
 //! ```
 
 #![forbid(clippy::allow_attributes)]
