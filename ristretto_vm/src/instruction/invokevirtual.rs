@@ -39,7 +39,7 @@ pub(crate) async fn invokevirtual(
     } else {
         let class_name = {
             let guard = reference.read();
-            guard.class_name()?.to_string()
+            guard.class_name()?.clone()
         };
         let object_class = thread.class(&class_name).await?;
         resolve_method(&object_class, method_name, method_descriptor)?

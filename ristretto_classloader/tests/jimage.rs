@@ -1,5 +1,5 @@
-//! Integration tests for ristretto_jimage crate. The test are included in this crate in order to
-//! make use of the class loader utilities for locating the JImage files without cyclical
+//! Integration tests for `ristretto_jimage` crate. The test are included in this crate in order to
+//! make use of the class loader utilities for locating the `JImage` files without cyclical
 //! dependencies.
 
 use ristretto_classfile::ClassFile;

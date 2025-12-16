@@ -683,7 +683,7 @@ pub(crate) async fn define_anonymous_class_0(
         Ok(c) => c,
         Err(e) => {
             tracing::error!("Class::from failed in defineAnonymousClass0: {:?}", e);
-            return Err(InternalError(format!("Class::from failed: {}", e)));
+            return Err(InternalError(format!("Class::from failed: {e}")));
         }
     };
     let class_object = class.to_object(&thread).await?;
@@ -725,15 +725,15 @@ pub(crate) async fn define_class_0(
         }
     };
 
-    if !name.is_null() {
-        let expected_name = name.as_string()?;
-        // TODO: Verify name matches class_file.class_name()
-        tracing::info!("Defining class: {}", expected_name);
-    } else {
+    if name.is_null() {
         tracing::info!(
             "Defining class (no name provided): {:?}",
             class_file.class_name()
         );
+    } else {
+        let expected_name = name.as_string()?;
+        // TODO: Verify name matches class_file.class_name()
+        tracing::info!("Defining class: {}", expected_name);
     }
 
     let class = Class::from(None, class_file)?;
@@ -876,13 +876,10 @@ async fn get_reference_type(
     if is_static {
         let class_name = {
             let guard = reference.read();
-            let object = match &*guard {
-                Reference::Object(o) => o,
-                _ => {
-                    return Err(InternalError(
-                        "Static field access on non-object".to_string(),
-                    ));
-                }
+            let Reference::Object(object) = &*guard else {
+                return Err(InternalError(
+                    "Static field access on non-object".to_string(),
+                ));
             };
             object.value("name")?.as_string()?
         };
@@ -1064,13 +1061,10 @@ async fn put_reference_type(
     if is_static {
         let class_name = {
             let guard = reference.read();
-            let object = match &*guard {
-                Reference::Object(o) => o,
-                _ => {
-                    return Err(InternalError(
-                        "Static field access on non-object".to_string(),
-                    ));
-                }
+            let Reference::Object(object) = &*guard else {
+                return Err(InternalError(
+                    "Static field access on non-object".to_string(),
+                ));
             };
             object.value("name")?.as_string()?
         };
@@ -1111,7 +1105,7 @@ async fn put_reference_type(
                 };
 
                 let bytes = match (base_type, &value) {
-                    (Some(BaseType::Boolean) | Some(BaseType::Byte), Value::Int(v)) => {
+                    (Some(BaseType::Boolean | BaseType::Byte), Value::Int(v)) => {
                         let v = i8::try_from(*v)?;
                         v.to_ne_bytes().to_vec()
                     }
@@ -1313,7 +1307,11 @@ pub(crate) async fn get_load_average_0(
         return Ok(Some(Value::Int(-1)));
     };
 
-    let count = std::cmp::min(nelems as usize, std::cmp::min(3, array.len()));
+    if nelems < 0 {
+        return Ok(Some(Value::Int(0)));
+    }
+    let nelems = usize::try_from(nelems)?;
+    let count = std::cmp::min(nelems, std::cmp::min(3, array.len()));
     for i in 0..count {
         array[i] = averages[i];
     }
@@ -1796,6 +1794,7 @@ pub(crate) async fn set_memory_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let value = parameters.pop_int()? as u8;
     let bytes = parameters.pop_long()?;
     let offset = parameters.pop_long()?;
@@ -1862,7 +1861,7 @@ pub(crate) async fn static_field_base_0(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn static_field_offset_0(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let field = parameters.pop()?;
@@ -1873,7 +1872,7 @@ pub(crate) async fn static_field_offset_0(
         (class, name)
     };
     let parameters = Parameters::new(vec![class, name]);
-    let result = object_field_offset_1(_thread, parameters).await?;
+    let result = object_field_offset_1(thread, parameters).await?;
     if let Some(Value::Long(offset)) = result {
         Ok(Some(Value::Long(offset | STATIC_FIELD_OFFSET_MASK)))
     } else {
@@ -2157,6 +2156,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         // Create class file bytes from Minimum.class
         let class_bytes = include_bytes!("../../../../../../classes/Minimum.class");
+        #[expect(clippy::cast_possible_wrap)]
         let bytes: Vec<i8> = class_bytes.iter().map(|&b| b as i8).collect();
         let bytes_value = Value::from(bytes);
 
@@ -2182,6 +2182,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         // Create class file bytes from Minimum.class
         let class_bytes = include_bytes!("../../../../../../classes/Minimum.class");
+        #[expect(clippy::cast_possible_wrap)]
         let bytes: Vec<i8> = class_bytes.iter().map(|&b| b as i8).collect();
         let bytes_len = bytes.len();
         let bytes_value = Value::from(bytes);

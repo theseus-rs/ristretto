@@ -27,7 +27,7 @@ fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
     });
     criterion.bench_function("to_string", |bencher| {
         bencher.iter(|| {
-            to_string(&class_file).ok();
+            to_string(&class_file);
         });
     });
 
@@ -50,9 +50,8 @@ fn verify(class_file: &ClassFile) -> Result<()> {
     Ok(())
 }
 
-fn to_string(class_file: &ClassFile) -> Result<()> {
+fn to_string(class_file: &ClassFile) {
     class_file.to_string();
-    Ok(())
 }
 
 criterion_group!(

@@ -265,8 +265,7 @@ pub(crate) async fn get_boolean_attributes_0(
     }
     if path
         .file_name()
-        .map(|name| name.to_string_lossy().starts_with('.'))
-        == Some(true)
+        .is_some_and(|name| name.to_string_lossy().starts_with('.'))
     {
         attributes |= BooleanAttributeFlags::HIDDEN;
     }

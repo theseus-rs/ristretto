@@ -295,7 +295,7 @@ mod tests {
     };
     use ristretto_classloader::Object;
 
-    /// Helper function to create a minimal MemberName object for testing
+    /// Helper function to create a minimal `MemberName` object for testing
     async fn create_test_member_name(
         thread: &Thread,
         class_name: &str,
@@ -353,7 +353,7 @@ mod tests {
         Ok(member)
     }
 
-    /// Helper function to register a mock MethodHandle class with a "member" field
+    /// Helper function to register a mock `MethodHandle` class with a "member" field
     async fn register_method_handle_class(thread: &Thread) -> Result<Arc<Class>> {
         let class_name = "java/lang/invoke/MethodHandle";
         let mut constant_pool = ConstantPool::new();
@@ -413,7 +413,7 @@ mod tests {
         parameters.push(arguments);
 
         let result = invoke(thread, parameters).await;
-        assert!(result.is_ok(), "invoke failed: {:?}", result);
+        assert!(result.is_ok(), "invoke failed: {result:?}");
         Ok(())
     }
 
@@ -443,7 +443,7 @@ mod tests {
         parameters.push(arguments);
 
         let result = invoke_basic(thread, parameters).await;
-        assert!(result.is_ok(), "invoke_basic failed: {:?}", result);
+        assert!(result.is_ok(), "invoke_basic failed: {result:?}");
         Ok(())
     }
 
@@ -475,7 +475,7 @@ mod tests {
         parameters.push(arguments);
 
         let result = invoke_exact(thread, parameters).await;
-        assert!(result.is_ok(), "invoke_exact failed: {:?}", result);
+        assert!(result.is_ok(), "invoke_exact failed: {result:?}");
         Ok(())
     }
 

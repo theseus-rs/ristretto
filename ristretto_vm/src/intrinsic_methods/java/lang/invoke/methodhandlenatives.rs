@@ -195,13 +195,12 @@ async fn resolve_constant_to_value(
             Ok(Value::Object(None))
         }
         _ => Err(InternalError(format!(
-            "Unsupported constant type for bootstrap argument: {:?}",
-            constant
+            "Unsupported constant type for bootstrap argument: {constant:?}"
         ))),
     }
 }
 
-/// Resolves a MethodType from a method descriptor string.
+/// Resolves a `MethodType` from a method descriptor string.
 async fn resolve_method_type(thread: &Thread, descriptor: &str) -> Result<Value> {
     let (params, ret) = FieldType::parse_method_descriptor(descriptor)?;
     let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
@@ -246,7 +245,8 @@ async fn resolve_method_type(thread: &Thread, descriptor: &str) -> Result<Value>
     }
 }
 
-/// Resolves a MethodHandle from a constant pool MethodHandle entry.
+/// Resolves a `MethodHandle` from a constant pool `MethodHandle` entry.
+#[expect(clippy::too_many_lines)]
 async fn resolve_method_handle(
     thread: &Thread,
     constant_pool: &ConstantPool,
@@ -285,8 +285,7 @@ async fn resolve_method_handle(
         }
         _ => {
             return Err(InternalError(format!(
-                "Unsupported MethodHandle target constant type: {:?}",
-                target
+                "Unsupported MethodHandle target constant type: {target:?}"
             )));
         }
     };
@@ -441,8 +440,7 @@ async fn resolve_method_handle(
                 .await
         }
         _ => Err(InternalError(format!(
-            "Unsupported method handle reference kind: {:?} is_method: {}",
-            reference_kind, is_method
+            "Unsupported method handle reference kind: {reference_kind:?} is_method: {is_method}"
         ))),
     }
 }
@@ -470,14 +468,11 @@ pub(crate) async fn get_constant(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let which = parameters.pop_int()?;
+    let _which = parameters.pop_int()?;
     // Constants defined in MethodHandleNatives:
     // GC_COUNT_MAX = 0: Maximum garbage collection count (0 = no limit)
     // Other indices are reserved and return 0
-    let result = match which {
-        0 => 0, // GC_COUNT_MAX - no limit
-        _ => 0, // Reserved constants default to 0
-    };
+    let result = 0;
     Ok(Some(Value::Int(result)))
 }
 
@@ -527,6 +522,7 @@ fn collect_interfaces(class: &Arc<Class>, result: &mut Vec<Arc<Class>>) -> Resul
     LessThanOrEqual(JAVA_17)
 )]
 #[async_recursion(?Send)]
+#[expect(clippy::too_many_lines)]
 pub(crate) async fn get_members(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -680,7 +676,7 @@ pub(crate) async fn get_members(
         count += 1;
     }
 
-    Ok(Some(Value::Int(count as i32)))
+    Ok(Some(Value::Int(i32::try_from(count)?)))
 }
 
 #[intrinsic_method(
@@ -745,7 +741,7 @@ pub(crate) async fn init(thread: Arc<Thread>, mut parameters: Parameters) -> Res
             init_from_constructor(&thread, member_name, ref_object).await?;
         }
         "java/lang/reflect/Field" => {
-            init_from_field(&thread, member_name, ref_object).await?;
+            init_from_field(&thread, &member_name, &ref_object)?;
         }
         _ => {
             // Unknown ref type, leave MemberName uninitialized
@@ -755,7 +751,7 @@ pub(crate) async fn init(thread: Arc<Thread>, mut parameters: Parameters) -> Res
     Ok(None)
 }
 
-/// Initializes a MemberName from a java.lang.reflect.Method object.
+/// Initializes a `MemberName` from a java.lang.reflect.Method object.
 async fn init_from_method(thread: &Thread, member_name: Value, method_ref: Value) -> Result<()> {
     let (clazz, name, modifiers, parameter_types, return_type) = {
         let method_obj = method_ref.as_object_ref()?;
@@ -787,12 +783,12 @@ async fn init_from_method(thread: &Thread, member_name: Value, method_ref: Value
             .await?
     };
 
-    let is_static = (modifiers & MethodAccessFlags::STATIC.bits() as i32) != 0;
-    let reference_kind = if is_static {
+    let is_static = (modifiers & i32::from(MethodAccessFlags::STATIC.bits())) != 0;
+    let reference_kind = i32::from(if is_static {
         ReferenceKind::InvokeStatic.kind()
     } else {
         ReferenceKind::InvokeVirtual.kind()
-    } as i32;
+    });
     let flags = MemberNameFlags::IS_METHOD.bits() | modifiers | (reference_kind << 24);
 
     let mut member_name_obj = member_name.as_object_mut()?;
@@ -804,7 +800,7 @@ async fn init_from_method(thread: &Thread, member_name: Value, method_ref: Value
     Ok(())
 }
 
-/// Initializes a MemberName from a java.lang.reflect.Constructor object.
+/// Initializes a `MemberName` from a java.lang.reflect.Constructor object.
 async fn init_from_constructor(
     thread: &Thread,
     member_name: Value,
@@ -857,8 +853,8 @@ async fn init_from_constructor(
     Ok(())
 }
 
-/// Initializes a MemberName from a java.lang.reflect.Field object.
-async fn init_from_field(_thread: &Thread, member_name: Value, field_ref: Value) -> Result<()> {
+/// Initializes a `MemberName` from a java.lang.reflect.Field object.
+fn init_from_field(_thread: &Thread, member_name: &Value, field_ref: &Value) -> Result<()> {
     let (clazz, name, field_type, modifiers) = {
         let field_obj = field_ref.as_object_ref()?;
         let clazz = field_obj.value("clazz")?;
@@ -869,12 +865,12 @@ async fn init_from_field(_thread: &Thread, member_name: Value, field_ref: Value)
     };
 
     // Default to getField/getStatic based on static modifier
-    let is_static = (modifiers & FieldAccessFlags::STATIC.bits() as i32) != 0;
-    let ref_kind = if is_static {
+    let is_static = (modifiers & i32::from(FieldAccessFlags::STATIC.bits())) != 0;
+    let ref_kind = i32::from(if is_static {
         ReferenceKind::GetStatic.kind()
     } else {
         ReferenceKind::GetField.kind()
-    } as i32;
+    });
     let flags = MemberNameFlags::IS_FIELD.bits() | modifiers | (ref_kind << 24);
 
     let mut member_name_obj = member_name.as_object_mut()?;
@@ -959,7 +955,7 @@ pub(crate) async fn resolve(
         resolve_method(
             &thread,
             member_self,
-            &caller,
+            caller.as_ref(),
             lookup_mode_flags,
             speculative_resolve,
             &name,
@@ -992,7 +988,7 @@ pub(crate) async fn resolve(
 async fn resolve_method(
     thread: &Thread,
     member_self: Value,
-    caller: &Option<Arc<Class>>,
+    caller: Option<&Arc<Class>>,
     lookup_mode_flags: &LookupModeFlags,
     speculative_resolve: bool,
     name: &Value,
@@ -1055,7 +1051,7 @@ async fn resolve_method(
             let return_descriptor = ret.map_or_else(|| "V".to_string(), |r| r.descriptor());
             (parameter_descriptors, return_descriptor)
         } else {
-            return Err(InternalError(format!("Unsupported type: {}", class_name)));
+            return Err(InternalError(format!("Unsupported type: {class_name}")));
         }
     };
 
@@ -1161,6 +1157,7 @@ async fn resolve_field(
 }
 
 /// Extracts the reference kind from the flags of a member name.
+#[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
 fn get_reference_kind(flags: i32) -> Result<ReferenceKind> {
     let flags = flags as u32;
     let shift = MemberNameFlags::REFERENCE_KIND_SHIFT.bits();
@@ -1171,7 +1168,7 @@ fn get_reference_kind(flags: i32) -> Result<ReferenceKind> {
 
 /// Returns the nest host class for a given class.
 ///
-/// If the class has a NestHost attribute, returns the nest host class. Otherwise, the class is its
+/// If the class has a `NestHost` attribute, returns the nest host class. Otherwise, the class is its
 /// own nest host.
 fn get_nest_host(class: &Arc<Class>) -> Arc<Class> {
     let class_file = class.class_file();
@@ -1219,7 +1216,7 @@ fn are_nestmates(class1: &Arc<Class>, class2: &Arc<Class>) -> bool {
 ///
 /// - [JLS §6.6 Access Control](https://docs.oracle.com/javase/specs/jls/se25/html/jls-6.html#jls-6.6)
 pub fn check_method_access(
-    caller: &Option<Arc<Class>>,
+    caller: Option<&Arc<Class>>,
     declaring: &Arc<Class>,
     method_access_flags: MethodAccessFlags,
     lookup_mode_flags: LookupModeFlags,
@@ -1544,10 +1541,10 @@ mod tests {
         member_name.set_value("type", type_obj)?;
 
         let flags = MemberNameFlags::IS_FIELD.bits()
-            | FieldAccessFlags::PUBLIC.bits() as i32
-            | FieldAccessFlags::STATIC.bits() as i32
-            | FieldAccessFlags::FINAL.bits() as i32
-            | ((ReferenceKind::GetStatic.kind() as i32) << 24);
+            | i32::from(FieldAccessFlags::PUBLIC.bits())
+            | i32::from(FieldAccessFlags::STATIC.bits())
+            | i32::from(FieldAccessFlags::FINAL.bits())
+            | (i32::from(ReferenceKind::GetStatic.kind()) << 24);
         member_name.set_value("flags", Value::Int(flags))?;
 
         parameters.push(Value::from(member_name));
@@ -1710,7 +1707,7 @@ mod tests {
         // PUBLIC | STATIC | FINAL
         let modifiers =
             FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL;
-        field_obj.set_value("modifiers", Value::Int(modifiers.bits() as i32))?;
+        field_obj.set_value("modifiers", Value::Int(i32::from(modifiers.bits())))?;
 
         parameters.push(Value::from(member_name));
         parameters.push(Value::from(field_obj));
@@ -1747,8 +1744,8 @@ mod tests {
 
     #[test]
     fn test_get_reference_kind() -> Result<()> {
-        let reference_kind =
-            MemberNameFlags::IS_METHOD.bits() | ((ReferenceKind::InvokeStatic.kind() as i32) << 24);
+        let reference_kind = MemberNameFlags::IS_METHOD.bits()
+            | (i32::from(ReferenceKind::InvokeStatic.kind()) << 24);
 
         assert_eq!(
             get_reference_kind(reference_kind)?,
@@ -1838,10 +1835,10 @@ mod tests {
         member_name.set_value("type", type_obj)?;
 
         let flags = MemberNameFlags::IS_FIELD.bits()
-            | FieldAccessFlags::PUBLIC.bits() as i32
-            | FieldAccessFlags::STATIC.bits() as i32
-            | FieldAccessFlags::FINAL.bits() as i32
-            | ((ReferenceKind::GetStatic.kind() as i32) << 24);
+            | i32::from(FieldAccessFlags::PUBLIC.bits())
+            | i32::from(FieldAccessFlags::STATIC.bits())
+            | i32::from(FieldAccessFlags::FINAL.bits())
+            | (i32::from(ReferenceKind::GetStatic.kind()) << 24);
         member_name.set_value("flags", Value::Int(flags))?;
 
         let caller_class = thread.class("java.lang.Object").await?;
@@ -1873,10 +1870,10 @@ mod tests {
         member_name.set_value("type", type_obj)?;
 
         let flags = MemberNameFlags::IS_FIELD.bits()
-            | FieldAccessFlags::PUBLIC.bits() as i32
-            | FieldAccessFlags::STATIC.bits() as i32
-            | FieldAccessFlags::FINAL.bits() as i32
-            | ((ReferenceKind::GetStatic.kind() as i32) << 24);
+            | i32::from(FieldAccessFlags::PUBLIC.bits())
+            | i32::from(FieldAccessFlags::STATIC.bits())
+            | i32::from(FieldAccessFlags::FINAL.bits())
+            | (i32::from(ReferenceKind::GetStatic.kind()) << 24);
         member_name.set_value("flags", Value::Int(flags))?;
 
         parameters.push(Value::from(member_name));
@@ -1908,10 +1905,10 @@ mod tests {
         member_name.set_value("type", type_obj)?;
 
         let flags = MemberNameFlags::IS_FIELD.bits()
-            | FieldAccessFlags::PUBLIC.bits() as i32
-            | FieldAccessFlags::STATIC.bits() as i32
-            | FieldAccessFlags::FINAL.bits() as i32
-            | ((ReferenceKind::GetStatic.kind() as i32) << 24);
+            | i32::from(FieldAccessFlags::PUBLIC.bits())
+            | i32::from(FieldAccessFlags::STATIC.bits())
+            | i32::from(FieldAccessFlags::FINAL.bits())
+            | (i32::from(ReferenceKind::GetStatic.kind()) << 24);
         member_name.set_value("flags", Value::Int(flags))?;
 
         parameters.push(Value::from(member_name));

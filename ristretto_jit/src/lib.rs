@@ -47,11 +47,8 @@
 //! - Limited object-oriented features (no instance method compilation yet)
 //! - No garbage collection integration
 //! - Exception handling is not fully implemented
-#![forbid(clippy::allow_attributes)]
-#![allow(dead_code)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::unwrap_used)]
 
+#![allow(unsafe_code)]
 #[cfg(not(target_family = "wasm"))]
 mod compiler;
 mod control_flow_graph;

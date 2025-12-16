@@ -1,12 +1,9 @@
 use crate::Error::InvalidMethodAccessFlags;
+use crate::Result;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
 use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
-use crate::version::Version;
-use crate::{JAVA_8, Result};
-
-const VERSION_52_0: Version = JAVA_8;
 
 /// Verify the method `MethodAccessFlags`.
 pub fn verify(class_file: &ClassFile, method: &Method) -> Result<()> {
@@ -56,8 +53,8 @@ mod test {
     use super::*;
     use crate::class_file::ClassFile;
     use crate::{
-        JAVA_1_2, JAVA_1_3, JAVA_1_4, JAVA_5, JAVA_6, JAVA_7, JAVA_9, JAVA_10, JAVA_11, JAVA_12,
-        JAVA_13, JAVA_14, JAVA_15, JAVA_16,
+        JAVA_1_2, JAVA_1_3, JAVA_1_4, JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_10, JAVA_11,
+        JAVA_12, JAVA_13, JAVA_14, JAVA_15, JAVA_16, Version,
     };
 
     #[test]

@@ -51,6 +51,7 @@ enum GcPhase {
 /// 2. Concurrent Mark: Mark reachable objects concurrently with mutator
 /// 3. Final Mark: Brief pause to handle objects modified during concurrent marking
 /// 4. Concurrent Sweep: Reclaim unmarked objects concurrently
+#[derive(Debug)]
 pub struct GarbageCollector {
     this: Weak<Self>,
     configuration: Configuration,

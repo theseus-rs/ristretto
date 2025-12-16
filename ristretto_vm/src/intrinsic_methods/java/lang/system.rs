@@ -139,7 +139,9 @@ pub(crate) async fn arraycopy(
                     length,
                 )?;
             }
-            _ => return Err(InternalError("source must be an array".to_string())),
+            Reference::Object(_) => {
+                return Err(InternalError("source must be an array".to_string()));
+            }
         }
     } else {
         let source_guard = source.read();
@@ -516,7 +518,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result,
-            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("source array index out of bounds")
+            Err(JavaError(IllegalArgumentException(message))) if message.clone().contains("source array index out of bounds")
         ));
     }
 
@@ -529,7 +531,7 @@ mod tests {
         let result = arraycopy_vec(&source, 0, &destination, 1, 3);
         assert!(matches!(
             result,
-            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("destination array index out of bounds")
+            Err(JavaError(IllegalArgumentException(message))) if message.clone().contains("destination array index out of bounds")
         ));
     }
 
@@ -543,7 +545,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result,
-            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("source array index out of bounds")
+            Err(JavaError(IllegalArgumentException(message))) if message.clone().contains("source array index out of bounds")
         ));
     }
 
@@ -557,7 +559,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result,
-            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("destination array index out of bounds")
+            Err(JavaError(IllegalArgumentException(message))) if message.clone().contains("destination array index out of bounds")
         ));
     }
 
@@ -595,7 +597,7 @@ mod tests {
         let result = arraycopy_vec(&source, 0, &destination, 0, 1);
         assert!(matches!(
             result,
-            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("source array index out of bounds")
+            Err(JavaError(IllegalArgumentException(message))) if message.clone().contains("source array index out of bounds")
         ));
     }
 
@@ -608,7 +610,7 @@ mod tests {
         let result = arraycopy_vec(&source, 0, &destination, 0, 1);
         assert!(matches!(
             result,
-            Err(JavaError(IllegalArgumentException(message))) if message.to_string().contains("destination array index out of bounds")
+            Err(JavaError(IllegalArgumentException(message))) if message.clone().contains("destination array index out of bounds")
         ));
     }
 

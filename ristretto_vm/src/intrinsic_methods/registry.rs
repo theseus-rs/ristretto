@@ -183,9 +183,12 @@ mod tests {
     }
 
     /// Verify that all the intrinsic methods are registered for a given runtime
-    async fn test_runtime(version: &str) -> Result<()> {
+    fn test_runtime(version: &str) -> Result<()> {
         #[cfg(target_os = "macos")]
-        let intrinsic_methods = get_intrinsic_methods(version).await?;
+        let intrinsic_methods = {
+            let runtime = tokio::runtime::Runtime::new()?;
+            runtime.block_on(get_intrinsic_methods(version))?
+        };
         let registry_methods = get_registry_methods(version)?;
         // Required methods for ristretto
         #[expect(clippy::useless_vec)]
@@ -253,28 +256,28 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_runtime_v8() -> Result<()> {
-        test_runtime("8.472.08.1").await
+    #[test]
+    fn test_runtime_v8() -> Result<()> {
+        test_runtime("8.472.08.1")
     }
 
-    #[tokio::test]
-    async fn test_runtime_v11() -> Result<()> {
-        test_runtime("11.0.29.7.1").await
+    #[test]
+    fn test_runtime_v11() -> Result<()> {
+        test_runtime("11.0.29.7.1")
     }
 
-    #[tokio::test]
-    async fn test_runtime_v17() -> Result<()> {
-        test_runtime("17.0.17.10.1").await
+    #[test]
+    fn test_runtime_v17() -> Result<()> {
+        test_runtime("17.0.17.10.1")
     }
 
-    #[tokio::test]
-    async fn test_runtime_v21() -> Result<()> {
-        test_runtime("21.0.9.10.1").await
+    #[test]
+    fn test_runtime_v21() -> Result<()> {
+        test_runtime("21.0.9.10.1")
     }
 
-    #[tokio::test]
-    async fn test_runtime_v25() -> Result<()> {
-        test_runtime("25.0.1.8.1").await
+    #[test]
+    fn test_runtime_v25() -> Result<()> {
+        test_runtime("25.0.1.8.1")
     }
 }

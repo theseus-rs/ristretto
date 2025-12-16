@@ -186,6 +186,7 @@ impl<T> Gc<T> {
         unsafe { self.ptr.as_mut() }
     }
 
+    /// Returns a reference to the inner data.
     pub(crate) fn inner(&self) -> &T {
         // Safety: self.ptr is guaranteed to be valid and non-null
         // because it was created from Box::into_raw and stored in NonNull

@@ -1,12 +1,12 @@
 use criterion::{Criterion, criterion_group, criterion_main};
-use ristretto_gc::{GarbageCollector, Gc, Result, Trace};
+use ristretto_gc::{GarbageCollector, Gc, Trace};
 use std::time::Duration;
 
 fn benchmarks(criterion: &mut Criterion) {
-    bench_lifecycle(criterion).ok();
+    bench_lifecycle(criterion);
 }
 
-fn bench_lifecycle(_criterion: &mut Criterion) -> Result<()> {
+fn bench_lifecycle(_criterion: &mut Criterion) {
     let collector = GarbageCollector::new();
 
     // Delete the following line and uncomment the next lines to enable the benchmark
@@ -14,11 +14,8 @@ fn bench_lifecycle(_criterion: &mut Criterion) -> Result<()> {
     // criterion.bench_function("gc_objects", |bencher| {
     //     bencher.iter(|| gc_objects(&collector));
     // });
-
-    Ok(())
 }
 
-#[expect(dead_code)]
 enum Data {
     Small(i32),
     Large(Vec<u8>),

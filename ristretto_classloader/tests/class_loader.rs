@@ -1,4 +1,4 @@
-//! Tests for the Ristretto ClassLoader
+//! Tests for the Ristretto `ClassLoader`
 
 use ristretto_classloader::{ClassLoader, ClassPath, Result};
 use std::path::PathBuf;

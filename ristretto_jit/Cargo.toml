@@ -10,6 +10,9 @@ repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.27.0" }
 thiserror = { workspace = true }
@@ -22,6 +25,3 @@ cranelift = { workspace = true, features = ["jit", "module", "native"] }
 
 [dev-dependencies]
 indexmap = { workspace = true }
-
-[lints.clippy]
-result_large_err = { level = "allow", priority = 1 }

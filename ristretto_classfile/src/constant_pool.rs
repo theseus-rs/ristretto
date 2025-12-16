@@ -1507,6 +1507,7 @@ impl fmt::Display for ConstantEntry {
 ///
 /// The iterator automatically skips the placeholder entry at index 0 and any placeholder
 /// entries following long and double constants.
+#[derive(Debug)]
 pub struct ConstantPoolIterator<'a> {
     constant_pool: &'a ConstantPool,
     index: usize,

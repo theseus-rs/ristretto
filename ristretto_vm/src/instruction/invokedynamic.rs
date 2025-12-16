@@ -493,7 +493,7 @@ pub async fn get_method_handle(
                 )
                 .await?
         }
-        (ReferenceKind::InvokeVirtual, true) => {
+        (ReferenceKind::InvokeVirtual | ReferenceKind::InvokeInterface, true) => {
             let method_handle = lookup_class.try_get_method(
                 "findVirtual",
                 "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
@@ -581,19 +581,7 @@ pub async fn get_method_handle(
                 )
                 .await?
         }
-        (ReferenceKind::InvokeInterface, true) => {
-            let method_handle = lookup_class.try_get_method(
-                "findVirtual",
-                "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/MethodHandle;",
-            )?;
-            thread
-                .try_execute(
-                    &lookup_class,
-                    &method_handle,
-                    &[lookup.clone(), class_object, name_value, method_type],
-                )
-                .await?
-        }
+
         _ => {
             return Err(InternalError(format!(
                 "Unsupported method handle reference kind: {reference_kind:?} is_method: {is_method}"

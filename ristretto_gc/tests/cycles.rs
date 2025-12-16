@@ -1,11 +1,10 @@
+#![allow(unsafe_code)]
+
 use ristretto_gc::{GarbageCollector, Gc, Result, Trace};
 use std::sync::Mutex;
 
 #[test_log::test]
 fn test_cyclic_gc_collection() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     struct CyclicWrapper {
         inner: Mutex<Cyclic>,
     }
@@ -29,6 +28,9 @@ fn test_cyclic_gc_collection() -> Result<()> {
             }
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     {
         // Create two Gc objects referencing each other
@@ -69,9 +71,6 @@ fn test_cyclic_gc_collection() -> Result<()> {
 
 #[test_log::test]
 fn test_complex_cyclic_structure() {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     struct Node {
         id: i32,
         children: Vec<Gc<Node>>,
@@ -88,6 +87,9 @@ fn test_complex_cyclic_structure() {
             }
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     {
         // Create a tree structure with cycles (parent-child relationships)
@@ -146,9 +148,6 @@ fn test_complex_cyclic_structure() {
 
 #[test_log::test]
 fn test_self_referencing_object() {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     struct SelfRef {
         value: i32,
         myself: Option<Gc<SelfRef>>,
@@ -161,6 +160,9 @@ fn test_self_referencing_object() {
             }
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     {
         let mut object = Gc::with_collector(

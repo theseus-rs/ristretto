@@ -1,3 +1,5 @@
+#![expect(clippy::missing_errors_doc)]
+#![expect(clippy::missing_panics_doc)]
 use ristretto_classfile::{ClassFile, Result};
 use std::io::Cursor;
 

@@ -1,8 +1,10 @@
-//! GcTrace trait and object tracing tests
+//! `GcTrace` trait and object tracing tests
 //!
-//! Tests custom GcTrace implementations, object graphs, and tracing correctness.
+//! Tests custom `GcTrace` implementations, object graphs, and tracing correctness.
 
-use ristretto_gc::{GarbageCollector, Gc, Result, Trace};
+#![allow(unsafe_code)]
+
+use ristretto_gc::{GarbageCollector, Gc, GcRootGuard, Result, Trace};
 use std::collections::{HashMap, HashSet};
 
 #[test_log::test]
@@ -24,10 +26,7 @@ fn test_primitive_types_trace() {
 }
 
 #[test_log::test]
-fn test_option_trace() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
+fn test_option_trace() {
     #[derive(Debug)]
     struct TestNode {
         value: i32,
@@ -39,6 +38,9 @@ fn test_option_trace() -> Result<()> {
             self.next.trace(collector);
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let node1 = Gc::with_collector(
         &collector,
@@ -59,14 +61,10 @@ fn test_option_trace() -> Result<()> {
     node2.trace(&collector);
     assert_eq!(node2.value, 2);
     assert_eq!(node1.value, 1);
-    Ok(())
 }
 
 #[test_log::test]
 fn test_vec_trace() {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
     struct Container {
         items: Vec<Gc<i32>>,
@@ -77,6 +75,9 @@ fn test_vec_trace() {
             self.items.trace(collector);
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let item1 = Gc::with_collector(&collector, 10);
     let item2 = Gc::with_collector(&collector, 20);
@@ -96,11 +97,7 @@ fn test_vec_trace() {
 
 #[test_log::test]
 fn test_custom_trace_implementation() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
-    #[expect(dead_code)]
     struct TreeNode {
         value: String,
         children: Vec<Gc<TreeNode>>,
@@ -117,6 +114,9 @@ fn test_custom_trace_implementation() -> Result<()> {
             // In a real implementation, we'd handle cycles properly
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let mut root = Gc::with_collector(
         &collector,
@@ -170,9 +170,6 @@ fn test_custom_trace_implementation() -> Result<()> {
 
 #[test_log::test]
 fn test_complex_nested_trace() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
     struct GraphNode {
         id: usize,
@@ -186,6 +183,9 @@ fn test_complex_nested_trace() -> Result<()> {
             }
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     // Create a simple graph with cycles
     let mut node_a = Gc::with_collector(
@@ -231,9 +231,6 @@ fn test_complex_nested_trace() -> Result<()> {
 
 #[test_log::test]
 fn test_mixed_types_trace() {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
     struct MixedContainer {
         number: Gc<i32>,
@@ -250,6 +247,9 @@ fn test_mixed_types_trace() {
             self.list.trace(collector);
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let container = Gc::with_collector(
         &collector,
@@ -268,15 +268,12 @@ fn test_mixed_types_trace() {
     container.trace(&collector);
     assert_eq!(*container.number, 42);
     assert_eq!(*container.text, "hello");
-    assert_eq!(**container.optional.as_ref().unwrap(), 1.23);
+    assert!((**container.optional.as_ref().unwrap() - 1.23f64).abs() < f64::EPSILON);
     assert_eq!(container.list.len(), 2);
 }
 
 #[test_log::test]
 fn test_deep_nesting_trace() {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
     struct Nested {
         level: usize,
@@ -291,10 +288,13 @@ fn test_deep_nesting_trace() {
         }
     }
 
+    let collector = GarbageCollector::new();
+    collector.start();
+
     // Create deeply nested structure
     let mut current: Option<ristretto_gc::GcRootGuard<Nested>> = None;
     for level in (0..10).rev() {
-        let inner = current.as_ref().map(|g| g.clone_gc());
+        let inner = current.as_ref().map(GcRootGuard::clone_gc);
         current = Some(Gc::with_collector(&collector, Nested { level, inner }));
     }
 
@@ -318,9 +318,6 @@ fn test_deep_nesting_trace() {
 
 #[test_log::test]
 fn test_trace_with_collections() {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
     struct CollectionContainer {
         map: HashMap<String, Gc<i32>>,
@@ -337,6 +334,9 @@ fn test_trace_with_collections() {
             }
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let mut map = HashMap::new();
     map.insert(
@@ -362,9 +362,6 @@ fn test_trace_with_collections() {
 
 #[test_log::test]
 fn test_circular_reference_trace() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
     struct CircularNode {
         id: usize,
@@ -378,6 +375,9 @@ fn test_circular_reference_trace() -> Result<()> {
             }
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let mut node_a = Gc::with_collector(
         &collector,
@@ -419,11 +419,7 @@ fn test_circular_reference_trace() -> Result<()> {
 
 #[test_log::test]
 fn test_trace_performance() {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
-    #[expect(dead_code)]
     struct PerfNode {
         id: usize,
         children: Vec<Gc<PerfNode>>,
@@ -434,6 +430,9 @@ fn test_trace_performance() {
             self.children.trace(collector);
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     // Create a wide tree (10 children per node, 3 levels deep)
     let mut level2_nodes = Vec::new();
@@ -458,7 +457,7 @@ fn test_trace_performance() {
                     id: 100 + i,
                     children: level2_nodes[start..end]
                         .iter()
-                        .map(|g| g.clone_gc())
+                        .map(GcRootGuard::clone_gc)
                         .collect(),
                 },
             )

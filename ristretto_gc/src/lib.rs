@@ -111,9 +111,7 @@
 //! - **JVM compatibility**: Supports Java memory model requirements
 //! - **Multi-core optimization**: Leverages modern multi-core processors for collection
 
-#![allow(dead_code)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::unwrap_used)]
+#![allow(unsafe_code)]
 
 mod collector;
 mod config;

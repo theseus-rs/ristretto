@@ -477,6 +477,7 @@ impl Thread {
     }
 
     /// Debug the execution of a method.
+    #[expect(clippy::unused_self)]
     fn debug_execute(
         &self,
         class_name: &str,

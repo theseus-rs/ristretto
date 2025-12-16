@@ -12,7 +12,7 @@ use ristretto_classloader::{ObjectArray, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-/// Intrinsic methods for `java/lang/Object.clone().
+/// Intrinsic methods for `java/lang/Object.clone()`.
 ///
 /// # References
 ///
@@ -72,7 +72,7 @@ pub(crate) async fn clone(
             let mut cloned_values = Vec::with_capacity(elements.len());
             for value in elements {
                 if let Value::Object(Some(ref reference)) = value {
-                    cloned_values.push(Value::Object(Some(reference.clone())))
+                    cloned_values.push(Value::Object(Some(reference.clone())));
                 } else {
                     cloned_values.push(value);
                 }
@@ -101,7 +101,7 @@ pub(crate) async fn get_class(
 
     let class_name = {
         let guard = object.read();
-        guard.class_name()?.to_string()
+        guard.class_name()?.clone()
     };
     let class = thread.class(&class_name).await?;
     let class = class.to_object(&thread).await?;

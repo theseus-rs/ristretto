@@ -45,6 +45,7 @@ pub(crate) fn raw_file_descriptor() -> i64 {
 /// represents the file handle in the operating system. This is used to interact with the file
 /// system at a lower level.
 #[cfg(any(not(target_family = "wasm"), target_os = "wasi"))]
+#[expect(clippy::unnecessary_wraps)]
 pub(crate) fn raw_file_descriptor(file: &File) -> Result<i64> {
     #[cfg(target_os = "wasi")]
     let file_descriptor = {

@@ -26,9 +26,6 @@ fn test_empty_collections() {
 
 #[test_log::test]
 fn test_zero_sized_types() {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     // Test with zero-sized types
     #[derive(Debug, PartialEq)]
     struct ZeroSized;
@@ -38,6 +35,9 @@ fn test_zero_sized_types() {
             // Nothing to trace
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let gc_zst = Gc::with_collector(&collector, ZeroSized);
     let gc_zst_clone = gc_zst.clone();
@@ -65,11 +65,7 @@ fn test_large_objects() {
 
 #[test_log::test]
 fn test_deeply_nested_structures() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
-    #[expect(dead_code)]
     enum NestedEnum {
         Leaf(i32),
         Branch {
@@ -90,6 +86,9 @@ fn test_deeply_nested_structures() -> Result<()> {
             }
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     // Create a nested binary tree structure
     let leaf1 = Gc::with_collector(&collector, NestedEnum::Leaf(1));
@@ -130,7 +129,7 @@ fn test_deeply_nested_structures() -> Result<()> {
     // Verify the structure is properly accessible
     match &**root {
         NestedEnum::Branch { value, .. } => assert_eq!(value, "root"),
-        _ => panic!("Expected root to be a branch"),
+        NestedEnum::Leaf(_) => panic!("Expected root to be a branch"),
     }
 
     Ok(())
@@ -138,10 +137,10 @@ fn test_deeply_nested_structures() -> Result<()> {
 
 #[test_log::test]
 fn test_concurrent_allocation_and_collection() {
+    static ALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
+
     let collector = GarbageCollector::new();
     collector.start();
-
-    static ALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
     let mut handles = vec![];
 
@@ -210,7 +209,7 @@ fn test_stress_test_rapid_allocation() {
 }
 
 #[test_log::test]
-fn test_collector_configuration() -> Result<()> {
+fn test_collector_configuration() {
     // Test custom collector configuration
     let config = Configuration {
         allocation_threshold: 1024 * 1024, // 1MB
@@ -226,7 +225,6 @@ fn test_collector_configuration() -> Result<()> {
 
     assert_eq!(**gc1, "test1");
     assert_eq!(**gc2, "test2");
-    Ok(())
 }
 
 #[test_log::test]
@@ -289,15 +287,12 @@ fn test_edge_case_empty_objects() {
     assert_eq!(empty_vec.len(), 0);
 
     // These should work without issues
-    let _empty_clone = empty_string.clone();
-    assert!(Gc::ptr_eq(&empty_string, &_empty_clone));
+    let empty_clone = empty_string.clone();
+    assert!(Gc::ptr_eq(&empty_string, &empty_clone));
 }
 
 #[test_log::test]
 fn test_complex_reachability_scenario() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     // Test complex reachability patterns
     struct ComplexObject {
         id: usize,
@@ -315,6 +310,9 @@ fn test_complex_reachability_scenario() -> Result<()> {
             }
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     // Create a complex graph of objects
     let obj1 = Gc::with_collector(

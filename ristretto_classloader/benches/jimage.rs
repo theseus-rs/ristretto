@@ -17,11 +17,7 @@ fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
 
     criterion.bench_function("jimage_load_hash_map", |bencher| {
         bencher.iter(|| {
-            runtime.block_on(async {
-                let _ = load_class(&image, "/java.base/java/util/HashMap.class")
-                    .await
-                    .ok();
-            });
+            let _ = load_class(&image, "/java.base/java/util/HashMap.class").ok();
         });
     });
 
@@ -36,7 +32,7 @@ async fn get_image() -> Result<Image> {
     Ok(image)
 }
 
-async fn load_class(image: &Image, class_name: &str) -> Result<()> {
+fn load_class(image: &Image, class_name: &str) -> Result<()> {
     let resource = image.get_resource(class_name)?;
     let mut bytes = Cursor::new(resource.data().to_vec());
     let _class_file = ClassFile::from_bytes(&mut bytes).expect("read classfile");

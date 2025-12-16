@@ -8,7 +8,7 @@ use std::thread;
 use std::time::Duration;
 
 #[test_log::test]
-fn test_custom_gc_config() -> Result<()> {
+fn test_custom_gc_config() {
     let config = Configuration {
         threads: 1,
         allocation_threshold: 16 * 1024 * 1024, // 16MB
@@ -23,7 +23,6 @@ fn test_custom_gc_config() -> Result<()> {
     // Test that collector works with custom config
     let _gc = Gc::with_collector(&collector, "test with custom config");
     collector.collect();
-    Ok(())
 }
 
 #[test_log::test]
@@ -213,9 +212,6 @@ fn test_allocation_threshold_trigger() -> Result<()> {
 
 #[test_log::test]
 fn test_root_management() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
     struct TestObject {
         id: usize,
@@ -227,6 +223,9 @@ fn test_root_management() -> Result<()> {
             // No GC references to trace
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let obj1 = Gc::with_collector(
         &collector,
@@ -262,9 +261,6 @@ fn test_root_management() -> Result<()> {
 
 #[test_log::test]
 fn test_reachability_analysis() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
     struct Node {
         id: usize,
@@ -278,6 +274,9 @@ fn test_reachability_analysis() -> Result<()> {
             }
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     // Create a tree structure
     let leaf1 = Gc::with_collector(
@@ -378,9 +377,6 @@ fn test_collection_phases() -> Result<()> {
 
 #[test_log::test]
 fn test_concurrent_collection_safety() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
     struct SharedData {
         values: Mutex<Vec<usize>>,
@@ -391,6 +387,9 @@ fn test_concurrent_collection_safety() -> Result<()> {
             // No GC references to trace
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let shared = Gc::with_collector(
         &collector,
@@ -467,7 +466,7 @@ fn test_large_object_collection() -> Result<()> {
 }
 
 #[test_log::test]
-fn test_collector_stress() -> Result<()> {
+fn test_collector_stress() {
     let collector = GarbageCollector::new();
     collector.start();
 
@@ -498,8 +497,6 @@ fn test_collector_stress() -> Result<()> {
         let item = i % 50;
         assert_eq!(***obj, format!("batch-{batch}-item-{item}"));
     }
-
-    Ok(())
 }
 
 #[test_log::test]
