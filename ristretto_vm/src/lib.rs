@@ -44,21 +44,7 @@
 //! This crate uses `#![forbid(unsafe_code)]` to ensure everything is implemented in 100% safe Rust.
 
 #![forbid(unsafe_code)]
-#![forbid(clippy::allow_attributes)]
-#![allow(dead_code)]
-#![allow(clippy::only_used_in_recursion)]
-// Disable pedantic clippy lint due to error when running clippy on this crate
-// cargo clippyerror: allocating a local array larger than 16384 bytes
-//    |
-//    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#large_stack_arrays
-// note: the lint level is defined here
-//   --> ristretto_vm/src/lib.rs:25:9
-//    |
-// 25 | #![deny(clippy::pedantic)]
-//    |         ^^^^^^^^^^^^^^^^
-//    = note: `#[deny(clippy::large_stack_arrays)]` implied by `#[deny(clippy::pedantic)]`
-// #![deny(clippy::pedantic)]
-#![deny(clippy::unwrap_used)]
+
 mod assignable;
 mod call_site_cache;
 mod configuration;

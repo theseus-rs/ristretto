@@ -21,7 +21,7 @@ fn compatibility_tests() -> Result<()> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let tests_root_dir = cargo_manifest.join("..").join("tests").canonicalize()?;
 
-    initialize_tracing()?;
+    initialize_tracing();
 
     let java_version = DEFAULT_JAVA_VERSION.to_string();
     let java_home = java_home(&java_version)?;
@@ -101,7 +101,7 @@ fn compatibility_tests() -> Result<()> {
 }
 
 /// Initializes the tracing subscriber for logging.
-fn initialize_tracing() -> Result<()> {
+fn initialize_tracing() {
     let format = tracing_subscriber::fmt::format()
         .with_level(true)
         .with_target(false)
@@ -120,7 +120,6 @@ fn initialize_tracing() -> Result<()> {
         .fmt_fields(fmt::format::DefaultFields::new())
         .event_format(format)
         .init();
-    Ok(())
 }
 
 /// Collects directories of all tests to run.  A test is a directory that contains a
@@ -129,8 +128,9 @@ fn collect_test_dirs(tests_root_dir: &PathBuf) -> Result<Vec<PathBuf>> {
     let mut test_paths = Vec::new();
     for entry in walkdir::WalkDir::new(tests_root_dir) {
         let entry = entry.map_err(|error| InternalError(error.to_string()))?;
-        if entry.file_name() == TEST_FILE {
-            let test_dir = entry.path().parent().unwrap();
+        if entry.file_name() == TEST_FILE
+            && let Some(test_dir) = entry.path().parent()
+        {
             let test_dir = test_dir.strip_prefix(tests_root_dir).unwrap_or(test_dir);
             test_paths.push(test_dir.to_path_buf());
         }

@@ -10,7 +10,6 @@ use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::io::{Read, Write};
-use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use syn::parse::{Parse, ParseStream};
 use syn::{Expr, ExprCall, Item, LitStr, Result as SynResult};
@@ -53,7 +52,7 @@ pub fn build() -> Result<(), Box<dyn Error>> {
         .join("intrinsic_methods")
         .join("intrinsics.rs");
 
-    let intrinsic_methods = get_intrinsic_methods(source_path)?;
+    let intrinsic_methods = get_intrinsic_methods(&source_path)?;
 
     let mut file = File::create(&destination_path)?;
     writeln!(
@@ -71,14 +70,14 @@ pub fn build() -> Result<(), Box<dyn Error>> {
 
 /// Retrieves intrinsic methods from the source path.
 fn get_intrinsic_methods(
-    source_path: PathBuf,
+    source_path: &PathBuf,
 ) -> Result<HashMap<String, (String, VersionSpecification)>, Box<dyn Error>> {
     let mut intrinsic_methods = HashMap::new();
     for entry in WalkDir::new(source_path.clone()) // Or use src_dir if absolute path is preferred
         .into_iter()
-        .filter_map(|entry| entry.ok())
+        .filter_map(Result::ok)
     {
-        process_file_entry(&source_path, entry, &mut intrinsic_methods)?;
+        process_file_entry(source_path, &entry, &mut intrinsic_methods)?;
     }
     Ok(intrinsic_methods)
 }
@@ -89,7 +88,7 @@ fn get_intrinsic_methods(
 /// find intrinsic definitions.
 fn process_file_entry(
     source_path: &PathBuf,
-    entry: walkdir::DirEntry,
+    entry: &walkdir::DirEntry,
     intrinsic_methods: &mut HashMap<String, (String, VersionSpecification)>,
 ) -> Result<(), Box<dyn Error>> {
     let file_name = entry.file_name().to_string_lossy();
@@ -127,7 +126,7 @@ fn process_file_entry(
 
     if let Ok(syn_file) = syn::parse_file(&file_content) {
         for item in syn_file.items {
-            process_item(&module, item, intrinsic_methods);
+            process_item(&module, &item, intrinsic_methods);
         }
     }
     Ok(())
@@ -151,19 +150,20 @@ impl Parse for IntrinsicMethodArgs {
     }
 }
 
-/// Processes a syn::Item to find intrinsic method definitions.
+/// Processes a `syn::Item` to find intrinsic method definitions.
 fn process_item(
     module: &str,
-    item: Item,
+    item: &Item,
     intrinsic_methods: &mut HashMap<String, (String, VersionSpecification)>,
 ) {
-    if let Item::Fn(ref function) = item {
+    if let Item::Fn(function) = item {
         let attribute = function
             .attrs
             .iter()
             .find(|attribute| attribute.path().is_ident("intrinsic_method"));
-        if let Some(attribute) = attribute {
-            let arguments = attribute.parse_args::<IntrinsicMethodArgs>().unwrap();
+        if let Some(attribute) = attribute
+            && let Ok(arguments) = attribute.parse_args::<IntrinsicMethodArgs>()
+        {
             let function_name = format!("{module}::{}", function.sig.ident);
             let signature = arguments.signature.value();
             let version_specification = version_specification(&arguments.version_specification);
@@ -172,17 +172,16 @@ fn process_item(
     }
 }
 
-/// Parses the version specification expression into a VersionSpecification.
+/// Parses the version specification expression into a `VersionSpecification`.
 fn version_specification(expression: &Expr) -> VersionSpecification {
     if let Expr::Path(path) = expression {
         if path.path.is_ident("Any") {
             return VersionSpecification::Any;
-        } else {
-            panic!(
-                "Unsupported version specification in intrinsic method attribute: {:?}",
-                path.path.get_ident(),
-            );
         }
+        panic!(
+            "Unsupported version specification in intrinsic method attribute: {:?}",
+            path.path.get_ident(),
+        );
     }
 
     let Expr::Call(call) = expression else {
@@ -190,7 +189,7 @@ fn version_specification(expression: &Expr) -> VersionSpecification {
             "[call] Unsupported version specification in intrinsic method attribute: {expression:?}"
         );
     };
-    let Expr::Path(function) = call.func.deref() else {
+    let Expr::Path(function) = &*call.func else {
         panic!(
             "[call.path] Unsupported version specification in intrinsic method attribute: {expression:?}"
         );
@@ -230,7 +229,7 @@ fn java_version_vec(call: &ExprCall) -> Vec<Version> {
     let Some(Expr::Reference(reference_expr)) = call.args.first() else {
         panic!("(call.args[0]]) Unsupported expression in call: {call:?}");
     };
-    let Expr::Array(array) = reference_expr.expr.deref() else {
+    let Expr::Array(array) = &*reference_expr.expr else {
         panic!("(call.args[0].expr) Unsupported expression in call: {call:?}");
     };
     let mut versions = Vec::new();

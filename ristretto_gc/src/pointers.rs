@@ -31,7 +31,7 @@ impl SafePtr {
 }
 
 /// Safe wrapper for raw pointers to `Trace` objects
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct TracePtr {
     pub(crate) ptr: *const (),
     pub(crate) trace_fn: fn(*const (), &GarbageCollector),

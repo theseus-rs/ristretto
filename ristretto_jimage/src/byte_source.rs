@@ -33,6 +33,7 @@ impl ByteSource {
             // Safety: This is safe because:
             // 1. The file is opened in read-only mode.
             // 2. The contents of the file are not modified through the memory map.
+            #[expect(unsafe_code)]
             if let Ok(mmap) = unsafe { memmap2::Mmap::map(&file) } {
                 return Ok(ByteSource::MemoryMap(mmap));
             }

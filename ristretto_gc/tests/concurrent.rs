@@ -10,12 +10,13 @@ use std::time::{Duration, Instant};
 
 #[test_log::test]
 fn test_concurrent_allocation() {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
     let thread_count = 4;
     let allocations_per_thread = 100;
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let mut handles = vec![];
 
@@ -146,9 +147,6 @@ fn test_stress_concurrent_gc() {
 
 #[test_log::test]
 fn test_concurrent_roots_management() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
     struct RootObject {
         id: usize,
@@ -162,6 +160,9 @@ fn test_concurrent_roots_management() -> Result<()> {
             }
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let objects: Vec<_> = (0..5)
         .map(|i| Gc::with_collector(&collector, RootObject { id: i, child: None }))
@@ -210,9 +211,6 @@ fn test_concurrent_roots_management() -> Result<()> {
 
 #[test_log::test]
 fn test_concurrent_complex_graph() -> Result<()> {
-    let collector = GarbageCollector::new();
-    collector.start();
-
     #[derive(Debug)]
     struct GraphNode {
         id: usize,
@@ -226,6 +224,9 @@ fn test_concurrent_complex_graph() -> Result<()> {
             }
         }
     }
+
+    let collector = GarbageCollector::new();
+    collector.start();
 
     // Create a set of nodes
     let nodes: Vec<_> = (0..20)

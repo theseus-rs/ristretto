@@ -46,7 +46,7 @@ pub(crate) async fn invokeinterface(
         Some(Value::Object(Some(reference))) => {
             let class_name = {
                 let guard = reference.read();
-                guard.class_name()?.to_string()
+                guard.class_name()?.clone()
             };
             thread.class(&class_name).await?
         }

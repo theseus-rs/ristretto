@@ -85,7 +85,7 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
             };
             value.clone()
         }
-        object => {
+        object @ Reference::Object(_) => {
             return Err(InvalidStackValue {
                 expected: "array".to_string(),
                 actual: format!("{object:?}"),
@@ -268,7 +268,7 @@ pub(crate) async fn get_length(
         Reference::IntArray(array) => array.len(),
         Reference::LongArray(array) => array.len(),
         Reference::Array(object_array) => object_array.elements.len(),
-        object => {
+        object @ Reference::Object(_) => {
             return Err(InvalidStackValue {
                 expected: "array".to_string(),
                 actual: format!("{object:?}"),

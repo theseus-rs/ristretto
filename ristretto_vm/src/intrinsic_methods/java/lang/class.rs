@@ -1354,7 +1354,7 @@ mod tests {
         };
         assert_eq!(class.name(), "[Ljava/lang/reflect/Field;");
         let mut signatures = Vec::new();
-        for value in values.into_iter() {
+        for value in values {
             let result = vm
                 .invoke(
                     "java.lang.reflect.Field",
@@ -1397,7 +1397,7 @@ mod tests {
         };
         assert_eq!(class.name(), "[Ljava/lang/reflect/Method;");
         let mut method_names = Vec::new();
-        for value in values.into_iter() {
+        for value in values {
             let result = vm
                 .invoke(
                     "java.lang.reflect.Method",

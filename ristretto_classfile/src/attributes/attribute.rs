@@ -15,13 +15,12 @@ use crate::display::indent_lines;
 use crate::error::Error::{InvalidAttributeLength, InvalidAttributeNameIndex};
 use crate::error::Result;
 use crate::version::Version;
-use crate::{JAVA_1_0_2, JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_11, JAVA_16, JAVA_17, mutf8};
+use crate::{JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_11, JAVA_16, JAVA_17, mutf8};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::collections::HashMap;
 use std::fmt;
 use std::io::{Cursor, Read};
 
-const VERSION_45_0: Version = JAVA_1_0_2;
 const VERSION_45_3: Version = Version::Java1_0_2 { minor: 3 };
 const VERSION_49_0: Version = JAVA_5;
 const VERSION_50_0: Version = JAVA_6;
@@ -1860,6 +1859,7 @@ impl fmt::Display for Attribute {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::JAVA_1_0_2;
     use crate::attributes::annotation_value_pair::AnnotationValuePair;
     use crate::attributes::nested_class_access_flags::NestedClassAccessFlags;
     use crate::attributes::{
@@ -1868,6 +1868,8 @@ mod test {
     };
     use crate::method_access_flags::MethodAccessFlags;
     use indoc::indoc;
+
+    const VERSION_45_0: Version = JAVA_1_0_2;
 
     #[test]
     fn test_invalid_attribute_name_index_error() {

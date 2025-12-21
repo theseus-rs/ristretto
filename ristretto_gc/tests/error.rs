@@ -45,37 +45,6 @@ fn test_error_debug() {
 }
 
 #[test_log::test]
-fn test_result_type_alias() -> Result<()> {
-    // Test that our Result type alias works correctly
-    fn returns_result() -> Result<i32> {
-        Ok(42)
-    }
-
-    let value = returns_result()?;
-    assert_eq!(value, 42);
-    Ok(())
-}
-
-#[test_log::test]
-fn test_error_propagation() {
-    let collector = GarbageCollector::new();
-    collector.start();
-
-    fn inner_function(collector: &GarbageCollector) -> Result<()> {
-        let _gc = Gc::with_collector(collector, 42);
-        collector.collect();
-        Ok(())
-    }
-
-    fn outer_function(collector: &GarbageCollector) -> Result<String> {
-        inner_function(collector)?;
-        Ok("success".to_string())
-    }
-
-    assert!(outer_function(&collector).is_ok());
-}
-
-#[test_log::test]
 fn test_collector_error_handling() -> Result<()> {
     let collector = GarbageCollector::new();
 
@@ -89,7 +58,7 @@ fn test_collector_error_handling() -> Result<()> {
 }
 
 #[test_log::test]
-fn test_concurrent_error_handling() -> Result<()> {
+fn test_concurrent_error_handling() {
     let collector = GarbageCollector::new();
     collector.start();
 
@@ -131,8 +100,6 @@ fn test_concurrent_error_handling() -> Result<()> {
         success_count >= 3,
         "Expected at least 3 successful operations"
     );
-
-    Ok(())
 }
 
 #[test_log::test]

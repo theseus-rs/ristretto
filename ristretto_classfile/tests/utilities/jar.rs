@@ -1,5 +1,6 @@
 use ristretto_classfile::{ClassFile, Result};
 use std::io::Cursor;
+use std::path::Path;
 use zip::ZipArchive;
 
 pub fn verify(jar_bytes: Vec<u8>) -> Result<()> {
@@ -11,7 +12,10 @@ pub fn verify(jar_bytes: Vec<u8>) -> Result<()> {
             .by_index(i)
             .expect("Failed to extract file from archive");
         let file_name = file.name().to_string();
-        if !file_name.ends_with(".class") {
+        if !Path::new(&file_name)
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("class"))
+        {
             continue;
         }
 

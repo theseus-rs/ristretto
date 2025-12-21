@@ -28,11 +28,6 @@
 //! }
 //! ```
 
-#![forbid(clippy::allow_attributes)]
-#![allow(dead_code)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::unwrap_used)]
-
 mod attribute;
 mod byte_source;
 mod error;

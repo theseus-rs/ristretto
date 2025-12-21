@@ -330,7 +330,7 @@ async fn is_instance_of(
             | Reference::IntArray(_)
             | Reference::LongArray(_)
             | Reference::FloatArray(_)
-            | Reference::DoubleArray(_) => (Some(object.class_name()?.to_string()), None),
+            | Reference::DoubleArray(_) => (Some(object.class_name()?.clone()), None),
             Reference::Array(object_array) => (None, Some(object_array.class.clone())),
             Reference::Object(object) => (None, Some(object.class().clone())),
         }

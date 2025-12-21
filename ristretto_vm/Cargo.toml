@@ -15,7 +15,9 @@ build = "src/build/main.rs"
 name = "ristretto_vm"
 path = "src/lib.rs"
 
-# Add this section for build dependencies
+[lints]
+workspace = true
+
 [build-dependencies]
 phf_codegen = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.27.0" }
@@ -84,6 +86,3 @@ url = [
 [[bench]]
 harness = false
 name = "vm"
-
-[lints.clippy]
-result_large_err = { level = "allow", priority = 1 }

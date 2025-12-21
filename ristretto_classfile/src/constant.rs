@@ -2,12 +2,11 @@ use crate::error::Error::InvalidConstantTag;
 use crate::error::Result;
 use crate::reference_kind::ReferenceKind;
 use crate::version::Version;
-use crate::{JAVA_1_0_2, JAVA_7, JAVA_9, JAVA_11, mutf8};
+use crate::{JAVA_7, JAVA_9, JAVA_11, mutf8};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::fmt;
 use std::io::{Cursor, Read};
 
-const VERSION_45_0: Version = JAVA_1_0_2;
 const VERSION_45_3: Version = Version::Java1_0_2 { minor: 3 };
 const VERSION_51_0: Version = JAVA_7;
 const VERSION_53_0: Version = JAVA_9;
@@ -465,6 +464,9 @@ impl fmt::Display for Constant {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::JAVA_1_0_2;
+
+    const VERSION_45_0: Version = JAVA_1_0_2;
 
     #[test]
     fn test_invalid_tag() {

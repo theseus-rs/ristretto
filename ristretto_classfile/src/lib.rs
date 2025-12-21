@@ -89,10 +89,7 @@
 //! This crate uses `#![forbid(unsafe_code)]` to ensure everything is implemented in 100% safe Rust.
 
 #![forbid(unsafe_code)]
-#![forbid(clippy::allow_attributes)]
-#![allow(dead_code)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::unwrap_used)]
+
 extern crate core;
 
 pub mod attributes;

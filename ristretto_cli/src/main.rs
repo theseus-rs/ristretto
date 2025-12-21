@@ -1,6 +1,6 @@
-#![allow(dead_code)]
-#![deny(clippy::pedantic)]
-#![deny(clippy::unwrap_used)]
+//! Ristretto CLI entry point.
+
+#![forbid(unsafe_code)]
 
 mod argument;
 mod logging;

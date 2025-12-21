@@ -76,7 +76,7 @@ pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
         Reference::IntArray(array) => array.len(),
         Reference::LongArray(array) => array.len(),
         Reference::Array(object_array) => object_array.elements.len(),
-        object => {
+        object @ Reference::Object(_) => {
             return Err(InvalidStackValue {
                 expected: "array".to_string(),
                 actual: object.to_string(),

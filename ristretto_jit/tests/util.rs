@@ -3,12 +3,20 @@ use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, MethodAcces
 use ristretto_jit::{Compiler, Function, Result};
 
 /// Creates a function from the given descriptor and instructions.
+///
+/// # Errors
+///
+/// If there is an error creating the function
 pub fn create_function(descriptor: &str, instructions: &[Instruction]) -> Result<Function> {
     let constant_pool = ConstantPool::default();
     create_function_with_constant_pool(constant_pool, descriptor, instructions)
 }
 
-/// Creates a function with the specifid constant pool,from the given descriptor and instructions.
+/// Creates a function with the specified constant pool,from the given descriptor and instructions.
+///
+/// # Errors
+///
+/// If there is an error creating the function
 pub fn create_function_with_constant_pool(
     mut constant_pool: ConstantPool,
     descriptor: &str,

@@ -11,7 +11,7 @@ async fn test_runtime(version: &str, class_name: &str) -> Result<()> {
 
     let class_path = class_loader.class_path();
     let class_names = class_path.class_names().await?;
-    assert!(class_names.contains(&class_name.to_string()));
+    assert!(class_names.contains(&class_name.clone()));
     Ok(())
 }
 
