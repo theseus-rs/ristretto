@@ -50,7 +50,7 @@ bitflags! {
     ///
     /// # References
     ///
-    /// - [java.lang.invoke.MethodHandles.Lookup fields](https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/invoke/MethodHandles.Lookup.html#field-summary)
+    /// - [java.lang.invoke.MethodHandles.Lookup fields](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/invoke/MethodHandles.Lookup.html#field-summary)
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct LookupModeFlags: i32 {
         const PUBLIC = 0x0001;
