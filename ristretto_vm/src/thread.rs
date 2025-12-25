@@ -331,12 +331,41 @@ impl Thread {
     /// [JLS §12.4.2](https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4.2)
     /// state machine.
     ///
-    /// This is the core initialization algorithm that:
+    /// # Static Field Initialization (JLS §12.4, JVMS §5.5)
+    ///
+    /// This implements the class initialization procedure where static fields are initialized:
+    ///
+    /// ## Initialization Order
+    ///
+    /// 1. **Superclass first**: The direct superclass is initialized before this class
+    /// 2. **`<clinit>` execution**: Static field initializers and static blocks execute in textual order
+    ///
+    /// ## Compile-Time Constants (JLS §15.28)
+    ///
+    /// Fields with `ConstantValue` attribute (e.g., `static final int X = 42`) are initialized
+    /// during the **preparation phase** (class loading), NOT here. Accessing such constants
+    /// does NOT trigger class initialization.
+    ///
+    /// ## Key Behaviors
+    ///
     /// - Uses lazy, recursive initialization
     /// - Handles circularity detection (same thread re-enters = OK, different thread = wait)
     /// - Initializes superclass before the class itself
-    /// - Does NOT eagerly initialize interfaces
+    /// - Does NOT eagerly initialize interfaces per [JLS §12.4.1](https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4.1)
     /// - Caches initialization errors permanently
+    ///
+    /// ## Failure Semantics
+    ///
+    /// If `<clinit>` throws an exception:
+    /// - Static fields may be **partially initialized** (no rollback occurs)
+    /// - Class is marked as **Erroneous** (Failed state)
+    /// - All future accesses throw `NoClassDefFoundError`
+    ///
+    /// ## Instance Fields NOT Affected
+    ///
+    /// Instance fields are NOT initialized here. They are:
+    /// - Zeroed during object allocation (`Object::new`)
+    /// - Initialized by constructor (`<init>`) during object construction
     ///
     /// # Errors
     ///

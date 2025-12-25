@@ -172,6 +172,32 @@ impl Field {
 
     /// Get the default static value for the field type.
     ///
+    /// This method determines the initial value for a static field according to JVM specification:
+    ///
+    /// # Static Field Initialization (JLS §12.4.2, JVMS §5.5)
+    ///
+    /// Static fields are initialized in two phases:
+    /// 1. **Preparation phase**: All static fields are set to their default zero values
+    /// 2. **Initialization phase**: `<clinit>` runs, assigning compile-time constants and
+    ///    executing static initializers
+    ///
+    /// For fields with a `ConstantValue` attribute (compile-time constants for primitives
+    /// and String literals), the value is set directly from the constant pool during the
+    /// preparation phase, BEFORE `<clinit>` runs.
+    ///
+    /// # Compile-Time Constants (JLS §15.28)
+    ///
+    /// Per [JLS §12.4.1](https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4.1),
+    /// accessing a compile-time constant does NOT trigger class initialization because:
+    /// - The compiler inlines the constant value at the access site
+    /// - The `ConstantValue` attribute ensures the value is available at preparation time
+    ///
+    /// # Returns
+    ///
+    /// - For primitive constants with `ConstantValue`: the constant value from the pool
+    /// - For String constants: `Value::Unused` (String objects require class initialization)
+    /// - For non-constant fields: the type's default zero value
+    ///
     /// # Errors
     ///
     /// - if the index is out of bounds for the constant pool.

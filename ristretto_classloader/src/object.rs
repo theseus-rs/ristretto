@@ -10,14 +10,83 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 /// Represents an object in the Ristretto VM.
+///
+/// # Instance Field Initialization (JLS §12.5)
+///
+/// Objects are created through two distinct phases:
+///
+/// ## 1. Allocation Phase (`Object::new`)
+///
+/// When an object is allocated:
+/// - Memory is allocated for all instance fields in the class hierarchy
+/// - All fields are set to their **default zero values** (0, 0.0, false, null)
+/// - This happens BEFORE any constructor code runs
+///
+/// ## 2. Initialization Phase (`<init>` constructor)
+///
+/// Constructors execute in this order:
+/// 1. Call to `super(...)` (recursively up to `Object.<init>`)
+/// 2. Instance field initializers (in textual order of field declarations)
+/// 3. Instance initializer blocks (in textual order)
+/// 4. Constructor body statements
+///
+/// ## Field Shadowing
+///
+/// Each class initializes only its own declared fields:
+/// ```java
+/// class A { int x = 1; }
+/// class B extends A { int x = 2; }
+/// ```
+/// - `A.x` is initialized in `A.<init>`, occupies one slot
+/// - `B.x` is initialized in `B.<init>`, occupies a different slot
+///
+/// ## Separation from Static Fields
+///
+/// Instance field initialization is **completely separate** from static field initialization:
+/// - Static fields: initialized during class initialization (`<clinit>`)
+/// - Instance fields: initialized during object construction (`<init>`)
+///
+/// ## Unsafe.allocateInstance
+///
+/// When using `Unsafe.allocateInstance()`:
+/// - Memory is allocated and zeroed (via `Object::new`)
+/// - NO constructor (`<init>`) is called
+/// - Field initializers are NOT run
 #[derive(Clone)]
 pub struct Object {
     class: Arc<Class>,
+    /// Field values for all instance fields in the class hierarchy.
+    /// Fields are stored in order: root class fields first, then subclass fields.
+    /// Initially set to default zero values; actual initialization happens in constructors.
     values: Box<[Value]>,
 }
 
 impl Object {
     /// Create a new object with the given class.
+    ///
+    /// This performs the **allocation phase** of object creation:
+    /// - Allocates storage for all instance fields in the class hierarchy
+    /// - Sets all fields to their **default zero values** (0, 0.0, false, null)
+    ///
+    /// **This does NOT call any constructor (`<init>`).**
+    ///
+    /// # JVM Specification Reference
+    ///
+    /// Per [JLS §12.5](https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.5):
+    /// > Just before a reference to the newly created object is returned as the result,
+    /// > the indicated constructor is processed to initialize the new object...
+    ///
+    /// The constructor invocation is handled separately by the VM's `invokespecial` instruction.
+    ///
+    /// # Zero Initialization
+    ///
+    /// All fields are initialized to their type's default value:
+    /// - `int`, `short`, `byte`, `char`: `0`
+    /// - `long`: `0L`
+    /// - `float`: `0.0f`
+    /// - `double`: `0.0d`
+    /// - `boolean`: `false`
+    /// - Object references and arrays: `null`
     ///
     /// # Errors
     ///
