@@ -293,7 +293,6 @@ impl VM {
         // SharedSecrets.setJavaLangRefAccess(...) at the appropriate time in the JVM initialization
         // process.
         let _ = self.class("java.lang.ref.Reference").await?;
-
         if self.java_class_file_version <= JAVA_8 {
             self.invoke(
                 "java.lang.System",

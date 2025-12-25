@@ -7,7 +7,7 @@ bitflags! {
     ///
     /// # References
     ///
-    /// - [RandomAccessFile (modes)](https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/io/RandomAccessFile.html#%3Cinit%3E(java.io.File,java.lang.String))
+    /// - [RandomAccessFile (modes)](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/io/RandomAccessFile.html#%3Cinit%3E(java.io.File,java.lang.String))
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub(crate) struct FileModeFlags: u16 {
         const READ_ONLY = 1;

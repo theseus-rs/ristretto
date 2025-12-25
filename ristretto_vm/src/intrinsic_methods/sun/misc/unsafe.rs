@@ -1051,7 +1051,11 @@ mod tests {
     #[tokio::test]
     async fn test_ensure_class_initialized() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = ensure_class_initialized(thread, Parameters::default()).await?;
+        let string_class = thread.class("java/lang/String").await?;
+        let class_object = string_class.to_object(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(class_object);
+        let result = ensure_class_initialized(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1285,7 +1289,13 @@ mod tests {
     #[tokio::test]
     async fn test_should_be_initialized() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = should_be_initialized(thread, Parameters::default()).await?;
+        // Create a Class object for testing - the class is already initialized
+        let string_class = thread.class("java/lang/String").await?;
+        let class_object = string_class.to_object(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(class_object);
+        let result = should_be_initialized(thread, parameters).await?;
+        // String class is already initialized, so should return false (should NOT be initialized)
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }

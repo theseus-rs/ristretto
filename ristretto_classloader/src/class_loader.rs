@@ -74,6 +74,17 @@ impl ClassLoader {
     ///
     /// if the class file cannot be read.
     pub async fn load_with_status(&self, class_name: &str) -> Result<(Arc<Class>, bool)> {
+        let class_name_internal = class_name.replace('.', "/");
+        let class_name_internal = class_name_internal.as_str();
+
+        // Check if the class is already loaded in this class loader.
+        {
+            let classes = self.classes.read().await;
+            if let Some(class) = classes.get(class_name_internal) {
+                return Ok((Arc::clone(class), true));
+            }
+        }
+
         // Attempt to load the class from the parent class loader first.
         if let Some(parent) = self.parent().await
             && let Ok((class, loaded)) = Box::pin(parent.load_with_status(class_name)).await
@@ -81,30 +92,19 @@ impl ClassLoader {
             return Ok((class, loaded));
         }
 
-        let class_name = class_name.replace('.', "/");
-        let class_name = class_name.as_str();
-
-        // Check if the class is already loaded in this class loader.
-        {
-            let classes = self.classes.read().await;
-            if let Some(class) = classes.get(class_name) {
-                return Ok((Arc::clone(class), true));
-            }
-        }
-
-        if class_name.starts_with('[') {
-            if let Ok(class) = self.create_array_class(class_name) {
-                return Ok(self.cache_class(class_name, class).await);
+        if class_name_internal.starts_with('[') {
+            if let Ok(class) = self.create_array_class(class_name_internal) {
+                return Ok(self.cache_class(class_name_internal, class).await);
             }
         } else {
             let class_path = self.class_path();
-            if let Ok(class_file) = class_path.read_class(class_name).await {
+            if let Ok(class_file) = class_path.read_class(class_name_internal).await {
                 let class = Class::from(Some(self.this.clone()), class_file)?;
-                return Ok(self.cache_class(class_name, class).await);
+                return Ok(self.cache_class(class_name_internal, class).await);
             }
         }
 
-        Err(ClassNotFound(class_name.to_string()))
+        Err(ClassNotFound(class_name_internal.to_string()))
     }
 
     /// Cache a class in the class loader.
@@ -322,6 +322,32 @@ mod tests {
 
         let class = class_loader.load("HelloWorld").await?;
         assert_eq!("HelloWorld", class.name());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_order() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_directory = cargo_manifest.join("..").join("classes");
+        let class_path = ClassPath::from(&[classes_directory]);
+        let parent_loader = ClassLoader::new("parent", class_path.clone());
+        let child_loader = ClassLoader::new("child", class_path.clone());
+        child_loader.set_parent(Some(parent_loader.clone())).await;
+
+        // Load the class in the parent loader
+        let parent_class = parent_loader.load("HelloWorld").await?;
+
+        // Register a fake class in the child loader with the same name
+        let fake_class_name = "HelloWorld";
+        let fake_class = child_loader.create_array_class(fake_class_name)?;
+        child_loader.register(fake_class.clone()).await?;
+
+        // Load the class from the child loader
+        let loaded_class = child_loader.load("HelloWorld").await?;
+
+        // Verify that the loaded class is the one from the child loader, not the parent
+        assert_eq!(fake_class, loaded_class);
+        assert_ne!(parent_class, loaded_class);
         Ok(())
     }
 

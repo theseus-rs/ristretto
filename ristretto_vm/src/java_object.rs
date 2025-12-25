@@ -202,6 +202,21 @@ impl JavaObject for String {
     }
 }
 
+impl JavaObject for Value {
+    async fn to_object(&self, thread: &Thread) -> Result<Value> {
+        match self {
+            Value::Int(value) => value.to_object(thread).await,
+            Value::Long(value) => value.to_object(thread).await,
+            Value::Float(value) => value.to_object(thread).await,
+            Value::Double(value) => value.to_object(thread).await,
+            Value::Object(_) => Ok(self.clone()),
+            Value::Unused => Err(InternalError(
+                "Cannot convert unused value to object".to_string(),
+            )),
+        }
+    }
+}
+
 async fn to_class_loader_object(thread: &Thread, class_loader: &Arc<ClassLoader>) -> Result<Value> {
     if let Some(object) = class_loader.object().await {
         return Ok(object);

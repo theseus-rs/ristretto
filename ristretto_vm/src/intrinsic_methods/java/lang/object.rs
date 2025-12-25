@@ -16,7 +16,7 @@ use std::sync::Arc;
 ///
 /// # References
 ///
-/// - [java.lang.Object.clone()](https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/Object.html#clone())
+/// - [java.lang.Object.clone()](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/Object.html#clone())
 #[intrinsic_method("java/lang/Object.clone()Ljava/lang/Object;", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn clone(
