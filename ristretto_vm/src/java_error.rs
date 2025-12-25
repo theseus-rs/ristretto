@@ -2,90 +2,98 @@
 #[derive(Debug, thiserror::Error)]
 pub enum JavaError {
     /// `AbstractMethodError`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/AbstractMethodError.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/AbstractMethodError.html>
     #[error("{0}")]
     AbstractMethodError(String),
     /// `AccessControlException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/security/AccessControlException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/security/AccessControlException.html>
     #[error("{0}")]
     AccessControlException(String),
     /// `ArithmeticException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ArithmeticException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/ArithmeticException.html>
     #[error("{0}")]
     ArithmeticException(String),
     /// `ArrayIndexOutOfBoundsException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ArrayIndexOutOfBoundsException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/ArrayIndexOutOfBoundsException.html>
     #[error("Index {index} out of bounds for length {length}")]
     ArrayIndexOutOfBoundsException { index: i32, length: usize },
     /// `BootstrapMethodError`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/BootstrapMethodError.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/BootstrapMethodError.html>
     #[error("{0}")]
     BootstrapMethodError(String),
     /// `ClassCastException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ClassCastException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/ClassCastException.html>
     #[error("class {source_class_name} cannot be cast to class {target_class_name}")]
     ClassCastException {
         source_class_name: String,
         target_class_name: String,
     },
+    /// `ClassCircularityError`
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/ClassCircularityError.html>
+    #[error("{0}")]
+    ClassCircularityError(String),
     /// `ClassFormatError`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ClassFormatError.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/ClassFormatError.html>
     #[error("{0}")]
     ClassFormatError(String),
     /// `ClassNotFoundException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/ClassNotFoundException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/ClassNotFoundException.html>
     #[error("{0}")]
     ClassNotFoundException(String),
     /// `CloneNotSupportedException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/CloneNotSupportedException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/CloneNotSupportedException.html>
     #[error("{0}")]
     CloneNotSupportedException(String),
+    /// `ExceptionInInitializerError`
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/ExceptionInInitializerError.html>
+    #[error("{0}")]
+    ExceptionInInitializerError(String),
     /// `FileNotFoundException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/io/FileNotFoundException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/io/FileNotFoundException.html>
     #[error("{0}")]
     FileNotFoundException(String),
     /// `IllegalAccessError`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IllegalAccessError.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/IllegalAccessError.html>
     #[error("{0}")]
     IllegalAccessError(String),
     /// `IllegalArgumentException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IllegalArgumentException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/IllegalArgumentException.html>
     #[error("{0}")]
     IllegalArgumentException(String),
     /// `IncompatibleClassChangeError`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IncompatibleClassChangeError.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/IncompatibleClassChangeError.html>
     #[error("{0}")]
     IncompatibleClassChangeError(String),
     /// `IndexOutOfBoundsException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/IndexOutOfBoundsException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/IndexOutOfBoundsException.html>
     #[error("Index: {index}, Size {size}")]
     IndexOutOfBoundsException { index: i32, size: i32 },
     /// `IOException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/io/IOException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/io/IOException.html>
     #[error("{0}")]
     IoException(String),
     /// `NoClassDefFoundError`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NoClassDefFoundError.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/NoClassDefFoundError.html>
     #[error("{0}")]
     NoClassDefFoundError(String),
     /// `NoSuchMethodError`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NoSuchMethodError.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/NoSuchMethodError.html>
     #[error("{0}")]
     NoSuchMethodError(String),
     /// `NegativeArraySizeException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NegativeArraySizeException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/NegativeArraySizeException.html>
     #[error("{0}")]
     NegativeArraySizeException(String),
     /// `NullPointerException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/NullPointerException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/NullPointerException.html>
     #[error("{0}")]
     NullPointerException(String),
     /// `RuntimeException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/RuntimeException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/RuntimeException.html>
     #[error("{0}")]
     RuntimeException(String),
     /// `UnsupportedOperationException`
-    /// See: <https://docs.oracle.com/en/java/javase/24/docs/api/java.base/java/lang/UnsupportedOperationException.html>
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/UnsupportedOperationException.html>
     #[error("{0}")]
     UnsupportedOperationException(String),
 }
@@ -103,9 +111,11 @@ impl JavaError {
             JavaError::ArithmeticException(_) => "java.lang.ArithmeticException",
             JavaError::BootstrapMethodError(_) => "java.lang.BootstrapMethodError",
             JavaError::ClassCastException { .. } => "java.lang.ClassCastException",
+            JavaError::ClassCircularityError(_) => "java.lang.ClassCircularityError",
             JavaError::ClassFormatError(_) => "java.lang.ClassFormatError",
             JavaError::ClassNotFoundException(_) => "java.lang.ClassNotFoundException",
             JavaError::CloneNotSupportedException(_) => "java.lang.CloneNotSupportedException",
+            JavaError::ExceptionInInitializerError(_) => "java.lang.ExceptionInInitializerError",
             JavaError::FileNotFoundException(_) => "java.io.FileNotFoundException",
             JavaError::IllegalAccessError(_) => "java.lang.IllegalAccessError",
             JavaError::IllegalArgumentException(_) => "java.lang.IllegalArgumentException",
@@ -189,6 +199,13 @@ mod tests {
     }
 
     #[test]
+    fn test_class_circularity_error() {
+        let error = JavaError::ClassCircularityError("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.ClassCircularityError");
+        assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
     fn test_class_format_error() {
         let error = JavaError::ClassFormatError("invalid class format".to_string());
         assert_eq!(error.class_name(), "java.lang.ClassFormatError");
@@ -207,6 +224,13 @@ mod tests {
         let error = JavaError::CloneNotSupportedException("foo".to_string());
         assert_eq!(error.class_name(), "java.lang.CloneNotSupportedException");
         assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
+    fn test_exception_in_initializer_error() {
+        let error = JavaError::ExceptionInInitializerError("initialization failed".to_string());
+        assert_eq!(error.class_name(), "java.lang.ExceptionInInitializerError");
+        assert_eq!(error.message(), "initialization failed");
     }
 
     #[test]

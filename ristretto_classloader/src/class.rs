@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::sync::{Arc, LazyLock, RwLock, Weak};
+use tokio::sync::Notify;
 
 /// A list of methods that are designated as polymorphic in the Java Virtual Machine.
 ///
@@ -16,7 +17,7 @@ use std::sync::{Arc, LazyLock, RwLock, Weak};
 /// sites, even though they have a single method descriptor in the class file. The JVM uses a
 /// special invokedynamic mechanism to dispatch these methods.
 ///
-/// Each entry is a tuple of (`class_name`, `method_name`, `method_decsriptor`) that identifies a
+/// Each entry is a tuple of (`class_name`, `method_name`, `method_descriptor`) that identifies a
 /// polymorphic method. The method will be matched regardless of the descriptor at the call site.
 ///
 /// These methods are primarily used with method handles and the invokedynamic instruction
@@ -63,6 +64,48 @@ pub static POLYMORPHIC_METHODS: LazyLock<HashMap<(&'static str, &'static str), &
         map
     });
 
+/// Represents the initialization state of a class.
+///
+/// This follows the
+/// [JVM Specification §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5)
+/// for class initialization.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum InitializationState {
+    /// The class has been loaded but not yet initialized.
+    #[default]
+    NotInitialized,
+    /// The class is currently being initialized by the specified thread ID.
+    BeingInitialized {
+        /// The ID of the thread that is initializing the class.
+        thread_id: u64,
+    },
+    /// The class has been successfully initialized.
+    Initialized,
+    /// The class initialization failed with an error message.
+    Failed {
+        /// The error message describing why initialization failed.
+        error: String,
+    },
+}
+
+/// The action to take after calling `begin_initialization`.
+#[derive(Debug, Clone, PartialEq)]
+pub enum InitializationAction {
+    /// The class needs to be initialized by the calling thread.
+    ShouldInitialize,
+    /// The class is already being initialized by the calling thread (recursive init).
+    AlreadyInitializing,
+    /// The class has already been fully initialized.
+    AlreadyInitialized,
+    /// Another thread is initializing the class; the caller should wait.
+    WaitForInitialization,
+    /// The class initialization previously failed.
+    Failed {
+        /// The error message from the failed initialization.
+        error: String,
+    },
+}
+
 /// A representation of a Java class.
 #[expect(clippy::struct_field_names)]
 #[derive(Debug)]
@@ -78,6 +121,11 @@ pub struct Class {
     object_fields: Vec<Arc<Field>>,
     methods: HashMap<String, Arc<Method>>,
     object: RwLock<Option<Value>>,
+    /// The initialization state of the class
+    /// [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5).
+    initialization_state: RwLock<InitializationState>,
+    /// Notifier for threads waiting on initialization to complete.
+    initialization_notify: Notify,
 }
 
 impl Class {
@@ -181,6 +229,8 @@ impl Class {
             object_fields,
             methods,
             object: RwLock::new(None),
+            initialization_state: RwLock::new(InitializationState::NotInitialized),
+            initialization_notify: Notify::new(),
         });
         Ok(class)
     }
@@ -330,6 +380,125 @@ impl Class {
     #[must_use]
     pub fn source_file(&self) -> Option<&str> {
         self.source_file.as_deref()
+    }
+
+    /// Get the current initialization state of the class.
+    ///
+    /// # Errors
+    ///
+    /// if the state cannot be accessed due to a poisoned lock.
+    pub fn initialization_state(&self) -> Result<InitializationState> {
+        let state = self
+            .initialization_state
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        Ok(state.clone())
+    }
+
+    /// Check if the class is initialized.
+    ///
+    /// # Errors
+    ///
+    /// if the state cannot be accessed due to a poisoned lock.
+    pub fn is_initialized(&self) -> Result<bool> {
+        let state = self
+            .initialization_state
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        Ok(matches!(*state, InitializationState::Initialized))
+    }
+
+    /// Attempt to begin initialization of this class.
+    ///
+    /// Returns the action the caller should take based on the current state. This implements the
+    /// synchronization logic from
+    /// [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5).
+    ///
+    /// # Arguments
+    ///
+    /// * `thread_id` - The ID of the thread attempting initialization
+    ///
+    /// # Errors
+    ///
+    /// if the state cannot be accessed due to a poisoned lock.
+    pub fn begin_initialization(&self, thread_id: u64) -> Result<InitializationAction> {
+        let mut state = self
+            .initialization_state
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+
+        match &*state {
+            InitializationState::NotInitialized => {
+                // Mark as being initialized by current thread
+                *state = InitializationState::BeingInitialized { thread_id };
+                Ok(InitializationAction::ShouldInitialize)
+            }
+            InitializationState::BeingInitialized {
+                thread_id: init_thread_id,
+            } => {
+                if *init_thread_id == thread_id {
+                    // Recursive initialization by the same thread is OK
+                    Ok(InitializationAction::AlreadyInitializing)
+                } else {
+                    // Another thread is initializing
+                    Ok(InitializationAction::WaitForInitialization)
+                }
+            }
+            InitializationState::Initialized => Ok(InitializationAction::AlreadyInitialized),
+            InitializationState::Failed { error } => Ok(InitializationAction::Failed {
+                error: error.clone(),
+            }),
+        }
+    }
+
+    /// Mark the class as successfully initialized.
+    ///
+    /// This implements step 9 of
+    /// [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5).
+    ///
+    /// # Errors
+    ///
+    /// if the state cannot be accessed due to a poisoned lock.
+    pub fn complete_initialization(&self) -> Result<()> {
+        let mut state = self
+            .initialization_state
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        *state = InitializationState::Initialized;
+        // Notify all waiting threads
+        self.initialization_notify.notify_waiters();
+        Ok(())
+    }
+
+    /// Mark the class initialization as failed.
+    ///
+    /// This implements step 10 of
+    /// [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5).
+    ///
+    /// # Arguments
+    ///
+    /// * `error` - The error message describing why initialization failed
+    ///
+    /// # Errors
+    ///
+    /// if the state cannot be accessed due to a poisoned lock.
+    pub fn fail_initialization(&self, error: String) -> Result<()> {
+        let mut state = self
+            .initialization_state
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        *state = InitializationState::Failed { error };
+        // Notify all waiting threads
+        self.initialization_notify.notify_waiters();
+        Ok(())
+    }
+
+    /// Wait for initialization to complete.
+    ///
+    /// This is used when another thread is initializing the class and the current
+    /// thread needs to wait for it to finish.
+    pub async fn wait_for_initialization(&self) {
+        self.initialization_notify.notified().await;
     }
 
     /// Determine if this class is an array
@@ -1574,6 +1743,126 @@ mod tests {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
         let class = class_loader.load("java.lang.Override").await?;
         assert!(class.is_annotation());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_initialization_state_default() -> Result<()> {
+        let class = string_class().await?;
+        let state = class.initialization_state()?;
+        assert_eq!(state, InitializationState::NotInitialized);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_initialization_state_machine_basic() -> Result<()> {
+        let class = string_class().await?;
+        let thread_id = 1u64;
+
+        // Initially not initialized
+        assert!(!class.is_initialized()?);
+
+        // Begin initialization should return ShouldInitialize
+        let action = class.begin_initialization(thread_id)?;
+        assert_eq!(action, InitializationAction::ShouldInitialize);
+
+        // State should be BeingInitialized
+        let state = class.initialization_state()?;
+        assert_eq!(
+            state,
+            InitializationState::BeingInitialized { thread_id: 1 }
+        );
+
+        // Complete initialization
+        class.complete_initialization()?;
+
+        // State should be Initialized
+        assert!(class.is_initialized()?);
+        let state = class.initialization_state()?;
+        assert_eq!(state, InitializationState::Initialized);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_initialization_already_initialized() -> Result<()> {
+        let class = string_class().await?;
+        let thread_id = 1u64;
+
+        // Initialize the class
+        let action = class.begin_initialization(thread_id)?;
+        assert_eq!(action, InitializationAction::ShouldInitialize);
+        class.complete_initialization()?;
+
+        // Second attempt should return AlreadyInitialized
+        let action = class.begin_initialization(thread_id)?;
+        assert_eq!(action, InitializationAction::AlreadyInitialized);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_initialization_same_thread_reentrant() -> Result<()> {
+        let class = string_class().await?;
+        let thread_id = 1u64;
+
+        // Begin initialization
+        let action = class.begin_initialization(thread_id)?;
+        assert_eq!(action, InitializationAction::ShouldInitialize);
+
+        // Same thread tries again (reentrancy) - should return AlreadyInitializing
+        let action = class.begin_initialization(thread_id)?;
+        assert_eq!(action, InitializationAction::AlreadyInitializing);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_initialization_different_thread_should_wait() -> Result<()> {
+        let class = string_class().await?;
+        let thread_id_1 = 1u64;
+        let thread_id_2 = 2u64;
+
+        // Thread 1 begins initialization
+        let action = class.begin_initialization(thread_id_1)?;
+        assert_eq!(action, InitializationAction::ShouldInitialize);
+
+        // Thread 2 tries to initialize - should return WaitForInitialization
+        let action = class.begin_initialization(thread_id_2)?;
+        assert_eq!(action, InitializationAction::WaitForInitialization);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_initialization_failure_caching() -> Result<()> {
+        let class = string_class().await?;
+        let thread_id = 1u64;
+
+        // Begin initialization
+        let action = class.begin_initialization(thread_id)?;
+        assert_eq!(action, InitializationAction::ShouldInitialize);
+
+        // Fail initialization
+        class.fail_initialization("Test error".to_string())?;
+
+        // State should be Failed
+        let state = class.initialization_state()?;
+        assert_eq!(
+            state,
+            InitializationState::Failed {
+                error: "Test error".to_string()
+            }
+        );
+
+        // Second attempt should return Failed
+        let action = class.begin_initialization(thread_id)?;
+        assert!(matches!(action, InitializationAction::Failed { .. }));
+
+        // Third attempt by a different thread should also return Failed
+        let action = class.begin_initialization(2)?;
+        assert!(matches!(action, InitializationAction::Failed { .. }));
+
         Ok(())
     }
 }

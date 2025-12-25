@@ -53,20 +53,35 @@ pub(crate) async fn for_name_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // TODO: Add support for unused parameters
+    // TODO: Add support for class_loader parameter
     let _caller = parameters.pop_reference()?;
     let _class_loader = parameters.pop_reference()?;
-    let _initialize = parameters.pop_bool()?;
+    let initialize = parameters.pop_bool()?;
     let object = parameters.pop()?;
     if object.is_null() {
         return Err(NullPointerException("className cannot be null".to_string()).into());
     }
 
     let class_name = object.as_string()?;
-    let class = match thread.class(&class_name).await {
-        Ok(class) => class,
-        Err(_error) => {
-            return Err(ClassNotFoundException(class_name).into());
+
+    // If initialize is false, only load the class without initializing it
+    let class = if initialize {
+        match thread.class(&class_name).await {
+            Ok(class) => class,
+            Err(_error) => {
+                return Err(ClassNotFoundException(class_name).into());
+            }
+        }
+    } else {
+        // Load class without initialization
+        let vm = thread.vm()?;
+        let class_loader_lock = vm.class_loader();
+        let class_loader = class_loader_lock.read().await;
+        match class_loader.load(&class_name).await {
+            Ok(class) => class,
+            Err(_error) => {
+                return Err(ClassNotFoundException(class_name).into());
+            }
         }
     };
 

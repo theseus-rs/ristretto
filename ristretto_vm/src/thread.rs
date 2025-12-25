@@ -215,110 +215,195 @@ impl Thread {
         self.park_state.notify.notify_one();
     }
 
-    /// Get a class.
+    /// Get a class and ensure it is initialized.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4.1>
+    /// This implements the class initialization procedure as specified in
+    /// [JLS §12.4.2](https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4.2):
+    ///
+    /// 1. If the class is already initialized, return immediately
+    /// 2. If the class is in an erroneous state, throw `NoClassDefFoundError`
+    /// 3. If the class is being initialized by the current thread, return (recursive initialization)
+    /// 4. If the class is being initialized by another thread, wait and recheck
+    /// 5. Mark the class as being initialized by the current thread
+    /// 6. Initialize the direct superclass first (recursive)
+    /// 7. Execute `<clinit>` for this class
+    /// 8. If `<clinit>` throws, mark as Erroneous and throw `ExceptionInInitializerError`
+    /// 9. Mark the class as Initialized
+    ///
+    /// Note: This implementation does NOT initialize interfaces as part of class initialization
+    /// unless explicitly triggered per
+    /// [JLS §12.4.1](https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4.1).
+    ///
+    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5>
+    /// See: <https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4.2>
     ///
     /// # Errors
     ///
-    /// if the class cannot be loaded
+    /// if the class cannot be loaded or initialized
     #[expect(clippy::multiple_bound_locations)]
     #[async_recursion(?Send)]
     pub(crate) async fn class<S: AsRef<str>>(&self, class_name: S) -> Result<Arc<Class>> {
         let class_name = class_name.as_ref();
-        let (class, previously_loaded) = {
-            let vm = self.vm()?;
-            let class_loader_lock = vm.class_loader();
-            let class_loader = class_loader_lock.read().await;
-            class_loader.load_with_status(class_name).await?
-        };
 
-        // Determine if the class has already been loaded.  If the class has already been loaded,
-        // return the class. Otherwise, the class must be initialized.
-        if previously_loaded {
-            return Ok(class);
-        }
+        // Load the class; the class tracks its own initialization state
+        let class = self.load_and_link_class(class_name).await?;
 
-        let classes = self.prepare_class_initialization(&class).await?;
-        for current_class in classes {
-            if let Some(class_initializer) = current_class.class_initializer() {
-                // Execute the class initializer on the current thread.
-                self.execute(&current_class, &class_initializer, &[] as &[Value])
-                    .await?;
-            }
-        }
+        // Perform lazy, recursive initialization
+        self.initialize_class(&class).await?;
+
         Ok(class)
     }
 
-    /// Prepare class initialization.
+    /// Load and link a class without initializing it.
+    ///
+    /// This loads the class and resolves its superclass and interfaces (linking), but does not
+    /// trigger initialization.
     ///
     /// # Errors
     ///
-    /// if the class cannot be resolved
-    async fn prepare_class_initialization(&self, class: &Arc<Class>) -> Result<Vec<Arc<Class>>> {
+    /// if the class cannot be loaded or linked
+    #[async_recursion(?Send)]
+    async fn load_and_link_class(&self, class_name: &str) -> Result<Arc<Class>> {
         let vm = self.vm()?;
-        let class_loader_lock = vm.class_loader();
-        let class_loader = class_loader_lock.read().await;
-        let mut classes = Vec::new();
-        let mut index = 0;
-        classes.push(class.clone());
+        let class = {
+            let class_loader_lock = vm.class_loader();
+            let class_loader = class_loader_lock.read().await;
+            class_loader.load(class_name).await?
+        };
 
-        while index < classes.len() {
-            let Some(current_class) = classes.get(index) else {
-                break;
-            };
-            let current_class = current_class.clone();
-
-            if current_class.class_file().version > *vm.java_class_file_version() {
-                return Err(UnsupportedClassFileVersion(
-                    current_class.class_file().version.major(),
-                ));
-            }
-
-            let mut interfaces = Vec::new();
-            for interface_index in &current_class.class_file().interfaces {
-                let interface_name = current_class
-                    .constant_pool()
-                    .try_get_class(*interface_index)?;
-                let (interface_class, previously_loaded) =
-                    class_loader.load_with_status(interface_name).await?;
-                interfaces.push(interface_class.clone());
-                if !previously_loaded && !classes.contains(&interface_class) {
-                    classes.push(interface_class);
-                }
-            }
-            current_class.set_interfaces(interfaces)?;
-
-            // If the current class is java.lang.Object, skip the parent class logic since Object is
-            // the root class.
-            if current_class.name() == "java/lang/Object" {
-                index += 1;
-                continue;
-            }
-
-            let super_class_index = current_class.class_file().super_class;
-            let super_class_name = if super_class_index == 0 {
-                "java/lang/Object"
-            } else {
-                let constant_pool = current_class.constant_pool();
-                constant_pool.try_get_class(super_class_index)?
-            };
-
-            let (super_class, previously_loaded) =
-                class_loader.load_with_status(super_class_name).await?;
-            current_class.set_parent(Some(super_class.clone()))?;
-            if !previously_loaded && !classes.contains(&super_class) {
-                classes.push(super_class);
-            }
-
-            index += 1;
+        // Check class version compatibility
+        if class.class_file().version > *vm.java_class_file_version() {
+            return Err(UnsupportedClassFileVersion(
+                class.class_file().version.major(),
+            ));
         }
 
-        // Classes are discovered from the top of the hierarchy to the bottom.  However, the class
-        // initialization order is from the bottom to the top.  Reverse the classes so that the
-        // classes are initialized from the bottom to the top.
-        classes.reverse();
-        Ok(classes)
+        // Link: resolve interfaces and recursively link them
+        // Only link if:
+        // 1. There are interfaces declared in the class file
+        // 2. The interfaces haven't been linked yet (the interfaces vector is empty)
+        let has_declared_interfaces = !class.class_file().interfaces.is_empty();
+        let interfaces_not_linked = class.interfaces()?.is_empty();
+
+        if has_declared_interfaces && interfaces_not_linked {
+            let interface_names: Vec<String> = {
+                let mut names = Vec::new();
+                for interface_index in &class.class_file().interfaces {
+                    let interface_name = class.constant_pool().try_get_class(*interface_index)?;
+                    names.push(interface_name.to_string());
+                }
+                names
+            };
+
+            let mut interfaces = Vec::new();
+            for interface_name in interface_names {
+                // Recursively link each interface (this ensures interface inheritance is linked)
+                let interface_class = self.load_and_link_class(&interface_name).await?;
+                interfaces.push(interface_class);
+            }
+            class.set_interfaces(interfaces)?;
+        }
+
+        // Link: resolve superclass and recursively link the entire superclass chain
+        // This ensures that all parent classes have their own parents resolved
+        if class.parent()?.is_none() && class.name() != "java/lang/Object" {
+            let super_class_name = {
+                let super_class_index = class.class_file().super_class;
+                if super_class_index == 0 {
+                    "java/lang/Object".to_string()
+                } else {
+                    class
+                        .constant_pool()
+                        .try_get_class(super_class_index)?
+                        .to_string()
+                }
+            };
+
+            // Recursively link the superclass (this ensures the entire chain is linked)
+            let super_class = self.load_and_link_class(&super_class_name).await?;
+            class.set_parent(Some(super_class))?;
+        }
+
+        Ok(class)
+    }
+
+    /// Initialize a class following
+    /// [JLS §12.4.2](https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4.2)
+    /// state machine.
+    ///
+    /// This is the core initialization algorithm that:
+    /// - Uses lazy, recursive initialization
+    /// - Handles circularity detection (same thread re-enters = OK, different thread = wait)
+    /// - Initializes superclass before the class itself
+    /// - Does NOT eagerly initialize interfaces
+    /// - Caches initialization errors permanently
+    ///
+    /// # Errors
+    ///
+    /// if the class initialization fails
+    #[async_recursion(?Send)]
+    async fn initialize_class(&self, class: &Arc<Class>) -> Result<()> {
+        use crate::JavaError::{ExceptionInInitializerError, NoClassDefFoundError};
+        use ristretto_classloader::InitializationAction;
+
+        loop {
+            let action = class.begin_initialization(self.id)?;
+
+            match action {
+                // Step 1 & 3: Already initialized or being initialized by current thread
+                // Per JLS §12.4.2, circularity by same thread is allowed - return immediately
+                InitializationAction::AlreadyInitialized
+                | InitializationAction::AlreadyInitializing => {
+                    return Ok(());
+                }
+                InitializationAction::Failed { error } => {
+                    // Step 2: Previously failed, throw NoClassDefFoundError
+                    return Err(NoClassDefFoundError(error).into());
+                }
+                InitializationAction::WaitForInitialization => {
+                    // Step 4: Another thread is initializing, wait and recheck
+                    class.wait_for_initialization().await;
+                    // Loop will continue to recheck the state
+                }
+                InitializationAction::ShouldInitialize => {
+                    // Step 5: We are now the initializing thread
+                    // Step 6: Initialize superclass first (recursive descent)
+                    if let Some(superclass) = class.parent()?
+                        && let Err(error) = self.initialize_class(&superclass).await
+                    {
+                        // Superclass initialization failed
+                        let error_msg = format!("{error}");
+                        class.fail_initialization(error_msg)?;
+                        return Err(error);
+                    }
+
+                    // Step 7: Execute <clinit> for this class
+                    if let Some(class_initializer) = class.class_initializer() {
+                        match self
+                            .execute(class, &class_initializer, &[] as &[Value])
+                            .await
+                        {
+                            Ok(_) => {
+                                // Step 9: Mark as initialized
+                                class.complete_initialization()?;
+                            }
+                            Err(error) => {
+                                // Step 8: <clinit> threw, mark as Erroneous
+                                let error_msg = format!("{error}");
+                                class.fail_initialization(error_msg.clone())?;
+                                // Wrap in ExceptionInInitializerError (only first time)
+                                return Err(ExceptionInInitializerError(error_msg).into());
+                            }
+                        }
+                    } else {
+                        // No <clinit>, just mark as initialized
+                        class.complete_initialization()?;
+                    }
+
+                    return Ok(());
+                }
+            }
+        }
     }
 
     /// Register a class.

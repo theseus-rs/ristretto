@@ -2,9 +2,17 @@ use crate::Result;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
-use ristretto_classfile::FieldType;
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic>
+///
+/// The getstatic instruction:
+/// 1. Resolves the field reference [JVMS §5.4.3.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.2)
+/// 2. Initializes the class, and its superclasses, that declares the field [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5)
+/// 3. Gets the value of the static field
+///
+/// Note: When `thread.class()` is called, it initializes the class and all its superclasses in
+/// order (from Object down to the referenced class). This ensures that any inherited static fields
+/// are properly initialized before we access them.
 #[inline]
 pub(crate) async fn getstatic(
     frame: &Frame,
@@ -17,22 +25,34 @@ pub(crate) async fn getstatic(
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
+
+    // Initialize the class and its superclasses:
+    // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5
+    // This ensures parent classes are initialized first, which is required for inherited static
+    // fields to be properly set up.
     let class = thread.class(class_name).await?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
 
-    let field = class.static_field(field_name)?;
-    if let FieldType::Object(class_name) = field.field_type() {
-        // Load the class of the field value if it is an object.
-        // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3
-        thread.class(class_name).await?;
-    }
+    // Verify the field exists; searches class hierarchy per:
+    // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.2
+    let _field = class.static_field(field_name)?;
 
+    // Get the value (searches class hierarchy and returns from declaring class)
     let value = class.static_value(field_name)?;
     stack.push(value)?;
     Ok(Continue)
 }
 
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic>
+///
+/// The putstatic instruction:
+/// 1. Resolves the field reference [JVMS §5.4.3.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.2)
+/// 2. Initializes the class, and its superclasses, that declares the field [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5)
+/// 3. Sets the value of the static field
+///
+/// Note: When `thread.class()` is called, it initializes the class and all its superclasses in
+/// order (from Object down to the referenced class). This ensures that any inherited static fields
+/// are properly initialized before we modify them.
 #[inline]
 pub(crate) async fn putstatic(
     frame: &Frame,
@@ -45,15 +65,19 @@ pub(crate) async fn putstatic(
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
+
+    // Initialize the class and its superclasses:
+    // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5
+    // This ensures parent classes are initialized first, which is required for inherited static
+    // fields to be properly set up.
     let class = thread.class(class_name).await?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
 
-    let field = class.static_field(field_name)?;
-    if let FieldType::Object(class_name) = field.field_type() {
-        // Load the class of the field value if it is an object.
-        // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3
-        thread.class(class_name).await?;
-    }
+    // Verify the field exists; searches class hierarchy per:
+    // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.2
+    let _field = class.static_field(field_name)?;
+
+    // Set the value (searches class hierarchy and sets in declaring class)
     let value = stack.pop()?;
     class.set_static_value(field_name, value)?;
     Ok(Continue)
