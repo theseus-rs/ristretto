@@ -107,6 +107,58 @@ pub enum InitializationAction {
 }
 
 /// A representation of a Java class.
+///
+/// # Field Initialization Semantics (HotSpot-Compatible)
+///
+/// This class implements field initialization following the JVM Specification and `HotSpot` behavior:
+///
+/// ## Static Fields ([JLS §12.4](https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4))
+///
+/// Static fields are initialized during **class initialization**, NOT during class loading:
+///
+/// 1. **Loading**: Class is loaded and linked; static storage is allocated and zeroed
+/// 2. **Preparation**: Compile-time constants (primitive/String with `ConstantValue`) get their values
+/// 3. **Initialization**: `<clinit>` runs, executing field initializers and static blocks in textual order
+///
+/// ### Compile-Time Constants ([JLS §15.28](https://docs.oracle.com/javase/specs/jls/se25/html/jls-15.html#jls-15.28))
+///
+/// Fields declared as `static final` with a constant expression value:
+/// - Are set from the `ConstantValue` attribute during preparation
+/// - Do NOT trigger class initialization when accessed (values are inlined by compiler)
+/// - Example: `static final int X = 42;`
+///
+/// ### Initialization Failure
+///
+/// If `<clinit>` throws an exception:
+/// - Static fields may be partially initialized (no rollback)
+/// - Class is marked as `Failed` (Erroneous state)
+/// - All future accesses throw `NoClassDefFoundError`
+///
+/// ## Instance Fields ([JLS §12.5](https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.5))
+///
+/// Instance fields are initialized during **object construction**, NOT during class loading:
+///
+/// 1. **Allocation**: Memory is allocated for the object
+/// 2. **Zero initialization**: All fields are set to default zero values (0, 0.0, false, null)
+/// 3. **Constructor execution**: `<init>` runs with the following order:
+///    a. Call to `super(...)` (recursively up to `Object.<init>`)
+///    b. Instance field initializers (in textual order)
+///    c. Instance initializer blocks (in textual order)
+///    d. Constructor body
+///
+/// ### Field Shadowing
+///
+/// Each class initializes only its own declared fields:
+/// - Subclass fields with the same name as superclass fields occupy different storage
+/// - Inherited fields are initialized by the superclass constructor
+/// - Field offsets are fixed at link time
+///
+/// ## Separation of Concerns
+///
+/// **Static and instance field initialization are completely separate**:
+/// - Static fields: initialized via `<clinit>` during class initialization
+/// - Instance fields: initialized via `<init>` during object construction
+/// - `Unsafe.allocateInstance()`: allocates and zeroes memory but does NOT call constructors
 #[expect(clippy::struct_field_names)]
 #[derive(Debug)]
 pub struct Class {
@@ -116,8 +168,17 @@ pub struct Class {
     class_file: ClassFile,
     parent: RwLock<Option<Arc<Class>>>,
     interfaces: RwLock<Vec<Arc<Class>>>,
+    /// Static fields declared in this class.
+    /// These are initialized during class initialization (`<clinit>`).
+    /// Compile-time constants are initialized from `ConstantValue` attributes.
     static_fields: Vec<Arc<Field>>,
+    /// Values for static fields.
+    /// Initially set to default values (including compile-time constants from `ConstantValue`).
+    /// Non-constant fields are assigned by `<clinit>`.
     static_values: Vec<Arc<RwLock<Value>>>,
+    /// Instance fields declared in this class (not inherited fields).
+    /// These are initialized during object construction (`<init>`).
+    /// Zero values are set during allocation; actual initialization happens in constructors.
     object_fields: Vec<Arc<Field>>,
     methods: HashMap<String, Arc<Method>>,
     object: RwLock<Option<Value>>,
@@ -654,7 +715,22 @@ impl Class {
         Ok(field)
     }
 
+    /// Get the static fields declared in this class.
+    ///
+    /// Static fields are:
+    /// - Allocated and zeroed during class loading
+    /// - Compile-time constants are set from `ConstantValue` attributes during preparation
+    /// - Non-constant fields are assigned by `<clinit>` during initialization
+    ///
+    /// This does NOT include inherited static fields from parent classes.
+    #[must_use]
+    pub fn static_fields(&self) -> &[Arc<Field>] {
+        &self.static_fields
+    }
+
     /// Get a static field by key.
+    ///
+    /// Searches this class and the class hierarchy for the static field.
     ///
     /// # Errors
     ///

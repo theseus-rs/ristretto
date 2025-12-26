@@ -240,7 +240,35 @@ pub(crate) fn areturn(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Return(Some(Value::Object(value))))
 }
 
+/// Creates a new object of the specified class type.
+///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.new>
+///
+/// # Instance Field Initialization (JLS §12.5)
+///
+/// This instruction performs the **allocation phase** of object creation:
+///
+/// 1. **Class initialization**: The class is initialized if not already (triggers `<clinit>`)
+/// 2. **Memory allocation**: Space is allocated for all instance fields in the class hierarchy
+/// 3. **Zero initialization**: All fields are set to default zero values (0, 0.0, false, null)
+///
+/// **This does NOT execute any constructor (`<init>`).**
+///
+/// The constructor invocation is handled separately by a subsequent `invokespecial` instruction
+/// targeting an `<init>` method.
+///
+/// # JVM Behavior
+///
+/// ```text
+/// new <class>           ; Allocates object, zeroes all fields, pushes reference
+/// dup                   ; Duplicate reference (for consuming by invokespecial)
+/// invokespecial <init>  ; Calls constructor, which initializes fields
+/// ```
+///
+/// # Instance Fields vs Static Fields
+///
+/// - **Static fields**: Already initialized during class initialization (triggered by this instruction)
+/// - **Instance fields**: Zeroed here, then initialized by constructor (`<init>`)
 #[inline]
 pub(crate) async fn new(
     frame: &Frame,
@@ -250,7 +278,9 @@ pub(crate) async fn new(
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
+    // Initialize the class (triggers <clinit> for static fields if not already done)
     let class = thread.class(class_name).await?;
+    // Allocate object with all instance fields zeroed (does NOT call constructor)
     let object = Object::new(class)?;
     let reference = Value::from(object);
     stack.push(reference)?;
