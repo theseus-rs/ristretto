@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/v0.27.0...v0.28.0) - 2025-12-26
+
+### Added
+- implement java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;
+
+### Fixed
+- update class loading to comply with JVMS 5.5
+
+### Other
+- improve lint configuration
+- add field initialization tests and docs
+- correct cyclic crate dependencies with ristretto_jimage
+
+## `ristretto_vm` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.27.0...ristretto_vm-v0.28.0) - 2025-12-26
+
+### Added
+- implement java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;
+
+### Fixed
+- update class loading to comply with JVMS 5.5
+
+### Other
+- add field initialization tests and docs
+- improve lint configuration
+
+## `ristretto_macros` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.27.0...ristretto_macros-v0.28.0) - 2025-12-26
+
+### Other
+- improve lint configuration
+
+## `ristretto_jit` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.27.0...ristretto_jit-v0.28.0) - 2025-12-26
+
+### Other
+- improve lint configuration
+
+## `ristretto_classloader` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.27.0...ristretto_classloader-v0.28.0) - 2025-12-26
+
+### Fixed
+- update class loading to comply with JVMS 5.5
+
+### Other
+- add field initialization tests and docs
+- improve lint configuration
+- correct cyclic crate dependencies with ristretto_jimage
+
+## `ristretto_jimage` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.27.0...ristretto_jimage-v0.28.0) - 2025-12-26
+
+### Other
+- improve lint configuration
+- correct cyclic crate dependencies with ristretto_jimage
+
+## `ristretto_gc` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.27.0...ristretto_gc-v0.28.0) - 2025-12-26
+
+### Other
+- improve lint configuration
+
+## `ristretto_classfile` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.27.0...ristretto_classfile-v0.28.0) - 2025-12-26
+
+### Other
+- improve lint configuration
+
 ## `ristretto_cli` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/v0.26.0...v0.27.0) - 2025-12-09
 
 ### Added
