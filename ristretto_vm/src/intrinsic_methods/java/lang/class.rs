@@ -12,7 +12,8 @@ use ristretto_classfile::VersionSpecification::{
 };
 use ristretto_classfile::attributes::{Attribute, InnerClass};
 use ristretto_classfile::{
-    ClassAccessFlags, FieldAccessFlags, JAVA_8, JAVA_11, JAVA_17, JAVA_21, MethodAccessFlags,
+    ClassAccessFlags, FieldAccessFlags, FieldType, JAVA_8, JAVA_11, JAVA_17, JAVA_21,
+    MethodAccessFlags,
 };
 use ristretto_classloader::{Class, Method, Object, Value};
 use ristretto_macros::intrinsic_method;
@@ -902,12 +903,94 @@ pub(crate) async fn get_raw_type_annotations(
 #[async_recursion(?Send)]
 pub(crate) async fn get_record_components_0(
     thread: Arc<Thread>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let object = parameters.pop()?;
+    let class = get_class(&thread, &object).await?;
+    let class_file = class.class_file();
+    let constant_pool = &class_file.constant_pool;
+    let mut record_components = Vec::new();
+
+    // Find Record attribute
+    for attribute in &class_file.attributes {
+        if let Attribute::Record { records, .. } = attribute {
+            for record in records {
+                let name = constant_pool.try_get_utf8(record.name_index)?;
+                let descriptor = constant_pool.try_get_utf8(record.descriptor_index)?;
+
+                let name_object = name.to_object(&thread).await?;
+                let descriptor_object = descriptor.to_object(&thread).await?;
+
+                // Resolve type from descriptor
+                let type_class_name = FieldType::parse(descriptor)?.class_name();
+                let type_class = thread.class(&type_class_name).await?;
+                let type_object = type_class.to_object(&thread).await?;
+
+                let mut generic_signature = Value::Object(None);
+                let mut annotations = Value::Object(None);
+                let mut type_annotations = Value::Object(None);
+
+                for attributes in &record.attributes {
+                    match attributes {
+                        Attribute::Signature {
+                            signature_index, ..
+                        } => {
+                            let signature = constant_pool.try_get_utf8(*signature_index)?;
+                            generic_signature = signature.to_object(&thread).await?;
+                        }
+                        Attribute::RuntimeVisibleAnnotations {
+                            annotations: runtime_annotations,
+                            ..
+                        } => {
+                            let mut bytes = Vec::new();
+                            bytes.write_u16::<BigEndian>(u16::try_from(
+                                runtime_annotations.len(),
+                            )?)?;
+                            for runtime_annotation in runtime_annotations {
+                                runtime_annotation.to_bytes(&mut bytes)?;
+                            }
+                            annotations = Value::from(bytes);
+                        }
+                        Attribute::RuntimeVisibleTypeAnnotations {
+                            type_annotations: runtime_annotations,
+                            ..
+                        } => {
+                            let mut bytes = Vec::new();
+                            bytes.write_u16::<BigEndian>(u16::try_from(
+                                runtime_annotations.len(),
+                            )?)?;
+                            for runtime_annotation in runtime_annotations {
+                                runtime_annotation.to_bytes(&mut bytes)?;
+                            }
+                            type_annotations = Value::from(bytes);
+                        }
+                        _ => {}
+                    }
+                }
+
+                let component = thread
+                    .object(
+                        "java/lang/reflect/RecordComponent",
+                        "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;[B[B",
+                        &[
+                            object.clone(),
+                            name_object,
+                            type_object,
+                            descriptor_object,
+                            generic_signature,
+                            annotations,
+                            type_annotations,
+                        ],
+                    )
+                    .await?;
+                record_components.push(component);
+            }
+        }
+    }
+
     let record_component_array_class = thread.class("[Ljava/lang/reflect/RecordComponent;").await?;
-    let empty_vec: Vec<Value> = Vec::new();
-    let empty = Value::try_from((record_component_array_class, empty_vec))?;
-    Ok(Some(empty))
+    let result_array = Value::try_from((record_component_array_class, record_components))?;
+    Ok(Some(result_array))
 }
 
 #[intrinsic_method(
@@ -1130,7 +1213,9 @@ pub(crate) async fn set_signers(
 mod tests {
     use super::*;
     use crate::Error::JavaError;
-    use ristretto_classfile::Version;
+    use ristretto_classfile::attributes::Instruction;
+    use ristretto_classfile::{ClassFile, ConstantPool, Version};
+    use ristretto_classfile::{Constant, Field, FieldType, Method};
 
     #[tokio::test]
     async fn test_desired_assertion_status_0() -> Result<()> {
@@ -1704,15 +1789,213 @@ mod tests {
         Ok(())
     }
 
+    fn create_record_component_class_file() -> Result<ClassFile> {
+        let mut cp = ConstantPool::new();
+        let class_name_idx = cp.add_class("java/lang/reflect/RecordComponent")?;
+        let super_class_idx = cp.add_class("java/lang/Object")?;
+
+        // Field: name
+        let name_str = "name";
+        let string_desc_str = "Ljava/lang/String;";
+        let name_utf8 = cp.add_utf8(name_str)?;
+        let string_desc_utf8 = cp.add_utf8(string_desc_str)?;
+
+        let name_nt_idx = cp.add(Constant::NameAndType {
+            name_index: name_utf8,
+            descriptor_index: string_desc_utf8,
+        })?;
+        let name_field_ref = cp.add(Constant::FieldRef {
+            class_index: class_name_idx,
+            name_and_type_index: name_nt_idx,
+        })?;
+
+        let name_field = Field {
+            access_flags: FieldAccessFlags::PRIVATE,
+            name_index: name_utf8,
+            descriptor_index: string_desc_utf8,
+            field_type: FieldType::parse(string_desc_str)?,
+            attributes: vec![],
+        };
+
+        // Field: descriptor
+        let desc_str = "descriptor";
+        let desc_utf8 = cp.add_utf8(desc_str)?;
+
+        let desc_nt_idx = cp.add(Constant::NameAndType {
+            name_index: desc_utf8,
+            descriptor_index: string_desc_utf8,
+        })?;
+        let desc_field_ref = cp.add(Constant::FieldRef {
+            class_index: class_name_idx,
+            name_and_type_index: desc_nt_idx,
+        })?;
+
+        let descriptor_field = Field {
+            access_flags: FieldAccessFlags::PRIVATE,
+            name_index: desc_utf8,
+            descriptor_index: string_desc_utf8,
+            field_type: FieldType::parse(string_desc_str)?,
+            attributes: vec![],
+        };
+
+        // Field: type
+        let type_str = "type";
+        let class_desc_str = "Ljava/lang/Class;";
+        let type_utf8 = cp.add_utf8(type_str)?;
+        let class_desc_utf8 = cp.add_utf8(class_desc_str)?;
+
+        let type_nt_idx = cp.add(Constant::NameAndType {
+            name_index: type_utf8,
+            descriptor_index: class_desc_utf8,
+        })?;
+        let type_field_ref = cp.add(Constant::FieldRef {
+            class_index: class_name_idx,
+            name_and_type_index: type_nt_idx,
+        })?;
+
+        let type_field = Field {
+            access_flags: FieldAccessFlags::PRIVATE,
+            name_index: type_utf8,
+            descriptor_index: class_desc_utf8,
+            field_type: FieldType::parse(class_desc_str)?,
+            attributes: vec![],
+        };
+
+        // Constructor Code: put parameters into fields
+        // (Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;[B[B)V
+        // 0: this
+        // 1: declaringClass
+        // 2: name
+        // 3: type
+        // 4: descriptor
+
+        let code = vec![
+            Instruction::Aload_0,
+            Instruction::Aload_2, // name
+            Instruction::Putfield(name_field_ref),
+            Instruction::Aload_0,
+            Instruction::Aload_3, // type
+            Instruction::Putfield(type_field_ref),
+            Instruction::Aload_0,
+            Instruction::Aload(4), // descriptor
+            Instruction::Putfield(desc_field_ref),
+            Instruction::Return,
+        ];
+
+        let code_attr = Attribute::Code {
+            name_index: cp.add_utf8("Code")?,
+            max_stack: 2,
+            max_locals: 8,
+            code,
+            exception_table: vec![],
+            attributes: vec![],
+        };
+
+        let init_method = Method {
+            access_flags: MethodAccessFlags::PUBLIC,
+            name_index: cp.add_utf8("<init>")?,
+            descriptor_index: cp.add_utf8("(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;[B[B)V")?,
+            attributes: vec![code_attr],
+        };
+
+        Ok(ClassFile {
+            version: JAVA_17,
+            constant_pool: cp,
+            this_class: class_name_idx,
+            super_class: super_class_idx,
+            fields: vec![name_field, descriptor_field, type_field],
+            methods: vec![init_method],
+            ..Default::default()
+        })
+    }
+
+    fn create_mock_record_class_file() -> Result<ClassFile> {
+        let class_name = "MockRecord";
+        let mut constant_pool = ConstantPool::new();
+        let this_class_idx = constant_pool.add_class(class_name)?;
+        let super_class_idx = constant_pool.add_class("java/lang/Record")?;
+
+        let name_idx = constant_pool.add_utf8("id")?;
+        let descriptor_idx = constant_pool.add_utf8("I")?;
+        let name_second_idx = constant_pool.add_utf8("name")?;
+        let descriptor_second_idx = constant_pool.add_utf8("Ljava/lang/String;")?;
+
+        let record_attr = Attribute::Record {
+            name_index: constant_pool.add_utf8("Record")?,
+            records: vec![
+                ristretto_classfile::attributes::Record {
+                    name_index: name_idx,
+                    descriptor_index: descriptor_idx,
+                    attributes: vec![],
+                },
+                ristretto_classfile::attributes::Record {
+                    name_index: name_second_idx,
+                    descriptor_index: descriptor_second_idx,
+                    attributes: vec![],
+                },
+            ],
+        };
+
+        Ok(ClassFile {
+            version: JAVA_17,
+            constant_pool,
+            this_class: this_class_idx,
+            super_class: super_class_idx,
+            attributes: vec![record_attr],
+            ..Default::default()
+        })
+    }
+
     #[tokio::test]
     async fn test_get_record_components_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_record_components_0(thread, Parameters::default()).await?;
+        let vm = thread.vm()?;
+        let class_loader_lock = vm.class_loader();
+        let class_loader = class_loader_lock.read().await;
+
+        // 1. Define java.lang.reflect.RecordComponent class
+        let class_file = create_record_component_class_file()?;
+        let rc_class = Class::from(Some(Arc::downgrade(&class_loader)), class_file)?;
+        class_loader.register(rc_class.clone()).await?;
+
+        // 2. Construct MockRecord class
+        let class_file = create_mock_record_class_file()?;
+        let class = Class::from(Some(Arc::downgrade(&class_loader)), class_file)?;
+        class_loader.register(class.clone()).await?;
+
+        // Test getRecordComponents
+        let class_object = class.to_object(&thread).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_record_components_0(thread.clone(), parameters).await?;
+
         let components = result.expect("components");
-        let (class, values) = components.as_class_vec_ref()?;
-        assert_eq!(class.name(), "[Ljava/lang/reflect/RecordComponent;");
-        // Empty array since no record components
-        assert!(values.is_empty());
+        let (_class, values) = components.as_class_vec_ref()?;
+
+        assert_eq!(values.len(), 2);
+
+        // Verify first component (id)
+        let comp1 = values[0].as_object_ref()?;
+        let name_val = comp1.value("name")?;
+        assert_eq!(name_val.as_string()?, "id");
+        let desc_val = comp1.value("descriptor")?;
+        assert_eq!(desc_val.as_string()?, "I");
+        let type_val = comp1.value("type")?;
+        let type_obj = type_val.as_object_ref()?;
+        let type_name = type_obj.value("name")?.as_string()?;
+        assert_eq!(type_name, "int");
+
+        // Verify second component (name)
+        let comp2 = values[1].as_object_ref()?;
+        assert_eq!(comp2.value("name")?.as_string()?, "name");
+        assert_eq!(
+            comp2.value("descriptor")?.as_string()?,
+            "Ljava/lang/String;"
+        );
+        let type_val2 = comp2.value("type")?;
+        let type_obj2 = type_val2.as_object_ref()?;
+        let type_name2 = type_obj2.value("name")?.as_string()?;
+        assert_eq!(type_name2, "java.lang.String");
+
         Ok(())
     }
 
