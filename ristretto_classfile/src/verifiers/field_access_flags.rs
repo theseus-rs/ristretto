@@ -1,12 +1,15 @@
-use crate::Error::InvalidFieldAccessFlags;
-use crate::Result;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
 use crate::field::Field;
 use crate::field_access_flags::FieldAccessFlags;
+use crate::verifiers::error::Result;
+use crate::verifiers::error::VerifyError::InvalidFieldAccessFlags;
 
 /// Verify the field `FieldAccessFlags`.
-pub fn verify(class_file: &ClassFile, field: &Field) -> Result<()> {
+///
+/// # Errors
+/// Returns `InvalidFieldAccessFlags` if the access flags are invalid.
+pub(crate) fn verify(class_file: &ClassFile, field: &Field) -> Result<()> {
     let access_flags = field.access_flags;
     let public_set = access_flags.contains(FieldAccessFlags::PUBLIC);
     let protected_set = access_flags.contains(FieldAccessFlags::PROTECTED);

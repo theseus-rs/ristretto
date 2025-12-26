@@ -1,6 +1,6 @@
 use anstyle::{AnsiColor, Style};
 use clap::builder::Styles;
-use clap::{ArgAction, ArgGroup, Parser};
+use clap::{ArgAction, ArgGroup, Parser, ValueEnum};
 use std::env;
 use std::ffi::{OsStr, OsString};
 use std::io::{self, Write};
@@ -19,6 +19,23 @@ const STYLES: Styles = Styles::styled()
     .valid(GREEN)
     .invalid(YELLOW);
 
+/// Verification mode for class files.
+///
+/// This corresponds to the `-Xverify` JVM options:
+/// - `-Xverify:all` - Verify all classes
+/// - `-Xverify:remote` - Verify only classes loaded from network (default)
+/// - `-Xverify:none` - Skip verification entirely
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, ValueEnum)]
+pub enum VerifyMode {
+    /// Verify all classes.
+    All,
+    /// Verify only remote/untrusted classes (default).
+    #[default]
+    Remote,
+    /// Skip verification entirely.
+    None,
+}
+
 #[expect(clippy::struct_excessive_bools)]
 #[derive(Debug, Parser)]
 pub struct XOptions {
@@ -36,6 +53,9 @@ pub struct XOptions {
 
     #[arg(long = "Xint", hide = true)]
     pub interpreted: bool,
+
+    #[arg(long = "Xverify", hide = true, default_value = "remote", value_enum)]
+    pub verify: VerifyMode,
 }
 
 #[derive(Debug, Parser)]
@@ -108,6 +128,13 @@ impl Arguments {
                 s if s == OsStr::new("-Xcomp") => *argument = OsString::from("--Xcomp"),
                 s if s == OsStr::new("-Xdebug") => *argument = OsString::from("--Xdebug"),
                 s if s == OsStr::new("-Xint") => *argument = OsString::from("--Xint"),
+                s if s == OsStr::new("-Xverify") || s == OsStr::new("-Xverify:remote") => {
+                    *argument = OsString::from("--Xverify=remote");
+                }
+                s if s == OsStr::new("-Xverify:all") => *argument = OsString::from("--Xverify=all"),
+                s if s == OsStr::new("-Xverify:none") => {
+                    *argument = OsString::from("--Xverify=none");
+                }
                 _ => {}
             }
         }
@@ -142,6 +169,12 @@ pub fn print_x_help() {
     let _ = writeln!(
         stderr,
         "    {}-Xint{}             interpreted mode execution only",
+        literal_style.render(),
+        literal_style.render_reset()
+    );
+    let _ = writeln!(
+        stderr,
+        "    {}-Xverify{}          sets the mode of the bytecode verifier",
         literal_style.render(),
         literal_style.render_reset()
     );

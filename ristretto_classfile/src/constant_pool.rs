@@ -26,7 +26,7 @@ use std::{fmt, io};
 ///  # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4>
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConstantPool {
     constants: Vec<ConstantEntry>,
 }
@@ -1420,7 +1420,7 @@ impl Default for ConstantPool {
 /// # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.5>
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 enum ConstantEntry {
     /// An actual constant in the pool.
     Constant(Constant),
