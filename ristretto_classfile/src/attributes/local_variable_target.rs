@@ -12,7 +12,7 @@ use std::io::Cursor;
 /// **Note on PC representation:** Similar to `LineNumber` and `LocalVariableTable` entries,
 /// `start_pc` and `length` here define a range of instruction indices within the method's code.
 ///
-/// See the [JVM Specification §4.7.20.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20.1)
+/// See the [JVMS §4.7.20.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20.1)
 /// as part of the `TypeAnnotation` structure.
 ///
 /// # Fields

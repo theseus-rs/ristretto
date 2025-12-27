@@ -1,7 +1,9 @@
 use crate::Error::InternalError;
 use crate::Result;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
+/// # References
+///
+/// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 pub(crate) fn wide() -> Result<()> {
     // The wide instruction is not directly used by this implementation.  The wide
     // versions of instructions are specifically enumerated in the instruction set.

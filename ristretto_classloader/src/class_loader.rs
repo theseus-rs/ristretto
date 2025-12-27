@@ -8,7 +8,9 @@ use tokio::sync::RwLock;
 
 /// Implementation of a Java class loader.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html>
+/// # References
+///
+/// - [JVMS §5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html)
 #[derive(Debug)]
 pub struct ClassLoader {
     this: Weak<ClassLoader>,
@@ -125,7 +127,7 @@ impl ClassLoader {
     ///
     /// # Reference
     ///
-    /// - [JLS §5.3.3 Creating Array Classes](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.3)
+    /// - [JVMS §5.3.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.3)
     fn create_array_class(&self, class_name: &str) -> Result<Arc<Class>> {
         let mut constant_pool = ConstantPool::new();
         let this_class_index = constant_pool.add_class(class_name)?;

@@ -5,7 +5,9 @@ use crate::operand_stack::OperandStack;
 use ristretto_classloader::Class;
 use std::sync::Arc;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getfield>
+/// # References
+///
+/// - [JVMS §6.5.getfield](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getfield)
 #[inline]
 pub(crate) async fn getfield(
     frame: &Frame,
@@ -28,7 +30,9 @@ pub(crate) async fn getfield(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield>
+/// # References
+///
+/// - [JVMS §6.5.putfield](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield)
 #[inline]
 pub(crate) async fn putfield(
     frame: &Frame,

@@ -13,7 +13,9 @@ pub const MANIFEST_VERSION: &str = "Manifest-Version";
 pub const MAIN_CLASS: &str = "Main-Class";
 
 /// Represents a Jar manifest.
-/// See: <https://docs.oracle.com/en/java/javase/22/docs/specs/jar/jar.html#jar-manifest>
+///
+/// # References
+/// - [JAR File Specification](https://docs.oracle.com/en/java/javase/22/docs/specs/jar/jar.html#jar-manifest)
 #[derive(Debug, Default)]
 pub struct Manifest {
     pub attributes: IndexMap<String, String>,

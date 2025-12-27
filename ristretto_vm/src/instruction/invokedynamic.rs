@@ -147,8 +147,8 @@
 //!
 //! # References
 //!
-//! - [JVM Specification §6.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokedynamic)
-//! - [JVM Specification §4.7.23](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.23)
+//! - [JVMS §6.5.invokedynamic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokedynamic)
+//! - [JVMS §4.7.23](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.23)
 
 use crate::Error::InternalError;
 use crate::JavaError::BootstrapMethodError;
@@ -698,8 +698,8 @@ async fn resolve_static_bootstrap_arguments(
 ///
 /// # References
 ///
-/// - [JVM Specification §4.7.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.23)
-/// - [JVM Specification §5.4.3.6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.6)
+/// - [JVMS §4.7.23](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.23)
+/// - [JVMS §5.4.3.6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.6)
 async fn resolve_call_site(frame: &Frame, method_index: u16) -> Result<Value> {
     let thread = frame.thread()?;
     let current_class = frame.class();
@@ -942,7 +942,7 @@ async fn validate_call_site(
 ///
 /// # References
 ///
-/// - [JVM Specification §6.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokedynamic)
+/// - [JVMS §6.5.invokedynamic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokedynamic)
 #[inline]
 pub(crate) async fn invokedynamic(
     frame: &Frame,

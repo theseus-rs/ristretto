@@ -2,7 +2,8 @@ use crate::operand_stack::OperandStack;
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{InstBuilder, MemFlags, types};
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload>
+/// # References
+/// - [JVMS §6.5.aload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload)
 pub(crate) fn aload(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -51,7 +52,8 @@ pub(crate) fn aload(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore>
+/// # References
+/// - [JVMS §6.5.astore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore)
 pub(crate) fn astore(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,

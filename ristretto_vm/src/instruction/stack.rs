@@ -3,14 +3,18 @@ use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop>
+/// # References
+///
+/// - [JVMS §6.5.pop](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop)
 #[inline]
 pub(crate) fn pop(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let _ = stack.pop()?;
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop2>
+/// # References
+///
+/// - [JVMS §6.5.pop2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop2)
 #[inline]
 pub(crate) fn pop2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop()?;
@@ -20,7 +24,9 @@ pub(crate) fn pop2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup>
+/// # References
+///
+/// - [JVMS §6.5.dup](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup)
 #[inline]
 pub(crate) fn dup(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop()?;
@@ -29,7 +35,9 @@ pub(crate) fn dup(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x1>
+/// # References
+///
+/// - [JVMS §6.5.dup_x1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x1)
 #[inline]
 pub(crate) fn dup_x1(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value1 = stack.pop()?;
@@ -40,7 +48,9 @@ pub(crate) fn dup_x1(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x2>
+/// # References
+///
+/// - [JVMS §6.5.dup_x2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x2)
 #[inline]
 pub(crate) fn dup_x2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value1 = stack.pop()?;
@@ -59,7 +69,9 @@ pub(crate) fn dup_x2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2>
+/// # References
+///
+/// - [JVMS §6.5.dup2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2)
 #[inline]
 pub(crate) fn dup2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value1 = stack.pop()?;
@@ -76,7 +88,9 @@ pub(crate) fn dup2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x1>
+/// # References
+///
+/// - [JVMS §6.5.dup2_x1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x1)
 #[inline]
 pub(crate) fn dup2_x1(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value1 = stack.pop()?;
@@ -96,7 +110,9 @@ pub(crate) fn dup2_x1(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x2>
+/// # References
+///
+/// - [JVMS §6.5.dup2_x2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x2)
 #[inline]
 pub(crate) fn dup2_x2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value1 = stack.pop()?;
@@ -128,7 +144,9 @@ pub(crate) fn dup2_x2(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.swap>
+/// # References
+///
+/// - [JVMS §6.5.swap](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.swap)
 #[inline]
 pub(crate) fn swap(stack: &mut OperandStack) -> Result<ExecutionResult> {
     // Swapping category 2 values (Double and Long) is not supported by the JVM specification and

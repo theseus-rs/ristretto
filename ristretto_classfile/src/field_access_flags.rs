@@ -45,6 +45,7 @@ bitflags! {
     /// assert_eq!("(0x0012) ACC_PRIVATE, ACC_FINAL", flags.to_string());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
+    ///
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.5:~:text=field_info%20structure%20are%20as%20follows%3A-,access_flags,-The%20value%20of%20the%20access_flags>

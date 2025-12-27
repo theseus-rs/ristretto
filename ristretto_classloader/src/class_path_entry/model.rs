@@ -81,7 +81,9 @@ impl ClassPathEntry {
 }
 
 /// Represents a Jar manifest.
-/// See: <https://docs.oracle.com/en/java/javase/22/docs/specs/jar/jar.html>
+///
+/// # References
+/// - [JAR File Specification](https://docs.oracle.com/en/java/javase/22/docs/specs/jar/jar.html)
 #[derive(Debug)]
 struct Manifest {
     class_path: String,

@@ -10,7 +10,7 @@ use std::io::Cursor;
 /// interfaces that are members of the current class or interface, or are anonymous or local
 /// classes within its methods.
 ///
-/// See the [JVM Specification §4.7.6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.6)
+/// See the [JVMS §4.7.6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.6)
 /// for more details.
 ///
 /// # Fields
