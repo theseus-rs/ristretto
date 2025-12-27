@@ -13,7 +13,9 @@ use tokio::sync::RwLock;
 use zip::ZipArchive;
 
 /// A jar or zip in the class path.
-/// See: <https://docs.oracle.com/en/java/javase/22/docs/specs/jar/jar.html>
+///
+/// # References
+/// - [JAR File Specification](https://docs.oracle.com/en/java/javase/22/docs/specs/jar/jar.html)
 #[derive(Debug)]
 pub struct Jar {
     name: OsString,

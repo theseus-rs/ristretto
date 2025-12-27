@@ -67,7 +67,7 @@ pub static POLYMORPHIC_METHODS: LazyLock<HashMap<(&'static str, &'static str), &
 /// Represents the initialization state of a class.
 ///
 /// This follows the
-/// [JVM Specification §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5)
+/// [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5)
 /// for class initialization.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum InitializationState {

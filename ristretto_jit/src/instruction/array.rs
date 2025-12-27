@@ -4,7 +4,9 @@ use cranelift::codegen::ir::{FuncRef, MemFlags};
 use cranelift::prelude::{FunctionBuilder, InstBuilder, types};
 use ristretto_classfile::attributes::ArrayType;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray>
+/// # References
+///
+/// - [JVMS §6.5.newarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray)
 pub(crate) fn newarray(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -42,7 +44,9 @@ pub(crate) fn newarray(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.arraylength>
+/// # References
+///
+/// - [JVMS §6.5.arraylength](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.arraylength)
 pub(crate) fn arraylength(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,

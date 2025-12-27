@@ -3,7 +3,8 @@ use crate::operand_stack::OperandStack;
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{InstBuilder, types};
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bipush>
+/// # References
+/// - [JVMS §6.5.bipush](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bipush)
 pub(crate) fn bipush(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -15,7 +16,8 @@ pub(crate) fn bipush(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sipush>
+/// # References
+/// - [JVMS §6.5.sipush](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sipush)
 pub(crate) fn sipush(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,

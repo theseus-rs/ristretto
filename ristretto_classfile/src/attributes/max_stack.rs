@@ -34,7 +34,7 @@ use crate::{ConstantPool, Result};
 ///
 /// # References
 ///
-/// - [JVM Specification §4.7.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3)
+/// - [JVMS §4.7.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3)
 pub trait MaxStack {
     /// Calculates the maximum stack size required by the instructions.
     ///

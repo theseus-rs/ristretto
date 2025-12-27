@@ -16,7 +16,7 @@ use std::ops::Range;
 /// rather than raw byte offsets as in the class file format. This abstraction simplifies
 /// instruction manipulation and analysis.
 ///
-/// See the [JVM Specification §4.7.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3)
+/// See the [JVMS §4.7.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3)
 /// for more details (specifically, the `exception_table` within the `Code` attribute).
 ///
 /// # Examples
