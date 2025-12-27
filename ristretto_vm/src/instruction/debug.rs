@@ -2,7 +2,9 @@ use crate::Result;
 use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2>
+/// # References
+///
+/// - [JVMS §6.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2)
 #[inline]
 #[expect(clippy::unnecessary_wraps)]
 pub(crate) fn breakpoint() -> Result<ExecutionResult> {
@@ -10,7 +12,9 @@ pub(crate) fn breakpoint() -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2>
+/// # References
+///
+/// - [JVMS §6.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2)
 #[inline]
 #[expect(clippy::unnecessary_wraps)]
 pub(crate) fn impdep1() -> Result<ExecutionResult> {
@@ -18,7 +22,9 @@ pub(crate) fn impdep1() -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2>
+/// # References
+///
+/// - [JVMS §6.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2)
 #[inline]
 #[expect(clippy::unnecessary_wraps)]
 pub(crate) fn impdep2() -> Result<ExecutionResult> {

@@ -117,7 +117,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
+    /// - [JVMS §4.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.)
     #[must_use]
     pub fn get(&self, index: u16) -> Option<&Constant> {
         self.try_get(index).ok()
@@ -144,7 +144,7 @@ impl ConstantPool {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.>
+    /// - [JVMS §4.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.)
     pub fn try_get(&self, index: u16) -> Result<&Constant> {
         let constant_entry = self.constants.get(index as usize);
         match constant_entry {

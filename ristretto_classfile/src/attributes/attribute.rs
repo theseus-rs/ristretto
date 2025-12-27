@@ -71,7 +71,7 @@ const VERSION_61_0: Version = JAVA_17;
 ///
 /// # References
 ///
-/// - [JVM Specification §4.7](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7)
+/// - [JVMS §4.7](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7)
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Attribute {
     /// Represents a constant value for a field.
@@ -81,7 +81,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.2)
+    /// - [JVMS §4.7.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.2)
     ConstantValue {
         name_index: u16,
         constant_value_index: u16,
@@ -95,7 +95,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3)
+    /// - [JVMS §4.7.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3)
     Code {
         name_index: u16,
         max_stack: u16,
@@ -113,7 +113,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.4](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.4)
+    /// - [JVMS §4.7.4](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.4)
     StackMapTable {
         name_index: u16,
         frames: Vec<StackFrame>,
@@ -127,7 +127,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.5)
+    /// - [JVMS §4.7.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.5)
     Exceptions {
         name_index: u16,
         exception_indexes: Vec<u16>,
@@ -141,7 +141,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.6)
+    /// - [JVMS §4.7.6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.6)
     InnerClasses {
         name_index: u16,
         classes: Vec<InnerClass>,
@@ -155,7 +155,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.7](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.7)
+    /// - [JVMS §4.7.7](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.7)
     EnclosingMethod {
         name_index: u16,
         class_index: u16,
@@ -171,7 +171,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.8](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.8)
+    /// - [JVMS §4.7.8](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.8)
     Synthetic { name_index: u16 },
 
     /// Stores generic signature information for a class, field, or method.
@@ -182,7 +182,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.9](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.9)
+    /// - [JVMS §4.7.9](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.9)
     Signature {
         name_index: u16,
         signature_index: u16,
@@ -195,7 +195,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.10](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.10)
+    /// - [JVMS §4.7.10](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.10)
     SourceFile {
         name_index: u16,
         source_file_index: u16,
@@ -209,7 +209,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.11](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.11)
+    /// - [JVMS §4.7.11](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.11)
     SourceDebugExtension {
         name_index: u16,
         debug_extension: String,
@@ -223,7 +223,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.12](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.12)
+    /// - [JVMS §4.7.12](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.12)
     LineNumberTable {
         name_index: u16,
         line_numbers: Vec<LineNumber>,
@@ -237,7 +237,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.13](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.13)
+    /// - [JVMS §4.7.13](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.13)
     LocalVariableTable {
         name_index: u16,
         variables: Vec<LocalVariableTable>,
@@ -251,7 +251,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.14](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.14)
+    /// - [JVMS §4.7.14](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.14)
     LocalVariableTypeTable {
         name_index: u16,
         variable_types: Vec<LocalVariableTypeTable>,
@@ -265,7 +265,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.15](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.15)
+    /// - [JVMS §4.7.15](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.15)
     Deprecated { name_index: u16 },
 
     /// Stores annotations that are visible at runtime.
@@ -276,7 +276,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.16](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.16)
+    /// - [JVMS §4.7.16](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.16)
     RuntimeVisibleAnnotations {
         name_index: u16,
         annotations: Vec<Annotation>,
@@ -290,7 +290,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.17](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.17)
+    /// - [JVMS §4.7.17](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.17)
     RuntimeInvisibleAnnotations {
         name_index: u16,
         annotations: Vec<Annotation>,
@@ -304,7 +304,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.18](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.18)
+    /// - [JVMS §4.7.18](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.18)
     RuntimeVisibleParameterAnnotations {
         name_index: u16,
         parameter_annotations: Vec<ParameterAnnotation>,
@@ -318,7 +318,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.19](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.19)
+    /// - [JVMS §4.7.19](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.19)
     RuntimeInvisibleParameterAnnotations {
         name_index: u16,
         parameter_annotations: Vec<ParameterAnnotation>,
@@ -332,7 +332,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.20](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20)
+    /// - [JVMS §4.7.20](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.20)
     RuntimeVisibleTypeAnnotations {
         name_index: u16,
         type_annotations: Vec<TypeAnnotation>,
@@ -346,7 +346,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.21](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.21)
+    /// - [JVMS §4.7.21](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.21)
     RuntimeInvisibleTypeAnnotations {
         name_index: u16,
         type_annotations: Vec<TypeAnnotation>,
@@ -359,7 +359,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.22](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.22)
+    /// - [JVMS §4.7.22](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.22)
     AnnotationDefault {
         name_index: u16,
         element: AnnotationElement,
@@ -373,7 +373,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.23](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.23)
+    /// - [JVMS §4.7.23](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.23)
     BootstrapMethods {
         name_index: u16,
         methods: Vec<BootstrapMethod>,
@@ -387,7 +387,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.24](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.24)
+    /// - [JVMS §4.7.24](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.24)
     MethodParameters {
         name_index: u16,
         parameters: Vec<MethodParameter>,
@@ -401,7 +401,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.25](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.25)
+    /// - [JVMS §4.7.25](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.25)
     Module {
         name_index: u16,
         module_name_index: u16,
@@ -422,7 +422,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.26](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.26)
+    /// - [JVMS §4.7.26](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.26)
     ModulePackages {
         name_index: u16,
         package_indexes: Vec<u16>,
@@ -435,7 +435,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.27](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.27)
+    /// - [JVMS §4.7.27](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.27)
     ModuleMainClass {
         name_index: u16,
         main_class_index: u16,
@@ -449,7 +449,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.28](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.28)
+    /// - [JVMS §4.7.28](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.28)
     NestHost {
         name_index: u16,
         host_class_index: u16,
@@ -463,7 +463,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.29](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.29)
+    /// - [JVMS §4.7.29](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.29)
     NestMembers {
         name_index: u16,
         class_indexes: Vec<u16>,
@@ -477,7 +477,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.30](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.30)
+    /// - [JVMS §4.7.30](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.30)
     Record {
         name_index: u16,
         records: Vec<Record>,
@@ -491,7 +491,7 @@ pub enum Attribute {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.31](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.31)
+    /// - [JVMS §4.7.31](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.31)
     PermittedSubclasses {
         name_index: u16,
         class_indexes: Vec<u16>,

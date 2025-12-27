@@ -1214,7 +1214,7 @@ fn are_nestmates(class1: &Arc<Class>, class2: &Arc<Class>) -> bool {
 ///
 /// # References
 ///
-/// - [JLS §6.6 Access Control](https://docs.oracle.com/javase/specs/jls/se25/html/jls-6.html#jls-6.6)
+/// - [JLS §6.6](https://docs.oracle.com/javase/specs/jls/se25/html/jls-6.html#jls-6.6)
 pub fn check_method_access(
     caller: Option<&Arc<Class>>,
     declaring: &Arc<Class>,
@@ -1270,7 +1270,7 @@ pub fn check_method_access(
 ///
 /// # References
 ///
-/// - [JLS §6.6 Access Control](https://docs.oracle.com/javase/specs/jls/se25/html/jls-6.html#jls-6.6)
+/// - [JLS §6.6](https://docs.oracle.com/javase/specs/jls/se25/html/jls-6.html#jls-6.6)
 #[expect(clippy::needless_pass_by_value)]
 pub fn check_field_access(
     caller: Option<Arc<Class>>,

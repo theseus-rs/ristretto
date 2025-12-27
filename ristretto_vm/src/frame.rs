@@ -88,7 +88,7 @@ pub(crate) enum ExecutionResult {
 ///
 /// # References
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6>
+/// - [JVMS §2.6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6)
 #[derive(Debug)]
 pub struct Frame {
     thread: Weak<Thread>,
@@ -234,7 +234,7 @@ impl Frame {
     ///
     /// # References
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.1>
+    /// - [JVMS §2.6.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.1)
     fn adjust_parameters(parameters: &mut Vec<Value>, max_size: usize) {
         let mut index = parameters.len();
         while index > 0 {
@@ -320,8 +320,7 @@ impl Frame {
     ///
     /// # References
     ///
-    /// Each instruction's behavior is defined by the JVM specification:
-    /// <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html>
+    /// - [JVMS §6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html)
     #[expect(clippy::too_many_lines)]
     async fn process(
         &self,

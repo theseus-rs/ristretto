@@ -3,7 +3,9 @@ use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorenter>
+/// # References
+///
+/// - [JVMS §6.5.monitorenter](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorenter)
 #[inline]
 pub(crate) fn monitorenter(stack: &mut OperandStack) -> Result<ExecutionResult> {
     // The monitorenter instruction is not currently used by this implementation.
@@ -11,7 +13,9 @@ pub(crate) fn monitorenter(stack: &mut OperandStack) -> Result<ExecutionResult> 
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorexit>
+/// # References
+///
+/// - [JVMS §6.5.monitorexit](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorexit)
 #[inline]
 pub(crate) fn monitorexit(stack: &mut OperandStack) -> Result<ExecutionResult> {
     // The monitorexit instruction is not currently used by this implementation.

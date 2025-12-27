@@ -6,7 +6,9 @@ use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
 use ristretto_classloader::Reference;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.baload>
+/// # References
+///
+/// - [JVMS §6.5.baload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.baload)
 #[inline]
 pub(crate) fn baload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
@@ -38,7 +40,9 @@ pub(crate) fn baload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bastore>
+/// # References
+///
+/// - [JVMS §6.5.bastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bastore)
 #[inline]
 pub(crate) fn bastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;

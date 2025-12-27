@@ -7,7 +7,9 @@ use crate::thread::Thread;
 use crate::{Error, Result};
 use ristretto_classloader::Value;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow>
+/// # References
+///
+/// - [JVMS §6.5.athrow](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow)
 #[inline]
 pub(crate) async fn athrow(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let throwable = stack.pop()?;
@@ -21,8 +23,10 @@ pub(crate) async fn athrow(stack: &mut OperandStack) -> Result<ExecutionResult> 
 /// Process the throwable and return the next instruction to execute; if there is no exception
 /// handler, the exception is returned as an error.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow>
+/// # References
+///
+/// - [JVMS §4.7.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.3)
+/// - [JVMS §6.5.athrow](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow)
 pub(crate) async fn process_throwable(
     frame: &Frame,
     stack: &mut OperandStack,

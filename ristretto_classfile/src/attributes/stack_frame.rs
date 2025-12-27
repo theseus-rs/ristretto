@@ -61,7 +61,7 @@ use std::io::Cursor;
 ///
 /// # References
 ///
-/// - [JVM Specification §4.7.4](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.4)
+/// - [JVMS §4.7.4](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.4)
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StackFrame {
     /// Represents a frame with the same locals as the previous frame and an empty stack.
