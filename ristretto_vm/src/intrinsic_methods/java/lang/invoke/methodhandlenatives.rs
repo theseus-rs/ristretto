@@ -486,13 +486,16 @@ pub(crate) async fn get_member_vm_info(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let member_name = parameters.pop()?;
-    let vmindex = {
+    let (vmindex, flags) = {
         let member_name_ref = member_name.as_object_ref()?;
-        member_name_ref.value("vmindex")?
+        let vmindex = member_name_ref.value("vmindex")?;
+        let flags = member_name_ref.value("flags")?;
+        (vmindex, flags)
     };
 
+    let flags = flags.to_object(&thread).await?;
     let object_array_class = thread.class("[Ljava/lang/Object;").await?;
-    let values = vec![vmindex, member_name];
+    let values = vec![vmindex, flags];
     let array = Value::try_from((object_array_class, values))?;
     Ok(Some(array))
 }
@@ -694,9 +697,50 @@ pub(crate) async fn get_named_con(
     // Named constants - these are internal VM constants that can be queried by index
     // The name is stored in box_array[0] if found
     // Returns the constant value, or -1 if not found
-    let (name, value): (Option<&str>, i32) = match which {
-        0 => (Some("GC_COUNT_MAX"), 0),
-        _ => (None, -1),
+    
+    let constants: &[(&str, i32)] = &[
+        ("GC_COUNT_MAX", 0),
+        ("MN_IS_METHOD", 0x0001_0000),
+        ("MN_IS_CONSTRUCTOR", 0x0002_0000),
+        ("MN_IS_FIELD", 0x0004_0000),
+        ("MN_IS_TYPE", 0x0008_0000),
+        ("MN_CALLER_SENSITIVE", 0x0010_0000),
+        ("MN_REFERENCE_KIND_SHIFT", 24),
+        ("MN_REFERENCE_KIND_MASK", 0x0F00_0000),
+        ("MN_SEARCH_SUPERCLASSES", 0x0010_0000),
+        ("MN_SEARCH_INTERFACES", 0x0020_0000),
+        ("T_BOOLEAN", 4),
+        ("T_CHAR", 5),
+        ("T_FLOAT", 6),
+        ("T_DOUBLE", 7),
+        ("T_BYTE", 8),
+        ("T_SHORT", 9),
+        ("T_INT", 10),
+        ("T_LONG", 11),
+        ("T_OBJECT", 12),
+        ("T_ARRAY", 13),
+        ("T_VOID", 14),
+        ("T_ADDRESS", 15),
+        ("T_NARROWOOP", 16),
+        ("T_METADATA", 17),
+        ("T_NARROWKLASS", 18),
+        ("T_CONFLICT", 19),
+        ("REF_getField", 1),
+        ("REF_getStatic", 2),
+        ("REF_putField", 3),
+        ("REF_putStatic", 4),
+        ("REF_invokeVirtual", 5),
+        ("REF_invokeStatic", 6),
+        ("REF_invokeSpecial", 7),
+        ("REF_newInvokeSpecial", 8),
+        ("REF_invokeInterface", 9),
+    ];
+
+    let which_usize = usize::try_from(which).unwrap_or(usize::MAX);
+    let (name, value) = if let Some((name, value)) = constants.get(which_usize) {
+        (Some(*name), *value)
+    } else {
+        (None, -1)
     };
 
     if let Some(name) = name {
@@ -986,7 +1030,7 @@ pub(crate) async fn resolve(
 /// if successful.
 #[expect(clippy::too_many_arguments)]
 async fn resolve_method(
-    thread: &Thread,
+    _thread: &Thread,
     member_self: Value,
     caller: Option<&Arc<Class>>,
     lookup_mode_flags: &LookupModeFlags,
@@ -1060,7 +1104,9 @@ async fn resolve_method(
     let method = match class.name() {
         "java/lang/invoke/DelegatingMethodHandle$Holder"
         | "java/lang/invoke/DirectMethodHandle$Holder"
-        | "java/lang/invoke/Invokers$Holder" => {
+        | "java/lang/invoke/Invokers$Holder"
+        | "java/lang/invoke/MethodHandle"
+        | "java/lang/invoke/VarHandle" => {
             resolve_holder_methods(class.clone(), &method_name, &method_descriptor)?
         }
         _ => class.try_get_method(&method_name, &method_descriptor)?,
@@ -1089,14 +1135,11 @@ async fn resolve_method(
     let modifiers = i32::from(method_access_flags.bits());
     let flags = flags | modifiers;
     {
-        let vm = thread.vm()?;
-        let member_handles = vm.member_handles();
-        let method_signature =
-            format!("{}.{}{}", class.name(), method.name(), method.descriptor(),);
-        member_handles
-            .insert(method_signature, method.into())
-            .await?;
-        let vmindex = method_descriptor.to_object(thread).await?;
+        // vmindex is used by OpenJDK MethodHandle implementation.
+        // For methods, it's typically a vtable index or similar.
+        // Since we intercept execution, we can use 0 or a placeholder.
+        // Must be Long to avoid ClassCastException in Java code.
+        let vmindex = Value::Long(0);
         let mut member_self = member_self.as_object_mut()?;
         member_self.set_value("flags", Value::from(flags))?;
         member_self.set_value("vmindex", vmindex)?;
@@ -1108,7 +1151,7 @@ async fn resolve_method(
 /// if successful.
 #[expect(clippy::too_many_arguments)]
 async fn resolve_field(
-    thread: &Thread,
+    _thread: &Thread,
     member_self: Value,
     caller: Option<Arc<Class>>,
     lookup_mode_flags: &LookupModeFlags,
@@ -1141,14 +1184,8 @@ async fn resolve_field(
     let modifiers = i32::from(field_access_flags.bits());
     let flags = flags | modifiers;
     {
-        let vm = thread.vm()?;
-        let member_handles = vm.member_handles();
         let field_offset = class.field_offset(&field_name)?;
-        let field_signature = format!("{}.{field_name}", class.name(),);
-        member_handles
-            .insert(field_signature.clone(), field_offset.into())
-            .await?;
-        let vmindex = field_signature.to_object(thread).await?;
+        let vmindex = Value::Long(i64::try_from(field_offset)?);
         let mut member_self = member_self.as_object_mut()?;
         member_self.set_value("flags", Value::from(flags))?;
         member_self.set_value("vmindex", vmindex)?;
@@ -1332,7 +1369,6 @@ pub(crate) async fn resolve_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     // Correct parameter order: pop MemberName first, then caller (Class)
-    let member_self = parameters.pop()?;
     let caller = match parameters.pop() {
         Ok(caller) => {
             let caller = get_class(&thread, &caller).await?;
@@ -1340,6 +1376,7 @@ pub(crate) async fn resolve_0(
         }
         Err(_) => None,
     };
+    let member_self = parameters.pop()?;
     resolve(
         thread,
         member_self,

@@ -155,7 +155,6 @@ use crate::JavaError::BootstrapMethodError;
 use crate::assignable::Assignable;
 use crate::call_site_cache::CallSiteKey;
 use crate::frame::{ExecutionResult, Frame};
-use crate::intrinsic_methods::java::lang::invoke::methodhandle::call_method_handle_target;
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
@@ -269,10 +268,24 @@ async fn resolve_bootstrap_method<'a>(
         bootstrap_class.try_get_method(bootstrap_method_name, bootstrap_method_descriptor)?;
 
     // 2.4 Validate bootstrap method signature matches required pattern:
-    //     (MethodHandles.Lookup, String, MethodType, ...additionalArgs) -> CallSite
-    if !bootstrap_method_descriptor.starts_with(
-        "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;",
-    ) || !bootstrap_method_descriptor.ends_with(")Ljava/lang/invoke/CallSite;")
+    //     (MethodHandles.Lookup, String, MethodType|TypeDescriptor, ...additionalArgs) -> CallSite|Object
+    //
+    // Bootstrap methods can use either:
+    // - MethodType for standard lambda/method reference bootstrap methods
+    // - TypeDescriptor for record-related bootstrap methods (ObjectMethods.bootstrap)
+    //
+    // Return types can be:
+    // - CallSite for standard bootstrap methods
+    // - Object for record-related bootstrap methods (which return MethodHandle)
+    let is_valid_third_arg = bootstrap_method_descriptor.contains("Ljava/lang/invoke/MethodType;")
+        || bootstrap_method_descriptor.contains("Ljava/lang/invoke/TypeDescriptor;");
+    let is_valid_return = bootstrap_method_descriptor.ends_with(")Ljava/lang/invoke/CallSite;")
+        || bootstrap_method_descriptor.ends_with(")Ljava/lang/Object;");
+
+    if !bootstrap_method_descriptor
+        .starts_with("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;")
+        || !is_valid_third_arg
+        || !is_valid_return
     {
         return Err(BootstrapMethodError(format!(
             "Invalid bootstrap method descriptor: {bootstrap_method_descriptor}"
@@ -674,6 +687,94 @@ async fn resolve_static_bootstrap_arguments(
     Ok(arguments)
 }
 
+/// Adjusts static arguments for bootstrap methods with varargs parameters.
+///
+/// If the bootstrap method's last parameter is an array type (varargs), this function
+/// collects the trailing static arguments into an array. This is required for bootstrap
+/// methods like `ObjectMethods.bootstrap` which expects:
+/// `(Lookup, String, TypeDescriptor, Class, String, MethodHandle...)Object`
+///
+/// # Arguments
+///
+/// * `thread` - The current thread
+/// * `bootstrap_method_descriptor` - The descriptor of the bootstrap method
+/// * `static_arguments` - The resolved static arguments
+///
+/// # Returns
+///
+/// The adjusted static arguments with varargs collected into an array if needed.
+async fn adjust_varargs_static_arguments(
+    thread: &Arc<Thread>,
+    bootstrap_method_descriptor: &str,
+    mut static_arguments: Vec<Value>,
+) -> Result<Vec<Value>> {
+    debug!(
+        "adjust_varargs_static_arguments: descriptor={}, static_arguments.len()={}",
+        bootstrap_method_descriptor,
+        static_arguments.len()
+    );
+
+    // Parse the bootstrap method descriptor to get parameter types
+    let (param_types, _) = FieldType::parse_method_descriptor(bootstrap_method_descriptor)?;
+
+    // The first 3 params are always: Lookup, String, MethodType/TypeDescriptor
+    // The remaining params come from static_arguments
+    let static_param_types: Vec<_> = param_types.into_iter().skip(3).collect();
+
+    debug!(
+        "adjust_varargs_static_arguments: static_param_types.len()={}",
+        static_param_types.len()
+    );
+
+    if static_param_types.is_empty() {
+        return Ok(static_arguments);
+    }
+
+    // Check if the last parameter is an array type (varargs)
+    let last_param = static_param_types.last().unwrap();
+    if let FieldType::Array(component_type) = last_param {
+        // Count fixed static parameters (all except the varargs array)
+        let fixed_count = static_param_types.len() - 1;
+
+        debug!(
+            "adjust_varargs_static_arguments: varargs detected, fixed_count={}, static_arguments.len()={}",
+            fixed_count,
+            static_arguments.len()
+        );
+
+        if static_arguments.len() >= fixed_count {
+            // Collect the varargs into an array
+            let varargs: Vec<Value> = static_arguments.drain(fixed_count..).collect();
+
+            debug!(
+                "adjust_varargs_static_arguments: collected {} varargs",
+                varargs.len()
+            );
+
+            // Create the array type name
+            let array_type_name = format!("[{}", component_type.descriptor());
+            let array_class = thread.class(&array_type_name).await?;
+
+            // Convert Values to Option<Reference> for the array
+            let mut array_elements = Vec::with_capacity(varargs.len());
+            for value in varargs {
+                let reference = value.as_reference()?.clone();
+                array_elements.push(Some(reference));
+            }
+
+            let array_ref = Reference::from((array_class, array_elements));
+            static_arguments.push(Value::from(array_ref));
+
+            debug!(
+                "adjust_varargs_static_arguments: final static_arguments.len()={}",
+                static_arguments.len()
+            );
+        }
+    }
+
+    Ok(static_arguments)
+}
+
 /// **Step 4.1 / 4.2 / 4.3** Resolves the call site object for an invokedynamic instruction.
 ///
 /// This function implements the bootstrap method resolution and call site linking process as
@@ -791,6 +892,12 @@ async fn resolve_call_site_uncached(frame: &Frame, method_index: u16) -> Result<
         resolve_static_bootstrap_arguments(&thread, constant_pool, &bootstrap_method_attribute)
             .await?;
 
+    // Adjust static arguments for varargs bootstrap methods (e.g., ObjectMethods.bootstrap)
+    let bootstrap_method_descriptor = bootstrap_method.descriptor();
+    let static_arguments =
+        adjust_varargs_static_arguments(&thread, bootstrap_method_descriptor, static_arguments)
+            .await?;
+
     // 4.1 Construct argument array for bootstrap method:
     let mut arguments = vec![caller_lookup, method_name, method_type];
     arguments.extend(static_arguments);
@@ -828,12 +935,14 @@ async fn invoke_bootstrap_method(
         return Err(BootstrapMethodError("Bootstrap method handle is null".to_string()).into());
     }
 
-    let member = {
-        let target_member = method_handle.as_object_ref()?;
-        target_member.value("member")?
-    };
-
-    let result = call_method_handle_target(thread.clone(), &member, arguments).await?;
+    // Use native method handle dispatch to avoid complex initialization chains
+    let result =
+        crate::intrinsic_methods::java::lang::invoke::methodhandle::invoke_method_handle_native(
+            thread.clone(),
+            method_handle,
+            arguments,
+        )
+        .await?;
 
     // Validate call site result is not null
     if let Value::Object(None) = result {
@@ -845,75 +954,82 @@ async fn invoke_bootstrap_method(
 
 /// **Step 4.3** Validates the `CallSite` returned by the bootstrap method.
 ///
-/// Validate returned `CallSite`:
+/// Validate returned `CallSite` or `MethodHandle`:
 ///   - Must not be null
-///   - `CallSite.type()` must exactly match the expected `MethodType`
+///   - For CallSite: `CallSite.type()` must exactly match the expected `MethodType`
+///   - For MethodHandle: also valid (used by record-related bootstrap methods)
 ///   - If validation fails, throw `BootstrapMethodError`
 ///
 /// # Errors
 ///
-/// Returns an error if the `CallSite` is null, if it does not match the expected type, or if it does
-/// not implement the `CallSite` interface.
+/// Returns an error if the result is null, if it does not match the expected type, or if it is
+/// neither a `CallSite` nor a `MethodHandle`.
 async fn validate_call_site(
     thread: &Arc<Thread>,
     bootstrap_method_descriptor: &str,
     call_site: &Value,
 ) -> Result<()> {
     if call_site.is_null() {
-        return Err(
-            BootstrapMethodError("Bootstrap method returned null CallSite".to_string()).into(),
-        );
+        return Err(BootstrapMethodError("Bootstrap method returned null".to_string()).into());
     } else if !call_site.is_object() {
         return Err(
             BootstrapMethodError("Bootstrap method did not return an object".to_string()).into(),
         );
     }
 
-    // Validate that the returned object is actually a CallSite
+    // Check if the returned object is a CallSite or MethodHandle
     let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
+    let method_handle_class = thread.class("java.lang.invoke.MethodHandle").await?;
     let object_class = {
         let object = call_site.as_object_ref()?;
         object.class().clone()
     };
 
-    if !call_site_class
+    let is_call_site = call_site_class
         .is_assignable_from(thread, &object_class)
-        .await?
-    {
+        .await?;
+    let is_method_handle = method_handle_class
+        .is_assignable_from(thread, &object_class)
+        .await?;
+
+    if !is_call_site && !is_method_handle {
         return Err(BootstrapMethodError(format!(
-            "Bootstrap method returned object of type {} which is not a CallSite",
+            "Bootstrap method returned object of type {} which is neither a CallSite nor a MethodHandle",
             object_class.name()
         ))
         .into());
     }
 
-    // Validate CallSite.type() matches expected MethodType
-    let type_method = call_site_class.try_get_method("type", "()Ljava/lang/invoke/MethodType;")?;
-    let call_site_type = thread
-        .try_execute(
-            &call_site_class,
-            &type_method,
-            std::slice::from_ref(call_site),
-        )
-        .await?;
-    let expected_method_type = get_method_type(thread, bootstrap_method_descriptor).await?;
+    // Only validate CallSite.type() for CallSite results (not for MethodHandle)
+    if is_call_site {
+        let type_method =
+            call_site_class.try_get_method("type", "()Ljava/lang/invoke/MethodType;")?;
+        let call_site_type = thread
+            .try_execute(
+                &call_site_class,
+                &type_method,
+                std::slice::from_ref(call_site),
+            )
+            .await?;
+        let expected_method_type = get_method_type(thread, bootstrap_method_descriptor).await?;
 
-    // Compare the method types
-    let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
-    let equals_method = method_type_class.try_get_method("equals", "(Ljava/lang/Object;)Z")?;
-    let types_equal = thread
-        .try_execute(
-            &method_type_class,
-            &equals_method,
-            &[call_site_type, expected_method_type],
-        )
-        .await?;
+        // Compare the method types
+        let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
+        let equals_method = method_type_class.try_get_method("equals", "(Ljava/lang/Object;)Z")?;
+        let types_equal = thread
+            .try_execute(
+                &method_type_class,
+                &equals_method,
+                &[call_site_type, expected_method_type],
+            )
+            .await?;
 
-    if let Value::Int(0) = types_equal {
-        return Err(BootstrapMethodError(
-            "CallSite type does not match expected MethodType".to_string(),
-        )
-        .into());
+        if let Value::Int(0) = types_equal {
+            return Err(BootstrapMethodError(
+                "CallSite type does not match expected MethodType".to_string(),
+            )
+            .into());
+        }
     }
     Ok(())
 }
@@ -959,15 +1075,44 @@ pub(crate) async fn invokedynamic(
     );
 
     // Step 1: Resolve the call site (this may be cached on subsequent calls)
-    let call_site = resolve_call_site(frame, method_index).await?;
+    let call_site_or_method_handle = resolve_call_site(frame, method_index).await?;
 
-    // Step 2: Extract the target MethodHandle from the CallSite
+    // Step 2: Extract the target MethodHandle from the CallSite or use it directly if it's already a MethodHandle
     let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
-    let get_target_method =
-        call_site_class.try_get_method("getTarget", "()Ljava/lang/invoke/MethodHandle;")?;
-    let target_method_handle = thread
-        .try_execute(&call_site_class, &get_target_method, &[call_site])
-        .await?;
+    let method_handle_class = thread.class("java.lang.invoke.MethodHandle").await?;
+
+    let object_class = {
+        let object = call_site_or_method_handle.as_object_ref()?;
+        object.class().clone()
+    };
+
+    let target_method_handle = if call_site_class
+        .is_assignable_from(&thread, &object_class)
+        .await?
+    {
+        // It's a CallSite - extract the target MethodHandle
+        let get_target_method =
+            call_site_class.try_get_method("getTarget", "()Ljava/lang/invoke/MethodHandle;")?;
+        thread
+            .try_execute(
+                &call_site_class,
+                &get_target_method,
+                &[call_site_or_method_handle],
+            )
+            .await?
+    } else if method_handle_class
+        .is_assignable_from(&thread, &object_class)
+        .await?
+    {
+        // It's already a MethodHandle (from record-related bootstrap methods)
+        call_site_or_method_handle
+    } else {
+        return Err(BootstrapMethodError(format!(
+            "Bootstrap method returned object of type {} which is neither a CallSite nor a MethodHandle",
+            object_class.name()
+        ))
+        .into());
+    };
 
     // Step 3: Get the method type to determine argument count and types
     let current_class = frame.class();
@@ -984,13 +1129,16 @@ pub(crate) async fn invokedynamic(
     // Step 4: Get parameters from the operand stack
     let parameters = stack.drain_last(argument_types.len());
 
-    // Step 5: Invoke the target MethodHandle directly using call_method_handle_target
-    let member = {
-        let target_member = target_method_handle.as_object_ref()?;
-        target_member.value("member")?
-    };
-
-    let result = call_method_handle_target(thread.clone(), &member, parameters).await?;
+    // Step 5: Invoke the target MethodHandle using native dispatch
+    // This handles different method handle types (DirectMethodHandle, BoundMethodHandle, etc.)
+    // avoiding complex LambdaForm initialization chains
+    let result =
+        crate::intrinsic_methods::java::lang::invoke::methodhandle::invoke_method_handle_native(
+            thread.clone(),
+            target_method_handle,
+            parameters,
+        )
+        .await?;
 
     // Step 6: Handle the return value based on the method descriptor
     if let Some(_return_type) = return_type {
