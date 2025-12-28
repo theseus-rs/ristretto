@@ -6,7 +6,8 @@ use crate::{Result, jit_value};
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{InstBuilder, IntCC, MemFlags, Value, types};
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l>
+/// # References
+/// - [JVMS §6.5.lconst_l](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l)
 pub(crate) fn lconst_0(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -16,7 +17,8 @@ pub(crate) fn lconst_0(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l>
+/// # References
+/// - [JVMS §6.5.lconst_l](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l)
 pub(crate) fn lconst_1(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -26,7 +28,8 @@ pub(crate) fn lconst_1(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload>
+/// # References
+/// - [JVMS §6.5.lload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload)
 pub(crate) fn lload(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -39,8 +42,9 @@ pub(crate) fn lload(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
+/// # References
+/// - [JVMS §6.5.lload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload)
+/// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 pub(crate) fn lload_w(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -53,7 +57,8 @@ pub(crate) fn lload_w(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n>
+/// # References
+/// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
 pub(crate) fn lload_0(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -64,7 +69,8 @@ pub(crate) fn lload_0(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n>
+/// # References
+/// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
 pub(crate) fn lload_1(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -75,7 +81,8 @@ pub(crate) fn lload_1(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n>
+/// # References
+/// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
 pub(crate) fn lload_2(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -86,7 +93,8 @@ pub(crate) fn lload_2(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n>
+/// # References
+/// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
 pub(crate) fn lload_3(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -97,7 +105,8 @@ pub(crate) fn lload_3(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore>
+/// # References
+/// - [JVMS §6.5.lstore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore)
 pub(crate) fn lstore(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -110,8 +119,9 @@ pub(crate) fn lstore(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
+/// # References
+/// - [JVMS §6.5.lstore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore)
+/// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 pub(crate) fn lstore_w(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -124,7 +134,8 @@ pub(crate) fn lstore_w(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n>
+/// # References
+/// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
 pub(crate) fn lstore_0(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -135,7 +146,8 @@ pub(crate) fn lstore_0(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n>
+/// # References
+/// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
 pub(crate) fn lstore_1(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -146,7 +158,8 @@ pub(crate) fn lstore_1(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n>
+/// # References
+/// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
 pub(crate) fn lstore_2(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -157,7 +170,8 @@ pub(crate) fn lstore_2(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n>
+/// # References
+/// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
 pub(crate) fn lstore_3(
     function_builder: &mut FunctionBuilder,
     locals: &mut LocalVariables,
@@ -168,7 +182,8 @@ pub(crate) fn lstore_3(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.laload>
+/// # References
+/// - [JVMS §6.5.laload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.laload)
 pub(crate) fn laload(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -176,7 +191,8 @@ pub(crate) fn laload(
     aload(function_builder, stack, types::I64, 8, false, false)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lastore>
+/// # References
+/// - [JVMS §6.5.lastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lastore)
 pub(crate) fn lastore(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -184,7 +200,8 @@ pub(crate) fn lastore(
     astore(function_builder, stack, types::I64, 8)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ladd>
+/// # References
+/// - [JVMS §6.5.ladd](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ladd)
 pub(crate) fn ladd(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
@@ -193,7 +210,8 @@ pub(crate) fn ladd(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lsub>
+/// # References
+/// - [JVMS §6.5.lsub](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lsub)
 pub(crate) fn lsub(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
@@ -202,7 +220,8 @@ pub(crate) fn lsub(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lmul>
+/// # References
+/// - [JVMS §6.5.lmul](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lmul)
 pub(crate) fn lmul(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
@@ -211,7 +230,8 @@ pub(crate) fn lmul(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldiv>
+/// # References
+/// - [JVMS §6.5.ldiv](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldiv)
 pub(crate) fn ldiv(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
@@ -226,7 +246,8 @@ pub(crate) fn ldiv(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lrem>
+/// # References
+/// - [JVMS §6.5.lrem](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lrem)
 pub(crate) fn lrem(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
@@ -241,7 +262,8 @@ pub(crate) fn lrem(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lneg>
+/// # References
+/// - [JVMS §6.5.lneg](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lneg)
 pub(crate) fn lneg(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_long(function_builder)?;
     let value = function_builder.ins().ineg(value);
@@ -249,7 +271,8 @@ pub(crate) fn lneg(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshl>
+/// # References
+/// - [JVMS §6.5.lshl](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshl)
 pub(crate) fn lshl(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
@@ -261,7 +284,8 @@ pub(crate) fn lshl(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshr>
+/// # References
+/// - [JVMS §6.5.lshr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshr)
 pub(crate) fn lshr(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_int(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
@@ -273,7 +297,8 @@ pub(crate) fn lshr(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lushr>
+/// # References
+/// - [JVMS §6.5.lushr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lushr)
 pub(crate) fn lushr(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -288,7 +313,8 @@ pub(crate) fn lushr(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.land>
+/// # References
+/// - [JVMS §6.5.land](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.land)
 pub(crate) fn land(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
@@ -297,7 +323,8 @@ pub(crate) fn land(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lor>
+/// # References
+/// - [JVMS §6.5.lor](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lor)
 pub(crate) fn lor(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
@@ -306,7 +333,8 @@ pub(crate) fn lor(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lxor>
+/// # References
+/// - [JVMS §6.5.lxor](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lxor)
 pub(crate) fn lxor(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
@@ -315,7 +343,8 @@ pub(crate) fn lxor(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lcmp>
+/// # References
+/// - [JVMS §6.5.lcmp](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lcmp)
 pub(crate) fn lcmp(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
@@ -382,7 +411,8 @@ pub(crate) fn lcmp(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lreturn>
+/// # References
+/// - [JVMS §6.5.lreturn](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lreturn)
 pub(crate) fn lreturn(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,

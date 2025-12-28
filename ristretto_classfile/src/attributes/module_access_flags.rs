@@ -40,7 +40,7 @@ bitflags! {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.25](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.25)
+    /// - [JVMS §4.7.25](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.25)
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct ModuleAccessFlags: u16 {
         /// Indicates that this module is open.

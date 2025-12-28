@@ -9,7 +9,7 @@ use std::io::Cursor;
 /// An `exports` directive specifies a package that is exported by the current module,
 /// potentially qualified to specific other modules.
 ///
-/// See the [JVM Specification §4.7.25](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.25)
+/// See the [JVMS §4.7.25](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.25)
 /// for more details on the `exports` table within the `Module` attribute.
 ///
 /// # Fields

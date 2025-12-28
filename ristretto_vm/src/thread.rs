@@ -39,7 +39,8 @@ impl ParkState {
 /// A thread is a single sequential flow of control within a program. It has its own call stack
 /// and program counter.
 ///
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.5.2>
+/// # References
+/// - [JVMS §2.5.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.5.2)
 #[expect(clippy::struct_field_names)]
 #[derive(Debug)]
 pub struct Thread {
@@ -235,8 +236,10 @@ impl Thread {
     /// unless explicitly triggered per
     /// [JLS §12.4.1](https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4.1).
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5>
-    /// See: <https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4.2>
+    /// # References
+    ///
+    /// - [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5)
+    /// - [JLS §12.4.2](https://docs.oracle.com/javase/specs/jls/se25/html/jls-12.html#jls-12.4.2)
     ///
     /// # Errors
     ///

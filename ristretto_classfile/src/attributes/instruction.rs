@@ -13,7 +13,7 @@ use std::io::Cursor;
 ///
 /// # References
 ///
-/// - [JVM Specification §6.5 tableswich](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch)
+/// - [JVMS §6.5.tableswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch)
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TableSwitch {
     pub default: i32,
@@ -27,7 +27,7 @@ pub struct TableSwitch {
 ///
 /// # References
 ///
-/// - [JVM Specification §6.5 lookupswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch)
+/// - [JVMS §6.5.lookupswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch)
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LookupSwitch {
     pub default: i32,
@@ -38,506 +38,922 @@ pub struct LookupSwitch {
 ///
 /// # References
 ///
-/// - [JVM Specification §6.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5)
+/// - [JVMS §6.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5)
 #[expect(non_camel_case_types)]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Instruction {
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.nop>
+    ///
+    /// # References
+    /// - [JVMS §6.5.nop](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.nop)
     Nop,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aconst_null>
+    ///
+    /// # References
+    /// - [JVMS §6.5.aconst_null](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aconst_null)
     Aconst_null,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iconst_i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i)
     Iconst_m1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iconst_i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i)
     Iconst_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iconst_i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i)
     Iconst_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iconst_i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i)
     Iconst_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iconst_i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i)
     Iconst_3,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iconst_i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i)
     Iconst_4,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iconst_i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iconst_i)
     Iconst_5,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lconst_l](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l)
     Lconst_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lconst_l](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lconst_l)
     Lconst_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fconst_f>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fconst_f](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fconst_f)
     Fconst_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fconst_f>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fconst_f](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fconst_f)
     Fconst_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fconst_f>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fconst_f](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fconst_f)
     Fconst_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dconst_d>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dconst_d](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dconst_d)
     Dconst_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dconst_d>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dconst_d](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dconst_d)
     Dconst_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bipush>
+    ///
+    /// # References
+    /// - [JVMS §6.5.bipush](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bipush)
     Bipush(i8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sipush>
+    ///
+    /// # References
+    /// - [JVMS §6.5.sipush](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sipush)
     Sipush(i16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ldc](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc)
     Ldc(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc_w>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ldc_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc_w)
     Ldc_w(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc2_w>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ldc2_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc2_w)
     Ldc2_w(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload)
     Iload(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload)
     Lload(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload)
     Fload(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload)
     Dload(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.aload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload)
     Aload(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n)
     Iload_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n)
     Iload_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n)
     Iload_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload_n)
     Iload_3,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
     Lload_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
     Lload_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
     Lload_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload_n)
     Lload_3,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload_n)
     Fload_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload_n)
     Fload_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload_n)
     Fload_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload_n)
     Fload_3,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n)
     Dload_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n)
     Dload_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n)
     Dload_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload_n)
     Dload_3,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.aload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n)
     Aload_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.aload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n)
     Aload_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.aload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n)
     Aload_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.aload_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload_n)
     Aload_3,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iaload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iaload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iaload)
     Iaload,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.laload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.laload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.laload)
     Laload,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.faload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.faload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.faload)
     Faload,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.daload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.daload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.daload)
     Daload,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aaload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.aaload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aaload)
     Aaload,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.baload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.baload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.baload)
     Baload,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.caload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.caload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.caload)
     Caload,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.saload>
+    ///
+    /// # References
+    /// - [JVMS §6.5.saload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.saload)
     Saload,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.istore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore)
     Istore(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lstore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore)
     Lstore(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fstore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore)
     Fstore(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dstore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore)
     Dstore(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.astore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore)
     Astore(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.istore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n)
     Istore_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.istore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n)
     Istore_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.istore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n)
     Istore_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.istore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore_n)
     Istore_3,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
     Lstore_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
     Lstore_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
     Lstore_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore_n)
     Lstore_3,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore_n)
     Fstore_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore_n)
     Fstore_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore_n)
     Fstore_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore_n)
     Fstore_3,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n)
     Dstore_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n)
     Dstore_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n)
     Dstore_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dstore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore_n)
     Dstore_3,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.astore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n)
     Astore_0,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.astore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n)
     Astore_1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.astore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n)
     Astore_2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n>
+    ///
+    /// # References
+    /// - [JVMS §6.5.astore_n](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore_n)
     Astore_3,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iastore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iastore)
     Iastore,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lastore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lastore)
     Lastore,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fastore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fastore)
     Fastore,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dastore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dastore)
     Dastore,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aastore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.aastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aastore)
     Aastore,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bastore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.bastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bastore)
     Bastore,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.castore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.castore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.castore)
     Castore,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sastore>
+    ///
+    /// # References
+    /// - [JVMS §6.5.sastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sastore)
     Sastore,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop>
+    ///
+    /// # References
+    /// - [JVMS §6.5.pop](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop)
     Pop,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop2>
+    ///
+    /// # References
+    /// - [JVMS §6.5.pop2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.pop2)
     Pop2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dup](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup)
     Dup,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x1>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dup_x1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x1)
     Dup_x1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x2>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dup_x2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup_x2)
     Dup_x2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dup2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2)
     Dup2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x1>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dup2_x1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x1)
     Dup2_x1,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x2>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dup2_x2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dup2_x2)
     Dup2_x2,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.swap>
+    ///
+    /// # References
+    /// - [JVMS §6.5.swap](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.swap)
     Swap,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iadd>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iadd](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iadd)
     Iadd,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ladd>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ladd](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ladd)
     Ladd,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fadd>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fadd](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fadd)
     Fadd,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dadd>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dadd](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dadd)
     Dadd,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.isub>
+    ///
+    /// # References
+    /// - [JVMS §6.5.isub](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.isub)
     Isub,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lsub>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lsub](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lsub)
     Lsub,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fsub>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fsub](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fsub)
     Fsub,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dsub>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dsub](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dsub)
     Dsub,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.imul>
+    ///
+    /// # References
+    /// - [JVMS §6.5.imul](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.imul)
     Imul,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lmul>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lmul](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lmul)
     Lmul,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fmul>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fmul](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fmul)
     Fmul,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dmul>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dmul](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dmul)
     Dmul,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.idiv>
+    ///
+    /// # References
+    /// - [JVMS §6.5.idiv](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.idiv)
     Idiv,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldiv>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ldiv](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldiv)
     Ldiv,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fdiv>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fdiv](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fdiv)
     Fdiv,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ddiv>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ddiv](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ddiv)
     Ddiv,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.irem>
+    ///
+    /// # References
+    /// - [JVMS §6.5.irem](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.irem)
     Irem,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lrem>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lrem](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lrem)
     Lrem,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.frem>
+    ///
+    /// # References
+    /// - [JVMS §6.5.frem](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.frem)
     Frem,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.drem>
+    ///
+    /// # References
+    /// - [JVMS §6.5.drem](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.drem)
     Drem,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ineg>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ineg](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ineg)
     Ineg,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lneg>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lneg](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lneg)
     Lneg,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fneg>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fneg](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fneg)
     Fneg,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dneg>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dneg](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dneg)
     Dneg,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ishl>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ishl](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ishl)
     Ishl,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshl>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lshl](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshl)
     Lshl,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ishr>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ishr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ishr)
     Ishr,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshr>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lshr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lshr)
     Lshr,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iushr>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iushr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iushr)
     Iushr,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lushr>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lushr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lushr)
     Lushr,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iand>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iand](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iand)
     Iand,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.land>
+    ///
+    /// # References
+    /// - [JVMS §6.5.land](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.land)
     Land,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ior>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ior](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ior)
     Ior,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lor>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lor](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lor)
     Lor,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ixor>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ixor](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ixor)
     Ixor,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lxor>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lxor](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lxor)
     Lxor,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iinc>
+    ///
+    /// # References
+    /// - [JVMS §6.5.iinc](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iinc)
     Iinc(u8, i8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2l>
+    ///
+    /// # References
+    /// - [JVMS §6.5.i2l](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2l)
     I2l,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2f>
+    ///
+    /// # References
+    /// - [JVMS §6.5.i2f](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2f)
     I2f,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2d>
+    ///
+    /// # References
+    /// - [JVMS §6.5.i2d](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2d)
     I2d,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2i>
+    ///
+    /// # References
+    /// - [JVMS §6.5.l2i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2i)
     L2i,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2f>
+    ///
+    /// # References
+    /// - [JVMS §6.5.l2f](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2f)
     L2f,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2d>
+    ///
+    /// # References
+    /// - [JVMS §6.5.l2d](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.l2d)
     L2d,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2i>
+    ///
+    /// # References
+    /// - [JVMS §6.5.f2i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2i)
     F2i,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2l>
+    ///
+    /// # References
+    /// - [JVMS §6.5.f2l](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2l)
     F2l,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2d>
+    ///
+    /// # References
+    /// - [JVMS §6.5.f2d](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.f2d)
     F2d,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2i>
+    ///
+    /// # References
+    /// - [JVMS §6.5.d2i](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2i)
     D2i,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2l>
+    ///
+    /// # References
+    /// - [JVMS §6.5.d2l](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2l)
     D2l,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2f>
+    ///
+    /// # References
+    /// - [JVMS §6.5.d2f](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.d2f)
     D2f,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2b>
+    ///
+    /// # References
+    /// - [JVMS §6.5.i2b](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2b)
     I2b,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2c>
+    ///
+    /// # References
+    /// - [JVMS §6.5.i2c](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2c)
     I2c,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2s>
+    ///
+    /// # References
+    /// - [JVMS §6.5.i2s](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2s)
     I2s,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lcmp>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lcmp](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lcmp)
     Lcmp,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fcmp_op>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fcmp_op](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fcmp_op)
     Fcmpl,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fcmp_op>
+    ///
+    /// # References
+    /// - [JVMS §6.5.fcmp_op](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fcmp_op)
     Fcmpg,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dcmp_op>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dcmp_op](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dcmp_op)
     Dcmpl,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dcmp_op>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dcmp_op](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dcmp_op)
     Dcmpg,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Ifeq(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Ifne(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Iflt(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Ifge(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Ifgt(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Ifle(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmpeq(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmpne(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmplt(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmpge(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmpgt(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmple(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_acmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond)
     If_acmpeq(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond>
+    ///
+    /// # References
+    /// - [JVMS §6.5.if_acmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond)
     If_acmpne(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto>
+    ///
+    /// # References
+    /// - [JVMS §6.5.goto](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto)
     Goto(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr>
+    ///
+    /// # References
+    /// - [JVMS §6.5.jsr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr)
     Jsr(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ret](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret)
     Ret(u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch>
+    ///
+    /// # References
+    /// - [JVMS §6.5.tableswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch)
     Tableswitch(TableSwitch),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lookupswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch)
     Lookupswitch(LookupSwitch),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ireturn>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ireturn](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ireturn)
     Ireturn,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lreturn>
+    ///
+    /// # References
+    /// - [JVMS §6.5.lreturn](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lreturn)
     Lreturn,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.freturn>
+    ///
+    /// # References
+    /// - [JVMS §6.5.freturn](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.freturn)
     Freturn,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dreturn>
+    ///
+    /// # References
+    /// - [JVMS §6.5.dreturn](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dreturn)
     Dreturn,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.areturn>
+    ///
+    /// # References
+    /// - [JVMS §6.5.areturn](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.areturn)
     Areturn,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.return>
+    ///
+    /// # References
+    /// - [JVMS §6.5.return](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.return)
     Return,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic>
+    ///
+    /// # References
+    /// - [JVMS §6.5.getstatic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic)
     Getstatic(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic>
+    ///
+    /// # References
+    /// - [JVMS §6.5.putstatic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic)
     Putstatic(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getfield>
+    ///
+    /// # References
+    /// - [JVMS §6.5.getfield](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getfield)
     Getfield(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield>
+    ///
+    /// # References
+    /// - [JVMS §6.5.putfield](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield)
     Putfield(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual>
+    ///
+    /// # References
+    /// - [JVMS §6.5.invokevirtual](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokevirtual)
     Invokevirtual(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial>
+    ///
+    /// # References
+    /// - [JVMS §6.5.invokespecial](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokespecial)
     Invokespecial(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokestatic>
+    ///
+    /// # References
+    /// - [JVMS §6.5.invokestatic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokestatic)
     Invokestatic(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface>
+    ///
+    /// # References
+    /// - [JVMS §6.5.invokeinterface](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface)
     Invokeinterface(u16, u8),
     /// Not implemented. Usage results in a panic.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokedynamic>
+    /// # References
+    /// - [JVMS §6.5.invokedynamic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokedynamic)
     Invokedynamic(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.new>
+    ///
+    /// # References
+    /// - [JVMS §6.5.new](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.new)
     New(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray>
+    ///
+    /// # References
+    /// - [JVMS §6.5.newarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray)
     Newarray(ArrayType),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.anewarray>
+    ///
+    /// # References
+    /// - [JVMS §6.5.anewarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.anewarray)
     Anewarray(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.arraylength>
+    ///
+    /// # References
+    /// - [JVMS §6.5.arraylength](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.arraylength)
     Arraylength,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow>
+    ///
+    /// # References
+    /// - [JVMS §6.5.athrow](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.athrow)
     Athrow,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.checkcast>
+    ///
+    /// # References
+    /// - [JVMS §6.5.checkcast](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.checkcast)
     Checkcast(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.instanceof>
+    ///
+    /// # References
+    /// - [JVMS §6.5.instanceof](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.instanceof)
     Instanceof(u16),
     /// Not implemented. No-op.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorenter>
+    /// # References
+    /// - [JVMS §6.5.monitorenter](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorenter)
     Monitorenter,
     /// Not implemented. No-op.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorexit>
+    /// # References
+    /// - [JVMS §6.5.monitorexit](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.monitorexit)
     Monitorexit,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
+    ///
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
     Wide,
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray>
+    ///
+    /// # References
+    /// - [JVMS §6.5.multianewarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray)
     Multianewarray(u16, u8),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnull>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ifnull](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnull)
     Ifnull(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnonnull>
+    ///
+    /// # References
+    /// - [JVMS §6.5.ifnonnull](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnonnull)
     Ifnonnull(u16),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w>
+    ///
+    /// # References
+    /// - [JVMS §6.5.goto_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w)
     Goto_w(i32),
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr_w>
+    ///
+    /// # References
+    /// - [JVMS §6.5.jsr_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr_w)
     Jsr_w(i32),
     /// Breakpoint is reserved for debugging and implementation dependent operations.
     /// Not implemented. No-op.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2>
+    /// # References
+    /// - [JVMS §6.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2)
     Breakpoint,
     /// Impdep1 is reserved for debugging and implementation dependent operations.
     /// Not implemented. No-op.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2>
+    /// # References
+    /// - [JVMS §6.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2)
     Impdep1,
     /// Impdep2 is reserved for debugging and implementation dependent operations.
     /// Not implemented. No-op.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2>
+    /// # References
+    /// - [JVMS §6.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.2)
     Impdep2,
     /// Virtual instruction that represents wide version of `iload`. This instruction is not part of
     /// the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.iload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload)
     Iload_w(u16),
     /// Virtual instruction that represents wide version of `lload`. This instruction is not part of
     /// the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.lload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lload)
     Lload_w(u16),
     /// Virtual instruction that represents wide version of `fload`. This instruction is not part of
     /// the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.fload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fload)
     Fload_w(u16),
     /// Virtual instruction that represents wide version of `dload`. This instruction is not part of
     /// the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.dload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dload)
     Dload_w(u16),
     /// Virtual instruction that represents wide version of `aload`. This instruction is not part of
     /// the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.aload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aload)
     Aload_w(u16),
     /// Virtual instruction that represents wide version of `istore`. This instruction is not part
     /// of the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.istore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.istore)
     Istore_w(u16),
     /// Virtual instruction that represents wide version of `lstore`. This instruction is not part
     /// of the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.lstore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lstore)
     Lstore_w(u16),
     /// Virtual instruction that represents wide version of `fstore`. This instruction is not part
     /// of the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.fstore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.fstore)
     Fstore_w(u16),
     /// Virtual instruction that represents wide version of `dstore`. This instruction is not part
     /// of the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.dstore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dstore)
     Dstore_w(u16),
     /// Virtual instruction that represents wide version of `astore`. This instruction is not part
     /// of the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.astore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.astore)
     Astore_w(u16),
     /// Virtual instruction that represents wide version of `iinc`. This instruction is not part
     /// of the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iinc>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.iinc](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iinc)
     Iinc_w(u16, i16),
     /// Virtual instruction that represents wide version of `ret`. This instruction is not part of
     /// the JVM specification, it is used internally to efficiently represent wide instructions.
     ///
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
-    /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret>
+    /// # References
+    /// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
+    /// - [JVMS §6.5.ret](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret)
     Ret_w(u16),
 }
 

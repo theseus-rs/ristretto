@@ -10,7 +10,7 @@ use std::io::Cursor;
 /// `CONSTANT_Utf8_info` structure) and an element value (an `AnnotationElement`).
 ///
 /// This structure is part of the `annotation` structure defined in the JVM specification.
-/// See the [JVM Specification §4.7.16](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.16)
+/// See the [JVMS §4.7.16](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.16)
 /// for more details.
 ///
 /// # Examples

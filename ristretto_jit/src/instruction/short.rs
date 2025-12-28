@@ -3,7 +3,8 @@ use crate::operand_stack::OperandStack;
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::types;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.saload>
+/// # References
+/// - [JVMS §6.5.saload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.saload)
 pub(crate) fn saload(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
@@ -12,7 +13,8 @@ pub(crate) fn saload(
     aload(function_builder, stack, types::I16, 2, true, false)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sastore>
+/// # References
+/// - [JVMS §6.5.sastore](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sastore)
 pub(crate) fn sastore(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,

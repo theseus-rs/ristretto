@@ -9,7 +9,9 @@ use cranelift::prelude::{Block, InstBuilder, IntCC, TrapCode, Value, types};
 use ristretto_classfile::attributes::{LookupSwitch, TableSwitch};
 use std::collections::HashMap;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
 pub(crate) fn ifeq(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -43,7 +45,9 @@ pub(crate) fn ifeq(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
 pub(crate) fn ifne(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -77,7 +81,9 @@ pub(crate) fn ifne(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
 pub(crate) fn iflt(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -113,7 +119,9 @@ pub(crate) fn iflt(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
 pub(crate) fn ifge(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -150,7 +158,9 @@ pub(crate) fn ifge(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
 pub(crate) fn ifgt(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -186,7 +196,9 @@ pub(crate) fn ifgt(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
 pub(crate) fn ifle(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -222,7 +234,9 @@ pub(crate) fn ifle(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 pub(crate) fn if_icmpeq(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -256,7 +270,9 @@ pub(crate) fn if_icmpeq(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 pub(crate) fn if_icmpne(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -290,7 +306,9 @@ pub(crate) fn if_icmpne(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 pub(crate) fn if_icmplt(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -326,7 +344,9 @@ pub(crate) fn if_icmplt(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 pub(crate) fn if_icmpge(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -363,7 +383,9 @@ pub(crate) fn if_icmpge(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 pub(crate) fn if_icmpgt(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -399,7 +421,9 @@ pub(crate) fn if_icmpgt(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond>
+/// # References
+///
+/// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
 pub(crate) fn if_icmple(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -435,7 +459,9 @@ pub(crate) fn if_icmple(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto>
+/// # References
+///
+/// - [JVMS §6.5.goto](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto)
 pub(crate) fn goto(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -446,8 +472,10 @@ pub(crate) fn goto(
     goto_w(function_builder, blocks, stack, address)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
+/// # References
+///
+/// - [JVMS §6.5.goto_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w)
+/// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 pub(crate) fn goto_w(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -464,7 +492,9 @@ pub(crate) fn goto_w(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr>
+/// # References
+///
+/// - [JVMS §6.5.jsr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr)
 pub(crate) fn jsr(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -476,8 +506,10 @@ pub(crate) fn jsr(
     jsr_w(function_builder, blocks, stack, program_counter, address)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
+/// # References
+///
+/// - [JVMS §6.5.jsr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr)
+/// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 pub(crate) fn jsr_w(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -501,7 +533,9 @@ pub(crate) fn jsr_w(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret>
+/// # References
+///
+/// - [JVMS §6.5.ret](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret)
 pub(crate) fn ret(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -513,8 +547,10 @@ pub(crate) fn ret(
     ret_w(function_builder, blocks, locals, stack, index)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret>
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide>
+/// # References
+///
+/// - [JVMS §6.5.ret](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret)
+/// - [JVMS §6.5.wide](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.wide)
 pub(crate) fn ret_w(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -565,7 +601,9 @@ pub(crate) fn ret_w(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch>
+/// # References
+///
+/// - [JVMS §6.5.tableswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch)
 pub(crate) fn tableswitch(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -599,7 +637,9 @@ pub(crate) fn tableswitch(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch>
+/// # References
+///
+/// - [JVMS §6.5.lookupswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch)
 pub(crate) fn lookupswitch(
     function_builder: &mut FunctionBuilder,
     blocks: &HashMap<usize, Block>,
@@ -632,7 +672,9 @@ pub(crate) fn lookupswitch(
     Ok(())
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.return>
+/// # References
+///
+/// - [JVMS §6.5.return](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.return)
 pub(crate) fn r#return(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,

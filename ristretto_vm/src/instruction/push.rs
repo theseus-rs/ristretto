@@ -3,14 +3,18 @@ use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
 use crate::operand_stack::OperandStack;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bipush>
+/// # References
+///
+/// - [JVMS §6.5.bipush](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.bipush)
 #[inline]
 pub(crate) fn bipush(stack: &mut OperandStack, value: i8) -> Result<ExecutionResult> {
     stack.push_int(i32::from(value))?;
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sipush>
+/// # References
+///
+/// - [JVMS §6.5.sipush](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.sipush)
 #[inline]
 pub(crate) fn sipush(stack: &mut OperandStack, value: i16) -> Result<ExecutionResult> {
     stack.push_int(i32::from(value))?;

@@ -3,7 +3,7 @@ use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic>
+/// Get the value of a static field and push it onto the operand stack.
 ///
 /// The getstatic instruction:
 /// 1. Resolves the field reference [JVMS §5.4.3.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.2)
@@ -13,6 +13,10 @@ use crate::operand_stack::OperandStack;
 /// Note: When `thread.class()` is called, it initializes the class and all its superclasses in
 /// order (from Object down to the referenced class). This ensures that any inherited static fields
 /// are properly initialized before we access them.
+///
+/// # References
+///
+/// - [JVMS §6.5.getstatic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getstatic)
 #[inline]
 pub(crate) async fn getstatic(
     frame: &Frame,
@@ -43,7 +47,7 @@ pub(crate) async fn getstatic(
     Ok(Continue)
 }
 
-/// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic>
+/// Set the value of a static field from the operand stack.
 ///
 /// The putstatic instruction:
 /// 1. Resolves the field reference [JVMS §5.4.3.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.2)
@@ -53,6 +57,10 @@ pub(crate) async fn getstatic(
 /// Note: When `thread.class()` is called, it initializes the class and all its superclasses in
 /// order (from Object down to the referenced class). This ensures that any inherited static fields
 /// are properly initialized before we modify them.
+///
+/// # References
+///
+/// - [JVMS §6.5.putstatic](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putstatic)
 #[inline]
 pub(crate) async fn putstatic(
     frame: &Frame,

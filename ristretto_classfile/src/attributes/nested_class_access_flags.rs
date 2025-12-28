@@ -41,7 +41,7 @@ bitflags! {
     ///
     /// # References
     ///
-    /// - [JVM Specification §4.7.6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.6)
+    /// - [JVMS §4.7.6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.6)
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub struct NestedClassAccessFlags: u16 {
         /// Declared public; may be accessed from outside its package.
