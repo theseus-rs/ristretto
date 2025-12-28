@@ -64,6 +64,11 @@ async fn class_object_from_bytes(
     }
 
     let class = Class::from(None, class_file)?;
+
+    // Register the class with the VM so it can be found later. This is critical for
+    // hidden / anonymous classes like LambdaForm$MH
+    thread.register_class(class.clone()).await?;
+
     let class = class.to_object(thread).await?;
     Ok(class)
 }
