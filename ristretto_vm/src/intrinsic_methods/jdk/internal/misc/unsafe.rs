@@ -678,14 +678,23 @@ pub(crate) async fn define_anonymous_class_0(
     // TODO: Set host class (nest host)
 
     let class_loader = host_class.class_loader()?;
-    let class_loader = class_loader.map(|cl| Arc::downgrade(&cl));
-    let class = match Class::from(class_loader, class_file) {
+    let class_loader_weak = class_loader.clone().map(|cl| Arc::downgrade(&cl));
+    let class = match Class::from(class_loader_weak, class_file) {
         Ok(c) => c,
         Err(e) => {
             tracing::error!("Class::from failed in defineAnonymousClass0: {:?}", e);
             return Err(InternalError(format!("Class::from failed: {e}")));
         }
     };
+
+    // Register the class with the class loader so it can be found later
+    if let Some(loader) = class_loader {
+        loader.register(class.clone()).await?;
+    } else {
+        // For bootstrap class loader, register via the thread's VM
+        thread.register_class(class.clone()).await?;
+    }
+
     let class_object = class.to_object(&thread).await?;
     Ok(Some(class_object))
 }
@@ -779,6 +788,10 @@ pub(crate) async fn define_hidden_class(
         ClassFile::from_bytes(&mut cursor).map_err(|e| ClassFormatError(e.to_string()))?;
 
     let class = Class::from(None, class_file)?;
+
+    // Register the hidden class so it can be found later
+    thread.register_class(class.clone()).await?;
+
     let class_object = class.to_object(&thread).await?;
 
     if !class_loader.is_null() {
