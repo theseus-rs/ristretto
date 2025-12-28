@@ -1,5 +1,6 @@
 use crate::Error::InternalError;
 use crate::Result;
+pub use ristretto_classfile::VerifyMode;
 use ristretto_classloader::{ClassPath, DEFAULT_JAVA_VERSION};
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -24,6 +25,7 @@ pub struct Configuration {
     interpreted: bool,
     batch_compilation: bool,
     preview_features: bool,
+    verify_mode: VerifyMode,
     stdin: Arc<Mutex<dyn Read + Send + Sync>>,
     stdout: Arc<Mutex<dyn Write + Send + Sync>>,
     stderr: Arc<Mutex<dyn Write + Send + Sync>>,
@@ -137,6 +139,12 @@ impl Configuration {
     pub fn batch_compilation(&self) -> bool {
         self.batch_compilation
     }
+
+    /// Returns the verification mode for class files.
+    #[must_use]
+    pub fn verify_mode(&self) -> VerifyMode {
+        self.verify_mode
+    }
 }
 
 #[expect(clippy::missing_fields_in_debug)]
@@ -152,6 +160,7 @@ impl Debug for Configuration {
             .field("interpreted", &self.interpreted)
             .field("batch_compilation", &self.batch_compilation)
             .field("preview_features", &self.preview_features)
+            .field("verify_mode", &self.verify_mode)
             .finish()
     }
 }
@@ -170,6 +179,7 @@ pub struct ConfigurationBuilder {
     interpreted: bool,
     batch_compilation: bool,
     preview_features: bool,
+    verify_mode: VerifyMode,
     stdin: Arc<Mutex<dyn Read + Send + Sync>>,
     stdout: Arc<Mutex<dyn Write + Send + Sync>>,
     stderr: Arc<Mutex<dyn Write + Send + Sync>>,
@@ -189,6 +199,7 @@ impl ConfigurationBuilder {
     /// - JIT mode enabled
     /// - Background batch compilation enabled
     /// - Preview features disabled
+    /// - Verify mode set to Remote (verify only remote/untrusted classes)
     /// - Standard output and error streams directed to system stdout/stderr
     #[must_use]
     pub fn new() -> Self {
@@ -202,6 +213,7 @@ impl ConfigurationBuilder {
             interpreted: false,
             batch_compilation: true,
             preview_features: false,
+            verify_mode: VerifyMode::default(),
             stdin: Arc::new(Mutex::new(stdin())),
             stdout: Arc::new(Mutex::new(stdout())),
             stderr: Arc::new(Mutex::new(stderr())),
@@ -284,6 +296,13 @@ impl ConfigurationBuilder {
         self
     }
 
+    /// Set the class verification mode
+    #[must_use]
+    pub fn verify_mode(mut self, verify_mode: VerifyMode) -> Self {
+        self.verify_mode = verify_mode;
+        self
+    }
+
     /// Set the standard input stream
     #[must_use]
     pub fn stdin(mut self, stdin: Arc<Mutex<dyn Read + Send + Sync>>) -> Self {
@@ -341,6 +360,7 @@ impl ConfigurationBuilder {
             interpreted: self.interpreted,
             batch_compilation: self.batch_compilation,
             preview_features: self.preview_features,
+            verify_mode: self.verify_mode,
             stdin: self.stdin,
             stdout: self.stdout,
             stderr: self.stderr,
@@ -363,6 +383,7 @@ impl Debug for ConfigurationBuilder {
             .field("interpreted", &self.interpreted)
             .field("batch_compilation", &self.batch_compilation)
             .field("preview_features", &self.preview_features)
+            .field("verify_mode", &self.verify_mode)
             .finish()
     }
 }
@@ -454,6 +475,31 @@ mod tests {
         let system_properties = configuration.system_properties();
         assert_eq!(Some(&"1".to_string()), system_properties.get("a"));
         assert_eq!(Some(&"2".to_string()), system_properties.get("b"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_configuration_builder_verify_mode_default() -> Result<()> {
+        let configuration = ConfigurationBuilder::new().build()?;
+        assert_eq!(VerifyMode::Remote, configuration.verify_mode());
+        Ok(())
+    }
+
+    #[test]
+    fn test_configuration_builder_verify_mode_all() -> Result<()> {
+        let configuration = ConfigurationBuilder::new()
+            .verify_mode(VerifyMode::All)
+            .build()?;
+        assert_eq!(VerifyMode::All, configuration.verify_mode());
+        Ok(())
+    }
+
+    #[test]
+    fn test_configuration_builder_verify_mode_none() -> Result<()> {
+        let configuration = ConfigurationBuilder::new()
+            .verify_mode(VerifyMode::None)
+            .build()?;
+        assert_eq!(VerifyMode::None, configuration.verify_mode());
         Ok(())
     }
 }

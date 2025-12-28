@@ -1,5 +1,6 @@
 use crate::JavaError::{ClassFormatError, IndexOutOfBoundsException, NoClassDefFoundError};
 use crate::Result;
+use crate::configuration::VerifyMode;
 use crate::intrinsic_methods::java::lang::class::get_class;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
@@ -43,7 +44,17 @@ async fn class_object_from_bytes(
             return Err(ClassFormatError(error.to_string()).into());
         }
     };
-    if let Err(error) = class_file.verify() {
+
+    // Verify class file according to the configured verify mode
+    // Classes loaded via defineClass are always considered "remote/untrusted"
+    let vm = thread.vm()?;
+    let verify_mode = vm.configuration().verify_mode();
+    let should_verify = match verify_mode {
+        VerifyMode::All | VerifyMode::Remote => true,
+        VerifyMode::None => false,
+    };
+
+    if should_verify && let Err(error) = class_file.verify() {
         return Err(ClassFormatError(error.to_string()).into());
     }
 

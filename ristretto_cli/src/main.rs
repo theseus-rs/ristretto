@@ -6,10 +6,12 @@ mod argument;
 mod logging;
 mod version;
 
-use argument::Arguments;
+use argument::{Arguments, VerifyMode as CliVerifyMode};
 use clap::CommandFactory;
 use ristretto_vm::Error::{InternalError, Throwable};
-use ristretto_vm::{ClassPath, ConfigurationBuilder, Error, Result, VM, Value, startup_trace};
+use ristretto_vm::{
+    ClassPath, ConfigurationBuilder, Error, Result, VM, Value, VerifyMode, startup_trace,
+};
 use std::env;
 use std::env::consts::{ARCH, OS};
 use std::path::PathBuf;
@@ -97,6 +99,13 @@ async fn common_main(cli: Arguments) -> Result<()> {
     configuration_builder =
         configuration_builder.batch_compilation(cli.x_options.batch_compilation);
     configuration_builder = configuration_builder.interpreted(cli.x_options.interpreted);
+
+    let verify_mode = match cli.x_options.verify {
+        CliVerifyMode::All => VerifyMode::All,
+        CliVerifyMode::Remote => VerifyMode::Remote,
+        CliVerifyMode::None => VerifyMode::None,
+    };
+    configuration_builder = configuration_builder.verify_mode(verify_mode);
 
     if cli.enable_preview {
         configuration_builder = configuration_builder.preview_features();

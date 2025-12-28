@@ -273,10 +273,10 @@ pub(crate) async fn compare_and_exchange_reference(
     let expected_value = parameters.pop()?;
     let offset = parameters.pop_long()?;
     let offset = usize::try_from(offset & !STATIC_FIELD_OFFSET_MASK)?;
-    let obj = parameters.pop()?;
-    let mut obj = obj.as_reference_mut()?;
+    let object = parameters.pop()?;
+    let mut object = object.as_reference_mut()?;
 
-    let result = match &mut *obj {
+    let result = match &mut *object {
         Reference::Object(object) => {
             let field_name = object.class().field_name(offset)?;
             let current_value = object.value(&field_name)?;
@@ -782,8 +782,8 @@ pub(crate) async fn define_hidden_class(
     let class_object = class.to_object(&thread).await?;
 
     if !class_loader.is_null() {
-        let mut obj = class_object.as_object_mut()?;
-        obj.set_value("classLoader", class_loader)?;
+        let mut object = class_object.as_object_mut()?;
+        object.set_value("classLoader", class_loader)?;
     }
 
     Ok(Some(class_object))
@@ -1845,8 +1845,8 @@ pub(crate) async fn should_be_initialized_0(
 ) -> Result<Option<Value>> {
     let class_object = parameters.pop()?;
     let class_name = {
-        let obj = class_object.as_object_ref()?;
-        obj.value("name")?.as_string()?
+        let object = class_object.as_object_ref()?;
+        object.value("name")?.as_string()?
     };
 
     let vm = thread.vm()?;

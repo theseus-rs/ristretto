@@ -36,8 +36,7 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - Runtime classes based on LTS versions of [AWS Corretto](https://github.com/corretto)
 - Load classes from directories, jars, modules
 - Url class loading from jars and modules
-- Reading, writing, verifying classes
-- Verification of class files is supported, but is still a work in progress.
+- Reading, writing, and verifying classes
 - A low-pause, concurrent, parallel mark-and-sweep garbage collector
 - Parallel Just-In-Time (JIT) compilation for x86-64, aarch64, s390x and riscv64
 

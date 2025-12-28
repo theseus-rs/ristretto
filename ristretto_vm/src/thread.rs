@@ -1,5 +1,6 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
-use crate::JavaError::RuntimeException;
+use crate::JavaError::{RuntimeException, VerifyError};
+use crate::configuration::VerifyMode;
 use crate::parameters::Parameters;
 use crate::rust_value::{RustValue, process_values};
 use crate::{Frame, Result, VM, jit};
@@ -276,6 +277,30 @@ impl Thread {
             return Err(UnsupportedClassFileVersion(
                 class.class_file().version.major(),
             ));
+        }
+
+        // Verify class file according to the configured verify mode
+        let verify_mode = vm.configuration().verify_mode();
+        let should_verify = match verify_mode {
+            VerifyMode::All => true,
+            VerifyMode::Remote => {
+                // Check if the class is from a trusted source (bootstrap class loader)
+                // Classes from bootstrap loader are considered trusted
+                let is_trusted = class
+                    .class_loader()
+                    .ok()
+                    .flatten()
+                    .is_some_and(|class_loader| class_loader.name() == "bootstrap");
+                !is_trusted
+            }
+            VerifyMode::None => false,
+        };
+
+        if should_verify && let Err(error) = class.class_file().verify() {
+            return Err(VerifyError(format!(
+                "Verification failed for class {class_name}: {error}"
+            ))
+            .into());
         }
 
         // Link: resolve interfaces and recursively link them
