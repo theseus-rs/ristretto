@@ -3,9 +3,7 @@ use crate::JavaError::{NoSuchMethodError, NullPointerException};
 use crate::Result;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
-use crate::java_object::JavaObject;
 use crate::operand_stack::OperandStack;
-use ristretto_classfile::FieldType;
 use ristretto_classloader::{Class, Method, Value};
 use std::sync::Arc;
 
@@ -29,27 +27,7 @@ pub(crate) async fn invokevirtual(
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
     let (resolved_class, resolved_method) = resolve_method(&class, method_name, method_descriptor)?;
 
-    let is_signature_polymorphic = (resolved_class.name() == "java/lang/invoke/MethodHandle"
-        || resolved_class.name() == "java/lang/invoke/VarHandle")
-        && (method_name == "invoke"
-            || method_name == "invokeExact"
-            || method_name == "invokeBasic");
-
-    let parameters = if is_signature_polymorphic {
-        let (method_parameters, _) = FieldType::parse_method_descriptor(method_descriptor)?;
-        let mut arguments = stack.drain_last(method_parameters.len() + 1);
-        let receiver = arguments.remove(0);
-        let array_class = thread.class("[Ljava/lang/Object;").await?;
-        let mut boxed_arguments = Vec::with_capacity(arguments.len());
-        for argument in arguments {
-            boxed_arguments.push(argument.to_object(&thread).await?);
-        }
-        let array = Value::try_from((array_class, boxed_arguments))?;
-        vec![receiver, array]
-    } else {
-        stack.drain_last(resolved_method.parameters().len() + 1)
-    };
-
+    let parameters = stack.drain_last(resolved_method.parameters().len() + 1);
     let reference = match parameters.first() {
         Some(Value::Object(Some(reference))) => reference,
         Some(Value::Object(None)) => {
@@ -58,7 +36,7 @@ pub(crate) async fn invokevirtual(
         _ => return Err(InternalError("Expected object reference".to_string())),
     };
 
-    let (class, method) = if is_signature_polymorphic || resolved_method.is_private() {
+    let (class, method) = if resolved_method.is_private() {
         (resolved_class, resolved_method)
     } else {
         let class_name = {

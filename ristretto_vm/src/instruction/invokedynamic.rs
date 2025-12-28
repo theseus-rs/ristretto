@@ -155,6 +155,7 @@ use crate::JavaError::BootstrapMethodError;
 use crate::assignable::Assignable;
 use crate::call_site_cache::CallSiteKey;
 use crate::frame::{ExecutionResult, Frame};
+use crate::intrinsic_methods::java::lang::invoke::methodhandle::call_method_handle_target;
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
@@ -731,8 +732,7 @@ async fn adjust_varargs_static_arguments(
     }
 
     // Check if the last parameter is an array type (varargs)
-    let last_param = static_param_types.last().unwrap();
-    if let FieldType::Array(component_type) = last_param {
+    if let Some(FieldType::Array(component_type)) = static_param_types.last() {
         // Count fixed static parameters (all except the varargs array)
         let fixed_count = static_param_types.len() - 1;
 
@@ -935,14 +935,12 @@ async fn invoke_bootstrap_method(
         return Err(BootstrapMethodError("Bootstrap method handle is null".to_string()).into());
     }
 
-    // Use native method handle dispatch to avoid complex initialization chains
-    let result =
-        crate::intrinsic_methods::java::lang::invoke::methodhandle::invoke_method_handle_native(
-            thread.clone(),
-            method_handle,
-            arguments,
-        )
-        .await?;
+    let member = {
+        let target_member = method_handle.as_object_ref()?;
+        target_member.value("member")?
+    };
+
+    let result = call_method_handle_target(thread.clone(), &member, arguments).await?;
 
     // Validate call site result is not null
     if let Value::Object(None) = result {
@@ -956,8 +954,8 @@ async fn invoke_bootstrap_method(
 ///
 /// Validate returned `CallSite` or `MethodHandle`:
 ///   - Must not be null
-///   - For CallSite: `CallSite.type()` must exactly match the expected `MethodType`
-///   - For MethodHandle: also valid (used by record-related bootstrap methods)
+///   - For `CallSite`: `CallSite.type()` must exactly match the expected `MethodType`
+///   - For `MethodHandle`: also valid (used by record-related bootstrap methods)
 ///   - If validation fails, throw `BootstrapMethodError`
 ///
 /// # Errors
@@ -1129,16 +1127,13 @@ pub(crate) async fn invokedynamic(
     // Step 4: Get parameters from the operand stack
     let parameters = stack.drain_last(argument_types.len());
 
-    // Step 5: Invoke the target MethodHandle using native dispatch
-    // This handles different method handle types (DirectMethodHandle, BoundMethodHandle, etc.)
-    // avoiding complex LambdaForm initialization chains
-    let result =
-        crate::intrinsic_methods::java::lang::invoke::methodhandle::invoke_method_handle_native(
-            thread.clone(),
-            target_method_handle,
-            parameters,
-        )
-        .await?;
+    // Step 5: Invoke the target MethodHandle directly using call_method_handle_target
+    let member = {
+        let target_member = target_method_handle.as_object_ref()?;
+        target_member.value("member")?
+    };
+
+    let result = call_method_handle_target(thread.clone(), &member, parameters).await?;
 
     // Step 6: Handle the return value based on the method descriptor
     if let Some(_return_type) = return_type {

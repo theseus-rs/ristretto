@@ -283,6 +283,18 @@ async fn resolve_method_handle(
             let descriptor = constant_pool.try_get_utf8(*type_index)?;
             (class_name, name, descriptor, true)
         }
+        Constant::MethodHandle {
+            reference_kind: nested_reference_kind,
+            reference_index: nested_reference_index,
+        } => {
+            return Box::pin(resolve_method_handle(
+                thread,
+                constant_pool,
+                nested_reference_kind,
+                *nested_reference_index,
+            ))
+            .await;
+        }
         _ => {
             return Err(InternalError(format!(
                 "Unsupported MethodHandle target constant type: {target:?}"
@@ -697,7 +709,7 @@ pub(crate) async fn get_named_con(
     // Named constants - these are internal VM constants that can be queried by index
     // The name is stored in box_array[0] if found
     // Returns the constant value, or -1 if not found
-    
+
     let constants: &[(&str, i32)] = &[
         ("GC_COUNT_MAX", 0),
         ("MN_IS_METHOD", 0x0001_0000),
@@ -1000,7 +1012,7 @@ pub(crate) async fn resolve(
             &thread,
             member_self,
             caller.as_ref(),
-            lookup_mode_flags,
+            *lookup_mode_flags,
             speculative_resolve,
             &name,
             flags,
@@ -1012,9 +1024,9 @@ pub(crate) async fn resolve(
             &thread,
             member_self,
             caller,
-            lookup_mode_flags,
+            *lookup_mode_flags,
             speculative_resolve,
-            name,
+            &name,
             flags,
             &class,
         )
@@ -1030,10 +1042,10 @@ pub(crate) async fn resolve(
 /// if successful.
 #[expect(clippy::too_many_arguments)]
 async fn resolve_method(
-    _thread: &Thread,
+    thread: &Thread,
     member_self: Value,
     caller: Option<&Arc<Class>>,
-    lookup_mode_flags: &LookupModeFlags,
+    lookup_mode_flags: LookupModeFlags,
     speculative_resolve: bool,
     name: &Value,
     flags: i32,
@@ -1114,7 +1126,7 @@ async fn resolve_method(
 
     // Access control enforcement
     let method_access_flags = method.access_flags();
-    if !check_method_access(caller, class, *method_access_flags, *lookup_mode_flags)? {
+    if !check_method_access(caller, class, *method_access_flags, lookup_mode_flags)? {
         return if speculative_resolve {
             // If speculative, return None (fail silently)
             Ok(None)
@@ -1138,8 +1150,8 @@ async fn resolve_method(
         // vmindex is used by OpenJDK MethodHandle implementation.
         // For methods, it's typically a vtable index or similar.
         // Since we intercept execution, we can use 0 or a placeholder.
-        // Must be Long to avoid ClassCastException in Java code.
-        let vmindex = Value::Long(0);
+        // Must be a boxed Long object to match the field type Ljava/lang/Object;
+        let vmindex = 0i64.to_object(thread).await?;
         let mut member_self = member_self.as_object_mut()?;
         member_self.set_value("flags", Value::from(flags))?;
         member_self.set_value("vmindex", vmindex)?;
@@ -1151,12 +1163,12 @@ async fn resolve_method(
 /// if successful.
 #[expect(clippy::too_many_arguments)]
 async fn resolve_field(
-    _thread: &Thread,
+    thread: &Thread,
     member_self: Value,
     caller: Option<Arc<Class>>,
-    lookup_mode_flags: &LookupModeFlags,
+    lookup_mode_flags: LookupModeFlags,
     speculative_resolve: bool,
-    name: Value,
+    name: &Value,
     flags: i32,
     class: &Arc<Class>,
 ) -> Result<Option<Value>> {
@@ -1164,7 +1176,7 @@ async fn resolve_field(
     let field_name = name.as_string()?;
     let field = class.declared_field(&field_name)?;
     let field_access_flags = field.access_flags();
-    if !check_field_access(caller, class, *field_access_flags, *lookup_mode_flags)? {
+    if !check_field_access(caller, class, *field_access_flags, lookup_mode_flags)? {
         return if speculative_resolve {
             Ok(None)
         } else {
@@ -1185,7 +1197,7 @@ async fn resolve_field(
     let flags = flags | modifiers;
     {
         let field_offset = class.field_offset(&field_name)?;
-        let vmindex = Value::Long(i64::try_from(field_offset)?);
+        let vmindex = (i64::try_from(field_offset)?).to_object(thread).await?;
         let mut member_self = member_self.as_object_mut()?;
         member_self.set_value("flags", Value::from(flags))?;
         member_self.set_value("vmindex", vmindex)?;
@@ -1881,8 +1893,8 @@ mod tests {
         let caller_class = thread.class("java.lang.Object").await?;
         let caller = caller_class.to_object(&thread).await?;
 
-        parameters.push(caller);
         parameters.push(Value::from(member_name));
+        parameters.push(caller);
 
         let result = resolve_0(thread, parameters).await?;
         assert!(result.is_some());
