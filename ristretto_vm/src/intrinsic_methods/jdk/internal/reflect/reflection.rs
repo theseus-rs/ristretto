@@ -72,12 +72,10 @@ pub(crate) async fn get_caller_class(
     for frame in frames.iter().rev().skip(1) {
         let class = frame.class();
         let class_name = class.name();
-        // Skip known reflection/VM implementation frames
+        // Skip known reflection/VM implementation frames and invoke infrastructure
         if class_name.starts_with("jdk/internal/reflect/")
             || class_name.starts_with("sun/reflect/")
-            || class_name == "java/lang/invoke/MethodHandles"
-            || class_name == "java/lang/invoke/MethodHandleNatives"
-            || class_name == "java/lang/invoke/MemberName"
+            || class_name.starts_with("java/lang/invoke/")
         {
             continue;
         }
