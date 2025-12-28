@@ -67,7 +67,7 @@ pub(crate) mod test;
 mod thread;
 mod vm;
 
-pub use configuration::{Configuration, ConfigurationBuilder};
+pub use configuration::{Configuration, ConfigurationBuilder, VerifyMode};
 pub use error::{Error, Result};
 pub(crate) use frame::Frame;
 pub use java_error::JavaError;

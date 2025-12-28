@@ -1,10 +1,13 @@
-use crate::Error::InvalidClassAccessFlags;
-use crate::Result;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
+use crate::verifiers::error::Result;
+use crate::verifiers::error::VerifyError::InvalidClassAccessFlags;
 
 /// Verify the `ClassFile` `ClassAccessFlags`.
-pub fn verify(class_file: &ClassFile) -> Result<()> {
+///
+/// # Errors
+/// Returns `InvalidClassAccessFlags` if the access flags are invalid.
+pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
     let access_flags = class_file.access_flags;
 
     if access_flags.contains(ClassAccessFlags::ANNOTATION)
@@ -112,5 +115,20 @@ mod test {
     #[test]
     fn test_verify_not_abstract_and_finale_error() -> Result<()> {
         test_verify_error(ClassAccessFlags::ABSTRACT | ClassAccessFlags::FINAL)
+    }
+
+    #[test]
+    fn test_verify_valid_interface() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let this_class = constant_pool.add_class("MyInterface")?;
+        let class_file = ClassFile {
+            constant_pool,
+            access_flags: ClassAccessFlags::INTERFACE | ClassAccessFlags::ABSTRACT,
+            this_class,
+            ..Default::default()
+        };
+
+        assert_eq!(Ok(()), verify(&class_file));
+        Ok(())
     }
 }

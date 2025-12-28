@@ -1,3 +1,4 @@
+use crate::configuration::VerifyMode;
 use crate::frame::Frame;
 use crate::{Class, ConfigurationBuilder, Result, Thread, VM};
 use ristretto_classfile::{ClassFile, ConstantPool, MethodAccessFlags};
@@ -11,6 +12,8 @@ pub(crate) async fn thread() -> Result<(Arc<VM>, Arc<Thread>)> {
     let class_path = ClassPath::from(&[classes_path]);
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path.clone())
+        // Disable verification for tests that use synthetic test classes
+        .verify_mode(VerifyMode::None)
         .build()?;
     let vm = VM::new(configuration).await?;
     let weak_vm = Arc::downgrade(&vm);

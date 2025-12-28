@@ -1,12 +1,15 @@
-use crate::Error::InvalidMethodAccessFlags;
-use crate::Result;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
 use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
+use crate::verifiers::error::Result;
+use crate::verifiers::error::VerifyError::InvalidMethodAccessFlags;
 
 /// Verify the method `MethodAccessFlags`.
-pub fn verify(class_file: &ClassFile, method: &Method) -> Result<()> {
+///
+/// # Errors
+/// Returns `InvalidMethodAccessFlags` if the access flags are invalid.
+pub(crate) fn verify(class_file: &ClassFile, method: &Method) -> Result<()> {
     let access_flags = method.access_flags;
     let public_set = access_flags.contains(MethodAccessFlags::PUBLIC);
     let protected_set = access_flags.contains(MethodAccessFlags::PROTECTED);

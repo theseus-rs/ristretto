@@ -67,7 +67,7 @@ const VERSION_55_0: Version = JAVA_11;
 ///  # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4>
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum Constant {
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7>
     Utf8(String),
@@ -125,6 +125,97 @@ pub enum Constant {
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.12>
     Package(u16), // Name index (Utf8)
 }
+
+impl PartialEq for Constant {
+    #[expect(clippy::match_same_arms)]
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Constant::Utf8(a), Constant::Utf8(b)) => a == b,
+            (Constant::Integer(a), Constant::Integer(b)) => a == b,
+            (Constant::Float(a), Constant::Float(b)) => a.to_bits() == b.to_bits(),
+            (Constant::Long(a), Constant::Long(b)) => a == b,
+            (Constant::Double(a), Constant::Double(b)) => a.to_bits() == b.to_bits(),
+            (Constant::Class(a), Constant::Class(b)) => a == b,
+            (Constant::String(a), Constant::String(b)) => a == b,
+            (
+                Constant::FieldRef {
+                    class_index: a1,
+                    name_and_type_index: a2,
+                },
+                Constant::FieldRef {
+                    class_index: b1,
+                    name_and_type_index: b2,
+                },
+            ) => a1 == b1 && a2 == b2,
+            (
+                Constant::MethodRef {
+                    class_index: a1,
+                    name_and_type_index: a2,
+                },
+                Constant::MethodRef {
+                    class_index: b1,
+                    name_and_type_index: b2,
+                },
+            ) => a1 == b1 && a2 == b2,
+            (
+                Constant::InterfaceMethodRef {
+                    class_index: a1,
+                    name_and_type_index: a2,
+                },
+                Constant::InterfaceMethodRef {
+                    class_index: b1,
+                    name_and_type_index: b2,
+                },
+            ) => a1 == b1 && a2 == b2,
+            (
+                Constant::NameAndType {
+                    name_index: a1,
+                    descriptor_index: a2,
+                },
+                Constant::NameAndType {
+                    name_index: b1,
+                    descriptor_index: b2,
+                },
+            ) => a1 == b1 && a2 == b2,
+            (
+                Constant::MethodHandle {
+                    reference_kind: a1,
+                    reference_index: a2,
+                },
+                Constant::MethodHandle {
+                    reference_kind: b1,
+                    reference_index: b2,
+                },
+            ) => a1 == b1 && a2 == b2,
+            (Constant::MethodType(a), Constant::MethodType(b)) => a == b,
+            (
+                Constant::Dynamic {
+                    bootstrap_method_attr_index: a1,
+                    name_and_type_index: a2,
+                },
+                Constant::Dynamic {
+                    bootstrap_method_attr_index: b1,
+                    name_and_type_index: b2,
+                },
+            ) => a1 == b1 && a2 == b2,
+            (
+                Constant::InvokeDynamic {
+                    bootstrap_method_attr_index: a1,
+                    name_and_type_index: a2,
+                },
+                Constant::InvokeDynamic {
+                    bootstrap_method_attr_index: b1,
+                    name_and_type_index: b2,
+                },
+            ) => a1 == b1 && a2 == b2,
+            (Constant::Module(a), Constant::Module(b)) => a == b,
+            (Constant::Package(a), Constant::Package(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Constant {}
 
 impl Constant {
     /// Returns the tag value for this constant type.
@@ -664,5 +755,448 @@ mod test {
 
         assert_eq!("Package #1", constant.to_string());
         test_constant(&constant, &expected_bytes, 20, &VERSION_55_0)
+    }
+
+    // ==================== Eq tests - success conditions ====================
+
+    #[test]
+    fn test_eq_utf8_equal() {
+        let a = Constant::Utf8("hello".to_string());
+        let b = Constant::Utf8("hello".to_string());
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_integer_equal() {
+        let a = Constant::Integer(42);
+        let b = Constant::Integer(42);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_float_equal() {
+        let a = Constant::Float(1.5);
+        let b = Constant::Float(1.5);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_float_nan_equal() {
+        let a = Constant::Float(f32::NAN);
+        let b = Constant::Float(f32::NAN);
+        assert_eq!(a, b); // NaN equals NaN using to_bits()
+    }
+
+    #[test]
+    fn test_eq_float_negative_zero_not_equal_positive_zero() {
+        let a = Constant::Float(-0.0);
+        let b = Constant::Float(0.0);
+        assert_ne!(a, b); // -0.0 and 0.0 have different bit patterns
+    }
+
+    #[test]
+    fn test_eq_long_equal() {
+        let a = Constant::Long(1_234_567_890);
+        let b = Constant::Long(1_234_567_890);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_double_equal() {
+        let a = Constant::Double(std::f64::consts::PI);
+        let b = Constant::Double(std::f64::consts::PI);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_double_nan_equal() {
+        let a = Constant::Double(f64::NAN);
+        let b = Constant::Double(f64::NAN);
+        assert_eq!(a, b); // NaN equals NaN using to_bits()
+    }
+
+    #[test]
+    fn test_eq_double_negative_zero_not_equal_positive_zero() {
+        let a = Constant::Double(-0.0);
+        let b = Constant::Double(0.0);
+        assert_ne!(a, b); // -0.0 and 0.0 have different bit patterns
+    }
+
+    #[test]
+    fn test_eq_class_equal() {
+        let a = Constant::Class(1);
+        let b = Constant::Class(1);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_string_equal() {
+        let a = Constant::String(1);
+        let b = Constant::String(1);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_field_ref_equal() {
+        let a = Constant::FieldRef {
+            class_index: 1,
+            name_and_type_index: 2,
+        };
+        let b = Constant::FieldRef {
+            class_index: 1,
+            name_and_type_index: 2,
+        };
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_method_ref_equal() {
+        let a = Constant::MethodRef {
+            class_index: 1,
+            name_and_type_index: 2,
+        };
+        let b = Constant::MethodRef {
+            class_index: 1,
+            name_and_type_index: 2,
+        };
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_interface_method_ref_equal() {
+        let a = Constant::InterfaceMethodRef {
+            class_index: 1,
+            name_and_type_index: 2,
+        };
+        let b = Constant::InterfaceMethodRef {
+            class_index: 1,
+            name_and_type_index: 2,
+        };
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_name_and_type_equal() {
+        let a = Constant::NameAndType {
+            name_index: 1,
+            descriptor_index: 2,
+        };
+        let b = Constant::NameAndType {
+            name_index: 1,
+            descriptor_index: 2,
+        };
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_method_handle_equal() {
+        let a = Constant::MethodHandle {
+            reference_kind: ReferenceKind::GetField,
+            reference_index: 1,
+        };
+        let b = Constant::MethodHandle {
+            reference_kind: ReferenceKind::GetField,
+            reference_index: 1,
+        };
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_method_type_equal() {
+        let a = Constant::MethodType(1);
+        let b = Constant::MethodType(1);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_dynamic_equal() {
+        let a = Constant::Dynamic {
+            bootstrap_method_attr_index: 1,
+            name_and_type_index: 2,
+        };
+        let b = Constant::Dynamic {
+            bootstrap_method_attr_index: 1,
+            name_and_type_index: 2,
+        };
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_invoke_dynamic_equal() {
+        let a = Constant::InvokeDynamic {
+            bootstrap_method_attr_index: 1,
+            name_and_type_index: 2,
+        };
+        let b = Constant::InvokeDynamic {
+            bootstrap_method_attr_index: 1,
+            name_and_type_index: 2,
+        };
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_module_equal() {
+        let a = Constant::Module(1);
+        let b = Constant::Module(1);
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_eq_package_equal() {
+        let a = Constant::Package(1);
+        let b = Constant::Package(1);
+        assert_eq!(a, b);
+    }
+
+    // ==================== Eq tests - failure conditions ====================
+
+    #[test]
+    fn test_eq_utf8_not_equal() {
+        let a = Constant::Utf8("hello".to_string());
+        let b = Constant::Utf8("world".to_string());
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_integer_not_equal() {
+        let a = Constant::Integer(42);
+        let b = Constant::Integer(43);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_float_not_equal() {
+        let a = Constant::Float(1.5);
+        let b = Constant::Float(2.5);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_long_not_equal() {
+        let a = Constant::Long(1_234_567_890);
+        let b = Constant::Long(9_876_543_210);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_double_not_equal() {
+        let a = Constant::Double(std::f64::consts::PI);
+        let b = Constant::Double(std::f64::consts::E);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_class_not_equal() {
+        let a = Constant::Class(1);
+        let b = Constant::Class(2);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_string_not_equal() {
+        let a = Constant::String(1);
+        let b = Constant::String(2);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_field_ref_not_equal_class_index() {
+        let a = Constant::FieldRef {
+            class_index: 1,
+            name_and_type_index: 2,
+        };
+        let b = Constant::FieldRef {
+            class_index: 3,
+            name_and_type_index: 2,
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_field_ref_not_equal_name_and_type_index() {
+        let a = Constant::FieldRef {
+            class_index: 1,
+            name_and_type_index: 2,
+        };
+        let b = Constant::FieldRef {
+            class_index: 1,
+            name_and_type_index: 3,
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_method_ref_not_equal() {
+        let a = Constant::MethodRef {
+            class_index: 1,
+            name_and_type_index: 2,
+        };
+        let b = Constant::MethodRef {
+            class_index: 3,
+            name_and_type_index: 4,
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_interface_method_ref_not_equal() {
+        let a = Constant::InterfaceMethodRef {
+            class_index: 1,
+            name_and_type_index: 2,
+        };
+        let b = Constant::InterfaceMethodRef {
+            class_index: 3,
+            name_and_type_index: 4,
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_name_and_type_not_equal() {
+        let a = Constant::NameAndType {
+            name_index: 1,
+            descriptor_index: 2,
+        };
+        let b = Constant::NameAndType {
+            name_index: 3,
+            descriptor_index: 4,
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_method_handle_not_equal_reference_kind() {
+        let a = Constant::MethodHandle {
+            reference_kind: ReferenceKind::GetField,
+            reference_index: 1,
+        };
+        let b = Constant::MethodHandle {
+            reference_kind: ReferenceKind::GetStatic,
+            reference_index: 1,
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_method_handle_not_equal_reference_index() {
+        let a = Constant::MethodHandle {
+            reference_kind: ReferenceKind::GetField,
+            reference_index: 1,
+        };
+        let b = Constant::MethodHandle {
+            reference_kind: ReferenceKind::GetField,
+            reference_index: 2,
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_method_type_not_equal() {
+        let a = Constant::MethodType(1);
+        let b = Constant::MethodType(2);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_dynamic_not_equal() {
+        let a = Constant::Dynamic {
+            bootstrap_method_attr_index: 1,
+            name_and_type_index: 2,
+        };
+        let b = Constant::Dynamic {
+            bootstrap_method_attr_index: 3,
+            name_and_type_index: 4,
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_invoke_dynamic_not_equal() {
+        let a = Constant::InvokeDynamic {
+            bootstrap_method_attr_index: 1,
+            name_and_type_index: 2,
+        };
+        let b = Constant::InvokeDynamic {
+            bootstrap_method_attr_index: 3,
+            name_and_type_index: 4,
+        };
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_module_not_equal() {
+        let a = Constant::Module(1);
+        let b = Constant::Module(2);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn test_eq_package_not_equal() {
+        let a = Constant::Package(1);
+        let b = Constant::Package(2);
+        assert_ne!(a, b);
+    }
+
+    // ==================== Eq tests - different variant types ====================
+
+    #[test]
+    fn test_eq_different_variants_not_equal() {
+        let utf8 = Constant::Utf8("1".to_string());
+        let integer = Constant::Integer(1);
+        let float = Constant::Float(1.0);
+        let long = Constant::Long(1);
+        let double = Constant::Double(1.0);
+        let class = Constant::Class(1);
+        let string = Constant::String(1);
+        let field_ref = Constant::FieldRef {
+            class_index: 1,
+            name_and_type_index: 1,
+        };
+        let method_ref = Constant::MethodRef {
+            class_index: 1,
+            name_and_type_index: 1,
+        };
+        let interface_method_ref = Constant::InterfaceMethodRef {
+            class_index: 1,
+            name_and_type_index: 1,
+        };
+        let name_and_type = Constant::NameAndType {
+            name_index: 1,
+            descriptor_index: 1,
+        };
+        let method_handle = Constant::MethodHandle {
+            reference_kind: ReferenceKind::GetField,
+            reference_index: 1,
+        };
+        let method_type = Constant::MethodType(1);
+        let dynamic = Constant::Dynamic {
+            bootstrap_method_attr_index: 1,
+            name_and_type_index: 1,
+        };
+        let invoke_dynamic = Constant::InvokeDynamic {
+            bootstrap_method_attr_index: 1,
+            name_and_type_index: 1,
+        };
+        let module = Constant::Module(1);
+        let package = Constant::Package(1);
+
+        // All different variants should not be equal to each other
+        assert_ne!(utf8, integer);
+        assert_ne!(integer, float);
+        assert_ne!(float, long);
+        assert_ne!(long, double);
+        assert_ne!(double, class);
+        assert_ne!(class, string);
+        assert_ne!(string, field_ref);
+        assert_ne!(field_ref, method_ref);
+        assert_ne!(method_ref, interface_method_ref);
+        assert_ne!(interface_method_ref, name_and_type);
+        assert_ne!(name_and_type, method_handle);
+        assert_ne!(method_handle, method_type);
+        assert_ne!(method_type, dynamic);
+        assert_ne!(dynamic, invoke_dynamic);
+        assert_ne!(invoke_dynamic, module);
+        assert_ne!(module, package);
+        assert_ne!(package, utf8);
     }
 }

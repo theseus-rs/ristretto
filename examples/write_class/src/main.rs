@@ -80,20 +80,19 @@ fn main() -> Result<()> {
         max_locals: main_max_locals,
         code: main_method_code,
         exception_table: Vec::new(),
-        attributes: Vec::new(),
-    });
-    main_method.attributes.push(Attribute::LineNumberTable {
-        name_index: line_number_table_index,
-        line_numbers: vec![
-            LineNumber {
-                start_pc: 0,
-                line_number: 3,
-            },
-            LineNumber {
-                start_pc: 8,
-                line_number: 4,
-            },
-        ],
+        attributes: vec![Attribute::LineNumberTable {
+            name_index: line_number_table_index,
+            line_numbers: vec![
+                LineNumber {
+                    start_pc: 0, // Instruction index 0 (Getstatic)
+                    line_number: 3,
+                },
+                LineNumber {
+                    start_pc: 3, // Instruction index 3 (Return)
+                    line_number: 4,
+                },
+            ],
+        }],
     });
     methods.push(main_method);
 

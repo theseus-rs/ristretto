@@ -464,10 +464,10 @@ mod tests {
         method_handle.as_object_mut()?.set_value("member", member)?;
 
         let args_class = thread.class("[Ljava/lang/Object;").await?;
-        let int_obj = thread
+        let int_object = thread
             .object("java/lang/Integer", "I", &[Value::Int(42)])
             .await?;
-        let args = vec![int_obj];
+        let args = vec![int_object];
         let arguments = Value::try_from((args_class, args))?;
 
         let mut parameters = Parameters::default();
@@ -503,7 +503,7 @@ mod tests {
     #[tokio::test]
     async fn test_link_to_virtual() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let string_obj = "test".to_object(&thread).await?;
+        let string_object = "test".to_object(&thread).await?;
 
         let member = create_test_member_name(
             &thread,
@@ -515,7 +515,7 @@ mod tests {
         .await?;
 
         let mut parameters = Parameters::default();
-        parameters.push(string_obj);
+        parameters.push(string_object);
         parameters.push(member);
 
         let result = link_to_virtual(thread, parameters).await;
@@ -527,7 +527,7 @@ mod tests {
     async fn test_link_to_interface() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let empty_values: &[Value] = &[];
-        let list_obj = thread
+        let list_object = thread
             .object("java/util/ArrayList", "", empty_values)
             .await?;
 
@@ -541,7 +541,7 @@ mod tests {
         .await?;
 
         let mut parameters = Parameters::default();
-        parameters.push(list_obj);
+        parameters.push(list_object);
         parameters.push(member);
 
         let result = link_to_interface(thread, parameters).await;

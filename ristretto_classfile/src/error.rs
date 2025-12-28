@@ -21,9 +21,6 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 /// processing of JVM class files in the Ristretto system.
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum Error {
-    /// `BootstrapMethods` attribute not defined in class file
-    #[error("BootstrapMethods attribute not defined in class file")]
-    BootstrapMethodsNotDefined,
     /// Invalid annotation element tag
     #[error("Invalid annotation element tag: {0}")]
     InvalidAnnotationElementTag(u8),
@@ -39,12 +36,6 @@ pub enum Error {
     /// Invalid base type code
     #[error("Invalid base type code {0}")]
     InvalidBaseTypeCode(char),
-    /// Invalid bootstrap method index
-    #[error("Invalid bootstrap method index {0}")]
-    InvalidBootstrapMethodIndex(usize),
-    /// Invalid class access flags
-    #[error("Invalid class access flags: {0}")]
-    InvalidClassAccessFlags(u16),
     /// Invalid constant pool index
     #[error("Invalid constant pool index {0}")]
     InvalidConstantPoolIndex(u16),
@@ -54,9 +45,6 @@ pub enum Error {
     /// Invalid constant tag
     #[error("Invalid constant tag: {0}")]
     InvalidConstantTag(u8),
-    /// Invalid field access flags
-    #[error("Invalid field access flags: {0}")]
-    InvalidFieldAccessFlags(u16),
     /// Invalid field type code
     #[error("Invalid field type code {0}")]
     InvalidFieldTypeCode(char),
@@ -72,9 +60,6 @@ pub enum Error {
     /// Invalid magic number when reading a class file
     #[error("Invalid magic number: {0}")]
     InvalidMagicNumber(u32),
-    /// Invalid method access flags
-    #[error("Invalid method access flags: {0}")]
-    InvalidMethodAccessFlags(u16),
     /// An error occurred while parsing a method descriptor
     #[error("Invalid method descriptor: {0}")]
     InvalidMethodDescriptor(String),
@@ -93,9 +78,6 @@ pub enum Error {
     /// Error when creating a Version from major and minor
     #[error("Invalid version: major={major}; minor={minor}")]
     InvalidVersion { major: u16, minor: u16 },
-    /// Invalid tag in the constant pool for the class file version
-    #[error("Class file version does not support constant tag {0}")]
-    InvalidVersionConstant(u8),
     /// Invalid wide instruction
     #[error("Invalid wide instruction: {0}")]
     InvalidWideInstruction(u8),
@@ -109,8 +91,8 @@ pub enum Error {
     #[error(transparent)]
     TryFromIntError(#[from] TryFromIntError),
     /// Error when verifying a class file
-    #[error("{context}: {message}")]
-    VerificationError { context: String, message: String },
+    #[error(transparent)]
+    VerificationError(#[from] crate::verifiers::VerifyError),
 }
 
 /// Convert [`FromUtf8Error` errors](FromUtf8Error) to [`FromUtf8Error`](Error::FromUtf8Error)

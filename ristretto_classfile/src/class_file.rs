@@ -2,7 +2,7 @@ use crate::attributes::Attribute;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::constant_pool::ConstantPool;
 use crate::display::indent_lines;
-use crate::error::Error::{InvalidMagicNumber, VerificationError};
+use crate::error::Error::InvalidMagicNumber;
 use crate::error::Result;
 use crate::field::Field;
 use crate::method::Method;
@@ -51,7 +51,7 @@ const MAGIC: u32 = 0xCAFE_BABE;
 /// # References
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1>
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ClassFile {
     pub version: Version,
     pub constant_pool: ConstantPool,
@@ -109,17 +109,7 @@ impl ClassFile {
     /// # Errors
     /// Returns a `VerificationError` if the verification fails.
     pub fn verify(&self) -> Result<()> {
-        match verifier::verify(self) {
-            Ok(()) => Ok(()),
-            Err(error) => {
-                let context = self.class_name()?;
-                let verification_error = VerificationError {
-                    context: context.to_string(),
-                    message: error.to_string(),
-                };
-                Err(verification_error)
-            }
-        }
+        verifier::verify(self).map_err(crate::Error::from)
     }
 
     /// Deserialize the `ClassFile` from bytes.
@@ -463,10 +453,9 @@ mod test {
         };
 
         assert_eq!(
-            Err(VerificationError {
-                context: "Test".to_string(),
-                message: "Invalid constant pool index 2".to_string()
-            }),
+            Err(crate::Error::VerificationError(
+                crate::verifiers::error::VerifyError::InvalidConstantPoolIndex(3)
+            )),
             class_file.verify()
         );
         Ok(())

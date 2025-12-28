@@ -754,12 +754,12 @@ pub(crate) async fn init(thread: Arc<Thread>, mut parameters: Parameters) -> Res
 /// Initializes a `MemberName` from a java.lang.reflect.Method object.
 async fn init_from_method(thread: &Thread, member_name: Value, method_ref: Value) -> Result<()> {
     let (clazz, name, modifiers, parameter_types, return_type) = {
-        let method_obj = method_ref.as_object_ref()?;
-        let clazz = method_obj.value("clazz")?;
-        let name = method_obj.value("name")?;
-        let modifiers = method_obj.value("modifiers")?.as_i32()?;
-        let parameter_types = method_obj.value("parameterTypes")?;
-        let return_type = method_obj.value("returnType")?;
+        let method_object = method_ref.as_object_ref()?;
+        let clazz = method_object.value("clazz")?;
+        let name = method_object.value("name")?;
+        let modifiers = method_object.value("modifiers")?.as_i32()?;
+        let parameter_types = method_object.value("parameterTypes")?;
+        let return_type = method_object.value("returnType")?;
         (clazz, name, modifiers, parameter_types, return_type)
     };
 
@@ -791,11 +791,11 @@ async fn init_from_method(thread: &Thread, member_name: Value, method_ref: Value
     });
     let flags = MemberNameFlags::IS_METHOD.bits() | modifiers | (reference_kind << 24);
 
-    let mut member_name_obj = member_name.as_object_mut()?;
-    member_name_obj.set_value("clazz", clazz)?;
-    member_name_obj.set_value("name", name)?;
-    member_name_obj.set_value("type", method_type)?;
-    member_name_obj.set_value("flags", Value::Int(flags))?;
+    let mut member_name_object = member_name.as_object_mut()?;
+    member_name_object.set_value("clazz", clazz)?;
+    member_name_object.set_value("name", name)?;
+    member_name_object.set_value("type", method_type)?;
+    member_name_object.set_value("flags", Value::Int(flags))?;
 
     Ok(())
 }
@@ -807,10 +807,10 @@ async fn init_from_constructor(
     constructor_ref: Value,
 ) -> Result<()> {
     let (clazz, modifiers, parameter_types) = {
-        let constructor_obj = constructor_ref.as_object_ref()?;
-        let clazz = constructor_obj.value("clazz")?;
-        let modifiers = constructor_obj.value("modifiers")?.as_i32()?;
-        let parameter_types = constructor_obj.value("parameterTypes")?;
+        let constructor_object = constructor_ref.as_object_ref()?;
+        let clazz = constructor_object.value("clazz")?;
+        let modifiers = constructor_object.value("modifiers")?.as_i32()?;
+        let parameter_types = constructor_object.value("parameterTypes")?;
         (clazz, modifiers, parameter_types)
     };
 
@@ -844,11 +844,11 @@ async fn init_from_constructor(
     // REF_newInvokeSpecial = 8 for constructors
     let flags = MemberNameFlags::IS_CONSTRUCTOR.bits() | modifiers | (8 << 24);
 
-    let mut member_name_obj = member_name.as_object_mut()?;
-    member_name_obj.set_value("clazz", clazz)?;
-    member_name_obj.set_value("name", name)?;
-    member_name_obj.set_value("type", method_type)?;
-    member_name_obj.set_value("flags", Value::Int(flags))?;
+    let mut member_name_object = member_name.as_object_mut()?;
+    member_name_object.set_value("clazz", clazz)?;
+    member_name_object.set_value("name", name)?;
+    member_name_object.set_value("type", method_type)?;
+    member_name_object.set_value("flags", Value::Int(flags))?;
 
     Ok(())
 }
@@ -856,11 +856,11 @@ async fn init_from_constructor(
 /// Initializes a `MemberName` from a java.lang.reflect.Field object.
 fn init_from_field(_thread: &Thread, member_name: &Value, field_ref: &Value) -> Result<()> {
     let (clazz, name, field_type, modifiers) = {
-        let field_obj = field_ref.as_object_ref()?;
-        let clazz = field_obj.value("clazz")?;
-        let name = field_obj.value("name")?;
-        let field_type = field_obj.value("type")?;
-        let modifiers = field_obj.value("modifiers")?.as_i32()?;
+        let field_object = field_ref.as_object_ref()?;
+        let clazz = field_object.value("clazz")?;
+        let name = field_object.value("name")?;
+        let field_type = field_object.value("type")?;
+        let modifiers = field_object.value("modifiers")?.as_i32()?;
         (clazz, name, field_type, modifiers)
     };
 
@@ -873,11 +873,11 @@ fn init_from_field(_thread: &Thread, member_name: &Value, field_ref: &Value) -> 
     });
     let flags = MemberNameFlags::IS_FIELD.bits() | modifiers | (ref_kind << 24);
 
-    let mut member_name_obj = member_name.as_object_mut()?;
-    member_name_obj.set_value("clazz", clazz)?;
-    member_name_obj.set_value("name", name)?;
-    member_name_obj.set_value("type", field_type)?;
-    member_name_obj.set_value("flags", Value::Int(flags))?;
+    let mut member_name_object = member_name.as_object_mut()?;
+    member_name_object.set_value("clazz", clazz)?;
+    member_name_object.set_value("name", name)?;
+    member_name_object.set_value("type", field_type)?;
+    member_name_object.set_value("flags", Value::Int(flags))?;
 
     Ok(())
 }
@@ -1537,8 +1537,8 @@ mod tests {
         let name = "MAX_VALUE".to_object(&thread).await?;
         member_name.set_value("name", name)?;
 
-        let type_obj = Value::Object(None);
-        member_name.set_value("type", type_obj)?;
+        let type_object = Value::Object(None);
+        member_name.set_value("type", type_object)?;
 
         let flags = MemberNameFlags::IS_FIELD.bits()
             | i32::from(FieldAccessFlags::PUBLIC.bits())
@@ -1691,26 +1691,26 @@ mod tests {
         let member_name = Object::new(member_name_class)?;
 
         let field_class = thread.class("java.lang.reflect.Field").await?;
-        let mut field_obj = Object::new(field_class)?;
+        let mut field_object = Object::new(field_class)?;
 
         let declaring_class = thread.class("java.lang.Integer").await?;
-        let declaring_class_obj = declaring_class.to_object(&thread).await?;
-        field_obj.set_value("clazz", declaring_class_obj)?;
+        let declaring_class_object = declaring_class.to_object(&thread).await?;
+        field_object.set_value("clazz", declaring_class_object)?;
 
         let field_name = "MAX_VALUE".to_object(&thread).await?;
-        field_obj.set_value("name", field_name)?;
+        field_object.set_value("name", field_name)?;
 
         let int_class = thread.class("int").await?;
-        let int_class_obj = int_class.to_object(&thread).await?;
-        field_obj.set_value("type", int_class_obj)?;
+        let int_class_object = int_class.to_object(&thread).await?;
+        field_object.set_value("type", int_class_object)?;
 
         // PUBLIC | STATIC | FINAL
         let modifiers =
             FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL;
-        field_obj.set_value("modifiers", Value::Int(i32::from(modifiers.bits())))?;
+        field_object.set_value("modifiers", Value::Int(i32::from(modifiers.bits())))?;
 
         parameters.push(Value::from(member_name));
-        parameters.push(Value::from(field_obj));
+        parameters.push(Value::from(field_object));
 
         let result = init(thread, parameters).await?;
         assert_eq!(None, result);
@@ -1831,8 +1831,8 @@ mod tests {
         let name = "MAX_VALUE".to_object(&thread).await?;
         member_name.set_value("name", name)?;
 
-        let type_obj = Value::Object(None);
-        member_name.set_value("type", type_obj)?;
+        let type_object = Value::Object(None);
+        member_name.set_value("type", type_object)?;
 
         let flags = MemberNameFlags::IS_FIELD.bits()
             | i32::from(FieldAccessFlags::PUBLIC.bits())
@@ -1866,8 +1866,8 @@ mod tests {
         let name = "MAX_VALUE".to_object(&thread).await?;
         member_name.set_value("name", name)?;
 
-        let type_obj = Value::Object(None);
-        member_name.set_value("type", type_obj)?;
+        let type_object = Value::Object(None);
+        member_name.set_value("type", type_object)?;
 
         let flags = MemberNameFlags::IS_FIELD.bits()
             | i32::from(FieldAccessFlags::PUBLIC.bits())
@@ -1901,8 +1901,8 @@ mod tests {
         let name = "MAX_VALUE".to_object(&thread).await?;
         member_name.set_value("name", name)?;
 
-        let type_obj = Value::Object(None);
-        member_name.set_value("type", type_obj)?;
+        let type_object = Value::Object(None);
+        member_name.set_value("type", type_object)?;
 
         let flags = MemberNameFlags::IS_FIELD.bits()
             | i32::from(FieldAccessFlags::PUBLIC.bits())

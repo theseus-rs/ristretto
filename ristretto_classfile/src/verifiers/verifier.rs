@@ -1,19 +1,32 @@
-use crate::Error::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
-use crate::Result;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::class_file::ClassFile;
 use crate::constant::Constant;
-use crate::verifiers::{class_access_flags, constant_pool, fields, methods};
+use crate::verifiers::attributes::AttributeContext;
+use crate::verifiers::error::Result;
+use crate::verifiers::error::VerifyError::{
+    InvalidConstantPoolIndex, InvalidConstantPoolIndexType,
+};
+use crate::verifiers::{
+    attributes, class_access_flags, constant_pool, fields, interfaces, methods, nest,
+    permitted_subclasses, record,
+};
 
 /// Verify the `ClassFile`.
-pub fn verify(class_file: &ClassFile) -> Result<()> {
+///
+/// # Errors
+/// Returns `VerificationError` if the class file is invalid.
+pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
     constant_pool::verify(class_file)?;
     class_access_flags::verify(class_file)?;
     verify_this_class(class_file)?;
     verify_super_class(class_file)?;
+    interfaces::verify(class_file)?;
     fields::verify(class_file)?;
     methods::verify(class_file)?;
-    // TODO: verify attributes
+    attributes::verify(class_file, &class_file.attributes, AttributeContext::Class)?;
+    nest::verify(class_file)?;
+    permitted_subclasses::verify(class_file)?;
+    record::verify(class_file)?;
     Ok(())
 }
 
@@ -145,5 +158,18 @@ mod test {
             Err(InvalidConstantPoolIndex(0)),
             verify_super_class(&class_file)
         );
+    }
+
+    #[test]
+    fn test_verify_success() -> Result<()> {
+        let mut class_file = ClassFile {
+            version: crate::JAVA_8,
+            ..Default::default()
+        };
+        let constant_pool = &mut class_file.constant_pool;
+        class_file.this_class = constant_pool.add_class("Foo")?;
+        class_file.super_class = constant_pool.add_class("java/lang/Object")?;
+        assert_eq!(Ok(()), verify(&class_file));
+        Ok(())
     }
 }

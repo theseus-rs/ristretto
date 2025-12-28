@@ -96,6 +96,10 @@ pub enum JavaError {
     /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/UnsupportedOperationException.html>
     #[error("{0}")]
     UnsupportedOperationException(String),
+    /// `VerifyError`
+    /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/VerifyError.html>
+    #[error("{0}")]
+    VerifyError(String),
 }
 
 impl JavaError {
@@ -130,6 +134,7 @@ impl JavaError {
             JavaError::UnsupportedOperationException(_) => {
                 "java.lang.UnsupportedOperationException"
             }
+            JavaError::VerifyError(_) => "java.lang.VerifyError",
         }
     }
 
@@ -318,5 +323,12 @@ mod tests {
             "java.lang.UnsupportedOperationException"
         );
         assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
+    fn test_verify_error() {
+        let error = JavaError::VerifyError("Invalid bytecode".to_string());
+        assert_eq!(error.class_name(), "java.lang.VerifyError");
+        assert_eq!(error.message(), "Invalid bytecode");
     }
 }

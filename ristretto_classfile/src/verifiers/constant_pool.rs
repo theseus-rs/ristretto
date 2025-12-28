@@ -1,15 +1,19 @@
-use crate::Error::{
-    BootstrapMethodsNotDefined, InvalidBootstrapMethodIndex, InvalidVersionConstant,
-};
-use crate::Error::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
+use crate::JAVA_8;
 use crate::attributes::Attribute;
 use crate::class_file::ClassFile;
 use crate::constant::Constant;
 use crate::reference_kind::ReferenceKind;
-use crate::{JAVA_8, Result};
+use crate::verifiers::error::Result;
+use crate::verifiers::error::VerifyError::{
+    BootstrapMethodsNotDefined, InvalidBootstrapMethodIndex, InvalidConstantPoolIndex,
+    InvalidConstantPoolIndexType, InvalidVersionConstant,
+};
 
 /// Verify the `ClassFile` `ConstantPool`.
-pub fn verify(class_file: &ClassFile) -> Result<()> {
+///
+/// # Errors
+/// Returns `VerificationError` if the constant pool is invalid.
+pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
     verify_version_constants(class_file)?;
     verify_constant_indexes(class_file)?;
     Ok(())
@@ -31,8 +35,11 @@ fn verify_version_constants(class_file: &ClassFile) -> Result<()> {
 #[expect(clippy::too_many_lines)]
 fn verify_constant_indexes(class_file: &ClassFile) -> Result<()> {
     let constant_pool = &class_file.constant_pool;
-    for (index, constant) in constant_pool.iter().enumerate() {
-        let index = u16::try_from(index)?;
+    let len = u16::try_from(constant_pool.len())?;
+    for index in 1..=len {
+        let Some(constant) = constant_pool.get(index) else {
+            continue;
+        };
         match constant {
             Constant::Class(name_index)
             | Constant::Module(name_index)
@@ -182,7 +189,9 @@ mod test {
     fn get_class_file() -> Result<ClassFile> {
         let class_bytes = include_bytes!("../../../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
-        ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))
+        Ok(ClassFile::from_bytes(&mut Cursor::new(
+            expected_bytes.clone(),
+        ))?)
     }
 
     fn get_utf8_index(class_file: &mut ClassFile) -> Result<u16> {
@@ -231,6 +240,13 @@ mod test {
         let expected_bytes = class_bytes.to_vec();
         let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
 
+        assert_eq!(Ok(()), verify(&class_file));
+        Ok(())
+    }
+
+    #[test]
+    fn test_verify_success() -> Result<()> {
+        let class_file = get_class_file()?;
         assert_eq!(Ok(()), verify(&class_file));
         Ok(())
     }
@@ -288,7 +304,7 @@ mod test {
 
     fn test_indexes_index_error(mut class_file: ClassFile, constant: Constant) -> Result<()> {
         class_file.constant_pool.push(constant);
-        let index = u16::try_from(class_file.constant_pool.len() - 1)?;
+        let index = u16::try_from(class_file.constant_pool.len())?;
         assert_eq!(
             verify_constant_indexes(&class_file),
             Err(InvalidConstantPoolIndex(index))
@@ -298,7 +314,7 @@ mod test {
 
     fn test_indexes_index_type_error(mut class_file: ClassFile, constant: Constant) -> Result<()> {
         class_file.constant_pool.push(constant);
-        let index = u16::try_from(class_file.constant_pool.len() - 1)?;
+        let index = u16::try_from(class_file.constant_pool.len())?;
         assert_eq!(
             verify_constant_indexes(&class_file),
             Err(InvalidConstantPoolIndexType(index))

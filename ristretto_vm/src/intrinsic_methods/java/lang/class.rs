@@ -1980,8 +1980,8 @@ mod tests {
         let desc_val = comp1.value("descriptor")?;
         assert_eq!(desc_val.as_string()?, "I");
         let type_val = comp1.value("type")?;
-        let type_obj = type_val.as_object_ref()?;
-        let type_name = type_obj.value("name")?.as_string()?;
+        let type_object = type_val.as_object_ref()?;
+        let type_name = type_object.value("name")?.as_string()?;
         assert_eq!(type_name, "int");
 
         // Verify second component (name)
