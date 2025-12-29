@@ -5,6 +5,8 @@ use crate::operand_stack::OperandStack;
 use ristretto_classloader::Class;
 use std::sync::Arc;
 
+/// The `getfield` instruction fetches a field value from an object instance.
+///
 /// # References
 ///
 /// - [JVMS §6.5.getfield](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.getfield)
@@ -30,6 +32,8 @@ pub(crate) async fn getfield(
     Ok(Continue)
 }
 
+/// The `putfield` instruction sets a field value in an object instance.
+///
 /// # References
 ///
 /// - [JVMS §6.5.putfield](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.putfield)
@@ -47,6 +51,7 @@ pub(crate) async fn putfield(
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let field_class_name = constant_pool.try_get_class(*class_index)?;
     let field_class = thread.class(field_class_name).await?;
+
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;

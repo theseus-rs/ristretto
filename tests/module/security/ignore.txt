@@ -1,17 +1,4 @@
-InternalError("Throwable(Object(Some(Object(RwLock { data: Object(java/lang/InternalError)
-  backtrace=java/lang/StackTraceElement[5]
-  detailMessage=String(\"Operand stack overflow\")
-  cause=Object(class java/lang/InternalError)
-  stackTrace=java/lang/StackTraceElement[0]
-  depth=int(5)
-  suppressedExceptions=Object(class java/util/Collections$EmptyList)
- })))):
-stdout: === Module Security and Access Control Tests ===
---- Test: Reflection Access ---
-String class accessible: true
-String public methods count: 106
-String declared methods count: 148
-String declared fields count: 11
---- Test: Package Access ---
-Error testing package access: illegal lookupClass: class java.lang.invoke.LambdaMetafactory
---- Test: Module Opens ---
+These tests require full security manager and reflection support.
+Current issues:
+- "ExceptionInInitializerError" - Security initialization issues
+- Requires full module reflection access control

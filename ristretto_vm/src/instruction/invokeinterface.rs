@@ -6,11 +6,14 @@ use crate::Result;
 use crate::assignable::Assignable;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
-use crate::instruction::resolve_method;
+use crate::instruction::{lookup_method, resolve_method_ref};
+use crate::method_ref_cache::InvokeKind;
 use crate::operand_stack::OperandStack;
 use ristretto_classfile::FieldType;
 use ristretto_classloader::Value;
 
+/// Invokeinterface instruction implementation.
+///
 /// # References
 ///
 /// - [JVMS §6.5.invokeinterface](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface)
@@ -22,26 +25,12 @@ pub(crate) async fn invokeinterface(
     _count: u8,
 ) -> Result<ExecutionResult> {
     let thread = frame.thread()?;
-    let constant_pool = frame.class().constant_pool();
-    let (class_index, name_and_type_index) =
-        constant_pool.try_get_interface_method_ref(method_index)?;
-    let interface_name = constant_pool.try_get_class(*class_index)?;
-    let interface_class = thread.class(interface_name).await?;
 
-    if !interface_class.is_interface() {
-        return Err(IncompatibleClassChangeError(format!(
-            "{} is not an interface",
-            interface_class.name()
-        ))
-        .into());
-    }
+    // Resolve the interface method with JPMS checks and caching
+    let resolution = resolve_method_ref(frame, method_index, InvokeKind::Interface).await?;
 
-    let (name_index, descriptor_index) =
-        constant_pool.try_get_name_and_type(*name_and_type_index)?;
-    let method_name = constant_pool.try_get_utf8(*name_index)?;
-    let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
     let (method_parameters, _method_return_type) =
-        FieldType::parse_method_descriptor(method_descriptor)?;
+        FieldType::parse_method_descriptor(&resolution.method_descriptor)?;
     let parameters = stack.drain_last(method_parameters.len() + 1);
 
     let object_class = match parameters.first() {
@@ -59,35 +48,41 @@ pub(crate) async fn invokeinterface(
     };
 
     // Check object implements interface
-    if !interface_class
+    if !resolution
+        .declaring_class
         .is_assignable_from(&thread, &object_class)
         .await?
     {
         return Err(IncompatibleClassChangeError(format!(
             "{} does not implement {}",
             object_class.name(),
-            interface_class.name()
+            resolution.declaring_class.name()
         ))
         .into());
     }
 
-    // Find the method implementation
-    let (resolved_class, resolved_method) =
-        resolve_method(&object_class, method_name, method_descriptor)?;
+    // Find the method implementation in the actual receiver class
+    let (resolved_class, resolved_method) = lookup_method(
+        &object_class,
+        &resolution.method_name,
+        &resolution.method_descriptor,
+    )?;
 
     // Check resolved method accessibility
     if !resolved_method.is_public() {
         return Err(IllegalAccessError(format!(
-            "Method {}.{method_name} is not public",
+            "Method {}.{} is not public",
             resolved_class.name(),
+            resolution.method_name,
         ))
         .into());
     }
 
     if resolved_method.is_abstract() {
         return Err(AbstractMethodError(format!(
-            "Method {}.{method_name} is abstract",
+            "Method {}.{} is abstract",
             resolved_class.name(),
+            resolution.method_name,
         ))
         .into());
     }

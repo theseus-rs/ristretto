@@ -28,6 +28,32 @@ pub(crate) fn unbox_primitive(values: &mut [Value], index: usize) -> Result<()> 
     Ok(())
 }
 
+/// Gets the caller module from the call stack.
+///
+/// Walks up the call stack to find the first frame that is not in the reflection
+/// implementation, and returns that frame's module.
+async fn get_caller_module(thread: &Arc<Thread>) -> Result<Option<String>> {
+    let frames = thread.frames().await?;
+    // Skip reflection frames to find the actual caller
+    for frame in frames.iter().rev() {
+        let class_name = frame.class().name();
+        // Skip reflection implementation classes
+        if class_name.starts_with("java/lang/reflect/")
+            || class_name.starts_with("jdk/internal/reflect/")
+            || class_name.starts_with("sun/reflect/")
+        {
+            continue;
+        }
+        return frame.class().module_name().map_err(Into::into);
+    }
+    // If all frames are reflection frames, return unnamed module
+    Ok(None)
+}
+
+/// Creates a new instance via reflection.
+///
+/// This method implements JPMS module access checking for reflective constructor access.
+/// For non-public constructors, the target module must open the package to the caller module.
 #[intrinsic_method(
     "jdk/internal/reflect/NativeConstructorAccessorImpl.newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;",
     Between(JAVA_11, JAVA_21)
@@ -39,13 +65,54 @@ pub(crate) async fn new_instance_0(
 ) -> Result<Option<Value>> {
     let mut arguments: Vec<Value> = parameters.pop()?.try_into()?;
     let method = parameters.pop()?;
-    let (class_object, parameter_types) = {
+    let (class_object, parameter_types, override_flag) = {
         let method = method.as_object_ref()?;
         let class_object = method.value("clazz")?;
         let parameter_types: Vec<Value> = method.value("parameterTypes")?.try_into()?;
-        (class_object, parameter_types)
+        // Check if setAccessible(true) was called (override flag)
+        let override_flag = method
+            .value("override")
+            .map(|v| v.as_i32().unwrap_or(0) != 0)
+            .unwrap_or(false);
+        (class_object, parameter_types, override_flag)
     };
     let class = class::get_class(&thread, &class_object).await?;
+
+    // Check module reflection access unless setAccessible(true) was called
+    // Note: In a full implementation, even setAccessible requires proper module opens
+    // via --add-opens or Module.addOpens(). For now, we allow setAccessible to bypass.
+    if !override_flag {
+        let vm = thread.vm()?;
+        let caller_module = get_caller_module(&thread).await?;
+        let target_module = class.module_name()?;
+
+        // Only check if modules are different
+        if caller_module != target_module {
+            let result = vm.module_system().check_reflection_access(
+                caller_module.as_deref(),
+                target_module.as_deref(),
+                class.name(),
+            );
+
+            // For system modules, allow access (they handle their own opens)
+            // For application modules, enforce strictly
+            if result.is_denied() {
+                let target = target_module.as_deref().unwrap_or("");
+                if !target.starts_with("java.")
+                    && !target.starts_with("jdk.")
+                    && !target.starts_with("sun.")
+                    && !target.starts_with("com.sun.")
+                {
+                    vm.module_system().require_reflection_access(
+                        caller_module.as_deref(),
+                        target_module.as_deref(),
+                        class.name(),
+                    )?;
+                }
+            }
+        }
+    }
+
     let class_name = class.name();
     let mut descriptor = String::new();
     for (index, parameter_type) in parameter_types.iter().enumerate() {

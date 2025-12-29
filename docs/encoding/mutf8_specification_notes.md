@@ -9,7 +9,7 @@ it differs from standard UTF-8, handling of special characters, surrogate pairs,
 
 **MUTF-8** (Modified UTF-8) is a variant of UTF-8 encoding used by Java for representing strings in class files and
 certain serialized data formats (notably DataInput/DataOutput, JNI, and the constant pool). Its purpose is to ensure
-that all encoded strings are compatible with null-terminated C strings and legacy Java expectations.
+that all encoded strings are compatible with null terminated C strings and legacy Java expectations.
 
 ---
 

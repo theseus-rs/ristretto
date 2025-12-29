@@ -82,6 +82,14 @@ pub enum JavaError {
     /// - [IllegalAccessError](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/IllegalAccessError.html)
     #[error("{0}")]
     IllegalAccessError(String),
+    /// `InaccessibleObjectException`
+    ///
+    /// Thrown when reflective access fails due to JPMS encapsulation.
+    ///
+    /// # References
+    /// - [InaccessibleObjectException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/reflect/InaccessibleObjectException.html)
+    #[error("{0}")]
+    InaccessibleObjectException(String),
     /// `IllegalArgumentException`
     ///
     /// # References
@@ -112,6 +120,12 @@ pub enum JavaError {
     /// - [NoClassDefFoundError](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/NoClassDefFoundError.html)
     #[error("{0}")]
     NoClassDefFoundError(String),
+    /// `NoSuchFieldError`
+    ///
+    /// # References
+    /// - [NoSuchFieldError](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/NoSuchFieldError.html)
+    #[error("{0}")]
+    NoSuchFieldError(String),
     /// `NoSuchMethodError`
     ///
     /// # References
@@ -168,11 +182,15 @@ impl JavaError {
             JavaError::ExceptionInInitializerError(_) => "java.lang.ExceptionInInitializerError",
             JavaError::FileNotFoundException(_) => "java.io.FileNotFoundException",
             JavaError::IllegalAccessError(_) => "java.lang.IllegalAccessError",
+            JavaError::InaccessibleObjectException(_) => {
+                "java.lang.reflect.InaccessibleObjectException"
+            }
             JavaError::IllegalArgumentException(_) => "java.lang.IllegalArgumentException",
             JavaError::IncompatibleClassChangeError(_) => "java.lang.IncompatibleClassChangeError",
             JavaError::IndexOutOfBoundsException { .. } => "java.lang.IndexOutOfBoundsException",
             JavaError::IoException(_) => "java.io.IOException",
             JavaError::NoClassDefFoundError(_) => "java.lang.NoClassDefFoundError",
+            JavaError::NoSuchFieldError(_) => "java.lang.NoSuchFieldError",
             JavaError::NoSuchMethodError(_) => "java.lang.NoSuchMethodError",
             JavaError::NegativeArraySizeException(_) => "java.lang.NegativeArraySizeException",
             JavaError::NullPointerException(_) => "java.lang.NullPointerException",
@@ -299,6 +317,17 @@ mod tests {
     }
 
     #[test]
+    fn test_inaccessible_object_exception() {
+        let error =
+            JavaError::InaccessibleObjectException("Unable to access private field".to_string());
+        assert_eq!(
+            error.class_name(),
+            "java.lang.reflect.InaccessibleObjectException"
+        );
+        assert_eq!(error.message(), "Unable to access private field");
+    }
+
+    #[test]
     fn test_illegal_argument_exception() {
         let error = JavaError::IllegalArgumentException("invalid argument".to_string());
         assert_eq!(error.class_name(), "java.lang.IllegalArgumentException");
@@ -331,6 +360,13 @@ mod tests {
         let error = JavaError::NoClassDefFoundError("java.lang.String".to_string());
         assert_eq!(error.class_name(), "java.lang.NoClassDefFoundError");
         assert_eq!(error.message(), "java.lang.String");
+    }
+
+    #[test]
+    fn test_no_such_field_error() {
+        let error = JavaError::NoSuchFieldError("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.NoSuchFieldError");
+        assert_eq!(error.message(), "foo");
     }
 
     #[test]

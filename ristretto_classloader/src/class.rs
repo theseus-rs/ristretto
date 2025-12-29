@@ -187,6 +187,10 @@ pub struct Class {
     initialization_state: RwLock<InitializationState>,
     /// Notifier for threads waiting on initialization to complete.
     initialization_notify: Notify,
+    /// The module this class belongs to.
+    /// None means the class is in the unnamed module (classpath).
+    /// This is set during class loading based on the class loader and module path.
+    module_name: RwLock<Option<String>>,
 }
 
 impl Class {
@@ -292,6 +296,7 @@ impl Class {
             object: RwLock::new(None),
             initialization_state: RwLock::new(InitializationState::NotInitialized),
             initialization_notify: Notify::new(),
+            module_name: RwLock::new(None),
         });
         Ok(class)
     }
@@ -377,6 +382,43 @@ impl Class {
     pub fn package(&self) -> &str {
         let index = self.name.rfind('/').unwrap_or(self.name.len());
         &self.name[..index]
+    }
+
+    /// Get the module name this class belongs to.
+    ///
+    /// Returns `None` if the class is in the unnamed module (classpath code).
+    /// Returns `Some(module_name)` if the class is in a named module.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the lock is poisoned.
+    pub fn module_name(&self) -> Result<Option<String>> {
+        let module_name = self
+            .module_name
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        Ok(module_name.clone())
+    }
+
+    /// Set the module name for this class.
+    ///
+    /// This is typically called during class loading when the module is determined
+    /// from the class loader hierarchy or module path configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `module` - The module name, or `None` for the unnamed module
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the lock is poisoned.
+    pub fn set_module_name(&self, module: Option<String>) -> Result<()> {
+        let mut module_name = self
+            .module_name
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        *module_name = module;
+        Ok(())
     }
 
     /// Transform the class name to a descriptor.

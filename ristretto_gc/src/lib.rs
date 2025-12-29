@@ -8,25 +8,25 @@
 //! ## Overview
 //!
 //! A low pause, concurrent and parallel mark and sweep garbage collector implementation for the
-//! Ristretto VM. This crate provides `Gc<T>` types for garbage-collected references, using a pure
+//! Ristretto VM. This crate provides `Gc<T>` types for garbage collected references, using a pure
 //! reachability analysis algorithm with automatic cycle detection and collection.
 //!
 //! ## Features
 //!
 //! ### **Low Pause, Parallel, Concurrent Collection**
 //! - **Sub-millisecond pause times** (default: 100 microseconds maximum)
-//! - **Parallel, Concurrent mark-and-sweep** algorithm with reachability analysis
+//! - **Parallel, Concurrent mark and sweep** algorithm with reachability analysis
 //! - **Background collection thread** that runs alongside application code
 //! - **Incremental processing** to maintain low latency
 //!
 //! ### **Parallel Processing**
-//! - **Parallel marking and sweeping** for multi-core utilization
+//! - **Parallel marking and sweeping** for multicore utilization
 //! - **Configurable parallel threshold** (default: 1,000,000 objects)
 //! - **Automatic fallback** to sequential processing for smaller object sets
 //! - **Work-stealing parallelism** for efficient load distribution
 //!
 //! ### **Smart Pointer Type**
-//! - **[`Gc<T>`]**: Garbage-collected smart pointer with reachability-based collection
+//! - **[`Gc<T>`]**: Garbage collected smart pointer with reachability based collection
 //! - **Thread-safe**: Full [`Send`] + [`Sync`] support for concurrent access
 //! - **Cycle-safe**: Automatic detection and collection of circular references
 //! - **[`Finalize`]**: Optional custom cleanup for objects before deallocation
@@ -70,13 +70,13 @@
 //! The collector automatically selects between parallel and sequential processing based on workload characteristics:
 //!
 //! - **Parallel Processing**: Used when object count exceeds the configured threshold (default: 1,000,000 objects)
-//!   - Utilizes work-stealing thread pool for optimal performance
+//!   - Utilizes work stealing thread pool for optimal performance
 //!   - Parallel iteration over object collections during mark and sweep phases
 //!   - Efficient for large heaps with many objects
 //!
 //! - **Sequential Processing**: Used for smaller object sets
 //!   - Avoids parallelization overhead for small workloads
-//!   - Single-threaded iteration for optimal cache locality
+//!   - Single threaded iteration for optimal cache locality
 //!   - Better performance for applications with smaller heaps
 //!
 //! ### Performance Characteristics
@@ -88,8 +88,8 @@
 //!
 //! ### Thread Safety
 //!
-//! All operations are fully thread-safe with enhanced parallel processing:
-//! - Lock-free fast paths for common operations
+//! All operations are fully thread safe with enhanced parallel processing:
+//! - Lock free fast paths for common operations
 //! - Safe concurrent collection with proper synchronization
 //! - Cross-thread garbage collection coordination
 //! - Work-stealing parallel processing

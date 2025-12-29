@@ -1,40 +1,4 @@
-Output mismatch: expected === Module Services and Providers Tests ===
---- Test: Service Loader ---
-CharsetProvider service loader: java.util.ServiceLoader[java.nio.charset.spi.CharsetProvider]
-  Provider 1: sun.nio.cs.ext.ExtendedCharsets
-Total charset providers found: 1
---- Test: Module Provides/Uses ---
-java.base provides services:
-  Service: java.util.random.RandomGenerator
-    Providers: [java.security.SecureRandom, java.util.Random, java.util.SplittableRandom]
-  Service: java.nio.file.spi.FileSystemProvider
-    Providers: [jdk.internal.jrtfs.JrtFileSystemProvider]
-java.base uses services:
-  javax.security.auth.spi.LoginModule
-  java.net.ContentHandlerFactory
-  java.util.random.RandomGenerator
-  sun.util.resources.LocaleData$SupplementaryResourceBundleProvider
-  java.nio.file.spi.FileSystemProvider
---- Test: Built-in Services ---
-FileSystemProvider services:
-  1: jar (jdk.nio.zipfs.ZipFileSystemProvider)
-  2: jrt (jdk.internal.jrtfs.JrtFileSystemProvider)
-LocaleServiceProvider count: 0
---- Test: Service Iteration ---
-Using stream API:
-  Provider type: class sun.nio.cs.ext.ExtendedCharsets
-Stream count: 1
-Using iterator:
-Iterator count (limited): 1
-Service loader reloaded successfully
-=== Module Services Tests Complete ===
-, actual === Module Services and Providers Tests ===
---- Test: Service Loader ---
-Error testing service loader: null 'this' reference
---- Test: Module Provides/Uses ---
-Error testing provides/uses: illegal lookupClass: class java.lang.invoke.LambdaMetafactory
---- Test: Built-in Services ---
-Error testing built-in services: null 'this' reference
---- Test: Service Iteration ---
-Error testing service iteration: null 'this' reference
-=== Module Services Tests Complete ===
+These tests require full LambdaMetafactory support and ServiceLoader functionality.
+Current issues:
+- "illegal lookupClass: class java.lang.invoke.LambdaMetafactory" - Lambda expressions not fully supported
+- "null 'this' reference" - ServiceLoader iteration issues
