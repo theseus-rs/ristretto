@@ -14,6 +14,7 @@ use ristretto_gc::Gc;
 use ristretto_macros::intrinsic_method;
 use std::io::Cursor;
 use std::sync::Arc;
+use tracing::{debug, error, info};
 use zerocopy::transmute_ref;
 
 pub(crate) const BOOLEAN_SIZE: usize = 1;
@@ -650,7 +651,7 @@ pub(crate) async fn define_anonymous_class_0(
     let bytes = parameters.pop()?;
     let host_class_object = parameters.pop()?;
     let host_class = get_class(&thread, &host_class_object).await?;
-    tracing::info!(
+    info!(
         "defineAnonymousClass0 called for host: {}",
         host_class.name()
     );
@@ -665,13 +666,13 @@ pub(crate) async fn define_anonymous_class_0(
     let class_file = match ClassFile::from_bytes(&mut cursor) {
         Ok(class_file) => class_file,
         Err(error) => {
-            tracing::error!("ClassFormatError in defineAnonymousClass0: {}", error);
+            error!("ClassFormatError in defineAnonymousClass0: {error}");
             return Err(ClassFormatError(error.to_string()).into());
         }
     };
-    tracing::info!(
-        "Defined anonymous class name: {:?}",
-        class_file.class_name()
+    debug!(
+        "Defined anonymous class name: {class_name:?}",
+        class_name = class_file.class_name()
     );
 
     // TODO: Apply constant pool patches
@@ -680,10 +681,10 @@ pub(crate) async fn define_anonymous_class_0(
     let class_loader = host_class.class_loader()?;
     let class_loader_weak = class_loader.clone().map(|cl| Arc::downgrade(&cl));
     let class = match Class::from(class_loader_weak, class_file) {
-        Ok(c) => c,
-        Err(e) => {
-            tracing::error!("Class::from failed in defineAnonymousClass0: {:?}", e);
-            return Err(InternalError(format!("Class::from failed: {e}")));
+        Ok(class) => class,
+        Err(error) => {
+            error!("Class::from failed in defineAnonymousClass0: {error:?}");
+            return Err(InternalError(format!("Class::from failed: {error}")));
         }
     };
 
@@ -715,8 +716,6 @@ pub(crate) async fn define_class_0(
     let bytes = parameters.pop()?;
     let name = parameters.pop()?;
 
-    tracing::info!("defineClass0 called");
-
     let bytes = {
         let bytes = bytes.as_byte_vec_ref()?;
         let bytes: &[u8] = transmute_ref!(&*bytes);
@@ -729,20 +728,20 @@ pub(crate) async fn define_class_0(
     let class_file = match ClassFile::from_bytes(&mut cursor) {
         Ok(class_file) => class_file,
         Err(error) => {
-            tracing::error!("ClassFormatError in defineClass0: {}", error);
+            error!("ClassFormatError in defineClass0: {error}");
             return Err(ClassFormatError(error.to_string()).into());
         }
     };
 
     if name.is_null() {
-        tracing::info!(
-            "Defining class (no name provided): {:?}",
-            class_file.class_name()
+        debug!(
+            "Defining class (no name provided): {class_name:?}",
+            class_name = class_file.class_name()
         );
     } else {
         let expected_name = name.as_string()?;
         // TODO: Verify name matches class_file.class_name()
-        tracing::info!("Defining class: {}", expected_name);
+        debug!("Defining class: {expected_name}");
     }
 
     let class = Class::from(None, class_file)?;

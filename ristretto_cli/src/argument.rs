@@ -68,7 +68,7 @@ pub struct XOptions {
 )]
 #[command(group(
     ArgGroup::new("execution")
-        .args(&["mainclass", "jar"])
+        .args(&["mainclass", "jar", "module"])
 ))]
 #[clap(styles=STYLES)]
 pub struct Arguments {
@@ -83,11 +83,76 @@ pub struct Arguments {
     pub jar: Option<OsString>,
 
     #[arg(
+        short = 'm',
+        long = "module",
+        help = "execute module[/mainclass]",
+        conflicts_with_all = ["mainclass", "jar"]
+    )]
+    pub module: Option<String>,
+
+    #[arg(
         long = "classpath",
         visible_aliases = ["cp", "class-path"],
         help = "class search path of directories and zip/jar files"
     )]
     pub classpath: Option<OsString>,
+
+    #[arg(
+        short = 'p',
+        long = "module-path",
+        help = "module path for modular JARs",
+        value_delimiter = ':'
+    )]
+    pub module_path: Option<Vec<OsString>>,
+
+    #[arg(
+        long = "upgrade-module-path",
+        help = "upgrade module path",
+        value_delimiter = ':'
+    )]
+    pub upgrade_module_path: Option<Vec<OsString>>,
+
+    #[arg(
+        long = "add-modules",
+        help = "additional root modules (e.g., ALL-DEFAULT, ALL-SYSTEM, or module names)",
+        value_delimiter = ','
+    )]
+    pub add_modules: Option<Vec<String>>,
+
+    #[arg(
+        long = "limit-modules",
+        help = "limit observable modules",
+        value_delimiter = ','
+    )]
+    pub limit_modules: Option<Vec<String>>,
+
+    #[arg(
+        long = "add-reads",
+        help = "add read edges (SOURCE=TARGET,...)",
+        value_delimiter = ','
+    )]
+    pub add_reads: Option<Vec<String>>,
+
+    #[arg(
+        long = "add-exports",
+        help = "add exports (SOURCE/PACKAGE=TARGET,...)",
+        value_delimiter = ','
+    )]
+    pub add_exports: Option<Vec<String>>,
+
+    #[arg(
+        long = "add-opens",
+        help = "add opens (SOURCE/PACKAGE=TARGET,...)",
+        value_delimiter = ','
+    )]
+    pub add_opens: Option<Vec<String>>,
+
+    #[arg(
+        long = "patch-module",
+        help = "patch module (MODULE=PATH,...)",
+        value_delimiter = ','
+    )]
+    pub patch_module: Option<Vec<String>>,
 
     #[arg(short = 'D', help = "define a system property")]
     pub properties: Option<Vec<String>>,

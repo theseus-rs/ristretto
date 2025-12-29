@@ -12,7 +12,7 @@ use std::mem::size_of;
 use std::ops::Deref;
 use std::ptr::{self, NonNull};
 
-/// A garbage-collected pointer type for `T`.
+/// A garbage collected pointer type for `T`.
 ///
 /// `Gc<T>` provides shared ownership of a value of type `T`, allocated in the heap. Unlike
 /// `Arc<T>`, `Gc<T>` can automatically detect and collect circular references using a low pause,
@@ -99,7 +99,7 @@ impl<T> Gc<T> {
             phantom: PhantomData,
         };
 
-        // Register the heap-allocated data pointer (not the Gc wrapper)
+        // Register the heap allocated data pointer (not the Gc wrapper)
         // This matches what the root registration uses: root.ptr.as_ptr()
         collector.register_object::<T>(ptr, size);
 
@@ -151,7 +151,7 @@ impl<T> Gc<T> {
             phantom: PhantomData,
         };
 
-        // Register the heap-allocated data pointer (not the Gc wrapper)
+        // Register the heap allocated data pointer (not the Gc wrapper)
         // This matches what the root registration uses: root.ptr.as_ptr()
         collector.register_object_with_finalizer::<T>(ptr, size);
 

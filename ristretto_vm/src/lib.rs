@@ -57,6 +57,8 @@ mod java_error;
 mod java_object;
 mod jit;
 mod local_variables;
+mod method_ref_cache;
+mod module_system;
 mod operand_stack;
 mod parameters;
 mod rust_value;
@@ -67,12 +69,16 @@ pub(crate) mod test;
 mod thread;
 mod vm;
 
-pub use configuration::{Configuration, ConfigurationBuilder, VerifyMode};
+pub use configuration::{
+    Configuration, ConfigurationBuilder, MainModule, ModuleExport, ModuleOpens, ModulePatch,
+    ModuleRead, VerifyMode,
+};
 pub use error::{Error, Result};
 pub(crate) use frame::Frame;
 pub use java_error::JavaError;
 pub use java_object::JavaObject;
 pub(crate) use local_variables::LocalVariables;
+pub use module_system::{ALL_UNNAMED, AccessCheckResult, DefinedModule, ModuleSystem};
 pub(crate) use operand_stack::OperandStack;
 pub use ristretto_classloader::{Class, ClassPath, DEFAULT_JAVA_VERSION, Object, Reference, Value};
 pub(crate) use thread::Thread;

@@ -398,12 +398,12 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         // Perform the actual verification
         match self.verify_with_stackmaps(&initial_frame) {
             Ok(()) => FastPathResult::Success,
-            Err(e) => {
+            Err(error) => {
                 // Check if this is a fallback-eligible error
-                if self.config.allows_inference_fallback() && Self::is_fallback_eligible(&e) {
-                    FastPathResult::NeedsFallback(format!("Fast path failed: {e}"))
+                if self.config.allows_inference_fallback() && Self::is_fallback_eligible(&error) {
+                    FastPathResult::NeedsFallback(format!("Fast path failed: {error}"))
                 } else {
-                    FastPathResult::Failed(e)
+                    FastPathResult::Failed(error)
                 }
             }
         }
@@ -1004,7 +1004,7 @@ mod tests {
 
         match &result {
             FastPathResult::Success => {}
-            FastPathResult::Failed(e) => panic!("Fast path failed: {e}"),
+            FastPathResult::Failed(error) => panic!("Fast path failed: {error}"),
             FastPathResult::NeedsFallback(reason) => panic!("Fast path needs fallback: {reason}"),
         }
     }

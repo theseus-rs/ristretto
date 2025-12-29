@@ -57,6 +57,7 @@ mod class_path_entry;
 mod error;
 mod field;
 mod method;
+pub mod module;
 mod object;
 mod reference;
 pub mod runtime;

@@ -46,7 +46,7 @@ enum GcPhase {
 
 /// A low pause, parallel, concurrent garbage collector using reachability analysis.
 ///
-/// This collector implements a concurrent mark-and-sweep algorithm with the following phases:
+/// This collector implements a concurrent mark and sweep algorithm with the following phases:
 /// 1. Initial Mark: Brief pause to mark root objects
 /// 2. Concurrent Mark: Mark reachable objects concurrently with mutator
 /// 3. Final Mark: Brief pause to handle objects modified during concurrent marking
@@ -133,7 +133,7 @@ impl GarbageCollector {
         // Store the raw pointer without casting to ensure type information is preserved
         let safe_ptr = SafePtr::from_ptr(ptr);
 
-        // Create type-safe metadata that knows how to properly drop the Gc<T>
+        // Create type safe metadata that knows how to properly drop the Gc<T>
         // Here T is the inner type, so we create a dropper for Gc<T>
         let metadata = ObjectMetadata::new_for_gc::<T>(safe_ptr, size);
 

@@ -4,6 +4,7 @@
 
 mod argument;
 mod logging;
+mod module;
 mod version;
 
 use argument::{Arguments, VerifyMode as CliVerifyMode};
@@ -48,7 +49,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn common_main(cli: Arguments) -> Result<()> {
+async fn common_main(mut cli: Arguments) -> Result<()> {
     if cli.help {
         Arguments::command().print_help()?;
         return Ok(());
@@ -67,8 +68,8 @@ async fn common_main(cli: Arguments) -> Result<()> {
 
     debug!("ristretto/{VERSION}/{OS}/{ARCH}");
     let mut configuration_builder = ConfigurationBuilder::new();
-    if let Some(class_path) = cli.classpath {
-        let class_paths = env::split_paths(&class_path).collect::<Vec<_>>();
+    if let Some(ref class_path) = cli.classpath {
+        let class_paths = env::split_paths(class_path).collect::<Vec<_>>();
         let class_path = ClassPath::from(&class_paths);
         configuration_builder = configuration_builder.class_path(class_path);
     }
@@ -77,13 +78,13 @@ async fn common_main(cli: Arguments) -> Result<()> {
         configuration_builder = configuration_builder.java_version(java_version);
     }
 
-    if let Some(main_class) = cli.mainclass {
+    if let Some(ref main_class) = cli.mainclass {
         configuration_builder = configuration_builder.main_class(main_class);
-    } else if let Some(jar) = cli.jar {
+    } else if let Some(ref jar) = cli.jar {
         configuration_builder = configuration_builder.jar(PathBuf::from(jar));
     }
 
-    if let Some(properties) = cli.properties {
+    if let Some(ref properties) = cli.properties {
         for property in properties {
             let mut parts = property.splitn(2, '=');
             let key = parts.next().ok_or(InternalError(format!(
@@ -110,6 +111,8 @@ async fn common_main(cli: Arguments) -> Result<()> {
     if cli.enable_preview {
         configuration_builder = configuration_builder.preview_features();
     }
+
+    configuration_builder = module::apply_module_configuration(&mut cli, configuration_builder);
 
     let configuration = configuration_builder.build()?;
     startup_trace!("[cli] vm configuration");
