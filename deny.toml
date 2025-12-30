@@ -22,6 +22,7 @@ allow = [
     "ISC",
     "MIT",
     "MPL-2.0",
+    "OpenSSL",
     "Unicode-3.0",
     "Unlicense",
     "Zlib",
@@ -32,10 +33,3 @@ allow = [
 multiple-versions = "deny"
 wildcards = "allow"
 deny = []
-
-[[licenses.clarify]]
-name = "ring"
-expression = "MIT AND ISC AND OpenSSL"
-license-files = [
-    { path = "LICENSE", hash = 0xbd0eed23 }
-]
