@@ -96,10 +96,12 @@ pub(crate) async fn get_system_package_names(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn set_boot_loader_unnamed_module_0(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _object = parameters.pop_reference()?;
+    let module = parameters.pop()?;
+    let vm = thread.vm()?;
+    vm.module_system().set_boot_unnamed_module(module);
     Ok(None)
 }
 

@@ -21,13 +21,14 @@
 use crate::Configuration;
 use crate::JavaError::{IllegalAccessError, InaccessibleObjectException};
 use crate::Result;
+use parking_lot::RwLock;
+use ristretto_classloader::Value;
 use ristretto_classloader::module::{
     AccessCheck, ModuleFinder, ModuleFinderChain, ModulePathFinder, ResolvedConfiguration,
     Resolver, SystemModuleFinder,
 };
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::RwLock;
 use tracing::debug;
 
 // Re-export AccessCheckResult from classloader - this is the canonical location
@@ -70,6 +71,11 @@ pub struct ModuleSystem {
     /// Defined modules: `module_name` -> module info.
     /// Tracks modules that have been defined via `Module.defineModule0`.
     modules: RwLock<HashMap<String, DefinedModule>>,
+
+    /// The boot class loader's unnamed module.
+    /// This is set by `BootLoader.setBootLoaderUnnamedModule0` during JVM initialization
+    /// and used as the default module for classes that don't have an explicit module.
+    boot_unnamed_module: RwLock<Option<Value>>,
 }
 
 /// Information about a defined module.
@@ -182,6 +188,7 @@ impl ModuleSystem {
             opens: RwLock::new(HashMap::new()),
             reads: RwLock::new(HashMap::new()),
             modules: RwLock::new(HashMap::new()),
+            boot_unnamed_module: RwLock::new(None),
         }
     }
 
@@ -513,13 +520,9 @@ impl ModuleSystem {
     ///
     /// This is called by `Module.addExports0(Module, String, Module)`.
     /// If `target_module` is `None`, the package is exported to all modules.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     pub fn add_export(&self, source_module: &str, package: &str, target_module: Option<&str>) {
         let target = target_module.unwrap_or(ALL_UNNAMED);
-        let mut exports = self.exports.write().expect("exports lock poisoned");
+        let mut exports = self.exports.write();
         exports
             .entry(source_module.to_string())
             .or_default()
@@ -544,13 +547,9 @@ impl ModuleSystem {
     }
 
     /// Checks if `package` in `source_module` is exported to `target_module`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     #[must_use]
     pub fn is_exported(&self, source_module: &str, package: &str, target_module: &str) -> bool {
-        let exports = self.exports.read().expect("exports lock poisoned");
+        let exports = self.exports.read();
         if let Some(module_exports) = exports.get(source_module)
             && let Some(targets) = module_exports.get(package)
         {
@@ -566,13 +565,9 @@ impl ModuleSystem {
     ///
     /// This is called by `Module.addOpens0(Module, String, Module)`.
     /// If `target_module` is `None`, the package is opened to all modules.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     pub fn add_opens(&self, source_module: &str, package: &str, target_module: Option<&str>) {
         let target = target_module.unwrap_or(ALL_UNNAMED);
-        let mut opens = self.opens.write().expect("opens lock poisoned");
+        let mut opens = self.opens.write();
         opens
             .entry(source_module.to_string())
             .or_default()
@@ -592,10 +587,6 @@ impl ModuleSystem {
     }
 
     /// Checks if `package` in `source_module` is opened to `target_module`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     #[must_use]
     pub fn is_opened(&self, source_module: &str, package: &str, target_module: &str) -> bool {
         // First check if the module is open (all packages implicitly opened)
@@ -603,7 +594,7 @@ impl ModuleSystem {
             return true;
         }
 
-        let opens = self.opens.read().expect("opens lock poisoned");
+        let opens = self.opens.read();
         if let Some(module_opens) = opens.get(source_module)
             && let Some(targets) = module_opens.get(package)
         {
@@ -617,12 +608,8 @@ impl ModuleSystem {
     /// Adds a read edge from `source_module` to `target_module`.
     ///
     /// This is called by `Module.addReads0(Module, Module)`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     pub fn add_read(&self, source_module: &str, target_module: &str) {
-        let mut reads = self.reads.write().expect("reads lock poisoned");
+        let mut reads = self.reads.write();
         reads
             .entry(source_module.to_string())
             .or_default()
@@ -630,10 +617,6 @@ impl ModuleSystem {
     }
 
     /// Checks if `source_module` reads `target_module`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     #[must_use]
     pub fn can_read(&self, source_module: &str, target_module: &str) -> bool {
         // Same module can always read itself
@@ -646,7 +629,7 @@ impl ModuleSystem {
             return true;
         }
 
-        let reads = self.reads.read().expect("reads lock poisoned");
+        let reads = self.reads.read();
         reads
             .get(source_module)
             .is_some_and(|targets| targets.contains(target_module))
@@ -655,65 +638,60 @@ impl ModuleSystem {
     /// Defines a new module.
     ///
     /// This is called by `Module.defineModule0`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     pub fn define_module(&self, module: DefinedModule) {
-        let mut modules = self.modules.write().expect("modules lock poisoned");
+        let mut modules = self.modules.write();
         modules.insert(module.name.clone(), module);
     }
 
     /// Gets a defined module by name.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     #[must_use]
     pub fn get_module(&self, name: &str) -> Option<DefinedModule> {
-        let modules = self.modules.read().expect("modules lock poisoned");
+        let modules = self.modules.read();
         modules.get(name).cloned()
     }
 
     /// Checks if a module is defined and is open.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     #[must_use]
     pub fn is_module_open(&self, name: &str) -> bool {
-        let modules = self.modules.read().expect("modules lock poisoned");
+        let modules = self.modules.read();
         modules.get(name).is_some_and(|m| m.is_open)
     }
 
     /// Returns all dynamic exports for merging with static configuration.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     #[must_use]
     pub fn get_all_exports(&self) -> HashMap<String, HashMap<String, HashSet<String>>> {
-        self.exports.read().expect("exports lock poisoned").clone()
+        self.exports.read().clone()
     }
 
     /// Returns all dynamic opens for merging with static configuration.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     #[must_use]
     pub fn get_all_opens(&self) -> HashMap<String, HashMap<String, HashSet<String>>> {
-        self.opens.read().expect("opens lock poisoned").clone()
+        self.opens.read().clone()
     }
 
     /// Returns all dynamic reads for merging with static configuration.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the internal lock is poisoned.
     #[must_use]
     pub fn get_all_reads(&self) -> HashMap<String, HashSet<String>> {
-        self.reads.read().expect("reads lock poisoned").clone()
+        self.reads.read().clone()
+    }
+
+    /// Gets the boot class loader's unnamed module.
+    ///
+    /// Returns `None` if the unnamed module has not been set yet (i.e., before
+    /// `BootLoader.setBootLoaderUnnamedModule0` is called during JVM initialization).
+    #[must_use]
+    pub fn boot_unnamed_module(&self) -> Option<Value> {
+        let guard = self.boot_unnamed_module.read();
+        guard.clone()
+    }
+    /// Sets the boot class loader's unnamed module.
+    ///
+    /// This is called by `BootLoader.setBootLoaderUnnamedModule0` during JVM initialization.
+    /// The unnamed module is used as the default module for classes that don't have
+    /// an explicit module assignment.
+    pub fn set_boot_unnamed_module(&self, module: Value) {
+        let mut guard = self.boot_unnamed_module.write();
+        *guard = Some(module);
     }
 
     /// Checks if `from_module` can access `package` in `to_module` based on **dynamic state only**.
@@ -1569,5 +1547,238 @@ mod tests {
         assert!(module_system.is_opened("java.base", "java.lang.reflect", "ALL-UNNAMED"));
 
         Ok(())
+    }
+
+    // ==================== require_access tests ====================
+
+    #[test]
+    fn test_require_access_same_module_success() {
+        let module_system = ModuleSystem::empty();
+        // Same module access is always allowed
+        let result =
+            module_system.require_access(Some("my.module"), Some("my.module"), "my/pkg/MyClass");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_access_with_export_success() {
+        let module_system = ModuleSystem::empty();
+        module_system.add_read("my.module", "other.module");
+        module_system.add_export("other.module", "other/api", Some("my.module"));
+
+        let result = module_system.require_access(
+            Some("my.module"),
+            Some("other.module"),
+            "other/api/SomeClass",
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_access_not_readable_failure() {
+        let module_system = ModuleSystem::empty();
+        // Module doesn't read the other module - should fail
+        let result = module_system.require_access(
+            Some("my.module"),
+            Some("other.module"),
+            "other/pkg/SomeClass",
+        );
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        let error_msg = error.to_string();
+        assert!(error_msg.contains("does not read"));
+    }
+
+    #[test]
+    fn test_require_access_not_exported_failure() {
+        let module_system = ModuleSystem::empty();
+        module_system.add_read("my.module", "other.module");
+        // Package is not exported - should fail
+        let result = module_system.require_access(
+            Some("my.module"),
+            Some("other.module"),
+            "other/internal/Secret",
+        );
+        assert!(result.is_err());
+        let error = result.unwrap_err();
+        let error_msg = error.to_string();
+        assert!(error_msg.contains("does not export"));
+    }
+
+    #[test]
+    fn test_require_access_unnamed_to_named_module_success() {
+        let module_system = ModuleSystem::empty();
+        module_system.add_export_to_all_unnamed("java.base", "java/lang");
+
+        // Unnamed module accessing exported package
+        let result = module_system.require_access(None, Some("java.base"), "java/lang/String");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_access_unnamed_to_named_module_failure() {
+        let module_system = ModuleSystem::empty();
+        // Package not exported to unnamed
+        let result =
+            module_system.require_access(None, Some("java.base"), "java/lang/internal/Secret");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_require_access_both_unnamed_success() {
+        let module_system = ModuleSystem::empty();
+        // Both modules are unnamed - should always succeed
+        let result = module_system.require_access(None, None, "com/example/MyClass");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_access_to_java_base_success() {
+        let module_system = ModuleSystem::empty();
+        module_system.add_export_to_all("java.base", "java/lang");
+
+        // java.base is implicitly readable by all modules
+        let result =
+            module_system.require_access(Some("my.module"), Some("java.base"), "java/lang/String");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_access_export_to_all_success() {
+        let module_system = ModuleSystem::empty();
+        module_system.add_read("my.module", "other.module");
+        module_system.add_export_to_all("other.module", "other/public");
+
+        // Export to ALL should allow any module
+        let result = module_system.require_access(
+            Some("my.module"),
+            Some("other.module"),
+            "other/public/PublicClass",
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_access_wrong_target_module_failure() {
+        let module_system = ModuleSystem::empty();
+        module_system.add_read("my.module", "other.module");
+        // Export only to different.module, not my.module
+        module_system.add_export("other.module", "other/api", Some("different.module"));
+
+        let result = module_system.require_access(
+            Some("my.module"),
+            Some("other.module"),
+            "other/api/SomeClass",
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_require_access_multiple_packages_partial_export() {
+        let module_system = ModuleSystem::empty();
+        module_system.add_read("my.module", "other.module");
+        module_system.add_export("other.module", "other/api", Some("my.module"));
+        // other/internal is NOT exported
+
+        // Should succeed for exported package
+        let result1 = module_system.require_access(
+            Some("my.module"),
+            Some("other.module"),
+            "other/api/PublicClass",
+        );
+        assert!(result1.is_ok());
+
+        // Should fail for non-exported package
+        let result2 = module_system.require_access(
+            Some("my.module"),
+            Some("other.module"),
+            "other/internal/InternalClass",
+        );
+        assert!(result2.is_err());
+    }
+
+    #[test]
+    fn test_require_access_default_package_class() {
+        let module_system = ModuleSystem::empty();
+        // Class in default package (no slash in name)
+        let result = module_system.require_access(None, None, "DefaultPackageClass");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_access_deeply_nested_package() {
+        let module_system = ModuleSystem::empty();
+        module_system.add_read("my.module", "other.module");
+        module_system.add_export(
+            "other.module",
+            "com/example/deep/nested/api",
+            Some("my.module"),
+        );
+
+        let result = module_system.require_access(
+            Some("my.module"),
+            Some("other.module"),
+            "com/example/deep/nested/api/DeepClass",
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_require_access_error_message_contains_module_names() {
+        let module_system = ModuleSystem::empty();
+        let result = module_system.require_access(
+            Some("requesting.module"),
+            Some("target.module"),
+            "target/pkg/TargetClass",
+        );
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        assert!(error_msg.contains("requesting.module"));
+        assert!(error_msg.contains("target.module"));
+    }
+
+    #[test]
+    fn test_require_access_error_message_contains_class_name() {
+        let module_system = ModuleSystem::empty();
+        let result = module_system.require_access(
+            Some("my.module"),
+            Some("other.module"),
+            "com/example/MyClass",
+        );
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        // Class name should be in dot format in error message
+        assert!(error_msg.contains("com.example.MyClass"));
+    }
+
+    #[test]
+    fn test_require_access_opened_package_requires_export_for_regular_access() {
+        let module_system = ModuleSystem::empty();
+        module_system.add_read("my.module", "other.module");
+        // Only opened, not explicitly exported
+        module_system.add_opens("other.module", "other/internal", Some("my.module"));
+
+        // Opens does NOT imply export for regular (non-reflection) access
+        // Regular access requires explicit export
+        let result = module_system.require_access(
+            Some("my.module"),
+            Some("other.module"),
+            "other/internal/InternalClass",
+        );
+        // This should fail because opened packages are only for reflection access
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_require_access_unnamed_module_can_access_opened_package() {
+        let module_system = ModuleSystem::empty();
+        // Open package to all unnamed
+        module_system.add_opens_to_all_unnamed("java.base", "java/lang/internal");
+
+        // Unnamed module accessing opened package - this works because
+        // check_unnamed_module_access checks both exports AND opens
+        let result =
+            module_system.require_access(None, Some("java.base"), "java/lang/internal/Unsafe");
+        assert!(result.is_ok());
     }
 }
