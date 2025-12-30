@@ -138,16 +138,22 @@ fn process_error(error: Error) -> Result<()> {
         return Err(error);
     };
 
-    let throwable = throwable.clone();
+    let mut current_throwable = throwable.clone();
     let mut first_throwable = true;
 
     loop {
-        let throwable_object = throwable.as_object_ref()?;
-        let class = throwable_object.class();
-        let class_name = class.name();
-        let message = throwable_object
-            .value("detailMessage")
-            .and_then(|value| value.as_string())?;
+        let (class_name, message, stack_trace, cause) = {
+            let throwable_object = current_throwable.as_object_ref()?;
+            let class = throwable_object.class();
+            let class_name = class.name().to_string();
+            let message = throwable_object
+                .value("detailMessage")
+                .and_then(|value| value.as_string())?;
+            let stack_trace: Vec<Value> = throwable_object.value("backtrace")?.try_into()?;
+            let cause = throwable_object.value("cause")?;
+            (class_name, message, stack_trace, cause)
+        };
+
         let prelude = if first_throwable {
             first_throwable = false;
             "Exception"
@@ -155,7 +161,7 @@ fn process_error(error: Error) -> Result<()> {
             "Caused by"
         };
         eprintln!("{prelude} {class_name}: {message}");
-        let stack_trace: Vec<Value> = throwable_object.value("backtrace")?.try_into()?;
+
         for stack_trace_element in stack_trace {
             let Value::Object(Some(reference)) = stack_trace_element else {
                 continue;
@@ -185,10 +191,20 @@ fn process_error(error: Error) -> Result<()> {
             }
         }
 
-        let cause = throwable_object.value("cause")?;
-        if cause.is_null() || throwable == cause {
+        if cause.is_null() {
             break;
         }
+
+        let Value::Object(Some(current_gc)) = &current_throwable else {
+            break;
+        };
+        let Value::Object(Some(cause_gc)) = &cause else {
+            break;
+        };
+        if std::ptr::eq(cause_gc.as_ptr(), current_gc.as_ptr()) {
+            break;
+        }
+        current_throwable = cause;
     }
     Err(error)
 }
