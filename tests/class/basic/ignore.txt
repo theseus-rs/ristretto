@@ -1,0 +1,35 @@
+InternalError("Throwable(Object(Some(RwLock { data: Object(Object(java/lang/InternalError)
+  backtrace=java/lang/StackTraceElement[17]
+  detailMessage=String(\"Internal error: putReferenceType: Invalid reference\")
+  cause=Object(class java/lang/InternalError)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(17)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+) }))):
+stdout: === Comprehensive Class Get Methods Test ===
+
+--- Test: getName() ---
+ChildClass.getName(): Test$ChildClass
+String[].getName(): [Ljava.lang.String;
+int.getName(): int
+InnerClass.getName(): Test$ChildClass$InnerClass
+
+--- Test: getSimpleName() ---
+ChildClass.getSimpleName(): ChildClass
+String[].getSimpleName(): String[]
+int.getSimpleName(): int
+InnerClass.getSimpleName(): InnerClass
+
+--- Test: getCanonicalName() ---
+ChildClass.getCanonicalName(): Test.ChildClass
+String[].getCanonicalName(): java.lang.String[]
+InnerClass.getCanonicalName(): Test.ChildClass.InnerClass
+
+--- Test: getTypeName() ---
+ChildClass.getTypeName(): Test$ChildClass
+String[].getTypeName(): java.lang.String[]
+int.getTypeName(): int
+
+--- Test: getPackage() ---
+
+stderr: ")

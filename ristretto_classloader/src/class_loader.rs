@@ -1,4 +1,5 @@
 use crate::Error::ClassNotFound;
+use crate::module::ResolvedConfiguration;
 use crate::{Class, ClassPath, Result, Value};
 use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2};
 use std::collections::HashMap;
@@ -19,6 +20,9 @@ pub struct ClassLoader {
     parent: Arc<RwLock<Option<Arc<ClassLoader>>>>,
     classes: Arc<RwLock<HashMap<String, Arc<Class>>>>,
     object: Arc<RwLock<Option<Value>>>,
+    /// Module configuration for JPMS support.
+    /// When set, the class loader will determine module names from packages during class loading.
+    module_configuration: Arc<RwLock<Option<Arc<ResolvedConfiguration>>>>,
 }
 
 impl ClassLoader {
@@ -31,6 +35,7 @@ impl ClassLoader {
             parent: Arc::new(RwLock::new(None)),
             classes: Arc::new(RwLock::new(HashMap::new())),
             object: Arc::new(RwLock::new(None)),
+            module_configuration: Arc::new(RwLock::new(None)),
         })
     }
 
@@ -102,11 +107,46 @@ impl ClassLoader {
             let class_path = self.class_path();
             if let Ok(class_file) = class_path.read_class(class_name_internal).await {
                 let class = Class::from(Some(self.this.clone()), class_file)?;
+                self.set_class_module_name(&class, class_name_internal)
+                    .await?;
                 return Ok(self.cache_class(class_name_internal, class).await);
             }
         }
 
         Err(ClassNotFound(class_name_internal.to_string()))
+    }
+
+    /// Determines and sets the module name for a class based on its package.
+    ///
+    /// This uses the module configuration's package-to-module mapping to determine which module
+    /// (if any) the class belongs to.
+    async fn set_class_module_name(&self, class: &Arc<Class>, class_name: &str) -> Result<()> {
+        let config_guard = self.module_configuration.read().await;
+        if let Some(ref config) = *config_guard {
+            // Extract package from class name (e.g., "java/lang/String" -> "java/lang")
+            let package = Self::package_from_class_name(class_name);
+            if let Some(module_name) = config.find_module_for_package(package) {
+                class.set_module_name(Some(module_name.to_string()))?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Extracts the package name from a fully qualified class name.
+    ///
+    /// # Examples
+    ///
+    /// - `java/lang/String` → `java/lang`
+    /// - `com/example/MyClass` → `com/example`
+    /// - `MyClass` → empty string (default package)
+    #[must_use]
+    pub fn package_from_class_name(class_name: &str) -> &str {
+        if let Some(last_slash) = class_name.rfind('/') {
+            &class_name[..last_slash]
+        } else {
+            // Default package
+            ""
+        }
     }
 
     /// Cache a class in the class loader.
@@ -193,6 +233,21 @@ impl ClassLoader {
         let mut object_guard = self.object.write().await;
         *object_guard = object;
     }
+
+    /// Get the module configuration for JPMS support.
+    pub async fn module_configuration(&self) -> Option<Arc<ResolvedConfiguration>> {
+        let config_guard = self.module_configuration.read().await;
+        config_guard.clone()
+    }
+
+    /// Set the module configuration for JPMS support.
+    ///
+    /// When set, the class loader will determine module names for loaded classes
+    /// based on the package-to-module mapping in the configuration.
+    pub async fn set_module_configuration(&self, config: Option<Arc<ResolvedConfiguration>>) {
+        let mut config_guard = self.module_configuration.write().await;
+        *config_guard = config;
+    }
 }
 
 impl Clone for ClassLoader {
@@ -205,6 +260,7 @@ impl Clone for ClassLoader {
             parent: Arc::clone(&self.parent),
             classes: Arc::clone(&self.classes),
             object: Arc::clone(&self.object),
+            module_configuration: Arc::clone(&self.module_configuration),
         }
     }
 }
@@ -401,5 +457,52 @@ mod tests {
             clone.classes.read().await.len()
         );
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_module_configuration() -> Result<()> {
+        use crate::module::ResolvedConfiguration;
+        use std::collections::{BTreeMap, HashMap};
+
+        // Create a module configuration with a package-to-module mapping
+        let mut package_to_module = BTreeMap::new();
+        package_to_module.insert("test/pkg".to_string(), "test.module".to_string());
+
+        let config = ResolvedConfiguration::new(
+            BTreeMap::new(),
+            package_to_module,
+            HashMap::new(),
+            HashMap::new(),
+        );
+
+        let class_path = ClassPath::from(&["."]);
+        let class_loader = ClassLoader::new("test", class_path);
+
+        // Verify no module configuration initially
+        assert!(class_loader.module_configuration().await.is_none());
+
+        // Set module configuration
+        class_loader
+            .set_module_configuration(Some(Arc::new(config)))
+            .await;
+
+        // Verify configuration is set
+        assert!(class_loader.module_configuration().await.is_some());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_package_from_class_name() {
+        assert_eq!(
+            ClassLoader::package_from_class_name("java/lang/String"),
+            "java/lang"
+        );
+        assert_eq!(
+            ClassLoader::package_from_class_name("com/example/MyClass"),
+            "com/example"
+        );
+        assert_eq!(ClassLoader::package_from_class_name("MyClass"), "");
+        assert_eq!(ClassLoader::package_from_class_name("a/b/c/D"), "a/b/c");
     }
 }

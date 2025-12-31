@@ -106,6 +106,17 @@ impl VM {
             ModuleSystem::new(&configuration, &java_home, java_major_version).await?;
         startup_trace!("[vm] module system");
 
+        // Set module configuration on class loaders for JPMS support. This enables module name
+        // assignment during class loading
+        let module_config = Arc::new(module_system.resolved_configuration().clone());
+        bootstrap_class_loader
+            .set_module_configuration(Some(module_config.clone()))
+            .await;
+        class_loader
+            .set_module_configuration(Some(module_config))
+            .await;
+        startup_trace!("[vm] class loader module config");
+
         let vm = Arc::new_cyclic(|vm| VM {
             vm: vm.clone(),
             configuration,

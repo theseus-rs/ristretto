@@ -233,7 +233,6 @@ async fn to_class_loader_object(thread: &Thread, class_loader: &Arc<ClassLoader>
 
     let vm = thread.vm()?;
     let builtin_class_loader = if *vm.java_class_file_version() == JAVA_8 {
-        // TODO: implement creating a class loader object for Java 8
         let builtin_class_loader = Value::Object(None);
         class_loader
             .set_object(Some(builtin_class_loader.clone()))
@@ -277,46 +276,168 @@ impl JavaObject for Arc<ClassLoader> {
     }
 }
 
+/// Convert a Class to a Class object.
+///
+/// # Errors
+///
+/// An error will be returned if the conversion fails.
 async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
+    let vm = thread.vm()?;
+    let java_version = vm.java_class_file_version();
+
+    // Return cached object if available, updating module if necessary
     if let Some(object) = class.object()? {
+        if *java_version > JAVA_8 {
+            update_cached_class_module(thread, class, &object).await?;
+        }
         return Ok(object);
     }
 
+    // Build class name and get class loader object
     let class_name = class.name().replace('/', ".");
     let name = class_name.to_object(thread).await?;
     let class_loader_object = match class.class_loader()? {
         Some(class_loader) => Box::pin(to_class_loader_object(thread, &class_loader)).await?,
         None => Value::Object(None),
     };
-    let component_type = class.component_type();
-    let component_type_object = if let Some(component_type) = component_type {
-        let component_type_class = thread.class(component_type).await?;
-        Box::pin(to_class_object(thread, &component_type_class)).await?
-    } else {
-        Value::Object(None)
-    };
 
+    // Get component type and module
+    let component_type_object = get_component_type_object(thread, class).await?;
+    let module = get_class_module(thread, class, &class_loader_object).await?;
+
+    // Build constructor parameters based on Java version
+    let (descriptor, parameters, module) = build_class_constructor_params(
+        class,
+        java_version,
+        class_loader_object,
+        component_type_object,
+        module,
+    );
+
+    // Create the Class object
+    let object_value = thread
+        .object("java.lang.Class", descriptor, &parameters)
+        .await?;
+
+    {
+        let mut object = object_value.as_object_mut()?;
+        object.set_value("name", name)?;
+
+        if !matches!(module, Value::Object(None)) {
+            object.set_value_unchecked("module", module)?;
+        }
+    }
+
+    class.set_object(Some(object_value.clone()))?;
+    Ok(object_value)
+}
+
+/// Update the module field on a cached Class object for Java 9+.
+/// This handles the case where the Class object was created before the module system was
+/// fully initialized.
+///
+/// # Errors
+///
+/// An error will be returned if the module cannot be updated.
+async fn update_cached_class_module(
+    thread: &Thread,
+    class: &Arc<Class>,
+    object: &Value,
+) -> Result<()> {
+    let vm = thread.vm()?;
+    let current_module = object.as_object_ref()?.value("module")?;
+    if !current_module.is_null() {
+        return Ok(());
+    }
+
+    if let Some(class_loader) = class.class_loader()? {
+        let class_loader_object = Box::pin(to_class_loader_object(thread, &class_loader)).await?;
+        if !class_loader_object.is_null() {
+            let module = thread
+                .try_invoke(
+                    "java.lang.ClassLoader",
+                    "getUnnamedModule()Ljava/lang/Module;",
+                    std::slice::from_ref(&class_loader_object),
+                )
+                .await?;
+            if !module.is_null() {
+                let mut object_mut = object.as_object_mut()?;
+                object_mut.set_value_unchecked("module", module)?;
+            }
+        }
+    } else {
+        // For bootstrap classes, try named module first, then unnamed
+        let package = ClassLoader::package_from_class_name(class.name());
+        let module = vm
+            .module_system()
+            .get_module_for_package(package)
+            .or_else(|| vm.module_system().boot_unnamed_module());
+        if let Some(module) = module {
+            let mut object_mut = object.as_object_mut()?;
+            object_mut.set_value_unchecked("module", module)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Get the module for a class based on Java version and class loader.
+///
+/// # Errors
+///
+/// An error will be returned if the module cannot be retrieved.
+async fn get_class_module(
+    thread: &Thread,
+    class: &Arc<Class>,
+    class_loader_object: &Value,
+) -> Result<Value> {
     let vm = thread.vm()?;
     let java_version = vm.java_class_file_version();
-    let module = if *java_version <= JAVA_8 || class_loader_object.is_null() {
-        Value::Object(None)
-    } else {
-        thread
-            .try_invoke(
-                "java.lang.ClassLoader",
-                "getUnnamedModule()Ljava/lang/Module;",
-                std::slice::from_ref(&class_loader_object),
-            )
-            .await?
-    };
 
-    let (descriptor, parameters, module) = if *java_version <= JAVA_8 {
+    if *java_version <= JAVA_8 {
+        return Ok(Value::Object(None));
+    }
+
+    if class_loader_object.is_null() {
+        // For bootstrap-loaded classes, try to find the correct named module first (e.g., java.base
+        // for java.lang.String). If not found, fall back to the boot loader's unnamed module.
+        let package = ClassLoader::package_from_class_name(class.name());
+        let module = vm
+            .module_system()
+            .get_module_for_package(package)
+            .or_else(|| vm.module_system().boot_unnamed_module())
+            .unwrap_or(Value::Object(None));
+        return Ok(module);
+    }
+
+    thread
+        .try_invoke(
+            "java.lang.ClassLoader",
+            "getUnnamedModule()Ljava/lang/Module;",
+            std::slice::from_ref(class_loader_object),
+        )
+        .await
+}
+
+/// Build the constructor descriptor and parameters for creating a Class object based on Java version.
+///
+/// # Returns
+///
+/// A tuple containing the constructor descriptor, parameters, and module value.
+fn build_class_constructor_params(
+    class: &Arc<Class>,
+    java_version: &ristretto_classfile::Version,
+    class_loader_object: Value,
+    component_type_object: Value,
+    module: Value,
+) -> (&'static str, Vec<Value>, Value) {
+    if *java_version <= JAVA_8 {
         (
             "Ljava/lang/ClassLoader;",
             vec![class_loader_object],
             Value::Object(None),
         )
-    } else if *java_version > JAVA_8 && *java_version < JAVA_25 {
+    } else if *java_version < JAVA_25 {
         (
             "Ljava/lang/ClassLoader;Ljava/lang/Class;",
             vec![class_loader_object, component_type_object],
@@ -337,22 +458,21 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
             ],
             module,
         )
-    };
-    let object_value = thread
-        .object("java.lang.Class", descriptor, &parameters)
-        .await?;
-
-    {
-        let mut object = object_value.as_object_mut()?;
-        object.set_value("name", name)?;
-        // Set the class module if applicable
-        if !matches!(module, Value::Object(None)) {
-            object.set_value_unchecked("module", module)?;
-        }
     }
+}
 
-    class.set_object(Some(object_value.clone()))?;
-    Ok(object_value)
+/// Get the component type object for an array class.
+///
+/// # Errors
+///
+/// An error will be returned if the component type cannot be converted to a Class object.
+async fn get_component_type_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
+    if let Some(component_type) = class.component_type() {
+        let component_type_class = thread.class(component_type).await?;
+        Box::pin(to_class_object(thread, &component_type_class)).await
+    } else {
+        Ok(Value::Object(None))
+    }
 }
 
 impl JavaObject for Arc<Class> {
