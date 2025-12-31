@@ -221,6 +221,7 @@ pub(crate) async fn define_module_0_0(
         defined_module.version = version;
         defined_module.location = location;
         defined_module.packages = packages;
+        defined_module.module_object = Some(module);
 
         let vm = thread.vm()?;
         vm.module_system().define_module(defined_module);
@@ -270,6 +271,7 @@ pub(crate) async fn define_module_0_1(
         defined_module.version = version;
         defined_module.location = location;
         defined_module.packages = packages;
+        defined_module.module_object = Some(module);
 
         let vm = thread.vm()?;
         vm.module_system().define_module(defined_module);

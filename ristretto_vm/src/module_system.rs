@@ -91,6 +91,8 @@ pub struct DefinedModule {
     pub location: Option<String>,
     /// Packages contained in this module.
     pub packages: HashSet<String>,
+    /// The java.lang.Module object for this module (set during defineModule0).
+    pub module_object: Option<Value>,
 }
 
 impl DefinedModule {
@@ -103,6 +105,7 @@ impl DefinedModule {
             version: None,
             location: None,
             packages: HashSet::new(),
+            module_object: None,
         }
     }
 }
@@ -684,6 +687,37 @@ impl ModuleSystem {
         let guard = self.boot_unnamed_module.read();
         guard.clone()
     }
+
+    /// Gets the java.lang.Module object for a given package.
+    ///
+    /// This looks up which module contains the package and returns the corresponding
+    /// `java.lang.Module` object that was stored during `defineModule0`.
+    ///
+    /// Returns `None` if:
+    /// - The package is not in any defined module
+    /// - The module was defined but no Module object was stored
+    #[must_use]
+    pub fn get_module_for_package(&self, package: &str) -> Option<Value> {
+        // First check the defined modules from defineModule0 calls
+        let modules = self.modules.read();
+        for module in modules.values() {
+            // Convert package name from internal format (java/lang) to dot format (java.lang)
+            let dot_package = package.replace('/', ".");
+            if module.packages.contains(&dot_package) || module.packages.contains(package) {
+                return module.module_object.clone();
+            }
+        }
+
+        // Check the static resolved configuration
+        if let Some(module_name) = self.resolved_configuration.find_module_for_package(package)
+            && let Some(module) = modules.get(module_name)
+        {
+            return module.module_object.clone();
+        }
+
+        None
+    }
+
     /// Sets the boot class loader's unnamed module.
     ///
     /// This is called by `BootLoader.setBootLoaderUnnamedModule0` during JVM initialization.
