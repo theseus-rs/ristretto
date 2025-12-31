@@ -18,7 +18,7 @@ bytemuck = { workspace = true }
 flate2 = { workspace = true }
 indexmap = { workspace = true }
 parking_lot = { workspace = true }
-reqwest = { workspace = true, features = ["json"] }
+reqwest = { workspace = true, features = ["json", "query"] }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.27.0" }
 ristretto_gc = { path = "../ristretto_gc", version = "0.27.0" }
 ristretto_jimage = { path = "../ristretto_jimage", version = "0.27.0" }
@@ -56,7 +56,7 @@ native-tls = [
     "reqwest/native-tls",
 ]
 rustls-tls = [
-    "reqwest/rustls-tls-native-roots",
+    "reqwest/rustls",
 ]
 url = []
 
