@@ -628,7 +628,7 @@ pub(crate) async fn stat_0_1(
 ) -> Result<Option<Value>> {
     let attributes = parameters.pop()?;
     if attributes.is_null() {
-        return Err(NullPointerException("attributes is null".to_string()).into());
+        return Err(NullPointerException(Some("attributes is null".to_string())).into());
     }
     let _path = parameters.pop_long()?;
     // TODO: Implement the stat0 method

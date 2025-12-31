@@ -60,7 +60,7 @@ pub(crate) async fn for_name_0(
     let initialize = parameters.pop_bool()?;
     let object = parameters.pop()?;
     if object.is_null() {
-        return Err(NullPointerException("className cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("className cannot be null".to_string())).into());
     }
 
     let class_name = object.as_string()?;
@@ -1092,7 +1092,7 @@ pub(crate) async fn is_assignable_from(
 ) -> Result<Option<Value>> {
     let object_parameter = parameters.pop()?;
     if object_parameter.is_null() {
-        return Err(NullPointerException("object cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("object cannot be null".to_string())).into());
     }
     let class_parameter = get_class(&thread, &object_parameter).await?;
     let object = parameters.pop()?;
@@ -1254,7 +1254,10 @@ mod tests {
             Value::Object(None),
         ]);
         let result = for_name_0(thread, parameters).await;
-        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        assert!(matches!(
+            result,
+            Err(JavaError(NullPointerException(Some(_))))
+        ));
         Ok(())
     }
 
@@ -2152,7 +2155,10 @@ mod tests {
         let null_object = Value::Object(None);
         let parameters = Parameters::new(vec![object, null_object]);
         let result = is_assignable_from(thread, parameters).await;
-        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        assert!(matches!(
+            result,
+            Err(JavaError(NullPointerException(Some(_))))
+        ));
         Ok(())
     }
 

@@ -13,7 +13,7 @@ use ristretto_classloader::Reference;
 pub(crate) fn saload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(None).into());
     };
     let guard = reference.read();
     let Reference::ShortArray(array) = &*guard else {
@@ -48,7 +48,7 @@ pub(crate) fn sastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(None).into());
     };
     let mut guard = reference.write();
     let Reference::ShortArray(array) = &mut *guard else {
@@ -147,7 +147,7 @@ mod test {
         stack.push_object(None)?;
         stack.push_int(0)?;
         let result = saload(stack);
-        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(None)))));
         Ok(())
     }
 
@@ -220,7 +220,7 @@ mod test {
         stack.push_int(0)?;
         stack.push_int(42)?;
         let result = sastore(stack);
-        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(None)))));
         Ok(())
     }
 }

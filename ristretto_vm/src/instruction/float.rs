@@ -203,7 +203,7 @@ pub(crate) fn fstore_3(
 pub(crate) fn faload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(None).into());
     };
     let guard = reference.read();
     let Reference::FloatArray(array) = &*guard else {
@@ -238,7 +238,7 @@ pub(crate) fn fastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_float()?;
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(None).into());
     };
     let mut guard = reference.write();
     let Reference::FloatArray(array) = &mut *guard else {
@@ -623,7 +623,7 @@ mod tests {
         stack.push_object(None)?;
         stack.push_int(0)?;
         let result = faload(stack);
-        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(None)))));
         Ok(())
     }
 
@@ -696,7 +696,7 @@ mod tests {
         stack.push_int(0)?;
         stack.push_float(42f32)?;
         let result = fastore(stack);
-        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(None)))));
         Ok(())
     }
 

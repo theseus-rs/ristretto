@@ -64,7 +64,7 @@ pub(crate) async fn anewarray(
 #[inline]
 pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let Some(reference) = stack.pop_object()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(None).into());
     };
     let guard = reference.read();
     let length = match &*guard {
@@ -436,7 +436,7 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_object(None)?;
         let result = arraylength(stack);
-        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(None)))));
         Ok(())
     }
 

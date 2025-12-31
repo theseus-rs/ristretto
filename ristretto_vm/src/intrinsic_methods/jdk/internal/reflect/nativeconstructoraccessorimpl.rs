@@ -65,23 +65,27 @@ pub(crate) async fn new_instance_0(
 ) -> Result<Option<Value>> {
     let mut arguments: Vec<Value> = parameters.pop()?.try_into()?;
     let method = parameters.pop()?;
-    let (class_object, parameter_types, override_flag) = {
+    let (class_object, parameter_types, modifiers, override_flag) = {
         let method = method.as_object_ref()?;
         let class_object = method.value("clazz")?;
         let parameter_types: Vec<Value> = method.value("parameterTypes")?.try_into()?;
+        let modifiers = method
+            .value("modifiers")
+            .and_then(|v| v.as_i32())
+            .unwrap_or(0);
         // Check if setAccessible(true) was called (override flag)
         let override_flag = method
             .value("override")
             .map(|v| v.as_i32().unwrap_or(0) != 0)
             .unwrap_or(false);
-        (class_object, parameter_types, override_flag)
+        (class_object, parameter_types, modifiers, override_flag)
     };
     let class = class::get_class(&thread, &class_object).await?;
 
     // Check module reflection access unless setAccessible(true) was called
-    // Note: In a full implementation, even setAccessible requires proper module opens
-    // via --add-opens or Module.addOpens(). For now, we allow setAccessible to bypass.
-    if !override_flag {
+    // Note: Public constructors in exported packages don't require opens
+    let is_public = modifiers & 0x0001 != 0; // ACC_PUBLIC
+    if !override_flag && !is_public {
         let vm = thread.vm()?;
         let caller_module = get_caller_module(&thread).await?;
         let target_module = class.module_name()?;
@@ -94,15 +98,23 @@ pub(crate) async fn new_instance_0(
                 class.name(),
             );
 
-            // For system modules, allow access (they handle their own opens)
-            // For application modules, enforce strictly
+            // Enforce module access for all reflective access when denied
+            // Exception: system module to system module access is allowed (internal JDK usage)
             if result.is_denied() {
+                let caller = caller_module.as_deref().unwrap_or("");
                 let target = target_module.as_deref().unwrap_or("");
-                if !target.starts_with("java.")
-                    && !target.starts_with("jdk.")
-                    && !target.starts_with("sun.")
-                    && !target.starts_with("com.sun.")
-                {
+
+                let caller_is_system = caller.starts_with("java.")
+                    || caller.starts_with("jdk.")
+                    || caller.starts_with("sun.")
+                    || caller.starts_with("com.sun.");
+                let target_is_system = target.starts_with("java.")
+                    || target.starts_with("jdk.")
+                    || target.starts_with("sun.")
+                    || target.starts_with("com.sun.");
+
+                // Allow system-to-system access, deny all other denied cases
+                if !(caller_is_system && target_is_system) {
                     vm.module_system().require_reflection_access(
                         caller_module.as_deref(),
                         target_module.as_deref(),

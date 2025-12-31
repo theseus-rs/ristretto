@@ -258,7 +258,7 @@ pub(crate) async fn set_native_name(
 ) -> Result<Option<Value>> {
     let name = parameters.pop()?;
     if name.is_null() {
-        return Err(NullPointerException("name cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("name cannot be null".to_string())).into());
     }
     let name = name.as_string()?;
     thread.set_name(name).await;

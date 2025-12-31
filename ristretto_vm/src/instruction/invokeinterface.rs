@@ -16,7 +16,7 @@ use ristretto_classloader::Value;
 ///
 /// # References
 ///
-/// - [JVMS §6.5.invokeinterface](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.invokeinterface)
+/// - [JVMS §6.5.invokeinterface](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.5.invokeinterface)
 #[inline]
 pub(crate) async fn invokeinterface(
     frame: &Frame,
@@ -41,9 +41,7 @@ pub(crate) async fn invokeinterface(
             };
             thread.class(&class_name).await?
         }
-        Some(Value::Object(None)) => {
-            return Err(NullPointerException("null 'this' reference".to_string()).into());
-        }
+        Some(Value::Object(None)) => return Err(NullPointerException(None).into()),
         _ => return Err(InternalError("Expected object reference".to_string())),
     };
 
