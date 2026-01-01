@@ -159,23 +159,26 @@ impl Compiler {
         )?;
 
         let mut stack = OperandStack::with_capacity(max_stack);
+        let mut block_is_terminated = false;
         for (program_counter, instruction) in instructions.iter().enumerate() {
             if let Some(block) = blocks.get(&program_counter) {
                 // The block needs to be filled before switching
                 if program_counter != 0 {
-                    let last_instruction_index = program_counter.saturating_sub(1);
-                    if let Some(last_instruction) = instructions.get(last_instruction_index) {
-                        // Determine if instructions in the last block changes the control flow.
-                        // If it doesn't, then a jump to the next block is needed.
-                        if !last_instruction.changes_control_flow() {
-                            let block_arguments = stack.as_block_arguments();
-                            function_builder.ins().jump(*block, &block_arguments);
-                        }
+                    // Only add a jump if the current block is not already terminated
+                    if !block_is_terminated {
+                        let block_arguments = stack.as_block_arguments();
+                        function_builder.ins().jump(*block, &block_arguments);
                     }
 
                     function_builder.switch_to_block(*block);
                     stack.reset(&mut function_builder)?;
                 }
+                // We've switched to a new block, so it's not terminated yet
+                block_is_terminated = false;
+            } else if block_is_terminated {
+                // Skip this instruction - it's unreachable dead code after a control flow change
+                // and not a target of any jump
+                continue;
             }
 
             Self::process_instruction(
@@ -189,6 +192,11 @@ impl Compiler {
                 malloc,
                 instruction,
             )?;
+
+            // Check if this instruction terminates the block
+            if instruction.changes_control_flow() {
+                block_is_terminated = true;
+            }
         }
 
         function_builder.seal_all_blocks();

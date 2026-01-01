@@ -413,6 +413,78 @@ fn tableswitch() -> Result<()> {
     Ok(())
 }
 
+/// Test tableswitch with negative offsets (backward jumps)
+#[test]
+fn tableswitch_negative_offset() -> Result<()> {
+    // Structure: Entry jumps to switch, switch can jump backward
+    let instructions = vec![
+        Instruction::Goto(4),  // 0: jump to the switch at instruction 4
+        Instruction::Iconst_0, // 1: target of backward jump - push 0
+        Instruction::Ireturn,  // 2: return 0
+        Instruction::Nop,      // 3: padding (unreachable)
+        Instruction::Iload_0,  // 4: load input for switch
+        Instruction::Tableswitch(TableSwitch {
+            default: 3, // forward to instruction 8 (5 + 3)
+            low: 0,
+            high: 1,
+            offsets: vec![-4, 3], // case 0: backward to instruction 1 (5 + (-4) = 1), case 1: forward to instruction 8
+        }), // 5: switch
+        Instruction::Nop,      // 6: padding
+        Instruction::Nop,      // 7: padding
+        Instruction::Iconst_1, // 8: default/case 1 - push 1
+        Instruction::Ireturn,  // 9: return 1
+    ];
+    let function = create_function("(I)I", &instructions)?;
+
+    // Test case 0 - should take the backward jump and return 0
+    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    assert_eq!(value, Value::I32(0));
+
+    // Test case 1 - should go forward and return 1
+    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    // Test default case - should go forward and return 1
+    let value = function.execute(vec![Value::I32(99)])?.expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    Ok(())
+}
+
+/// Test tableswitch with negative default offset (backward jump for default case)
+#[test]
+fn tableswitch_negative_default_offset() -> Result<()> {
+    // Structure: Entry jumps to switch, default case jumps backward
+    let instructions = vec![
+        Instruction::Goto(4),   // 0: jump to the switch at instruction 4
+        Instruction::Iconst_m1, // 1: target of backward jump (default) - push -1
+        Instruction::Ireturn,   // 2: return -1
+        Instruction::Nop,       // 3: padding (unreachable)
+        Instruction::Iload_0,   // 4: load input for switch
+        Instruction::Tableswitch(TableSwitch {
+            default: -4, // backward to instruction 1 (5 + (-4) = 1)
+            low: 0,
+            high: 0,
+            offsets: vec![3], // case 0: forward to instruction 8 (5 + 3)
+        }), // 5: switch
+        Instruction::Nop,       // 6: padding
+        Instruction::Nop,       // 7: padding
+        Instruction::Iconst_0,  // 8: case 0 result - push 0
+        Instruction::Ireturn,   // 9: return 0
+    ];
+    let function = create_function("(I)I", &instructions)?;
+
+    // Test case 0 - should go forward and return 0
+    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    assert_eq!(value, Value::I32(0));
+
+    // Test default case (value not in range) - should take backward jump and return -1
+    let value = function.execute(vec![Value::I32(99)])?.expect("value");
+    assert_eq!(value, Value::I32(-1));
+
+    Ok(())
+}
+
 #[test]
 fn test_lookupswitch() -> Result<()> {
     let instructions = vec![
@@ -454,6 +526,79 @@ fn test_lookupswitch() -> Result<()> {
 
     // Test default case (far above range)
     let value = function.execute(vec![Value::I32(100)])?.expect("value");
+    assert_eq!(value, Value::I32(-1));
+
+    Ok(())
+}
+
+/// Test lookupswitch with negative offsets (backward jumps)
+#[test]
+fn lookupswitch_negative_offset() -> Result<()> {
+    // Structure: Entry jumps to switch, switch can jump backward
+    let instructions = vec![
+        Instruction::Goto(4),  // 0: jump to the switch at instruction 4
+        Instruction::Iconst_0, // 1: target of backward jump - push 0
+        Instruction::Ireturn,  // 2: return 0
+        Instruction::Nop,      // 3: padding (unreachable)
+        Instruction::Iload_0,  // 4: load input for switch
+        Instruction::Lookupswitch(LookupSwitch {
+            default: 3, // forward to instruction 8 (5 + 3)
+            pairs: IndexMap::from_iter([
+                (42, -4), // case 42: backward to instruction 1 (5 + (-4) = 1)
+                (100, 3), // case 100: forward to instruction 8
+            ]),
+        }), // 5: switch
+        Instruction::Nop,      // 6: padding
+        Instruction::Nop,      // 7: padding
+        Instruction::Iconst_1, // 8: default/case 100 result - push 1
+        Instruction::Ireturn,  // 9: return 1
+    ];
+    let function = create_function("(I)I", &instructions)?;
+
+    // Test case 42 - should take the backward jump and return 0
+    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    assert_eq!(value, Value::I32(0));
+
+    // Test case 100 - should go forward and return 1
+    let value = function.execute(vec![Value::I32(100)])?.expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    // Test default case - should go forward and return 1
+    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    assert_eq!(value, Value::I32(1));
+
+    Ok(())
+}
+
+/// Test lookupswitch with negative default offset (backward jump for default case)
+#[test]
+fn lookupswitch_negative_default_offset() -> Result<()> {
+    // Structure: Entry jumps to switch, default case jumps backward
+    let instructions = vec![
+        Instruction::Goto(4),   // 0: jump to the switch at instruction 4
+        Instruction::Iconst_m1, // 1: target of backward jump (default) - push -1
+        Instruction::Ireturn,   // 2: return -1
+        Instruction::Nop,       // 3: padding (unreachable)
+        Instruction::Iload_0,   // 4: load input for switch
+        Instruction::Lookupswitch(LookupSwitch {
+            default: -4, // backward to instruction 1 (5 + (-4) = 1)
+            pairs: IndexMap::from_iter([
+                (42, 3), // case 42: forward to instruction 8 (5 + 3)
+            ]),
+        }), // 5: switch
+        Instruction::Nop,       // 6: padding
+        Instruction::Nop,       // 7: padding
+        Instruction::Iconst_0,  // 8: case 42 result - push 0
+        Instruction::Ireturn,   // 9: return 0
+    ];
+    let function = create_function("(I)I", &instructions)?;
+
+    // Test case 42 - should go forward and return 0
+    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    assert_eq!(value, Value::I32(0));
+
+    // Test default case - should take backward jump and return -1
+    let value = function.execute(vec![Value::I32(0)])?.expect("value");
     assert_eq!(value, Value::I32(-1));
 
     Ok(())
