@@ -1,8 +1,10 @@
+use crate::JavaError::InaccessibleObjectException;
 use crate::Result;
 use crate::intrinsic_methods::java::lang::class;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use ristretto_classfile::MethodAccessFlags;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
@@ -12,8 +14,8 @@ use std::sync::Arc;
 /// Gets the caller module from the call stack.
 ///
 /// Walks up the call stack to find the first frame that is not in the reflection
-/// implementation, and returns that frame's module.
-async fn get_caller_module(thread: &Arc<Thread>) -> Result<Option<String>> {
+/// implementation, and returns that frame's module name and a hash for the module.
+async fn get_caller_module_info(thread: &Arc<Thread>) -> Result<(Option<String>, usize)> {
     let frames = thread.frames().await?;
     // Skip reflection frames to find the actual caller
     for frame in frames.iter().rev() {
@@ -25,10 +27,13 @@ async fn get_caller_module(thread: &Arc<Thread>) -> Result<Option<String>> {
         {
             continue;
         }
-        return frame.class().module_name().map_err(Into::into);
+        let module_name = frame.class().module_name()?;
+        // Use the class pointer as a proxy for the module identity hash
+        let class_ptr = Arc::as_ptr(frame.class()) as usize;
+        return Ok((module_name, class_ptr));
     }
     // If all frames are reflection frames, return unnamed module
-    Ok(None)
+    Ok((None, 0))
 }
 
 /// Invokes a method via reflection.
@@ -40,6 +45,7 @@ async fn get_caller_module(thread: &Arc<Thread>) -> Result<Option<String>> {
     Between(JAVA_11, JAVA_21)
 )]
 #[async_recursion(?Send)]
+#[expect(clippy::too_many_lines)]
 pub(crate) async fn invoke_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -50,12 +56,16 @@ pub(crate) async fn invoke_0(
         arguments.insert(0, Value::from(object));
     }
     let method = parameters.pop()?;
-    let (name, class_object, parameter_types, return_type, override_flag) = {
+    let (name, class_object, parameter_types, return_type, modifiers, override_flag) = {
         let method = method.as_object_ref()?;
         let name = method.value("name")?.as_string()?;
         let class_object = method.value("clazz")?;
         let parameter_types: Vec<Value> = method.value("parameterTypes")?.try_into()?;
         let return_type = method.value("returnType")?;
+        let modifiers = method
+            .value("modifiers")
+            .and_then(|v| v.as_i32())
+            .unwrap_or(0);
         // Check if setAccessible(true) was called (override flag)
         let override_flag = method
             .value("override")
@@ -66,15 +76,20 @@ pub(crate) async fn invoke_0(
             class_object,
             parameter_types,
             return_type,
+            modifiers,
             override_flag,
         )
     };
     let class = class::get_class(&thread, &class_object).await?;
 
     // Check module reflection access unless setAccessible(true) was called
-    if !override_flag {
+    // Note: Public members in exported packages don't require opens, only exports
+    // We only need deep reflection access (opens) for non-public members
+    let access_flags = MethodAccessFlags::from_bits_truncate(u16::try_from(modifiers)?);
+    let is_public = access_flags.contains(MethodAccessFlags::PUBLIC);
+    if !override_flag && !is_public {
         let vm = thread.vm()?;
-        let caller_module = get_caller_module(&thread).await?;
+        let (caller_module, caller_module_hash) = get_caller_module_info(&thread).await?;
         let target_module = class.module_name()?;
 
         // Only check if modules are different
@@ -85,20 +100,71 @@ pub(crate) async fn invoke_0(
                 class.name(),
             );
 
-            // For system modules, allow access (they handle their own opens)
-            // For application modules, enforce strictly
+            // Enforce module access for all reflective access when denied
+            // Exception: system module to system module access is allowed (internal JDK usage)
             if result.is_denied() {
+                let caller = caller_module.as_deref().unwrap_or("");
                 let target = target_module.as_deref().unwrap_or("");
-                if !target.starts_with("java.")
-                    && !target.starts_with("jdk.")
-                    && !target.starts_with("sun.")
-                    && !target.starts_with("com.sun.")
-                {
-                    vm.module_system().require_reflection_access(
-                        caller_module.as_deref(),
-                        target_module.as_deref(),
-                        class.name(),
-                    )?;
+
+                let caller_is_system = caller.starts_with("java.")
+                    || caller.starts_with("jdk.")
+                    || caller.starts_with("sun.")
+                    || caller.starts_with("com.sun.");
+                let target_is_system = target.starts_with("java.")
+                    || target.starts_with("jdk.")
+                    || target.starts_with("sun.")
+                    || target.starts_with("com.sun.");
+
+                // Allow system-to-system access, deny all other denied cases
+                if !(caller_is_system && target_is_system) {
+                    // Build JDK-compatible error message:
+                    // "Unable to make <modifiers> <return_type> <class>.<method>() accessible:
+                    //  module <target> does not "opens <package>" to <caller> @<hash>"
+                    let class_name = class.name().replace('/', ".");
+                    let package =
+                        crate::module_system::ModuleSystem::package_from_class_name(class.name())
+                            .replace('/', ".");
+                    let target_module_name = target_module.as_deref().unwrap_or("unnamed module");
+
+                    // Build caller display with module hash for unnamed modules
+                    // Format: "unnamed module @<hash>" or "module <name>"
+                    let caller_display = if caller.is_empty() {
+                        // For unnamed modules, include the identity hash code
+                        if caller_module_hash != 0 {
+                            format!("unnamed module @{:x}", caller_module_hash & 0xFFFF_FFFF)
+                        } else {
+                            "unnamed module".to_string()
+                        }
+                    } else {
+                        format!("module {caller}")
+                    };
+
+                    // Build modifier string
+                    let modifier_str = access_flags.as_code();
+
+                    // Get return type name
+                    let return_type_class = class::get_class(&thread, &return_type).await?;
+                    let return_type_name = return_type_class.name().replace('/', ".");
+
+                    let error_msg = format!(
+                        "Unable to make {}{}{}.{}() accessible: module {} does not \"opens {}\" to {}",
+                        if modifier_str.is_empty() {
+                            String::new()
+                        } else {
+                            format!("{modifier_str} ")
+                        },
+                        if return_type_name.is_empty() {
+                            String::new()
+                        } else {
+                            format!("{return_type_name} ")
+                        },
+                        class_name,
+                        name,
+                        target_module_name,
+                        package,
+                        caller_display
+                    );
+                    return Err(InaccessibleObjectException(error_msg).into());
                 }
             }
         }

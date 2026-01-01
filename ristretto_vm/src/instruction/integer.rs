@@ -239,7 +239,7 @@ pub(crate) fn istore_3(
 pub(crate) fn iaload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(None).into());
     };
     let guard = reference.read();
     let Reference::IntArray(array) = &*guard else {
@@ -274,7 +274,7 @@ pub(crate) fn iastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_int()?;
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(None).into());
     };
     let mut guard = reference.write();
     let Reference::IntArray(array) = &mut *guard else {
@@ -759,7 +759,7 @@ mod tests {
         stack.push_object(None)?;
         stack.push_int(0)?;
         let result = iaload(stack);
-        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(None)))));
         Ok(())
     }
 
@@ -832,7 +832,7 @@ mod tests {
         stack.push_int(0)?;
         stack.push_int(42)?;
         let result = iastore(stack);
-        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(None)))));
         Ok(())
     }
 

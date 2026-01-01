@@ -28,7 +28,7 @@ pub(crate) async fn invokevirtual(
     let reference = match parameters.first() {
         Some(Value::Object(Some(reference))) => reference,
         Some(Value::Object(None)) => {
-            return Err(NullPointerException("null 'this' reference".to_string()).into());
+            return Err(NullPointerException(None).into());
         }
         _ => return Err(InternalError("Expected object reference".to_string())),
     };

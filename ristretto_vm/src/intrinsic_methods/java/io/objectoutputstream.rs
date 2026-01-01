@@ -21,13 +21,13 @@ pub(crate) async fn doubles_to_bytes(
     let number_of_doubles = usize::try_from(parameters.pop_int()?)?;
     let destination_position = usize::try_from(parameters.pop_int()?)?;
     let Some(destination) = parameters.pop_reference()? else {
-        return Err(NullPointerException("destination cannot be null".into()).into());
+        return Err(NullPointerException(Some("destination cannot be null".to_string())).into());
     };
     let mut destination_guard = destination.write();
     let destination = destination_guard.as_byte_vec_mut()?;
     let source_position = usize::try_from(parameters.pop_int()?)?;
     let Some(source) = parameters.pop_reference()? else {
-        return Err(NullPointerException("source cannot be null".into()).into());
+        return Err(NullPointerException(Some("source cannot be null".to_string())).into());
     };
     let source_guard = source.read();
     let source = source_guard.as_double_vec_ref()?;
@@ -62,13 +62,13 @@ pub(crate) async fn floats_to_bytes(
     let number_of_floats = usize::try_from(parameters.pop_int()?)?;
     let destination_position = usize::try_from(parameters.pop_int()?)?;
     let Some(destination) = parameters.pop_reference()? else {
-        return Err(NullPointerException("destination cannot be null".into()).into());
+        return Err(NullPointerException(Some("destination cannot be null".to_string())).into());
     };
     let mut destination_guard = destination.write();
     let destination = destination_guard.as_byte_vec_mut()?;
     let source_position = usize::try_from(parameters.pop_int()?)?;
     let Some(source) = parameters.pop_reference()? else {
-        return Err(NullPointerException("source cannot be null".into()).into());
+        return Err(NullPointerException(Some("source cannot be null".to_string())).into());
     };
     let source_guard = source.read();
     let source = source_guard.as_float_vec_ref()?;

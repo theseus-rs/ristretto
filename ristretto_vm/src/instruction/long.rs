@@ -196,7 +196,7 @@ pub(crate) fn lstore_3(
 pub(crate) fn laload(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(None).into());
     };
     let guard = reference.read();
     let Reference::LongArray(array) = &*guard else {
@@ -231,7 +231,7 @@ pub(crate) fn lastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let value = stack.pop_long()?;
     let index = stack.pop_int()?;
     let Some(reference) = stack.pop_object()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(None).into());
     };
     let mut guard = reference.write();
     let Reference::LongArray(array) = &mut *guard else {
@@ -651,7 +651,7 @@ mod tests {
         stack.push_object(None)?;
         stack.push_int(0)?;
         let result = laload(stack);
-        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(None)))));
         Ok(())
     }
 
@@ -724,7 +724,7 @@ mod tests {
         stack.push_int(0)?;
         stack.push_long(42)?;
         let result = lastore(stack);
-        assert!(matches!(result, Err(JavaError(NullPointerException(_)))));
+        assert!(matches!(result, Err(JavaError(NullPointerException(None)))));
         Ok(())
     }
 

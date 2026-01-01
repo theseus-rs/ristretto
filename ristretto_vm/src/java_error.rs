@@ -142,8 +142,8 @@ pub enum JavaError {
     ///
     /// # References
     /// - [NullPointerException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/NullPointerException.html)
-    #[error("{0}")]
-    NullPointerException(String),
+    #[error("{}", .0.as_deref().unwrap_or("null"))]
+    NullPointerException(Option<String>),
     /// `RuntimeException`
     ///
     /// # References
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn test_null_pointer_exception() {
-        let error = JavaError::NullPointerException("null".to_string());
+        let error = JavaError::NullPointerException(Some("null".to_string()));
         assert_eq!(error.class_name(), "java.lang.NullPointerException");
         assert_eq!(error.message(), "null");
     }

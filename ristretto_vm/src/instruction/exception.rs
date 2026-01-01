@@ -14,7 +14,7 @@ use ristretto_classloader::Value;
 pub(crate) async fn athrow(stack: &mut OperandStack) -> Result<ExecutionResult> {
     let throwable = stack.pop()?;
     if throwable.is_null() {
-        return Err(NullPointerException("Cannot throw null".to_string()).into());
+        return Err(NullPointerException(Some("Cannot throw null".to_string())).into());
     }
     // Return the exception to the caller and let the frame error handler deal with it
     Err(Throwable(throwable))
@@ -81,6 +81,16 @@ pub(crate) async fn process_throwable(
 ///
 /// if the error cannot be converted to a throwable
 pub(crate) async fn convert_error_to_throwable(thread: &Thread, error: Error) -> Result<Value> {
+    if let JavaError(NullPointerException(None)) = error {
+        return thread
+            .object(
+                "java/lang/NullPointerException",
+                "Ljava/lang/String;",
+                &[Value::Object(None)],
+            )
+            .await;
+    }
+
     let (class_name, message) = match error {
         JavaError(java_error) => {
             let class_name = java_error.class_name().to_string();

@@ -353,13 +353,24 @@ async fn update_cached_class_module(
     if let Some(class_loader) = class.class_loader()? {
         let class_loader_object = Box::pin(to_class_loader_object(thread, &class_loader)).await?;
         if !class_loader_object.is_null() {
-            let module = thread
+            let mut module = thread
                 .try_invoke(
                     "java.lang.ClassLoader",
                     "getUnnamedModule()Ljava/lang/Module;",
                     std::slice::from_ref(&class_loader_object),
                 )
                 .await?;
+
+            // If the unnamed module is null, create one
+            if module.is_null() {
+                module = create_unnamed_module(thread, &class_loader_object).await?;
+                // Store it in the class loader's unnamedModule field
+                if !module.is_null() {
+                    let mut loader_obj = class_loader_object.as_object_mut()?;
+                    let _ = loader_obj.set_value_unchecked("unnamedModule", module.clone());
+                }
+            }
+
             if !module.is_null() {
                 let mut object_mut = object.as_object_mut()?;
                 object_mut.set_value_unchecked("module", module)?;
@@ -368,17 +379,47 @@ async fn update_cached_class_module(
     } else {
         // For bootstrap classes, try named module first, then unnamed
         let package = ClassLoader::package_from_class_name(class.name());
-        let module = vm
-            .module_system()
-            .get_module_for_package(package)
-            .or_else(|| vm.module_system().boot_unnamed_module());
-        if let Some(module) = module {
+
+        // First, try to get the module from the defined modules (from defineModule0)
+        // This should have a complete Module object with descriptor
+        if let Some(module) = vm.module_system().get_module_for_package(package) {
+            let mut object_mut = object.as_object_mut()?;
+            object_mut.set_value_unchecked("module", module)?;
+            return Ok(());
+        }
+
+        // Fall back to the boot loader's unnamed module
+        if let Some(module) = vm.module_system().boot_unnamed_module() {
+            let mut object_mut = object.as_object_mut()?;
+            object_mut.set_value_unchecked("module", module)?;
+            return Ok(());
+        }
+
+        // If no boot unnamed module exists yet, create one
+        let module = create_boot_unnamed_module(thread).await?;
+        if !module.is_null() {
+            vm.module_system().set_boot_unnamed_module(module.clone());
             let mut object_mut = object.as_object_mut()?;
             object_mut.set_value_unchecked("module", module)?;
         }
     }
 
     Ok(())
+}
+
+/// Create an unnamed module for the boot class loader.
+async fn create_boot_unnamed_module(thread: &Thread) -> Result<Value> {
+    // Create a new Module object for an unnamed module.
+    // The unnamed module has:
+    // - layer = null
+    // - name = null
+    // - loader = null (boot class loader)
+    // - descriptor = null
+    let module_class = thread.class("java/lang/Module").await?;
+    let module_object = Object::new(module_class)?;
+    // All fields remain null/default which is correct for an unnamed boot module
+
+    Ok(Value::from(module_object))
 }
 
 /// Get the module for a class based on Java version and class loader.
@@ -402,21 +443,74 @@ async fn get_class_module(
         // For bootstrap-loaded classes, try to find the correct named module first (e.g., java.base
         // for java.lang.String). If not found, fall back to the boot loader's unnamed module.
         let package = ClassLoader::package_from_class_name(class.name());
-        let module = vm
-            .module_system()
-            .get_module_for_package(package)
-            .or_else(|| vm.module_system().boot_unnamed_module())
-            .unwrap_or(Value::Object(None));
+
+        // First, try to get the module from the defined modules (from defineModule0)
+        // This should have a complete Module object with descriptor
+        if let Some(module) = vm.module_system().get_module_for_package(package) {
+            return Ok(module);
+        }
+
+        // Fall back to the boot loader's unnamed module
+        // Note: VM level checks in invoke0 enforce JPMS for system modules
+        if let Some(module) = vm.module_system().boot_unnamed_module() {
+            return Ok(module);
+        }
+
+        // If no boot unnamed module exists yet, create one
+        let module = create_boot_unnamed_module(thread).await?;
+        if !module.is_null() {
+            vm.module_system().set_boot_unnamed_module(module.clone());
+        }
         return Ok(module);
     }
 
-    thread
+    // Try to get the unnamed module from the class loader
+    let module = thread
         .try_invoke(
             "java.lang.ClassLoader",
             "getUnnamedModule()Ljava/lang/Module;",
             std::slice::from_ref(class_loader_object),
         )
-        .await
+        .await?;
+
+    // If the unnamed module is null, we need to create one.
+    // This can happen if the ClassLoader was not fully initialized through
+    // the normal JDK initialization path.
+    if module.is_null() {
+        // Create an unnamed module for this class loader
+        let module = create_unnamed_module(thread, class_loader_object).await?;
+        // Store it in the class loader's unnamedModule field
+        if !module.is_null() {
+            let mut loader_obj = class_loader_object.as_object_mut()?;
+            // Try to set the field; it might be final, so we use set_value_unchecked
+            let _ = loader_obj.set_value_unchecked("unnamedModule", module.clone());
+        }
+        return Ok(module);
+    }
+
+    Ok(module)
+}
+
+/// Create an unnamed module for the given class loader.
+async fn create_unnamed_module(thread: &Thread, class_loader_object: &Value) -> Result<Value> {
+    // Create a new Module object for an unnamed module.
+    // The unnamed module has:
+    // - layer = null
+    // - name = null
+    // - loader = the class loader
+    // - descriptor = null
+    //
+    // We can't call the Module(ClassLoader) constructor directly as it's package-private.
+    // Instead, we create the object and set the fields directly.
+    let module_class = thread.class("java/lang/Module").await?;
+    let mut module_object = Object::new(module_class)?;
+
+    // Set the loader field to the class loader
+    module_object.set_value_unchecked("loader", class_loader_object.clone())?;
+    // layer and descriptor remain null (default)
+    // name remains null (unnamed module)
+
+    Ok(Value::from(module_object))
 }
 
 /// Build the constructor descriptor and parameters for creating a Class object based on Java version.

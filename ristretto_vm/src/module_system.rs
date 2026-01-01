@@ -877,6 +877,9 @@ impl ModuleSystem {
             format!("module {from_module}")
         };
 
+        // Use dot notation for package names in error messages (JDK style)
+        let package_display = package.replace('/', ".");
+
         match result {
             AccessCheckResult::Allowed => {
                 format!("access to {class_display} allowed") // Should not happen
@@ -890,14 +893,12 @@ impl ModuleSystem {
             AccessCheckResult::NotExported => {
                 format!(
                     "{from_display} cannot access class {class_display} \
-                     (in module {to_module}) because module {to_module} does not export {package} to {from_display}"
+                     (in module {to_module}) because module {to_module} does not export {package_display} to {from_display}"
                 )
             }
             AccessCheckResult::NotOpened => {
-                format!(
-                    "{from_display} cannot reflectively access class {class_display} \
-                     (in module {to_module}) because module {to_module} does not open {package} to {from_display}"
-                )
+                // Format to match JDK's InaccessibleObjectException message
+                format!("module {to_module} does not \"opens {package_display}\" to {from_display}")
             }
         }
     }
@@ -1374,8 +1375,7 @@ mod tests {
             "other/internal/Secret",
             AccessCheckResult::NotOpened,
         );
-        assert!(error_message.contains("reflectively"));
-        assert!(error_message.contains("does not open"));
+        assert!(error_message.contains("does not \"opens"));
     }
 
     #[test]

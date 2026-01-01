@@ -1,10 +1,11 @@
 use rayon::prelude::*;
+use regex::Regex;
 use ristretto_classloader::{DEFAULT_JAVA_VERSION, runtime};
 use ristretto_vm::Error::InternalError;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, LazyLock};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 use tracing::metadata::LevelFilter;
@@ -15,6 +16,16 @@ const TEST_ENDS_WITH_FILTER: Option<&str> = None;
 const TEST_CLASS_NAME: &str = "Test";
 const TEST_FILE: &str = "Test.java";
 const IGNORE_FILE: &str = "ignore.txt";
+
+/// Regex to match @hexcode patterns (e.g., @2b2fa4f7) that appear in `Object.toString()` outputs.
+static HASH_CODE_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"@[0-9a-fA-F]+").expect("valid regex"));
+
+/// Normalize output by removing Java object hash codes that vary between runs. This handles
+/// patterns like "@2b2fa4f7" that appear in `Object.toString()` outputs.
+fn normalize_output(output: &str) -> String {
+    HASH_CODE_REGEX.replace_all(output, "@HASH").to_string()
+}
 
 #[test]
 fn compatibility_tests() -> Result<()> {
@@ -245,7 +256,10 @@ fn test_vm(
     });
     match result {
         Ok(Ok((duration, output))) => {
-            if expected_output == output {
+            // Normalize outputs to handle variable content like object hash codes
+            let normalized_expected = normalize_output(expected_output);
+            let normalized_actual = normalize_output(&output);
+            if normalized_expected == normalized_actual {
                 info!(
                     "Passed ({test_type}) {test_name} in {duration:.2?} (expected: {expected_duration:.2?})"
                 );

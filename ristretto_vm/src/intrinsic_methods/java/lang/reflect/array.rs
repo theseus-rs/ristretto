@@ -24,7 +24,7 @@ fn get_class_name(value: &Value) -> Result<String> {
 pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let guard = reference.read();
     let value = match &*guard {
@@ -112,7 +112,7 @@ pub(crate) async fn get_byte(
 ) -> Result<Option<Value>> {
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let guard = reference.read();
     let value = match &*guard {
@@ -141,7 +141,7 @@ pub(crate) async fn get_char(
 ) -> Result<Option<Value>> {
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let guard = reference.read();
     let value = match &*guard {
@@ -170,7 +170,7 @@ pub(crate) async fn get_double(
 ) -> Result<Option<Value>> {
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let guard = reference.read();
     let value = match &*guard {
@@ -199,7 +199,7 @@ pub(crate) async fn get_float(
 ) -> Result<Option<Value>> {
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let guard = reference.read();
     let value = match &*guard {
@@ -228,7 +228,7 @@ pub(crate) async fn get_int(
 ) -> Result<Option<Value>> {
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let guard = reference.read();
     let value = match &*guard {
@@ -256,7 +256,7 @@ pub(crate) async fn get_length(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let Some(array) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let guard = array.read();
     let length = match &*guard {
@@ -287,7 +287,7 @@ pub(crate) async fn get_long(
 ) -> Result<Option<Value>> {
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let guard = reference.read();
     let value = match &*guard {
@@ -316,7 +316,7 @@ pub(crate) async fn get_short(
 ) -> Result<Option<Value>> {
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let guard = reference.read();
     let value = match &*guard {
@@ -466,7 +466,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     let value = parameters.pop()?;
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let mut guard = reference.write();
     match &mut *guard {
@@ -576,7 +576,7 @@ pub(crate) async fn set_byte(
     let value = i8::try_from(parameters.pop_int()?)?;
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let mut guard = reference.write();
     match &mut *guard {
@@ -607,7 +607,7 @@ pub(crate) async fn set_char(
     let value = u16::try_from(parameters.pop_int()?)?;
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let mut guard = reference.write();
     match &mut *guard {
@@ -638,7 +638,7 @@ pub(crate) async fn set_double(
     let value = parameters.pop_double()?;
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let mut guard = reference.write();
     match &mut *guard {
@@ -669,7 +669,7 @@ pub(crate) async fn set_float(
     let value = parameters.pop_float()?;
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let mut guard = reference.write();
     match &mut *guard {
@@ -700,7 +700,7 @@ pub(crate) async fn set_int(
     let value = parameters.pop_int()?;
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let mut guard = reference.write();
     match &mut *guard {
@@ -731,7 +731,7 @@ pub(crate) async fn set_long(
     let value = parameters.pop_long()?;
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let mut guard = reference.write();
     match &mut *guard {
@@ -762,7 +762,7 @@ pub(crate) async fn set_short(
     let value = i16::try_from(parameters.pop_int()?)?;
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException("array cannot be null".to_string()).into());
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
     };
     let mut guard = reference.write();
     match &mut *guard {

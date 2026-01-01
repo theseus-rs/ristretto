@@ -1,3 +1,4 @@
+use crate::JavaError::NullPointerException;
 use crate::Result;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
@@ -26,6 +27,10 @@ pub(crate) async fn getfield(
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
+
+    if object.is_null() {
+        return Err(NullPointerException(None).into());
+    }
     let object = object.as_object_ref()?;
     let value = object.value_in_class(&field_class, field_name)?;
     stack.push(value)?;
@@ -55,6 +60,10 @@ pub(crate) async fn putfield(
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
+
+    if object.is_null() {
+        return Err(NullPointerException(None).into());
+    }
     let mut object = object.as_object_mut()?;
     object.set_value_in_class(&field_class, field_name, value)?;
     Ok(Continue)

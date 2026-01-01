@@ -46,18 +46,71 @@ pub(crate) async fn fill_in_stack_trace(
         stack_elements.push(Value::from(stack_element_object));
     }
 
-    let depth = i32::try_from(stack_elements.len())?;
     let stack_element_array_class = thread
         .class(format!("[L{stack_element_class};").as_str())
         .await?;
     let stack_trace = Value::try_from((stack_element_array_class, stack_elements))?;
 
+    // Create the backtrace
+    let _object_class = thread.class("java/lang/Object").await?;
+    let object_array_class = thread.class("[Ljava/lang/Object;").await?;
+    let integer_class = thread.class("java/lang/Integer").await?;
+    let mut backtrace_elements = Vec::new();
+
+    let throwable_class = {
+        let obj = throwable.as_object_ref()?;
+        obj.class().clone()
+    };
+    let mut skipping = true;
+
+    for frame in thread.frames().await?.iter().rev() {
+        let class = frame.class();
+        let method = frame.method();
+        let method_name_str = method.name();
+
+        if skipping {
+            if method_name_str == "fillInStackTrace" {
+                continue;
+            }
+            if method_name_str == "<init>"
+                && (Arc::ptr_eq(class, &throwable_class)
+                    || throwable_class.is_subclass_of(class)?)
+            {
+                continue;
+            }
+            if class.name() == "java/lang/Throwable" {
+                continue;
+            }
+            skipping = false;
+        }
+
+        let method_name = method_name_str.to_object(&thread).await?;
+        let method_descriptor = method.descriptor().to_object(&thread).await?;
+        let program_counter = frame.program_counter();
+        let mut program_counter_value = Object::new(integer_class.clone())?;
+        program_counter_value.set_value("value", Value::Int(i32::try_from(program_counter)?))?;
+
+        let frame_info = vec![
+            class.to_object(&thread).await?,
+            method_name,
+            method_descriptor,
+            Value::from(program_counter_value),
+        ];
+        let frame_info_array = Value::try_from((object_array_class.clone(), frame_info))?;
+        backtrace_elements.push(frame_info_array);
+    }
+    let backtrace = Value::try_from((object_array_class, backtrace_elements.clone()))?;
+    let backtrace_depth = i32::try_from(backtrace_elements.len())?;
+
     {
         let mut throwable = throwable.as_object_mut()?;
-        throwable.set_value("backtrace", stack_trace)?;
+        // Store standard stack trace in the public field if possible (standard JDK). Ignoring error
+        // if field doesn't exist to maintain compatibility with varying JDKs
+        let _ = throwable.set_value("stackTrace", stack_trace.clone());
+        throwable.set_value("backtrace", backtrace)?;
 
         if vm.java_major_version() >= JAVA_11.java() {
-            throwable.set_value("depth", Value::Int(depth))?;
+            throwable.set_value("depth", Value::Int(backtrace_depth))?;
         }
     }
 
