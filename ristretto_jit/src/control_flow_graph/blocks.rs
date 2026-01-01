@@ -28,6 +28,7 @@ pub(crate) fn get_blocks(
         .map(|entry| usize::from(entry.handler_pc))
         .collect::<Vec<_>>();
     let mut stack = TypeStack::new();
+    let mut in_dead_code = false;
 
     // The first block is always the function entry point (with empty stack)
     blocks.insert(0, function_builder.create_block());
@@ -35,6 +36,8 @@ pub(crate) fn get_blocks(
 
     for (program_counter, instruction) in instructions.iter().enumerate() {
         if exception_handler_addresses.contains(&program_counter) {
+            // Exception handlers are always reachable
+            in_dead_code = false;
             // Push an object onto the stack for the exception object
             stack.push_object()?;
             insert_stack(&mut stack_states, program_counter, &stack)?;
@@ -45,8 +48,14 @@ pub(crate) fn get_blocks(
                 &mut blocks,
             );
         }
+
+        // Check if this address has a recorded stack state (it's a jump target)
         if let Some(new_stack) = stack_states.get(&program_counter) {
             stack = new_stack.clone();
+            in_dead_code = false;
+        } else if in_dead_code {
+            // Skip simulating this instruction - we don't have a valid stack state
+            continue;
         }
 
         // Simulate the instruction to determine the stack state
@@ -176,6 +185,27 @@ pub(crate) fn get_blocks(
                 }
             }
             _ => {}
+        }
+
+        // Mark dead code after control flow terminating instructions
+        // (instructions that don't fall through to the next instruction)
+        if matches!(
+            instruction,
+            Instruction::Goto(..)
+                | Instruction::Goto_w(..)
+                | Instruction::Tableswitch { .. }
+                | Instruction::Lookupswitch { .. }
+                | Instruction::Ret(..)
+                | Instruction::Ret_w(..)
+                | Instruction::Return
+                | Instruction::Ireturn
+                | Instruction::Lreturn
+                | Instruction::Freturn
+                | Instruction::Dreturn
+                | Instruction::Areturn
+                | Instruction::Athrow
+        ) {
+            in_dead_code = true;
         }
     }
 

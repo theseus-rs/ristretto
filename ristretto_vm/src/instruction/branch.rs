@@ -262,13 +262,15 @@ pub(crate) fn tableswitch(
     offsets: &Vec<i32>,
 ) -> Result<ExecutionResult> {
     let key = stack.pop_int()?;
-    let address = if key < low || key > high {
-        usize::try_from(default)?
+    let offset = if key < low || key > high {
+        default
     } else {
         let index = usize::try_from(key - low)?;
-        usize::try_from(offsets[index])?
+        offsets[index]
     };
-    Ok(ContinueAtPosition(program_counter + address))
+    let pc = i64::try_from(program_counter)?;
+    let address = usize::try_from(pc + i64::from(offset))?;
+    Ok(ContinueAtPosition(address))
 }
 
 /// # References
@@ -282,11 +284,13 @@ pub(crate) fn lookupswitch(
     pairs: &IndexMap<i32, i32>,
 ) -> Result<ExecutionResult> {
     let key = stack.pop_int()?;
-    let address = match pairs.get(&key) {
-        Some(offset) => usize::try_from(*offset)?,
-        None => usize::try_from(default)?,
+    let offset = match pairs.get(&key) {
+        Some(offset) => *offset,
+        None => default,
     };
-    Ok(ContinueAtPosition(program_counter + address))
+    let pc = i64::try_from(program_counter)?;
+    let address = usize::try_from(pc + i64::from(offset))?;
+    Ok(ContinueAtPosition(address))
 }
 
 /// # References
@@ -816,6 +820,32 @@ mod test {
         Ok(())
     }
 
+    /// Test tableswitch with negative offset (backward jump)
+    #[test]
+    fn test_tableswitch_negative_offset() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(1);
+        stack.push_int(1)?; // Select case 1, which has offset -5
+        let program_counter = 20;
+        // low=0, high=2, offsets: case 0 -> +10, case 1 -> -5 (backward), case 2 -> +15
+        let result = tableswitch(stack, program_counter, 100, 0, 2, &vec![10, -5, 15])?;
+        // program_counter (20) + offset (-5) = 15
+        assert_eq!(ContinueAtPosition(15), result);
+        Ok(())
+    }
+
+    /// Test tableswitch with negative default offset (backward jump for default case)
+    #[test]
+    fn test_tableswitch_negative_default_offset() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(1);
+        stack.push_int(99)?; // Value outside range, will use default
+        let program_counter = 20;
+        // default offset is -10 (backward jump)
+        let result = tableswitch(stack, program_counter, -10, 0, 2, &vec![10, 15, 20])?;
+        // program_counter (20) + default offset (-10) = 10
+        assert_eq!(ContinueAtPosition(10), result);
+        Ok(())
+    }
+
     #[test]
     fn test_lookupswitch() -> Result<()> {
         let stack = &mut OperandStack::with_max_size(1);
@@ -843,6 +873,40 @@ mod test {
             &IndexMap::from([(1, 11), (2, 12), (3, 13)]),
         )?;
         assert!(matches!(result, ContinueAtPosition(24)));
+        Ok(())
+    }
+
+    /// Test lookupswitch with negative offset (backward jump)
+    #[test]
+    fn test_lookupswitch_negative_offset() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(1);
+        stack.push_int(42)?; // Select case 42, which has offset -8
+        let program_counter = 20;
+        let result = lookupswitch(
+            stack,
+            program_counter,
+            100,                                    // default offset (forward)
+            &IndexMap::from([(42, -8), (100, 15)]), // case 42 jumps backward
+        )?;
+        // program_counter (20) + offset (-8) = 12
+        assert_eq!(ContinueAtPosition(12), result);
+        Ok(())
+    }
+
+    /// Test lookupswitch with negative default offset (backward jump for default case)
+    #[test]
+    fn test_lookupswitch_negative_default_offset() -> Result<()> {
+        let stack = &mut OperandStack::with_max_size(1);
+        stack.push_int(0)?; // Value not in lookup table, will use default
+        let program_counter = 20;
+        let result = lookupswitch(
+            stack,
+            program_counter,
+            -15, // default offset is backward jump
+            &IndexMap::from([(42, 10), (100, 15)]),
+        )?;
+        // program_counter (20) + default offset (-15) = 5
+        assert_eq!(ContinueAtPosition(5), result);
         Ok(())
     }
 

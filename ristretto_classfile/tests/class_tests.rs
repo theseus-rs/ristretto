@@ -32,3 +32,8 @@ pub fn test_minimum() -> Result<()> {
 pub fn test_simple() -> Result<()> {
     test_class(include_bytes!("../../classes/Simple.class"))
 }
+
+#[test]
+pub fn test_lookupswitch() -> Result<()> {
+    test_class(include_bytes!("../../classes/Lookupswitch.class"))
+}
