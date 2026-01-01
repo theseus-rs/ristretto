@@ -112,20 +112,25 @@ pub(crate) fn instructions_from_bytes(
                     .get(&u16::try_from(index)?)
                     .expect("instruction byte");
                 let position = u32::from(*position);
-                let default_offset = position + u32::try_from(lookup_switch.default)?;
-                let instruction_default = byte_to_instruction_map
-                    .get(&u16::try_from(default_offset)?)
-                    .ok_or(InvalidInstructionOffset(default_offset))?
-                    - u16::try_from(index)?;
-                lookup_switch.default = i32::from(instruction_default);
+                let default_offset =
+                    u32::try_from(i64::from(position) + i64::from(lookup_switch.default))?;
+                let instruction_default = i32::from(
+                    *byte_to_instruction_map
+                        .get(&u16::try_from(default_offset)?)
+                        .ok_or(InvalidInstructionOffset(default_offset))?,
+                ) - i32::try_from(index)?;
+                lookup_switch.default = instruction_default;
 
                 for (_match, offset) in &mut lookup_switch.pairs {
-                    let byte_offset = position + u32::try_from(*offset)?;
-                    let instruction_offset = byte_to_instruction_map
-                        .get(&u16::try_from(byte_offset)?)
-                        .ok_or(InvalidInstructionOffset(byte_offset))?
-                        - u16::try_from(index)?;
-                    *offset = i32::from(instruction_offset);
+                    let byte_offset = u32::try_from(i64::from(position) + i64::from(*offset))?;
+
+                    let instruction_offset = i32::from(
+                        *byte_to_instruction_map
+                            .get(&u16::try_from(byte_offset)?)
+                            .ok_or(InvalidInstructionOffset(byte_offset))?,
+                    ) - i32::try_from(index)?;
+
+                    *offset = instruction_offset;
                 }
             }
             _ => {}
@@ -235,7 +240,7 @@ pub(crate) fn instructions_to_bytes(
                 lookup_switch.default = i32::from(default_byte) - position_byte;
 
                 for (_match, offset) in &mut lookup_switch.pairs {
-                    let instruction_offset = position + u32::try_from(*offset)?;
+                    let instruction_offset = u32::try_from(i64::from(position) + i64::from(*offset))?;
                     let offset_byte = instruction_to_byte_map
                         .get(&u16::try_from(instruction_offset)?)
                         .ok_or(InvalidInstructionOffset(instruction_offset))?;
