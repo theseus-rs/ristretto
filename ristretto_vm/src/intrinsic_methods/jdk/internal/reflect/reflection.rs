@@ -68,21 +68,33 @@ pub(crate) async fn get_caller_class(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     let frames = thread.frames().await?;
-    // skip current frame
+    // Skip frames:
+    // - Frame 0: The current intrinsic (getCallerClass)
+    // - Frame 1: The immediate caller (typically Reflection.getCallerClass bytecode frame)
+    // - Any additional reflection/method-handle infrastructure frames that shouldn't be visible
+    //
+    // The key is to find the "real" caller - the first class that is not part of the
+    // reflection or method handle implementation machinery.
+    //
+    // We skip:
+    // - jdk/internal/reflect/* (reflection implementation)
+    // - sun/reflect/* (legacy reflection)
+    //
+    // We do NOT skip java/lang/invoke/* because those classes may legitimately call
+    // getCallerClass to get their own class (e.g., StringConcatFactory calling
+    // MethodHandles.lookup() should get a lookup for StringConcatFactory, not the user class).
     for frame in frames.iter().rev().skip(1) {
         let class = frame.class();
         let class_name = class.name();
-        // Skip known reflection/VM implementation frames and invoke infrastructure
-        if class_name.starts_with("jdk/internal/reflect/")
-            || class_name.starts_with("sun/reflect/")
-            || class_name.starts_with("java/lang/invoke/")
+        // Skip only reflection implementation frames
+        if class_name.starts_with("jdk/internal/reflect/") || class_name.starts_with("sun/reflect/")
         {
             continue;
         }
         let class_object = class.to_object(&thread).await?;
         return Ok(Some(class_object));
     }
-    // No non-reflection caller found
+    // No caller found
     Ok(Some(Value::Object(None)))
 }
 

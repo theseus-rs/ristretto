@@ -198,7 +198,8 @@ fn system_properties(vm: &VM) -> Result<HashMap<&'static str, String>> {
     let home_dir = dirs::home_dir().unwrap_or_default();
     properties.insert("user.home", format!("{}", home_dir.to_string_lossy()));
     properties.insert("user.language", language.to_string());
-    properties.insert("user.name", whoami::username());
+    let username = whoami::username().map_err(|error| InternalError(error.to_string()))?;
+    properties.insert("user.name", username);
     // TODO: implement user.script
     properties.insert("user.script", String::new());
     // TODO: implement user.variant

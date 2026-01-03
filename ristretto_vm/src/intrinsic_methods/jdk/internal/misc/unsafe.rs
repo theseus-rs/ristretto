@@ -773,6 +773,7 @@ pub(crate) async fn define_hidden_class(
     let offset = parameters.pop_int()?;
     let bytes = parameters.pop()?;
     let _name = parameters.pop()?;
+    let _unsafe = parameters.pop()?;
 
     let bytes = {
         let bytes = bytes.as_byte_vec_ref()?;
@@ -786,7 +787,10 @@ pub(crate) async fn define_hidden_class(
     let class_file =
         ClassFile::from_bytes(&mut cursor).map_err(|e| ClassFormatError(e.to_string()))?;
 
-    let class = Class::from(None, class_file)?;
+    // Generate a unique suffix for the hidden class name
+    let vm = thread.vm()?;
+    let suffix = vm.next_hidden_class_suffix()?;
+    let class = Class::from_hidden(None, class_file, suffix)?;
 
     // Register the hidden class so it can be found later
     thread.register_class(class.clone()).await?;

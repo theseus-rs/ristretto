@@ -63,10 +63,20 @@ async fn class_object_from_bytes(
         // TODO: implement setting the source file
     }
 
-    let class = Class::from(None, class_file)?;
+    // Check if this is a hidden like class (String$$StringConcat, etc.). These classes contain $$
+    // in their name and need unique names to avoid overwriting each other when multiple instances
+    // are created.
+    let class_name = class_file.class_name()?.to_string();
+    let is_hidden_like = class_name.contains("$$");
 
-    // Register the class with the VM so it can be found later. This is critical for
-    // hidden / anonymous classes like LambdaForm$MH
+    let class = if is_hidden_like {
+        let suffix = vm.next_hidden_class_suffix()?;
+        Class::from_hidden(None, class_file, suffix)?
+    } else {
+        Class::from(None, class_file)?
+    };
+
+    // Register the class with the VM so it can be found later.
     thread.register_class(class.clone()).await?;
 
     let class = class.to_object(thread).await?;
@@ -182,7 +192,7 @@ pub(crate) async fn define_class_0_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _class_data = parameters.pop_reference()?;
+    let class_data = parameters.pop()?;
     let _flags = parameters.pop_int()?;
     let _initialize = parameters.pop_bool()?;
     let _protection_domain = parameters.pop()?;
@@ -202,6 +212,10 @@ pub(crate) async fn define_class_0_1(
     {
         let mut class_object = class.as_object_mut()?;
         class_object.set_value("classLoader", class_loader)?;
+        // Set classData for hidden classes; this is used by StringConcatFactory and others
+        if !class_data.is_null() {
+            class_object.set_value("classData", class_data)?;
+        }
     }
     Ok(Some(class))
 }

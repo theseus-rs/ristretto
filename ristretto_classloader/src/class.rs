@@ -3,7 +3,7 @@ use crate::field::FieldKey;
 use crate::{ClassLoader, Field, Method, Result, Value};
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, ConstantPool, FieldAccessFlags, MethodAccessFlags,
+    ClassAccessFlags, ClassFile, Constant, ConstantPool, FieldAccessFlags, MethodAccessFlags,
 };
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
@@ -285,6 +285,91 @@ impl Class {
         let class = Arc::new(Self {
             class_loader,
             name: class_file.class_name()?.to_string(),
+            source_file,
+            class_file,
+            parent: RwLock::new(None),
+            interfaces: RwLock::new(Vec::new()),
+            static_fields,
+            static_values,
+            object_fields,
+            methods,
+            object: RwLock::new(None),
+            initialization_state: RwLock::new(InitializationState::NotInitialized),
+            initialization_notify: Notify::new(),
+            module_name: RwLock::new(None),
+        });
+        Ok(class)
+    }
+
+    /// Creates a Class from a `ClassFile` with a custom name suffix.
+    /// This is used for hidden classes which need unique names even though
+    /// the class file contains a shared name.
+    ///
+    /// The name will be formatted as `{original_name}+0x{suffix:016x}`.
+    ///
+    /// # Errors
+    ///
+    /// if the class file cannot be read.
+    pub fn from_hidden(
+        class_loader: Option<Weak<ClassLoader>>,
+        mut class_file: ClassFile,
+        suffix: u64,
+    ) -> Result<Arc<Self>> {
+        let original_name = class_file.class_name()?.to_string();
+        let hidden_name = format!("{original_name}+0x{suffix:016x}");
+
+        // Patch the constant pool to replace the original class name with the hidden name. This
+        // ensures that self references in bytecode (ldc, new, checkcast, etc.) will resolve to the
+        // correct hidden class name without runtime checks.
+        if let Constant::Class(name_index) =
+            class_file.constant_pool.try_get(class_file.this_class)?
+        {
+            let name_index = *name_index;
+            class_file
+                .constant_pool
+                .set(name_index, Constant::Utf8(hidden_name.clone()))?;
+        }
+
+        let mut source_file = None;
+
+        for attribute in &class_file.attributes {
+            if let Attribute::SourceFile {
+                source_file_index, ..
+            } = attribute
+            {
+                let constant_pool = &class_file.constant_pool;
+                let source_file_name = constant_pool.try_get_utf8(*source_file_index)?;
+                source_file = Some(source_file_name.to_string());
+                break;
+            }
+        }
+
+        let mut static_fields = Vec::new();
+        let mut static_values = Vec::new();
+        let mut object_fields = Vec::new();
+        let constant_pool = &class_file.constant_pool;
+        for (index, class_field) in class_file.fields.iter().enumerate() {
+            let index = u16::try_from(index)?;
+            let field = Arc::new(Field::from(&class_file, index, class_field)?);
+            if field.access_flags().contains(FieldAccessFlags::STATIC) {
+                static_fields.push(field.clone());
+                let value = field.default_static_value(constant_pool)?;
+                static_values.push(Arc::new(RwLock::new(value)));
+            } else {
+                object_fields.push(field);
+            }
+        }
+
+        let mut methods = HashMap::new();
+        for class_file_method in &class_file.methods {
+            let method = Method::from(&class_file, class_file_method)?;
+            let signature = method.signature();
+            methods.insert(signature, Arc::new(method));
+        }
+
+        let class = Arc::new(Self {
+            class_loader,
+            name: hidden_name,
             source_file,
             class_file,
             parent: RwLock::new(None),
@@ -639,6 +724,16 @@ impl Class {
         self.class_file
             .access_flags
             .contains(ClassAccessFlags::ANNOTATION)
+    }
+
+    /// Determine if this class is a hidden class.
+    ///
+    /// Hidden classes are created via `Class::from_hidden` and have unique names with a suffix in
+    /// the format `{original_name}+0x{suffix:016x}`. They cannot be found by name lookups and are
+    /// typically used for dynamically generated code like lambda expressions.
+    #[must_use]
+    pub fn is_hidden(&self) -> bool {
+        self.name.contains("+0x")
     }
 
     /// Get the class file.
@@ -1861,6 +1956,53 @@ mod tests {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
         let class = class_loader.load("java.lang.Override").await?;
         assert!(class.is_annotation());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_regular_class_is_not_hidden() -> Result<()> {
+        let class = string_class().await?;
+        assert!(!class.is_hidden());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_from_hidden_creates_hidden_class() -> Result<()> {
+        let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
+        let class = class_loader.load("java.lang.String").await?;
+
+        // Get the class file to create a hidden class from it
+        let class_file = class.class_file().clone();
+
+        // Create a hidden class with suffix 42
+        let hidden_class = Class::from_hidden(None, class_file, 42)?;
+
+        // Verify it's marked as hidden
+        assert!(hidden_class.is_hidden());
+
+        // Verify the name includes the suffix
+        assert_eq!(hidden_class.name(), "java/lang/String+0x000000000000002a");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_from_hidden_unique_names() -> Result<()> {
+        let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
+        let class = class_loader.load("java.lang.String").await?;
+
+        // Create two hidden classes with different suffixes
+        let class_file1 = class.class_file().clone();
+        let class_file2 = class.class_file().clone();
+
+        let hidden_class1 = Class::from_hidden(None, class_file1, 1)?;
+        let hidden_class2 = Class::from_hidden(None, class_file2, 2)?;
+
+        // Verify they have different names
+        assert_ne!(hidden_class1.name(), hidden_class2.name());
+
+        // Both should be hidden
+        assert!(hidden_class1.is_hidden());
+        assert!(hidden_class2.is_hidden());
         Ok(())
     }
 
