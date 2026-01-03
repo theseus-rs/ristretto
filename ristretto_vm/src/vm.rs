@@ -55,6 +55,8 @@ pub struct VM {
     method_registry: MethodRegistry,
     /// The JIT compiler
     compiler: Option<Compiler>,
+    /// Counter for generating unique hidden class name suffixes
+    hidden_class_counter: AtomicU64,
     /// The next thread ID
     next_thread_id: AtomicU64,
     /// The VM thread handles
@@ -128,6 +130,7 @@ impl VM {
             java_class_file_version,
             method_registry,
             compiler,
+            hidden_class_counter: AtomicU64::new(1),
             next_thread_id: AtomicU64::new(1),
             thread_handles: HandleManager::new(),
             file_handles: HandleManager::new(),
@@ -328,6 +331,22 @@ impl VM {
     /// Get the JIT Compiler
     pub(crate) fn compiler(&self) -> Option<&Compiler> {
         self.compiler.as_ref()
+    }
+
+    /// Get the next unique suffix for a hidden class name.
+    ///
+    /// This atomically increments and returns a counter used to generate unique names for hidden
+    /// classes in the format `{name}+0x{suffix:016x}`.
+    ///
+    /// # Errors
+    ///
+    /// if the hidden class suffix overflows
+    pub(crate) fn next_hidden_class_suffix(&self) -> Result<u64> {
+        let id = self.hidden_class_counter.fetch_add(1, Ordering::SeqCst);
+        if id == 0 {
+            return Err(InternalError("Hidden class suffix overflow".to_string()));
+        }
+        Ok(id)
     }
 
     /// Get the next thread ID
@@ -931,7 +950,7 @@ mod tests {
         let initial_size = vm.method_ref_cache().len();
 
         // Store a failed resolution with a unique key
-        let key = MethodRefKey::new("unique/test/Class".to_string(), 65000);
+        let key = MethodRefKey::new("unique/test/Class".to_string(), 65_000);
         let error = MethodRefError::new(MethodRefErrorKind::NoSuchMethod, "test error".to_string());
         vm.method_ref_cache().store_failed(key.clone(), error);
 

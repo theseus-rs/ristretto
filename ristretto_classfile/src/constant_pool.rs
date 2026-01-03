@@ -153,6 +153,24 @@ impl ConstantPool {
         }
     }
 
+    /// Set a constant at the specified index; indexes are 1-based.
+    ///
+    /// This replaces the existing constant at the given index.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the index is out of bounds or points to a placeholder entry.
+    pub fn set(&mut self, index: u16, constant: Constant) -> Result<()> {
+        let constant_entry = self.constants.get_mut(index as usize);
+        match constant_entry {
+            Some(entry @ ConstantEntry::Constant(_)) => {
+                *entry = ConstantEntry::Constant(constant);
+                Ok(())
+            }
+            _ => Err(InvalidConstantPoolIndex(index)),
+        }
+    }
+
     /// Get the number of constants in the pool.
     ///
     /// # Examples
@@ -1709,6 +1727,23 @@ mod test {
         assert!(constant_pool.try_get(1).is_err());
         constant_pool.push(Constant::Utf8("foo".to_string()));
         assert!(constant_pool.try_get(1).is_ok());
+    }
+
+    #[test]
+    fn test_set() {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.push(Constant::Utf8("foo".to_string()));
+        assert_eq!(
+            Some(&Constant::Utf8("foo".to_string())),
+            constant_pool.get(1)
+        );
+        constant_pool
+            .set(1, Constant::Utf8("baz".to_string()))
+            .expect("Failed to set constant");
+        assert_eq!(
+            Some(&Constant::Utf8("baz".to_string())),
+            constant_pool.get(1)
+        );
     }
 
     #[test]

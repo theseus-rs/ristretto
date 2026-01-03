@@ -1107,11 +1107,12 @@ pub(crate) async fn is_assignable_from(
 #[intrinsic_method("java/lang/Class.isHidden()Z", GreaterThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
 pub(crate) async fn is_hidden(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // TODO: implement support for hidden classes
-    Ok(Some(Value::from(false)))
+    let object = parameters.pop()?;
+    let class = get_class(&thread, &object).await?;
+    Ok(Some(Value::from(class.is_hidden())))
 }
 
 #[intrinsic_method("java/lang/Class.isInstance(Ljava/lang/Object;)Z", Any)]
@@ -2165,7 +2166,10 @@ mod tests {
     #[tokio::test]
     async fn test_is_hidden() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = is_hidden(thread, Parameters::default()).await?;
+        let class = thread.class("java.lang.Object").await?;
+        let object = class.to_object(&thread).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = is_hidden(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -2248,6 +2252,42 @@ mod tests {
         let parameters = Parameters::new(vec![object]);
         let result = is_record_0(thread, parameters).await?;
         assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_hidden_false() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java.lang.String").await?;
+        let object = class.to_object(&thread).await?;
+        let parameters = Parameters::new(vec![object]);
+        let result = is_hidden(thread, parameters).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_hidden_true() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+
+        // Load a class file and create a hidden class from it
+        let class = thread.class("java.lang.String").await?;
+        let class_file = class.class_file().clone();
+
+        // Create a hidden class
+        let vm = thread.vm()?;
+        let suffix = vm.next_hidden_class_suffix()?;
+        let hidden_class = Class::from_hidden(None, class_file, suffix)?;
+
+        // Register the hidden class so it can be found
+        thread.register_class(hidden_class.clone()).await?;
+
+        // Get the class object for the hidden class
+        let object = hidden_class.to_object(&thread).await?;
+
+        let parameters = Parameters::new(vec![object]);
+        let result = is_hidden(thread, parameters).await?;
+        assert_eq!(result, Some(Value::from(true)));
         Ok(())
     }
 
