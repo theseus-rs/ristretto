@@ -186,7 +186,6 @@ fn compile_test(java_home: &Path, tests_root_dir: &Path, test_dir: &PathBuf) -> 
 
     let arguments = vec![
         "-parameters",
-        "-XDstringConcat=inline", // TODO: Remove when invokedynamic string concatenation is implemented
         "-cp",
         test_dir.to_str().unwrap_or_default(),
         TEST_FILE,
@@ -249,11 +248,24 @@ fn test_vm(
     expected_output: &str,
 ) -> Result<()> {
     let test_type = if interpreted { "int" } else { "jit" };
-    let result = std::panic::catch_unwind(|| {
-        let runtime =
-            tokio::runtime::Runtime::new().map_err(|error| InternalError(error.to_string()))?;
-        runtime.block_on(run_test(java_version, test_dir, interpreted))
-    });
+    // Spawn a thread with a larger stack to handle deeply nested async calls that occur during
+    // method handle invocations and invokedynamic resolution
+    let java_version = java_version.to_string();
+    let test_dir = test_dir.to_path_buf();
+    let result = std::thread::Builder::new()
+        .stack_size(8 * 1024 * 1024) // 8 MB stack
+        .spawn(move || {
+            std::panic::catch_unwind(|| {
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .map_err(|error| InternalError(error.to_string()))?;
+                runtime.block_on(run_test(&java_version, &test_dir, interpreted))
+            })
+        })
+        .expect("Failed to spawn test thread")
+        .join()
+        .expect("Test thread panicked");
     match result {
         Ok(Ok((duration, output))) => {
             // Normalize outputs to handle variable content like object hash codes

@@ -23,8 +23,10 @@ impl OperandStack {
     }
 
     /// Drain the last `n` values from the operand stack.
+    ///
+    /// If `n` is greater than the stack length, drains all values.
     pub fn drain_last(&mut self, n: usize) -> Vec<Value> {
-        let split_idx = self.stack.len() - n;
+        let split_idx = self.stack.len().saturating_sub(n);
         self.stack.split_off(split_idx)
     }
 

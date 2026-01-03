@@ -22,7 +22,8 @@ use crate::Error::InternalError;
 use crate::JavaError::IllegalAccessError;
 use crate::Result;
 use dashmap::DashMap;
-use ristretto_classloader::{Class, Method};
+use ristretto_classfile::FieldType;
+use ristretto_classloader::{Class, Method, POLYMORPHIC_METHODS};
 use std::sync::Arc;
 
 /// Unique identifier for a method reference in the constant pool.
@@ -74,20 +75,65 @@ pub struct ResolvedMethodRef {
     pub method_name: String,
     /// Method descriptor (cached for error messages).
     pub method_descriptor: String,
+    /// Whether this is a polymorphic method (e.g., `MethodHandle.invoke`). Cached to avoid
+    /// `HashMap` lookup at invocation time.
+    pub is_polymorphic: bool,
+    /// Number of parameters to pop from the operand stack. For polymorphic methods, this is
+    /// computed from the call site descriptor. For regular methods, this is the method's declared
+    /// parameter count.
+    pub param_count: usize,
+    /// Whether the method has a return value to push onto the operand stack. For polymorphic
+    /// methods, this is computed from the call site descriptor. For regular methods, this is
+    /// whether the method has a return type.
+    pub has_return_type: bool,
 }
 
 impl ResolvedMethodRef {
     /// Creates a new resolved method reference.
+    ///
+    /// Computes and caches polymorphic method information to avoid runtime lookups.
+    ///
+    /// # Arguments
+    ///
+    /// * `declaring_class` - The class that declares the method
+    /// * `method` - The resolved method
+    /// * `invoke_kind` - The kind of invocation
+    /// * `method_descriptor` - The call site descriptor (may differ from method's for polymorphic methods)
     #[must_use]
-    pub fn new(declaring_class: Arc<Class>, method: Arc<Method>, invoke_kind: InvokeKind) -> Self {
+    pub fn new(
+        declaring_class: Arc<Class>,
+        method: Arc<Method>,
+        invoke_kind: InvokeKind,
+        method_descriptor: String,
+    ) -> Self {
         let method_name = method.name().to_string();
-        let method_descriptor = method.descriptor().to_string();
+
+        // Check if this is a polymorphic method (cached lookup)
+        let is_polymorphic = POLYMORPHIC_METHODS
+            .get(&(declaring_class.name(), method.name()))
+            .is_some();
+
+        // Compute param_count and has_return_type once during resolution
+        let (param_count, has_return_type) = if is_polymorphic {
+            // For polymorphic methods, parse the call site descriptor
+            match FieldType::parse_method_descriptor(&method_descriptor) {
+                Ok((params, return_type)) => (params.len(), return_type.is_some()),
+                // Fallback to method's declared parameters if parsing fails
+                Err(_) => (method.parameters().len(), method.return_type().is_some()),
+            }
+        } else {
+            (method.parameters().len(), method.return_type().is_some())
+        };
+
         Self {
             declaring_class,
             method,
             invoke_kind,
             method_name,
             method_descriptor,
+            is_polymorphic,
+            param_count,
+            has_return_type,
         }
     }
 }

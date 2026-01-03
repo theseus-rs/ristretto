@@ -49,10 +49,6 @@ surrogates from Java's UTF-16 encoding. Any unpaired surrogates will be replaced
 (U+FFFD) when decoding Java strings. For additional details on how Java and Rust handle strings, see
 [encodings](docs/encoding/index.md).
 
-#### Instructions
-
-The Invokedynamic instruction is not implemented.
-
 #### Just-In-Time (JIT) Compilation
 
 The JIT compiler only supports functions that use primitive type byte codes. The JIT compiler is not implemented for

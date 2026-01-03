@@ -56,6 +56,15 @@ pub struct MethodResolution {
     pub method_name: String,
     /// Method descriptor (cached for virtual dispatch).
     pub method_descriptor: String,
+    /// Whether this is a polymorphic method (e.g., `MethodHandle.invoke`).
+    /// Cached to avoid `HashMap` lookup at invocation time.
+    pub is_polymorphic: bool,
+    /// Number of parameters to pop from the operand stack.
+    /// For polymorphic methods, this is computed from the call site descriptor.
+    pub param_count: usize,
+    /// Whether the method has a return value to push onto the operand stack.
+    /// For polymorphic methods, this is computed from the call site descriptor.
+    pub has_return_type: bool,
 }
 
 /// Resolves a method reference from the constant pool with JPMS access checking and caching.
@@ -101,6 +110,9 @@ pub async fn resolve_method_ref(
             method: resolved.method.clone(),
             method_name: resolved.method_name.clone(),
             method_descriptor: resolved.method_descriptor.clone(),
+            is_polymorphic: resolved.is_polymorphic,
+            param_count: resolved.param_count,
+            has_return_type: resolved.has_return_type,
         });
     }
 
@@ -153,7 +165,20 @@ pub async fn resolve_method_ref(
     validate_method_for_invoke(&method, method_name, method_descriptor, invoke_kind)?;
 
     // Cache the successful resolution
-    let resolved_ref = ResolvedMethodRef::new(resolved_class.clone(), method.clone(), invoke_kind);
+    // For polymorphic methods, we must use the call site descriptor from the constant pool, not the
+    // method's declared descriptor, as each call site may have a different signature.
+    let resolved_ref = ResolvedMethodRef::new(
+        resolved_class.clone(),
+        method.clone(),
+        invoke_kind,
+        method_descriptor.to_string(),
+    );
+
+    // Extract cached values before moving into cache
+    let is_polymorphic = resolved_ref.is_polymorphic;
+    let param_count = resolved_ref.param_count;
+    let has_return_type = resolved_ref.has_return_type;
+
     vm.method_ref_cache()
         .store_resolved(cache_key, resolved_ref);
 
@@ -162,6 +187,9 @@ pub async fn resolve_method_ref(
         method,
         method_name: method_name.to_string(),
         method_descriptor: method_descriptor.to_string(),
+        is_polymorphic,
+        param_count,
+        has_return_type,
     })
 }
 

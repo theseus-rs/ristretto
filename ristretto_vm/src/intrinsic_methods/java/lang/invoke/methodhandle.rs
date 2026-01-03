@@ -5,28 +5,320 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
-use ristretto_classfile::{JAVA_17, ReferenceKind};
+use ristretto_classfile::{JAVA_11, ReferenceKind};
 use ristretto_classloader::{Class, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
+use tracing::debug;
 
 #[intrinsic_method(
     "java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;",
     Any
 )]
 #[async_recursion(?Send)]
-pub(crate) async fn invoke(
-    thread: Arc<Thread>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let arguments: Vec<Value> = parameters.pop()?.try_into()?;
-    let method_handle = parameters.pop()?;
-    let target_member = {
-        let method_handle = method_handle.as_object_ref()?;
-        method_handle.value("member")?
+pub(crate) async fn invoke(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    // For signature polymorphic methods, parameters are passed individually, not as an array
+    let all_params = parameters.into_vec();
+    if all_params.is_empty() {
+        return Err(crate::Error::InternalError(
+            "invoke requires at least the method handle".to_string(),
+        ));
+    }
+
+    let method_handle = all_params[0].clone();
+    let arguments: Vec<Value> = all_params[1..].to_vec();
+
+    // Try to get the LambdaForm's vmentry first
+    let (form, member) = {
+        let mh_ref = method_handle.as_object_ref()?;
+        let form = mh_ref.value("form").ok();
+        let member = mh_ref.value("member").ok();
+        (form, member)
     };
-    let result = call_method_handle_target(thread, &target_member, arguments).await?;
-    Ok(Some(result))
+
+    // Check if we have a LambdaForm with a vmentry
+    if let Some(ref form_val) = form
+        && !form_val.is_null()
+    {
+        let vmentry = {
+            let form_ref = form_val.as_object_ref()?;
+            form_ref.value("vmentry").ok()
+        };
+
+        if let Some(ref vmentry_val) = vmentry
+            && !vmentry_val.is_null()
+        {
+            let mut lf_args = Vec::with_capacity(arguments.len() + 1);
+            lf_args.push(method_handle.clone());
+            lf_args.extend(arguments);
+
+            return call_method_handle_target(thread, vmentry_val, lf_args)
+                .await
+                .map(Some);
+        }
+    }
+
+    // Fallback: use the member field directly
+    if let Some(ref member_val) = member
+        && !member_val.is_null()
+    {
+        let result = call_method_handle_target(thread, member_val, arguments).await?;
+        return Ok(Some(result));
+    }
+
+    Err(crate::Error::InternalError(
+        "MethodHandle has neither vmentry nor member".to_string(),
+    ))
+}
+
+/// Interpret a `LambdaForm` by executing its names array.
+/// This is an alternative to dispatching through Holder methods, which avoids the argument layout
+/// issues that occur with compiled `LambdaForm`s.
+#[async_recursion(?Send)]
+async fn interpret_lambda_form(
+    thread: Arc<Thread>,
+    form: &Value,
+    input_args: Vec<Value>,
+) -> Result<Value> {
+    let form_ref = form.as_object_ref()?;
+
+    // Get the arity (number of input parameters)
+    let arity = usize::try_from(form_ref.value("arity")?.as_i32()?)?;
+
+    // Get the result index
+    let result_index = form_ref.value("result")?.as_i32()?;
+
+    // Get the names array
+    let names = form_ref.value("names")?;
+    let names_elements = get_object_array_elements(&names)?;
+
+    // Create the values array initialized with input arguments
+    let mut values: Vec<Value> = Vec::with_capacity(names_elements.len());
+
+    // First `arity` entries are the input arguments
+    for (i, arg) in input_args.into_iter().enumerate() {
+        if i >= arity {
+            break;
+        }
+        values.push(arg);
+    }
+
+    // Pad with nulls if we don't have enough input arguments
+    while values.len() < arity {
+        values.push(Value::Object(None));
+    }
+
+    // Execute each Name beyond the input parameters
+    for name in names_elements.iter().skip(arity) {
+        if name.is_null() {
+            values.push(Value::Object(None));
+            continue;
+        }
+
+        let result = interpret_name(thread.clone(), name, &values).await?;
+        values.push(result);
+    }
+
+    // Return the result
+    if result_index < 0 {
+        Ok(Value::Object(None))
+    } else {
+        let result_idx = usize::try_from(result_index)?;
+        if result_idx < values.len() {
+            Ok(values[result_idx].clone())
+        } else {
+            Err(InternalError(format!(
+                "LambdaForm result index {} out of bounds (values len={})",
+                result_index,
+                values.len()
+            )))
+        }
+    }
+}
+
+/// Interpret a single `Name` from a `LambdaForm`'s names array.
+#[async_recursion(?Send)]
+async fn interpret_name(thread: Arc<Thread>, name: &Value, values: &[Value]) -> Result<Value> {
+    let name_ref = name.as_object_ref()?;
+
+    // Get the Name's arguments array
+    let args = name_ref.value("arguments")?;
+
+    // Get the elements from the arguments array
+    let args_elements = get_object_array_elements(&args)?;
+
+    // Resolve each argument - if it's a Name, look it up in values
+    let mut resolved_args: Vec<Value> = Vec::with_capacity(args_elements.len());
+    for arg_val in args_elements {
+        let resolved = resolve_lambda_form_argument(&arg_val, values)?;
+        resolved_args.push(resolved);
+    }
+
+    // Get the function to invoke
+    let function = name_ref.value("function")?;
+    let function_ref = function.as_object_ref()?;
+
+    // Check for intrinsic operations first
+    // The intrinsicName field indicates special VM-level operations
+    if let Ok(intrinsic_name_val) = function_ref.value("intrinsicName")
+        && !intrinsic_name_val.is_null()
+    {
+        // Get the enum ordinal value to identify the intrinsic
+        if let Ok(ordinal) = intrinsic_name_val
+            .as_object_ref()
+            .and_then(|obj| obj.value("ordinal"))
+            .and_then(|v| v.as_i32())
+        {
+            // Handle specific intrinsic operations
+            // See java.lang.invoke.LambdaForm.Intrinsic enum
+            match ordinal {
+                1 => {
+                    // IDENTITY - just return the first argument
+                    if let Some(arg) = resolved_args.first() {
+                        return Ok(arg.clone());
+                    }
+                    return Ok(Value::Object(None));
+                }
+                2 => {
+                    // ZERO - return zero/null value
+                    // The type is determined by the Name's type field
+                    if let Ok(type_val) = name_ref.value("type")
+                        && !type_val.is_null()
+                    {
+                        return Ok(get_zero_value(&type_val));
+                    }
+                    return Ok(Value::Object(None));
+                }
+                // NONE (0) and other intrinsics - fall through to regular dispatch
+                _ => {}
+            }
+        }
+    }
+
+    // Get the member to invoke
+    let member = function_ref.value("member")?;
+
+    // If member is null, this is an error - we can't invoke without a target
+    if member.is_null() {
+        return Err(InternalError(
+            "NamedFunction.member is null - cannot invoke".to_string(),
+        ));
+    }
+
+    // Call the method with resolved arguments
+    call_method_handle_target(thread, &member, resolved_args).await
+}
+
+/// Get elements from an object array Value
+fn get_object_array_elements(value: &Value) -> Result<Vec<Value>> {
+    let ref_guard = value.as_reference()?;
+    let (_, elements) = ref_guard.as_class_vec_ref()?;
+    Ok(elements.to_vec())
+}
+
+/// Resolve a `LambdaForm` argument - if it's a `Name`, look up its value
+fn resolve_lambda_form_argument(arg_val: &Value, values: &[Value]) -> Result<Value> {
+    if arg_val.is_null() {
+        return Ok(arg_val.clone());
+    }
+
+    // Check if this is a Name (index reference to earlier value)
+    let class_name = get_object_class_name(arg_val);
+
+    if let Some(name) = class_name {
+        if name == "java/lang/invoke/LambdaForm$Name" {
+            // It's a Name - get its index and look up the value
+            let arg_ref = arg_val.as_object_ref()?;
+            let index = usize::try_from(arg_ref.value("index")?.as_i32()?)?;
+            if index < values.len() {
+                return Ok(values[index].clone());
+            }
+            return Err(InternalError(format!(
+                "Name index {index} out of bounds (values len={})",
+                values.len()
+            )));
+        }
+        // It's a constant value - unbox if needed
+        return unbox_if_wrapper(arg_val);
+    }
+
+    Ok(arg_val.clone())
+}
+
+/// Get the class name of an object Value, or None if not an object
+fn get_object_class_name(value: &Value) -> Option<String> {
+    value
+        .as_object_ref()
+        .ok()
+        .map(|obj| obj.class().name().to_string())
+}
+
+/// Unbox a primitive wrapper to its value
+fn unbox_if_wrapper(value: &Value) -> Result<Value> {
+    let Ok(obj_ref) = value.as_object_ref() else {
+        return Ok(value.clone());
+    };
+
+    let class_name = obj_ref.class().name();
+
+    match class_name {
+        "java/lang/Integer"
+        | "java/lang/Boolean"
+        | "java/lang/Byte"
+        | "java/lang/Short"
+        | "java/lang/Character" => {
+            let v = obj_ref.value("value")?.as_i32()?;
+            Ok(Value::Int(v))
+        }
+        "java/lang/Long" => {
+            let v = obj_ref.value("value")?.as_i64()?;
+            Ok(Value::Long(v))
+        }
+        "java/lang/Float" => {
+            let v = obj_ref.value("value")?.as_f32()?;
+            Ok(Value::Float(v))
+        }
+        "java/lang/Double" => {
+            let v = obj_ref.value("value")?.as_f64()?;
+            Ok(Value::Double(v))
+        }
+        _ => Ok(value.clone()),
+    }
+}
+
+/// Get a zero value for the given type.
+/// Used by the `ZERO` intrinsic in `LambdaForm` interpretation.
+fn get_zero_value(type_val: &Value) -> Value {
+    // The type field in Name is a BasicType byte
+    // BasicType: L=0 (object), I=1 (int), J=2 (long), F=3 (float), D=4 (double), V=5 (void)
+    if let Ok(basic_type) = type_val.as_i32() {
+        return match basic_type {
+            1 => Value::Int(0),      // I_TYPE = int
+            2 => Value::Long(0),     // J_TYPE = long
+            3 => Value::Float(0.0),  // F_TYPE = float
+            4 => Value::Double(0.0), // D_TYPE = double
+            // L_TYPE (0), V_TYPE (5), and others default to null
+            _ => Value::Object(None),
+        };
+    }
+
+    // Try to get BasicType from its ordinal if it's an enum
+    if let Ok(obj_ref) = type_val.as_object_ref()
+        && obj_ref.class().name() == "java/lang/invoke/LambdaForm$BasicType"
+        && let Ok(ordinal) = obj_ref.value("ordinal").and_then(|v| v.as_i32())
+    {
+        return match ordinal {
+            1 => Value::Int(0),      // I_TYPE
+            2 => Value::Long(0),     // J_TYPE
+            3 => Value::Float(0.0),  // F_TYPE
+            4 => Value::Double(0.0), // D_TYPE
+            // L_TYPE (0), V_TYPE (5), and others default to null
+            _ => Value::Object(None),
+        };
+    }
+
+    // Default to null object
+    Value::Object(None)
 }
 
 #[intrinsic_method(
@@ -36,16 +328,64 @@ pub(crate) async fn invoke(
 #[async_recursion(?Send)]
 pub(crate) async fn invoke_basic(
     thread: Arc<Thread>,
-    mut parameters: Parameters,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let arguments: Vec<Value> = parameters.pop()?.try_into()?;
-    let method_handle = parameters.pop()?;
-    let target_member = {
-        let method_handle = method_handle.as_object_ref()?;
-        method_handle.value("member")?
+    // For signature polymorphic methods, parameters are passed individually, not as an array
+    let all_params = parameters.into_vec();
+    if all_params.is_empty() {
+        return Err(crate::Error::InternalError(
+            "invokeBasic requires at least the method handle".to_string(),
+        ));
+    }
+
+    let method_handle = all_params[0].clone();
+    let arguments: Vec<Value> = all_params[1..].to_vec();
+
+    // Try to get the LambdaForm's vmentry first
+    // This is the proper way to invoke a MethodHandle via its compiled LambdaForm
+    let (form, member) = {
+        let mh_ref = method_handle.as_object_ref()?;
+        let form = mh_ref.value("form").ok();
+        let member = mh_ref.value("member").ok();
+        (form, member)
     };
-    let result = call_method_handle_target(thread, &target_member, arguments).await?;
-    Ok(Some(result))
+
+    // Check if we have a LambdaForm with a vmentry
+    if let Some(ref form_val) = form
+        && !form_val.is_null()
+    {
+        let vmentry = {
+            let form_ref = form_val.as_object_ref()?;
+            form_ref.value("vmentry").ok()
+        };
+
+        if let Some(ref vmentry_val) = vmentry
+            && !vmentry_val.is_null()
+        {
+            // The vmentry is a MemberName pointing to the compiled LambdaForm method
+            // The LambdaForm method signature is (MethodHandle, args...) -> result
+            // We need to prepend the MethodHandle to the arguments
+            let mut lf_args = Vec::with_capacity(arguments.len() + 1);
+            lf_args.push(method_handle.clone());
+            lf_args.extend(arguments);
+
+            return call_method_handle_target(thread, vmentry_val, lf_args)
+                .await
+                .map(Some);
+        }
+    }
+
+    // Fallback: use the member field directly (for DirectMethodHandle)
+    if let Some(ref member_val) = member
+        && !member_val.is_null()
+    {
+        let result = call_method_handle_target(thread, member_val, arguments).await?;
+        return Ok(Some(result));
+    }
+
+    Err(crate::Error::InternalError(
+        "MethodHandle has neither vmentry nor member".to_string(),
+    ))
 }
 
 #[intrinsic_method(
@@ -55,19 +395,72 @@ pub(crate) async fn invoke_basic(
 #[async_recursion(?Send)]
 pub(crate) async fn invoke_exact(
     thread: Arc<Thread>,
-    mut parameters: Parameters,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let arguments: Vec<Value> = parameters.pop()?.try_into()?;
-    let method_handle = parameters.pop()?;
-    let member = {
-        let method_handle = method_handle.as_object_ref()?;
-        method_handle.value("member")?
+    // For signature polymorphic methods like invokeExact, the actual call site signature
+    // determines the parameters. The declared signature ([Ljava/lang/Object;)Ljava/lang/Object;
+    // is a placeholder. The actual arguments are passed as individual values, not as an array.
+    //
+    // When called from invokevirtual with the call site descriptor (String,String)String,
+    // parameters will be: [method_handle, "Hello", " World"]
+    //
+    // We need to extract the method_handle first, then treat remaining parameters as arguments.
+    let all_params = parameters.into_vec();
+    if all_params.is_empty() {
+        return Err(crate::Error::InternalError(
+            "invokeExact requires at least the method handle".to_string(),
+        ));
+    }
+
+    let method_handle = all_params[0].clone();
+    let arguments: Vec<Value> = all_params[1..].to_vec();
+
+    // Try to get the LambdaForm's vmentry first
+    let (form, member) = {
+        let mh_ref = method_handle.as_object_ref()?;
+        let form = mh_ref.value("form").ok();
+        let member = mh_ref.value("member").ok();
+        (form, member)
     };
-    let result = call_method_handle_target(thread, &member, arguments).await?;
-    Ok(Some(result))
+
+    // Check if we have a LambdaForm with a vmentry
+    if let Some(ref form_val) = form
+        && !form_val.is_null()
+    {
+        let vmentry = {
+            let form_ref = form_val.as_object_ref()?;
+            form_ref.value("vmentry").ok()
+        };
+
+        if let Some(ref vmentry_val) = vmentry
+            && !vmentry_val.is_null()
+        {
+            let mut lf_args = Vec::with_capacity(arguments.len() + 1);
+            lf_args.push(method_handle.clone());
+            lf_args.extend(arguments);
+
+            return call_method_handle_target(thread, vmentry_val, lf_args)
+                .await
+                .map(Some);
+        }
+    }
+
+    // Fallback: use the member field directly
+    if let Some(ref member_val) = member
+        && !member_val.is_null()
+    {
+        let result = call_method_handle_target(thread, member_val, arguments).await?;
+        return Ok(Some(result));
+    }
+
+    Err(crate::Error::InternalError(
+        "MethodHandle has neither vmentry nor member".to_string(),
+    ))
 }
 
 /// Helper: Actually invokes the target referenced by a `MethodHandle`.
+#[expect(clippy::too_many_lines)]
+#[async_recursion(?Send)]
 pub async fn call_method_handle_target(
     thread: Arc<Thread>,
     member: &Value,
@@ -86,7 +479,24 @@ pub async fn call_method_handle_target(
         let target_class_object = member_class.as_object_ref()?;
         target_class_object.value("name")?.as_string()?
     };
-    let target_class = thread.class(target_class_name).await?;
+
+    // Handle Holder classes and LambdaForm classes specially - these are synthetic entry points
+    // that may have dynamically generated methods not present in the pre-compiled class files.
+    // We use the LambdaForm interpreter to dispatch these methods.
+    if is_holder_class(&target_class_name) {
+        return dispatch_holder_method(thread, &member_name, arguments).await;
+    }
+
+    let target_class = match thread.class(&target_class_name).await {
+        Ok(c) => c,
+        Err(e) => {
+            debug!(
+                "call_method_handle_target: Failed to load class '{}': {:?}",
+                target_class_name, e
+            );
+            return Err(e);
+        }
+    };
 
     // Get flags to determine the kind of member and operation
     let reference_kind_value = (flags
@@ -97,17 +507,47 @@ pub async fn call_method_handle_target(
     let reference_kind = ReferenceKind::try_from(reference_kind_value)?;
 
     // Get the descriptor (method signature or field type)
-    let member_descriptor = if let Ok(method_type) = member_type {
-        let method_descriptor = thread
-            .invoke(
-                "java.lang.invoke.MethodType",
-                "toMethodDescriptorString()Ljava/lang/String;",
-                &[method_type],
-            )
-            .await?;
-        match method_descriptor {
-            Some(descriptor) => descriptor.as_string()?,
-            _ => return Err(InternalError("Invalid MethodType".to_string())),
+    // For methods, type is MethodType; for fields, type is Class
+    let member_descriptor = if let Ok(ref type_val) = member_type {
+        let type_class = get_object_class_name(type_val);
+
+        if let Some(class_name) = type_class {
+            if class_name == "java/lang/invoke/MethodType" {
+                // It's a method - get the descriptor string
+                let method_descriptor = thread
+                    .invoke(
+                        "java.lang.invoke.MethodType",
+                        "toMethodDescriptorString()Ljava/lang/String;",
+                        std::slice::from_ref(type_val),
+                    )
+                    .await?;
+                match method_descriptor {
+                    Some(descriptor) => descriptor.as_string()?,
+                    _ => return Err(InternalError("Invalid MethodType".to_string())),
+                }
+            } else if class_name == "java/lang/Class" {
+                // It's a field - get the class name and convert to descriptor
+                let type_ref = type_val.as_object_ref()?;
+                let field_type_name = type_ref.value("name")?.as_string()?;
+                // For field access, we just need the field name, not the type descriptor
+                // The type is used to verify the field but we don't need it for GetField
+                format!("L{};", field_type_name.replace('.', "/"))
+            } else {
+                // Unknown type - try to use descriptor field
+                if let Ok(descriptor) = member_descriptor.and_then(|value| value.as_string()) {
+                    descriptor
+                } else {
+                    return Err(InternalError(format!(
+                        "MemberName has unknown type class: {class_name}"
+                    )));
+                }
+            }
+        } else if let Ok(descriptor) = member_descriptor.and_then(|value| value.as_string()) {
+            descriptor
+        } else {
+            return Err(InternalError(
+                "MemberName missing type/descriptor".to_string(),
+            ));
         }
     } else if let Ok(descriptor) = member_descriptor.and_then(|value| value.as_string()) {
         descriptor
@@ -117,19 +557,36 @@ pub async fn call_method_handle_target(
         ));
     };
 
+    debug!(
+        "call_method_handle_target: class={}, name={}, descriptor={}, kind={:?}, args={}",
+        target_class_name,
+        member_name,
+        member_descriptor,
+        reference_kind,
+        arguments.len()
+    );
+
     match reference_kind {
         ReferenceKind::InvokeVirtual | ReferenceKind::InvokeInterface => {
+            if arguments.is_empty() {
+                return Err(InternalError(format!(
+                    "InvokeVirtual/Interface requires receiver: {target_class_name}.{member_name}{member_descriptor}"
+                )));
+            }
             let receiver = arguments.remove(0);
             let method = target_class.try_get_method(member_name, member_descriptor)?;
             let mut call_arguments = vec![receiver];
             call_arguments.extend(arguments);
-            thread
-                .try_execute(&target_class, &method, &call_arguments)
-                .await
+            let result = thread
+                .execute(&target_class, &method, &call_arguments)
+                .await?;
+            // For void methods, return null; otherwise return the result
+            Ok(result.unwrap_or(Value::Object(None)))
         }
         ReferenceKind::InvokeStatic => {
             let method = target_class.try_get_method(member_name, member_descriptor)?;
-            thread.try_execute(&target_class, &method, &arguments).await
+            let result = thread.execute(&target_class, &method, &arguments).await?;
+            Ok(result.unwrap_or(Value::Object(None)))
         }
         ReferenceKind::InvokeSpecial | ReferenceKind::NewInvokeSpecial => {
             invoke_special(
@@ -179,8 +636,16 @@ async fn invoke_special(
     mut arguments: Vec<Value>,
     is_constructor: bool,
 ) -> Result<Value> {
-    if is_constructor {
-        let start_index = method_descriptor.find('(').unwrap_or_default();
+    // For constructor invocations (<init> methods):
+    // - NewInvokeSpecial (is_constructor=true): Always allocate + invoke
+    // - InvokeSpecial with <init>: If arguments is empty, treat as NewInvokeSpecial
+    //   This handles the case where MethodHandle machinery uses InvokeSpecial for constructors
+    let is_constructor_invocation =
+        is_constructor || (method_name == "<init>" && arguments.is_empty());
+
+    if is_constructor_invocation {
+        // Allocate object and invoke constructor
+        let start_index = method_descriptor.find('(').map_or(0, |i| i + 1);
         let end_index = method_descriptor
             .rfind(')')
             .unwrap_or(method_descriptor.len());
@@ -189,16 +654,276 @@ async fn invoke_special(
             .object(target_class.name(), descriptor, arguments.as_slice())
             .await?;
         Ok(instance)
+    } else if method_name == "<init>" {
+        // InvokeSpecial with <init> and a receiver - complete initialization of existing object
+        let receiver = arguments.remove(0);
+        let method = target_class.try_get_method(method_name, method_descriptor)?;
+        let mut call_arguments = vec![receiver.clone()];
+        call_arguments.extend(arguments);
+        thread
+            .execute(&target_class, &method, &call_arguments)
+            .await?;
+        Ok(receiver)
     } else {
         // Regular special invocation (private methods, super calls)
+        if arguments.is_empty() {
+            let class_name = target_class.name();
+            return Err(InternalError(format!(
+                "InvokeSpecial requires receiver: {class_name}.{method_name}{method_descriptor}"
+            )));
+        }
         let receiver = arguments.remove(0);
         let method = target_class.try_get_method(method_name, method_descriptor)?;
         let mut call_arguments = vec![receiver];
         call_arguments.extend(arguments);
-        thread
-            .try_execute(&target_class, &method, &call_arguments)
-            .await
+        let result = thread
+            .execute(&target_class, &method, &call_arguments)
+            .await?;
+        Ok(result.unwrap_or(Value::Object(None)))
     }
+}
+
+/// Checks if a class is a Holder class or similar class used for `LambdaForm` entry points.
+/// These classes have dynamically generated methods that don't have real bytecode.
+fn is_holder_class(class_name: &str) -> bool {
+    // Class names may be in either format: java.lang.invoke.X or java/lang/invoke/X
+    let normalized = class_name.replace('.', "/");
+
+    // Exact matches
+    if matches!(
+        normalized.as_str(),
+        "java/lang/invoke/DirectMethodHandle$Holder"
+            | "java/lang/invoke/DelegatingMethodHandle$Holder"
+            | "java/lang/invoke/Invokers$Holder"
+            | "java/lang/invoke/LambdaForm$Holder"
+            | "java/lang/invoke/VarHandleGuards"
+    ) {
+        return true;
+    }
+
+    // Pattern matches for dynamically generated LambdaForm classes
+    // These include LambdaForm$MH, LambdaForm$DMH, LambdaForm$BMH, etc.
+    if normalized.starts_with("java/lang/invoke/LambdaForm$") {
+        return true;
+    }
+
+    false
+}
+
+/// Dispatches a Holder method call to the actual target.
+///
+/// Holder methods are entry points for `LambdaForms`. The first argument is typically
+/// the `MethodHandle` itself, which contains the actual target in its `member` field.
+///
+/// `depth` is used to prevent infinite recursion in complex method handle chains.
+#[async_recursion(?Send)]
+async fn dispatch_holder_method_internal(
+    thread: Arc<Thread>,
+    method_name: &str,
+    mut arguments: Vec<Value>,
+    depth: usize,
+) -> Result<Value> {
+    const MAX_DEPTH: usize = 50;
+    if depth > MAX_DEPTH {
+        return Err(InternalError(format!(
+            "Maximum method handle chain depth ({MAX_DEPTH}) exceeded for {method_name}"
+        )));
+    }
+
+    debug!(
+        "dispatch_holder_method: method_name={}, args={}, depth={}",
+        method_name,
+        arguments.len(),
+        depth
+    );
+
+    // The first argument should be the MethodHandle
+    if arguments.is_empty() {
+        return Err(InternalError(format!(
+            "Holder method {method_name} requires at least a MethodHandle argument"
+        )));
+    }
+
+    let method_handle = arguments.remove(0);
+    let mh_class = method_handle.as_object_ref()?.class().name().to_string();
+
+    // Try to use LambdaForm interpretation first
+    // This properly handles the argument layout that compiled LambdaForms expect
+    {
+        let mh_ref = method_handle.as_object_ref()?;
+        if let Ok(form) = mh_ref.value("form")
+            && !form.is_null()
+        {
+            // Build input args: [MethodHandle, ...remaining_arguments]
+            let mut input_args = Vec::with_capacity(arguments.len() + 1);
+            input_args.push(method_handle.clone());
+            input_args.extend(arguments.clone());
+
+            match interpret_lambda_form(thread.clone(), &form, input_args).await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    debug!(
+                        "dispatch_holder_method: LambdaForm interpretation failed for {}: {:?}",
+                        method_name, e
+                    );
+                    // Fall through to direct dispatch
+                }
+            }
+        }
+    }
+
+    // Fallback: For DirectMethodHandle, use the member directly
+    if mh_class == "java/lang/invoke/DirectMethodHandle" {
+        let mh_ref = method_handle.as_object_ref()?;
+        if let Ok(member) = mh_ref.value("member")
+            && !member.is_null()
+        {
+            return call_method_handle_target(thread, &member, arguments).await;
+        }
+    }
+
+    // Navigate through the MethodHandle chain to find the ultimate target and collect bound arguments
+    let (target_member, mut bound_args) =
+        extract_target_and_bound_args(&method_handle, depth, MAX_DEPTH)?;
+
+    // Prepend bound arguments to the call arguments
+    bound_args.append(&mut arguments);
+
+    // Dispatch to the target
+    call_method_handle_target(thread, &target_member, bound_args).await
+}
+
+/// Extract the ultimate target `MemberName` and all bound arguments from a `MethodHandle` chain.
+///
+/// This recursively traverses `BoundMethodHandle` wrappers to find the `DirectMethodHandle`
+/// at the bottom and collect all bound arguments along the way.
+fn extract_target_and_bound_args(
+    method_handle: &Value,
+    depth: usize,
+    max_depth: usize,
+) -> Result<(Value, Vec<Value>)> {
+    if depth > max_depth {
+        return Err(InternalError(
+            "Maximum depth exceeded in MethodHandle chain".to_string(),
+        ));
+    }
+
+    let mh_ref = method_handle.as_object_ref()?;
+
+    // First check if this MethodHandle has a direct member field (DirectMethodHandle)
+    if let Ok(member) = mh_ref.value("member")
+        && !member.is_null()
+    {
+        return Ok((member, Vec::new()));
+    }
+
+    // Check if this is a BoundMethodHandle
+    let mh_class_name = mh_ref.class().name().to_string();
+    if mh_class_name.starts_with("java/lang/invoke/BoundMethodHandle") {
+        // Collect bound arguments from this level
+        let mut bound_args = Vec::new();
+
+        // Try to get argL0 - this is often the inner MethodHandle
+        if let Ok(arg_l0) = mh_ref.value("argL0")
+            && !arg_l0.is_null()
+        {
+            // Check if argL0 is a MethodHandle (inner target) or a regular bound argument
+            let arg_l0_class = arg_l0.as_object_ref()?.class().name().to_string();
+
+            if arg_l0_class.contains("MethodHandle") {
+                // argL0 is the inner MethodHandle - recurse into it
+                let (inner_target, mut inner_bound) =
+                    extract_target_and_bound_args(&arg_l0, depth + 1, max_depth)?;
+
+                // Collect any additional bound arguments from this level (argL1, argL2, etc.)
+                for i in 1..10 {
+                    let field_name = format!("argL{i}");
+                    if let Ok(arg) = mh_ref.value(&field_name) {
+                        if !arg.is_null() {
+                            bound_args.push(arg);
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                // Collect primitive bound arguments (argI0, argJ0, etc.)
+                for i in 0..10 {
+                    let field_name = format!("argI{i}");
+                    if let Ok(arg) = mh_ref.value(&field_name) {
+                        bound_args.push(arg);
+                    } else {
+                        break;
+                    }
+                }
+
+                // The bound args from this level come after inner bound args
+                inner_bound.extend(bound_args);
+                return Ok((inner_target, inner_bound));
+            }
+
+            // argL0 is a regular bound argument (e.g., receiver object)
+            bound_args.push(arg_l0);
+        }
+
+        // Collect additional bound arguments
+        for i in 1..10 {
+            let field_name = format!("argL{i}");
+            if let Ok(arg) = mh_ref.value(&field_name) {
+                if !arg.is_null() {
+                    bound_args.push(arg);
+                }
+            } else {
+                break;
+            }
+        }
+
+        for i in 0..10 {
+            let field_name = format!("argI{i}");
+            if let Ok(arg) = mh_ref.value(&field_name) {
+                bound_args.push(arg);
+            } else {
+                break;
+            }
+        }
+
+        // Try to find the target through form.vmentry
+        if let Ok(form) = mh_ref.value("form")
+            && !form.is_null()
+        {
+            let form_ref = form.as_object_ref()?;
+            if let Ok(vmentry) = form_ref.value("vmentry")
+                && !vmentry.is_null()
+            {
+                return Ok((vmentry, bound_args));
+            }
+        }
+    }
+
+    // Fallback: try form.vmentry
+    if let Ok(form) = mh_ref.value("form")
+        && !form.is_null()
+    {
+        let form_ref = form.as_object_ref()?;
+        if let Ok(vmentry) = form_ref.value("vmentry")
+            && !vmentry.is_null()
+        {
+            return Ok((vmentry, Vec::new()));
+        }
+    }
+
+    Err(InternalError(format!(
+        "Could not find target in MethodHandle of class {mh_class_name}"
+    )))
+}
+
+/// Wrapper for `dispatch_holder_method_internal` that starts with depth=0.
+pub(crate) async fn dispatch_holder_method(
+    thread: Arc<Thread>,
+    method_name: &str,
+    arguments: Vec<Value>,
+) -> Result<Value> {
+    dispatch_holder_method_internal(thread, method_name, arguments, 0).await
 }
 
 #[intrinsic_method(
@@ -210,6 +935,9 @@ pub(crate) async fn link_to_interface(
     thread: Arc<Thread>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
+    // For signature polymorphic methods, the parameters are passed as individual values
+    // after being drained from the stack using the call site descriptor.
+    // The last parameter is the MemberName.
     let mut arguments: Vec<Value> = parameters.into_vec();
     let member = arguments
         .pop()
@@ -220,13 +948,16 @@ pub(crate) async fn link_to_interface(
 
 #[intrinsic_method(
     "java/lang/invoke/MethodHandle.linkToNative([Ljava/lang/Object;)Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_17)
+    GreaterThanOrEqual(JAVA_11)
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn link_to_native(
     thread: Arc<Thread>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
+    // For signature polymorphic methods, the parameters are passed as individual values
+    // after being drained from the stack using the call site descriptor.
+    // The last parameter is the MemberName.
     let mut arguments: Vec<Value> = parameters.into_vec();
     let member = arguments
         .pop()
@@ -244,6 +975,9 @@ pub(crate) async fn link_to_special(
     thread: Arc<Thread>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
+    // For signature polymorphic methods, the parameters are passed as individual values
+    // after being drained from the stack using the call site descriptor.
+    // The last parameter is the MemberName.
     let mut arguments: Vec<Value> = parameters.into_vec();
     let member = arguments
         .pop()
@@ -261,6 +995,9 @@ pub(crate) async fn link_to_static(
     thread: Arc<Thread>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
+    // For signature polymorphic methods, the parameters are passed as individual values
+    // after being drained from the stack using the call site descriptor.
+    // The last parameter is the MemberName.
     let mut arguments: Vec<Value> = parameters.into_vec();
     let member = arguments
         .pop()
@@ -278,6 +1015,9 @@ pub(crate) async fn link_to_virtual(
     thread: Arc<Thread>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
+    // For signature polymorphic methods, the parameters are passed as individual values
+    // after being drained from the stack using the call site descriptor.
+    // The last parameter is the MemberName.
     let mut arguments: Vec<Value> = parameters.into_vec();
     let member = arguments
         .pop()
@@ -291,7 +1031,7 @@ mod tests {
     use super::*;
     use crate::JavaObject;
     use ristretto_classfile::{
-        ClassAccessFlags, ClassFile, ConstantPool, Field, FieldAccessFlags, FieldType,
+        ClassAccessFlags, ClassFile, ConstantPool, Field, FieldAccessFlags, FieldType, JAVA_17,
     };
     use ristretto_classloader::Object;
 
@@ -403,14 +1143,12 @@ mod tests {
         let method_handle = Value::from(Object::new(mh_class)?);
         method_handle.as_object_mut()?.set_value("member", member)?;
 
-        let args_class = thread.class("[Ljava/lang/Object;").await?;
         let arg = "42".to_object(&thread).await?;
-        let args = vec![arg];
-        let arguments = Value::try_from((args_class, args))?;
 
+        // For signature polymorphic methods, push method_handle first, then individual arguments
         let mut parameters = Parameters::default();
         parameters.push(method_handle);
-        parameters.push(arguments);
+        parameters.push(arg);
 
         let result = invoke(thread, parameters).await;
         assert!(result.is_ok(), "invoke failed: {result:?}");
@@ -433,14 +1171,12 @@ mod tests {
         let method_handle = Value::from(Object::new(mh_class)?);
         method_handle.as_object_mut()?.set_value("member", member)?;
 
-        let args_class = thread.class("[Ljava/lang/Object;").await?;
         let arg = "42".to_object(&thread).await?;
-        let args = vec![arg];
-        let arguments = Value::try_from((args_class, args))?;
 
+        // For signature polymorphic methods, push method_handle first, then individual arguments
         let mut parameters = Parameters::default();
         parameters.push(method_handle);
-        parameters.push(arguments);
+        parameters.push(arg);
 
         let result = invoke_basic(thread, parameters).await;
         assert!(result.is_ok(), "invoke_basic failed: {result:?}");
