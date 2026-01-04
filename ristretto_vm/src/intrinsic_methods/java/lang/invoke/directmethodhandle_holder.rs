@@ -614,6 +614,18 @@ pub(crate) async fn invoke_virtual(
 }
 
 #[intrinsic_method(
+    "java/lang/invoke/DirectMethodHandle$Holder.newInvokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;",
+    Any
+)]
+#[async_recursion(?Send)]
+pub(crate) async fn new_invoke_special(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    holder_method_stub(thread, "newInvokeSpecial", parameters).await
+}
+
+#[intrinsic_method(
     "java/lang/invoke/DirectMethodHandle$Holder.putBoolean(Ljava/lang/Object;I)V",
     GreaterThanOrEqual(JAVA_11)
 )]

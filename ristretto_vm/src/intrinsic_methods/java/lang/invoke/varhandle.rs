@@ -8,6 +8,122 @@ use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
+/// Access mode ordinals from java.lang.invoke.VarHandle.AccessMode
+#[derive(Debug, Clone, Copy)]
+#[repr(i32)]
+enum AccessMode {
+    Get = 0,
+    Set = 1,
+    GetVolatile = 2,
+    SetVolatile = 3,
+    GetAcquire = 4,
+    SetRelease = 5,
+    GetOpaque = 6,
+    SetOpaque = 7,
+    CompareAndSet = 8,
+    CompareAndExchange = 9,
+    CompareAndExchangeAcquire = 10,
+    CompareAndExchangeRelease = 11,
+    WeakCompareAndSetPlain = 12,
+    WeakCompareAndSet = 13,
+    WeakCompareAndSetAcquire = 14,
+    WeakCompareAndSetRelease = 15,
+    GetAndSet = 16,
+    GetAndSetAcquire = 17,
+    GetAndSetRelease = 18,
+    GetAndAdd = 19,
+    GetAndAddAcquire = 20,
+    GetAndAddRelease = 21,
+    GetAndBitwiseOr = 22,
+    GetAndBitwiseOrRelease = 23,
+    GetAndBitwiseOrAcquire = 24,
+    GetAndBitwiseAnd = 25,
+    GetAndBitwiseAndRelease = 26,
+    GetAndBitwiseAndAcquire = 27,
+    GetAndBitwiseXor = 28,
+    GetAndBitwiseXorRelease = 29,
+    GetAndBitwiseXorAcquire = 30,
+}
+
+/// Invokes a `VarHandle` access mode by getting the `MethodHandle` for that mode and invoking it.
+///
+/// Per JVM spec, `VarHandle` polymorphic methods dispatch to `MethodHandle`s stored in the
+/// `VarHandle`'s `methodHandleTable`.
+#[async_recursion(?Send)]
+async fn invoke_var_handle_access_mode(
+    thread: &Arc<Thread>,
+    parameters: Parameters,
+    access_mode: AccessMode,
+) -> Result<Option<Value>> {
+    // Get all parameters as a vector
+    let all_params = parameters.into_vec();
+    if all_params.is_empty() {
+        return Err(crate::Error::InternalError(
+            "VarHandle access mode requires at least the VarHandle".to_string(),
+        ));
+    }
+
+    // First parameter is the VarHandle itself (this)
+    let var_handle = all_params[0].clone();
+    let remaining_args: Vec<Value> = all_params[1..].to_vec();
+
+    // Get the AccessMode enum value
+    let access_mode_class = thread
+        .class("java/lang/invoke/VarHandle$AccessMode")
+        .await?;
+    let values_method =
+        access_mode_class.try_get_method("values", "()[Ljava/lang/invoke/VarHandle$AccessMode;")?;
+    let values_result = thread
+        .execute(&access_mode_class, &values_method, &[] as &[Value])
+        .await?;
+    let values_array = values_result.ok_or_else(|| {
+        crate::Error::InternalError("AccessMode.values() returned null".to_string())
+    })?;
+
+    // Get the AccessMode enum constant at the ordinal
+    let access_mode_value = {
+        let values_ref = values_array.as_reference()?;
+        let (_, elements) = values_ref.as_class_vec_ref()?;
+        let ordinal = access_mode as usize;
+        if ordinal >= elements.len() {
+            return Err(crate::Error::InternalError(format!(
+                "AccessMode ordinal {ordinal} out of bounds"
+            )));
+        }
+        elements[ordinal].clone()
+    };
+
+    // Call toMethodHandle(AccessMode) to get a MethodHandle that's bound to this VarHandle
+    let var_handle_class = thread.class("java/lang/invoke/VarHandle").await?;
+    let to_method_handle = var_handle_class.try_get_method(
+        "toMethodHandle",
+        "(Ljava/lang/invoke/VarHandle$AccessMode;)Ljava/lang/invoke/MethodHandle;",
+    )?;
+
+    let mh_result = thread
+        .execute(
+            &var_handle_class,
+            &to_method_handle,
+            &[var_handle, access_mode_value],
+        )
+        .await?;
+
+    let method_handle = mh_result.ok_or_else(|| {
+        crate::Error::InternalError("VarHandle.toMethodHandle returned null".to_string())
+    })?;
+
+    // Build the arguments for the MethodHandle invoke:
+    // [method_handle, ...remaining_args]
+    // The MethodHandle from toMethodHandle is already bound to the VarHandle
+    let mut invoke_args = vec![method_handle];
+    invoke_args.extend(remaining_args);
+
+    // Invoke the MethodHandle using the same mechanism as MethodHandle.invoke
+    // This calls the invoke intrinsic method which handles LambdaForm dispatch
+    let invoke_params = Parameters::new(invoke_args);
+    super::methodhandle::invoke(thread.clone(), invoke_params).await
+}
+
 #[intrinsic_method(
     "java/lang/invoke/VarHandle.compareAndExchange([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
@@ -302,8 +418,8 @@ pub(crate) async fn get_volatile(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_recursion(?Send)]
-pub(crate) async fn set(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.set([Ljava/lang/Object;)V")
+pub(crate) async fn set(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::Set).await
 }
 
 #[intrinsic_method(
@@ -602,12 +718,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.set([Ljava/lang/Object;)V"
-    )]
-    async fn test_set() {
+    async fn test_set_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set(thread, Parameters::default()).await;
+        let result = set(thread, Parameters::default()).await;
+        // With no arguments, set should return an error
+        assert!(result.is_err());
     }
 
     #[tokio::test]

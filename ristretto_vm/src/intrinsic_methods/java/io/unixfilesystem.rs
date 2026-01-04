@@ -31,6 +31,16 @@ bitflags! {
     }
 }
 
+bitflags! {
+    /// File access mode flags per java.io.FileSystem.
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct FileAccessMode: i32 {
+        const EXECUTE = 0x01;
+        const WRITE = 0x02;
+        const READ = 0x04;
+    }
+}
+
 #[intrinsic_method(
     "java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;",
     Any
@@ -81,7 +91,7 @@ pub(crate) async fn check_access_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let access_mode = parameters.pop_int()?;
+    let access_mode = FileAccessMode::from_bits_truncate(parameters.pop_int()?);
     let file = parameters.pop()?;
     let file = file.as_object_ref()?;
     let path = file.value("path")?.as_string()?;
@@ -91,18 +101,28 @@ pub(crate) async fn check_access_0(
         return Ok(Some(Value::from(false)));
     };
 
-    let readonly = metadata.permissions().readonly();
-    // Access mode bits: 1=read, 2=write, 4=execute
-    let can_read = access_mode & 1 == 0 || !readonly;
-    let can_write = access_mode & 2 == 0 || !readonly;
     #[cfg(unix)]
-    let can_execute = access_mode & 4 == 0 || { metadata.permissions().mode() & 0o111 != 0 };
+    let (can_read, can_write, can_execute) = {
+        let mode = metadata.permissions().mode();
+        // Check if any read bit is set (owner, group, or other)
+        let can_read = mode & 0o444 != 0;
+        // Check if any write bit is set
+        let can_write = mode & 0o222 != 0;
+        // Check if any execute bit is set
+        let can_execute = mode & 0o111 != 0;
+        (can_read, can_write, can_execute)
+    };
     #[cfg(not(unix))]
-    let can_execute = true; // Not supported on non-Unix
+    let (can_read, can_write, can_execute) = {
+        let readonly = metadata.permissions().readonly();
+        // On non-Unix, use readonly flag for write permission
+        // and assume read/execute are always available
+        (!readonly || true, !readonly, true)
+    };
 
-    let allowed = (access_mode & 1 == 0 || can_read)
-        && (access_mode & 2 == 0 || can_write)
-        && (access_mode & 4 == 0 || can_execute);
+    let allowed = (!access_mode.contains(FileAccessMode::READ) || can_read)
+        && (!access_mode.contains(FileAccessMode::WRITE) || can_write)
+        && (!access_mode.contains(FileAccessMode::EXECUTE) || can_execute);
 
     Ok(Some(Value::from(allowed)))
 }
@@ -806,7 +826,7 @@ mod tests {
         let (_file, file_object) = create_file(&thread, "check_access").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
-        parameters.push_int(1); // Read access
+        parameters.push_int(FileAccessMode::READ.bits());
         let value = check_access(thread, parameters).await?.expect("access");
         let has_access = value.as_bool()?;
         assert!(has_access);
@@ -819,7 +839,7 @@ mod tests {
         let (_file, file_object) = create_file(&thread, "check_access_0").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
-        parameters.push_int(1); // Read access
+        parameters.push_int(FileAccessMode::READ.bits());
         let value = check_access_0(thread, parameters).await?.expect("access");
         let has_access = value.as_bool()?;
         assert!(has_access);

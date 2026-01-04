@@ -3,6 +3,7 @@ use crate::call_site_cache::CallSiteCache;
 use crate::handles::{FileHandle, HandleManager, MemberHandle, ThreadHandle};
 use crate::intrinsic_methods::MethodRegistry;
 use crate::java_object::JavaObject;
+use crate::jit::Compiler;
 use crate::method_ref_cache::MethodRefCache;
 use crate::module_system::ModuleSystem;
 use crate::rust_value::RustValue;
@@ -15,7 +16,6 @@ use ristretto_classloader::{
     Class, ClassLoader, ClassPath, ClassPathEntry, Object, Value, runtime,
 };
 use ristretto_gc::{GC, Statistics};
-use ristretto_jit::Compiler;
 use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt::Debug;
@@ -53,7 +53,7 @@ pub struct VM {
     java_class_file_version: Version,
     /// The method registry for intrinsic methods
     method_registry: MethodRegistry,
-    /// The JIT compiler
+    /// The JIT compiler (per-VM instance with its own cache and background compilation)
     compiler: Option<Compiler>,
     /// Counter for generating unique hidden class name suffixes
     hidden_class_counter: AtomicU64,
@@ -101,7 +101,7 @@ impl VM {
         let method_registry = MethodRegistry::new(&java_class_file_version);
         startup_trace!("[vm] method registry");
 
-        let compiler = Self::create_compiler();
+        let compiler = Self::create_compiler(&configuration);
         startup_trace!("[vm] jit compiler");
 
         let module_system =
@@ -236,14 +236,11 @@ impl VM {
     }
 
     /// Creates the JIT compiler.
-    fn create_compiler() -> Option<Compiler> {
-        match Compiler::new() {
-            Ok(compiler) => Some(compiler),
-            Err(error) => {
-                debug!("JIT compiler not available: {error:?}");
-                None
-            }
-        }
+    fn create_compiler(configuration: &Configuration) -> Option<Compiler> {
+        Compiler::new(
+            configuration.batch_compilation(),
+            configuration.interpreted(),
+        )
     }
 
     /// Create a new VM with the default configuration
@@ -399,6 +396,13 @@ impl VM {
         // SharedSecrets.setJavaLangRefAccess(...) at the appropriate time in the JVM initialization
         // process.
         let _ = self.class("java.lang.ref.Reference").await?;
+
+        // Load java.lang.reflect.AccessibleObject early so that its static initializer calls
+        // SharedSecrets.setJavaLangReflectAccess(...) before any reflection operations are performed.
+        // This is required because ReflectionFactory's constructor calls getJavaLangReflectAccess().
+        let _ = self.class("java.lang.reflect.AccessibleObject").await?;
+        startup_trace!("[vm] accessible object initialized");
+
         if self.java_class_file_version <= JAVA_8 {
             self.invoke(
                 "java.lang.System",

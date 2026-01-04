@@ -158,7 +158,34 @@ pub async fn resolve_method_ref(
     let (resolved_class, method) = if invoke_kind == InvokeKind::Interface {
         lookup_interface_method(&target_class, method_name, method_descriptor)?
     } else {
-        lookup_method(&target_class, method_name, method_descriptor)?
+        // First try normal method lookup
+        match lookup_method(&target_class, method_name, method_descriptor) {
+            Ok(result) => result,
+            Err(e) => {
+                // If lookup failed, check if this is a holder class with an intrinsic method
+                // Holder classes have dynamically generated methods provided by the JVM
+                if is_holder_class_for_resolution(class_name) {
+                    let vm = thread.vm()?;
+                    let registry = vm.method_registry();
+                    if registry
+                        .method(class_name, method_name, method_descriptor)
+                        .is_some()
+                    {
+                        // Create a synthetic native method for the intrinsic
+                        let synthetic_method = create_synthetic_intrinsic_method(
+                            class_name,
+                            method_name,
+                            method_descriptor,
+                        )?;
+                        (target_class.clone(), synthetic_method)
+                    } else {
+                        return Err(e);
+                    }
+                } else {
+                    return Err(e);
+                }
+            }
+        }
     };
 
     // Validate method properties for the invoke kind
@@ -378,8 +405,8 @@ pub fn lookup_method(
         current = parent.parent()?;
     }
 
-    // Search interfaces for default methods
-    // For an interface, we need to search super-interfaces
+    // Search interfaces for methods (including abstract interface methods). Per JVMS §5.4.3.3,
+    // method resolution searches super-interfaces for a maximally specific super interface method.
     // For a class, we need to search all implemented interfaces
     let mut interfaces_to_check: Vec<Arc<Class>> = class.interfaces()?;
 
@@ -390,17 +417,24 @@ pub fn lookup_method(
     let mut visited = std::collections::HashSet::new();
     visited.insert(class.name().to_string());
 
+    // First pass: look for non-abstract (default) methods
+    let mut abstract_method: Option<(Arc<Class>, Arc<Method>)> = None;
+
     while let Some(interface) = interfaces_to_check.pop() {
         // Skip if already visited
         if !visited.insert(interface.name().to_string()) {
             continue;
         }
 
-        // Check for default method (non-abstract)
-        if let Some(method) = interface.method(name, descriptor)
-            && !method.is_abstract()
-        {
-            return Ok((interface, method));
+        // Check for method in interface
+        if let Some(method) = interface.method(name, descriptor) {
+            if !method.is_abstract() {
+                // Found a concrete default method; return immediately
+                return Ok((interface, method));
+            } else if abstract_method.is_none() {
+                // Record the first abstract method we find
+                abstract_method = Some((interface.clone(), method));
+            }
         }
 
         // Add super-interfaces
@@ -418,16 +452,24 @@ pub fn lookup_method(
                 continue;
             }
 
-            if let Some(method) = interface.method(name, descriptor)
-                && !method.is_abstract()
-            {
-                return Ok((interface, method));
+            if let Some(method) = interface.method(name, descriptor) {
+                if !method.is_abstract() {
+                    return Ok((interface, method));
+                } else if abstract_method.is_none() {
+                    abstract_method = Some((interface.clone(), method));
+                }
             }
 
             parent_interfaces.extend(interface.interfaces()?);
         }
 
         class_to_check = parent_class.parent()?;
+    }
+
+    // If we found an abstract interface method, return it. This allows method resolution to succeed
+    // even when the method is abstract. The actual implementation will be found at dispatch time.
+    if let Some((interface, method)) = abstract_method {
+        return Ok((interface, method));
     }
 
     Err(crate::JavaError::NoSuchMethodError(format!(
@@ -512,6 +554,58 @@ pub fn create_jpms_error(
     };
 
     MethodRefError::new(kind, message)
+}
+
+/// Checks if a class is a holder class for method resolution purposes. These classes have
+/// dynamically generated methods that don't exist in the class file but are provided by intrinsics.
+fn is_holder_class_for_resolution(class_name: &str) -> bool {
+    // Class names may be in either format: java.lang.invoke.X or java/lang/invoke/X
+    let normalized = class_name.replace('.', "/");
+
+    // Exact matches for holder classes
+    matches!(
+        normalized.as_str(),
+        "java/lang/invoke/DirectMethodHandle$Holder"
+            | "java/lang/invoke/DelegatingMethodHandle$Holder"
+            | "java/lang/invoke/Invokers$Holder"
+            | "java/lang/invoke/LambdaForm$Holder"
+            | "java/lang/invoke/VarHandleGuards"
+    ) || normalized.starts_with("java/lang/invoke/LambdaForm$")
+}
+
+/// Creates a synthetic native method for an intrinsic that doesn't have a class file entry.
+/// This is used for holder class methods that are dynamically generated.
+fn create_synthetic_intrinsic_method(
+    _class_name: &str,
+    method_name: &str,
+    method_descriptor: &str,
+) -> Result<Arc<Method>> {
+    use ristretto_classfile::MethodAccessFlags;
+
+    // Create a synthetic method definition
+    let definition = ristretto_classfile::Method {
+        access_flags: MethodAccessFlags::PUBLIC
+            | MethodAccessFlags::STATIC
+            | MethodAccessFlags::NATIVE,
+        name_index: 0,       // Not used for synthetic methods
+        descriptor_index: 0, // Not used for synthetic methods
+        attributes: Vec::new(),
+    };
+
+    // Parse the method descriptor
+    let (parameters, return_type) =
+        ristretto_classfile::FieldType::parse_method_descriptor(method_descriptor)?;
+
+    // Create the method directly
+    let method = Method::new_synthetic(
+        definition,
+        method_name.to_string(),
+        method_descriptor.to_string(),
+        parameters,
+        return_type,
+    );
+
+    Ok(Arc::new(method))
 }
 
 #[cfg(test)]

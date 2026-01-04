@@ -190,18 +190,25 @@ mod tests {
             runtime.block_on(get_intrinsic_methods(version))?
         };
         let registry_methods = get_registry_methods(version)?;
-        // Required methods for ristretto
-        #[expect(clippy::useless_vec)]
-        let required_methods = vec![
-            "java/lang/ClassLoader.initSystemClassLoader()Ljava/lang/ClassLoader;".to_string(),
+
+        // Parse Java major version to conditionally include methods
+        let version_major: u16 = version.split_once('.').unwrap_or_default().0.parse()?;
+
+        // Required methods for ristretto - some are version-specific
+        let mut required_methods = vec![
             "java/lang/System.allowSecurityManager()Z".to_string(),
             "java/lang/System.getSecurityManager()Ljava/lang/SecurityManager;".to_string(),
             "java/lang/System.setSecurityManager(Ljava/lang/SecurityManager;)V".to_string(),
             "jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;".to_string(),
         ];
+        // initSystemClassLoader is only a native method in Java 8 and earlier
+        if version_major <= 8 {
+            required_methods.push(
+                "java/lang/ClassLoader.initSystemClassLoader()Ljava/lang/ClassLoader;".to_string(),
+            );
+        }
         #[cfg(target_os = "windows")]
         {
-            let mut required_methods = required_methods.clone();
             required_methods.push("java/io/WinNTFileSystem.initIDs()V".to_string());
             required_methods.push("sun/io/Win32ErrorMode.setErrorMode(J)J".to_string());
         }

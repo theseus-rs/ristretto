@@ -67,7 +67,8 @@ pub(crate) async fn invokeinterface(
     )?;
 
     // Check resolved method accessibility
-    if !resolved_method.is_public() {
+    // Lambda methods (like lambda$andThen$0) are private but can be invoked through method handles
+    if !resolved_method.is_public() && !resolution.method_name.starts_with("lambda$") {
         return Err(IllegalAccessError(format!(
             "Method {}.{} is not public",
             resolved_class.name(),

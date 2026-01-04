@@ -5,6 +5,7 @@ use crate::pointers::SafePtr;
 use crate::{Finalize, Gc};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
+use tracing::warn;
 
 /// Type-safe drop function for garbage-collected objects
 type DropFn = Option<Box<dyn FnOnce() + Send + Sync>>;
@@ -162,8 +163,7 @@ impl ObjectMetadata {
                 finalizer();
             }))
             .unwrap_or_else(|_| {
-                // Log finalizer panic but don't propagate it
-                eprintln!("Warning: Finalizer panicked during object cleanup");
+                warn!("Finalizer panicked during object cleanup");
             });
         }
 
@@ -176,8 +176,7 @@ impl ObjectMetadata {
                 drop_fn();
             }))
             .unwrap_or_else(|_| {
-                // Log drop panic but don't propagate it
-                eprintln!("Warning: Drop function panicked during object cleanup");
+                warn!("Drop function panicked during object cleanup");
             });
         }
     }

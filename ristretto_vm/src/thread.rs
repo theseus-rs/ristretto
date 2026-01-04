@@ -267,7 +267,7 @@ impl Thread {
     ///
     /// if the class cannot be loaded or linked
     #[async_recursion(?Send)]
-    async fn load_and_link_class(&self, class_name: &str) -> Result<Arc<Class>> {
+    pub(crate) async fn load_and_link_class(&self, class_name: &str) -> Result<Arc<Class>> {
         let vm = self.vm()?;
         let class = {
             let class_loader_lock = vm.class_loader();
@@ -545,7 +545,11 @@ impl Thread {
         let rust_method = method_registry.method(class_name, method_name, method_descriptor);
         // If the method is not found in the registry, try to JIT compile it.
         let jit_method = if rust_method.is_none() {
-            jit::compile(&vm, class, method).await?
+            if let Some(compiler) = vm.compiler() {
+                compiler.compile(class, method).await?
+            } else {
+                None
+            }
         } else {
             None
         };

@@ -792,8 +792,19 @@ async fn adjust_varargs_static_arguments(
             let array_type_name = format!("[{}", component_type.descriptor());
             let array_class = thread.class(&array_type_name).await?;
 
+            // Box primitives if the array is Object[] (needed for varargs like Object...)
+            let boxed_varargs = if array_type_name == "[Ljava/lang/Object;" {
+                let mut boxed = Vec::with_capacity(varargs.len());
+                for val in varargs {
+                    boxed.push(val.to_object(thread).await?);
+                }
+                boxed
+            } else {
+                varargs
+            };
+
             // Convert Values directly to the array (preserving Gc pointers)
-            let array_ref = Reference::try_from((array_class, varargs))?;
+            let array_ref = Reference::try_from((array_class, boxed_varargs))?;
             static_arguments.push(Value::from(array_ref));
 
             debug!(

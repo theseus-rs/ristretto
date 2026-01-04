@@ -21,10 +21,18 @@ const IGNORE_FILE: &str = "ignore.txt";
 static HASH_CODE_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"@[0-9a-fA-F]+").expect("valid regex"));
 
-/// Normalize output by removing Java object hash codes that vary between runs. This handles
-/// patterns like "@2b2fa4f7" that appear in `Object.toString()` outputs.
+/// Regex to match hidden class name suffixes (e.g., /0x000000040100a438 or +0x000000000000000c)
+/// that vary between runs.
+// TODO: Remove the need for this; update hidden class names to be consistent with corretto/openjdk.
+static HIDDEN_CLASS_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"[/+]0x[0-9a-fA-F]+").expect("valid regex"));
+
+/// Normalize output by removing Java object hash codes, hidden class suffixes, and local variable
+/// references that vary between runs or implementations.
 fn normalize_output(output: &str) -> String {
-    HASH_CODE_REGEX.replace_all(output, "@HASH").to_string()
+    let output = HASH_CODE_REGEX.replace_all(output, "@HASH");
+    let output = HIDDEN_CLASS_REGEX.replace_all(&output, "/0xHIDDEN_CLASS");
+    output.to_string()
 }
 
 #[test]
