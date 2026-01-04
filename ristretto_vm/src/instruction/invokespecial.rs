@@ -21,11 +21,15 @@ pub(crate) async fn invokespecial(
     // Resolve the method with JPMS checks and caching
     let resolution = resolve_method_ref(frame, method_index, InvokeKind::Special).await?;
 
-    let parameters = stack.drain_last(resolution.method.parameters().len() + 1);
+    // +1 for the receiver (this)
+    let parameters = stack.drain_last(resolution.param_count + 1);
     let result =
         Box::pin(thread.execute(&resolution.declaring_class, &resolution.method, &parameters))
             .await?;
-    if let Some(result) = result {
+    // For polymorphic methods, only push if the call site has a return type
+    if resolution.has_return_type
+        && let Some(result) = result
+    {
         stack.push(result)?;
     }
     Ok(Continue)

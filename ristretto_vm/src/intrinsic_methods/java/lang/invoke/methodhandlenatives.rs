@@ -1,5 +1,6 @@
 use crate::Error::InternalError;
 use crate::intrinsic_methods::java::lang::class::get_class;
+use crate::intrinsic_methods::jdk::internal::misc::r#unsafe::STATIC_FIELD_OFFSET_MASK;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
@@ -1522,6 +1523,8 @@ pub(crate) async fn static_field_offset(
     let class = get_class(&thread, &class_object).await?;
     let offset = class.field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
+    // Mark this as a static field offset by setting the high bit
+    let offset = offset | STATIC_FIELD_OFFSET_MASK;
     Ok(Some(Value::Long(offset)))
 }
 
@@ -1861,7 +1864,8 @@ mod tests {
         member_name.set_value("name", value_string)?;
         parameters.push(Value::from(member_name));
         let result = static_field_offset(thread, parameters).await?;
-        assert_eq!(Some(Value::Long(2)), result);
+        // The offset has the STATIC_FIELD_OFFSET_MASK set to indicate it's a static field
+        assert_eq!(Some(Value::Long(2 | STATIC_FIELD_OFFSET_MASK)), result);
         Ok(())
     }
 

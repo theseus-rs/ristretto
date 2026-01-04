@@ -323,6 +323,34 @@ async fn get_method_handles_lookup(thread: &Thread) -> Result<Value> {
     Ok(lookup)
 }
 
+/// Creates a Lookup object with full access rights for the specified class.
+/// This is used for bootstrap method invocation where we need a properly privileged lookup.
+///
+/// # Errors
+///
+/// Returns an error if the Lookup cannot be created.
+async fn get_private_lookup(thread: &Thread, caller_class: &Arc<Class>) -> Result<Value> {
+    let caller_class_object = caller_class.to_object(thread).await?;
+    let lookup_class = thread
+        .class("java.lang.invoke.MethodHandles$Lookup")
+        .await?;
+
+    // Construct lookup directly with TRUSTED mode (-1) to bypass all access checks
+    // The TRUSTED mode (-1) is what IMPL_LOOKUP uses and is required for
+    // bootstrap method invocation where the lookup needs access to JDK internals.
+    let mut lookup_instance = ristretto_classloader::Object::new(lookup_class.clone())?;
+    lookup_instance.set_value("lookupClass", caller_class_object.clone())?;
+    lookup_instance.set_value("prevLookupClass", Value::Object(None))?;
+    lookup_instance.set_value("allowedModes", Value::Int(-1))?;
+
+    debug!(
+        "Created trusted lookup for class '{}' with allowedModes=-1",
+        caller_class.name()
+    );
+
+    Ok(Value::from(lookup_instance))
+}
+
 /// **For Step 3.2** Resolves a Java class object corresponding to a field type.
 ///
 /// This function takes an optional `FieldType` and returns the Java class object (as a `Value`)
@@ -374,14 +402,13 @@ async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Val
     }
 
     let first_argument = get_field_type_class(thread, argument_types.first().cloned()).await?;
-    let mut argument_classes = Vec::with_capacity(argument_types.len() - 1);
+    let mut argument_classes: Vec<Value> = Vec::with_capacity(argument_types.len() - 1);
     for argument_type in argument_types.iter().skip(1) {
         let argument_class = get_field_type_class(thread, Some(argument_type.clone())).await?;
-        let argument_reference = argument_class.as_reference()?.clone();
-        argument_classes.push(Some(argument_reference));
+        argument_classes.push(argument_class);
     }
     let class_array = thread.class("[Ljava/lang/Class;").await?;
-    let reference_array = Reference::from((class_array, argument_classes));
+    let reference_array = Reference::try_from((class_array, argument_classes))?;
     let arguments = Value::from(reference_array);
 
     let method = method_type_class.try_get_method(
@@ -470,18 +497,28 @@ pub async fn get_method_handle(
     let lookup_class = thread
         .class("java.lang.invoke.MethodHandles$Lookup")
         .await?;
-    let lookup_object = get_method_handles_lookup(thread).await?;
-    // We use the "trusted" lookup for bootstraps
-    let lookup = thread
-        .try_execute(
-            &lookup_class,
-            &lookup_class.try_get_method(
-                "in",
-                "(Ljava/lang/Class;)Ljava/lang/invoke/MethodHandles$Lookup;",
-            )?,
-            &[lookup_object, class_object.clone()],
-        )
-        .await?;
+
+    // Try to get IMPL_LOOKUP which is a properly initialized trusted lookup.
+    // IMPL_LOOKUP has access to all classes including java.lang.invoke internals.
+    let lookup = if let Ok(impl_lookup) = lookup_class.static_value("IMPL_LOOKUP") {
+        if impl_lookup.is_null() {
+            // Fallback: create a trusted lookup directly
+            let mut trusted_lookup = ristretto_classloader::Object::new(lookup_class.clone())?;
+            trusted_lookup.set_value("lookupClass", class_object.clone())?;
+            trusted_lookup.set_value("prevLookupClass", Value::Object(None))?;
+            trusted_lookup.set_value("allowedModes", Value::Int(-1))?;
+            Value::from(trusted_lookup)
+        } else {
+            impl_lookup
+        }
+    } else {
+        // Fallback: create a trusted lookup directly
+        let mut trusted_lookup = ristretto_classloader::Object::new(lookup_class.clone())?;
+        trusted_lookup.set_value("lookupClass", class_object.clone())?;
+        trusted_lookup.set_value("prevLookupClass", Value::Object(None))?;
+        trusted_lookup.set_value("allowedModes", Value::Int(-1))?;
+        Value::from(trusted_lookup)
+    };
 
     // 4. Build the Java String and MethodType for the member
     let name_value = member_name.to_object(thread).await?;
@@ -755,14 +792,8 @@ async fn adjust_varargs_static_arguments(
             let array_type_name = format!("[{}", component_type.descriptor());
             let array_class = thread.class(&array_type_name).await?;
 
-            // Convert Values to Option<Reference> for the array
-            let mut array_elements = Vec::with_capacity(varargs.len());
-            for value in varargs {
-                let reference = value.as_reference()?.clone();
-                array_elements.push(Some(reference));
-            }
-
-            let array_ref = Reference::from((array_class, array_elements));
+            // Convert Values directly to the array (preserving Gc pointers)
+            let array_ref = Reference::try_from((array_class, varargs))?;
             static_arguments.push(Value::from(array_ref));
 
             debug!(
@@ -864,24 +895,20 @@ async fn resolve_call_site_uncached(frame: &Frame, method_index: u16) -> Result<
         bootstrap_method.descriptor()
     );
 
-    // 3.1 Create MethodHandles.Lookup object for the calling class
-    let lookup = get_method_handles_lookup(&thread).await?;
+    // 3.1 Create MethodHandles.Lookup object for the calling class with full access rights
     let caller_class = frame.class();
-    let caller_class_object = caller_class.to_object(&thread).await?;
-    let lookup_class = thread
-        .class("java.lang.invoke.MethodHandles$Lookup")
-        .await?;
-    let lookup_in_method = lookup_class.try_get_method(
-        "in",
-        "(Ljava/lang/Class;)Ljava/lang/invoke/MethodHandles$Lookup;",
-    )?;
-    let caller_lookup = thread
-        .try_execute(
-            &lookup_class,
-            &lookup_in_method,
-            &[lookup, caller_class_object],
-        )
-        .await?;
+    let caller_lookup = get_private_lookup(&thread, caller_class).await?;
+
+    // Debug: verify the lookup has the correct allowedModes
+    if let Ok(lookup_obj) = caller_lookup.as_object_ref()
+        && let Ok(modes) = lookup_obj.value("allowedModes")
+        && let Ok(modes_int) = modes.as_i32()
+    {
+        debug!(
+            "Bootstrap lookup for '{}': allowedModes={modes_int}",
+            caller_class.name()
+        );
+    }
 
     // 3.2 Prepare method name and method type for the invokedynamic call site
     let method_name = bootstrap_method_attr_name.to_object(&thread).await?;
@@ -902,17 +929,12 @@ async fn resolve_call_site_uncached(frame: &Frame, method_index: u16) -> Result<
     let mut arguments = vec![caller_lookup, method_name, method_type];
     arguments.extend(static_arguments);
 
-    // 4.2 Invoke bootstrap method using the bootstrap method handle directly
-    let bootstrap_method_handle = get_method_handle(
-        &thread,
-        constant_pool,
-        reference_kind,
-        bootstrap_method_attribute.bootstrap_method_ref,
-    )
-    .await?;
-
-    let call_site_result =
-        invoke_bootstrap_method(&thread, bootstrap_method_handle, arguments).await?;
+    // 4.2 Invoke bootstrap method directly (bypassing MethodHandle)
+    // This ensures the bootstrap method has a proper Java frame on the stack
+    let call_site_result = thread
+        .execute(&bootstrap_class, &bootstrap_method, &arguments)
+        .await?
+        .ok_or_else(|| BootstrapMethodError("Bootstrap method returned null".to_string()))?;
 
     // 4.3 Validate returned CallSite:
     validate_call_site(&thread, bootstrap_method_attr_descriptor, &call_site_result).await?;
@@ -928,26 +950,63 @@ async fn resolve_call_site_uncached(frame: &Frame, method_index: u16) -> Result<
 async fn invoke_bootstrap_method(
     thread: &Arc<Thread>,
     method_handle: Value,
-    arguments: Vec<Value>,
+    mut arguments: Vec<Value>,
 ) -> Result<Value> {
     // Validate method handle is not null
     if let Value::Object(None) = method_handle {
         return Err(BootstrapMethodError("Bootstrap method handle is null".to_string()).into());
     }
 
-    let member = {
-        let target_member = method_handle.as_object_ref()?;
-        target_member.value("member")?
+    // Try to get the LambdaForm's vmentry first
+    let (form, member) = {
+        let mh_ref = method_handle.as_object_ref()?;
+        let form = mh_ref.value("form").ok();
+        let member = mh_ref.value("member").ok();
+        (form, member)
     };
 
-    let result = call_method_handle_target(thread.clone(), &member, arguments).await?;
+    // Check if we have a LambdaForm with a vmentry
+    if let Some(ref form_val) = form
+        && !form_val.is_null()
+    {
+        let vmentry = {
+            let form_ref = form_val.as_object_ref()?;
+            form_ref.value("vmentry").ok()
+        };
 
-    // Validate call site result is not null
-    if let Value::Object(None) = result {
-        return Err(BootstrapMethodError("Bootstrap method returned null".to_string()).into());
+        if let Some(ref vmentry_val) = vmentry
+            && !vmentry_val.is_null()
+        {
+            // Prepend the MethodHandle to arguments for LambdaForm invocation
+            arguments.insert(0, method_handle.clone());
+            let result = call_method_handle_target(thread.clone(), vmentry_val, arguments).await?;
+
+            // Validate call site result is not null
+            if let Value::Object(None) = result {
+                return Err(
+                    BootstrapMethodError("Bootstrap method returned null".to_string()).into(),
+                );
+            }
+
+            return Ok(result);
+        }
     }
 
-    Ok(result)
+    // Fallback: use the member field directly
+    if let Some(ref member_val) = member
+        && !member_val.is_null()
+    {
+        let result = call_method_handle_target(thread.clone(), member_val, arguments).await?;
+
+        // Validate call site result is not null
+        if let Value::Object(None) = result {
+            return Err(BootstrapMethodError("Bootstrap method returned null".to_string()).into());
+        }
+
+        return Ok(result);
+    }
+
+    Err(BootstrapMethodError("MethodHandle has neither vmentry nor member".to_string()).into())
 }
 
 /// **Step 4.3** Validates the `CallSite` returned by the bootstrap method.
@@ -1009,23 +1068,21 @@ async fn validate_call_site(
                 std::slice::from_ref(call_site),
             )
             .await?;
-        let expected_method_type = get_method_type(thread, bootstrap_method_descriptor).await?;
 
-        // Compare the method types
+        // Get the descriptor string from the CallSite's MethodType
         let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
-        let equals_method = method_type_class.try_get_method("equals", "(Ljava/lang/Object;)Z")?;
-        let types_equal = thread
-            .try_execute(
-                &method_type_class,
-                &equals_method,
-                &[call_site_type, expected_method_type],
-            )
+        let to_descriptor =
+            method_type_class.try_get_method("toMethodDescriptorString", "()Ljava/lang/String;")?;
+        let call_site_descriptor = thread
+            .try_execute(&method_type_class, &to_descriptor, &[call_site_type])
             .await?;
+        let call_site_descriptor_str = call_site_descriptor.as_string()?;
 
-        if let Value::Int(0) = types_equal {
-            return Err(BootstrapMethodError(
-                "CallSite type does not match expected MethodType".to_string(),
-            )
+        // Compare descriptor strings
+        if call_site_descriptor_str != bootstrap_method_descriptor {
+            return Err(BootstrapMethodError(format!(
+                "CallSite type '{call_site_descriptor_str}' does not match expected descriptor '{bootstrap_method_descriptor}'"
+            ))
             .into());
         }
     }
@@ -1089,11 +1146,12 @@ pub(crate) async fn invokedynamic(
         .await?
     {
         // It's a CallSite - extract the target MethodHandle
+        // Use the actual runtime class (e.g., ConstantCallSite) not the abstract CallSite class
         let get_target_method =
-            call_site_class.try_get_method("getTarget", "()Ljava/lang/invoke/MethodHandle;")?;
+            object_class.try_get_method("getTarget", "()Ljava/lang/invoke/MethodHandle;")?;
         thread
             .try_execute(
-                &call_site_class,
+                &object_class,
                 &get_target_method,
                 &[call_site_or_method_handle],
             )
@@ -1125,15 +1183,51 @@ pub(crate) async fn invokedynamic(
     let (argument_types, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
 
     // Step 4: Get parameters from the operand stack
-    let parameters = stack.drain_last(argument_types.len());
+    let mut parameters = stack.drain_last(argument_types.len());
 
-    // Step 5: Invoke the target MethodHandle directly using call_method_handle_target
-    let member = {
-        let target_member = target_method_handle.as_object_ref()?;
-        target_member.value("member")?
+    // Step 5: Invoke the target MethodHandle
+    // Try to get the LambdaForm's vmentry first
+    let (form, member) = {
+        let mh_ref = target_method_handle.as_object_ref()?;
+        let form = mh_ref.value("form").ok();
+        let member = mh_ref.value("member").ok();
+        (form, member)
     };
 
-    let result = call_method_handle_target(thread.clone(), &member, parameters).await?;
+    let result = if let Some(ref form_val) = form
+        && !form_val.is_null()
+    {
+        let vmentry = {
+            let form_ref = form_val.as_object_ref()?;
+            form_ref.value("vmentry").ok()
+        };
+
+        if let Some(ref vmentry_val) = vmentry
+            && !vmentry_val.is_null()
+        {
+            // Prepend the MethodHandle to parameters for LambdaForm invocation
+            parameters.insert(0, target_method_handle.clone());
+            call_method_handle_target(thread.clone(), vmentry_val, parameters).await?
+        } else if let Some(ref member_val) = member
+            && !member_val.is_null()
+        {
+            call_method_handle_target(thread.clone(), member_val, parameters).await?
+        } else {
+            return Err(BootstrapMethodError(
+                "MethodHandle has neither vmentry nor member".to_string(),
+            )
+            .into());
+        }
+    } else if let Some(ref member_val) = member
+        && !member_val.is_null()
+    {
+        call_method_handle_target(thread.clone(), member_val, parameters).await?
+    } else {
+        return Err(BootstrapMethodError(
+            "MethodHandle has neither vmentry nor member".to_string(),
+        )
+        .into());
+    };
 
     // Step 6: Handle the return value based on the method descriptor
     if let Some(_return_type) = return_type {

@@ -2,6 +2,7 @@
 //!
 //! These methods are used for direct method invocation and field access in the JVM.
 
+use super::methodhandle::dispatch_holder_method;
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
@@ -11,6 +12,18 @@ use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
+
+/// Helper function for holder method implementations.
+/// Dispatches the method call through the `LambdaForm` interpreter.
+async fn holder_method_stub(
+    thread: Arc<Thread>,
+    method_name: &str,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    let arguments: Vec<Value> = parameters.into_vec();
+    let result = dispatch_holder_method(thread, method_name, arguments).await?;
+    Ok(Some(result))
+}
 
 #[intrinsic_method(
     "java/lang/invoke/DirectMethodHandle$Holder.getBoolean(Ljava/lang/Object;)I",
@@ -452,12 +465,10 @@ pub(crate) async fn get_reference_0(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn get_reference_1(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    holder_method_stub(thread, "getReference", parameters).await
 }
 
 #[intrinsic_method(
@@ -560,12 +571,10 @@ pub(crate) async fn get_short_volatile_1(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn invoke_interface(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.DirectMethodHandle$Holder.invokeInterface([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    holder_method_stub(thread, "invokeInterface", parameters).await
 }
 
 #[intrinsic_method(
@@ -574,12 +583,10 @@ pub(crate) async fn invoke_interface(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn invoke_special(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    holder_method_stub(thread, "invokeSpecial", parameters).await
 }
 
 #[intrinsic_method(
@@ -588,12 +595,10 @@ pub(crate) async fn invoke_special(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn invoke_static(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.DirectMethodHandle$Holder.invokeStatic([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    holder_method_stub(thread, "invokeStatic", parameters).await
 }
 
 #[intrinsic_method(
@@ -602,12 +607,10 @@ pub(crate) async fn invoke_static(
 )]
 #[async_recursion(?Send)]
 pub(crate) async fn invoke_virtual(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    holder_method_stub(thread, "invokeVirtual", parameters).await
 }
 
 #[intrinsic_method(
@@ -1440,12 +1443,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_reference_1() {
+    async fn test_get_reference_1_requires_method_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_reference_1(thread, Parameters::default()).await;
+        let result = get_reference_1(thread, Parameters::default()).await;
+        // With no arguments, dispatch_holder_method should return an error
+        assert!(matches!(result, Err(crate::Error::InternalError(_))));
     }
 
     #[tokio::test]
@@ -1512,39 +1514,35 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.DirectMethodHandle$Holder.invokeInterface([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_invoke_interface() {
+    async fn test_invoke_interface_requires_method_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke_interface(thread, Parameters::default()).await;
+        let result = invoke_interface(thread, Parameters::default()).await;
+        // With no arguments, dispatch_holder_method should return an error
+        assert!(matches!(result, Err(crate::Error::InternalError(_))));
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.DirectMethodHandle$Holder.invokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_invoke_special() {
+    async fn test_invoke_special_requires_method_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke_special(thread, Parameters::default()).await;
+        let result = invoke_special(thread, Parameters::default()).await;
+        // With no arguments, dispatch_holder_method should return an error
+        assert!(matches!(result, Err(crate::Error::InternalError(_))));
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.DirectMethodHandle$Holder.invokeStatic([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_invoke_static() {
+    async fn test_invoke_static_requires_method_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke_static(thread, Parameters::default()).await;
+        let result = invoke_static(thread, Parameters::default()).await;
+        // With no arguments, dispatch_holder_method should return an error
+        assert!(matches!(result, Err(crate::Error::InternalError(_))));
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_invoke_virtual() {
+    async fn test_invoke_virtual_requires_method_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke_virtual(thread, Parameters::default()).await;
+        let result = invoke_virtual(thread, Parameters::default()).await;
+        // With no arguments, dispatch_holder_method should return an error
+        assert!(matches!(result, Err(crate::Error::InternalError(_))));
     }
 
     #[tokio::test]

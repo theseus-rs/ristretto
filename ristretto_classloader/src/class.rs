@@ -1118,11 +1118,8 @@ impl Class {
             return Some(method.clone());
         }
 
-        let Ok(class_name) = self.class_file.class_name() else {
-            return None;
-        };
-
-        if let Some(polymorphic_descriptor) = POLYMORPHIC_METHODS.get(&(class_name, name)) {
+        // Use the cached class name instead of parsing from class_file
+        if let Some(polymorphic_descriptor) = POLYMORPHIC_METHODS.get(&(self.name.as_str(), name)) {
             // If the class name and method name match a polymorphic method, we can return it
             // regardless of the descriptor.
             let signature = format!("{name}{polymorphic_descriptor}");

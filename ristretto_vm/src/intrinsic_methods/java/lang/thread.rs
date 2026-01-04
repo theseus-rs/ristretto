@@ -405,39 +405,44 @@ pub(crate) async fn start_0(
     new_thread.set_java_object(thread_object.clone()).await;
 
     // Spawn a new OS thread to run the target's run() method in a Tokio runtime
+    // Use a larger stack size (8 MB) to accommodate deeply nested async calls
+    // that occur during method handle invocations and invokedynamic resolution
     let spawn_vm = vm.clone();
     let spawn_thread = new_thread.clone();
-    let join_handle = std::thread::spawn({
-        move || {
-            let runtime = Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("Failed to create Tokio runtime for new thread");
-            // Execute the Runnable's run() method within the new thread's context
-            runtime.block_on(async move {
-                let _ = spawn_thread
-                    .execute(&thread_class, &run_method, &[thread_value])
-                    .await;
-                // Set `eetop` to 0 after execution to indicate the thread has finished
-                {
-                    let mut thread_object = match thread_object.as_object_mut() {
-                        Ok(thread_object) => thread_object,
-                        Err(error) => {
-                            error!("Failed to get thread object: {error:?}");
-                            return;
+    let join_handle = std::thread::Builder::new()
+        .stack_size(8 * 1024 * 1024) // 8 MB stack
+        .spawn({
+            move || {
+                let runtime = Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("Failed to create Tokio runtime for new thread");
+                // Execute the Runnable's run() method within the new thread's context
+                runtime.block_on(async move {
+                    let _ = spawn_thread
+                        .execute(&thread_class, &run_method, &[thread_value])
+                        .await;
+                    // Set `eetop` to 0 after execution to indicate the thread has finished
+                    {
+                        let mut thread_object = match thread_object.as_object_mut() {
+                            Ok(thread_object) => thread_object,
+                            Err(error) => {
+                                error!("Failed to get thread object: {error:?}");
+                                return;
+                            }
+                        };
+                        if let Err(error) = thread_object.set_value("eetop", Value::Long(0)) {
+                            error!("Failed to set eetop to 0: {error}");
                         }
-                    };
-                    if let Err(error) = thread_object.set_value("eetop", Value::Long(0)) {
-                        error!("Failed to set eetop to 0: {error}");
                     }
-                }
-                // Remove the thread from the VM's thread handles; this drops the JoinHandle which
-                // in turn will drop the OS thread.
-                let thread_handles = spawn_vm.thread_handles();
-                thread_handles.remove(&thread_id).await;
-            });
-        }
-    });
+                    // Remove the thread from the VM's thread handles; this drops the JoinHandle which
+                    // in turn will drop the OS thread.
+                    let thread_handles = spawn_vm.thread_handles();
+                    thread_handles.remove(&thread_id).await;
+                });
+            }
+        })
+        .expect("Failed to spawn Java thread");
 
     let thread_handle = ThreadHandle::from((new_thread, join_handle));
     let thread_handles = vm.thread_handles();

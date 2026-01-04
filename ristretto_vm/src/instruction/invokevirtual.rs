@@ -24,7 +24,8 @@ pub(crate) async fn invokevirtual(
     // Resolve the method with JPMS checks and caching
     let resolution = resolve_method_ref(frame, method_index, InvokeKind::Virtual).await?;
 
-    let parameters = stack.drain_last(resolution.method.parameters().len() + 1);
+    // +1 for the receiver (this)
+    let parameters = stack.drain_last(resolution.param_count + 1);
     let reference = match parameters.first() {
         Some(Value::Object(Some(reference))) => reference,
         Some(Value::Object(None)) => {
@@ -50,7 +51,10 @@ pub(crate) async fn invokevirtual(
     };
 
     let result = Box::pin(thread.execute(&class, &method, &parameters)).await?;
-    if let Some(result) = result {
+    // For polymorphic methods, only push if the call site has a return type
+    if resolution.has_return_type
+        && let Some(result) = result
+    {
         stack.push(result)?;
     }
     Ok(Continue)

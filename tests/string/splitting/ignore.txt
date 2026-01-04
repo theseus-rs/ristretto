@@ -1,1 +1,0 @@
-illegal lookupClass: class java.lang.invoke.LambdaMetafactory

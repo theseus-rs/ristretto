@@ -153,13 +153,29 @@ impl ConstantPool {
         }
     }
 
-    /// Set a constant at the specified index; indexes are 1-based.
+    /// Set a constant in the pool at the given index; indexes are 1-based.
     ///
-    /// This replaces the existing constant at the given index.
+    /// This replaces an existing constant at the given index. Use with caution as it can break
+    /// references to the replaced constant.
     ///
     /// # Errors
     ///
     /// Returns an error if the index is out of bounds or points to a placeholder entry.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{Constant, ConstantPool};
+    ///
+    /// let mut constant_pool = ConstantPool::new();
+    /// constant_pool.push(Constant::Utf8("original".to_string()));
+    /// constant_pool.set(1, Constant::Utf8("modified".to_string()))?;
+    /// assert_eq!(
+    ///     &Constant::Utf8("modified".to_string()),
+    ///     constant_pool.try_get(1)?
+    /// );
+    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// ```
     pub fn set(&mut self, index: u16, constant: Constant) -> Result<()> {
         let constant_entry = self.constants.get_mut(index as usize);
         match constant_entry {
