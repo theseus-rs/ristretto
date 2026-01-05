@@ -7,6 +7,134 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/v0.27.0...v0.28.0) - 2026-01-05
+
+### Added
+- initial jpms support
+- implement comprehensive bytecode and attribute verification
+- implement invokedynamic instruction
+- implement hidden classes
+- implement lambda support
+- configure class object module
+- implement java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String;
+- implement jdk/internal/loader/BootLoader.setBootLoaderUnnamedModule0(Ljava/lang/Module;)V
+- implement java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;
+
+### Fixed
+- improve cli exception cause reporting
+- correct tableswitch and lookupswitch negative offsets
+- update class loading to comply with JVMS 5.5
+- stub java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String; to return null
+- register dynamically created classes
+
+### Other
+- improve lint configuration
+- Fix lookupswitch type cast error
+- Add test for lookupswitch bug
+- update to reqwest=0.13.0
+- update rustdoc references section
+- add field initialization tests and docs
+- correct cyclic crate dependencies with ristretto_jimage
+- Merge pull request #608 from theseus-rs/register-dynamically-created-classes
+- correct clippy lints
+- Implement invokedynamic support and MethodHandleNatives updates for JDK 17+ compatibility
+
+## `ristretto_vm` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.27.0...ristretto_vm-v0.28.0) - 2026-01-05
+
+### Added
+- implement lambda support
+- implement invokedynamic instruction
+- implement hidden classes
+- implement java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String;
+- configure class object module
+- implement jdk/internal/loader/BootLoader.setBootLoaderUnnamedModule0(Ljava/lang/Module;)V
+- initial jpms support
+- implement comprehensive bytecode and attribute verification
+- implement java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;
+
+### Fixed
+- correct tableswitch and lookupswitch negative offsets
+- stub java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String; to return null
+- register dynamically created classes
+- update class loading to comply with JVMS 5.5
+
+### Other
+- Merge pull request #608 from theseus-rs/register-dynamically-created-classes
+- correct clippy lints
+- Implement invokedynamic support and MethodHandleNatives updates for JDK 17+ compatibility
+- update rustdoc references section
+- add field initialization tests and docs
+- improve lint configuration
+
+## `ristretto_macros` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.27.0...ristretto_macros-v0.28.0) - 2026-01-05
+
+### Other
+- improve lint configuration
+
+## `ristretto_jit` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.27.0...ristretto_jit-v0.28.0) - 2026-01-05
+
+### Added
+- implement lambda support
+
+### Fixed
+- correct tableswitch and lookupswitch negative offsets
+
+### Other
+- update rustdoc references section
+- improve lint configuration
+
+## `ristretto_classloader` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.27.0...ristretto_classloader-v0.28.0) - 2026-01-05
+
+### Added
+- implement lambda support
+- implement invokedynamic instruction
+- implement hidden classes
+- configure class object module
+- initial jpms support
+
+### Fixed
+- update class loading to comply with JVMS 5.5
+
+### Other
+- update to reqwest=0.13.0
+- update rustdoc references section
+- add field initialization tests and docs
+- improve lint configuration
+- correct cyclic crate dependencies with ristretto_jimage
+
+## `ristretto_jimage` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.27.0...ristretto_jimage-v0.28.0) - 2026-01-05
+
+### Other
+- improve lint configuration
+- correct cyclic crate dependencies with ristretto_jimage
+
+## `ristretto_gc` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.27.0...ristretto_gc-v0.28.0) - 2026-01-05
+
+### Added
+- implement lambda support
+- initial jpms support
+
+### Other
+- improve lint configuration
+
+## `ristretto_classfile` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.27.0...ristretto_classfile-v0.28.0) - 2026-01-05
+
+### Added
+- implement invokedynamic instruction
+- implement hidden classes
+- initial jpms support
+- implement comprehensive bytecode and attribute verification
+
+### Fixed
+- correct tableswitch and lookupswitch negative offsets
+
+### Other
+- Fix lookupswitch type cast error
+- Add test for lookupswitch bug
+- update to reqwest=0.13.0
+- update rustdoc references section
+- improve lint configuration
+
 ## `ristretto_cli` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/v0.26.0...v0.27.0) - 2025-12-09
 
 ### Added
