@@ -20,6 +20,7 @@ use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 /// Get the class of an object, handling special cases for `java/lang/Class`.
+/// This WILL initialize the class if not already initialized.
 pub async fn get_class(thread: &Thread, object: &Value) -> Result<Arc<Class>> {
     {
         let object = object.as_object_ref()?;
@@ -34,6 +35,25 @@ pub async fn get_class(thread: &Thread, object: &Value) -> Result<Arc<Class>> {
         object.value("name")?.as_string()?
     };
     thread.class(class_name.as_str()).await
+}
+
+/// Get the class of an object WITHOUT initializing it.
+/// This is used for reflection methods like `getSuperclass()` that should NOT trigger class
+/// initialization per JVM specification.
+pub async fn get_class_no_init(thread: &Thread, object: &Value) -> Result<Arc<Class>> {
+    {
+        let object = object.as_object_ref()?;
+        let class = object.class();
+        if class.name() != "java/lang/Class" {
+            return Ok(Arc::clone(class));
+        }
+    }
+
+    let class_name = {
+        let object = object.as_object_ref()?;
+        object.value("name")?.as_string()?
+    };
+    thread.load_and_link_class(class_name.as_str()).await
 }
 
 #[intrinsic_method("java/lang/Class.desiredAssertionStatus0(Ljava/lang/Class;)Z", Any)]
@@ -104,7 +124,7 @@ pub(crate) async fn get_class_access_flags_raw_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags;
     #[expect(clippy::cast_lossless)]
@@ -119,7 +139,7 @@ pub(crate) async fn get_class_file_version_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_file = class.class_file();
     let version = &class_file.version;
     #[expect(clippy::cast_lossless)]
@@ -150,7 +170,9 @@ pub(crate) async fn get_component_type(
         return Ok(Some(Value::Object(None)));
     }
 
-    let class_name = class_name.trim_start_matches('[');
+    // Strip only ONE leading '[' to get the component type
+    // e.g., "[[Ljava/lang/String;" -> "[Ljava/lang/String;" (String[] is component of String[][])
+    let class_name = class_name.strip_prefix('[').unwrap_or(&class_name);
     let class = thread.class(class_name).await?;
     let class_object = class.to_object(&thread).await?;
 
@@ -245,7 +267,7 @@ pub(crate) async fn get_declared_constructors_0(
 ) -> Result<Option<Value>> {
     let public_only = parameters.pop_bool()?;
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_object = class.to_object(&thread).await?;
 
     let class_array = thread.class("[Ljava/lang/Class;").await?;
@@ -345,7 +367,7 @@ pub(crate) async fn get_declared_fields_0(
     let public_only = parameters.pop_bool()?;
     let object = parameters.pop()?;
     let vm = thread.vm()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_object = class.to_object(&thread).await?;
 
     let mut fields = Vec::new();
@@ -444,7 +466,7 @@ pub(crate) async fn get_declared_methods_0(
 ) -> Result<Option<Value>> {
     let public_only = parameters.pop_bool()?;
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_object = class.to_object(&thread).await?;
 
     let class_array = thread.class("[Ljava/lang/Class;").await?;
@@ -560,23 +582,34 @@ pub(crate) async fn get_declaring_class_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
 
     if class.is_array() || class.is_primitive() {
         return Ok(Some(Value::Object(None)));
     }
 
+    // Hidden classes (like lambda classes) don't have a declaring class
+    if class.is_hidden() {
+        return Ok(Some(Value::Object(None)));
+    }
+
     let class_name = class.name();
+
+    // Lambda/hidden classes contain "$$Lambda" in their name and shouldn't have a declaring class
+    if class_name.contains("$$Lambda") {
+        return Ok(Some(Value::Object(None)));
+    }
+
     match class_name
         .rsplit_once('$')
         .map(|(class_name, _)| class_name)
     {
-        Some(class_name) => {
-            let class = thread.class(class_name).await?;
+        Some(outer_class_name) if !outer_class_name.is_empty() => {
+            let class = thread.class(outer_class_name).await?;
             let class = class.to_object(&thread).await?;
             Ok(Some(class))
         }
-        None => Ok(Some(Value::Object(None))),
+        _ => Ok(Some(Value::Object(None))),
     }
 }
 
@@ -587,7 +620,7 @@ pub(crate) async fn get_enclosing_method_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_file = class.class_file();
     for attribute in &class_file.attributes {
         if let Attribute::EnclosingMethod {
@@ -597,7 +630,7 @@ pub(crate) async fn get_enclosing_method_0(
         } = attribute
         {
             let constant_pool = &class_file.constant_pool;
-            let class_name = constant_pool.try_get_utf8(*class_index)?;
+            let class_name = constant_pool.try_get_class(*class_index)?;
             let class = thread.class(class_name).await?;
             let class = class.to_object(&thread).await?;
             let (method_name, method_descriptor) = if *method_index == 0 {
@@ -656,7 +689,7 @@ pub(crate) async fn get_generic_signature_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_file = class.class_file();
     let constant_pool = &class_file.constant_pool;
 
@@ -705,7 +738,7 @@ pub(crate) async fn get_modifiers(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_file = class.class_file();
     let access_flags = &class_file.access_flags.bits();
     let excluded_flags =
@@ -727,7 +760,7 @@ pub(crate) async fn get_name_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_name = class.name().replace('/', ".");
     let value = class_name.to_object(&thread).await?;
     Ok(Some(value))
@@ -740,7 +773,7 @@ pub(crate) async fn get_nest_host_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_file = class.class_file();
     for attribute in &class_file.attributes {
         if let Attribute::NestHost {
@@ -767,7 +800,7 @@ pub(crate) async fn get_nest_members_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_file = class.class_file();
     let mut members = Vec::new();
     members.push(object.clone());
@@ -799,7 +832,7 @@ pub(crate) async fn get_permitted_subclasses_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let _class = get_class(&thread, &object).await?;
+    let _class = get_class_no_init(&thread, &object).await?;
     // TODO: add support for sealed classes
     Ok(Some(Value::Object(None)))
 }
@@ -840,7 +873,7 @@ pub(crate) async fn get_raw_annotations(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_file = class.class_file();
     let mut bytes = Vec::new();
     let annotations = class_file
@@ -870,7 +903,7 @@ pub(crate) async fn get_raw_type_annotations(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_file = class.class_file();
     let mut bytes = Vec::new();
     let annotations = class_file
@@ -906,7 +939,8 @@ pub(crate) async fn get_record_components_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
+    let class_object = class.to_object(&thread).await?;
     let class_file = class.class_file();
     let constant_pool = &class_file.constant_pool;
     let mut record_components = Vec::new();
@@ -919,7 +953,6 @@ pub(crate) async fn get_record_components_0(
                 let descriptor = constant_pool.try_get_utf8(record.descriptor_index)?;
 
                 let name_object = name.to_object(&thread).await?;
-                let descriptor_object = descriptor.to_object(&thread).await?;
 
                 // Resolve type from descriptor
                 let type_class_name = FieldType::parse(descriptor)?.class_name();
@@ -968,22 +1001,25 @@ pub(crate) async fn get_record_components_0(
                     }
                 }
 
-                let component = thread
-                    .object(
-                        "java/lang/reflect/RecordComponent",
-                        "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;[B[B",
-                        &[
-                            object.clone(),
-                            name_object,
-                            type_object,
-                            descriptor_object,
-                            generic_signature,
-                            annotations,
-                            type_annotations,
-                        ],
-                    )
-                    .await?;
-                record_components.push(component);
+                // Create accessor Method object for the record component. The accessor method has
+                // the same name as the component and returns the component type
+                let accessor_method =
+                    create_accessor_method(&thread, &class, &class_object, name, descriptor)
+                        .await?;
+
+                // Create RecordComponent by setting fields directly (no public constructor)
+                let record_component_class =
+                    thread.class("java/lang/reflect/RecordComponent").await?;
+                let mut component = Object::new(record_component_class)?;
+                component.set_value("clazz", object.clone())?;
+                component.set_value("name", name_object)?;
+                component.set_value("type", type_object)?;
+                component.set_value("accessor", accessor_method)?;
+                component.set_value("signature", generic_signature)?;
+                component.set_value("annotations", annotations)?;
+                component.set_value("typeAnnotations", type_annotations)?;
+
+                record_components.push(Value::from(component));
             }
         }
     }
@@ -991,6 +1027,121 @@ pub(crate) async fn get_record_components_0(
     let record_component_array_class = thread.class("[Ljava/lang/reflect/RecordComponent;").await?;
     let result_array = Value::try_from((record_component_array_class, record_components))?;
     Ok(Some(result_array))
+}
+
+/// Create a Method object for a record component accessor
+async fn create_accessor_method(
+    thread: &Arc<Thread>,
+    class: &Arc<Class>,
+    class_object: &Value,
+    accessor_name: &str,
+    return_descriptor: &str,
+) -> Result<Value> {
+    let class_array = thread.class("[Ljava/lang/Class;").await?;
+
+    // Find the accessor method in the class
+    for (slot, method) in class.methods().iter().enumerate() {
+        if method.name() != accessor_name {
+            continue;
+        }
+
+        // Accessor methods have no parameters
+        if !method.parameters().is_empty() {
+            continue;
+        }
+
+        // Check return type matches
+        let method_return_type = method.return_type();
+        let expected_return_type = FieldType::parse(return_descriptor)?;
+        if method_return_type != Some(&expected_return_type) {
+            continue;
+        }
+
+        let access_flags = method.access_flags();
+        let method_name_value = accessor_name.to_object(thread).await?;
+        let parameter_types = Value::try_from((class_array.clone(), Vec::<Value>::new()))?;
+
+        let return_type_class_name = expected_return_type.class_name();
+        let return_type_class = thread.class(&return_type_class_name).await?;
+        let return_type_value = return_type_class.to_object(thread).await?;
+
+        let checked_exceptions = get_exceptions(thread, class, method).await?;
+        let modifiers = Value::Int(i32::from(access_flags.bits()));
+        let slot_value = Value::Int(i32::try_from(slot)?);
+
+        let mut method_signature = Value::Object(None);
+        let mut annotations = Value::Object(None);
+        let mut parameter_annotations = Value::Object(None);
+        let mut annotation_default = Value::Object(None);
+
+        for attribute in method.attributes() {
+            match attribute {
+                Attribute::Signature {
+                    signature_index, ..
+                } => {
+                    let class_file = class.class_file();
+                    let constant_pool = &class_file.constant_pool;
+                    let signature = constant_pool.try_get_utf8(*signature_index)?;
+                    method_signature = signature.to_object(thread).await?;
+                }
+                Attribute::RuntimeVisibleAnnotations {
+                    annotations: runtime_annotations,
+                    ..
+                } => {
+                    let mut method_annotations = Vec::new();
+                    method_annotations
+                        .write_u16::<BigEndian>(u16::try_from(runtime_annotations.len())?)?;
+                    for annotation in runtime_annotations {
+                        annotation.to_bytes(&mut method_annotations)?;
+                    }
+                    annotations = Value::from(method_annotations);
+                }
+                Attribute::RuntimeVisibleParameterAnnotations {
+                    parameter_annotations: runtime_parameter_annotations,
+                    ..
+                } => {
+                    let mut method_parameter_annotations = Vec::new();
+                    method_parameter_annotations.write_u16::<BigEndian>(u16::try_from(
+                        runtime_parameter_annotations.len(),
+                    )?)?;
+                    for parameter_annotation in runtime_parameter_annotations {
+                        parameter_annotation.to_bytes(&mut method_parameter_annotations)?;
+                    }
+                    parameter_annotations = Value::from(method_parameter_annotations);
+                }
+                Attribute::AnnotationDefault { element, .. } => {
+                    let mut method_annotation_default = Vec::new();
+                    element.to_bytes(&mut method_annotation_default)?;
+                    annotation_default = Value::from(method_annotation_default);
+                }
+                _ => {}
+            }
+        }
+
+        let method_object = thread
+            .object(
+                "java/lang/reflect/Method",
+                "Ljava/lang/Class;Ljava/lang/String;[Ljava/lang/Class;Ljava/lang/Class;[Ljava/lang/Class;IILjava/lang/String;[B[B[B",
+                &[
+                    class_object.clone(),
+                    method_name_value,
+                    parameter_types,
+                    return_type_value,
+                    checked_exceptions,
+                    modifiers,
+                    slot_value,
+                    method_signature,
+                    annotations,
+                    parameter_annotations,
+                    annotation_default,
+                ],
+            )
+            .await?;
+        return Ok(method_object);
+    }
+
+    // Return null if accessor not found (shouldn't happen for valid records)
+    Ok(Value::Object(None))
 }
 
 #[intrinsic_method(
@@ -1016,15 +1167,53 @@ pub(crate) async fn get_simple_binary_name_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_name = class.name();
-    let class_name_parts = class_name.split('$').collect::<Vec<&str>>();
 
-    if class_name_parts.len() <= 1 {
+    // Hidden classes (like lambda classes) return null for simple binary name
+    // Lambda classes have "$$Lambda" in their name
+    if class.is_hidden() || class_name.contains("$$Lambda") || class.is_hidden() {
         return Ok(Some(Value::Object(None)));
     }
 
-    let binary_name = class_name_parts[class_name_parts.len() - 1];
+    // Find the last '$' to get the simple binary name
+    let Some(dollar_pos) = class_name.rfind('$') else {
+        return Ok(Some(Value::Object(None)));
+    };
+
+    let binary_name = &class_name[dollar_pos + 1..];
+
+    // If the binary name is empty or starts with a digit (anonymous class), return null
+    // Anonymous classes have names like "Test$1" where the part after $ is numeric
+    if binary_name.is_empty() {
+        return Ok(Some(Value::Object(None)));
+    }
+
+    // Check if it's an anonymous class (name is purely numeric or starts with digit)
+    if binary_name
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_digit())
+    {
+        // This is an anonymous class or local class
+        // For local classes like "Test$1LocalClass", we should return "LocalClass"
+        // For anonymous classes like "Test$1", we should return null
+        let non_digit_start = binary_name.find(|c: char| !c.is_ascii_digit());
+        match non_digit_start {
+            Some(pos) => {
+                // Local class - return the part after the digits
+                let local_name = &binary_name[pos..];
+                let value: Value = local_name.to_string().to_object(&thread).await?;
+                return Ok(Some(value));
+            }
+            None => {
+                // Anonymous class - purely numeric, return null
+                return Ok(Some(Value::Object(None)));
+            }
+        }
+    }
+
+    // Named inner class - return the full name after $
     let value: Value = binary_name.to_string().to_object(&thread).await?;
     Ok(Some(value))
 }
@@ -1036,16 +1225,14 @@ pub(crate) async fn get_superclass(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     if class.is_primitive() || class.is_interface() {
         return Ok(Some(Value::Object(None)));
     }
 
     match class.parent()? {
         Some(parent) => {
-            let class_name = parent.name();
-            let class = thread.class(class_name).await?;
-            let class = class.to_object(&thread).await?;
+            let class = parent.to_object(&thread).await?;
             Ok(Some(class))
         }
         None => Ok(Some(Value::Object(None))),
@@ -1063,7 +1250,7 @@ pub(crate) async fn init_class_name(
 ) -> Result<Option<Value>> {
     // TODO: implement support for hidden classes
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     let class_name = class.name().replace('/', ".");
     let value = class_name.to_object(&thread).await?;
     Ok(Some(value))
@@ -1076,7 +1263,7 @@ pub(crate) async fn is_array(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     if class.is_array() {
         Ok(Some(Value::from(true)))
     } else {
@@ -1094,9 +1281,9 @@ pub(crate) async fn is_assignable_from(
     if object_parameter.is_null() {
         return Err(NullPointerException(Some("object cannot be null".to_string())).into());
     }
-    let class_parameter = get_class(&thread, &object_parameter).await?;
+    let class_parameter = get_class_no_init(&thread, &object_parameter).await?;
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     if class.is_assignable_from(&thread, &class_parameter).await? {
         Ok(Some(Value::from(true)))
     } else {
@@ -1111,7 +1298,7 @@ pub(crate) async fn is_hidden(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     Ok(Some(Value::from(class.is_hidden())))
 }
 
@@ -1123,7 +1310,7 @@ pub(crate) async fn is_instance(
 ) -> Result<Option<Value>> {
     let compare_object = parameters.pop()?;
     let self_object = parameters.pop()?;
-    let self_class = get_class(&thread, &self_object).await?;
+    let self_class = get_class_no_init(&thread, &self_object).await?;
 
     if compare_object.is_null() {
         return Ok(Some(Value::from(false)));
@@ -1149,7 +1336,7 @@ pub(crate) async fn is_interface(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     if class.is_interface() {
         Ok(Some(Value::from(true)))
     } else {
@@ -1164,7 +1351,7 @@ pub(crate) async fn is_primitive(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class = get_class(&thread, &object).await?;
+    let class = get_class_no_init(&thread, &object).await?;
     if class.is_primitive() {
         Ok(Some(Value::from(true)))
     } else {
@@ -1179,7 +1366,7 @@ pub(crate) async fn is_record_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let value = parameters.pop()?;
-    let class = get_class(&thread, &value).await?;
+    let class = get_class_no_init(&thread, &value).await?;
     let Some(parent_class) = class.parent()? else {
         return Ok(Some(Value::from(false)));
     };
@@ -1216,7 +1403,7 @@ mod tests {
     use crate::Error::JavaError;
     use ristretto_classfile::attributes::Instruction;
     use ristretto_classfile::{ClassFile, ConstantPool, Version};
-    use ristretto_classfile::{Constant, Field, FieldType, Method};
+    use ristretto_classfile::{Field, FieldType, Method};
 
     #[tokio::test]
     async fn test_desired_assertion_status_0() -> Result<()> {
@@ -1798,107 +1985,94 @@ mod tests {
         let class_name_idx = cp.add_class("java/lang/reflect/RecordComponent")?;
         let super_class_idx = cp.add_class("java/lang/Object")?;
 
-        // Field: name
-        let name_str = "name";
-        let string_desc_str = "Ljava/lang/String;";
-        let name_utf8 = cp.add_utf8(name_str)?;
-        let string_desc_utf8 = cp.add_utf8(string_desc_str)?;
-
-        let name_nt_idx = cp.add(Constant::NameAndType {
-            name_index: name_utf8,
-            descriptor_index: string_desc_utf8,
-        })?;
-        let name_field_ref = cp.add(Constant::FieldRef {
-            class_index: class_name_idx,
-            name_and_type_index: name_nt_idx,
-        })?;
-
-        let name_field = Field {
-            access_flags: FieldAccessFlags::PRIVATE,
-            name_index: name_utf8,
-            descriptor_index: string_desc_utf8,
-            field_type: FieldType::parse(string_desc_str)?,
-            attributes: vec![],
-        };
-
-        // Field: descriptor
-        let desc_str = "descriptor";
-        let desc_utf8 = cp.add_utf8(desc_str)?;
-
-        let desc_nt_idx = cp.add(Constant::NameAndType {
-            name_index: desc_utf8,
-            descriptor_index: string_desc_utf8,
-        })?;
-        let desc_field_ref = cp.add(Constant::FieldRef {
-            class_index: class_name_idx,
-            name_and_type_index: desc_nt_idx,
-        })?;
-
-        let descriptor_field = Field {
-            access_flags: FieldAccessFlags::PRIVATE,
-            name_index: desc_utf8,
-            descriptor_index: string_desc_utf8,
-            field_type: FieldType::parse(string_desc_str)?,
-            attributes: vec![],
-        };
-
-        // Field: type
-        let type_str = "type";
         let class_desc_str = "Ljava/lang/Class;";
-        let type_utf8 = cp.add_utf8(type_str)?;
+        let string_desc_str = "Ljava/lang/String;";
+        let method_desc_str = "Ljava/lang/reflect/Method;";
+        let byte_array_desc_str = "[B";
+
         let class_desc_utf8 = cp.add_utf8(class_desc_str)?;
+        let string_desc_utf8 = cp.add_utf8(string_desc_str)?;
+        let method_desc_utf8 = cp.add_utf8(method_desc_str)?;
+        let byte_array_desc_utf8 = cp.add_utf8(byte_array_desc_str)?;
 
-        let type_nt_idx = cp.add(Constant::NameAndType {
-            name_index: type_utf8,
-            descriptor_index: class_desc_utf8,
-        })?;
-        let type_field_ref = cp.add(Constant::FieldRef {
-            class_index: class_name_idx,
-            name_and_type_index: type_nt_idx,
-        })?;
-
-        let type_field = Field {
+        // Field: clazz (Class)
+        let clazz_field = Field {
             access_flags: FieldAccessFlags::PRIVATE,
-            name_index: type_utf8,
+            name_index: cp.add_utf8("clazz")?,
             descriptor_index: class_desc_utf8,
             field_type: FieldType::parse(class_desc_str)?,
             attributes: vec![],
         };
 
-        // Constructor Code: put parameters into fields
-        // (Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;[B[B)V
-        // 0: this
-        // 1: declaringClass
-        // 2: name
-        // 3: type
-        // 4: descriptor
+        // Field: name (String)
+        let name_field = Field {
+            access_flags: FieldAccessFlags::PRIVATE,
+            name_index: cp.add_utf8("name")?,
+            descriptor_index: string_desc_utf8,
+            field_type: FieldType::parse(string_desc_str)?,
+            attributes: vec![],
+        };
 
-        let code = vec![
-            Instruction::Aload_0,
-            Instruction::Aload_2, // name
-            Instruction::Putfield(name_field_ref),
-            Instruction::Aload_0,
-            Instruction::Aload_3, // type
-            Instruction::Putfield(type_field_ref),
-            Instruction::Aload_0,
-            Instruction::Aload(4), // descriptor
-            Instruction::Putfield(desc_field_ref),
-            Instruction::Return,
-        ];
+        // Field: type (Class)
+        let type_field = Field {
+            access_flags: FieldAccessFlags::PRIVATE,
+            name_index: cp.add_utf8("type")?,
+            descriptor_index: class_desc_utf8,
+            field_type: FieldType::parse(class_desc_str)?,
+            attributes: vec![],
+        };
 
+        // Field: accessor (Method)
+        let accessor_field = Field {
+            access_flags: FieldAccessFlags::PRIVATE,
+            name_index: cp.add_utf8("accessor")?,
+            descriptor_index: method_desc_utf8,
+            field_type: FieldType::parse(method_desc_str)?,
+            attributes: vec![],
+        };
+
+        // Field: signature (String)
+        let signature_field = Field {
+            access_flags: FieldAccessFlags::PRIVATE,
+            name_index: cp.add_utf8("signature")?,
+            descriptor_index: string_desc_utf8,
+            field_type: FieldType::parse(string_desc_str)?,
+            attributes: vec![],
+        };
+
+        // Field: annotations (byte[])
+        let annotations_field = Field {
+            access_flags: FieldAccessFlags::PRIVATE,
+            name_index: cp.add_utf8("annotations")?,
+            descriptor_index: byte_array_desc_utf8,
+            field_type: FieldType::parse(byte_array_desc_str)?,
+            attributes: vec![],
+        };
+
+        // Field: typeAnnotations (byte[])
+        let type_annotations_field = Field {
+            access_flags: FieldAccessFlags::PRIVATE,
+            name_index: cp.add_utf8("typeAnnotations")?,
+            descriptor_index: byte_array_desc_utf8,
+            field_type: FieldType::parse(byte_array_desc_str)?,
+            attributes: vec![],
+        };
+
+        // Simple no-arg constructor (just return)
+        let code = vec![Instruction::Return];
         let code_attr = Attribute::Code {
             name_index: cp.add_utf8("Code")?,
-            max_stack: 2,
-            max_locals: 8,
+            max_stack: 1,
+            max_locals: 1,
             code,
             exception_table: vec![],
             attributes: vec![],
         };
 
         let init_method = Method {
-            access_flags: MethodAccessFlags::PUBLIC,
+            access_flags: MethodAccessFlags::PRIVATE,
             name_index: cp.add_utf8("<init>")?,
-            descriptor_index: cp.add_utf8("(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;[B[B)V")?,
+            descriptor_index: cp.add_utf8("()V")?,
             attributes: vec![code_attr],
         };
 
@@ -1907,7 +2081,15 @@ mod tests {
             constant_pool: cp,
             this_class: class_name_idx,
             super_class: super_class_idx,
-            fields: vec![name_field, descriptor_field, type_field],
+            fields: vec![
+                clazz_field,
+                name_field,
+                type_field,
+                accessor_field,
+                signature_field,
+                annotations_field,
+                type_annotations_field,
+            ],
             methods: vec![init_method],
             ..Default::default()
         })
@@ -1981,8 +2163,6 @@ mod tests {
         let comp1 = values[0].as_object_ref()?;
         let name_val = comp1.value("name")?;
         assert_eq!(name_val.as_string()?, "id");
-        let desc_val = comp1.value("descriptor")?;
-        assert_eq!(desc_val.as_string()?, "I");
         let type_val = comp1.value("type")?;
         let type_object = type_val.as_object_ref()?;
         let type_name = type_object.value("name")?.as_string()?;
@@ -1991,10 +2171,6 @@ mod tests {
         // Verify second component (name)
         let comp2 = values[1].as_object_ref()?;
         assert_eq!(comp2.value("name")?.as_string()?, "name");
-        assert_eq!(
-            comp2.value("descriptor")?.as_string()?,
-            "Ljava/lang/String;"
-        );
         let type_val2 = comp2.value("type")?;
         let type_obj2 = type_val2.as_object_ref()?;
         let type_name2 = type_obj2.value("name")?.as_string()?;

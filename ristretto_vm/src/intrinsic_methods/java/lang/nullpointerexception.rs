@@ -705,8 +705,31 @@ impl NpeAnalyzer {
         }
     }
 
-    #[expect(clippy::unused_self)]
-    fn get_local_name(&self, _index: usize) -> Option<String> {
+    /// Get the local variable name for a given index.
+    ///
+    /// According to the JVM specification, when a local variable is a method parameter
+    /// and no debug information is available, it should be named `<parameterN>` where N
+    /// is the 1-based parameter index.
+    fn get_local_name(&self, index: usize) -> Option<String> {
+        // For instance methods, local 0 is 'this', so parameters start at index 1.
+        // For static methods, parameters start at index 0.
+        let param_start_index = usize::from(!self.method.is_static());
+        let local_offset = index.checked_sub(param_start_index)?;
+
+        let mut current_slot = 0;
+        for (param_number, param_type) in self.method.parameters().iter().enumerate() {
+            let slot_count = match param_type {
+                FieldType::Base(
+                    ristretto_classfile::BaseType::Long | ristretto_classfile::BaseType::Double,
+                ) => 2,
+                _ => 1,
+            };
+
+            if local_offset < current_slot + slot_count {
+                return Some(format!("<parameter{}>", param_number + 1));
+            }
+            current_slot += slot_count;
+        }
         None
     }
 

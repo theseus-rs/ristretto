@@ -262,6 +262,7 @@ mod tests {
     use super::*;
     use crate::JavaError::RuntimeException;
     use crate::JavaObject;
+    use crate::intrinsic_methods::java::io::unixfilesystem::FileAccessMode;
     use std::path::Path;
     use tempfile::NamedTempFile;
 
@@ -313,7 +314,7 @@ mod tests {
         let (_file, file_object) = create_file(&thread, "check_access").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
-        parameters.push_int(1); // Read access
+        parameters.push_int(FileAccessMode::READ.bits());
         let value = check_access(thread, parameters).await?.expect("name max");
         let has_access = value.as_bool()?;
         assert!(has_access);

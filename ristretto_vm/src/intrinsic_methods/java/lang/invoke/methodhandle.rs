@@ -1,4 +1,5 @@
 use crate::Error::InternalError;
+use crate::JavaObject;
 use crate::Result;
 use crate::intrinsic_methods::java::lang::invoke::methodhandlenatives::MemberNameFlags;
 use crate::parameters::Parameters;
@@ -206,7 +207,19 @@ async fn interpret_name(thread: Arc<Thread>, name: &Value, values: &[Value]) -> 
     }
 
     // Call the method with resolved arguments
-    call_method_handle_target(thread, &member, resolved_args).await
+    let result = call_method_handle_target(thread.clone(), &member, resolved_args).await?;
+
+    // Check if we need to box the result based on the Name's expected type
+    // BasicType: L_TYPE=0 (object), I_TYPE=1 (int), J_TYPE=2 (long), etc.
+    if let Ok(type_val) = name_ref.value("type") {
+        let expected_object = is_object_type(&type_val);
+        if expected_object && is_primitive(&result) {
+            // Box the primitive result
+            return box_primitive(&thread, result).await;
+        }
+    }
+
+    Ok(result)
 }
 
 /// Get elements from an object array Value
@@ -319,6 +332,43 @@ fn get_zero_value(type_val: &Value) -> Value {
 
     // Default to null object
     Value::Object(None)
+}
+
+/// Check if a `BasicType` value indicates an object type (`L_TYPE` = 0).
+fn is_object_type(type_val: &Value) -> bool {
+    // BasicType: L_TYPE=0 (object), I_TYPE=1 (int), J_TYPE=2 (long), etc.
+    if let Ok(basic_type) = type_val.as_i32() {
+        return basic_type == 0; // L_TYPE
+    }
+
+    // Try to get BasicType from its ordinal if it's an enum
+    if let Ok(obj_ref) = type_val.as_object_ref()
+        && obj_ref.class().name() == "java/lang/invoke/LambdaForm$BasicType"
+        && let Ok(ordinal) = obj_ref.value("ordinal").and_then(|v| v.as_i32())
+    {
+        return ordinal == 0; // L_TYPE
+    }
+
+    false
+}
+
+/// Check if a Value is a primitive type.
+fn is_primitive(value: &Value) -> bool {
+    matches!(
+        value,
+        Value::Int(_) | Value::Long(_) | Value::Float(_) | Value::Double(_)
+    )
+}
+
+/// Box a primitive value into its wrapper object.
+async fn box_primitive(thread: &Thread, value: Value) -> Result<Value> {
+    match value {
+        Value::Int(v) => v.to_object(thread).await,
+        Value::Long(v) => v.to_object(thread).await,
+        Value::Float(v) => v.to_object(thread).await,
+        Value::Double(v) => v.to_object(thread).await,
+        other => Ok(other), // Not a primitive, return as-is
+    }
 }
 
 #[intrinsic_method(
@@ -458,6 +508,127 @@ pub(crate) async fn invoke_exact(
     ))
 }
 
+/// Finds a method in the class hierarchy, starting with the target class and falling back
+/// to the receiver's class hierarchy if not found.
+///
+/// This is needed for lambda methods where MemberName.clazz may be Object but the actual
+/// lambda method is defined in an interface (like Function.andThen).
+#[async_recursion(?Send)]
+async fn find_method_in_hierarchy(
+    _thread: &Arc<Thread>,
+    target_class: &Arc<Class>,
+    receiver: &Value,
+    method_name: &str,
+    method_descriptor: &str,
+) -> Result<(Arc<Class>, Arc<ristretto_classloader::Method>)> {
+    // First try the target class directly
+    if let Ok(method) = target_class.try_get_method(method_name, method_descriptor) {
+        return Ok((target_class.clone(), method));
+    }
+
+    // If the method is a lambda method and target is Object, search receiver's class hierarchy
+    if method_name.starts_with("lambda$")
+        && target_class.name() == "java/lang/Object"
+        && let Ok(receiver_obj) = receiver.as_object_ref()
+    {
+        let receiver_class = receiver_obj.class().clone();
+
+        // Search the receiver's class hierarchy (including interfaces)
+        if let Some((class, method)) =
+            search_class_hierarchy_for_method(&receiver_class, method_name, method_descriptor)?
+        {
+            return Ok((class, method));
+        }
+    }
+
+    // If it's a method on Object that doesn't exist, try searching the receiver's interfaces
+    // This handles interface methods like Collection.stream() when invoked via method handles
+    if target_class.name() == "java/lang/Object"
+        && let Ok(receiver_obj) = receiver.as_object_ref()
+    {
+        let receiver_class = receiver_obj.class().clone();
+        if let Some((class, method)) =
+            search_class_hierarchy_for_method(&receiver_class, method_name, method_descriptor)?
+        {
+            return Ok((class, method));
+        }
+    }
+
+    // Include receiver info in error for debugging
+    let receiver_info = if let Ok(obj) = receiver.as_object_ref() {
+        format!("receiver class: {}", obj.class().name())
+    } else {
+        format!("receiver: {receiver:?}")
+    };
+    Err(InternalError(format!(
+        "Method not found: {}.{method_name}{method_descriptor} ({receiver_info})",
+        target_class.name()
+    )))
+}
+
+/// Searches for a method in a class's hierarchy, including interfaces.
+fn search_class_hierarchy_for_method(
+    class: &Arc<Class>,
+    method_name: &str,
+    method_descriptor: &str,
+) -> Result<Option<(Arc<Class>, Arc<ristretto_classloader::Method>)>> {
+    // Check the class itself
+    if let Ok(method) = class.try_get_method(method_name, method_descriptor) {
+        return Ok(Some((class.clone(), method)));
+    }
+
+    // Check interfaces
+    if let Ok(interfaces) = class.interfaces() {
+        for interface in interfaces {
+            if let Ok(method) = interface.try_get_method(method_name, method_descriptor) {
+                return Ok(Some((interface.clone(), method)));
+            }
+            // Recursively check super-interfaces
+            if let Some(result) =
+                search_class_hierarchy_for_method(&interface, method_name, method_descriptor)?
+            {
+                return Ok(Some(result));
+            }
+        }
+    }
+
+    // Check parent class
+    if let Ok(Some(parent)) = class.parent()
+        && let Some(result) =
+            search_class_hierarchy_for_method(&parent, method_name, method_descriptor)?
+    {
+        return Ok(Some(result));
+    }
+
+    Ok(None)
+}
+
+/// Finds a static lambda method by searching the class hierarchy of the first argument.
+///
+/// This is used when a static lambda method (like those in interface default methods)
+/// cannot be found on the specified target class.
+#[async_recursion(?Send)]
+async fn find_static_lambda_method(
+    _thread: &Arc<Thread>,
+    arguments: &[Value],
+    method_name: &str,
+    method_descriptor: &str,
+) -> Option<(Arc<Class>, Arc<ristretto_classloader::Method>)> {
+    // For static lambda methods, the first argument is often the captured 'this'
+    // which is the interface instance. Search its class hierarchy.
+    for arg in arguments {
+        if let Ok(arg_obj) = arg.as_object_ref() {
+            let arg_class = arg_obj.class().clone();
+            if let Ok(Some(result)) =
+                search_class_hierarchy_for_method(&arg_class, method_name, method_descriptor)
+            {
+                return Some(result);
+            }
+        }
+    }
+    None
+}
+
 /// Helper: Actually invokes the target referenced by a `MethodHandle`.
 #[expect(clippy::too_many_lines)]
 #[async_recursion(?Send)]
@@ -484,8 +655,12 @@ pub async fn call_method_handle_target(
     // that may have dynamically generated methods not present in the pre-compiled class files.
     // We use the LambdaForm interpreter to dispatch these methods.
     if is_holder_class(&target_class_name) {
+        debug!(
+            "call_method_handle_target: dispatching to holder method {target_class_name}::{member_name}"
+        );
         return dispatch_holder_method(thread, &member_name, arguments).await;
     }
+    debug!("call_method_handle_target: NOT a holder class: {target_class_name}");
 
     let target_class = match thread.class(&target_class_name).await {
         Ok(c) => c,
@@ -497,6 +672,13 @@ pub async fn call_method_handle_target(
             return Err(e);
         }
     };
+
+    debug!(
+        "call_method_handle_target: target_class={}, member_name={}, args={}",
+        target_class_name,
+        member_name,
+        arguments.len()
+    );
 
     // Get flags to determine the kind of member and operation
     let reference_kind_value = (flags
@@ -574,18 +756,47 @@ pub async fn call_method_handle_target(
                 )));
             }
             let receiver = arguments.remove(0);
-            let method = target_class.try_get_method(member_name, member_descriptor)?;
+
+            // Try to find method on target class first, then on receiver's class if not found
+            // This handles lambda methods where MemberName.clazz may be Object but the
+            // lambda method is defined on the actual interface/class
+            let (actual_class, method) = find_method_in_hierarchy(
+                &thread,
+                &target_class,
+                &receiver,
+                &member_name,
+                &member_descriptor,
+            )
+            .await?;
+
             let mut call_arguments = vec![receiver];
             call_arguments.extend(arguments);
             let result = thread
-                .execute(&target_class, &method, &call_arguments)
+                .execute(&actual_class, &method, &call_arguments)
                 .await?;
             // For void methods, return null; otherwise return the result
             Ok(result.unwrap_or(Value::Object(None)))
         }
         ReferenceKind::InvokeStatic => {
-            let method = target_class.try_get_method(member_name, member_descriptor)?;
-            let result = thread.execute(&target_class, &method, &arguments).await?;
+            // For static methods (including static lambda methods), try the target class first
+            // If not found and it's a lambda method, try to find it in arguments' class hierarchy
+            let (actual_class, method) = match target_class
+                .try_get_method(&member_name, &member_descriptor)
+            {
+                Ok(m) => (target_class.clone(), m),
+                Err(_) if member_name.starts_with("lambda$") => {
+                    // For lambda methods, try to find in argument's class hierarchy
+                    find_static_lambda_method(&thread, &arguments, &member_name, &member_descriptor)
+                        .await
+                        .ok_or_else(|| {
+                            InternalError(format!(
+                                "Static lambda method not found: {target_class_name}.{member_name}{member_descriptor}"
+                            ))
+                        })?
+                }
+                Err(e) => return Err(e.into()),
+            };
+            let result = thread.execute(&actual_class, &method, &arguments).await?;
             Ok(result.unwrap_or(Value::Object(None)))
         }
         ReferenceKind::InvokeSpecial | ReferenceKind::NewInvokeSpecial => {
@@ -716,6 +927,7 @@ fn is_holder_class(class_name: &str) -> bool {
 /// the `MethodHandle` itself, which contains the actual target in its `member` field.
 ///
 /// `depth` is used to prevent infinite recursion in complex method handle chains.
+#[expect(clippy::too_many_lines)]
 #[async_recursion(?Send)]
 async fn dispatch_holder_method_internal(
     thread: Arc<Thread>,
@@ -745,6 +957,119 @@ async fn dispatch_holder_method_internal(
     }
 
     let method_handle = arguments.remove(0);
+
+    // For constant_* methods, extract the constant from the MethodHandle's bound arguments
+    // These holder methods return a constant value that was bound when the MethodHandle was created
+    if method_name.starts_with("constant_") {
+        let constant_value = {
+            let mh_obj = method_handle.as_object_ref()?;
+            let mh_class = mh_obj.class().name().to_string();
+
+            // For BoundMethodHandle, the constant is in argL0
+            if mh_class.starts_with("java/lang/invoke/BoundMethodHandle") {
+                mh_obj.value("argL0").ok()
+            } else {
+                None
+            }
+        };
+
+        if let Some(value) = constant_value {
+            return Ok(value);
+        }
+
+        // Fallback - just return the first argument
+        return Ok(method_handle);
+    }
+
+    // For newInvokeSpecial, we need to create a new instance and invoke the constructor
+    // The MethodHandle contains the constructor target
+    if method_name == "newInvokeSpecial" {
+        let mh_ref = method_handle.as_object_ref()?;
+        let mh_class = mh_ref.class().name().to_string();
+        debug!("newInvokeSpecial: mh_class={}", mh_class);
+
+        // Get the member (constructor target) from the MethodHandle
+        if let Ok(member) = mh_ref.value("member")
+            && !member.is_null()
+        {
+            let member_ref = member.as_object_ref()?;
+            let member_clazz = member_ref.value("clazz").ok();
+            let member_name_val = member_ref
+                .value("name")
+                .ok()
+                .and_then(|v| v.as_string().ok());
+            let member_desc = member_ref
+                .value("descriptor")
+                .ok()
+                .and_then(|v| v.as_string().ok());
+
+            // Get the class name from the clazz field
+            let target_class_name = if let Some(ref clazz) = member_clazz
+                && !clazz.is_null()
+            {
+                clazz
+                    .as_object_ref()
+                    .ok()
+                    .and_then(|c| c.value("name").ok())
+                    .and_then(|n| n.as_string().ok())
+            } else {
+                None
+            };
+
+            debug!(
+                "newInvokeSpecial: member target_class={:?}, name={:?}, desc={:?}",
+                target_class_name, member_name_val, member_desc
+            );
+
+            // If this is a holder class member, we need to handle it differently
+            // The actual constructor target should be somewhere else
+            if let Some(ref class_name) = target_class_name {
+                if is_holder_class(class_name) {
+                    debug!("newInvokeSpecial: member points to holder class, skipping");
+                } else {
+                    // The member points to a real constructor - use it
+                    return call_method_handle_target(thread, &member, arguments).await;
+                }
+            }
+        }
+
+        // For DirectMethodHandle$Constructor, the target is in the form's names
+        // The actual constructor MemberName should be obtainable from the names array
+        if let Ok(form) = mh_ref.value("form")
+            && !form.is_null()
+        {
+            debug!("newInvokeSpecial: has form, trying LambdaForm interpretation");
+            let mut input_args = Vec::with_capacity(arguments.len() + 1);
+            input_args.push(method_handle.clone());
+            input_args.extend(arguments.clone());
+
+            // Try LambdaForm interpretation - this should handle newInvokeSpecial correctly
+            match interpret_lambda_form(thread.clone(), &form, input_args).await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    debug!(
+                        "newInvokeSpecial: LambdaForm interpretation failed: {:?}",
+                        e
+                    );
+                }
+            }
+        }
+
+        debug!("newInvokeSpecial: falling through to default handling");
+    }
+
+    // Handle special cases where the "MethodHandle" might not be a proper MethodHandle
+    // This can happen with dynamically generated holder methods
+    let is_object = method_handle.as_object_ref().is_ok();
+    if !is_object {
+        // Not an object - might be a primitive value or null
+        debug!(
+            "dispatch_holder_method: first arg is not an object for {}",
+            method_name
+        );
+        return Ok(method_handle);
+    }
+
     let mh_class = method_handle.as_object_ref()?.class().name().to_string();
 
     // Try to use LambdaForm interpretation first
@@ -773,7 +1098,9 @@ async fn dispatch_holder_method_internal(
     }
 
     // Fallback: For DirectMethodHandle, use the member directly
-    if mh_class == "java/lang/invoke/DirectMethodHandle" {
+    if mh_class == "java/lang/invoke/DirectMethodHandle"
+        || mh_class.starts_with("java/lang/invoke/DirectMethodHandle$")
+    {
         let mh_ref = method_handle.as_object_ref()?;
         if let Ok(member) = mh_ref.value("member")
             && !member.is_null()

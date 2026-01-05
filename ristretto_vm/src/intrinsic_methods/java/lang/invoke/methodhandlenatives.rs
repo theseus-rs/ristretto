@@ -506,6 +506,7 @@ pub(crate) async fn get_member_vm_info(
         (vmindex, flags)
     };
 
+    let vmindex = vmindex.to_object(&thread).await?;
     let flags = flags.to_object(&thread).await?;
     let object_array_class = thread.class("[Ljava/lang/Object;").await?;
     let values = vec![vmindex, flags];
@@ -968,12 +969,61 @@ fn resolve_holder_methods(
     method_name: &str,
     method_descriptor: &str,
 ) -> Result<Arc<Method>> {
+    // For holder classes, the methods may not exist in the class file.
+    // They are provided by intrinsics and we need to create synthetic methods.
+    let class_name = class.name();
+
+    // Check if the class is a holder class
+    let is_holder = matches!(
+        class_name,
+        "java/lang/invoke/DirectMethodHandle$Holder"
+            | "java/lang/invoke/DelegatingMethodHandle$Holder"
+            | "java/lang/invoke/Invokers$Holder"
+            | "java/lang/invoke/LambdaForm$Holder"
+            | "java/lang/invoke/VarHandleGuards"
+    ) || class_name.starts_with("java/lang/invoke/LambdaForm$");
+
+    // First try to get the method from the class
     if let Ok(method) = class.try_get_method(method_name, method_descriptor) {
         return Ok(method);
     }
-    let method_descriptor = "([Ljava/lang/Object;)Ljava/lang/Object;";
-    let method = class.try_get_method(method_name, method_descriptor)?;
-    Ok(method)
+
+    // Try with the polymorphic signature
+    let polymorphic_descriptor = "([Ljava/lang/Object;)Ljava/lang/Object;";
+    if let Ok(method) = class.try_get_method(method_name, polymorphic_descriptor) {
+        return Ok(method);
+    }
+
+    // For holder classes, create a synthetic method for intrinsics
+    if is_holder {
+        use ristretto_classfile::{FieldType, MethodAccessFlags};
+
+        let definition = ristretto_classfile::Method {
+            access_flags: MethodAccessFlags::PUBLIC
+                | MethodAccessFlags::STATIC
+                | MethodAccessFlags::NATIVE,
+            name_index: 0,
+            descriptor_index: 0,
+            attributes: Vec::new(),
+        };
+
+        let descriptor_to_use = polymorphic_descriptor;
+        let (parameters, return_type) = FieldType::parse_method_descriptor(descriptor_to_use)?;
+
+        let method = ristretto_classloader::Method::new_synthetic(
+            definition,
+            method_name.to_string(),
+            descriptor_to_use.to_string(),
+            parameters,
+            return_type,
+        );
+
+        return Ok(Arc::new(method));
+    }
+
+    // If not a holder class, return the original error
+    class.try_get_method(method_name, method_descriptor)?;
+    unreachable!()
 }
 
 #[intrinsic_method("java/lang/invoke/MethodHandleNatives.registerNatives()V", Any)]
@@ -983,6 +1033,179 @@ pub(crate) async fn register_natives(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Ok(None)
+}
+
+/// Searches for a lambda method in interface classes.
+///
+/// Lambda methods in interface default methods (like `Function.andThen`) are private instance
+/// methods on the interface itself. When the `MemberName.clazz` is incorrectly set to `Object`,
+/// we need to find the actual interface that defines the lambda method.
+///
+/// We use the method's parameter types to identify candidate interfaces, since lambda methods
+/// often have the interface type as their first parameter (for captured `this`).
+async fn find_lambda_method_in_interfaces(
+    thread: &Thread,
+    parameter_descriptors: &[String],
+    method_name: &str,
+    method_descriptor: &str,
+) -> Result<Option<(Arc<Class>, Arc<Method>)>> {
+    // Extract interface class names from parameter descriptors
+    // Lambda methods typically capture 'this' as the first parameter
+    for param_desc in parameter_descriptors {
+        // Check if this is an object type descriptor (L...;)
+        if param_desc.starts_with('L') && param_desc.ends_with(';') {
+            let class_name = &param_desc[1..param_desc.len() - 1];
+
+            // Try to load the class and check if it has the lambda method
+            if let Ok(candidate_class) = thread.class(class_name).await {
+                // Check if this class has the lambda method
+                if let Ok(method) = candidate_class.try_get_method(method_name, method_descriptor) {
+                    return Ok(Some((candidate_class, method)));
+                }
+
+                // Also check interfaces of the class
+                if let Ok(interfaces) = candidate_class.interfaces() {
+                    for interface in interfaces {
+                        if let Ok(method) = interface.try_get_method(method_name, method_descriptor)
+                        {
+                            return Ok(Some((interface, method)));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Also try common functional interfaces based on the method name pattern
+    // e.g., lambda$andThen$0 is likely from Function, IntUnaryOperator, etc.
+    let potential_interfaces = get_potential_interfaces_from_method_name(method_name);
+    for interface_name in potential_interfaces {
+        if let Ok(interface_class) = thread.class(interface_name).await
+            && let Ok(method) = interface_class.try_get_method(method_name, method_descriptor)
+        {
+            return Ok(Some((interface_class, method)));
+        }
+    }
+
+    Ok(None)
+}
+
+/// Returns potential interface class names based on a lambda method name.
+///
+/// Lambda methods follow the pattern `lambda$<method>$<number>`, where `<method>` is the
+/// name of the method that created the lambda. We can use this to guess the interface.
+fn get_potential_interfaces_from_method_name(method_name: &str) -> Vec<&'static str> {
+    // Extract the method name from the lambda pattern: lambda$methodName$number
+    let parts: Vec<&str> = method_name.split('$').collect();
+    if parts.len() < 2 {
+        return Vec::new();
+    }
+
+    let origin_method = parts[1];
+
+    // Map common method names to their likely interfaces
+    match origin_method {
+        "andThen" => vec![
+            "java/util/function/Function",
+            "java/util/function/BiFunction",
+            "java/util/function/Consumer",
+            "java/util/function/BiConsumer",
+            "java/util/function/IntUnaryOperator",
+            "java/util/function/LongUnaryOperator",
+            "java/util/function/DoubleUnaryOperator",
+            "java/util/function/IntConsumer",
+            "java/util/function/LongConsumer",
+            "java/util/function/DoubleConsumer",
+        ],
+        "compose" => vec![
+            "java/util/function/Function",
+            "java/util/function/IntUnaryOperator",
+            "java/util/function/LongUnaryOperator",
+            "java/util/function/DoubleUnaryOperator",
+        ],
+        "negate" => vec![
+            "java/util/function/Predicate",
+            "java/util/function/IntPredicate",
+            "java/util/function/LongPredicate",
+            "java/util/function/DoublePredicate",
+        ],
+        "and" | "or" => vec![
+            "java/util/function/Predicate",
+            "java/util/function/IntPredicate",
+            "java/util/function/LongPredicate",
+            "java/util/function/DoublePredicate",
+            "java/util/function/BiPredicate",
+        ],
+        "identity" => vec![
+            "java/util/function/Function",
+            "java/util/function/UnaryOperator",
+            "java/util/function/IntUnaryOperator",
+            "java/util/function/LongUnaryOperator",
+            "java/util/function/DoubleUnaryOperator",
+        ],
+        _ => Vec::new(),
+    }
+}
+
+/// Searches for an interface method based on parameter types.
+///
+/// This is used when a method on Object cannot be found, but might be an interface method
+/// like `Collection.stream()`. We search interfaces that could define the method.
+async fn find_interface_method_from_params(
+    thread: &Thread,
+    parameter_descriptors: &[String],
+    method_name: &str,
+    method_descriptor: &str,
+) -> Result<Option<(Arc<Class>, Arc<Method>)>> {
+    // Search interfaces based on parameter types
+    for param_desc in parameter_descriptors {
+        if param_desc.starts_with('L') && param_desc.ends_with(';') {
+            let class_name = &param_desc[1..param_desc.len() - 1];
+
+            if let Ok(candidate_class) = thread.class(class_name).await {
+                // Check if this class or its interfaces have the method
+                if let Ok(method) = candidate_class.try_get_method(method_name, method_descriptor) {
+                    return Ok(Some((candidate_class, method)));
+                }
+
+                // Check interfaces
+                if let Ok(interfaces) = candidate_class.interfaces() {
+                    for interface in interfaces {
+                        if let Ok(method) = interface.try_get_method(method_name, method_descriptor)
+                        {
+                            return Ok(Some((interface, method)));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Try common interfaces based on method name
+    let common_interfaces = get_common_interfaces_for_method(method_name);
+    for interface_name in common_interfaces {
+        if let Ok(interface_class) = thread.class(interface_name).await
+            && let Ok(method) = interface_class.try_get_method(method_name, method_descriptor)
+        {
+            return Ok(Some((interface_class, method)));
+        }
+    }
+
+    Ok(None)
+}
+
+/// Returns common interface names for a given method name.
+fn get_common_interfaces_for_method(method_name: &str) -> Vec<&'static str> {
+    match method_name {
+        "stream" | "parallelStream" => {
+            vec!["java/util/Collection", "java/util/List", "java/util/Set"]
+        }
+        "iterator" | "forEach" | "spliterator" => {
+            vec!["java/lang/Iterable", "java/util/Collection"]
+        }
+        "getTypeName" => vec!["java/lang/Class", "java/lang/reflect/Type"],
+        _ => Vec::new(),
+    }
 }
 
 pub(crate) async fn resolve(
@@ -1042,6 +1265,7 @@ pub(crate) async fn resolve(
 /// Resolves a method in the given class, checking access permissions and returning the member self
 /// if successful.
 #[expect(clippy::too_many_arguments)]
+#[expect(clippy::too_many_lines)]
 async fn resolve_method(
     thread: &Thread,
     member_self: Value,
@@ -1114,20 +1338,92 @@ async fn resolve_method(
 
     let method_name = name.as_string()?;
     let method_descriptor = format!("({}){return_descriptor}", parameter_descriptors.concat());
-    let method = match class.name() {
+    let (resolved_class, method, is_lambda_method) = match class.name() {
         "java/lang/invoke/DelegatingMethodHandle$Holder"
         | "java/lang/invoke/DirectMethodHandle$Holder"
         | "java/lang/invoke/Invokers$Holder"
         | "java/lang/invoke/MethodHandle"
-        | "java/lang/invoke/VarHandle" => {
-            resolve_holder_methods(class.clone(), &method_name, &method_descriptor)?
+        | "java/lang/invoke/VarHandle" => (
+            class.clone(),
+            resolve_holder_methods(class.clone(), &method_name, &method_descriptor)?,
+            false,
+        ),
+        _ => {
+            // First try the specified class
+            match class.try_get_method(&method_name, &method_descriptor) {
+                Ok(m) => (class.clone(), m, false),
+                Err(_)
+                    if method_name.starts_with("lambda$") && class.name() == "java/lang/Object" =>
+                {
+                    // For lambda methods on Object, the MemberName.clazz was incorrectly set.
+                    // Search for the method in interfaces based on the method signature.
+                    // Lambda methods in interface default methods typically have the interface
+                    // type as their first parameter.
+                    if let Some((found_class, found_method)) = find_lambda_method_in_interfaces(
+                        thread,
+                        &parameter_descriptors,
+                        &method_name,
+                        &method_descriptor,
+                    )
+                    .await?
+                    {
+                        // Update the MemberName's clazz field to the correct class
+                        let class_object = found_class.to_object(thread).await?;
+                        {
+                            let mut member_self_mut = member_self.as_object_mut()?;
+                            member_self_mut.set_value("clazz", class_object)?;
+                        }
+                        // Lambda methods are private but invoked through method handles
+                        // which already have appropriate access, so skip access check
+                        (found_class, found_method, true)
+                    } else {
+                        return Err(InternalError(format!(
+                            "Lambda method not found: {}.{method_name}{method_descriptor}",
+                            class.name()
+                        )));
+                    }
+                }
+                Err(_) if class.name() == "java/lang/Object" => {
+                    // For non-lambda methods on Object (like interface methods),
+                    // search for the method in interfaces based on parameter types.
+                    // This handles cases like Collection.stream() invoked via method handles.
+                    if let Some((found_class, found_method)) = find_interface_method_from_params(
+                        thread,
+                        &parameter_descriptors,
+                        &method_name,
+                        &method_descriptor,
+                    )
+                    .await?
+                    {
+                        // Update the MemberName's clazz field to the correct class
+                        let class_object = found_class.to_object(thread).await?;
+                        {
+                            let mut member_self_mut = member_self.as_object_mut()?;
+                            member_self_mut.set_value("clazz", class_object)?;
+                        }
+                        (found_class, found_method, false)
+                    } else {
+                        return Err(InternalError(format!(
+                            "Interface method not found: {}.{method_name}{method_descriptor}",
+                            class.name()
+                        )));
+                    }
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
-        _ => class.try_get_method(&method_name, &method_descriptor)?,
     };
 
-    // Access control enforcement
+    // Access control enforcement (skip for lambda methods)
     let method_access_flags = method.access_flags();
-    if !check_method_access(caller, class, *method_access_flags, lookup_mode_flags)? {
+    if !is_lambda_method
+        && !check_method_access(
+            caller,
+            &resolved_class,
+            *method_access_flags,
+            lookup_mode_flags,
+        )?
+    {
         return if speculative_resolve {
             // If speculative, return None (fail silently)
             Ok(None)
@@ -1139,7 +1435,7 @@ async fn resolve_method(
                 } else {
                     "inaccessible"
                 },
-                class.name(),
+                resolved_class.name(),
             ))
             .into())
         };

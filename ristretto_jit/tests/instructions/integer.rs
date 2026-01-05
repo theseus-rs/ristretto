@@ -484,3 +484,18 @@ fn ireturn() -> Result<()> {
     assert_eq!(value, expected_value);
     Ok(())
 }
+
+#[test]
+fn imul_square() -> Result<()> {
+    // This simulates lambda$main$15: n -> n * n
+    let instructions = vec![
+        Instruction::Iload_0,
+        Instruction::Iload_0,
+        Instruction::Imul,
+        Instruction::Ireturn,
+    ];
+    let function = create_function("(I)I", &instructions)?;
+    let value = function.execute(vec![Value::I32(7)])?.expect("value");
+    assert_eq!(value, Value::I32(49));
+    Ok(())
+}

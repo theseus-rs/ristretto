@@ -113,9 +113,10 @@ pub(crate) async fn multianewarray(
     dimension_sizes.reverse();
 
     // Create the nested array structure
+    // For multidimensional arrays, we need the base element type (strip all '[' prefixes)
+    let base_component_type = class.array_base_element_type();
     let array =
-        create_multidimensional_array(&thread, class.array_component_type(), &dimension_sizes, 0)
-            .await?;
+        create_multidimensional_array(&thread, base_component_type, &dimension_sizes, 0).await?;
 
     stack.push(array)?;
     Ok(Continue)

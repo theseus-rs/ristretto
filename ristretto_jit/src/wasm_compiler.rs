@@ -4,7 +4,7 @@ use ristretto_classfile::{ClassFile, Method};
 /// Java Virtual Machine (JVM) bytecode to wasm code compiler.
 ///
 /// This is a no-op compiler that does not actually compile any code.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Compiler {}
 
 impl Compiler {

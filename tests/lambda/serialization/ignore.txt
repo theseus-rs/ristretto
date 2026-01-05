@@ -1,0 +1,11 @@
+InternalError("Throwable(Object(Some(RwLock { data: Object(Object(java/lang/ExceptionInInitializerError)
+  backtrace=java/lang/Object[16]
+  detailMessage=String(\"java.lang.Throwable: Object(class java/lang/ExceptionInInitializerError)\")
+  cause=Object(null)
+  stackTrace=java/lang/StackTraceElement[0]
+  depth=int(16)
+  suppressedExceptions=Object(class java/util/Collections$EmptyList)
+) }))):
+stdout: === Lambda Serialization Tests ===
+--- Serializable Lambda ---
+Before serialization: 5

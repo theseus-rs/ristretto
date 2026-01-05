@@ -29,6 +29,7 @@ use tokio::sync::Notify;
 pub static POLYMORPHIC_METHODS: LazyLock<HashMap<(&'static str, &'static str), &'static str>> =
     LazyLock::new(|| {
         let mut map = HashMap::new();
+        // MethodHandle polymorphic methods
         map.insert(
             ("java/lang/invoke/MethodHandle", "invoke"),
             "([Ljava/lang/Object;)Ljava/lang/Object;",
@@ -59,6 +60,131 @@ pub static POLYMORPHIC_METHODS: LazyLock<HashMap<(&'static str, &'static str), &
         );
         map.insert(
             ("java/lang/invoke/MethodHandle", "linkToVirtual"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        // VarHandle polymorphic methods
+        map.insert(
+            ("java/lang/invoke/VarHandle", "get"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "set"),
+            "([Ljava/lang/Object;)V",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getVolatile"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "setVolatile"),
+            "([Ljava/lang/Object;)V",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getOpaque"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "setOpaque"),
+            "([Ljava/lang/Object;)V",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAcquire"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "setRelease"),
+            "([Ljava/lang/Object;)V",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "compareAndSet"),
+            "([Ljava/lang/Object;)Z",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "compareAndExchange"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "compareAndExchangeAcquire"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "compareAndExchangeRelease"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "weakCompareAndSetPlain"),
+            "([Ljava/lang/Object;)Z",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "weakCompareAndSet"),
+            "([Ljava/lang/Object;)Z",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "weakCompareAndSetAcquire"),
+            "([Ljava/lang/Object;)Z",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "weakCompareAndSetRelease"),
+            "([Ljava/lang/Object;)Z",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndSet"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndSetAcquire"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndSetRelease"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndAdd"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndAddAcquire"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndAddRelease"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndBitwiseOr"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndBitwiseOrAcquire"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndBitwiseOrRelease"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndBitwiseAnd"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndBitwiseAndAcquire"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndBitwiseAndRelease"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndBitwiseXor"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndBitwiseXorAcquire"),
+            "([Ljava/lang/Object;)Ljava/lang/Object;",
+        );
+        map.insert(
+            ("java/lang/invoke/VarHandle", "getAndBitwiseXorRelease"),
             "([Ljava/lang/Object;)Ljava/lang/Object;",
         );
         map
@@ -530,17 +656,31 @@ impl Class {
     }
 
     /// Get the raw component name for an array class.
+    /// For a 2D array `[[Ljava/lang/String;`, returns `[Ljava/lang/String;`.
+    /// For a 1D array `[Ljava/lang/String;`, returns `java/lang/String`.
     #[must_use]
     pub fn array_component_type(&self) -> &str {
-        let mut component_type = self.name().split('[').next_back().unwrap_or_default();
-        if component_type.ends_with(';') {
-            component_type = component_type
-                .strip_prefix('L')
-                .unwrap_or_default()
-                .strip_suffix(';')
-                .unwrap_or_default();
+        // Strip exactly one leading '[' to get the component type descriptor
+        let name = self.name();
+        if let Some(component) = name.strip_prefix('[') {
+            // For object arrays like "[Ljava/lang/String;", strip L and ; to get the class name
+            // But for nested arrays like "[[Ljava/lang/String;", keep the '[' prefix
+            if component.starts_with('L') && component.ends_with(';') && !component.starts_with('[')
+            {
+                // It's an object type like "Ljava/lang/String;"
+                component
+                    .strip_prefix('L')
+                    .unwrap_or(component)
+                    .strip_suffix(';')
+                    .unwrap_or(component)
+            } else {
+                // It's a primitive type (e.g., "I") or nested array (e.g., "[Ljava/lang/String;")
+                component
+            }
+        } else {
+            // Not an array, return empty
+            ""
         }
-        component_type
     }
 
     /// Get the component name for an array class.
@@ -562,6 +702,30 @@ impl Class {
             _ => component_type,
         };
         Some(component_type)
+    }
+
+    /// Get the innermost base element type for a multidimensional array class.
+    /// For `[[Ljava/lang/String;`, returns `java/lang/String`.
+    /// For `[[[I`, returns `I`.
+    /// For non-arrays, returns an empty string.
+    #[must_use]
+    pub fn array_base_element_type(&self) -> &str {
+        let name = self.name();
+        // Strip all leading '[' to get the innermost type descriptor
+        let base = name.trim_start_matches('[');
+        if base.is_empty() {
+            return "";
+        }
+        // For object types like "Ljava/lang/String;", strip L and ; to get the class name
+        if base.starts_with('L') && base.ends_with(';') {
+            base.strip_prefix('L')
+                .unwrap_or(base)
+                .strip_suffix(';')
+                .unwrap_or(base)
+        } else {
+            // It's a primitive type descriptor (e.g., "I", "Z", etc.)
+            base
+        }
     }
 
     /// Get the class source file name.
@@ -1463,9 +1627,37 @@ mod tests {
     async fn test_new_array_multiple_dimensions() -> Result<()> {
         let class = load_class("[[[[[B").await?;
         assert_eq!("[[[[[B", class.name());
-        assert_eq!(Some("byte"), class.component_type());
+        assert_eq!(Some("[[[[B"), class.component_type());
         assert_eq!(5, class.array_dimensions());
         assert!(class.is_array());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_array_base_element_type_primitive() -> Result<()> {
+        let class = load_class("[[[[[I").await?;
+        assert_eq!("I", class.array_base_element_type());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_array_base_element_type_object() -> Result<()> {
+        let class = load_class("[[Ljava/lang/String;").await?;
+        assert_eq!("java/lang/String", class.array_base_element_type());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_array_base_element_type_single_dimension() -> Result<()> {
+        let class = load_class("[B").await?;
+        assert_eq!("B", class.array_base_element_type());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_array_base_element_type_non_array() -> Result<()> {
+        let class = string_class().await?;
+        assert_eq!("java/lang/String", class.array_base_element_type());
         Ok(())
     }
 
