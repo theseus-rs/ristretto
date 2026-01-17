@@ -1,6 +1,7 @@
 use crate::Error::{FieldNotFound, InternalError, MethodNotFound, PoisonedLock};
 use crate::field::FieldKey;
 use crate::{ClassLoader, Field, Method, Result, Value};
+use indexmap::IndexMap;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
     ClassAccessFlags, ClassFile, Constant, ConstantPool, FieldAccessFlags, MethodAccessFlags,
@@ -306,7 +307,10 @@ pub struct Class {
     /// These are initialized during object construction (`<init>`).
     /// Zero values are set during allocation; actual initialization happens in constructors.
     object_fields: Vec<Arc<Field>>,
-    methods: HashMap<String, Arc<Method>>,
+    /// Methods declared in this class, stored in class file order to match JVM behavior.
+    /// Using `IndexMap` to preserve insertion order, which is required for reflection APIs
+    /// like `getDeclaredMethods()` to return methods in a consistent order.
+    methods: IndexMap<String, Arc<Method>>,
     object: RwLock<Option<Value>>,
     /// The initialization state of the class
     /// [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5).
@@ -367,7 +371,7 @@ impl Class {
             }
         }
 
-        let mut methods = HashMap::new();
+        let mut methods = IndexMap::new();
         for class_file_method in &class_file.methods {
             let method = Method::from(&class_file, class_file_method)?;
             let signature = method.signature();
@@ -486,7 +490,7 @@ impl Class {
             }
         }
 
-        let mut methods = HashMap::new();
+        let mut methods = IndexMap::new();
         for class_file_method in &class_file.methods {
             let method = Method::from(&class_file, class_file_method)?;
             let signature = method.signature();
@@ -538,7 +542,7 @@ impl Class {
     /// the class file, but are required for the class to function correctly.
     fn add_synthetic_methods(
         class_file: &mut ClassFile,
-        methods: &mut HashMap<String, Arc<Method>>,
+        methods: &mut IndexMap<String, Arc<Method>>,
         method_signatures: &[(&str, &str)],
     ) -> Result<()> {
         for (name, descriptor) in method_signatures {

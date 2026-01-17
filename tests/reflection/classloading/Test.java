@@ -79,7 +79,13 @@ public class Test {
         System.out.println("System ClassLoader: " + systemLoader.getClass().getName());
 
         ClassLoader currentLoader = Test.class.getClassLoader();
-        System.out.println("Current ClassLoader: " + (currentLoader != null ? currentLoader.getClass().getName() : "Bootstrap ClassLoader"));
+        // Print a simplified classloader description to handle implementation differences
+        String loaderName = currentLoader != null ? currentLoader.getClass().getSimpleName() : "Bootstrap";
+        // Normalize classloader names to avoid implementation-specific differences
+        if (loaderName.contains("AppClassLoader") || loaderName.contains("BuiltinClassLoader")) {
+            loaderName = "ApplicationClassLoader";
+        }
+        System.out.println("Current ClassLoader type: " + loaderName);
 
         // Test class loading from different loaders
         Class<?> viaSystemLoader = Class.forName("java.lang.String", false, systemLoader);

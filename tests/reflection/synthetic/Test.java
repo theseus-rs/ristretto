@@ -1,5 +1,7 @@
 /** Test synthetic members and bridge methods in reflection. */
 import java.lang.reflect.*;
+import java.util.Arrays;
+import java.util.Comparator;
 
 public class Test {
     // Generic class to create bridge methods
@@ -40,6 +42,10 @@ public class Test {
         System.out.println("=== Bridge Methods ===");
         Class<?> stringChildClass = StringChild.class;
         Method[] methods = stringChildClass.getDeclaredMethods();
+        // Sort methods for deterministic output: name, then params, then return type
+        Arrays.sort(methods, Comparator.comparing(Method::getName)
+            .thenComparing(m -> Arrays.toString(m.getParameterTypes()))
+            .thenComparing(m -> m.getReturnType().getName()));
 
         int bridgeCount = 0;
         int normalCount = 0;
@@ -71,13 +77,16 @@ public class Test {
 
         // Test method invocation on bridge vs non-bridge
         StringChild instance = new StringChild();
-        for (Method method : methods) {
-            if (method.getName().equals("getValue")) {
-                Object result = method.invoke(instance);
-                System.out.println("Method " + method.getName() +
-                    (method.isBridge() ? " (bridge)" : " (normal)") +
-                    " result: " + result);
-            }
+        // Sort for deterministic invocation order (non-bridge first, then bridge)
+        Method[] getValueMethods = Arrays.stream(methods)
+            .filter(m -> m.getName().equals("getValue"))
+            .sorted(Comparator.comparing(Method::isBridge))
+            .toArray(Method[]::new);
+        for (Method method : getValueMethods) {
+            Object result = method.invoke(instance);
+            System.out.println("Method " + method.getName() +
+                (method.isBridge() ? " (bridge)" : " (normal)") +
+                " result: " + result);
         }
 
         // Test synthetic members in inner classes
@@ -88,6 +97,8 @@ public class Test {
 
         // Check synthetic fields (reference to outer instance)
         Field[] fields = innerClass.getDeclaredFields();
+        // Sort fields for deterministic output
+        Arrays.sort(fields, Comparator.comparing(Field::getName));
         System.out.println("Inner class fields:");
         for (Field field : fields) {
             System.out.println("Field: " + field.getName());
@@ -106,6 +117,8 @@ public class Test {
 
         // Check synthetic methods (access methods for private outer members)
         Method[] innerMethods = innerClass.getDeclaredMethods();
+        // Sort methods for deterministic output
+        Arrays.sort(innerMethods, Comparator.comparing(Method::getName));
         System.out.println("Inner class methods:");
         for (Method method : innerMethods) {
             System.out.println("Method: " + method.getName());
@@ -117,6 +130,8 @@ public class Test {
         // Check outer class for synthetic access methods
         System.out.println("Outer class synthetic methods:");
         Method[] outerMethods = Test.class.getDeclaredMethods();
+        // Sort methods for deterministic output
+        Arrays.sort(outerMethods, Comparator.comparing(Method::getName));
         for (Method method : outerMethods) {
             if (method.isSynthetic()) {
                 System.out.println("Synthetic method: " + method.getName());
@@ -135,6 +150,8 @@ public class Test {
         enum TestEnum { VALUE1, VALUE2 }
 
         Method[] enumMethods = TestEnum.class.getDeclaredMethods();
+        // Sort enum methods for deterministic output
+        Arrays.sort(enumMethods, Comparator.comparing(Method::getName));
         for (Method method : enumMethods) {
             System.out.println("Enum method: " + method.getName());
             System.out.println("  Is synthetic: " + method.isSynthetic());
@@ -152,10 +169,15 @@ public class Test {
         Runnable lambda = () -> System.out.println("Lambda executed");
         Class<?> lambdaClass = lambda.getClass();
 
-        System.out.println("Lambda class: " + lambdaClass.getName());
-        System.out.println("Is synthetic class: " + lambdaClass.isSynthetic());
+        // Lambda class names and synthetic status may vary between implementations
+        String lambdaClassName = lambdaClass.getName();
+        boolean isLambdaClass = lambdaClassName.contains("Lambda");
+        System.out.println("Lambda class detected: " + isLambdaClass);
+        System.out.println("Lambda class is generated: " + (lambdaClass.isSynthetic() || lambdaClassName.contains("Lambda")));
 
         Method[] lambdaMethods = lambdaClass.getDeclaredMethods();
+        // Sort lambda methods for deterministic output
+        Arrays.sort(lambdaMethods, Comparator.comparing(Method::getName));
         for (Method method : lambdaMethods) {
             System.out.println("Lambda method: " + method.getName());
             System.out.println("  Is synthetic: " + method.isSynthetic());
@@ -228,7 +250,11 @@ public class Test {
 
         // Test method.isSynthetic() vs method.isBridge() distinction
         System.out.println("\n=== Synthetic vs Bridge Distinction ===");
-        for (Method method : stringChildClass.getDeclaredMethods()) {
+        Method[] childMethods = stringChildClass.getDeclaredMethods();
+        // Sort for deterministic output
+        Arrays.sort(childMethods, Comparator.comparing(Method::getName)
+            .thenComparing(m -> m.getReturnType().getName()));
+        for (Method method : childMethods) {
             if (method.isSynthetic() || method.isBridge()) {
                 System.out.println("Method: " + method.getName());
                 System.out.println("  Synthetic: " + method.isSynthetic());

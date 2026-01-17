@@ -1,9 +1,0 @@
-InternalError("Throwable(Object(java/lang/annotation/AnnotationFormatError)
-  backtrace=java/lang/StackTraceElement[9]
-  detailMessage=String(\"Unexpected end of annotations.\")
-  cause=Object(class java/lang/annotation/AnnotationFormatError)
-  stackTrace=java/lang/StackTraceElement[0]
-  depth=int(9)
-  suppressedExceptions=Object(class java/util/Collections$EmptyList)
-):
-stdout: === Annotation Values Test ===

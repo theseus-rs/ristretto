@@ -239,9 +239,10 @@ pub(crate) async fn define_class_1_1(
         let bytes: &[u8] = transmute_ref!(&*bytes);
         bytes.to_vec()
     };
-    let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
+    let _name = parameters.pop()?;
     let class_loader = parameters.pop()?;
-    {
+    let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
+    if !class_loader.is_null() {
         let mut class_object = class.as_object_mut()?;
         class_object.set_value("classLoader", class_loader)?;
     }

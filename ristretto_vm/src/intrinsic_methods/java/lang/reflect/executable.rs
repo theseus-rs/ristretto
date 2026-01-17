@@ -3,6 +3,7 @@ use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use byteorder::{BigEndian, WriteBytesExt};
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classloader::{Reference, Value};
@@ -91,10 +92,69 @@ pub(crate) async fn get_parameters_0(
 #[intrinsic_method("java/lang/reflect/Executable.getTypeAnnotationBytes0()[B", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_type_annotation_bytes_0(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.reflect.Executable.getTypeAnnotationBytes0()[B")
+    // 'this' is the Executable (Method or Constructor)
+    let executable = parameters.pop()?;
+    let executable_obj = executable.as_object_ref()?;
+
+    // Get the declaring class and slot to find the method
+    let declaring_class_value = executable_obj.value("clazz")?;
+    let slot_i32 = executable_obj.value("slot")?.as_i32()?;
+    let slot = usize::try_from(slot_i32)
+        .map_err(|_| crate::Error::InternalError(format!("Invalid slot value: {slot_i32}")))?;
+
+    // Get the actual class from the Class object
+    let declaring_class_obj = declaring_class_value.as_object_ref()?;
+    let class_name = declaring_class_obj.value("name")?.as_string()?;
+    let class_name = class_name.replace('.', "/");
+    let declaring_class = thread.class(&class_name).await?;
+
+    // Get the method from the slot (index into class.methods())
+    let methods = declaring_class.methods();
+    let method = methods
+        .get(slot)
+        .ok_or_else(|| crate::Error::InternalError(format!("Method slot {slot} out of bounds")))?;
+
+    // Collect all type annotations from both visible and invisible attributes
+    let mut all_type_annotations = Vec::new();
+
+    for attribute in method.attributes() {
+        match attribute {
+            Attribute::RuntimeVisibleTypeAnnotations {
+                type_annotations, ..
+            }
+            | Attribute::RuntimeInvisibleTypeAnnotations {
+                type_annotations, ..
+            } => {
+                all_type_annotations.extend(type_annotations.iter().cloned());
+            }
+            _ => {}
+        }
+    }
+
+    // If no type annotations, return null
+    if all_type_annotations.is_empty() {
+        return Ok(Some(Value::Object(None)));
+    }
+
+    // Serialize the type annotations to bytes
+    let mut bytes = Vec::new();
+    let type_annotations_length = u16::try_from(all_type_annotations.len())?;
+    bytes.write_u16::<BigEndian>(type_annotations_length)?;
+    for type_annotation in &all_type_annotations {
+        type_annotation.to_bytes(&mut bytes)?;
+    }
+
+    // Create byte array
+    let byte_array_class = thread.class("[B").await?;
+    let byte_values: Vec<Value> = bytes
+        .into_iter()
+        .map(|b| Value::Int(i32::from(b)))
+        .collect();
+    let result = Reference::try_from((byte_array_class, byte_values))?;
+    Ok(Some(Value::from(result)))
 }
 
 #[cfg(test)]
@@ -105,11 +165,9 @@ mod tests {
     // Testing it properly requires setting up a reflection context which is complex
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.reflect.Executable.getTypeAnnotationBytes0()[B"
-    )]
     async fn test_get_type_annotation_bytes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_type_annotation_bytes_0(thread, Parameters::default()).await;
+        let result = get_type_annotation_bytes_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

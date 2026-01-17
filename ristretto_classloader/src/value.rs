@@ -1250,7 +1250,10 @@ mod tests {
     #[test]
     fn test_from_vec_bool() {
         let value: Value = vec![true, false].into();
-        assert_eq!(Value::from(Reference::from(vec![1i8, 0i8])), value);
+        assert_eq!(
+            Value::from(Reference::BooleanArray(vec![1i8, 0i8].into_boxed_slice())),
+            value
+        );
     }
 
     #[test]

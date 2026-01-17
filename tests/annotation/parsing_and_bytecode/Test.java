@@ -1,6 +1,7 @@
 import java.lang.annotation.*;
 import java.lang.reflect.*;
 import java.util.Arrays;
+import java.util.Comparator;
 
 // Annotation with complex nested structures for parsing tests
 @Retention(RetentionPolicy.RUNTIME)
@@ -251,11 +252,27 @@ public class Test {
 
         // Test annotation methods
         Method[] annMethods = annClass.getDeclaredMethods();
+        // Sort methods by name for deterministic output
+        Arrays.sort(annMethods, Comparator.comparing(Method::getName));
         System.out.println("ComplexParsingAnnotation methods count: " + annMethods.length);
         for (Method method : annMethods) {
             System.out.println("  Method: " + method.getName());
             System.out.println("    Return type: " + method.getReturnType().getName());
-            System.out.println("    Default value: " + method.getDefaultValue());
+            // Normalize array default values to avoid hashcode differences
+            Object defaultValue = method.getDefaultValue();
+            if (defaultValue != null && defaultValue.getClass().isArray()) {
+                if (defaultValue instanceof int[]) {
+                    System.out.println("    Default value: " + Arrays.toString((int[]) defaultValue));
+                } else if (defaultValue instanceof double[]) {
+                    System.out.println("    Default value: " + Arrays.toString((double[]) defaultValue));
+                } else if (defaultValue instanceof Object[]) {
+                    System.out.println("    Default value: " + Arrays.toString((Object[]) defaultValue));
+                } else {
+                    System.out.println("    Default value: <array>");
+                }
+            } else {
+                System.out.println("    Default value: " + defaultValue);
+            }
             System.out.println("    Is abstract: " + Modifier.isAbstract(method.getModifiers()));
             System.out.println("    Is public: " + Modifier.isPublic(method.getModifiers()));
         }
@@ -277,42 +294,34 @@ public class Test {
         System.out.println("\n=== Annotation Performance Test ===");
 
         // Test multiple accesses to same annotation
-        long startTime = System.nanoTime();
         for (int i = 0; i < 1000; i++) {
             ComplexParsingAnnotation ann = clazz.getAnnotation(ComplexParsingAnnotation.class);
             if (ann == null) break; // Shouldn't happen
         }
-        long endTime = System.nanoTime();
-        System.out.println("1000 getAnnotation() calls took: " + (endTime - startTime) / 1000000.0 + " ms");
+        System.out.println("1000 getAnnotation() calls completed");
 
         // Test annotation method invocation
         ComplexParsingAnnotation ann = clazz.getAnnotation(ComplexParsingAnnotation.class);
         if (ann != null) {
-            startTime = System.nanoTime();
             for (int i = 0; i < 1000; i++) {
                 String str = ann.normalString();
                 if (str == null) break; // Shouldn't happen
             }
-            endTime = System.nanoTime();
-            System.out.println("1000 annotation method calls took: " + (endTime - startTime) / 1000000.0 + " ms");
+            System.out.println("1000 annotation method calls completed");
 
             // Test array access
-            startTime = System.nanoTime();
             for (int i = 0; i < 1000; i++) {
                 int[] array = ann.largeIntArray();
                 if (array == null) break; // Shouldn't happen
             }
-            endTime = System.nanoTime();
-            System.out.println("1000 annotation array accesses took: " + (endTime - startTime) / 1000000.0 + " ms");
+            System.out.println("1000 annotation array accesses completed");
         }
 
         // Test isAnnotationPresent vs getAnnotation
-        startTime = System.nanoTime();
         for (int i = 0; i < 1000; i++) {
             boolean present = clazz.isAnnotationPresent(ComplexParsingAnnotation.class);
             if (!present) break; // Shouldn't happen
         }
-        endTime = System.nanoTime();
-        System.out.println("1000 isAnnotationPresent() calls took: " + (endTime - startTime) / 1000000.0 + " ms");
+        System.out.println("1000 isAnnotationPresent() calls completed");
     }
 }

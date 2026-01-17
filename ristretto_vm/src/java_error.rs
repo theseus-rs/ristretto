@@ -82,6 +82,16 @@ pub enum JavaError {
     /// - [IllegalAccessError](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/IllegalAccessError.html)
     #[error("{0}")]
     IllegalAccessError(String),
+    /// `IllegalAccessException`
+    ///
+    /// Thrown when an application tries to reflectively create an instance, set or get a field, or
+    /// invoke a method, but the currently executing method does not have access to the definition
+    /// of the specified class, field, method or constructor.
+    ///
+    /// # References
+    /// - [IllegalAccessException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/IllegalAccessException.html)
+    #[error("{0}")]
+    IllegalAccessException(String),
     /// `InaccessibleObjectException`
     ///
     /// Thrown when reflective access fails due to JPMS encapsulation.
@@ -182,6 +192,7 @@ impl JavaError {
             JavaError::ExceptionInInitializerError(_) => "java.lang.ExceptionInInitializerError",
             JavaError::FileNotFoundException(_) => "java.io.FileNotFoundException",
             JavaError::IllegalAccessError(_) => "java.lang.IllegalAccessError",
+            JavaError::IllegalAccessException(_) => "java.lang.IllegalAccessException",
             JavaError::InaccessibleObjectException(_) => {
                 "java.lang.reflect.InaccessibleObjectException"
             }
@@ -314,6 +325,18 @@ mod tests {
         let error = JavaError::IllegalAccessError("foo".to_string());
         assert_eq!(error.class_name(), "java.lang.IllegalAccessError");
         assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
+    fn test_illegal_access_exception() {
+        let error = JavaError::IllegalAccessException(
+            "class Test cannot access a member of class Foo with modifiers \"private\"".to_string(),
+        );
+        assert_eq!(error.class_name(), "java.lang.IllegalAccessException");
+        assert_eq!(
+            error.message(),
+            "class Test cannot access a member of class Foo with modifiers \"private\""
+        );
     }
 
     #[test]

@@ -1,4 +1,5 @@
 use crate::Error::InternalError;
+use crate::JavaError::NullPointerException;
 use crate::JavaObject;
 use crate::Result;
 use crate::intrinsic_methods::java::lang::invoke::methodhandlenatives::MemberNameFlags;
@@ -521,9 +522,35 @@ async fn find_method_in_hierarchy(
     method_name: &str,
     method_descriptor: &str,
 ) -> Result<(Arc<Class>, Arc<ristretto_classloader::Method>)> {
-    // First try the target class directly
+    // For virtual method dispatch, we MUST start from the receiver's actual class to properly
+    // implement polymorphism (overridden methods)
+    if let Ok(receiver_obj) = receiver.as_object_ref() {
+        let receiver_class = receiver_obj.class().clone();
+
+        // Search the receiver's class hierarchy for the method implementation
+        if let Some((class, method)) =
+            search_class_hierarchy_for_method(&receiver_class, method_name, method_descriptor)?
+        {
+            // Make sure we found a non-abstract implementation
+            if !method
+                .access_flags()
+                .contains(ristretto_classfile::MethodAccessFlags::ABSTRACT)
+            {
+                return Ok((class, method));
+            }
+        }
+    }
+
+    // Fallback: If not found on receiver's class hierarchy, try the target class. This handles
+    // cases where the method might be on an interface or abstract class
     if let Ok(method) = target_class.try_get_method(method_name, method_descriptor) {
-        return Ok((target_class.clone(), method));
+        // If the method is not abstract, we can use it
+        if !method
+            .access_flags()
+            .contains(ristretto_classfile::MethodAccessFlags::ABSTRACT)
+        {
+            return Ok((target_class.clone(), method));
+        }
     }
 
     // If the method is a lambda method and target is Object, search receiver's class hierarchy
@@ -534,19 +561,6 @@ async fn find_method_in_hierarchy(
         let receiver_class = receiver_obj.class().clone();
 
         // Search the receiver's class hierarchy (including interfaces)
-        if let Some((class, method)) =
-            search_class_hierarchy_for_method(&receiver_class, method_name, method_descriptor)?
-        {
-            return Ok((class, method));
-        }
-    }
-
-    // If it's a method on Object that doesn't exist, try searching the receiver's interfaces
-    // This handles interface methods like Collection.stream() when invoked via method handles
-    if target_class.name() == "java/lang/Object"
-        && let Ok(receiver_obj) = receiver.as_object_ref()
-    {
-        let receiver_class = receiver_obj.class().clone();
         if let Some((class, method)) =
             search_class_hierarchy_for_method(&receiver_class, method_name, method_descriptor)?
         {
@@ -757,6 +771,14 @@ pub async fn call_method_handle_target(
             }
             let receiver = arguments.remove(0);
 
+            // Check for null receiver; this is a NullPointerException
+            if receiver.is_null() {
+                return Err(NullPointerException(Some(format!(
+                    "Cannot invoke virtual method {target_class_name}.{member_name}{member_descriptor} on null"
+                )))
+                .into());
+            }
+
             // Try to find method on target class first, then on receiver's class if not found
             // This handles lambda methods where MemberName.clazz may be Object but the
             // lambda method is defined on the actual interface/class
@@ -811,7 +833,18 @@ pub async fn call_method_handle_target(
             .await
         }
         ReferenceKind::GetField => {
+            if arguments.is_empty() {
+                return Err(InternalError(format!(
+                    "GetField requires receiver: {target_class_name}.{member_name}"
+                )));
+            }
             let argument = arguments.remove(0);
+            if argument.is_null() {
+                return Err(NullPointerException(Some(format!(
+                    "Cannot get field {target_class_name}.{member_name} from null"
+                )))
+                .into());
+            }
             let receiver = argument.as_object_ref()?;
             Ok(receiver.value(&member_name)?)
         }
@@ -820,7 +853,18 @@ pub async fn call_method_handle_target(
             Ok(value)
         }
         ReferenceKind::PutField => {
+            if arguments.is_empty() {
+                return Err(InternalError(format!(
+                    "PutField requires receiver: {target_class_name}.{member_name}"
+                )));
+            }
             let argument = arguments.remove(0);
+            if argument.is_null() {
+                return Err(NullPointerException(Some(format!(
+                    "Cannot set field {target_class_name}.{member_name} on null"
+                )))
+                .into());
+            }
             let mut receiver = argument.as_object_mut()?;
             let value = arguments.remove(0);
             receiver.set_value(&member_name, value)?;

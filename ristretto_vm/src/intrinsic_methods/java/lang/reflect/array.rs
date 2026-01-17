@@ -28,7 +28,7 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     };
     let guard = reference.read();
     let value = match &*guard {
-        Reference::ByteArray(array) => {
+        Reference::BooleanArray(array) | Reference::ByteArray(array) => {
             let Some(value) = array.get(usize::try_from(index)?) else {
                 let size = i32::try_from(array.len())?;
                 return Err(IndexOutOfBoundsException { index, size }.into());
@@ -98,10 +98,30 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
 #[intrinsic_method("java/lang/reflect/Array.getBoolean(Ljava/lang/Object;I)Z", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn get_boolean(
-    thread: Arc<Thread>,
-    parameters: Parameters,
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_byte(thread, parameters).await
+    let index = parameters.pop_int()?;
+    let Some(reference) = parameters.pop_reference()? else {
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
+    };
+    let guard = reference.read();
+    let value = match &*guard {
+        Reference::BooleanArray(array) => {
+            let Some(value) = array.get(usize::try_from(index)?) else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            };
+            Value::from(*value)
+        }
+        _ => {
+            return Err(InvalidStackValue {
+                expected: "boolean array".to_string(),
+                actual: format!("{guard:?}"),
+            });
+        }
+    };
+    Ok(Some(value))
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getByte(Ljava/lang/Object;I)B", Any)]
@@ -260,7 +280,7 @@ pub(crate) async fn get_length(
     };
     let guard = array.read();
     let length = match &*guard {
-        Reference::ByteArray(array) => array.len(),
+        Reference::BooleanArray(array) | Reference::ByteArray(array) => array.len(),
         Reference::CharArray(array) => array.len(),
         Reference::FloatArray(array) => array.len(),
         Reference::DoubleArray(array) => array.len(),
@@ -384,7 +404,8 @@ async fn create_multi_dimensional_array(
     if dimensions.len() == 1 {
         // Base case: create a single-dimensional array
         let array = match class_name {
-            "boolean" | "byte" => Reference::from(vec![0i8; length]),
+            "boolean" => Reference::from(vec![false; length]),
+            "byte" => Reference::from(vec![0i8; length]),
             "char" => Reference::from(vec![0 as char; length]),
             "float" => Reference::from(vec![0.0f32; length]),
             "double" => Reference::from(vec![0.0f64; length]),
@@ -412,7 +433,8 @@ async fn create_multi_dimensional_array(
             format!("[{class_name}")
         } else {
             match class_name {
-                "boolean" | "byte" => format!("{}{}", "[".repeat(dimensions.len()), "B"),
+                "boolean" => format!("{}{}", "[".repeat(dimensions.len()), "Z"),
+                "byte" => format!("{}{}", "[".repeat(dimensions.len()), "B"),
                 "char" => format!("{}{}", "[".repeat(dimensions.len()), "C"),
                 "float" => format!("{}{}", "[".repeat(dimensions.len()), "F"),
                 "double" => format!("{}{}", "[".repeat(dimensions.len()), "D"),
@@ -440,7 +462,8 @@ pub(crate) async fn new_array(
     let class_name = get_class_name(&parameters.pop()?)?;
 
     let array = match class_name.as_str() {
-        "boolean" | "byte" => Value::from(vec![0i8; length]),
+        "boolean" => Value::from(vec![false; length]),
+        "byte" => Value::from(vec![0i8; length]),
         "char" => Value::from(vec![0 as char; length]),
         "float" => Value::from(vec![0.0f32; length]),
         "double" => Value::from(vec![0.0f64; length]),
@@ -470,7 +493,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
     };
     let mut guard = reference.write();
     match &mut *guard {
-        Reference::ByteArray(array) => {
+        Reference::BooleanArray(array) | Reference::ByteArray(array) => {
             let value = value.as_i8()?;
             if let Some(element) = array.get_mut(usize::try_from(index)?) {
                 *element = value;
@@ -561,10 +584,32 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
 #[intrinsic_method("java/lang/reflect/Array.setBoolean(Ljava/lang/Object;IZ)V", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn set_boolean(
-    thread: Arc<Thread>,
-    parameters: Parameters,
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    set_byte(thread, parameters).await
+    let value = i8::try_from(parameters.pop_int()?)?;
+    let index = parameters.pop_int()?;
+    let Some(reference) = parameters.pop_reference()? else {
+        return Err(NullPointerException(Some("array cannot be null".to_string())).into());
+    };
+    let mut guard = reference.write();
+    match &mut *guard {
+        Reference::BooleanArray(array) => {
+            if let Some(element) = array.get_mut(usize::try_from(index)?) {
+                *element = value;
+            } else {
+                let size = i32::try_from(array.len())?;
+                return Err(IndexOutOfBoundsException { index, size }.into());
+            }
+        }
+        _ => {
+            return Err(InvalidStackValue {
+                expected: "boolean array".to_string(),
+                actual: format!("{guard:?}"),
+            });
+        }
+    }
+    Ok(None)
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setByte(Ljava/lang/Object;IB)V", Any)]

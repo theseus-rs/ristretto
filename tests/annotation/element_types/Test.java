@@ -1,4 +1,6 @@
 import java.lang.annotation.*;
+import java.util.Arrays;
+import java.util.Comparator;
 
 // Test all valid annotation element types according to JLS
 @Retention(RetentionPolicy.RUNTIME)
@@ -286,6 +288,8 @@ public class Test {
 
         Class<AllElementTypesAnnotation> annClass = AllElementTypesAnnotation.class;
         java.lang.reflect.Method[] methods = annClass.getDeclaredMethods();
+        // Sort methods by name for deterministic output
+        Arrays.sort(methods, Comparator.comparing(java.lang.reflect.Method::getName));
 
         System.out.println("Annotation element methods: " + methods.length);
 

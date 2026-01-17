@@ -58,7 +58,7 @@ fn test_large_objects() {
     assert_eq!(large_vec.len(), 10000);
     assert_eq!(large_string.len(), 10000);
 
-    // Should work with cloning - all clones point to same object in reachability analysis
+    // Should work with cloning; all clones point to same object in reachability analysis
     let large_vec_clone = large_vec.clone();
     assert!(Gc::ptr_eq(&large_vec, &large_vec_clone));
 }

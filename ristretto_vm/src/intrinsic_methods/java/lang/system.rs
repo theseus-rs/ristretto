@@ -110,7 +110,7 @@ pub(crate) async fn arraycopy(
     if Gc::ptr_eq(&source, &destination) {
         let mut guard = source.write();
         match &mut *guard {
-            Reference::ByteArray(array) => {
+            Reference::BooleanArray(array) | Reference::ByteArray(array) => {
                 arraycopy_within_helper(array, source_position, destination_position, length)?;
             }
             Reference::CharArray(array) => {
@@ -147,7 +147,8 @@ pub(crate) async fn arraycopy(
         let source_guard = source.read();
         let mut destination_guard = destination.write();
         match (&*source_guard, &mut *destination_guard) {
-            (Reference::ByteArray(src), Reference::ByteArray(dst)) => {
+            (Reference::BooleanArray(src), Reference::BooleanArray(dst))
+            | (Reference::ByteArray(src), Reference::ByteArray(dst)) => {
                 arraycopy_helper(src, source_position, dst, destination_position, length)?;
             }
             (Reference::CharArray(src), Reference::CharArray(dst)) => {

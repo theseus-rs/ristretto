@@ -60,6 +60,7 @@ pub(crate) async fn clone(
 
     let guard = reference.read();
     let reference = match &*guard {
+        Reference::BooleanArray(array) => Reference::BooleanArray(array.clone()),
         Reference::ByteArray(array) => Reference::ByteArray(array.clone()),
         Reference::CharArray(array) => Reference::CharArray(array.clone()),
         Reference::ShortArray(array) => Reference::ShortArray(array.clone()),

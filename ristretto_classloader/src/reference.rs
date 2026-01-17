@@ -29,6 +29,7 @@ impl PartialEq for ObjectArray {
 /// Represents a reference to an object in the Ristretto VM.
 #[derive(Clone, Debug)]
 pub enum Reference {
+    BooleanArray(Box<[i8]>),
     ByteArray(Box<[i8]>),
     CharArray(Box<[u16]>),
     ShortArray(Box<[i16]>),
@@ -48,6 +49,7 @@ impl Reference {
     /// if the `Object` read lock is poisoned
     pub fn class_name(&self) -> Result<String> {
         let class_name = match self {
+            Reference::BooleanArray(_) => "[Z".to_string(),
             Reference::ByteArray(_) => "[B".to_string(),
             Reference::CharArray(_) => "[C".to_string(),
             Reference::ShortArray(_) => "[S".to_string(),
@@ -59,6 +61,30 @@ impl Reference {
             Reference::Object(object) => object.class().name().to_string(),
         };
         Ok(class_name)
+    }
+
+    /// Returns the reference to `Vec<bool>` (stored as i8).
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `BooleanArray`.
+    pub fn as_bool_vec_ref(&self) -> Result<&[i8]> {
+        match self {
+            Reference::BooleanArray(array) => Ok(array),
+            _ => Err(InvalidValueType("Expected boolean array".to_string())),
+        }
+    }
+
+    /// Returns a mutable reference to `Vec<bool>` (stored as i8).
+    ///
+    /// # Errors
+    ///
+    /// if the value is not a `BooleanArray`.
+    pub fn as_bool_vec_mut(&mut self) -> Result<&mut [i8]> {
+        match self {
+            Reference::BooleanArray(array) => Ok(array),
+            _ => Err(InvalidValueType("Expected boolean array".to_string())),
+        }
     }
 
     /// Returns the reference to `Vec<i8>`.
@@ -285,7 +311,9 @@ impl Reference {
     #[must_use]
     pub fn as_bytes(&self) -> Option<&[u8]> {
         match self {
-            Reference::ByteArray(array) => Some(bytemuck::cast_slice(array.as_ref())),
+            Reference::BooleanArray(array) | Reference::ByteArray(array) => {
+                Some(bytemuck::cast_slice(array.as_ref()))
+            }
             Reference::CharArray(array) => Some(bytemuck::cast_slice(array.as_ref())),
             Reference::ShortArray(array) => Some(bytemuck::cast_slice(array.as_ref())),
             Reference::IntArray(array) => Some(bytemuck::cast_slice(array.as_ref())),
@@ -304,7 +332,9 @@ impl Reference {
     #[must_use]
     pub fn as_bytes_mut(&mut self) -> Option<&mut [u8]> {
         match self {
-            Reference::ByteArray(array) => Some(bytemuck::cast_slice_mut(array.as_mut())),
+            Reference::BooleanArray(array) | Reference::ByteArray(array) => {
+                Some(bytemuck::cast_slice_mut(array.as_mut()))
+            }
             Reference::CharArray(array) => Some(bytemuck::cast_slice_mut(array.as_mut())),
             Reference::ShortArray(array) => Some(bytemuck::cast_slice_mut(array.as_mut())),
             Reference::IntArray(array) => Some(bytemuck::cast_slice_mut(array.as_mut())),
@@ -320,7 +350,7 @@ impl Reference {
     #[must_use]
     pub fn hash_code(&self) -> usize {
         match self {
-            Reference::ByteArray(array) => array.as_ptr() as usize,
+            Reference::BooleanArray(array) | Reference::ByteArray(array) => array.as_ptr() as usize,
             Reference::CharArray(array) => array.as_ptr() as usize,
             Reference::ShortArray(array) => array.as_ptr() as usize,
             Reference::IntArray(array) => array.as_ptr() as usize,
@@ -336,7 +366,8 @@ impl Reference {
     #[must_use]
     pub fn ptr_eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Reference::ByteArray(a), Reference::ByteArray(b)) => a.as_ptr() == b.as_ptr(),
+            (Reference::BooleanArray(a), Reference::BooleanArray(b))
+            | (Reference::ByteArray(a), Reference::ByteArray(b)) => a.as_ptr() == b.as_ptr(),
             (Reference::CharArray(a), Reference::CharArray(b)) => a.as_ptr() == b.as_ptr(),
             (Reference::ShortArray(a), Reference::ShortArray(b)) => a.as_ptr() == b.as_ptr(),
             (Reference::IntArray(a), Reference::IntArray(b)) => a.as_ptr() == b.as_ptr(),
@@ -547,6 +578,7 @@ impl Display for Reference {
         }
 
         match self {
+            Reference::BooleanArray(array) => fmt_vec(f, "boolean", array),
             Reference::ByteArray(array) => fmt_vec(f, "byte", array),
             Reference::CharArray(array) => fmt_vec(f, "char", array),
             Reference::ShortArray(array) => fmt_vec(f, "short", array),
@@ -585,7 +617,7 @@ impl Hash for Reference {
     /// - `Object`: hashes the object directly.
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            Reference::ByteArray(array) => {
+            Reference::BooleanArray(array) | Reference::ByteArray(array) => {
                 array.hash(state);
             }
             Reference::CharArray(array) => {
@@ -624,7 +656,8 @@ impl Hash for Reference {
 impl PartialEq for Reference {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Reference::ByteArray(a), Reference::ByteArray(b)) => a == b,
+            (Reference::BooleanArray(a), Reference::BooleanArray(b))
+            | (Reference::ByteArray(a), Reference::ByteArray(b)) => a == b,
             (Reference::CharArray(a), Reference::CharArray(b)) => a == b,
             (Reference::ShortArray(a), Reference::ShortArray(b)) => a == b,
             (Reference::IntArray(a), Reference::IntArray(b)) => a == b,
@@ -673,7 +706,7 @@ impl Trace for Reference {
 impl From<Vec<bool>> for Reference {
     fn from(value: Vec<bool>) -> Self {
         let value: Vec<i8> = value.into_iter().map(i8::from).collect();
-        Reference::ByteArray(value.into_boxed_slice())
+        Reference::BooleanArray(value.into_boxed_slice())
     }
 }
 
@@ -1801,7 +1834,7 @@ mod tests {
     #[test]
     fn test_from_vec_bool() {
         let reference = Reference::from(vec![true]);
-        assert!(matches!(reference, Reference::ByteArray(_)));
+        assert!(matches!(reference, Reference::BooleanArray(_)));
     }
 
     #[test]

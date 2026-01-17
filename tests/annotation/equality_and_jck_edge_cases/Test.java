@@ -1,5 +1,7 @@
 import java.lang.annotation.*;
 import java.lang.reflect.*;
+import java.util.Arrays;
+import java.util.Comparator;
 
 // Annotation for testing equality and hashCode contracts
 @Retention(RetentionPolicy.RUNTIME)
@@ -149,7 +151,7 @@ public class Test {
             int hash1 = classAnn1.hashCode();
             int hash2 = classAnn1.hashCode();
             System.out.println("HashCode consistent: " + (hash1 == hash2));
-            System.out.println("HashCode value: " + hash1);
+            System.out.println("HashCode value: (non-deterministic)");
 
             // Test equal objects have equal hashCodes
             if (classAnn1.equals(classAnn2)) {
@@ -166,8 +168,7 @@ public class Test {
             if (methodAnn1 != null && methodAnn2 != null && methodAnn1.equals(methodAnn2)) {
                 System.out.println("Identical value annotations have equal hashCodes: " +
                         (methodAnn1.hashCode() == methodAnn2.hashCode()));
-                System.out.println("Method1 hashCode: " + methodAnn1.hashCode());
-                System.out.println("Method2 hashCode: " + methodAnn2.hashCode());
+                System.out.println("Method hashCodes match: " + (methodAnn1.hashCode() == methodAnn2.hashCode()));
             }
 
             // Test different annotations have different hashCodes (not required but expected)
@@ -177,8 +178,6 @@ public class Test {
             if (fieldAnn != null && !classAnn1.equals(fieldAnn)) {
                 System.out.println("Different annotations have different hashCodes: " +
                         (classAnn1.hashCode() != fieldAnn.hashCode()));
-                System.out.println("Class hashCode: " + classAnn1.hashCode());
-                System.out.println("Field hashCode: " + fieldAnn.hashCode());
             }
 
         } catch (Exception e) {
@@ -236,11 +235,19 @@ public class Test {
 
             // Test annotation methods
             Method[] methods = annType.getDeclaredMethods();
+            // Sort methods by name for deterministic output
+            Arrays.sort(methods, Comparator.comparing(Method::getName));
             for (Method method : methods) {
                 System.out.println("Method: " + method.getName());
                 System.out.println("  Return type: " + method.getReturnType().getName());
                 System.out.println("  Has default: " + (method.getDefaultValue() != null));
-                System.out.println("  Default value: " + method.getDefaultValue());
+                // Normalize array default values
+                Object defaultValue = method.getDefaultValue();
+                if (defaultValue != null && defaultValue.getClass().isArray()) {
+                    System.out.println("  Default value: " + java.util.Arrays.toString((Object[]) defaultValue));
+                } else {
+                    System.out.println("  Default value: " + defaultValue);
+                }
                 System.out.println("  Is abstract: " + Modifier.isAbstract(method.getModifiers()));
                 System.out.println("  Parameter count: " + method.getParameterCount());
             }
@@ -327,6 +334,8 @@ public class Test {
 
         // Test method properties
         Method[] methods = annClass.getDeclaredMethods();
+        // Sort methods by name for deterministic output
+        Arrays.sort(methods, Comparator.comparing(Method::getName));
         System.out.println("Method count: " + methods.length);
 
         for (Method method : methods) {
