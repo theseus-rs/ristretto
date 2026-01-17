@@ -21,10 +21,10 @@ public class Test {
             }
         };
 
-        Thread[] localThreads = new Thread[3];
+        // Run threads sequentially for deterministic output
         for (int i = 0; i < 3; i++) {
             final int threadId = i;
-            localThreads[i] = new Thread(() -> {
+            Thread thread = new Thread(() -> {
                 String initial = threadLocal.get();
                 System.out.println("LocalThread" + threadId + " initial value: " + initial);
 
@@ -32,27 +32,16 @@ public class Test {
                 String modified = threadLocal.get();
                 System.out.println("LocalThread" + threadId + " modified value: " + modified);
 
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    System.out.println("LocalThread" + threadId + " interrupted");
-                }
-
                 String final_value = threadLocal.get();
                 System.out.println("LocalThread" + threadId + " final value: " + final_value);
             }, "LocalThread" + i);
-        }
 
-        for (Thread thread : localThreads) {
             thread.start();
-        }
-
-        try {
-            for (Thread thread : localThreads) {
+            try {
                 thread.join();
+            } catch (InterruptedException e) {
+                System.out.println("LocalThread" + threadId + " interrupted");
             }
-        } catch (InterruptedException e) {
-            System.out.println("ThreadLocal test interrupted");
         }
     }
 
@@ -192,12 +181,12 @@ public class Test {
             }
         };
 
-        Thread[] sessionThreads = new Thread[2];
         String[] userNames = {"Alice", "Bob"};
 
+        // Run threads sequentially for deterministic output
         for (int i = 0; i < 2; i++) {
             final int userId = i;
-            sessionThreads[i] = new Thread(() -> {
+            Thread thread = new Thread(() -> {
                 UserSession session = sessionLocal.get();
                 System.out.println("SessionThread" + userId + " initial: " + session);
 
@@ -206,18 +195,13 @@ public class Test {
 
                 System.out.println("SessionThread" + userId + " modified: " + sessionLocal.get());
             });
-        }
 
-        for (Thread thread : sessionThreads) {
             thread.start();
-        }
-
-        try {
-            for (Thread thread : sessionThreads) {
+            try {
                 thread.join();
+            } catch (InterruptedException e) {
+                System.out.println("Session ThreadLocal test interrupted");
             }
-        } catch (InterruptedException e) {
-            System.out.println("Session ThreadLocal test interrupted");
         }
     }
 

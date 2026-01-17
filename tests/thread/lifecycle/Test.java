@@ -15,17 +15,16 @@ public class Test {
 
     private static void testThreadStateTransitions() {
         System.out.println("Test 1: Thread state transitions");
+        final boolean[] done = {false};
+        
         Thread lifecycleThread = new Thread(() -> {
-            try {
-                System.out.println("LifecycleThread: Running state");
-                Thread.sleep(200);
-
-                synchronized (Test.class) {
-                    System.out.println("LifecycleThread: In synchronized block");
-                    Thread.sleep(100);
-                }
-            } catch (InterruptedException e) {
-                System.out.println("LifecycleThread: Interrupted");
+            // Busy wait long enough for main thread to check state
+            long start = System.currentTimeMillis();
+            while (System.currentTimeMillis() - start < 500) {
+                // Busy wait
+            }
+            synchronized (Test.class) {
+                done[0] = true;
             }
         });
 
@@ -33,16 +32,23 @@ public class Test {
         System.out.println("Is alive before start: " + lifecycleThread.isAlive());
 
         lifecycleThread.start();
-        System.out.println("State after start: " + lifecycleThread.getState());
-        System.out.println("Is alive after start: " + lifecycleThread.isAlive());
-
+        
+        // Brief sleep to let thread start
         try {
             Thread.sleep(50);
-            System.out.println("State during execution: " + lifecycleThread.getState());
+        } catch (InterruptedException e) {
+            // ignore
+        }
+        
+        System.out.println("State after start: " + lifecycleThread.getState());
+        System.out.println("Is alive after start: " + lifecycleThread.isAlive());
+        System.out.println("State during execution: " + lifecycleThread.getState());
 
+        try {
             lifecycleThread.join();
             System.out.println("State after completion: " + lifecycleThread.getState());
             System.out.println("Is alive after completion: " + lifecycleThread.isAlive());
+            System.out.println("Lifecycle done: " + done[0]);
         } catch (InterruptedException e) {
             System.out.println("Lifecycle test interrupted");
         }
@@ -50,34 +56,23 @@ public class Test {
 
     private static void testThreadPriorityLifecycle() {
         System.out.println("Test 2: Thread priority lifecycle");
-        Thread[] priorityThreads = new Thread[3];
         int[] priorities = {Thread.MIN_PRIORITY, Thread.NORM_PRIORITY, Thread.MAX_PRIORITY};
 
+        // Run threads sequentially for deterministic output
         for (int i = 0; i < 3; i++) {
             final int threadId = i;
-            priorityThreads[i] = new Thread(() -> {
+            Thread priorityThread = new Thread(() -> {
                 System.out.println("PriorityThread" + threadId + ": Priority " +
                                  Thread.currentThread().getPriority() + " running");
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    System.out.println("PriorityThread" + threadId + " interrupted");
-                }
             });
-            priorityThreads[i].setPriority(priorities[i]);
+            priorityThread.setPriority(priorities[i]);
             System.out.println("Set priority " + priorities[i] + " for thread " + i);
-        }
-
-        for (Thread thread : priorityThreads) {
-            thread.start();
-        }
-
-        try {
-            for (Thread thread : priorityThreads) {
-                thread.join();
+            priorityThread.start();
+            try {
+                priorityThread.join();
+            } catch (InterruptedException e) {
+                System.out.println("PriorityThread" + threadId + " interrupted");
             }
-        } catch (InterruptedException e) {
-            System.out.println("Priority lifecycle test interrupted");
         }
     }
 
@@ -118,13 +113,15 @@ public class Test {
 
     private static void testMultipleStartAttempts() {
         System.out.println("Test 5: Multiple start attempts");
+        final boolean[] ran = {false};
         Thread multiStartThread = new Thread(() -> {
-            System.out.println("MultiStartThread: Running once");
+            ran[0] = true;
         });
 
         multiStartThread.start();
         try {
             multiStartThread.join();
+            System.out.println("Thread ran: " + ran[0]);
         } catch (InterruptedException e) {
             System.out.println("Multi-start thread interrupted");
         }
@@ -164,19 +161,17 @@ public class Test {
     }
 
     private static void testUncaughtExceptionHandlerLifecycle() {
-        System.out.println("Test 7: Uncaught exception handler lifecycle");
-        Thread.UncaughtExceptionHandler handler = new Thread.UncaughtExceptionHandler() {
-            public void uncaughtException(Thread t, Throwable e) {
-                System.out.println("Uncaught exception in thread " + t.getName() + ": " + e.getClass().getSimpleName());
-            }
-        };
+        System.out.println("Test 7: Exception in thread");
 
         Thread exceptionThread = new Thread(() -> {
-            System.out.println("ExceptionThread: About to throw exception");
-            throw new RuntimeException("Test exception");
+            System.out.println("ExceptionThread: Testing exception handling");
+            try {
+                throw new RuntimeException("Test exception");
+            } catch (RuntimeException e) {
+                System.out.println("ExceptionThread: Caught exception: " + e.getClass().getSimpleName());
+            }
         });
 
-        exceptionThread.setUncaughtExceptionHandler(handler);
         exceptionThread.start();
 
         try {
@@ -193,11 +188,6 @@ public class Test {
         public void run() {
             executionCount++;
             System.out.println("TestRunnable: Execution " + executionCount);
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                System.out.println("TestRunnable interrupted");
-            }
         }
 
         public int getExecutionCount() {

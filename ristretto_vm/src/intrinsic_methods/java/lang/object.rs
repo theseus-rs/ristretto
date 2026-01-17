@@ -11,6 +11,7 @@ use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{ObjectArray, Reference, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Intrinsic methods for `java/lang/Object.clone()`.
 ///
@@ -131,7 +132,9 @@ pub(crate) async fn hash_code(
 #[intrinsic_method("java/lang/Object.notify()V", Any)]
 #[async_recursion(?Send)]
 pub(crate) async fn notify(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.lang.Object.notify()V")
+    // For basic thread support, notify is a no-op since we don't have true monitor support yet.
+    // In a full implementation, this would wake up one thread waiting on this object's monitor.
+    Ok(None)
 }
 
 #[intrinsic_method("java/lang/Object.notifyAll()V", Any)]
@@ -154,14 +157,90 @@ pub(crate) async fn register_natives(
 
 #[intrinsic_method("java/lang/Object.wait(J)V", LessThanOrEqual(JAVA_17))]
 #[async_recursion(?Send)]
-pub(crate) async fn wait(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.lang.Object.wait(J)V")
+pub(crate) async fn wait(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    wait_0(thread, parameters).await
 }
 
 #[intrinsic_method("java/lang/Object.wait0(J)V", GreaterThan(JAVA_17))]
 #[async_recursion(?Send)]
-pub(crate) async fn wait_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.lang.Object.wait0(J)V")
+pub(crate) async fn wait_0(
+    _thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let millis = parameters.pop_long()?;
+    let object = parameters.pop_reference()?;
+
+    if millis < 0 {
+        return Err(crate::JavaError::IllegalArgumentException(
+            "timeout value is negative".to_string(),
+        )
+        .into());
+    }
+
+    // Check if we're waiting on a Thread object for join()
+    let is_thread_object = if let Some(ref obj_ref) = object {
+        let guard = obj_ref.read();
+        if let Ok(class_name) = guard.class_name() {
+            class_name == "java/lang/Thread" || class_name.starts_with("java/lang/Thread$")
+        } else {
+            false
+        }
+    } else {
+        false
+    };
+
+    if is_thread_object {
+        // For Thread.join(), we need to poll until the thread is terminated
+        // The thread's eetop field is set to 0 when the thread terminates
+        let start = std::time::Instant::now();
+        let timeout_duration = if millis == 0 {
+            // Infinite wait
+            Duration::from_secs(u64::MAX)
+        } else {
+            Duration::from_millis(u64::try_from(millis)?)
+        };
+
+        loop {
+            // Check if the thread has terminated (eetop == 0)
+            let is_terminated = if let Some(ref obj_ref) = object {
+                let guard = obj_ref.read();
+                if let Reference::Object(obj) = &*guard {
+                    if let Ok(eetop) = obj.value("eetop") {
+                        eetop.as_i64().unwrap_or(0) == 0
+                    } else {
+                        // Can't read eetop, assume terminated
+                        true
+                    }
+                } else {
+                    true
+                }
+            } else {
+                true
+            };
+
+            if is_terminated {
+                return Ok(None);
+            }
+
+            if start.elapsed() >= timeout_duration {
+                return Ok(None);
+            }
+
+            // Sleep briefly and check again
+            #[cfg(target_family = "wasm")]
+            std::thread::sleep(Duration::from_millis(10));
+            #[cfg(not(target_family = "wasm"))]
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    } else if millis > 0 {
+        let millis = u64::try_from(millis)?;
+        let duration = Duration::from_millis(millis);
+        #[cfg(target_family = "wasm")]
+        std::thread::sleep(duration);
+        #[cfg(not(target_family = "wasm"))]
+        tokio::time::sleep(duration).await;
+    }
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -194,10 +273,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Object.notify()V")]
-    async fn test_notify() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = notify(thread, Parameters::default()).await;
+    async fn test_notify() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = notify(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
@@ -217,16 +297,30 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Object.wait(J)V")]
-    async fn test_wait() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = wait(thread, Parameters::default()).await;
+    async fn test_wait() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        // Create an object to wait on
+        let object_class = thread.class("java/lang/Object").await?;
+        let object = Object::new(object_class)?;
+        let object_value = Value::from(object);
+        // Pass object reference first (this), then timeout of 1ms (brief wait)
+        let parameters = Parameters::new(vec![object_value, Value::Long(1)]);
+        let result = wait(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Object.wait0(J)V")]
-    async fn test_wait_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = wait_0(thread, Parameters::default()).await;
+    async fn test_wait_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        // Create an object to wait on
+        let object_class = thread.class("java/lang/Object").await?;
+        let object = Object::new(object_class)?;
+        let object_value = Value::from(object);
+        // Pass object reference first (this), then timeout of 1ms (brief wait)
+        let parameters = Parameters::new(vec![object_value, Value::Long(1)]);
+        let result = wait_0(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 }

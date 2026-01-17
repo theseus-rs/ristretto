@@ -13,19 +13,19 @@ public class Test {
     private static void testBasicDaemonThread() {
         System.out.println("Test 1: Basic daemon thread");
         Thread daemonThread = new Thread(() -> {
-            try {
-                for (int i = 0; i < 5; i++) {
-                    System.out.println("Daemon thread iteration: " + i);
-                    Thread.sleep(100);
-                }
-            } catch (InterruptedException e) {
-                System.out.println("Daemon thread interrupted");
-            }
+            System.out.println("Daemon thread started");
         });
 
         daemonThread.setDaemon(true);
         System.out.println("Is daemon before start: " + daemonThread.isDaemon());
         daemonThread.start();
+
+        // Wait for daemon thread to complete its output
+        try {
+            daemonThread.join(500);
+        } catch (InterruptedException e) {
+            System.out.println("Daemon thread join interrupted");
+        }
     }
 
     private static void testNonDaemonThread() {

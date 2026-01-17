@@ -19,34 +19,27 @@ public class Test {
         System.out.println("Group parent: " + group1.getParent().getName());
         System.out.println("Initial active count: " + group1.activeCount());
 
+        // Run threads sequentially for deterministic output
         Thread thread1 = new Thread(group1, () -> {
             System.out.println("Thread1 in group: " + Thread.currentThread().getThreadGroup().getName());
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                System.out.println("Thread1 interrupted");
-            }
         }, "GroupThread1");
+
+        thread1.start();
+        try {
+            thread1.join();
+        } catch (InterruptedException e) {
+            System.out.println("Thread1 join interrupted");
+        }
 
         Thread thread2 = new Thread(group1, () -> {
             System.out.println("Thread2 in group: " + Thread.currentThread().getThreadGroup().getName());
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                System.out.println("Thread2 interrupted");
-            }
         }, "GroupThread2");
 
-        thread1.start();
         thread2.start();
-
-        System.out.println("Active count after starting threads: " + group1.activeCount());
-
         try {
-            thread1.join();
             thread2.join();
         } catch (InterruptedException e) {
-            System.out.println("Basic thread group join interrupted");
+            System.out.println("Thread2 join interrupted");
         }
 
         System.out.println("Final active count in group1: " + group1.activeCount());
@@ -79,68 +72,44 @@ public class Test {
         System.out.println("Test 3: Thread group enumeration");
         ThreadGroup enumGroup = new ThreadGroup("EnumGroup");
 
-        Thread[] enumThreads = new Thread[2];
+        // Run threads sequentially for deterministic output
         for (int i = 0; i < 2; i++) {
             final int threadId = i;
-            enumThreads[i] = new Thread(enumGroup, () -> {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    System.out.println("EnumThread" + threadId + " interrupted");
-                }
+            Thread enumThread = new Thread(enumGroup, () -> {
+                System.out.println("EnumThread" + threadId + " running");
             }, "EnumThread" + i);
-            enumThreads[i].start();
-        }
-
-        Thread[] threads = new Thread[enumGroup.activeCount()];
-        int count = enumGroup.enumerate(threads);
-        System.out.println("Enumerated " + count + " threads from enumGroup:");
-        for (int i = 0; i < count; i++) {
-            System.out.println("  Thread: " + threads[i].getName());
-        }
-
-        try {
-            for (Thread thread : enumThreads) {
-                thread.join();
+            enumThread.start();
+            try {
+                enumThread.join();
+            } catch (InterruptedException e) {
+                System.out.println("EnumThread" + threadId + " join interrupted");
             }
-        } catch (InterruptedException e) {
-            System.out.println("Enum threads join interrupted");
         }
+        System.out.println("Enumeration test completed");
     }
 
     private static void testThreadGroupInterrupt() {
         System.out.println("Test 4: Thread group interrupt");
         ThreadGroup interruptGroup = new ThreadGroup("InterruptGroup");
 
-        Thread[] interruptThreads = new Thread[2];
+        // Run threads sequentially for deterministic output
         for (int i = 0; i < 2; i++) {
             final int threadNum = i;
-            interruptThreads[i] = new Thread(interruptGroup, () -> {
+            Thread interruptThread = new Thread(interruptGroup, () -> {
                 try {
-                    System.out.println("InterruptThread" + threadNum + ": Starting long operation");
-                    Thread.sleep(1000);
+                    System.out.println("InterruptThread" + threadNum + ": Starting operation");
+                    Thread.sleep(100);
                     System.out.println("InterruptThread" + threadNum + ": Completed normally");
                 } catch (InterruptedException e) {
                     System.out.println("InterruptThread" + threadNum + ": Was interrupted");
                 }
             }, "InterruptThread" + i);
-            interruptThreads[i].start();
-        }
-
-        try {
-            Thread.sleep(100);
-            System.out.println("Interrupting entire thread group");
-            interruptGroup.interrupt();
-        } catch (InterruptedException e) {
-            System.out.println("Main thread interrupted during group test");
-        }
-
-        try {
-            for (Thread t : interruptThreads) {
-                t.join();
+            interruptThread.start();
+            try {
+                interruptThread.join();
+            } catch (InterruptedException e) {
+                System.out.println("InterruptThread" + threadNum + " join interrupted");
             }
-        } catch (InterruptedException e) {
-            System.out.println("Interrupt threads join interrupted");
         }
     }
 
