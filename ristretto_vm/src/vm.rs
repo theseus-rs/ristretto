@@ -10,7 +10,7 @@ use crate::rust_value::RustValue;
 use crate::string_pool::StringPool;
 use crate::thread::Thread;
 use crate::{Configuration, ConfigurationBuilder, Result, startup_trace};
-use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_PREVIEW_MINOR_VERSION, Version};
+use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_21, JAVA_PREVIEW_MINOR_VERSION, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
     Class, ClassLoader, ClassPath, ClassPathEntry, Object, Value, runtime,
@@ -402,6 +402,14 @@ impl VM {
         // This is required because ReflectionFactory's constructor calls getJavaLangReflectAccess().
         let _ = self.class("java.lang.reflect.AccessibleObject").await?;
         startup_trace!("[vm] accessible object initialized");
+
+        // Load java.lang.invoke.MethodHandleNatives to initialize the method handle subsystem.
+        // This sets SharedSecrets.setJavaLangInvokeAccess() which is required for reflective
+        // field access in Java 21+ (Field.get() uses method handles internally).
+        if self.java_class_file_version >= JAVA_21 {
+            let _ = self.class("java.lang.invoke.MethodHandleNatives").await?;
+            startup_trace!("[vm] method handle natives initialized");
+        }
 
         if self.java_class_file_version <= JAVA_8 {
             self.invoke(

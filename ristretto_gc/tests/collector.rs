@@ -247,7 +247,7 @@ fn test_root_management() -> Result<()> {
     obj1.as_root(&collector)?;
     obj2.as_root(&collector)?;
 
-    // Trigger collection - roots should remain accessible
+    // Trigger collection; roots should remain accessible
     collector.collect();
     thread::sleep(Duration::from_millis(50));
 
@@ -328,7 +328,7 @@ fn test_reachability_analysis() -> Result<()> {
     // Add root to make entire tree reachable
     root.as_root(&collector)?;
 
-    // Trigger collection - all nodes should remain accessible through reachability
+    // Trigger collection; all nodes should remain accessible through reachability
     collector.collect();
     thread::sleep(Duration::from_millis(100));
 

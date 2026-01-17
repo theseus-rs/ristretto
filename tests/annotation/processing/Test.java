@@ -1,5 +1,7 @@
 import java.lang.annotation.*;
 import java.lang.reflect.*;
+import java.util.Arrays;
+import java.util.Comparator;
 
 // Test annotations for reflection
 @Retention(RetentionPolicy.RUNTIME)
@@ -93,6 +95,8 @@ public class Test {
 
     private static void processFieldAnnotations(Class<?> clazz) {
         Field[] fields = clazz.getDeclaredFields();
+        // Sort fields by name for deterministic output
+        Arrays.sort(fields, Comparator.comparing(Field::getName));
         System.out.println("Processing " + fields.length + " fields");
 
         for (Field field : fields) {
@@ -109,6 +113,8 @@ public class Test {
 
     private static void processConstructorAnnotations(Class<?> clazz) {
         Constructor<?>[] constructors = clazz.getDeclaredConstructors();
+        // Sort constructors by parameter count for deterministic output
+        Arrays.sort(constructors, Comparator.comparingInt(Constructor::getParameterCount));
         System.out.println("Processing " + constructors.length + " constructors");
 
         for (Constructor<?> constructor : constructors) {
@@ -125,6 +131,8 @@ public class Test {
 
     private static void processMethodAnnotations(Class<?> clazz) {
         Method[] methods = clazz.getDeclaredMethods();
+        // Sort methods by name for deterministic output
+        Arrays.sort(methods, Comparator.comparing(Method::getName));
         System.out.println("Processing " + methods.length + " methods");
 
         for (Method method : methods) {
@@ -158,6 +166,8 @@ public class Test {
     private static void processAnnotation(Annotation annotation) {
         Class<? extends Annotation> annotationType = annotation.annotationType();
         Method[] methods = annotationType.getDeclaredMethods();
+        // Sort methods by name for deterministic output
+        Arrays.sort(methods, Comparator.comparing(Method::getName));
 
         for (Method method : methods) {
             try {

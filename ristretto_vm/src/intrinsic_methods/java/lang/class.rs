@@ -172,8 +172,22 @@ pub(crate) async fn get_component_type(
 
     // Strip only ONE leading '[' to get the component type
     // e.g., "[[Ljava/lang/String;" -> "[Ljava/lang/String;" (String[] is component of String[][])
-    let class_name = class_name.strip_prefix('[').unwrap_or(&class_name);
-    let class = thread.class(class_name).await?;
+    let component_description = class_name.strip_prefix('[').unwrap_or(&class_name);
+
+    // Convert primitive type descriptors to primitive type names
+    let component_class_name = match component_description {
+        "B" => "byte",
+        "C" => "char",
+        "D" => "double",
+        "F" => "float",
+        "I" => "int",
+        "J" => "long",
+        "S" => "short",
+        "Z" => "boolean",
+        _ => component_description,
+    };
+
+    let class = thread.class(component_class_name).await?;
     let class_object = class.to_object(&thread).await?;
 
     Ok(Some(class_object))
@@ -241,6 +255,10 @@ pub(crate) async fn get_declared_classes_0(
         .collect::<Vec<InnerClass>>();
     let class_name = class.name();
     for inner_class in inner_classes {
+        // Skip entries with outer_class_info_index of 0 (top-level, local, or anonymous classes)
+        if inner_class.outer_class_info_index == 0 {
+            continue;
+        }
         let outer_class_name = constant_pool.try_get_class(inner_class.outer_class_info_index)?;
         if outer_class_name != class_name {
             continue;
@@ -323,9 +341,8 @@ pub(crate) async fn get_declared_constructors_0(
                     ..
                 } => {
                     let mut method_parameter_annotations = Vec::new();
-                    method_parameter_annotations.write_u16::<BigEndian>(u16::try_from(
-                        runtime_parameter_annotations.len(),
-                    )?)?;
+                    method_parameter_annotations
+                        .push(u8::try_from(runtime_parameter_annotations.len())?);
                     for parameter_annotation in runtime_parameter_annotations {
                         parameter_annotation.to_bytes(&mut method_parameter_annotations)?;
                     }
@@ -482,7 +499,11 @@ pub(crate) async fn get_declared_methods_0(
             continue;
         }
 
-        let method_name = method_name.to_object(&thread).await?;
+        // Intern method name for correct reference equality in JDK code
+        let method_name = {
+            let vm = thread.vm()?;
+            vm.string_pool().intern(&thread, method_name).await?
+        };
         let mut parameters = Vec::new();
         for parameter in method.parameters() {
             let class_name = parameter.class_name();
@@ -532,9 +553,8 @@ pub(crate) async fn get_declared_methods_0(
                     ..
                 } => {
                     let mut method_parameter_annotations = Vec::new();
-                    method_parameter_annotations.write_u16::<BigEndian>(u16::try_from(
-                        runtime_parameter_annotations.len(),
-                    )?)?;
+                    method_parameter_annotations
+                        .push(u8::try_from(runtime_parameter_annotations.len())?);
                     for parameter_annotation in runtime_parameter_annotations {
                         parameter_annotation.to_bytes(&mut method_parameter_annotations)?;
                     }
@@ -639,7 +659,11 @@ pub(crate) async fn get_enclosing_method_0(
                 let (name_index, descriptor_index) =
                     constant_pool.try_get_name_and_type(*method_index)?;
                 let method_name = constant_pool.try_get_utf8(*name_index)?;
-                let method_name = method_name.to_object(&thread).await?;
+                // Intern method name for correct reference equality in JDK code
+                let method_name = {
+                    let vm = thread.vm()?;
+                    vm.string_pool().intern(&thread, method_name).await?
+                };
                 let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
                 let method_descriptor = method_descriptor.to_object(&thread).await?;
                 (method_name, method_descriptor)
@@ -740,13 +764,39 @@ pub(crate) async fn get_modifiers(
     let object = parameters.pop()?;
     let class = get_class_no_init(&thread, &object).await?;
     let class_file = class.class_file();
+    let class_name = class.name();
+
+    // Check if this class is an inner class by looking for $ in the name
+    // and try to get modifiers from the InnerClasses attribute
+    if class_name.contains('$') {
+        // Find the enclosing class's InnerClasses attribute
+        // The InnerClasses attribute is in the class file itself for inner classes
+        for attribute in &class_file.attributes {
+            if let Attribute::InnerClasses { classes, .. } = attribute {
+                // Find the entry for this class
+                for inner_class in classes {
+                    // Get the inner class name from the constant pool
+                    if class_file
+                        .constant_pool
+                        .try_get_class(inner_class.class_info_index)
+                        .is_ok_and(|inner_class_name| inner_class_name == class_name)
+                    {
+                        // Found our class - return the access flags from the inner class entry
+                        let modifiers = i32::from(inner_class.access_flags.bits());
+                        return Ok(Some(Value::Int(modifiers)));
+                    }
+                }
+            }
+        }
+    }
+
+    // Fall back to class-level access flags
     let access_flags = &class_file.access_flags.bits();
     let excluded_flags =
         (ClassAccessFlags::MODULE | ClassAccessFlags::SUPER | ClassAccessFlags::SYNTHETIC).bits();
     let excluded_flags_mask = !excluded_flags;
     let modifiers = i32::from(access_flags & excluded_flags_mask);
 
-    // TODO: correct the modifier values
     Ok(Some(Value::Int(modifiers)))
 }
 
@@ -1101,9 +1151,8 @@ async fn create_accessor_method(
                     ..
                 } => {
                     let mut method_parameter_annotations = Vec::new();
-                    method_parameter_annotations.write_u16::<BigEndian>(u16::try_from(
-                        runtime_parameter_annotations.len(),
-                    )?)?;
+                    method_parameter_annotations
+                        .push(u8::try_from(runtime_parameter_annotations.len())?);
                     for parameter_annotation in runtime_parameter_annotations {
                         parameter_annotation.to_bytes(&mut method_parameter_annotations)?;
                     }
@@ -1506,7 +1555,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_component_type() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let class = thread.class("[int").await?;
+        let class = thread.class("[I").await?;
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
         let result = get_component_type(thread, parameters).await?;
@@ -2278,7 +2327,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let class = thread.class("[int").await?;
+        let class = thread.class("[I").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = is_array(thread, parameters).await?;

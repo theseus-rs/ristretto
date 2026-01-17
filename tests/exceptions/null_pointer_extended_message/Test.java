@@ -15,7 +15,6 @@ public class Test {
                 sb.append("accessMethod: ");
                 sb.append(e.getMessage());
                 System.out.println(sb.toString());
-                printExtended(e);
             }
             try {
                 t.readField();
@@ -24,7 +23,6 @@ public class Test {
                 sb.append("readField: ");
                 sb.append(e.getMessage());
                 System.out.println(sb.toString());
-                printExtended(e);
             }
             try {
                 t.arrayLoad();
@@ -33,7 +31,6 @@ public class Test {
                 sb.append("arrayLoad: ");
                 sb.append(e.getMessage());
                 System.out.println(sb.toString());
-                printExtended(e);
             }
             try {
                 t.arrayLength();
@@ -42,7 +39,6 @@ public class Test {
                 sb.append("arrayLength: ");
                 sb.append(e.getMessage());
                 System.out.println(sb.toString());
-                printExtended(e);
             }
         } catch (Throwable t) {
             StringBuilder sb = new StringBuilder();
@@ -52,25 +48,6 @@ public class Test {
             sb.append(t.getMessage());
             System.out.println(sb.toString());
             t.printStackTrace();
-        }
-    }
-
-    private static void printExtended(NullPointerException e) {
-        try {
-            Method m = NullPointerException.class.getDeclaredMethod("getExtendedNPEMessage");
-            m.setAccessible(true);
-            String msg = (String) m.invoke(e);
-            StringBuilder sb = new StringBuilder();
-            sb.append("Extended: ");
-            sb.append(msg);
-            System.out.println(sb.toString());
-        } catch (Exception ex) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Reflection failed: ");
-            sb.append(ex.getClass().getName());
-            sb.append(": ");
-            sb.append(ex.getMessage());
-            System.out.println(sb.toString());
         }
     }
 

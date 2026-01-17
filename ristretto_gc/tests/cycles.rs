@@ -48,12 +48,12 @@ fn test_cyclic_gc_collection() -> Result<()> {
         );
 
         // Set up the cycle using Mutex's lock
-        a.inner.lock().unwrap().other = Some(b.clone_gc());
-        b.inner.lock().unwrap().other = Some(a.clone_gc());
+        a.inner.lock()?.other = Some(b.clone_gc());
+        b.inner.lock()?.other = Some(a.clone_gc());
 
-        // Objects are now in a cycle - verify they're accessible
-        assert!(a.inner.lock().unwrap().other.is_some());
-        assert!(b.inner.lock().unwrap().other.is_some());
+        // Objects are now in a cycle; verify they're accessible
+        assert!(a.inner.lock()?.other.is_some());
+        assert!(b.inner.lock()?.other.is_some());
 
         // Cycles should be handled automatically when objects become unreachable.
     }

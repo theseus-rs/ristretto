@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 /// guard is dropped, it automatically removes the root reference, ensuring proper cleanup and
 /// preventing memory leaks in the root set.
 ///
-/// `GcRootGuard` acts like an Rc-like smart pointer - it can be cloned to create multiple handles
+/// `GcRootGuard` acts like an Rc-like smart pointer; it can be cloned to create multiple handles
 /// to the same root, and the root is only removed when all guards are dropped.
 pub struct GcRootGuard<T: Trace> {
     gc: Arc<GarbageCollector>,
@@ -91,7 +91,7 @@ impl<T: Trace> Drop for GcRootGuard<T> {
 
         // If this was the last reference, remove the root
         if old_count == 1 {
-            // Ignore errors during cleanup - we can't handle them in Drop
+            // Ignore errors during cleanup; we can't handle them in Drop
             self.gc.remove_root_by_id(self.root_id);
         }
     }

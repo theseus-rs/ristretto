@@ -497,16 +497,16 @@ impl GarbageCollector {
 
         debug!("starting garbage collection cycle");
 
-        // Phase 1: Initial Mark - mark all root objects
+        // Phase 1: Initial Mark; mark all root objects
         Self::initial_mark_phase(collector, phase, roots, mark_queue, objects);
 
-        // Phase 2: Concurrent Mark - mark all reachable objects
+        // Phase 2: Concurrent Mark; mark all reachable objects
         Self::concurrent_mark_phase(collector, phase, mark_queue, objects);
 
-        // Phase 3: Final Mark - handle any objects modified during concurrent marking
+        // Phase 3: Final Mark; handle any objects modified during concurrent marking
         Self::final_mark_phase(phase, mark_queue, objects);
 
-        // Phase 4: Concurrent Sweep - reclaim unmarked objects
+        // Phase 4: Concurrent Sweep; reclaim unmarked objects
         let (bytes_freed, objects_swept) =
             Self::concurrent_sweep_phase(collector, phase, objects, bytes_allocated);
 
@@ -532,7 +532,7 @@ impl GarbageCollector {
         );
     }
 
-    /// Phase 1: Initial mark - mark all root objects
+    /// Phase 1: Initial mark; mark all root objects
     fn initial_mark_phase(
         collector: &GarbageCollector,
         phase: &Arc<RwLock<GcPhase>>,
@@ -579,7 +579,7 @@ impl GarbageCollector {
         trace!("Initial mark phase completed, {} roots queued", roots.len());
     }
 
-    /// Phase 2: Concurrent mark - mark all reachable objects
+    /// Phase 2: Concurrent mark; mark all reachable objects
     fn concurrent_mark_phase(
         collector: &GarbageCollector,
         phase: &Arc<RwLock<GcPhase>>,
@@ -620,7 +620,7 @@ impl GarbageCollector {
             };
 
             if should_trace {
-                // First time marking this object - trace its contents
+                // First time marking this object; trace its contents
                 processed_count += 1;
 
                 // Safely trace the object by calling its trace method
@@ -642,7 +642,7 @@ impl GarbageCollector {
         );
     }
 
-    /// Phase 3: Final mark - handle objects modified during concurrent marking
+    /// Phase 3: Final mark; handle objects modified during concurrent marking
     fn final_mark_phase(
         phase: &Arc<RwLock<GcPhase>>,
         mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
@@ -684,7 +684,7 @@ impl GarbageCollector {
         );
     }
 
-    /// Phase 4: Concurrent sweep - reclaim unmarked objects
+    /// Phase 4: Concurrent sweep; reclaim unmarked objects
     fn concurrent_sweep_phase(
         collector: &GarbageCollector,
         phase: &Arc<RwLock<GcPhase>>,

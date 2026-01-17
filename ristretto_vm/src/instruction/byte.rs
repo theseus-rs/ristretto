@@ -16,9 +16,9 @@ pub(crate) fn baload(stack: &mut OperandStack) -> Result<ExecutionResult> {
         return Err(NullPointerException(None).into());
     };
     let guard = reference.read();
-    let Reference::ByteArray(array) = &*guard else {
+    let (Reference::BooleanArray(array) | Reference::ByteArray(array)) = &*guard else {
         return Err(InvalidStackValue {
-            expected: "byte array".to_string(),
+            expected: "byte or boolean array".to_string(),
             actual: guard.to_string(),
         });
     };
@@ -51,9 +51,9 @@ pub(crate) fn bastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
         return Err(NullPointerException(None).into());
     };
     let mut guard = reference.write();
-    let Reference::ByteArray(array) = &mut *guard else {
+    let (Reference::BooleanArray(array) | Reference::ByteArray(array)) = &mut *guard else {
         return Err(InvalidStackValue {
-            expected: "byte array".to_string(),
+            expected: "byte or boolean array".to_string(),
             actual: guard.to_string(),
         });
     };
@@ -106,7 +106,7 @@ mod test {
             Err(InvalidStackValue {
                 expected,
                 actual
-            }) if expected == "byte array" && actual == "int[42]"
+            }) if expected == "byte or boolean array" && actual == "int[42]"
         ));
         Ok(())
     }
@@ -176,7 +176,7 @@ mod test {
             Err(InvalidStackValue {
                 expected,
                 actual
-            }) if expected == "byte array" && actual == "int[42]"
+            }) if expected == "byte or boolean array" && actual == "int[42]"
         ));
         Ok(())
     }

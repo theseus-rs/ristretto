@@ -392,7 +392,8 @@ async fn is_instance_of(
     let (class_name, resolved_class) = {
         let object = object.read();
         match &*object {
-            Reference::ByteArray(_)
+            Reference::BooleanArray(_)
+            | Reference::ByteArray(_)
             | Reference::CharArray(_)
             | Reference::ShortArray(_)
             | Reference::IntArray(_)

@@ -169,6 +169,29 @@ impl ClassLoader {
     ///
     /// - [JVMS §5.3.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.3)
     fn create_array_class(&self, class_name: &str) -> Result<Arc<Class>> {
+        // Validate the array descriptor before creating the class
+        // Valid array descriptors:
+        // - [B, [C, [D, [F, [I, [J, [S, [Z for primitive arrays
+        // - [Lclassname; for object arrays
+        // - [[... for multi-dimensional arrays
+        let component_type = class_name
+            .strip_prefix('[')
+            .ok_or_else(|| ClassNotFound(class_name.to_string()))?;
+
+        // Validate component type is a valid descriptor
+        let is_valid = match component_type.chars().next() {
+            Some('B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 'Z') if component_type.len() == 1 => {
+                true
+            }
+            Some('[') => true, // multi-dimensional array
+            Some('L') => component_type.ends_with(';') && component_type.len() > 2,
+            _ => false,
+        };
+
+        if !is_valid {
+            return Err(ClassNotFound(class_name.to_string()));
+        }
+
         let mut constant_pool = ConstantPool::new();
         let this_class_index = constant_pool.add_class(class_name)?;
         let super_class_index = constant_pool.add_class("java/lang/Object")?;
@@ -395,13 +418,15 @@ mod tests {
         // Load the class in the parent loader
         let parent_class = parent_loader.load("HelloWorld").await?;
 
-        // Register a fake class in the child loader with the same name
-        let fake_class_name = "HelloWorld";
+        // Register a fake array class in the child loader with a distinct name
+        // (using proper array notation to satisfy validation)
+        let fake_class_name = "[LHelloWorld;";
         let fake_class = child_loader.create_array_class(fake_class_name)?;
         child_loader.register(fake_class.clone()).await?;
 
-        // Load the class from the child loader
-        let loaded_class = child_loader.load("HelloWorld").await?;
+        // Load the class from the child loader - should delegate to parent for HelloWorld
+        // but return the registered class for [LHelloWorld;
+        let loaded_class = child_loader.load("[LHelloWorld;").await?;
 
         // Verify that the loaded class is the one from the child loader, not the parent
         assert_eq!(fake_class, loaded_class);

@@ -1,2 +1,1 @@
-thread '<unknown>' has overflowed its stack
-fatal runtime error: stack overflow, aborting
+Accessibility enforcement not yet fully implemented

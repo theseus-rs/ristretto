@@ -1,5 +1,7 @@
 /** Test modifier reflection operations. */
 import java.lang.reflect.*;
+import java.util.Arrays;
+import java.util.Comparator;
 
 public class Test {
     // Class modifiers
@@ -51,6 +53,8 @@ public class Test {
         // Test field modifiers
         System.out.println("\n=== Field Modifiers ===");
         Field[] fields = Test.class.getDeclaredFields();
+        // Sort fields by name for deterministic output
+        Arrays.sort(fields, Comparator.comparing(Field::getName));
         for (Field field : fields) {
             if (!field.isSynthetic()) { // Skip synthetic fields
                 testFieldModifiers(field);
@@ -60,6 +64,8 @@ public class Test {
         // Test method modifiers
         System.out.println("\n=== Method Modifiers ===");
         Method[] methods = Test.class.getDeclaredMethods();
+        // Sort methods by name for deterministic output
+        Arrays.sort(methods, Comparator.comparing(Method::getName));
         for (Method method : methods) {
             if (!method.isSynthetic() && !method.getName().equals("main")) {
                 testMethodModifiers(method);
@@ -69,6 +75,8 @@ public class Test {
         // Test constructor modifiers
         System.out.println("\n=== Constructor Modifiers ===");
         Constructor<?>[] constructors = Test.class.getDeclaredConstructors();
+        // Sort constructors by parameter count for deterministic output
+        Arrays.sort(constructors, Comparator.comparingInt(Constructor::getParameterCount));
         for (Constructor<?> constructor : constructors) {
             testConstructorModifiers(constructor);
         }
@@ -196,6 +204,8 @@ public class Test {
         // Test interface method modifiers
         Method[] interfaceMethods = TestInterface.class.getDeclaredMethods();
         if (interfaceMethods.length > 0) {
+            // Sort for deterministic output
+            Arrays.sort(interfaceMethods, Comparator.comparing(Method::getName));
             for (Method method : interfaceMethods) {
                 int methodMods = method.getModifiers();
                 System.out.println("Interface method modifiers: " + Modifier.toString(methodMods));
@@ -204,6 +214,8 @@ public class Test {
 
         // Test enum field modifiers
         Field[] enumFields = TestEnum.class.getDeclaredFields();
+        // Sort for deterministic output
+        Arrays.sort(enumFields, Comparator.comparing(Field::getName));
         for (Field field : enumFields) {
             if (field.isEnumConstant()) {
                 int enumMods = field.getModifiers();

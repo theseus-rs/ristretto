@@ -1,4 +1,4 @@
-use crate::JavaError::InaccessibleObjectException;
+use crate::JavaError::{IllegalAccessException, InaccessibleObjectException};
 use crate::Result;
 use crate::intrinsic_methods::java::lang::class;
 use crate::parameters::Parameters;
@@ -7,15 +7,15 @@ use async_recursion::async_recursion;
 use ristretto_classfile::MethodAccessFlags;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Class as RistrettoClass, Value};
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-/// Gets the caller module from the call stack.
+/// Gets the caller class info from the call stack.
 ///
 /// Walks up the call stack to find the first frame that is not in the reflection
-/// implementation, and returns that frame's module name and a hash for the module.
-async fn get_caller_module_info(thread: &Arc<Thread>) -> Result<(Option<String>, usize)> {
+/// implementation, and returns that frame's class name, module name and a hash for the module.
+async fn get_caller_info(thread: &Arc<Thread>) -> Result<(String, Option<String>, usize)> {
     let frames = thread.frames().await?;
     // Skip reflection frames to find the actual caller
     for frame in frames.iter().rev() {
@@ -30,10 +30,10 @@ async fn get_caller_module_info(thread: &Arc<Thread>) -> Result<(Option<String>,
         let module_name = frame.class().module_name()?;
         // Use the class pointer as a proxy for the module identity hash
         let class_ptr = Arc::as_ptr(frame.class()) as usize;
-        return Ok((module_name, class_ptr));
+        return Ok((class_name.to_string(), module_name, class_ptr));
     }
-    // If all frames are reflection frames, return unnamed module
-    Ok((None, 0))
+    // If all frames are reflection frames, return empty
+    Ok((String::new(), None, 0))
 }
 
 /// Invokes a method via reflection.
@@ -82,14 +82,66 @@ pub(crate) async fn invoke_0(
     };
     let class = class::get_class(&thread, &class_object).await?;
 
-    // Check module reflection access unless setAccessible(true) was called
-    // Note: Public members in exported packages don't require opens, only exports
-    // We only need deep reflection access (opens) for non-public members
+    // Check Java access modifiers unless setAccessible(true) was called
     let access_flags = MethodAccessFlags::from_bits_truncate(u16::try_from(modifiers)?);
     let is_public = access_flags.contains(MethodAccessFlags::PUBLIC);
+    let is_private = access_flags.contains(MethodAccessFlags::PRIVATE);
+    let is_protected = access_flags.contains(MethodAccessFlags::PROTECTED);
+
     if !override_flag && !is_public {
+        // For non-public methods, we need to check access
+        let (caller_class_name, caller_module, caller_module_hash) =
+            get_caller_info(&thread).await?;
+
+        // Check if private method is being accessed from a different class
+        if is_private {
+            let target_class_name = class.name();
+            // Private methods can only be accessed from the same class
+            if caller_class_name != target_class_name {
+                let class_name = class.name().replace('/', ".");
+                let caller_display = caller_class_name.replace('/', ".");
+                let error_msg = format!(
+                    "class {caller_display} cannot access a member of class {class_name} with modifiers \"private\""
+                );
+                return Err(IllegalAccessException(error_msg).into());
+            }
+        } else if is_protected {
+            // Protected methods: caller must be in same package or a subclass
+            let target_package =
+                crate::module_system::ModuleSystem::package_from_class_name(class.name());
+            let caller_package =
+                crate::module_system::ModuleSystem::package_from_class_name(&caller_class_name);
+
+            if target_package != caller_package {
+                // Not in same package, check if it's a subclass (simplified check)
+                // For now, we allow access if in different packages; a full implementation would
+                // check the class hierarchy
+                let class_name = class.name().replace('/', ".");
+                let caller_display = caller_class_name.replace('/', ".");
+                let error_msg = format!(
+                    "class {caller_display} cannot access a member of class {class_name} with modifiers \"protected\""
+                );
+                return Err(IllegalAccessException(error_msg).into());
+            }
+        } else {
+            // Package-private (no public/private/protected modifier)
+            let target_package =
+                crate::module_system::ModuleSystem::package_from_class_name(class.name());
+            let caller_package =
+                crate::module_system::ModuleSystem::package_from_class_name(&caller_class_name);
+
+            if target_package != caller_package {
+                let class_name = class.name().replace('/', ".");
+                let caller_display = caller_class_name.replace('/', ".");
+                let error_msg = format!(
+                    "class {caller_display} cannot access a member of class {class_name} with modifiers \"\""
+                );
+                return Err(IllegalAccessException(error_msg).into());
+            }
+        }
+
+        // Also check JPMS module access
         let vm = thread.vm()?;
-        let (caller_module, caller_module_hash) = get_caller_module_info(&thread).await?;
         let target_module = class.module_name()?;
 
         // Only check if modules are different
@@ -173,24 +225,76 @@ pub(crate) async fn invoke_0(
     let mut method_parameters = String::new();
     for parameter_type in &parameter_types {
         let parameter_type_class = class::get_class(&thread, parameter_type).await?;
-        if parameter_type_class.is_array() || parameter_type_class.is_primitive() {
-            method_parameters.push_str(parameter_type_class.name());
-        } else {
-            let parameter_type = format!("L{};", parameter_type_class.name());
-            method_parameters.push_str(parameter_type.as_str());
-        }
+        let descriptor = RistrettoClass::convert_to_descriptor(parameter_type_class.name());
+        method_parameters.push_str(&descriptor);
     }
 
     let return_type_class = class::get_class(&thread, &return_type).await?;
-    let return_type_class = if return_type_class.is_array() || return_type_class.is_primitive() {
-        return_type_class.name().to_string()
-    } else {
-        format!("L{};", return_type_class.name())
-    };
-    let descriptor = format!("({method_parameters}){return_type_class}");
+    let is_void = return_type_class.name() == "void";
+    let return_type_descriptor = RistrettoClass::convert_to_descriptor(return_type_class.name());
+    let descriptor = format!("({method_parameters}){return_type_descriptor}");
 
-    let method = class.try_get_method(name, descriptor)?;
-    thread.execute(&class, &method, &arguments).await
+    // For non-static methods, we need to dispatch to the actual implementation on the receiver's
+    // class, not the declaring class (which may be an interface or abstract class)
+    let is_static = access_flags.contains(MethodAccessFlags::STATIC);
+    let (dispatch_class, method) = if is_static {
+        // Static methods are called on the declaring class
+        let method = class.try_get_method(&name, &descriptor)?;
+        (class.clone(), method)
+    } else {
+        // For instance methods, get the receiver's class and find the method there
+        // The receiver is the first argument
+        if arguments.is_empty() {
+            return Err(crate::Error::InternalError(
+                "Instance method invocation requires a receiver".to_string(),
+            ));
+        }
+        let receiver = arguments[0].as_object_ref()?;
+        let receiver_class = receiver.class().clone();
+
+        // Search for the method starting from the receiver's class. This handles interface methods,
+        // abstract methods, and overridden methods
+        if let Some((impl_class, method)) =
+            find_method_in_class_hierarchy(&receiver_class, &name, &descriptor)?
+        {
+            (impl_class, method)
+        } else {
+            // Fallback: try the declaring class (should not happen for valid calls)
+            let method = class.try_get_method(&name, &descriptor)?;
+            (class.clone(), method)
+        }
+    };
+    let result = thread.execute(&dispatch_class, &method, &arguments).await?;
+
+    // For void methods, return null (as Object). For other methods, return the result.
+    // This is required because Method.invoke() always returns Object in Java.
+    if is_void {
+        Ok(Some(Value::Object(None)))
+    } else {
+        Ok(result)
+    }
+}
+
+/// Search for a non-abstract method implementation in the class hierarchy.
+fn find_method_in_class_hierarchy(
+    class: &Arc<RistrettoClass>,
+    name: &str,
+    descriptor: &str,
+) -> Result<Option<(Arc<RistrettoClass>, Arc<ristretto_classloader::Method>)>> {
+    if let Ok(method) = class.try_get_method(name, descriptor) {
+        // Make sure it's not abstract (has code)
+        if !method.access_flags().contains(MethodAccessFlags::ABSTRACT) {
+            return Ok(Some((class.clone(), method)));
+        }
+    }
+
+    if let Ok(Some(parent)) = class.parent()
+        && let Some(result) = find_method_in_class_hierarchy(&parent, name, descriptor)?
+    {
+        return Ok(Some(result));
+    }
+
+    Ok(None)
 }
 
 #[cfg(test)]

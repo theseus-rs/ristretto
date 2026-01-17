@@ -1,5 +1,7 @@
 /** Test annotation reflection operations. */
 import java.lang.annotation.*;
+import java.util.Arrays;
+import java.util.Comparator;
 
 public class Test {
     @Retention(RetentionPolicy.RUNTIME)
@@ -111,6 +113,8 @@ public class Test {
         System.out.println("Is annotation type: " + annotationType.isAnnotation());
 
         java.lang.reflect.Method[] annotationMethods = annotationType.getDeclaredMethods();
+        // Sort methods by name for deterministic output
+        Arrays.sort(annotationMethods, Comparator.comparing(java.lang.reflect.Method::getName));
         System.out.println("Annotation methods count: " + annotationMethods.length);
         for (java.lang.reflect.Method method : annotationMethods) {
             System.out.println("Annotation method: " + method.getName() + " -> " + method.getReturnType().getName());

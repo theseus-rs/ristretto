@@ -21,10 +21,11 @@ pub(crate) fn newarray(
     }
     let count = usize::try_from(count)?;
     let array = match array_type {
+        ArrayType::Boolean => Value::from(vec![false; count]),
+        ArrayType::Byte => Value::from(vec![0i8; count]),
         ArrayType::Char => Value::from(vec![0 as char; count]),
         ArrayType::Float => Value::from(vec![0.0f32; count]),
         ArrayType::Double => Value::from(vec![0.0f64; count]),
-        ArrayType::Boolean | ArrayType::Byte => Value::from(vec![0i8; count]),
         ArrayType::Short => Value::from(vec![0i16; count]),
         ArrayType::Int => Value::from(vec![0i32; count]),
         ArrayType::Long => Value::from(vec![0i64; count]),
@@ -68,7 +69,7 @@ pub(crate) fn arraylength(stack: &mut OperandStack) -> Result<ExecutionResult> {
     };
     let guard = reference.read();
     let length = match &*guard {
-        Reference::ByteArray(array) => array.len(),
+        Reference::BooleanArray(array) | Reference::ByteArray(array) => array.len(),
         Reference::CharArray(array) => array.len(),
         Reference::FloatArray(array) => array.len(),
         Reference::DoubleArray(array) => array.len(),
@@ -199,7 +200,7 @@ mod tests {
         assert_eq!(Continue, result);
         let object = stack.pop()?;
         let reference = object.as_reference()?;
-        assert!(matches!(*reference, Reference::ByteArray(_)));
+        assert!(matches!(*reference, Reference::BooleanArray(_)));
         Ok(())
     }
 

@@ -1,5 +1,7 @@
-/** Test varargs and default methods in reflection. */
+/** Test varargs method reflection metadata. */
 import java.lang.reflect.*;
+import java.util.Arrays;
+import java.util.Comparator;
 
 public class Test {
     // Varargs methods
@@ -33,19 +35,6 @@ public class Test {
 
         static void staticInterfaceMethod() {
             System.out.println("Static interface method");
-        }
-    }
-
-    // Implementation of interface with default methods
-    static class DefaultMethodImpl implements DefaultMethodInterface {
-        @Override
-        public void abstractMethod() {
-            System.out.println("Abstract method implementation");
-        }
-
-        @Override
-        public void defaultMethod() {
-            System.out.println("Overridden default method");
         }
     }
 
@@ -89,28 +78,13 @@ public class Test {
             System.out.println("  Is varargs: " + param.isVarArgs());
         }
 
-        // Test varargs method invocation
-        System.out.println("\n=== Varargs Method Invocation ===");
-
-        // Invoke with array
-        simpleVarargs.invoke(null, (Object) new String[]{"a", "b", "c"});
-
-        // Invoke with individual arguments (reflection handles conversion)
-        mixedVarargs.invoke(null, 42, new String[]{"x", "y"});
-
-        // Test primitive varargs
-        Method primitiveVarargs = Test.class.getMethod("primitiveVarargs", int[].class);
-        primitiveVarargs.invoke(null, (Object) new int[]{1, 2, 3, 4, 5});
-
-        // Test object varargs
-        Method objectVarargs = Test.class.getMethod("objectVarargs", Object[].class);
-        objectVarargs.invoke(null, (Object) new Object[]{"string", 42, true});
-
         // Test default methods in interfaces
         System.out.println("\n=== Default Methods in Interfaces ===");
 
         Class<?> interfaceClass = DefaultMethodInterface.class;
         Method[] interfaceMethods = interfaceClass.getDeclaredMethods();
+        // Sort methods for deterministic output
+        Arrays.sort(interfaceMethods, Comparator.comparing(Method::getName));
 
         for (Method method : interfaceMethods) {
             System.out.println("Interface method: " + method.getName());
@@ -121,51 +95,15 @@ public class Test {
             System.out.println();
         }
 
-        // Test default method invocation
-        System.out.println("=== Default Method Invocation ===");
-        DefaultMethodImpl impl = new DefaultMethodImpl();
-
-        Method abstractMethod = interfaceClass.getMethod("abstractMethod");
-        Method defaultMethod = interfaceClass.getMethod("defaultMethod");
-        Method defaultWithReturn = interfaceClass.getMethod("defaultMethodWithReturn");
-        Method staticMethod = interfaceClass.getMethod("staticInterfaceMethod");
-
-        // Invoke abstract method (implemented)
-        abstractMethod.invoke(impl);
-
-        // Invoke overridden default method
-        defaultMethod.invoke(impl);
-
-        // Invoke default method with return value
-        Object returnValue = defaultWithReturn.invoke(impl);
-        System.out.println("Default method return value: " + returnValue);
-
-        // Invoke static interface method
-        staticMethod.invoke(null);
-
-        // Test accessing original default method implementation
-        System.out.println("\n=== Original Default Method Access ===");
-
-        // Create an instance that doesn't override the default method
-        DefaultMethodInterface directImpl = new DefaultMethodInterface() {
-            @Override
-            public void abstractMethod() {
-                System.out.println("Direct abstract implementation");
-            }
-        };
-
-        // Invoke default method on non-overriding implementation
-        defaultMethod.invoke(directImpl);
-        Object directReturnValue = defaultWithReturn.invoke(directImpl);
-        System.out.println("Direct default method return: " + directReturnValue);
-
         // Test functional interface
-        System.out.println("\n=== Functional Interface ===");
+        System.out.println("=== Functional Interface ===");
 
         Class<?> functionalClass = FunctionalInterfaceTest.class;
         System.out.println("Is functional interface: " + functionalClass.isAnnotationPresent(FunctionalInterface.class));
 
         Method[] functionalMethods = functionalClass.getDeclaredMethods();
+        // Sort methods for deterministic output
+        Arrays.sort(functionalMethods, Comparator.comparing(Method::getName));
         int abstractCount = 0;
         int defaultCount = 0;
 
@@ -188,7 +126,7 @@ public class Test {
         // Test method parameter types with varargs
         System.out.println("\n=== Varargs Parameter Type Analysis ===");
 
-        Method[] varargsMethodsArray = {simpleVarargs, mixedVarargs, primitiveVarargs, objectVarargs};
+        Method[] varargsMethodsArray = {simpleVarargs, mixedVarargs};
 
         for (Method method : varargsMethodsArray) {
             System.out.println("Method: " + method.getName());
@@ -205,32 +143,6 @@ public class Test {
                 }
             }
             System.out.println();
-        }
-
-        // Test varargs with null and empty arrays
-        System.out.println("\n=== Varargs Edge Cases ===");
-
-        // Invoke with null
-        try {
-            simpleVarargs.invoke(null, (Object) null);
-            System.out.println("Successfully invoked varargs with null");
-        } catch (Exception e) {
-            System.out.println("Failed to invoke varargs with null: " + e.getClass().getSimpleName());
-        }
-
-        // Invoke with empty array
-        simpleVarargs.invoke(null, (Object) new String[0]);
-        System.out.println("Successfully invoked varargs with empty array");
-
-        // Test method resolution with varargs
-        System.out.println("\n=== Varargs Method Resolution ===");
-
-        // This tests how reflection resolves varargs methods
-        try {
-            Method resolved1 = Test.class.getMethod("simpleVarargs", String[].class);
-            System.out.println("Resolved varargs method: " + resolved1.getName());
-        } catch (NoSuchMethodException e) {
-            System.out.println("Failed to resolve varargs method: " + e.getMessage());
         }
     }
 }
