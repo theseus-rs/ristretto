@@ -271,6 +271,12 @@ impl ClassLoader {
         let mut config_guard = self.module_configuration.write().await;
         *config_guard = config;
     }
+
+    /// Get all loaded classes.
+    pub async fn loaded_classes(&self) -> Vec<Arc<Class>> {
+        let classes = self.classes.read().await;
+        classes.values().cloned().collect()
+    }
 }
 
 impl Clone for ClassLoader {

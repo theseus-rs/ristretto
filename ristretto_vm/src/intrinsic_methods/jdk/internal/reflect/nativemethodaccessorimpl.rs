@@ -275,7 +275,7 @@ pub(crate) async fn invoke_0(
     }
 }
 
-/// Search for a non-abstract method implementation in the class hierarchy.
+/// Search for a non-abstract method implementation in the class hierarchy and interfaces.
 fn find_method_in_class_hierarchy(
     class: &Arc<RistrettoClass>,
     name: &str,
@@ -288,10 +288,48 @@ fn find_method_in_class_hierarchy(
         }
     }
 
+    // Search in parent class
     if let Ok(Some(parent)) = class.parent()
         && let Some(result) = find_method_in_class_hierarchy(&parent, name, descriptor)?
     {
         return Ok(Some(result));
+    }
+
+    // Search in implemented interfaces for default methods
+    if let Ok(interfaces) = class.interfaces() {
+        for interface in interfaces {
+            if let Some(result) = find_method_in_interface_hierarchy(&interface, name, descriptor)?
+            {
+                return Ok(Some(result));
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+/// Search for a default method implementation in the interface hierarchy.
+fn find_method_in_interface_hierarchy(
+    interface: &Arc<RistrettoClass>,
+    name: &str,
+    descriptor: &str,
+) -> Result<Option<(Arc<RistrettoClass>, Arc<ristretto_classloader::Method>)>> {
+    if let Ok(method) = interface.try_get_method(name, descriptor) {
+        // Default methods are public and not abstract
+        if !method.access_flags().contains(MethodAccessFlags::ABSTRACT) {
+            return Ok(Some((interface.clone(), method)));
+        }
+    }
+
+    // Search in super-interfaces
+    if let Ok(super_interfaces) = interface.interfaces() {
+        for super_interface in super_interfaces {
+            if let Some(result) =
+                find_method_in_interface_hierarchy(&super_interface, name, descriptor)?
+            {
+                return Ok(Some(result));
+            }
+        }
     }
 
     Ok(None)

@@ -1168,12 +1168,22 @@ async fn find_interface_method_from_params(
                     return Ok(Some((candidate_class, method)));
                 }
 
-                // Check interfaces
+                // Check interfaces of the class
                 if let Ok(interfaces) = candidate_class.interfaces() {
                     for interface in interfaces {
                         if let Ok(method) = interface.try_get_method(method_name, method_descriptor)
                         {
                             return Ok(Some((interface, method)));
+                        }
+                        // Also check super-interfaces
+                        if let Some(result) = search_interface_hierarchy_for_method(
+                            &interface,
+                            method_name,
+                            method_descriptor,
+                        )
+                        .await?
+                        {
+                            return Ok(Some(result));
                         }
                     }
                 }
@@ -1194,6 +1204,34 @@ async fn find_interface_method_from_params(
     Ok(None)
 }
 
+/// Recursively search interface hierarchy for a method.
+#[async_recursion(?Send)]
+async fn search_interface_hierarchy_for_method(
+    interface: &Arc<Class>,
+    method_name: &str,
+    method_descriptor: &str,
+) -> Result<Option<(Arc<Class>, Arc<Method>)>> {
+    if let Ok(method) = interface.try_get_method(method_name, method_descriptor) {
+        return Ok(Some((interface.clone(), method)));
+    }
+
+    if let Ok(super_interfaces) = interface.interfaces() {
+        for super_interface in super_interfaces {
+            if let Some(result) = search_interface_hierarchy_for_method(
+                &super_interface,
+                method_name,
+                method_descriptor,
+            )
+            .await?
+            {
+                return Ok(Some(result));
+            }
+        }
+    }
+
+    Ok(None)
+}
+
 /// Returns common interface names for a given method name.
 fn get_common_interfaces_for_method(method_name: &str) -> Vec<&'static str> {
     match method_name {
@@ -1206,6 +1244,33 @@ fn get_common_interfaces_for_method(method_name: &str) -> Vec<&'static str> {
         "getTypeName" => vec!["java/lang/Class", "java/lang/reflect/Type"],
         _ => Vec::new(),
     }
+}
+
+/// Search all loaded interfaces for a method.
+/// This is a fallback for when parameter-based search fails,
+/// used for default interface methods with no parameters.
+async fn search_all_loaded_interfaces(
+    thread: &Thread,
+    method_name: &str,
+    method_descriptor: &str,
+) -> Result<Option<(Arc<Class>, Arc<Method>)>> {
+    let vm = thread.vm()?;
+    let class_loader_lock = vm.class_loader();
+    let class_loader = class_loader_lock.read().await;
+
+    // Get all loaded classes and search for interfaces with the method
+    for class in class_loader.loaded_classes().await {
+        if class.is_interface()
+            && let Ok(method) = class.try_get_method(method_name, method_descriptor)
+        {
+            // Check if it's a default method (not abstract)
+            if !method.access_flags().contains(MethodAccessFlags::ABSTRACT) {
+                return Ok(Some((class.clone(), method)));
+            }
+        }
+    }
+
+    Ok(None)
 }
 
 pub(crate) async fn resolve(
@@ -1396,6 +1461,18 @@ async fn resolve_method(
                     .await?
                     {
                         // Update the MemberName's clazz field to the correct class
+                        let class_object = found_class.to_object(thread).await?;
+                        {
+                            let mut member_self_mut = member_self.as_object_mut()?;
+                            member_self_mut.set_value("clazz", class_object)?;
+                        }
+                        (found_class, found_method, false)
+                    } else if let Some((found_class, found_method)) =
+                        search_all_loaded_interfaces(thread, &method_name, &method_descriptor)
+                            .await?
+                    {
+                        // Fallback: search all loaded interfaces for the method
+                        // This handles default methods with no parameters
                         let class_object = found_class.to_object(thread).await?;
                         {
                             let mut member_self_mut = member_self.as_object_mut()?;
