@@ -137,7 +137,7 @@ impl Compiler {
 
         let malloc = jit_module.declare_func_in_func(malloc_id, function_builder.func);
 
-        let blocks = control_flow_graph::get_blocks(
+        let (entry_block, blocks) = control_flow_graph::get_blocks(
             &mut function_builder,
             constant_pool,
             instructions,
@@ -145,11 +145,12 @@ impl Compiler {
         )?;
         let mut block_indexes = blocks.keys().copied().collect::<Vec<_>>();
         block_indexes.sort_unstable();
-        let block = *blocks.get(&0).ok_or_else(|| InvalidBlockAddress(0))?;
-        function_builder.switch_to_block(block);
-        function_builder.append_block_params_for_function_params(block);
+
+        // Use the entry block for function setup (entry_block cannot be jumped to)
+        function_builder.switch_to_block(entry_block);
+        function_builder.append_block_params_for_function_params(entry_block);
         let (arguments_pointer, _arguments_length_pointer, return_pointer) =
-            Self::function_pointers(&mut function_builder, block)?;
+            Self::function_pointers(&mut function_builder, entry_block)?;
 
         let mut locals = Self::locals(
             &mut function_builder,
@@ -157,6 +158,16 @@ impl Compiler {
             instructions,
             arguments_pointer,
         )?;
+
+        // Get the block for address 0 (may be entry_block or a separate loop body block)
+        let block_zero = *blocks.get(&0).ok_or_else(|| InvalidBlockAddress(0))?;
+
+        // If entry_block and block_zero are different, we need to jump from entry to block_zero
+        // This happens when there are backward jumps to address 0
+        if entry_block != block_zero {
+            function_builder.ins().jump(block_zero, &[]);
+            function_builder.switch_to_block(block_zero);
+        }
 
         let mut stack = OperandStack::with_capacity(max_stack);
         let mut block_is_terminated = false;
