@@ -6,6 +6,8 @@ use crate::rust_value::{RustValue, process_values};
 use crate::{Frame, Result, VM, jit};
 use async_recursion::async_recursion;
 use byte_unit::{Byte, UnitType};
+use ristretto_classfile::attributes::Attribute;
+use ristretto_classfile::{FieldAccessFlags, FieldType};
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Value};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -434,6 +436,14 @@ impl Thread {
                         return Err(error);
                     }
 
+                    // Step 6.5: Initialize String constants from ConstantValue attributes
+                    // This happens during the preparation phase before <clinit> runs
+                    if let Err(error) = self.initialize_string_constants(class).await {
+                        let error_msg = format!("{error}");
+                        class.fail_initialization(error_msg)?;
+                        return Err(error);
+                    }
+
                     // Step 7: Execute <clinit> for this class
                     if let Some(class_initializer) = class.class_initializer() {
                         match self
@@ -461,6 +471,69 @@ impl Thread {
                 }
             }
         }
+    }
+
+    /// Initialize String constants that have a `ConstantValue` attribute.
+    ///
+    /// Per JVM specification, static final fields with `ConstantValue` attributes should be
+    /// initialized during the preparation phase, before `<clinit>` runs. For String constants,
+    /// this means creating Java String objects from the constant pool values.
+    ///
+    /// # Errors
+    ///
+    /// if the String object cannot be created
+    #[async_recursion(?Send)]
+    async fn initialize_string_constants(&self, class: &Arc<Class>) -> Result<()> {
+        let constant_pool = class.constant_pool();
+
+        for field in class.static_fields() {
+            // Only process static final fields
+            if !field
+                .access_flags()
+                .contains(FieldAccessFlags::STATIC | FieldAccessFlags::FINAL)
+            {
+                continue;
+            }
+
+            // Only process String fields
+            let FieldType::Object(class_name) = field.field_type() else {
+                continue;
+            };
+            if class_name != "java/lang/String" {
+                continue;
+            }
+
+            // Check if the field has a ConstantValue attribute
+            let constant_value_index = field.attributes().iter().find_map(|attr| {
+                if let Attribute::ConstantValue {
+                    constant_value_index,
+                    ..
+                } = attr
+                {
+                    Some(*constant_value_index)
+                } else {
+                    None
+                }
+            });
+
+            let Some(constant_value_index) = constant_value_index else {
+                continue;
+            };
+
+            // Get the string value from the constant pool
+            let Ok(string_value) = constant_pool.try_get_string(constant_value_index) else {
+                continue;
+            };
+
+            // Create a Java String object using the string pool for interning
+            let vm = self.vm()?;
+            let string_object = vm.string_pool().intern(self, string_value).await?;
+
+            // Set the static field value
+            class.set_static_value_unchecked(field.name(), string_object)?;
+        }
+
+        Ok(())
     }
 
     /// Register a class.
