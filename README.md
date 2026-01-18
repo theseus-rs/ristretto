@@ -56,8 +56,8 @@ functions that use object byte code or call other functions.
 
 #### Threading
 
-Threading is not implemented. The JVM has been structured to allow for threading in the future by utilizing async with
-the `tokio` runtime.
+Threading is partially implemented. The JVM has been structured to implement threading using async with the `tokio`
+runtime.
 
 #### Runtime Native Methods
 

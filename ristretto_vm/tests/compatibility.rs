@@ -12,7 +12,8 @@ use tracing::metadata::LevelFilter;
 use tracing::{debug, error, info, trace};
 use tracing_subscriber::{EnvFilter, fmt};
 
-const TEST_ENDS_WITH_FILTER: Option<&str> = None;
+/// Regex to filter which tests to run. Defaults to matching all tests.
+static TEST_FILTER: LazyLock<Regex> = LazyLock::new(|| Regex::new(".*").expect("valid regex"));
 const TEST_CLASS_NAME: &str = "Test";
 const TEST_FILE: &str = "Test.java";
 const IGNORE_FILE: &str = "ignore.txt";
@@ -54,9 +55,7 @@ fn compatibility_tests() -> Result<()> {
         let test_name = test_dir.to_string_lossy().to_string();
         let test_dir = tests_root_dir.join(test_dir);
 
-        if let Some(filter) = TEST_ENDS_WITH_FILTER
-            && !test_name.ends_with(filter)
-        {
+        if !TEST_FILTER.is_match(&test_name) {
             return;
         }
 

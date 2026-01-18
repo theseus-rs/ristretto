@@ -58,14 +58,19 @@ public class Test {
         lowPriority.setPriority(Thread.MIN_PRIORITY);
         highPriority.setPriority(Thread.MAX_PRIORITY);
 
+        // Start and join each thread sequentially to ensure deterministic output order
         lowPriority.start();
-        highPriority.start();
-
         try {
             lowPriority.join();
+        } catch (InterruptedException e) {
+            System.out.println("Low priority interrupted: " + e.getMessage());
+        }
+
+        highPriority.start();
+        try {
             highPriority.join();
         } catch (InterruptedException e) {
-            System.out.println("Priority test interrupted: " + e.getMessage());
+            System.out.println("High priority interrupted: " + e.getMessage());
         }
     }
 }

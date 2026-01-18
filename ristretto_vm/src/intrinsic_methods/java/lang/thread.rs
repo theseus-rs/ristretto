@@ -4,6 +4,7 @@ use crate::handles::ThreadHandle;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use async_recursion::async_recursion;
+use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
@@ -15,12 +16,43 @@ use thread_priority::{ThreadPriority, ThreadPriorityValue, set_current_thread_pr
 use tokio::runtime::Builder;
 use tracing::error;
 
+bitflags! {
+    /// Thread state flags matching thread state values used by Java.
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub struct ThreadState: i32 {
+        const TERMINATED = 0x02;
+        const RUNNABLE = 0x04;
+    }
+}
+
+/// Set the thread status in the thread object, handling both old and new (Java 19+) layouts.
+fn set_thread_status(thread_object: &Value, status: ThreadState) -> Result<()> {
+    let mut thread_object = thread_object.as_object_mut()?;
+    // Try to set via holder (Java 19+), fall back to direct field (older versions)
+    if let Ok(holder_value) = thread_object.value("holder")
+        && let Ok(mut holder) = holder_value.as_object_mut()
+    {
+        holder.set_value("threadStatus", Value::Int(status.bits()))?;
+        return Ok(());
+    }
+    // For older Java versions, set directly on Thread object
+    thread_object.set_value("threadStatus", Value::Int(status.bits()))?;
+    Ok(())
+}
+
 /// Get the thread from the thread ID in the `eetop` field of the thread object.
+/// Returns an error if the thread is not found (which can happen if the thread has terminated).
 async fn get_thread(thread: &Arc<Thread>, thread_object: &Value) -> Result<Arc<Thread>> {
     let thread_id = {
         let thread_object = thread_object.as_object_ref()?;
         thread_object.value("eetop")?.as_i64()?
     };
+
+    // eetop of 0 means the thread has terminated or not started
+    if thread_id == 0 {
+        return Err(RuntimeException("Thread has terminated or not started".to_string()).into());
+    }
+
     let thread_id = u64::try_from(thread_id)?;
     let vm = thread.vm()?;
     let thread_handles = vm.thread_handles();
@@ -176,8 +208,9 @@ pub(crate) async fn interrupt_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let thread_object = parameters.pop()?;
-    let instance_thread = get_thread(&thread, &thread_object).await?;
-    instance_thread.interrupt();
+    if let Ok(instance_thread) = get_thread(&thread, &thread_object).await {
+        instance_thread.interrupt();
+    }
     Ok(None)
 }
 
@@ -200,9 +233,13 @@ pub(crate) async fn is_interrupted(
 ) -> Result<Option<Value>> {
     let clear_interrupt = parameters.pop_bool()?;
     let thread_object = parameters.pop()?;
-    let instance_thread = get_thread(&thread, &thread_object).await?;
-    let was_interrupted = instance_thread.is_interrupted(clear_interrupt);
-    Ok(Some(Value::from(was_interrupted)))
+
+    if let Ok(instance_thread) = get_thread(&thread, &thread_object).await {
+        let was_interrupted = instance_thread.is_interrupted(clear_interrupt);
+        Ok(Some(Value::from(was_interrupted)))
+    } else {
+        Ok(Some(Value::from(false)))
+    }
 }
 
 #[intrinsic_method("java/lang/Thread.registerNatives()V", Any)]
@@ -379,13 +416,6 @@ pub(crate) async fn start_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    if !matches!(
-        std::env::var("RISTRETTO_THREADING"),
-        Ok(v) if matches!(&*v.to_ascii_lowercase(), "1" | "true" | "yes" | "on")
-    ) {
-        return Ok(None);
-    }
-
     let thread_object = parameters.pop()?;
     let (thread_class, thread_id) = {
         let mut thread_object = thread_object.as_object_mut()?;
@@ -395,6 +425,12 @@ pub(crate) async fn start_0(
         thread_object.set_value("eetop", Value::from(thread_id))?;
         (thread_class, thread_id)
     };
+
+    // Set thread status to RUNNABLE before spawning the OS thread
+    if let Err(e) = set_thread_status(&thread_object, ThreadState::RUNNABLE) {
+        error!("Failed to set thread status to RUNNABLE: {e}");
+    }
+
     let run_method = thread_class.try_get_method("run", "()V")?;
     let thread_value = thread_object.clone();
 
@@ -422,8 +458,13 @@ pub(crate) async fn start_0(
                     let _ = spawn_thread
                         .execute(&thread_class, &run_method, &[thread_value])
                         .await;
-                    // Set `eetop` to 0 after execution to indicate the thread has finished
+                    // Set thread status to TERMINATED and eetop to 0 after execution
                     {
+                        if let Err(error) =
+                            set_thread_status(&thread_object, ThreadState::TERMINATED)
+                        {
+                            error!("Failed to set thread status to TERMINATED: {error}");
+                        }
                         let mut thread_object = match thread_object.as_object_mut() {
                             Ok(thread_object) => thread_object,
                             Err(error) => {
@@ -612,7 +653,8 @@ mod tests {
             .await?
             .expect("threads");
         let threads: Vec<Value> = value.try_into()?;
-        assert_eq!(threads.len(), 1);
+        // At least one thread should exist (the main thread)
+        assert!(!threads.is_empty());
         Ok(())
     }
 

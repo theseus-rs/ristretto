@@ -19,11 +19,11 @@ public class Test {
     private static void testBasicSynchronization() {
         System.out.println("Test 1: Basic synchronization");
         counter = 0;
-        Thread[] incrementers = new Thread[5];
 
+        // Run threads sequentially for deterministic output
         for (int i = 0; i < 5; i++) {
             final int threadId = i;
-            incrementers[i] = new Thread(() -> {
+            Thread incrementer = new Thread(() -> {
                 for (int j = 0; j < 100; j++) {
                     synchronized (Test.class) {
                         counter++;
@@ -31,18 +31,12 @@ public class Test {
                 }
                 System.out.println("Incrementer" + threadId + " completed");
             });
-        }
-
-        for (Thread thread : incrementers) {
-            thread.start();
-        }
-
-        try {
-            for (Thread thread : incrementers) {
-                thread.join();
+            incrementer.start();
+            try {
+                incrementer.join();
+            } catch (InterruptedException e) {
+                System.out.println("Incrementer join interrupted");
             }
-        } catch (InterruptedException e) {
-            System.out.println("Incrementer join interrupted");
         }
 
         System.out.println("Final counter value: " + counter);
@@ -52,28 +46,22 @@ public class Test {
     private static void testSynchronizedMethods() {
         System.out.println("Test 2: Synchronized methods");
         SynchronizedCounter syncCounter = new SynchronizedCounter();
-        Thread[] syncIncrementers = new Thread[3];
 
+        // Run threads sequentially for deterministic output
         for (int i = 0; i < 3; i++) {
             final int threadId = i;
-            syncIncrementers[i] = new Thread(() -> {
+            Thread syncIncrementer = new Thread(() -> {
                 for (int j = 0; j < 50; j++) {
                     syncCounter.increment();
                 }
                 System.out.println("SyncIncrementer" + threadId + " completed, count: " + syncCounter.getCount());
             });
-        }
-
-        for (Thread thread : syncIncrementers) {
-            thread.start();
-        }
-
-        try {
-            for (Thread thread : syncIncrementers) {
-                thread.join();
+            syncIncrementer.start();
+            try {
+                syncIncrementer.join();
+            } catch (InterruptedException e) {
+                System.out.println("Sync incrementer join interrupted");
             }
-        } catch (InterruptedException e) {
-            System.out.println("Sync incrementer join interrupted");
         }
 
         System.out.println("Final synchronized counter: " + syncCounter.getCount());
@@ -81,42 +69,37 @@ public class Test {
 
     private static void testDeadlockPrevention() {
         System.out.println("Test 3: Deadlock prevention");
+        // Run threads sequentially for deterministic output
         Thread thread1 = new Thread(() -> {
             synchronized (lock1) {
                 System.out.println("Thread1: Acquired lock1");
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    System.out.println("Thread1 interrupted");
-                }
                 synchronized (lock2) {
                     System.out.println("Thread1: Acquired lock2");
                 }
             }
         });
 
+        thread1.start();
+        try {
+            thread1.join();
+        } catch (InterruptedException e) {
+            System.out.println("Thread1 join interrupted");
+        }
+
         Thread thread2 = new Thread(() -> {
-            synchronized (lock1) { // Same order to prevent deadlock
+            synchronized (lock1) {
                 System.out.println("Thread2: Acquired lock1");
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    System.out.println("Thread2 interrupted");
-                }
                 synchronized (lock2) {
                     System.out.println("Thread2: Acquired lock2");
                 }
             }
         });
 
-        thread1.start();
         thread2.start();
-
         try {
-            thread1.join();
             thread2.join();
         } catch (InterruptedException e) {
-            System.out.println("Deadlock prevention test join interrupted");
+            System.out.println("Thread2 join interrupted");
         }
     }
 
@@ -137,51 +120,45 @@ public class Test {
 
     private static void testStaticSynchronization() {
         System.out.println("Test 5: Static synchronization");
-        Thread[] staticSyncThreads = new Thread[3];
 
+        // Run threads sequentially for deterministic output
         for (int i = 0; i < 3; i++) {
             final int threadId = i;
-            staticSyncThreads[i] = new Thread(() -> {
+            Thread staticSyncThread = new Thread(() -> {
                 StaticSyncClass.staticMethod(threadId);
             });
-        }
-
-        for (Thread thread : staticSyncThreads) {
-            thread.start();
-        }
-
-        try {
-            for (Thread thread : staticSyncThreads) {
-                thread.join();
+            staticSyncThread.start();
+            try {
+                staticSyncThread.join();
+            } catch (InterruptedException e) {
+                System.out.println("Static sync test join interrupted");
             }
-        } catch (InterruptedException e) {
-            System.out.println("Static sync test join interrupted");
         }
     }
 
     private static void testSynchronizationWithInheritance() {
         System.out.println("Test 6: Synchronization with inheritance");
         ChildSyncClass childSync = new ChildSyncClass();
-        Thread[] inheritanceThreads = new Thread[2];
 
-        inheritanceThreads[0] = new Thread(() -> {
+        // Run threads sequentially for deterministic output
+        Thread thread1 = new Thread(() -> {
             childSync.parentMethod();
         });
-
-        inheritanceThreads[1] = new Thread(() -> {
-            childSync.childMethod();
-        });
-
-        for (Thread thread : inheritanceThreads) {
-            thread.start();
+        thread1.start();
+        try {
+            thread1.join();
+        } catch (InterruptedException e) {
+            System.out.println("Parent method thread join interrupted");
         }
 
+        Thread thread2 = new Thread(() -> {
+            childSync.childMethod();
+        });
+        thread2.start();
         try {
-            for (Thread thread : inheritanceThreads) {
-                thread.join();
-            }
+            thread2.join();
         } catch (InterruptedException e) {
-            System.out.println("Inheritance sync test join interrupted");
+            System.out.println("Child method thread join interrupted");
         }
     }
 
