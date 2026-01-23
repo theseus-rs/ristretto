@@ -4,7 +4,8 @@ use crate::module::descriptor::ModuleDescriptor;
 use crate::module::error::{ModuleError, Result};
 use crate::module::finder::ModuleFinder;
 use crate::module::reference::ModuleReference;
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
+use ahash::{AHashMap, AHashSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// A resolved module in a configuration.
 #[derive(Clone, Debug)]
@@ -65,13 +66,13 @@ impl ResolvedModule {
 #[derive(Debug)]
 pub struct Resolver {
     /// Additional reads to add (from --add-reads).
-    add_reads: HashMap<String, HashSet<String>>,
+    add_reads: AHashMap<String, AHashSet<String>>,
     /// Additional exports to add (from --add-exports).
-    add_exports: HashMap<String, HashMap<String, HashSet<String>>>,
+    add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>>,
     /// Additional opens to add (from --add-opens).
-    add_opens: HashMap<String, HashMap<String, HashSet<String>>>,
+    add_opens: AHashMap<String, AHashMap<String, AHashSet<String>>>,
     /// Modules to limit (from --limit-modules).
-    limit_modules: Option<HashSet<String>>,
+    limit_modules: Option<AHashSet<String>>,
 }
 
 impl Resolver {
@@ -79,9 +80,9 @@ impl Resolver {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            add_reads: HashMap::new(),
-            add_exports: HashMap::new(),
-            add_opens: HashMap::new(),
+            add_reads: AHashMap::default(),
+            add_exports: AHashMap::default(),
+            add_opens: AHashMap::default(),
             limit_modules: None,
         }
     }
@@ -112,7 +113,7 @@ impl Resolver {
     }
 
     /// Sets the limit-modules set.
-    pub fn set_limit_modules(&mut self, modules: HashSet<String>) {
+    pub fn set_limit_modules(&mut self, modules: AHashSet<String>) {
         self.limit_modules = Some(modules);
     }
 
@@ -129,7 +130,7 @@ impl Resolver {
         let mut resolved: BTreeMap<String, ResolvedModule> = BTreeMap::new();
         let mut package_to_module: BTreeMap<String, String> = BTreeMap::new();
         let mut queue: VecDeque<String> = VecDeque::new();
-        let mut visited: HashSet<String> = HashSet::new();
+        let mut visited: AHashSet<String> = AHashSet::default();
 
         // Seed with root modules
         for root in root_modules {
@@ -251,7 +252,7 @@ impl Resolver {
     /// Computes transitive readability (requires transitive).
     fn compute_transitive_reads(resolved: &mut BTreeMap<String, ResolvedModule>) {
         // Build a map of which modules export transitively to which
-        let mut transitive_exports: HashMap<String, Vec<String>> = HashMap::new();
+        let mut transitive_exports: AHashMap<String, Vec<String>> = AHashMap::default();
 
         for (name, module) in resolved.iter() {
             for req in &module.descriptor().requires {
@@ -273,7 +274,7 @@ impl Resolver {
                 module.reads.iter().cloned().collect()
             };
 
-            let mut additional_reads = HashSet::new();
+            let mut additional_reads = AHashSet::default();
 
             for read in &reads_clone {
                 // If the read module transitively requires something, we also read it
@@ -281,7 +282,7 @@ impl Resolver {
                     read,
                     &transitive_exports,
                     &mut additional_reads,
-                    &mut HashSet::new(),
+                    &mut AHashSet::default(),
                 );
             }
 
@@ -295,9 +296,9 @@ impl Resolver {
 
     fn collect_transitive_reads(
         module_name: &str,
-        transitive_exports: &HashMap<String, Vec<String>>,
-        result: &mut HashSet<String>,
-        visited: &mut HashSet<String>,
+        transitive_exports: &AHashMap<String, Vec<String>>,
+        result: &mut AHashSet<String>,
+        visited: &mut AHashSet<String>,
     ) {
         if visited.contains(module_name) {
             return;
@@ -327,9 +328,9 @@ pub struct ResolvedConfiguration {
     /// Package to module mapping.
     pub(crate) package_to_module: BTreeMap<String, String>,
     /// Additional exports (from --add-exports).
-    pub(crate) add_exports: HashMap<String, HashMap<String, HashSet<String>>>,
+    pub(crate) add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>>,
     /// Additional opens (from --add-opens).
-    pub(crate) add_opens: HashMap<String, HashMap<String, HashSet<String>>>,
+    pub(crate) add_opens: AHashMap<String, AHashMap<String, AHashSet<String>>>,
 }
 
 impl ResolvedConfiguration {
@@ -339,8 +340,8 @@ impl ResolvedConfiguration {
         Self {
             resolved: BTreeMap::new(),
             package_to_module: BTreeMap::new(),
-            add_exports: HashMap::new(),
-            add_opens: HashMap::new(),
+            add_exports: AHashMap::default(),
+            add_opens: AHashMap::default(),
         }
     }
 
@@ -349,8 +350,8 @@ impl ResolvedConfiguration {
     pub fn new(
         resolved: BTreeMap<String, ResolvedModule>,
         package_to_module: BTreeMap<String, String>,
-        add_exports: HashMap<String, HashMap<String, HashSet<String>>>,
-        add_opens: HashMap<String, HashMap<String, HashSet<String>>>,
+        add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>>,
+        add_opens: AHashMap<String, AHashMap<String, AHashSet<String>>>,
     ) -> Self {
         Self {
             resolved,
@@ -449,13 +450,13 @@ impl ResolvedConfiguration {
 
     /// Returns the `add_exports` map for use by the access checker.
     #[must_use]
-    pub fn add_exports(&self) -> &HashMap<String, HashMap<String, HashSet<String>>> {
+    pub fn add_exports(&self) -> &AHashMap<String, AHashMap<String, AHashSet<String>>> {
         &self.add_exports
     }
 
     /// Returns the `add_opens` map for use by the access checker.
     #[must_use]
-    pub fn add_opens(&self) -> &HashMap<String, HashMap<String, HashSet<String>>> {
+    pub fn add_opens(&self) -> &AHashMap<String, AHashMap<String, AHashSet<String>>> {
         &self.add_opens
     }
 }

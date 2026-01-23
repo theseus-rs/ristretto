@@ -11,7 +11,7 @@
 //! - [JVMS §4.9 - Constraints on Java Virtual Machine Code](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.9)
 //! - [JVMS §4.10.1 - Verification by Type Checking](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1)
 
-use std::collections::HashSet;
+use ahash::AHashSet;
 
 use crate::attributes::{ExceptionTableEntry, Instruction, StackFrame};
 use crate::verifiers::error::{Result, VerifyError};
@@ -26,7 +26,7 @@ pub struct CodeInfo {
     instruction_offsets: Vec<u16>,
 
     /// Set of valid instruction start offsets for O(1) lookup.
-    valid_offsets: HashSet<u16>,
+    valid_offsets: AHashSet<u16>,
 
     /// Total length of the code array in bytes.
     code_length: u16,
@@ -44,7 +44,7 @@ impl CodeInfo {
     /// * `code_length` - Total length of the code array
     #[must_use]
     pub fn new(instruction_offsets: Vec<u16>, code_length: u16) -> Self {
-        let valid_offsets: HashSet<u16> = instruction_offsets.iter().copied().collect();
+        let valid_offsets: AHashSet<u16> = instruction_offsets.iter().copied().collect();
         let instruction_count = instruction_offsets.len();
         Self {
             instruction_offsets,

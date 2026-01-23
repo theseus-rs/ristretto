@@ -26,6 +26,7 @@ use crate::local_type::LocalType;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{JitValue, Result, control_flow_graph};
+use ahash::AHashMap;
 use cranelift::codegen::ir::{FuncRef, UserFuncName};
 use cranelift::codegen::settings::Flags;
 use cranelift::jit::{JITBuilder, JITModule};
@@ -35,7 +36,6 @@ use ristretto_classfile::attributes::{Attribute, Instruction};
 use ristretto_classfile::{
     BaseType, ClassFile, ConstantPool, FieldType, Method, MethodAccessFlags,
 };
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::mem;
 
@@ -398,7 +398,7 @@ impl Compiler {
     fn process_instruction(
         constant_pool: &ConstantPool,
         function_builder: &mut FunctionBuilder,
-        blocks: &HashMap<usize, Block>,
+        blocks: &AHashMap<usize, Block>,
         locals: &mut LocalVariables,
         stack: &mut OperandStack,
         program_counter: usize,

@@ -1,21 +1,21 @@
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
+use ahash::AHashMap;
 use ristretto_classloader::Value;
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// A thread-safe string pool that allows for efficient storage and retrieval of string values
 #[derive(Debug)]
 pub struct StringPool {
-    strings: Arc<RwLock<HashMap<String, Value>>>,
+    strings: Arc<RwLock<AHashMap<String, Value>>>,
 }
 
 impl StringPool {
     /// Creates a new empty string pool
     pub fn new() -> Self {
         StringPool {
-            strings: Arc::new(RwLock::new(HashMap::new())),
+            strings: Arc::new(RwLock::new(AHashMap::default())),
         }
     }
 

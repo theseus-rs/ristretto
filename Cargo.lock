@@ -20,6 +20,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ahash"
+version = "0.8.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a15f179cd60c4584b8a8c596927aadc462e27f2ca70c04e0071964a73ba7a75"
+dependencies = [
+ "cfg-if",
+ "getrandom 0.3.4",
+ "once_cell",
+ "version_check",
+ "zerocopy",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1089,7 +1102,7 @@ version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 dependencies = [
- "ahash",
+ "ahash 0.7.8",
 ]
 
 [[package]]
@@ -1455,9 +1468,9 @@ checksum = "bcc35a38544a891a5f7c865aca548a982ccb3b8650a5b06d0fd33a10283c56fc"
 
 [[package]]
 name = "libm"
-version = "0.2.15"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
+checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "libredox"
@@ -2409,6 +2422,7 @@ dependencies = [
 name = "ristretto_classfile"
 version = "0.27.0"
 dependencies = [
+ "ahash 0.8.12",
  "anyhow",
  "bitflags 2.10.0",
  "byteorder",
@@ -2427,6 +2441,7 @@ dependencies = [
 name = "ristretto_classloader"
 version = "0.27.0"
 dependencies = [
+ "ahash 0.8.12",
  "bytemuck",
  "criterion",
  "flate2",
@@ -2437,7 +2452,6 @@ dependencies = [
  "ristretto_classfile",
  "ristretto_gc",
  "ristretto_jimage",
- "rustc-hash",
  "serde",
  "serde_plain",
  "tar",
@@ -2454,6 +2468,7 @@ dependencies = [
 name = "ristretto_cli"
 version = "0.27.0"
 dependencies = [
+ "ahash 0.8.12",
  "anstyle",
  "clap",
  "os_info",
@@ -2492,6 +2507,7 @@ dependencies = [
 name = "ristretto_jit"
 version = "0.27.0"
 dependencies = [
+ "ahash 0.8.12",
  "cranelift",
  "indexmap",
  "ristretto_classfile",
@@ -2503,7 +2519,6 @@ name = "ristretto_macros"
 version = "0.27.0"
 dependencies = [
  "async-recursion",
- "proc-macro2",
  "quote",
  "ristretto_classfile",
  "syn 2.0.114",
@@ -2513,10 +2528,10 @@ dependencies = [
 name = "ristretto_vm"
 version = "0.27.0"
 dependencies = [
+ "ahash 0.8.12",
  "async-recursion",
  "bitflags 2.10.0",
  "byte-unit",
- "bytemuck",
  "byteorder",
  "console",
  "criterion",

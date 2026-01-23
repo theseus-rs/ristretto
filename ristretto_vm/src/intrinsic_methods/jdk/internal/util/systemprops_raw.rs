@@ -4,12 +4,12 @@ use crate::intrinsic_methods::properties;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
+use ahash::AHashMap;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 #[intrinsic_method(
@@ -91,7 +91,7 @@ pub(crate) async fn platform_properties(
 }
 
 fn push_property(
-    system_properties: &mut HashMap<&str, Value>,
+    system_properties: &mut AHashMap<&str, Value>,
     properties: &mut Vec<Value>,
     property_name: &str,
 ) -> Result<()> {

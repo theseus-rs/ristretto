@@ -14,6 +14,7 @@ version.workspace = true
 workspace = true
 
 [dependencies]
+ahash = { workspace = true }
 bytemuck = { workspace = true }
 flate2 = { workspace = true }
 indexmap = { workspace = true }
@@ -22,7 +23,6 @@ reqwest = { workspace = true, features = ["json", "query"] }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.27.0" }
 ristretto_gc = { path = "../ristretto_gc", version = "0.27.0" }
 ristretto_jimage = { path = "../ristretto_jimage", version = "0.27.0" }
-rustc-hash = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_plain = { workspace = true }
 tar = { workspace = true }

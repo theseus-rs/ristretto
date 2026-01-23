@@ -2,12 +2,12 @@ use crate::Result;
 use crate::module_system::{ALL_UNNAMED, DefinedModule};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
+use ahash::AHashSet;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThan, GreaterThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Helper function to get the module name from a Module object.
@@ -162,8 +162,8 @@ pub(crate) async fn add_reads_0(
 }
 
 /// Helper to extract packages from a String[] or Object[] array.
-fn extract_packages(packages_value: &Value) -> Result<HashSet<String>> {
-    let mut packages = HashSet::new();
+fn extract_packages(packages_value: &Value) -> Result<AHashSet<String>> {
+    let mut packages = AHashSet::default();
     if packages_value.is_null() {
         return Ok(packages);
     }

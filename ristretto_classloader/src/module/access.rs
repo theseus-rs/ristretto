@@ -394,7 +394,8 @@ mod tests {
     use crate::module::descriptor::{Exports, ModuleDescriptor, Opens};
     use crate::module::reference::ModuleReference;
     use crate::module::resolution::{ResolvedConfiguration, ResolvedModule};
-    use std::collections::{BTreeMap, HashMap, HashSet};
+    use ahash::{AHashMap, AHashSet};
+    use std::collections::BTreeMap;
 
     /// Creates a test module descriptor.
     fn create_descriptor(name: &str) -> ModuleDescriptor {
@@ -459,13 +460,18 @@ mod tests {
             resolved.insert(name, module);
         }
 
-        ResolvedConfiguration::new(resolved, package_to_module, HashMap::new(), HashMap::new())
+        ResolvedConfiguration::new(
+            resolved,
+            package_to_module,
+            AHashMap::default(),
+            AHashMap::default(),
+        )
     }
 
     /// Creates a test configuration with add-exports.
     fn create_config_with_exports(
         modules: Vec<ResolvedModule>,
-        add_exports: HashMap<String, HashMap<String, HashSet<String>>>,
+        add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>>,
     ) -> ResolvedConfiguration {
         let mut resolved = BTreeMap::new();
         let mut package_to_module = BTreeMap::new();
@@ -478,13 +484,18 @@ mod tests {
             resolved.insert(name, module);
         }
 
-        ResolvedConfiguration::new(resolved, package_to_module, add_exports, HashMap::new())
+        ResolvedConfiguration::new(
+            resolved,
+            package_to_module,
+            add_exports,
+            AHashMap::default(),
+        )
     }
 
     /// Creates a test configuration with add-opens.
     fn create_config_with_opens(
         modules: Vec<ResolvedModule>,
-        add_opens: HashMap<String, HashMap<String, HashSet<String>>>,
+        add_opens: AHashMap<String, AHashMap<String, AHashSet<String>>>,
     ) -> ResolvedConfiguration {
         let mut resolved = BTreeMap::new();
         let mut package_to_module = BTreeMap::new();
@@ -497,7 +508,7 @@ mod tests {
             resolved.insert(name, module);
         }
 
-        ResolvedConfiguration::new(resolved, package_to_module, HashMap::new(), add_opens)
+        ResolvedConfiguration::new(resolved, package_to_module, AHashMap::default(), add_opens)
     }
 
     // ==================== AccessCheckResult tests ====================
@@ -684,9 +695,10 @@ mod tests {
         let module_b = create_resolved_module(create_descriptor("module.b"), vec![]); // No exports
 
         // Add --add-exports module.b/module.b/internal=module.a
-        let mut add_exports: HashMap<String, HashMap<String, HashSet<String>>> = HashMap::new();
-        let mut package_map = HashMap::new();
-        let mut targets = HashSet::new();
+        let mut add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>> =
+            AHashMap::default();
+        let mut package_map = AHashMap::default();
+        let mut targets = AHashSet::default();
         targets.insert("module.a".to_string());
         package_map.insert("module.b/internal".to_string(), targets);
         add_exports.insert("module.b".to_string(), package_map);
@@ -776,9 +788,10 @@ mod tests {
         let module_b = create_resolved_module(descriptor_b, vec![]);
 
         // Add --add-opens module.b/module.b/api=module.a
-        let mut add_opens: HashMap<String, HashMap<String, HashSet<String>>> = HashMap::new();
-        let mut package_map = HashMap::new();
-        let mut targets = HashSet::new();
+        let mut add_opens: AHashMap<String, AHashMap<String, AHashSet<String>>> =
+            AHashMap::default();
+        let mut package_map = AHashMap::default();
+        let mut targets = AHashSet::default();
         targets.insert("module.a".to_string());
         package_map.insert("module.b/api".to_string(), targets);
         add_opens.insert("module.b".to_string(), package_map);
@@ -827,9 +840,10 @@ mod tests {
         let module_b = create_resolved_module(create_descriptor("module.b"), vec![]);
 
         // Add --add-exports module.b/module.b/internal=ALL-UNNAMED
-        let mut add_exports: HashMap<String, HashMap<String, HashSet<String>>> = HashMap::new();
-        let mut package_map = HashMap::new();
-        let mut targets = HashSet::new();
+        let mut add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>> =
+            AHashMap::default();
+        let mut package_map = AHashMap::default();
+        let mut targets = AHashSet::default();
         targets.insert(UNNAMED_MODULE.to_string());
         package_map.insert("module.b/internal".to_string(), targets);
         add_exports.insert("module.b".to_string(), package_map);

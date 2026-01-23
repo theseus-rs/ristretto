@@ -14,6 +14,8 @@ pub(crate) async fn thread() -> Result<(Arc<VM>, Arc<Thread>)> {
         .class_path(class_path.clone())
         // Disable verification for tests that use synthetic test classes
         .verify_mode(VerifyMode::None)
+        // Disable batch compilation to reduce test runtime
+        .batch_compilation(false)
         .build()?;
     let vm = VM::new(configuration).await?;
     let weak_vm = Arc::downgrade(&vm);

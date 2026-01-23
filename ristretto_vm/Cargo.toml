@@ -19,16 +19,17 @@ path = "src/lib.rs"
 workspace = true
 
 [build-dependencies]
+ahash = { workspace = true }
 phf_codegen = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.27.0" }
 syn = { workspace = true }
 walkdir = { workspace = true }
 
 [dependencies]
+ahash = { workspace = true }
 async-recursion = { workspace = true }
 bitflags = { workspace = true }
 byte-unit = { workspace = true }
-bytemuck = { workspace = true }
 byteorder = { workspace = true }
 console = { workspace = true }
 dashmap = { workspace = true }
@@ -83,6 +84,14 @@ rustls-tls = [
 startup-trace = []
 url = [
     "ristretto_classloader/url",
+]
+
+[package.metadata.cargo-machete]
+ignored = [
+    # used by async functions in proc macros
+    "async-recursion",
+    # used by wasm target
+    "getrandom",
 ]
 
 [[bench]]

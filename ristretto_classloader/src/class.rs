@@ -1,12 +1,12 @@
 use crate::Error::{FieldNotFound, InternalError, MethodNotFound, PoisonedLock};
 use crate::field::FieldKey;
 use crate::{ClassLoader, Field, Method, Result, Value};
+use ahash::AHashMap;
 use indexmap::IndexMap;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
     ClassAccessFlags, ClassFile, Constant, ConstantPool, FieldAccessFlags, MethodAccessFlags,
 };
-use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::sync::{Arc, LazyLock, RwLock, Weak};
@@ -27,9 +27,9 @@ use tokio::sync::Notify;
 /// TODO: This implementation should likely be refactored to use a more dynamic approach that looks
 ///       for the `PolymorphicSignature` annotation in the method attributes, rather than hardcoding
 ///       the method names and classes.
-pub static POLYMORPHIC_METHODS: LazyLock<HashMap<(&'static str, &'static str), &'static str>> =
+pub static POLYMORPHIC_METHODS: LazyLock<AHashMap<(&'static str, &'static str), &'static str>> =
     LazyLock::new(|| {
-        let mut map = HashMap::new();
+        let mut map = AHashMap::default();
         // MethodHandle polymorphic methods
         map.insert(
             ("java/lang/invoke/MethodHandle", "invoke"),

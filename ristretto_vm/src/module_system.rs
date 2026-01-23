@@ -21,13 +21,14 @@
 use crate::Configuration;
 use crate::JavaError::{IllegalAccessError, InaccessibleObjectException};
 use crate::Result;
+use ahash::{AHashMap, AHashSet};
 use parking_lot::RwLock;
 use ristretto_classloader::Value;
 use ristretto_classloader::module::{
     AccessCheck, ModuleFinder, ModuleFinderChain, ModulePathFinder, ResolvedConfiguration,
     Resolver, SystemModuleFinder,
 };
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
@@ -58,19 +59,19 @@ pub struct ModuleSystem {
 
     /// Dynamic exports: `source_module` -> (package -> set of target modules).
     /// An entry means the package is exported from `source_module` to the targets.
-    exports: RwLock<HashMap<String, HashMap<String, HashSet<String>>>>,
+    exports: RwLock<AHashMap<String, AHashMap<String, AHashSet<String>>>>,
 
     /// Dynamic opens: `source_module` -> (package -> set of target modules).
     /// An entry means the package is opened from `source_module` to the targets.
-    opens: RwLock<HashMap<String, HashMap<String, HashSet<String>>>>,
+    opens: RwLock<AHashMap<String, AHashMap<String, AHashSet<String>>>>,
 
     /// Dynamic reads: `source_module` -> set of target modules.
     /// An entry means `source_module` can read the targets.
-    reads: RwLock<HashMap<String, HashSet<String>>>,
+    reads: RwLock<AHashMap<String, AHashSet<String>>>,
 
     /// Defined modules: `module_name` -> module info.
     /// Tracks modules that have been defined via `Module.defineModule0`.
-    modules: RwLock<HashMap<String, DefinedModule>>,
+    modules: RwLock<AHashMap<String, DefinedModule>>,
 
     /// The boot class loader's unnamed module.
     /// This is set by `BootLoader.setBootLoaderUnnamedModule0` during JVM initialization
@@ -90,7 +91,7 @@ pub struct DefinedModule {
     /// Module location (optional, e.g., path to JAR).
     pub location: Option<String>,
     /// Packages contained in this module.
-    pub packages: HashSet<String>,
+    pub packages: AHashSet<String>,
     /// The java.lang.Module object for this module (set during defineModule0).
     pub module_object: Option<Value>,
 }
@@ -104,7 +105,7 @@ impl DefinedModule {
             is_open,
             version: None,
             location: None,
-            packages: HashSet::new(),
+            packages: AHashSet::default(),
             module_object: None,
         }
     }
@@ -118,6 +119,9 @@ impl ModuleSystem {
     /// 2. Loads modules from the module path (if specified)
     /// 3. Resolves the module graph starting from root modules
     /// 4. Applies command-line overrides (--add-reads, --add-exports, --add-opens)
+    ///
+    /// For simple classpath-based applications (no module path, no main module), this skips
+    /// expensive module resolution and uses a fast path.
     ///
     /// # Errors
     ///
@@ -135,6 +139,20 @@ impl ModuleSystem {
         // For Java 8 and earlier, there's no module system; use configuration with overrides only
         if java_major_version <= 8 {
             debug!("Java 8 or earlier; module system disabled");
+            module_system.resolved_configuration =
+                Self::create_fallback_configuration(configuration);
+            return Ok(module_system);
+        }
+
+        // Fast path: Skip expensive module resolution for simple classpath applications
+        // that don't use JPMS features (no module path, no main module, no custom limits)
+        let is_simple_classpath_app = configuration.module_path().is_empty()
+            && configuration.main_module().is_none()
+            && configuration.limit_modules().is_empty()
+            && configuration.upgrade_module_path().is_empty();
+
+        if is_simple_classpath_app {
+            debug!("Simple classpath application; skipping full module resolution");
             module_system.resolved_configuration =
                 Self::create_fallback_configuration(configuration);
             return Ok(module_system);
@@ -187,10 +205,10 @@ impl ModuleSystem {
     pub fn empty() -> Self {
         Self {
             resolved_configuration: ResolvedConfiguration::empty(),
-            exports: RwLock::new(HashMap::new()),
-            opens: RwLock::new(HashMap::new()),
-            reads: RwLock::new(HashMap::new()),
-            modules: RwLock::new(HashMap::new()),
+            exports: RwLock::new(AHashMap::default()),
+            opens: RwLock::new(AHashMap::default()),
+            reads: RwLock::new(AHashMap::default()),
+            modules: RwLock::new(AHashMap::default()),
             boot_unnamed_module: RwLock::new(None),
         }
     }
@@ -418,10 +436,10 @@ impl ModuleSystem {
     /// - No jimage file found
     /// - Module resolution fails
     fn create_fallback_configuration(configuration: &Configuration) -> ResolvedConfiguration {
-        let add_exports: HashMap<String, HashMap<String, HashSet<String>>> = configuration
+        let add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>> = configuration
             .add_exports()
             .iter()
-            .fold(HashMap::new(), |mut acc, export| {
+            .fold(AHashMap::default(), |mut acc, export| {
                 acc.entry(export.source.clone())
                     .or_default()
                     .entry(export.package.clone())
@@ -430,10 +448,10 @@ impl ModuleSystem {
                 acc
             });
 
-        let add_opens: HashMap<String, HashMap<String, HashSet<String>>> = configuration
+        let add_opens: AHashMap<String, AHashMap<String, AHashSet<String>>> = configuration
             .add_opens()
             .iter()
-            .fold(HashMap::new(), |mut acc, opens| {
+            .fold(AHashMap::default(), |mut acc, opens| {
                 acc.entry(opens.source.clone())
                     .or_default()
                     .entry(opens.package.clone())
@@ -662,19 +680,19 @@ impl ModuleSystem {
 
     /// Returns all dynamic exports for merging with static configuration.
     #[must_use]
-    pub fn get_all_exports(&self) -> HashMap<String, HashMap<String, HashSet<String>>> {
+    pub fn get_all_exports(&self) -> AHashMap<String, AHashMap<String, AHashSet<String>>> {
         self.exports.read().clone()
     }
 
     /// Returns all dynamic opens for merging with static configuration.
     #[must_use]
-    pub fn get_all_opens(&self) -> HashMap<String, HashMap<String, HashSet<String>>> {
+    pub fn get_all_opens(&self) -> AHashMap<String, AHashMap<String, AHashSet<String>>> {
         self.opens.read().clone()
     }
 
     /// Returns all dynamic reads for merging with static configuration.
     #[must_use]
-    pub fn get_all_reads(&self) -> HashMap<String, HashSet<String>> {
+    pub fn get_all_reads(&self) -> AHashMap<String, AHashSet<String>> {
         self.reads.read().clone()
     }
 

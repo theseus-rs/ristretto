@@ -2,10 +2,10 @@ use crate::Error::InternalError;
 use crate::Result;
 use crate::control_flow_graph::instruction;
 use crate::control_flow_graph::type_stack::TypeStack;
+use ahash::AHashMap;
 use cranelift::prelude::{Block, FunctionBuilder, Type};
 use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::{ExceptionTableEntry, Instruction};
-use std::collections::HashMap;
 
 /// Creates a control flow graph of blocks for a function by analyzing the instructions.
 ///
@@ -20,9 +20,9 @@ pub(crate) fn get_blocks(
     constant_pool: &ConstantPool,
     instructions: &[Instruction],
     exception_table: &[ExceptionTableEntry],
-) -> Result<HashMap<usize, Block>> {
-    let mut blocks = HashMap::new();
-    let mut stack_states: HashMap<usize, TypeStack> = HashMap::new();
+) -> Result<AHashMap<usize, Block>> {
+    let mut blocks = AHashMap::default();
+    let mut stack_states: AHashMap<usize, TypeStack> = AHashMap::default();
     let exception_handler_addresses = exception_table
         .iter()
         .map(|entry| usize::from(entry.handler_pc))
@@ -218,7 +218,7 @@ pub(crate) fn get_blocks(
 /// state already exists for the address, it validates that the new state matches the existing one
 /// to ensure that all paths to this instruction have compatible stack states.
 pub(crate) fn insert_stack(
-    stack_states: &mut HashMap<usize, TypeStack>,
+    stack_states: &mut AHashMap<usize, TypeStack>,
     address: usize,
     stack: &TypeStack,
 ) -> Result<()> {
@@ -250,9 +250,9 @@ pub(crate) fn insert_stack(
 /// edges.
 pub(crate) fn create_block_with_parameters(
     function_builder: &mut FunctionBuilder,
-    stack_states: &HashMap<usize, TypeStack>,
+    stack_states: &AHashMap<usize, TypeStack>,
     address: usize,
-    blocks: &mut HashMap<usize, Block>,
+    blocks: &mut AHashMap<usize, Block>,
 ) {
     blocks.entry(address).or_insert_with(|| {
         let block = function_builder.create_block();

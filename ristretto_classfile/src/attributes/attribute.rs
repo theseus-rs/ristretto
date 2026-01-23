@@ -16,8 +16,8 @@ use crate::error::Error::{InvalidAttributeLength, InvalidAttributeNameIndex};
 use crate::error::Result;
 use crate::version::Version;
 use crate::{JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_11, JAVA_16, JAVA_17, mutf8};
+use ahash::AHashMap;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::collections::HashMap;
 use std::fmt;
 use std::io::{Cursor, Read};
 
@@ -1093,7 +1093,7 @@ impl Attribute {
     fn from_bytes_code_attributes(
         constant_pool: &ConstantPool,
         bytes: &mut Cursor<Vec<u8>>,
-        byte_to_instruction_map: &HashMap<u16, u16>,
+        byte_to_instruction_map: &AHashMap<u16, u16>,
     ) -> Result<Vec<Attribute>> {
         let attributes_count = bytes.read_u16::<BigEndian>()?;
         let mut attributes = Vec::with_capacity(attributes_count as usize);
@@ -1586,7 +1586,7 @@ impl Attribute {
     fn to_bytes_code_attributes(
         attributes: &Vec<Attribute>,
         bytes: &mut Vec<u8>,
-        instruction_to_byte_map: &HashMap<u16, u16>,
+        instruction_to_byte_map: &AHashMap<u16, u16>,
     ) -> Result<()> {
         let attributes_length = u16::try_from(attributes.len())?;
         bytes.write_u16::<BigEndian>(attributes_length)?;

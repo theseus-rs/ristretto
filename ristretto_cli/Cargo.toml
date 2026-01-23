@@ -26,6 +26,7 @@ path = "src/main.rs"
 workspace = true
 
 [dependencies]
+ahash = { workspace = true }
 anstyle = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 os_info = { workspace = true }

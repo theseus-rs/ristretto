@@ -27,6 +27,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the local variable at the given index was not found.
+    #[inline]
     pub fn get(&self, index: usize) -> Result<Value> {
         match self.locals.get(index) {
             Some(value) => Ok(value.clone()),
@@ -39,6 +40,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the local variable at the given index was not found or if the value is not an int.
+    #[inline]
     pub fn get_int(&self, index: usize) -> Result<i32> {
         match self.locals.get(index) {
             Some(Value::Int(value)) => Ok(*value),
@@ -55,6 +57,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the local variable at the given index was not found or if the value is not a long.
+    #[inline]
     pub fn get_long(&self, index: usize) -> Result<i64> {
         match self.locals.get(index) {
             Some(Value::Long(value)) => Ok(*value),
@@ -71,6 +74,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the local variable at the given index was not found or if the value is not a float.
+    #[inline]
     pub fn get_float(&self, index: usize) -> Result<f32> {
         match self.locals.get(index) {
             Some(Value::Float(value)) => Ok(*value),
@@ -87,6 +91,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the local variable at the given index was not found or if the value is not a double.
+    #[inline]
     pub fn get_double(&self, index: usize) -> Result<f64> {
         match self.locals.get(index) {
             Some(Value::Double(value)) => Ok(*value),
@@ -120,6 +125,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the index is out of bounds.
+    #[inline]
     pub fn set(&mut self, index: usize, value: Value) -> Result<()> {
         if index >= self.locals.capacity() {
             return Err(InvalidLocalVariableIndex(index));
@@ -135,6 +141,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the index is out of bounds or if the value is not an int.
+    #[inline]
     pub fn set_int(&mut self, index: usize, value: i32) -> Result<()> {
         self.set(index, Value::Int(value))
     }
@@ -144,6 +151,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the index is out of bounds or if the value is not a long.
+    #[inline]
     pub fn set_long(&mut self, index: usize, value: i64) -> Result<()> {
         self.set(index, Value::Long(value))
     }
@@ -153,6 +161,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the index is out of bounds or if the value is not a float.
+    #[inline]
     pub fn set_float(&mut self, index: usize, value: f32) -> Result<()> {
         self.set(index, Value::Float(value))
     }
@@ -162,6 +171,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the index is out of bounds or if the value is not a double.
+    #[inline]
     pub fn set_double(&mut self, index: usize, value: f64) -> Result<()> {
         self.set(index, Value::Double(value))
     }
@@ -171,6 +181,7 @@ impl LocalVariables {
     /// # Errors
     ///
     /// if the index is out of bounds or if the value is not a null or object.
+    #[inline]
     pub fn set_object(&mut self, index: usize, value: Option<Gc<RwLock<Reference>>>) -> Result<()> {
         self.set(index, Value::Object(value))
     }

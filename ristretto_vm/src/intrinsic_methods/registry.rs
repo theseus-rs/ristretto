@@ -2,11 +2,12 @@ use crate::Result;
 use crate::intrinsic_methods::intrinsics;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25, Version};
+use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+use tracing::error;
 
 /// An intrinsic method represents a native Java method required by the Java Virtual Machine (JVM)
 /// that is implemented in Rust.
@@ -87,18 +88,15 @@ impl MethodRegistry {
     /// # Returns
     ///
     /// A new empty `MethodRegistry` configured for the specified Java version.
+    #[inline]
+    #[must_use]
     pub fn new(version: &Version) -> Self {
-        let java_major_version = version.java();
-        let methods = if java_major_version >= JAVA_25.java() {
-            &intrinsics::JAVA_25
-        } else if java_major_version >= JAVA_21.java() {
-            &intrinsics::JAVA_21
-        } else if java_major_version >= JAVA_17.java() {
-            &intrinsics::JAVA_17
-        } else if java_major_version >= JAVA_11.java() {
-            &intrinsics::JAVA_11
-        } else {
-            &intrinsics::JAVA_8
+        let methods = match version.major() {
+            69.. => &intrinsics::JAVA_25,
+            65.. => &intrinsics::JAVA_21,
+            61.. => &intrinsics::JAVA_17,
+            55.. => &intrinsics::JAVA_11,
+            _ => &intrinsics::JAVA_8,
         };
         MethodRegistry { methods }
     }
@@ -123,17 +121,44 @@ impl MethodRegistry {
         method_name: &str,
         method_descriptor: &str,
     ) -> Option<&IntrinsicMethod> {
-        // Create the method signature in the format "class_name.method_name(method_descriptor)"
-        // This is an optimization over using format!() for string concatenation.
-        let mut method_signature = String::with_capacity(
-            class_name.len() + 1 + method_name.len() + method_descriptor.len(),
-        );
-        method_signature.push_str(class_name);
-        method_signature.push('.');
-        method_signature.push_str(method_name);
-        method_signature.push_str(method_descriptor);
+        // Try to use a stack buffer to avoid heap allocation for typical method signatures
+        // Most Java method signatures are under 256 bytes
+        const STACK_BUFFER_SIZE: usize = 256;
+        let total_len = class_name.len() + 1 + method_name.len() + method_descriptor.len();
 
-        self.methods.get(&method_signature)
+        if total_len <= STACK_BUFFER_SIZE {
+            // Fast path: use stack buffer for small signatures
+            let mut buffer = [0u8; STACK_BUFFER_SIZE];
+            let mut pos = 0;
+
+            buffer[pos..pos + class_name.len()].copy_from_slice(class_name.as_bytes());
+            pos += class_name.len();
+            buffer[pos] = b'.';
+            pos += 1;
+            buffer[pos..pos + method_name.len()].copy_from_slice(method_name.as_bytes());
+            pos += method_name.len();
+            buffer[pos..pos + method_descriptor.len()]
+                .copy_from_slice(method_descriptor.as_bytes());
+            pos += method_descriptor.len();
+
+            let Ok(method_signature) = std::str::from_utf8(&buffer[..pos]) else {
+                error!(
+                    "Failed to construct method signature for {class_name}.{method_name}{method_descriptor}"
+                );
+                return None;
+            };
+            self.methods.get(method_signature)
+        } else {
+            // Slow path: fall back to heap allocation for unusually long signatures
+            let mut method_signature = String::with_capacity(
+                class_name.len() + 1 + method_name.len() + method_descriptor.len(),
+            );
+            method_signature.push_str(class_name);
+            method_signature.push('.');
+            method_signature.push_str(method_name);
+            method_signature.push_str(method_descriptor);
+            self.methods.get(&method_signature)
+        }
     }
 }
 
@@ -141,6 +166,7 @@ impl MethodRegistry {
 mod tests {
     use super::*;
     use crate::vm;
+    use ristretto_classfile::JAVA_21;
     use ristretto_classloader::runtime;
 
     #[tokio::test]

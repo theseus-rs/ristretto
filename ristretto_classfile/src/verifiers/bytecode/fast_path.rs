@@ -21,7 +21,7 @@
 //!
 //! - [JVMS §4.10.1 - Verification by Type Checking](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1)
 
-use std::collections::HashSet;
+use ahash::AHashSet;
 use std::io::Cursor;
 use std::sync::Arc;
 
@@ -99,9 +99,9 @@ pub struct FastPathVerifier<'a, C: VerificationContext> {
     /// Decoded `StackMapTable`.
     stack_map_table: DecodedStackMapTable,
     /// Set of jump targets (for merge point detection).
-    jump_targets: HashSet<u16>,
+    jump_targets: AHashSet<u16>,
     /// Set of exception handler entry points.
-    handler_entries: HashSet<u16>,
+    handler_entries: AHashSet<u16>,
     /// Verification trace (for verbose mode).
     trace: VerificationTrace,
 }
@@ -266,9 +266,9 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         code: &[Instruction],
         exception_table: &[ExceptionTableEntry],
         code_info: &CodeInfo,
-    ) -> (HashSet<u16>, HashSet<u16>) {
-        let mut jump_targets = HashSet::new();
-        let mut handler_entries = HashSet::new();
+    ) -> (AHashSet<u16>, AHashSet<u16>) {
+        let mut jump_targets = AHashSet::default();
+        let mut handler_entries = AHashSet::default();
 
         for handler in exception_table {
             handler_entries.insert(handler.handler_pc);

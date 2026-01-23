@@ -12,7 +12,7 @@
 //!
 //! - [JVMS §4.7.4 - The StackMapTable Attribute](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.4)
 
-use std::collections::HashMap;
+use ahash::{AHashMap, RandomState};
 use std::sync::Arc;
 
 use crate::attributes::{StackFrame, VerificationType as ClassFileVerificationType};
@@ -30,7 +30,7 @@ use crate::verifiers::error::{Result, VerifyError};
 #[derive(Debug)]
 pub struct DecodedStackMapTable {
     /// Frames indexed by bytecode offset.
-    frames: HashMap<u16, DecodedFrame>,
+    frames: AHashMap<u16, DecodedFrame>,
 
     /// Sorted list of frame offsets for iteration.
     offsets: Vec<u16>,
@@ -78,7 +78,7 @@ impl DecodedStackMapTable {
     #[must_use]
     pub fn empty() -> Self {
         Self {
-            frames: HashMap::new(),
+            frames: AHashMap::default(),
             offsets: Vec::new(),
             is_empty: true,
         }
@@ -106,7 +106,7 @@ impl DecodedStackMapTable {
             return Ok(Self::empty());
         }
 
-        let mut frames = HashMap::with_capacity(stack_frames.len());
+        let mut frames = AHashMap::with_capacity_and_hasher(stack_frames.len(), RandomState::new());
         let mut offsets = Vec::with_capacity(stack_frames.len());
 
         let mut current_locals = initial_frame.locals.clone();
