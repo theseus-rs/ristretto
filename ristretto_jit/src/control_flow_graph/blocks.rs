@@ -7,6 +7,43 @@ use cranelift::prelude::{Block, FunctionBuilder, Type};
 use ristretto_classfile::ConstantPool;
 use ristretto_classfile::attributes::{ExceptionTableEntry, Instruction};
 
+/// Returns true if any instruction jumps backward to address 0.
+///
+/// This is needed because Cranelift's entry block cannot be jumped to,
+/// so we need to detect this case and create a separate loop header block.
+fn has_backward_jump_to_zero(instructions: &[Instruction]) -> bool {
+    for (program_counter, instruction) in instructions.iter().enumerate() {
+        if program_counter == 0 {
+            continue;
+        }
+        let target_address = match instruction {
+            Instruction::Goto_w(address) => usize::try_from(*address).ok(),
+            Instruction::Ifeq(address)
+            | Instruction::Ifne(address)
+            | Instruction::Iflt(address)
+            | Instruction::Ifge(address)
+            | Instruction::Ifgt(address)
+            | Instruction::Ifle(address)
+            | Instruction::If_icmpeq(address)
+            | Instruction::If_icmpne(address)
+            | Instruction::If_icmplt(address)
+            | Instruction::If_icmpge(address)
+            | Instruction::If_icmpgt(address)
+            | Instruction::If_icmple(address)
+            | Instruction::If_acmpeq(address)
+            | Instruction::If_acmpne(address)
+            | Instruction::Ifnull(address)
+            | Instruction::Ifnonnull(address)
+            | Instruction::Goto(address) => Some(usize::from(*address)),
+            _ => None,
+        };
+        if target_address == Some(0) {
+            return true;
+        }
+    }
+    false
+}
+
 /// Creates a control flow graph of blocks for a function by analyzing the instructions.
 ///
 /// This function analyzes Java bytecode instructions to create a Cranelift IR control flow graph
@@ -14,13 +51,17 @@ use ristretto_classfile::attributes::{ExceptionTableEntry, Instruction};
 /// targets, exception handlers, etc.) to a Cranelift Block. The function also calculates the
 /// operand stack state at each point and ensures consistent stack states across different paths to
 /// the same instruction.
+///
+/// Returns a tuple of (`entry_block`, `blocks_map`) where:
+/// - `entry_block` is the function entry point (cannot be jumped to)
+/// - `blocks_map` maps instruction addresses to their corresponding blocks for jump targets
 #[expect(clippy::too_many_lines)]
 pub(crate) fn get_blocks(
     function_builder: &mut FunctionBuilder,
     constant_pool: &ConstantPool,
     instructions: &[Instruction],
     exception_table: &[ExceptionTableEntry],
-) -> Result<AHashMap<usize, Block>> {
+) -> Result<(Block, AHashMap<usize, Block>)> {
     let mut blocks = AHashMap::default();
     let mut stack_states: AHashMap<usize, TypeStack> = AHashMap::default();
     let exception_handler_addresses = exception_table
@@ -30,8 +71,21 @@ pub(crate) fn get_blocks(
     let mut stack = TypeStack::new();
     let mut in_dead_code = false;
 
-    // The first block is always the function entry point (with empty stack)
-    blocks.insert(0, function_builder.create_block());
+    // Create the function entry block (cannot be jumped to in Cranelift)
+    let entry_block = function_builder.create_block();
+
+    // Check if there are backward jumps to address 0
+    let has_loop_to_zero = has_backward_jump_to_zero(instructions);
+
+    // If there are backward jumps to address 0, we need a separate loop body block
+    // Otherwise, address 0 uses the entry block
+    if has_loop_to_zero {
+        // Create a separate block for address 0 that can be jumped to
+        blocks.insert(0, function_builder.create_block());
+    } else {
+        // No backward jumps, so address 0 can use the entry block
+        blocks.insert(0, entry_block);
+    }
     stack_states.insert(0, stack.clone());
 
     for (program_counter, instruction) in instructions.iter().enumerate() {
@@ -209,7 +263,7 @@ pub(crate) fn get_blocks(
         }
     }
 
-    Ok(blocks)
+    Ok((entry_block, blocks))
 }
 
 /// Inserts a stack state for a specific address, ensuring consistency with any existing state.
@@ -305,7 +359,7 @@ mod tests {
         let exception_table = Vec::new();
 
         // Create the control_flow_graph
-        let blocks = get_blocks(
+        let (_entry_block, blocks) = get_blocks(
             &mut function_builder,
             &constant_pool,
             &instructions,

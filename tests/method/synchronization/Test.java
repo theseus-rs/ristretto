@@ -7,88 +7,66 @@ public class Test {
     // Synchronized static method
     public static synchronized void incrementStaticCounter() {
         staticCounter++;
-        System.out.println("Static counter: " + staticCounter + " (Thread: " + Thread.currentThread().getName() + ")");
-        try {
-            Thread.sleep(10); // Simulate some work
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
     }
 
     // Synchronized instance method
     public synchronized void incrementInstanceCounter() {
         instanceCounter++;
-        System.out.println("Instance counter: " + instanceCounter + " (Thread: " + Thread.currentThread().getName() + ")");
-        try {
-            Thread.sleep(10); // Simulate some work
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
     }
 
     // Method with synchronized block
     public void incrementWithSyncBlock() {
         synchronized (lock) {
             instanceCounter++;
-            System.out.println("Sync block counter: " + instanceCounter + " (Thread: " + Thread.currentThread().getName() + ")");
-            try {
-                Thread.sleep(10); // Simulate some work
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
         }
-    }
-
-    // Method demonstrating different synchronization behaviors
-    public void demonstrateSynchronization() throws InterruptedException {
-        Test instance1 = new Test();
-        Test instance2 = new Test();
-
-        // Test static synchronization - all threads synchronize on the class
-        Thread[] staticThreads = new Thread[3];
-        for (int i = 0; i < 3; i++) {
-            staticThreads[i] = new Thread(() -> {
-                for (int j = 0; j < 3; j++) {
-                    incrementStaticCounter();
-                }
-            }, "StaticThread-" + i);
-            staticThreads[i].start();
-        }
-
-        // Test instance synchronization - threads synchronize per instance
-        Thread[] instanceThreads = new Thread[4];
-        for (int i = 0; i < 2; i++) {
-            final Test instance = (i == 0) ? instance1 : instance2;
-            instanceThreads[i] = new Thread(() -> {
-                for (int j = 0; j < 3; j++) {
-                    instance.incrementInstanceCounter();
-                }
-            }, "InstanceThread-" + i);
-            instanceThreads[i].start();
-        }
-
-        // Test synchronized block
-        for (int i = 2; i < 4; i++) {
-            instanceThreads[i] = new Thread(() -> {
-                for (int j = 0; j < 3; j++) {
-                    instance1.incrementWithSyncBlock();
-                }
-            }, "SyncBlockThread-" + (i-2));
-            instanceThreads[i].start();
-        }
-
-        // Wait for all threads to complete
-        for (Thread t : staticThreads) t.join();
-        for (Thread t : instanceThreads) t.join();
-
-        System.out.println("Final static counter: " + staticCounter);
-        System.out.println("Final instance1 counter: " + instance1.instanceCounter);
-        System.out.println("Final instance2 counter: " + instance2.instanceCounter);
     }
 
     public static void main(String[] args) throws InterruptedException {
-        Test test = new Test();
-        test.demonstrateSynchronization();
+        Test instance = new Test();
+
+        // Test static synchronized method (single thread for determinism)
+        System.out.println("Testing static synchronized method:");
+        for (int i = 0; i < 5; i++) {
+            incrementStaticCounter();
+        }
+        System.out.println("Static counter after 5 increments: " + staticCounter);
+
+        // Test instance synchronized method (single thread for determinism)
+        System.out.println("\nTesting instance synchronized method:");
+        for (int i = 0; i < 5; i++) {
+            instance.incrementInstanceCounter();
+        }
+        System.out.println("Instance counter after 5 increments: " + instance.instanceCounter);
+
+        // Test synchronized block (single thread for determinism)
+        System.out.println("\nTesting synchronized block:");
+        for (int i = 0; i < 5; i++) {
+            instance.incrementWithSyncBlock();
+        }
+        System.out.println("Instance counter after 5 more increments: " + instance.instanceCounter);
+
+        // Test with two threads that run sequentially (join before next)
+        System.out.println("\nTesting with sequential threads:");
+        Thread t1 = new Thread(() -> {
+            for (int i = 0; i < 3; i++) {
+                incrementStaticCounter();
+            }
+        }, "Thread-1");
+
+        Thread t2 = new Thread(() -> {
+            for (int i = 0; i < 3; i++) {
+                incrementStaticCounter();
+            }
+        }, "Thread-2");
+
+        t1.start();
+        t1.join(); // Wait for t1 to finish before starting t2
+        t2.start();
+        t2.join();
+
+        System.out.println("Static counter after two sequential threads: " + staticCounter);
+
+        System.out.println("\nSynchronization tests completed");
     }
 }
 

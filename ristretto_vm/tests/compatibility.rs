@@ -24,7 +24,6 @@ static HASH_CODE_REGEX: LazyLock<Regex> =
 
 /// Regex to match hidden class name suffixes (e.g., /0x000000040100a438 or +0x000000000000000c)
 /// that vary between runs.
-// TODO: Remove the need for this; update hidden class names to be consistent with corretto/openjdk.
 static HIDDEN_CLASS_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[/+]0x[0-9a-fA-F]+").expect("valid regex"));
 
