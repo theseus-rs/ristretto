@@ -13,9 +13,9 @@ use std::sync::Arc;
 pub(crate) async fn environ(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let mut values = Vec::new();
     for (key, value) in std::env::vars() {
-        let key = Value::from(mutf8::to_bytes(key)?);
+        let key = Value::from(mutf8::to_bytes(&key)?);
         values.push(key);
-        let value = Value::from(mutf8::to_bytes(value)?);
+        let value = Value::from(mutf8::to_bytes(&value)?);
         values.push(value);
     }
     let class = thread.class("[[B").await?;
