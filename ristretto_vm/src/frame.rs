@@ -1,5 +1,5 @@
 use crate::Error::{InternalError, InvalidProgramCounter};
-use crate::frame::ExecutionResult::{Continue, ContinueAtPosition, Return};
+
 use crate::instruction::{
     aaload, aastore, aconst_null, aload, aload_0, aload_1, aload_2, aload_3, aload_w, anewarray,
     areturn, arraylength, astore, astore_0, astore_1, astore_2, astore_3, astore_w, athrow, baload,
@@ -28,6 +28,8 @@ use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::{Instruction, LookupSwitch, TableSwitch};
 use ristretto_classloader::{Class, Method, Value};
 use ristretto_macros::async_method;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 use tracing::{Level, debug, event_enabled};
@@ -36,31 +38,71 @@ use tracing::{Level, debug, event_enabled};
 ///
 /// # Overview
 ///
-/// This enum is used to control the flow of execution within a frame. After each
-/// instruction is processed, an `ExecutionResult` is returned to indicate how the
-/// virtual machine should proceed.
+/// This enum is used to control the flow of execution within a frame. After each instruction is
+/// processed, an `ExecutionResult` is returned to indicate how the virtual machine should proceed.
 ///
 /// # Variants
 ///
-/// - `Return(Option<Value>)`: Indicates that the method execution should terminate and
-///   return the specified value (if any) to the caller. Methods with a void return type
-///   use `Return(None)`.
+/// - `Return(Option<Value>)`: Indicates that the method execution should terminate and return the
+///   specified value (if any) to the caller. Methods with a void return type use `Return(None)`.
 ///
-/// - `Continue`: Indicates that execution should continue with the next instruction
-///   (increments the program counter by 1).
+/// - `Continue`: Indicates that execution should continue with the next instruction (increments
+///   the program counter by 1).
 ///
 /// - `ContinueAtPosition(usize)`: Indicates that execution should continue at the specified
 ///   bytecode offset. Used for branch instructions like `goto`, `if_*`, and exception handlers.
 ///
 /// # Usage
 ///
-/// The VM's execution loop uses this enum to determine whether to proceed to the next
-/// instruction, jump to a different instruction, or return from the current method.
+/// The VM's execution loop uses this enum to determine whether to proceed to the next instruction,
+/// jump to a different instruction, or return from the current method.
 #[derive(Debug, PartialEq)]
 pub(crate) enum ExecutionResult {
     Return(Option<Value>),
     Continue,
     ContinueAtPosition(usize),
+}
+
+/// Represents the result of executing a JVM bytecode instruction.
+///
+/// # Overview
+///
+/// This enum is used to control the flow of execution within a frame. After each instruction is
+/// processed, an `InstructionResult` is returned to indicate how the virtual machine should
+/// proceed.
+///
+/// # Variants
+///
+/// - `Sync(ExecutionResult)`: Indicates that the instruction execution should terminate and return
+///   the specified value (if any) to the caller. Methods with a void return type use
+///   `Return(None)`.
+///
+/// - `Async(Pin<Box<dyn Future<Output = Result<ExecutionResult>> + Send + 'a>>)`: Indicates that
+///   the instruction execution should continue with the next instruction (increments the program
+///   counter by 1).
+#[cfg(not(target_family = "wasm"))]
+pub(crate) enum InstructionResult<'a> {
+    Sync(ExecutionResult),
+    Async(Pin<Box<dyn Future<Output = Result<ExecutionResult>> + Send + 'a>>),
+}
+
+/// This enum is used to control the flow of execution within a frame. After each instruction is
+/// processed, an `InstructionResult` is returned to indicate how the virtual machine should
+/// proceed.
+///
+/// # Variants
+///
+/// - `Sync(ExecutionResult)`: Indicates that the instruction execution should terminate and return
+///   the specified value (if any) to the caller. Methods with a void return type use
+///   `Return(None)`.
+///
+/// - `Async(Pin<Box<dyn Future<Output = Result<ExecutionResult>> + 'a>>)`: Indicates that
+///   the instruction execution should continue with the next instruction (increments the program
+///   counter by 1).
+#[cfg(target_family = "wasm")]
+pub(crate) enum InstructionResult<'a> {
+    Sync(ExecutionResult),
+    Async(Pin<Box<dyn Future<Output = Result<ExecutionResult>> + 'a>>),
 }
 
 /// A frame is created each time a method is invoked in the JVM.
@@ -77,9 +119,9 @@ pub(crate) enum ExecutionResult {
 /// - `program_counter`: Current position in the bytecode
 ///
 /// # Execution Model
-/// When a method is invoked, a new frame is created and pushed onto the JVM stack of the invoking thread.
-/// When the method completes (normally or abruptly), the frame is popped, and the invoker's frame becomes
-/// the current frame.
+/// When a method is invoked, a new frame is created and pushed onto the JVM stack of the invoking
+/// thread. When the method completes (normally or abruptly), the frame is popped, and the invoker's
+/// frame becomes the current frame.
 ///
 /// # Stack Effects
 /// The frame maintains two key data structures:
@@ -96,6 +138,9 @@ pub struct Frame {
     method: Arc<Method>,
     program_counter: AtomicUsize,
 }
+
+/// Number of instructions to execute before yielding to the Tokio runtime
+const INSTRUCTION_YIELD_COUNT: u32 = 1024;
 
 impl Frame {
     /// Create a new frame for the specified class. To invoke a method on an object reference, the
@@ -175,15 +220,9 @@ impl Frame {
         let max_stack = self.method.max_stack();
         let stack = &mut OperandStack::with_max_size(max_stack);
         let code = self.method.code();
-        let mut instruction_count: u32 = 0;
+        let mut instruction_yield_count: u32 = 0;
 
         loop {
-            // Yield periodically to allow tokio to process cancellation and other tasks
-            instruction_count = instruction_count.wrapping_add(1);
-            if instruction_count.is_multiple_of(1024) {
-                tokio::task::yield_now().await;
-            }
-
             let program_counter = self.program_counter.load(Ordering::Relaxed);
             let Some(instruction) = code.get(program_counter) else {
                 return Err(InvalidProgramCounter(program_counter));
@@ -193,17 +232,34 @@ impl Frame {
                 self.debug_execute(locals, stack, instruction)?;
             }
 
-            let result = Box::pin(self.process(locals, stack, instruction)).await;
+            let result = match self.process(locals, stack, instruction) {
+                Ok(InstructionResult::Sync(result)) => {
+                    // Yield periodically to allow tokio to process cancellation and other tasks
+                    instruction_yield_count = instruction_yield_count.wrapping_add(1);
+                    if instruction_yield_count.is_multiple_of(INSTRUCTION_YIELD_COUNT) {
+                        tokio::task::yield_now().await;
+                    }
+
+                    Ok(result)
+                }
+                Ok(InstructionResult::Async(future)) => {
+                    // Reset instruction count for async operations
+                    instruction_yield_count = 0;
+                    future.await
+                }
+                Err(error) => Err(error),
+            };
+
             match result {
-                Ok(Continue) => {
+                Ok(ExecutionResult::Continue) => {
                     self.program_counter
                         .store(program_counter + 1, Ordering::Relaxed);
                 }
-                Ok(ContinueAtPosition(program_counter)) => {
+                Ok(ExecutionResult::ContinueAtPosition(program_counter)) => {
                     self.program_counter
                         .store(program_counter, Ordering::Relaxed);
                 }
-                Ok(Return(value)) => return Ok(value),
+                Ok(ExecutionResult::Return(value)) => return Ok(value),
                 Err(error) => {
                     let thread = self.thread()?;
                     let throwable = convert_error_to_throwable(&thread, error).await?;
@@ -329,183 +385,215 @@ impl Frame {
     ///
     /// - [JVMS §6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html)
     #[expect(clippy::too_many_lines)]
-    async fn process(
-        &self,
-        locals: &mut LocalVariables,
-        stack: &mut OperandStack,
+    fn process<'a>(
+        &'a self,
+        locals: &'a mut LocalVariables,
+        stack: &'a mut OperandStack,
         instruction: &Instruction,
-    ) -> Result<ExecutionResult> {
+    ) -> Result<InstructionResult<'a>> {
         match instruction {
-            Instruction::Nop => nop(),
-            Instruction::Aconst_null => aconst_null(stack),
-            Instruction::Iconst_m1 => iconst_m1(stack),
-            Instruction::Iconst_0 => iconst_0(stack),
-            Instruction::Iconst_1 => iconst_1(stack),
-            Instruction::Iconst_2 => iconst_2(stack),
-            Instruction::Iconst_3 => iconst_3(stack),
-            Instruction::Iconst_4 => iconst_4(stack),
-            Instruction::Iconst_5 => iconst_5(stack),
-            Instruction::Lconst_0 => lconst_0(stack),
-            Instruction::Lconst_1 => lconst_1(stack),
-            Instruction::Fconst_0 => fconst_0(stack),
-            Instruction::Fconst_1 => fconst_1(stack),
-            Instruction::Fconst_2 => fconst_2(stack),
-            Instruction::Dconst_0 => dconst_0(stack),
-            Instruction::Dconst_1 => dconst_1(stack),
-            Instruction::Bipush(value) => bipush(stack, *value),
-            Instruction::Sipush(value) => sipush(stack, *value),
-            Instruction::Ldc(index) => Box::pin(ldc(self, stack, *index)).await,
-            Instruction::Ldc_w(index) => Box::pin(ldc_w(self, stack, *index)).await,
-            Instruction::Ldc2_w(index) => ldc2_w(self, stack, *index),
-            Instruction::Iload(index) => iload(locals, stack, *index),
-            Instruction::Lload(index) => lload(locals, stack, *index),
-            Instruction::Fload(index) => fload(locals, stack, *index),
-            Instruction::Dload(index) => dload(locals, stack, *index),
-            Instruction::Aload(index) => aload(locals, stack, *index),
-            Instruction::Iload_0 => iload_0(locals, stack),
-            Instruction::Iload_1 => iload_1(locals, stack),
-            Instruction::Iload_2 => iload_2(locals, stack),
-            Instruction::Iload_3 => iload_3(locals, stack),
-            Instruction::Lload_0 => lload_0(locals, stack),
-            Instruction::Lload_1 => lload_1(locals, stack),
-            Instruction::Lload_2 => lload_2(locals, stack),
-            Instruction::Lload_3 => lload_3(locals, stack),
-            Instruction::Fload_0 => fload_0(locals, stack),
-            Instruction::Fload_1 => fload_1(locals, stack),
-            Instruction::Fload_2 => fload_2(locals, stack),
-            Instruction::Fload_3 => fload_3(locals, stack),
-            Instruction::Dload_0 => dload_0(locals, stack),
-            Instruction::Dload_1 => dload_1(locals, stack),
-            Instruction::Dload_2 => dload_2(locals, stack),
-            Instruction::Dload_3 => dload_3(locals, stack),
-            Instruction::Aload_0 => aload_0(locals, stack),
-            Instruction::Aload_1 => aload_1(locals, stack),
-            Instruction::Aload_2 => aload_2(locals, stack),
-            Instruction::Aload_3 => aload_3(locals, stack),
-            Instruction::Iaload => iaload(stack),
-            Instruction::Laload => laload(stack),
-            Instruction::Faload => faload(stack),
-            Instruction::Daload => daload(stack),
-            Instruction::Aaload => aaload(stack),
-            Instruction::Baload => baload(stack),
-            Instruction::Caload => caload(stack),
-            Instruction::Saload => saload(stack),
-            Instruction::Istore(index) => istore(locals, stack, *index),
-            Instruction::Lstore(index) => lstore(locals, stack, *index),
-            Instruction::Fstore(index) => fstore(locals, stack, *index),
-            Instruction::Dstore(index) => dstore(locals, stack, *index),
-            Instruction::Astore(index) => astore(locals, stack, *index),
-            Instruction::Istore_0 => istore_0(locals, stack),
-            Instruction::Istore_1 => istore_1(locals, stack),
-            Instruction::Istore_2 => istore_2(locals, stack),
-            Instruction::Istore_3 => istore_3(locals, stack),
-            Instruction::Lstore_0 => lstore_0(locals, stack),
-            Instruction::Lstore_1 => lstore_1(locals, stack),
-            Instruction::Lstore_2 => lstore_2(locals, stack),
-            Instruction::Lstore_3 => lstore_3(locals, stack),
-            Instruction::Fstore_0 => fstore_0(locals, stack),
-            Instruction::Fstore_1 => fstore_1(locals, stack),
-            Instruction::Fstore_2 => fstore_2(locals, stack),
-            Instruction::Fstore_3 => fstore_3(locals, stack),
-            Instruction::Dstore_0 => dstore_0(locals, stack),
-            Instruction::Dstore_1 => dstore_1(locals, stack),
-            Instruction::Dstore_2 => dstore_2(locals, stack),
-            Instruction::Dstore_3 => dstore_3(locals, stack),
-            Instruction::Astore_0 => astore_0(locals, stack),
-            Instruction::Astore_1 => astore_1(locals, stack),
-            Instruction::Astore_2 => astore_2(locals, stack),
-            Instruction::Astore_3 => astore_3(locals, stack),
-            Instruction::Iastore => iastore(stack),
-            Instruction::Lastore => lastore(stack),
-            Instruction::Fastore => fastore(stack),
-            Instruction::Dastore => dastore(stack),
-            Instruction::Aastore => aastore(stack),
-            Instruction::Bastore => bastore(stack),
-            Instruction::Castore => castore(stack),
-            Instruction::Sastore => sastore(stack),
-            Instruction::Pop => pop(stack),
-            Instruction::Pop2 => pop2(stack),
-            Instruction::Dup => dup(stack),
-            Instruction::Dup_x1 => dup_x1(stack),
-            Instruction::Dup_x2 => dup_x2(stack),
-            Instruction::Dup2 => dup2(stack),
-            Instruction::Dup2_x1 => dup2_x1(stack),
-            Instruction::Dup2_x2 => dup2_x2(stack),
-            Instruction::Swap => swap(stack),
-            Instruction::Iadd => iadd(stack),
-            Instruction::Ladd => ladd(stack),
-            Instruction::Fadd => fadd(stack),
-            Instruction::Dadd => dadd(stack),
-            Instruction::Isub => isub(stack),
-            Instruction::Lsub => lsub(stack),
-            Instruction::Fsub => fsub(stack),
-            Instruction::Dsub => dsub(stack),
-            Instruction::Imul => imul(stack),
-            Instruction::Lmul => lmul(stack),
-            Instruction::Fmul => fmul(stack),
-            Instruction::Dmul => dmul(stack),
-            Instruction::Idiv => idiv(stack),
-            Instruction::Ldiv => ldiv(stack),
-            Instruction::Fdiv => fdiv(stack),
-            Instruction::Ddiv => ddiv(stack),
-            Instruction::Irem => irem(stack),
-            Instruction::Lrem => lrem(stack),
-            Instruction::Frem => frem(stack),
-            Instruction::Drem => drem(stack),
-            Instruction::Ineg => ineg(stack),
-            Instruction::Lneg => lneg(stack),
-            Instruction::Fneg => fneg(stack),
-            Instruction::Dneg => dneg(stack),
-            Instruction::Ishl => ishl(stack),
-            Instruction::Lshl => lshl(stack),
-            Instruction::Ishr => ishr(stack),
-            Instruction::Lshr => lshr(stack),
-            Instruction::Iushr => iushr(stack),
-            Instruction::Lushr => lushr(stack),
-            Instruction::Iand => iand(stack),
-            Instruction::Land => land(stack),
-            Instruction::Ior => ior(stack),
-            Instruction::Lor => lor(stack),
-            Instruction::Ixor => ixor(stack),
-            Instruction::Lxor => lxor(stack),
-            Instruction::Iinc(index, constant) => iinc(locals, *index, *constant),
-            Instruction::I2l => i2l(stack),
-            Instruction::I2f => i2f(stack),
-            Instruction::I2d => i2d(stack),
-            Instruction::L2i => l2i(stack),
-            Instruction::L2f => l2f(stack),
-            Instruction::L2d => l2d(stack),
-            Instruction::F2i => f2i(stack),
-            Instruction::F2l => f2l(stack),
-            Instruction::F2d => f2d(stack),
-            Instruction::D2i => d2i(stack),
-            Instruction::D2l => d2l(stack),
-            Instruction::D2f => d2f(stack),
-            Instruction::I2b => i2b(stack),
-            Instruction::I2c => i2c(stack),
-            Instruction::I2s => i2s(stack),
-            Instruction::Lcmp => lcmp(stack),
-            Instruction::Fcmpl => fcmpl(stack),
-            Instruction::Fcmpg => fcmpg(stack),
-            Instruction::Dcmpl => dcmpl(stack),
-            Instruction::Dcmpg => dcmpg(stack),
-            Instruction::Ifeq(address) => ifeq(stack, *address),
-            Instruction::Ifne(address) => ifne(stack, *address),
-            Instruction::Iflt(address) => iflt(stack, *address),
-            Instruction::Ifge(address) => ifge(stack, *address),
-            Instruction::Ifgt(address) => ifgt(stack, *address),
-            Instruction::Ifle(address) => ifle(stack, *address),
-            Instruction::If_icmpeq(address) => if_icmpeq(stack, *address),
-            Instruction::If_icmpne(address) => if_icmpne(stack, *address),
-            Instruction::If_icmplt(address) => if_icmplt(stack, *address),
-            Instruction::If_icmpge(address) => if_icmpge(stack, *address),
-            Instruction::If_icmpgt(address) => if_icmpgt(stack, *address),
-            Instruction::If_icmple(address) => if_icmple(stack, *address),
-            Instruction::If_acmpeq(address) => if_acmpeq(stack, *address),
-            Instruction::If_acmpne(address) => if_acmpne(stack, *address),
-            Instruction::Goto(address) => goto(*address),
-            Instruction::Jsr(address) => jsr(stack, *address),
-            Instruction::Ret(index) => ret(locals, *index),
+            Instruction::Nop => nop().map(InstructionResult::Sync),
+            Instruction::Aconst_null => aconst_null(stack).map(InstructionResult::Sync),
+            Instruction::Iconst_m1 => iconst_m1(stack).map(InstructionResult::Sync),
+            Instruction::Iconst_0 => iconst_0(stack).map(InstructionResult::Sync),
+            Instruction::Iconst_1 => iconst_1(stack).map(InstructionResult::Sync),
+            Instruction::Iconst_2 => iconst_2(stack).map(InstructionResult::Sync),
+            Instruction::Iconst_3 => iconst_3(stack).map(InstructionResult::Sync),
+            Instruction::Iconst_4 => iconst_4(stack).map(InstructionResult::Sync),
+            Instruction::Iconst_5 => iconst_5(stack).map(InstructionResult::Sync),
+            Instruction::Lconst_0 => lconst_0(stack).map(InstructionResult::Sync),
+            Instruction::Lconst_1 => lconst_1(stack).map(InstructionResult::Sync),
+            Instruction::Fconst_0 => fconst_0(stack).map(InstructionResult::Sync),
+            Instruction::Fconst_1 => fconst_1(stack).map(InstructionResult::Sync),
+            Instruction::Fconst_2 => fconst_2(stack).map(InstructionResult::Sync),
+            Instruction::Dconst_0 => dconst_0(stack).map(InstructionResult::Sync),
+            Instruction::Dconst_1 => dconst_1(stack).map(InstructionResult::Sync),
+            Instruction::Bipush(value) => bipush(stack, *value).map(InstructionResult::Sync),
+            Instruction::Sipush(value) => sipush(stack, *value).map(InstructionResult::Sync),
+            Instruction::Ldc(index) => {
+                Ok(InstructionResult::Async(Box::pin(ldc(self, stack, *index))))
+            }
+            Instruction::Ldc_w(index) => Ok(InstructionResult::Async(Box::pin(ldc_w(
+                self, stack, *index,
+            )))),
+            Instruction::Ldc2_w(index) => ldc2_w(self, stack, *index).map(InstructionResult::Sync),
+            Instruction::Iload(index) => iload(locals, stack, *index).map(InstructionResult::Sync),
+            Instruction::Lload(index) => lload(locals, stack, *index).map(InstructionResult::Sync),
+            Instruction::Fload(index) => fload(locals, stack, *index).map(InstructionResult::Sync),
+            Instruction::Dload(index) => dload(locals, stack, *index).map(InstructionResult::Sync),
+            Instruction::Aload(index) => aload(locals, stack, *index).map(InstructionResult::Sync),
+            Instruction::Iload_0 => iload_0(locals, stack).map(InstructionResult::Sync),
+            Instruction::Iload_1 => iload_1(locals, stack).map(InstructionResult::Sync),
+            Instruction::Iload_2 => iload_2(locals, stack).map(InstructionResult::Sync),
+            Instruction::Iload_3 => iload_3(locals, stack).map(InstructionResult::Sync),
+            Instruction::Lload_0 => lload_0(locals, stack).map(InstructionResult::Sync),
+            Instruction::Lload_1 => lload_1(locals, stack).map(InstructionResult::Sync),
+            Instruction::Lload_2 => lload_2(locals, stack).map(InstructionResult::Sync),
+            Instruction::Lload_3 => lload_3(locals, stack).map(InstructionResult::Sync),
+            Instruction::Fload_0 => fload_0(locals, stack).map(InstructionResult::Sync),
+            Instruction::Fload_1 => fload_1(locals, stack).map(InstructionResult::Sync),
+            Instruction::Fload_2 => fload_2(locals, stack).map(InstructionResult::Sync),
+            Instruction::Fload_3 => fload_3(locals, stack).map(InstructionResult::Sync),
+            Instruction::Dload_0 => dload_0(locals, stack).map(InstructionResult::Sync),
+            Instruction::Dload_1 => dload_1(locals, stack).map(InstructionResult::Sync),
+            Instruction::Dload_2 => dload_2(locals, stack).map(InstructionResult::Sync),
+            Instruction::Dload_3 => dload_3(locals, stack).map(InstructionResult::Sync),
+            Instruction::Aload_0 => aload_0(locals, stack).map(InstructionResult::Sync),
+            Instruction::Aload_1 => aload_1(locals, stack).map(InstructionResult::Sync),
+            Instruction::Aload_2 => aload_2(locals, stack).map(InstructionResult::Sync),
+            Instruction::Aload_3 => aload_3(locals, stack).map(InstructionResult::Sync),
+            Instruction::Iaload => iaload(stack).map(InstructionResult::Sync),
+            Instruction::Laload => laload(stack).map(InstructionResult::Sync),
+            Instruction::Faload => faload(stack).map(InstructionResult::Sync),
+            Instruction::Daload => daload(stack).map(InstructionResult::Sync),
+            Instruction::Aaload => aaload(stack).map(InstructionResult::Sync),
+            Instruction::Baload => baload(stack).map(InstructionResult::Sync),
+            Instruction::Caload => caload(stack).map(InstructionResult::Sync),
+            Instruction::Saload => saload(stack).map(InstructionResult::Sync),
+            Instruction::Istore(index) => {
+                istore(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Lstore(index) => {
+                lstore(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Fstore(index) => {
+                fstore(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Dstore(index) => {
+                dstore(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Astore(index) => {
+                astore(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Istore_0 => istore_0(locals, stack).map(InstructionResult::Sync),
+            Instruction::Istore_1 => istore_1(locals, stack).map(InstructionResult::Sync),
+            Instruction::Istore_2 => istore_2(locals, stack).map(InstructionResult::Sync),
+            Instruction::Istore_3 => istore_3(locals, stack).map(InstructionResult::Sync),
+            Instruction::Lstore_0 => lstore_0(locals, stack).map(InstructionResult::Sync),
+            Instruction::Lstore_1 => lstore_1(locals, stack).map(InstructionResult::Sync),
+            Instruction::Lstore_2 => lstore_2(locals, stack).map(InstructionResult::Sync),
+            Instruction::Lstore_3 => lstore_3(locals, stack).map(InstructionResult::Sync),
+            Instruction::Fstore_0 => fstore_0(locals, stack).map(InstructionResult::Sync),
+            Instruction::Fstore_1 => fstore_1(locals, stack).map(InstructionResult::Sync),
+            Instruction::Fstore_2 => fstore_2(locals, stack).map(InstructionResult::Sync),
+            Instruction::Fstore_3 => fstore_3(locals, stack).map(InstructionResult::Sync),
+            Instruction::Dstore_0 => dstore_0(locals, stack).map(InstructionResult::Sync),
+            Instruction::Dstore_1 => dstore_1(locals, stack).map(InstructionResult::Sync),
+            Instruction::Dstore_2 => dstore_2(locals, stack).map(InstructionResult::Sync),
+            Instruction::Dstore_3 => dstore_3(locals, stack).map(InstructionResult::Sync),
+            Instruction::Astore_0 => astore_0(locals, stack).map(InstructionResult::Sync),
+            Instruction::Astore_1 => astore_1(locals, stack).map(InstructionResult::Sync),
+            Instruction::Astore_2 => astore_2(locals, stack).map(InstructionResult::Sync),
+            Instruction::Astore_3 => astore_3(locals, stack).map(InstructionResult::Sync),
+            Instruction::Iastore => iastore(stack).map(InstructionResult::Sync),
+            Instruction::Lastore => lastore(stack).map(InstructionResult::Sync),
+            Instruction::Fastore => fastore(stack).map(InstructionResult::Sync),
+            Instruction::Dastore => dastore(stack).map(InstructionResult::Sync),
+            Instruction::Aastore => aastore(stack).map(InstructionResult::Sync),
+            Instruction::Bastore => bastore(stack).map(InstructionResult::Sync),
+            Instruction::Castore => castore(stack).map(InstructionResult::Sync),
+            Instruction::Sastore => sastore(stack).map(InstructionResult::Sync),
+            Instruction::Pop => pop(stack).map(InstructionResult::Sync),
+            Instruction::Pop2 => pop2(stack).map(InstructionResult::Sync),
+            Instruction::Dup => dup(stack).map(InstructionResult::Sync),
+            Instruction::Dup_x1 => dup_x1(stack).map(InstructionResult::Sync),
+            Instruction::Dup_x2 => dup_x2(stack).map(InstructionResult::Sync),
+            Instruction::Dup2 => dup2(stack).map(InstructionResult::Sync),
+            Instruction::Dup2_x1 => dup2_x1(stack).map(InstructionResult::Sync),
+            Instruction::Dup2_x2 => dup2_x2(stack).map(InstructionResult::Sync),
+            Instruction::Swap => swap(stack).map(InstructionResult::Sync),
+            Instruction::Iadd => iadd(stack).map(InstructionResult::Sync),
+            Instruction::Ladd => ladd(stack).map(InstructionResult::Sync),
+            Instruction::Fadd => fadd(stack).map(InstructionResult::Sync),
+            Instruction::Dadd => dadd(stack).map(InstructionResult::Sync),
+            Instruction::Isub => isub(stack).map(InstructionResult::Sync),
+            Instruction::Lsub => lsub(stack).map(InstructionResult::Sync),
+            Instruction::Fsub => fsub(stack).map(InstructionResult::Sync),
+            Instruction::Dsub => dsub(stack).map(InstructionResult::Sync),
+            Instruction::Imul => imul(stack).map(InstructionResult::Sync),
+            Instruction::Lmul => lmul(stack).map(InstructionResult::Sync),
+            Instruction::Fmul => fmul(stack).map(InstructionResult::Sync),
+            Instruction::Dmul => dmul(stack).map(InstructionResult::Sync),
+            Instruction::Idiv => idiv(stack).map(InstructionResult::Sync),
+            Instruction::Ldiv => ldiv(stack).map(InstructionResult::Sync),
+            Instruction::Fdiv => fdiv(stack).map(InstructionResult::Sync),
+            Instruction::Ddiv => ddiv(stack).map(InstructionResult::Sync),
+            Instruction::Irem => irem(stack).map(InstructionResult::Sync),
+            Instruction::Lrem => lrem(stack).map(InstructionResult::Sync),
+            Instruction::Frem => frem(stack).map(InstructionResult::Sync),
+            Instruction::Drem => drem(stack).map(InstructionResult::Sync),
+            Instruction::Ineg => ineg(stack).map(InstructionResult::Sync),
+            Instruction::Lneg => lneg(stack).map(InstructionResult::Sync),
+            Instruction::Fneg => fneg(stack).map(InstructionResult::Sync),
+            Instruction::Dneg => dneg(stack).map(InstructionResult::Sync),
+            Instruction::Ishl => ishl(stack).map(InstructionResult::Sync),
+            Instruction::Lshl => lshl(stack).map(InstructionResult::Sync),
+            Instruction::Ishr => ishr(stack).map(InstructionResult::Sync),
+            Instruction::Lshr => lshr(stack).map(InstructionResult::Sync),
+            Instruction::Iushr => iushr(stack).map(InstructionResult::Sync),
+            Instruction::Lushr => lushr(stack).map(InstructionResult::Sync),
+            Instruction::Iand => iand(stack).map(InstructionResult::Sync),
+            Instruction::Land => land(stack).map(InstructionResult::Sync),
+            Instruction::Ior => ior(stack).map(InstructionResult::Sync),
+            Instruction::Lor => lor(stack).map(InstructionResult::Sync),
+            Instruction::Ixor => ixor(stack).map(InstructionResult::Sync),
+            Instruction::Lxor => lxor(stack).map(InstructionResult::Sync),
+            Instruction::Iinc(index, constant) => {
+                iinc(locals, *index, *constant).map(InstructionResult::Sync)
+            }
+            Instruction::I2l => i2l(stack).map(InstructionResult::Sync),
+            Instruction::I2f => i2f(stack).map(InstructionResult::Sync),
+            Instruction::I2d => i2d(stack).map(InstructionResult::Sync),
+            Instruction::L2i => l2i(stack).map(InstructionResult::Sync),
+            Instruction::L2f => l2f(stack).map(InstructionResult::Sync),
+            Instruction::L2d => l2d(stack).map(InstructionResult::Sync),
+            Instruction::F2i => f2i(stack).map(InstructionResult::Sync),
+            Instruction::F2l => f2l(stack).map(InstructionResult::Sync),
+            Instruction::F2d => f2d(stack).map(InstructionResult::Sync),
+            Instruction::D2i => d2i(stack).map(InstructionResult::Sync),
+            Instruction::D2l => d2l(stack).map(InstructionResult::Sync),
+            Instruction::D2f => d2f(stack).map(InstructionResult::Sync),
+            Instruction::I2b => i2b(stack).map(InstructionResult::Sync),
+            Instruction::I2c => i2c(stack).map(InstructionResult::Sync),
+            Instruction::I2s => i2s(stack).map(InstructionResult::Sync),
+            Instruction::Lcmp => lcmp(stack).map(InstructionResult::Sync),
+            Instruction::Fcmpl => fcmpl(stack).map(InstructionResult::Sync),
+            Instruction::Fcmpg => fcmpg(stack).map(InstructionResult::Sync),
+            Instruction::Dcmpl => dcmpl(stack).map(InstructionResult::Sync),
+            Instruction::Dcmpg => dcmpg(stack).map(InstructionResult::Sync),
+            Instruction::Ifeq(address) => ifeq(stack, *address).map(InstructionResult::Sync),
+            Instruction::Ifne(address) => ifne(stack, *address).map(InstructionResult::Sync),
+            Instruction::Iflt(address) => iflt(stack, *address).map(InstructionResult::Sync),
+            Instruction::Ifge(address) => ifge(stack, *address).map(InstructionResult::Sync),
+            Instruction::Ifgt(address) => ifgt(stack, *address).map(InstructionResult::Sync),
+            Instruction::Ifle(address) => ifle(stack, *address).map(InstructionResult::Sync),
+            Instruction::If_icmpeq(address) => {
+                if_icmpeq(stack, *address).map(InstructionResult::Sync)
+            }
+            Instruction::If_icmpne(address) => {
+                if_icmpne(stack, *address).map(InstructionResult::Sync)
+            }
+            Instruction::If_icmplt(address) => {
+                if_icmplt(stack, *address).map(InstructionResult::Sync)
+            }
+            Instruction::If_icmpge(address) => {
+                if_icmpge(stack, *address).map(InstructionResult::Sync)
+            }
+            Instruction::If_icmpgt(address) => {
+                if_icmpgt(stack, *address).map(InstructionResult::Sync)
+            }
+            Instruction::If_icmple(address) => {
+                if_icmple(stack, *address).map(InstructionResult::Sync)
+            }
+            Instruction::If_acmpeq(address) => {
+                if_acmpeq(stack, *address).map(InstructionResult::Sync)
+            }
+            Instruction::If_acmpne(address) => {
+                if_acmpne(stack, *address).map(InstructionResult::Sync)
+            }
+            Instruction::Goto(address) => goto(*address).map(InstructionResult::Sync),
+            Instruction::Jsr(address) => jsr(stack, *address).map(InstructionResult::Sync),
+            Instruction::Ret(index) => ret(locals, *index).map(InstructionResult::Sync),
             Instruction::Tableswitch(TableSwitch {
                 default,
                 low,
@@ -514,69 +602,118 @@ impl Frame {
             }) => {
                 let program_counter = self.program_counter.load(Ordering::Relaxed);
                 tableswitch(stack, program_counter, *default, *low, *high, offsets)
+                    .map(InstructionResult::Sync)
             }
             Instruction::Lookupswitch(LookupSwitch { default, pairs }) => {
                 let program_counter = self.program_counter.load(Ordering::Relaxed);
-                lookupswitch(stack, program_counter, *default, pairs)
+                lookupswitch(stack, program_counter, *default, pairs).map(InstructionResult::Sync)
             }
-            Instruction::Ireturn => ireturn(stack),
-            Instruction::Lreturn => lreturn(stack),
-            Instruction::Freturn => freturn(stack),
-            Instruction::Dreturn => dreturn(stack),
-            Instruction::Areturn => areturn(stack),
-            Instruction::Return => r#return(),
-            Instruction::Getstatic(index) => Box::pin(getstatic(self, stack, *index)).await,
-            Instruction::Putstatic(index) => Box::pin(putstatic(self, stack, *index)).await,
-            Instruction::Getfield(index) => {
-                Box::pin(getfield(self, stack, &self.class, *index)).await
+            Instruction::Ireturn => ireturn(stack).map(InstructionResult::Sync),
+            Instruction::Lreturn => lreturn(stack).map(InstructionResult::Sync),
+            Instruction::Freturn => freturn(stack).map(InstructionResult::Sync),
+            Instruction::Dreturn => dreturn(stack).map(InstructionResult::Sync),
+            Instruction::Areturn => areturn(stack).map(InstructionResult::Sync),
+            Instruction::Return => r#return().map(InstructionResult::Sync),
+            Instruction::Getstatic(index) => Ok(InstructionResult::Async(Box::pin(getstatic(
+                self, stack, *index,
+            )))),
+            Instruction::Putstatic(index) => Ok(InstructionResult::Async(Box::pin(putstatic(
+                self, stack, *index,
+            )))),
+            Instruction::Getfield(index) => Ok(InstructionResult::Async(Box::pin(getfield(
+                self,
+                stack,
+                &self.class,
+                *index,
+            )))),
+            Instruction::Putfield(index) => Ok(InstructionResult::Async(Box::pin(putfield(
+                self,
+                stack,
+                &self.class,
+                *index,
+            )))),
+            Instruction::Invokevirtual(index) => Ok(InstructionResult::Async(Box::pin(
+                invokevirtual(self, stack, *index),
+            ))),
+            Instruction::Invokespecial(index) => Ok(InstructionResult::Async(Box::pin(
+                invokespecial(self, stack, *index),
+            ))),
+            Instruction::Invokestatic(index) => Ok(InstructionResult::Async(Box::pin(
+                invokestatic(self, stack, *index),
+            ))),
+            Instruction::Invokeinterface(index, count) => Ok(InstructionResult::Async(Box::pin(
+                invokeinterface(self, stack, *index, *count),
+            ))),
+            Instruction::Invokedynamic(index) => Ok(InstructionResult::Async(Box::pin(
+                invokedynamic(self, stack, *index),
+            ))),
+            Instruction::New(index) => {
+                Ok(InstructionResult::Async(Box::pin(new(self, stack, *index))))
             }
-            Instruction::Putfield(index) => {
-                Box::pin(putfield(self, stack, &self.class, *index)).await
+            Instruction::Newarray(array_type) => {
+                newarray(stack, array_type).map(InstructionResult::Sync)
             }
-            Instruction::Invokevirtual(index) => Box::pin(invokevirtual(self, stack, *index)).await,
-            Instruction::Invokespecial(index) => Box::pin(invokespecial(self, stack, *index)).await,
-            Instruction::Invokestatic(index) => Box::pin(invokestatic(self, stack, *index)).await,
-            Instruction::Invokeinterface(index, count) => {
-                Box::pin(invokeinterface(self, stack, *index, *count)).await
+            Instruction::Anewarray(index) => Ok(InstructionResult::Async(Box::pin(anewarray(
+                self, stack, *index,
+            )))),
+            Instruction::Arraylength => arraylength(stack).map(InstructionResult::Sync),
+            Instruction::Athrow => Ok(InstructionResult::Async(Box::pin(athrow(stack)))),
+            Instruction::Checkcast(class_index) => Ok(InstructionResult::Async(Box::pin(
+                checkcast(self, stack, *class_index),
+            ))),
+            Instruction::Instanceof(class_index) => Ok(InstructionResult::Async(Box::pin(
+                instanceof(self, stack, *class_index),
+            ))),
+            Instruction::Monitorenter => monitorenter(stack).map(InstructionResult::Sync),
+            Instruction::Monitorexit => monitorexit(stack).map(InstructionResult::Sync),
+            Instruction::Wide => wide().map(InstructionResult::Sync),
+            Instruction::Multianewarray(index, dimensions) => Ok(InstructionResult::Async(
+                Box::pin(multianewarray(self, stack, *index, *dimensions)),
+            )),
+            Instruction::Ifnull(address) => ifnull(stack, *address).map(InstructionResult::Sync),
+            Instruction::Ifnonnull(address) => {
+                ifnonnull(stack, *address).map(InstructionResult::Sync)
             }
-            Instruction::Invokedynamic(index) => Box::pin(invokedynamic(self, stack, *index)).await,
-            Instruction::New(index) => Box::pin(new(self, stack, *index)).await,
-            Instruction::Newarray(array_type) => newarray(stack, array_type),
-            Instruction::Anewarray(index) => Box::pin(anewarray(self, stack, *index)).await,
-            Instruction::Arraylength => arraylength(stack),
-            Instruction::Athrow => Box::pin(athrow(stack)).await,
-            Instruction::Checkcast(class_index) => {
-                Box::pin(checkcast(self, stack, *class_index)).await
-            }
-            Instruction::Instanceof(class_index) => {
-                Box::pin(instanceof(self, stack, *class_index)).await
-            }
-            Instruction::Monitorenter => monitorenter(stack),
-            Instruction::Monitorexit => monitorexit(stack),
-            Instruction::Wide => wide(),
-            Instruction::Multianewarray(index, dimensions) => {
-                Box::pin(multianewarray(self, stack, *index, *dimensions)).await
-            }
-            Instruction::Ifnull(address) => ifnull(stack, *address),
-            Instruction::Ifnonnull(address) => ifnonnull(stack, *address),
-            Instruction::Goto_w(address) => goto_w(*address),
-            Instruction::Jsr_w(address) => jsr_w(stack, *address),
-            Instruction::Breakpoint => breakpoint(),
-            Instruction::Impdep1 => impdep1(),
-            Instruction::Impdep2 => impdep2(),
+            Instruction::Goto_w(address) => goto_w(*address).map(InstructionResult::Sync),
+            Instruction::Jsr_w(address) => jsr_w(stack, *address).map(InstructionResult::Sync),
+            Instruction::Breakpoint => breakpoint().map(InstructionResult::Sync),
+            Instruction::Impdep1 => impdep1().map(InstructionResult::Sync),
+            Instruction::Impdep2 => impdep2().map(InstructionResult::Sync),
             // Wide instructions
-            Instruction::Iload_w(index) => iload_w(locals, stack, *index),
-            Instruction::Lload_w(index) => lload_w(locals, stack, *index),
-            Instruction::Fload_w(index) => fload_w(locals, stack, *index),
-            Instruction::Dload_w(index) => dload_w(locals, stack, *index),
-            Instruction::Aload_w(index) => aload_w(locals, stack, *index),
-            Instruction::Istore_w(index) => istore_w(locals, stack, *index),
-            Instruction::Lstore_w(index) => lstore_w(locals, stack, *index),
-            Instruction::Fstore_w(index) => fstore_w(locals, stack, *index),
-            Instruction::Dstore_w(index) => dstore_w(locals, stack, *index),
-            Instruction::Astore_w(index) => astore_w(locals, stack, *index),
-            Instruction::Iinc_w(index, constant) => iinc_w(locals, *index, *constant),
-            Instruction::Ret_w(index) => ret_w(locals, *index),
+            Instruction::Iload_w(index) => {
+                iload_w(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Lload_w(index) => {
+                lload_w(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Fload_w(index) => {
+                fload_w(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Dload_w(index) => {
+                dload_w(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Aload_w(index) => {
+                aload_w(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Istore_w(index) => {
+                istore_w(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Lstore_w(index) => {
+                lstore_w(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Fstore_w(index) => {
+                fstore_w(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Dstore_w(index) => {
+                dstore_w(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Astore_w(index) => {
+                astore_w(locals, stack, *index).map(InstructionResult::Sync)
+            }
+            Instruction::Iinc_w(index, constant) => {
+                iinc_w(locals, *index, *constant).map(InstructionResult::Sync)
+            }
+            Instruction::Ret_w(index) => ret_w(locals, *index).map(InstructionResult::Sync),
         }
     }
 }
