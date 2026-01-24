@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "jdk/internal/misc/VM.getNanoTimeAdjustment(J)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_nano_time_adjustment(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn get_nano_time_adjustment(
     "jdk/internal/misc/VM.getRuntimeArguments()[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_runtime_arguments(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn get_runtime_arguments(
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.getegid()J", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn getegid(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn getegid(
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.geteuid()J", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn geteuid(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -51,19 +51,19 @@ pub(crate) async fn geteuid(
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.getgid()J", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn getgid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.VM.getgid()J")
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.getuid()J", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn getuid(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.misc.VM.getuid()J")
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.initialize()V", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn initialize(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -75,7 +75,7 @@ pub(crate) async fn initialize(
     "jdk/internal/misc/VM.initializeFromArchive(Ljava/lang/Class;)V",
     Equal(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn initialize_from_archive(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -87,7 +87,7 @@ pub(crate) async fn initialize_from_archive(
     "jdk/internal/misc/VM.latestUserDefinedLoader0()Ljava/lang/ClassLoader;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn latest_user_defined_loader_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

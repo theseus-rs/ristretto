@@ -3,11 +3,11 @@ use crate::Result;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::ClassFile;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Class, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::io::Cursor;
 use std::sync::Arc;
@@ -18,7 +18,7 @@ use zerocopy::transmute_ref;
     "java/lang/reflect/Proxy.defineClass0(Ljava/lang/ClassLoader;Ljava/lang/String;[BII)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn define_class_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,

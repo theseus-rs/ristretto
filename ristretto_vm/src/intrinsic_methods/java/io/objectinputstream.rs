@@ -2,10 +2,10 @@ use crate::JavaError::{IllegalArgumentException, NullPointerException};
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -13,7 +13,7 @@ use std::sync::Arc;
     "java/io/ObjectInputStream.bytesToDoubles([BI[DII)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn bytes_to_doubles(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -56,7 +56,7 @@ pub(crate) async fn bytes_to_doubles(
     "java/io/ObjectInputStream.bytesToFloats([BI[FII)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn bytes_to_floats(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

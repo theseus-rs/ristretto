@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "jdk/internal/foreign/abi/UpcallStubs.freeUpcallStub0(J)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_upcall_stub_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn free_upcall_stub_0(
     "jdk/internal/foreign/abi/UpcallStubs.registerNatives()V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
     _parameters: Parameters,

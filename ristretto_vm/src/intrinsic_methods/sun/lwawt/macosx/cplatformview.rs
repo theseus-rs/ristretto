@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformView.nativeCreateView(IIIIJ)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create_view(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn native_create_view(
     "sun/lwawt/macosx/CPlatformView.nativeGetLocationOnScreen(J)Ljava/awt/geom/Rectangle2D;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_location_on_screen(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -29,7 +29,7 @@ pub(crate) async fn native_get_location_on_screen(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformView.nativeGetNSViewDisplayID(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_ns_view_display_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -38,7 +38,7 @@ pub(crate) async fn native_get_ns_view_display_id(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformView.nativeIsViewUnderMouse(J)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_is_view_under_mouse(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -47,7 +47,7 @@ pub(crate) async fn native_is_view_under_mouse(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPlatformView.nativeSetAutoResizable(JZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_set_auto_resizable(
     _thread: Arc<Thread>,
     _parameters: Parameters,

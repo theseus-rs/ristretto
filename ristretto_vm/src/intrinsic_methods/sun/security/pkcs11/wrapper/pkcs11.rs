@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/security/pkcs11/wrapper/PKCS11.C_CloseSession(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_close_session(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn c_close_session(
     "sun/security/pkcs11/wrapper/PKCS11.C_CopyObject(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_copy_object(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -38,7 +38,7 @@ pub(crate) async fn c_copy_object(
     "sun/security/pkcs11/wrapper/PKCS11.C_CreateObject(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_create_object(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -52,7 +52,7 @@ pub(crate) async fn c_create_object(
     "sun/security/pkcs11/wrapper/PKCS11.C_Decrypt(JJ[BIIJ[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_decrypt(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -64,7 +64,7 @@ pub(crate) async fn c_decrypt(
     "sun/security/pkcs11/wrapper/PKCS11.C_DecryptFinal(JJ[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_decrypt_final(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -76,7 +76,7 @@ pub(crate) async fn c_decrypt_final(
     "sun/security/pkcs11/wrapper/PKCS11.C_DecryptInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_decrypt_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -90,7 +90,7 @@ pub(crate) async fn c_decrypt_init(
     "sun/security/pkcs11/wrapper/PKCS11.C_DecryptUpdate(JJ[BIIJ[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_decrypt_update(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -102,7 +102,7 @@ pub(crate) async fn c_decrypt_update(
     "sun/security/pkcs11/wrapper/PKCS11.C_DeriveKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_derive_key(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -116,7 +116,7 @@ pub(crate) async fn c_derive_key(
     "sun/security/pkcs11/wrapper/PKCS11.C_DestroyObject(JJ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_destroy_object(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -128,7 +128,7 @@ pub(crate) async fn c_destroy_object(
     "sun/security/pkcs11/wrapper/PKCS11.C_DigestFinal(J[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_digest_final(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -140,7 +140,7 @@ pub(crate) async fn c_digest_final(
     "sun/security/pkcs11/wrapper/PKCS11.C_DigestInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_digest_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -154,7 +154,7 @@ pub(crate) async fn c_digest_init(
     "sun/security/pkcs11/wrapper/PKCS11.C_DigestKey(JJ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_digest_key(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -166,7 +166,7 @@ pub(crate) async fn c_digest_key(
     "sun/security/pkcs11/wrapper/PKCS11.C_DigestSingle(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[BII[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_digest_single(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -180,7 +180,7 @@ pub(crate) async fn c_digest_single(
     "sun/security/pkcs11/wrapper/PKCS11.C_DigestUpdate(JJ[BII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_digest_update(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -192,7 +192,7 @@ pub(crate) async fn c_digest_update(
     "sun/security/pkcs11/wrapper/PKCS11.C_Encrypt(JJ[BIIJ[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_encrypt(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -204,7 +204,7 @@ pub(crate) async fn c_encrypt(
     "sun/security/pkcs11/wrapper/PKCS11.C_EncryptFinal(JJ[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_encrypt_final(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -216,7 +216,7 @@ pub(crate) async fn c_encrypt_final(
     "sun/security/pkcs11/wrapper/PKCS11.C_EncryptInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_encrypt_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -230,7 +230,7 @@ pub(crate) async fn c_encrypt_init(
     "sun/security/pkcs11/wrapper/PKCS11.C_EncryptUpdate(JJ[BIIJ[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_encrypt_update(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -242,7 +242,7 @@ pub(crate) async fn c_encrypt_update(
     "sun/security/pkcs11/wrapper/PKCS11.C_Finalize(Ljava/lang/Object;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_finalize(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -254,7 +254,7 @@ pub(crate) async fn c_finalize(
     "sun/security/pkcs11/wrapper/PKCS11.C_FindObjects(JJ)[J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_find_objects(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -266,7 +266,7 @@ pub(crate) async fn c_find_objects(
     "sun/security/pkcs11/wrapper/PKCS11.C_FindObjectsFinal(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_find_objects_final(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -278,7 +278,7 @@ pub(crate) async fn c_find_objects_final(
     "sun/security/pkcs11/wrapper/PKCS11.C_FindObjectsInit(J[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_find_objects_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -292,7 +292,7 @@ pub(crate) async fn c_find_objects_init(
     "sun/security/pkcs11/wrapper/PKCS11.C_GCMDecryptInitWithRetry(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_gcm_decrypt_init_with_retry(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -306,7 +306,7 @@ pub(crate) async fn c_gcm_decrypt_init_with_retry(
     "sun/security/pkcs11/wrapper/PKCS11.C_GCMEncryptInitWithRetry(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_gcm_encrypt_init_with_retry(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -320,7 +320,7 @@ pub(crate) async fn c_gcm_encrypt_init_with_retry(
     "sun/security/pkcs11/wrapper/PKCS11.C_GenerateKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_generate_key(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -334,7 +334,7 @@ pub(crate) async fn c_generate_key(
     "sun/security/pkcs11/wrapper/PKCS11.C_GenerateKeyPair(JLsun/security/pkcs11/wrapper/CK_MECHANISM;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)[J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_generate_key_pair(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -348,7 +348,7 @@ pub(crate) async fn c_generate_key_pair(
     "sun/security/pkcs11/wrapper/PKCS11.C_GenerateRandom(J[B)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_generate_random(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -360,7 +360,7 @@ pub(crate) async fn c_generate_random(
     "sun/security/pkcs11/wrapper/PKCS11.C_GetAttributeValue(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_get_attribute_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -374,7 +374,7 @@ pub(crate) async fn c_get_attribute_value(
     "sun/security/pkcs11/wrapper/PKCS11.C_GetInfo()Lsun/security/pkcs11/wrapper/CK_INFO;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_get_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -386,7 +386,7 @@ pub(crate) async fn c_get_info(
     "sun/security/pkcs11/wrapper/PKCS11.C_GetMechanismInfo(JJ)Lsun/security/pkcs11/wrapper/CK_MECHANISM_INFO;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_get_mechanism_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -400,7 +400,7 @@ pub(crate) async fn c_get_mechanism_info(
     "sun/security/pkcs11/wrapper/PKCS11.C_GetMechanismList(J)[J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_get_mechanism_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -412,7 +412,7 @@ pub(crate) async fn c_get_mechanism_list(
     "sun/security/pkcs11/wrapper/PKCS11.C_GetOperationState(J)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_get_operation_state(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -424,7 +424,7 @@ pub(crate) async fn c_get_operation_state(
     "sun/security/pkcs11/wrapper/PKCS11.C_GetSessionInfo(J)Lsun/security/pkcs11/wrapper/CK_SESSION_INFO;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_get_session_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -438,7 +438,7 @@ pub(crate) async fn c_get_session_info(
     "sun/security/pkcs11/wrapper/PKCS11.C_GetSlotInfo(J)Lsun/security/pkcs11/wrapper/CK_SLOT_INFO;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_get_slot_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -452,7 +452,7 @@ pub(crate) async fn c_get_slot_info(
     "sun/security/pkcs11/wrapper/PKCS11.C_GetSlotList(Z)[J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_get_slot_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -464,7 +464,7 @@ pub(crate) async fn c_get_slot_list(
     "sun/security/pkcs11/wrapper/PKCS11.C_GetTokenInfo(J)Lsun/security/pkcs11/wrapper/CK_TOKEN_INFO;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_get_token_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -478,7 +478,7 @@ pub(crate) async fn c_get_token_info(
     "sun/security/pkcs11/wrapper/PKCS11.C_Initialize(Ljava/lang/Object;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_initialize(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -490,7 +490,7 @@ pub(crate) async fn c_initialize(
     "sun/security/pkcs11/wrapper/PKCS11.C_Login(JJ[C)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_login(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -502,7 +502,7 @@ pub(crate) async fn c_login(
     "sun/security/pkcs11/wrapper/PKCS11.C_Logout(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_logout(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -514,7 +514,7 @@ pub(crate) async fn c_logout(
     "sun/security/pkcs11/wrapper/PKCS11.C_OpenSession(JJLjava/lang/Object;Lsun/security/pkcs11/wrapper/CK_NOTIFY;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_open_session(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -528,7 +528,7 @@ pub(crate) async fn c_open_session(
     "sun/security/pkcs11/wrapper/PKCS11.C_SeedRandom(J[B)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_seed_random(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -540,7 +540,7 @@ pub(crate) async fn c_seed_random(
     "sun/security/pkcs11/wrapper/PKCS11.C_SessionCancel(JJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_session_cancel(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -552,7 +552,7 @@ pub(crate) async fn c_session_cancel(
     "sun/security/pkcs11/wrapper/PKCS11.C_SetAttributeValue(JJ[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_set_attribute_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -566,7 +566,7 @@ pub(crate) async fn c_set_attribute_value(
     "sun/security/pkcs11/wrapper/PKCS11.C_SetOperationState(J[BJJ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_set_operation_state(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -578,7 +578,7 @@ pub(crate) async fn c_set_operation_state(
     "sun/security/pkcs11/wrapper/PKCS11.C_Sign(J[B)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_sign(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.security.pkcs11.wrapper.PKCS11.C_Sign(J[B)[B")
 }
@@ -587,7 +587,7 @@ pub(crate) async fn c_sign(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/security/pkcs11/wrapper/PKCS11.C_SignFinal(JI)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_sign_final(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -599,7 +599,7 @@ pub(crate) async fn c_sign_final(
     "sun/security/pkcs11/wrapper/PKCS11.C_SignInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_sign_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -613,7 +613,7 @@ pub(crate) async fn c_sign_init(
     "sun/security/pkcs11/wrapper/PKCS11.C_SignRecover(J[BII[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_sign_recover(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -625,7 +625,7 @@ pub(crate) async fn c_sign_recover(
     "sun/security/pkcs11/wrapper/PKCS11.C_SignRecoverInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_sign_recover_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -639,7 +639,7 @@ pub(crate) async fn c_sign_recover_init(
     "sun/security/pkcs11/wrapper/PKCS11.C_SignUpdate(JJ[BII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_sign_update(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -651,7 +651,7 @@ pub(crate) async fn c_sign_update(
     "sun/security/pkcs11/wrapper/PKCS11.C_UnwrapKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J[B[Lsun/security/pkcs11/wrapper/CK_ATTRIBUTE;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_unwrap_key(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -665,7 +665,7 @@ pub(crate) async fn c_unwrap_key(
     "sun/security/pkcs11/wrapper/PKCS11.C_Verify(J[B[B)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_verify(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -677,7 +677,7 @@ pub(crate) async fn c_verify(
     "sun/security/pkcs11/wrapper/PKCS11.C_VerifyFinal(J[B)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_verify_final(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -689,7 +689,7 @@ pub(crate) async fn c_verify_final(
     "sun/security/pkcs11/wrapper/PKCS11.C_VerifyInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_verify_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -703,7 +703,7 @@ pub(crate) async fn c_verify_init(
     "sun/security/pkcs11/wrapper/PKCS11.C_VerifyRecover(J[BII[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_verify_recover(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -715,7 +715,7 @@ pub(crate) async fn c_verify_recover(
     "sun/security/pkcs11/wrapper/PKCS11.C_VerifyRecoverInit(JLsun/security/pkcs11/wrapper/CK_MECHANISM;J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_verify_recover_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -729,7 +729,7 @@ pub(crate) async fn c_verify_recover_init(
     "sun/security/pkcs11/wrapper/PKCS11.C_VerifyUpdate(JJ[BII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_verify_update(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -741,7 +741,7 @@ pub(crate) async fn c_verify_update(
     "sun/security/pkcs11/wrapper/PKCS11.C_WrapKey(JLsun/security/pkcs11/wrapper/CK_MECHANISM;JJ)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn c_wrap_key(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -755,7 +755,7 @@ pub(crate) async fn c_wrap_key(
     "sun/security/pkcs11/wrapper/PKCS11.connect(Ljava/lang/String;Ljava/lang/String;)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn connect_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -767,7 +767,7 @@ pub(crate) async fn connect_0(
     "sun/security/pkcs11/wrapper/PKCS11.connect(Ljava/lang/String;Ljava/lang/String;)Lsun/security/pkcs11/wrapper/CK_VERSION;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn connect_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -781,7 +781,7 @@ pub(crate) async fn connect_1(
     "sun/security/pkcs11/wrapper/PKCS11.createNativeKey(J[BJLsun/security/pkcs11/wrapper/CK_MECHANISM;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_native_key(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -795,7 +795,7 @@ pub(crate) async fn create_native_key(
     "sun/security/pkcs11/wrapper/PKCS11.disconnect()V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn disconnect_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -807,7 +807,7 @@ pub(crate) async fn disconnect_0(
     "sun/security/pkcs11/wrapper/PKCS11.disconnect(J)V",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn disconnect_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -819,7 +819,7 @@ pub(crate) async fn disconnect_1(
     "sun/security/pkcs11/wrapper/PKCS11.finalizeLibrary()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn finalize_library(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -831,7 +831,7 @@ pub(crate) async fn finalize_library(
     "sun/security/pkcs11/wrapper/PKCS11.freeMechanism(J)J",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_mechanism(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -843,7 +843,7 @@ pub(crate) async fn free_mechanism(
     "sun/security/pkcs11/wrapper/PKCS11.getNativeKeyInfo(JJJLsun/security/pkcs11/wrapper/CK_MECHANISM;)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_key_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -857,7 +857,7 @@ pub(crate) async fn get_native_key_info(
     "sun/security/pkcs11/wrapper/PKCS11.initializeLibrary(Z)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn initialize_library(
     _thread: Arc<Thread>,
     _parameters: Parameters,

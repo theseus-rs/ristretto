@@ -2,10 +2,10 @@ use crate::Result;
 use crate::intrinsic_methods::java::io::fileoutputstream::file_handle_identifier;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
@@ -15,7 +15,7 @@ use tokio::io::AsyncWriteExt;
     "java/io/FileCleanable.cleanupClose0(IJ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn cleanup_close_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,

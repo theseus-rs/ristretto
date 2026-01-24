@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "sun/security/jgss/wrapper/GSSLibStub.acceptContext(JLorg/ietf/jgss/ChannelBinding;[BLsun/security/jgss/wrapper/NativeGSSContext;)[B",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn accept_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -22,7 +22,7 @@ pub(crate) async fn accept_context(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.acquireCred(JII)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn acquire_cred(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -31,7 +31,7 @@ pub(crate) async fn acquire_cred(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.canonicalizeName(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn canonicalize_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -40,7 +40,7 @@ pub(crate) async fn canonicalize_name(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.compareName(JJ)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn compare_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -49,7 +49,7 @@ pub(crate) async fn compare_name(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.deleteContext(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn delete_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -61,7 +61,7 @@ pub(crate) async fn delete_context(
     "sun/security/jgss/wrapper/GSSLibStub.displayName(J)[Ljava/lang/Object;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn display_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -70,7 +70,7 @@ pub(crate) async fn display_name(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.exportContext(J)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn export_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -79,7 +79,7 @@ pub(crate) async fn export_context(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.exportName(J)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn export_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -91,7 +91,7 @@ pub(crate) async fn export_name(
     "sun/security/jgss/wrapper/GSSLibStub.getContextMech(J)Lorg/ietf/jgss/Oid;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_context_mech(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -100,7 +100,7 @@ pub(crate) async fn get_context_mech(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getContextName(JZ)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_context_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -109,7 +109,7 @@ pub(crate) async fn get_context_name(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getContextTime(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_context_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -118,7 +118,7 @@ pub(crate) async fn get_context_time(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getCredName(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_cred_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -127,7 +127,7 @@ pub(crate) async fn get_cred_name(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getCredTime(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_cred_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -136,7 +136,7 @@ pub(crate) async fn get_cred_time(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getCredUsage(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_cred_usage(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -145,7 +145,7 @@ pub(crate) async fn get_cred_usage(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getMechPtr([B)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_mech_ptr(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -154,7 +154,7 @@ pub(crate) async fn get_mech_ptr(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.getMic(JI[B)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_mic(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -166,7 +166,7 @@ pub(crate) async fn get_mic(
     "sun/security/jgss/wrapper/GSSLibStub.importContext([B)Lsun/security/jgss/wrapper/NativeGSSContext;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn import_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -180,7 +180,7 @@ pub(crate) async fn import_context(
     "sun/security/jgss/wrapper/GSSLibStub.importName([BLorg/ietf/jgss/Oid;)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn import_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -192,7 +192,7 @@ pub(crate) async fn import_name(
     "sun/security/jgss/wrapper/GSSLibStub.indicateMechs()[Lorg/ietf/jgss/Oid;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn indicate_mechs(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -201,7 +201,7 @@ pub(crate) async fn indicate_mechs(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.init(Ljava/lang/String;Z)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.security.jgss.wrapper.GSSLibStub.init(Ljava/lang/String;Z)Z")
 }
@@ -210,7 +210,7 @@ pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
     "sun/security/jgss/wrapper/GSSLibStub.initContext(JJLorg/ietf/jgss/ChannelBinding;[BLsun/security/jgss/wrapper/NativeGSSContext;)[B",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -221,7 +221,7 @@ pub(crate) async fn init_context(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.inquireContext(J)[J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn inquire_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -233,7 +233,7 @@ pub(crate) async fn inquire_context(
     "sun/security/jgss/wrapper/GSSLibStub.inquireNamesForMech()[Lorg/ietf/jgss/Oid;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn inquire_names_for_mech(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -242,7 +242,7 @@ pub(crate) async fn inquire_names_for_mech(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.releaseCred(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn release_cred(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -251,7 +251,7 @@ pub(crate) async fn release_cred(
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.releaseName(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn release_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -263,7 +263,7 @@ pub(crate) async fn release_name(
     "sun/security/jgss/wrapper/GSSLibStub.unwrap(J[BLorg/ietf/jgss/MessageProp;)[B",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unwrap(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.security.jgss.wrapper.GSSLibStub.unwrap(J[BLorg/ietf/jgss/MessageProp;)[B")
 }
@@ -272,7 +272,7 @@ pub(crate) async fn unwrap(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/security/jgss/wrapper/GSSLibStub.verifyMic(J[B[BLorg/ietf/jgss/MessageProp;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn verify_mic(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -284,13 +284,13 @@ pub(crate) async fn verify_mic(
     "sun/security/jgss/wrapper/GSSLibStub.wrap(J[BLorg/ietf/jgss/MessageProp;)[B",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn wrap(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.security.jgss.wrapper.GSSLibStub.wrap(J[BLorg/ietf/jgss/MessageProp;)[B")
 }
 
 #[intrinsic_method("sun/security/jgss/wrapper/GSSLibStub.wrapSizeLimit(JIII)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn wrap_size_limit(
     _thread: Arc<Thread>,
     _parameters: Parameters,

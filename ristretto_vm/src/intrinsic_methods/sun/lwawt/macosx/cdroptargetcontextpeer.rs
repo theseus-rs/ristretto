@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CDropTargetContextPeer.addTransfer(JJJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn add_transfer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn add_transfer(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CDropTargetContextPeer.dropDone(JJZZI)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn drop_done(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn drop_done(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CDropTargetContextPeer.startTransfer(JJ)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn start_transfer(
     _thread: Arc<Thread>,
     _parameters: Parameters,

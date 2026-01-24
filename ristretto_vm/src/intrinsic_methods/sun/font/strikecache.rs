@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/font/StrikeCache.freeIntMemory([IJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_int_memory(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -18,7 +18,7 @@ pub(crate) async fn free_int_memory(
 }
 
 #[intrinsic_method("sun/font/StrikeCache.freeIntPointer(I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_int_pointer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -27,7 +27,7 @@ pub(crate) async fn free_int_pointer(
 }
 
 #[intrinsic_method("sun/font/StrikeCache.freeLongMemory([JJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_long_memory(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn free_long_memory(
 }
 
 #[intrinsic_method("sun/font/StrikeCache.freeLongPointer(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_long_pointer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn free_long_pointer(
     "sun/font/StrikeCache.getGlyphCacheDescription([J)V",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_glyph_cache_description(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn get_glyph_cache_description(
     "sun/font/StrikeCache.getInvisibleGlyphPtr()J",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_invisible_glyph_ptr(
     _thread: Arc<Thread>,
     _parameters: Parameters,

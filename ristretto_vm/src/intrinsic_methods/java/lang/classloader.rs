@@ -5,12 +5,12 @@ use crate::intrinsic_methods::java::lang::class::get_class;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use parking_lot::RwLock;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11};
 use ristretto_classloader::{Class, Reference, Value};
 use ristretto_gc::Gc;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::io::Cursor;
 use std::sync::Arc;
@@ -87,7 +87,7 @@ async fn class_object_from_bytes(
     "java/lang/ClassLoader.defineClass0(Ljava/lang/String;[BIILjava/security/ProtectionDomain;)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn define_class_0_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -117,7 +117,7 @@ pub(crate) async fn define_class_0_0(
     "java/lang/ClassLoader.defineClass1(Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn define_class_1_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -148,7 +148,7 @@ pub(crate) async fn define_class_1_0(
     "java/lang/ClassLoader.defineClass2(Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn define_class_2_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -187,7 +187,7 @@ pub(crate) async fn define_class_2_0(
     "java/lang/ClassLoader.defineClass0(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn define_class_0_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -224,7 +224,7 @@ pub(crate) async fn define_class_0_1(
     "java/lang/ClassLoader.defineClass1(Ljava/lang/ClassLoader;Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn define_class_1_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -253,7 +253,7 @@ pub(crate) async fn define_class_1_1(
     "java/lang/ClassLoader.defineClass2(Ljava/lang/ClassLoader;Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn define_class_2_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -289,7 +289,7 @@ pub(crate) async fn define_class_2_1(
     "java/lang/ClassLoader.findBootstrapClass(Ljava/lang/String;)Ljava/lang/Class;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find_bootstrap_class(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -306,7 +306,7 @@ pub(crate) async fn find_bootstrap_class(
     "java/lang/ClassLoader.findBuiltinLib(Ljava/lang/String;)Ljava/lang/String;",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find_builtin_lib(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -319,7 +319,7 @@ pub(crate) async fn find_builtin_lib(
     "java/lang/ClassLoader.findLoadedClass0(Ljava/lang/String;)Ljava/lang/Class;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find_loaded_class_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -336,7 +336,7 @@ pub(crate) async fn find_loaded_class_0(
     "java/lang/ClassLoader.initSystemClassLoader()Ljava/lang/ClassLoader;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_system_class_loader(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -346,7 +346,7 @@ pub(crate) async fn init_system_class_loader(
 }
 
 #[intrinsic_method("java/lang/ClassLoader.registerNatives()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -358,7 +358,7 @@ pub(crate) async fn register_natives(
     "java/lang/ClassLoader.resolveClass0(Ljava/lang/Class;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn resolve_class_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -371,7 +371,7 @@ pub(crate) async fn resolve_class_0(
     "java/lang/ClassLoader.retrieveDirectives()Ljava/lang/AssertionStatusDirectives;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn retrieve_directives(
     _thread: Arc<Thread>,
     _parameters: Parameters,

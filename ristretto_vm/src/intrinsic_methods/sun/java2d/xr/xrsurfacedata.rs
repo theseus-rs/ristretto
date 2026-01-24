@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/java2d/xr/XRSurfaceData.XRInitSurface(IIIJI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn xr_init_surface(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn xr_init_surface(
     "sun/java2d/xr/XRSurfaceData.freeXSDOPicture(J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_xsdo_picture(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn free_xsdo_picture(
 }
 
 #[intrinsic_method("sun/java2d/xr/XRSurfaceData.initIDs()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -45,7 +45,7 @@ pub(crate) async fn init_ids(
     "sun/java2d/xr/XRSurfaceData.initXRPicture(JI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_xr_picture(
     _thread: Arc<Thread>,
     _parameters: Parameters,

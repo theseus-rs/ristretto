@@ -3,13 +3,13 @@ use crate::JavaError::NullPointerException;
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::{
     Any, Between, Equal, GreaterThanOrEqual, LessThan, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -32,7 +32,7 @@ bitflags! {
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.access0(JI)V", LessThan(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn access_0_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -44,7 +44,7 @@ pub(crate) async fn access_0_0(
     "sun/nio/fs/UnixNativeDispatcher.access0(JI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn access_0_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -53,7 +53,7 @@ pub(crate) async fn access_0_1(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.chmod0(JI)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn chmod_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -62,7 +62,7 @@ pub(crate) async fn chmod_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.chown0(JII)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn chown_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -71,7 +71,7 @@ pub(crate) async fn chown_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.close(I)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     close_0(thread, parameters).await
 }
@@ -80,7 +80,7 @@ pub(crate) async fn close(thread: Arc<Thread>, parameters: Parameters) -> Result
     "sun/nio/fs/UnixNativeDispatcher.close0(I)V",
     GreaterThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -89,7 +89,7 @@ pub(crate) async fn close_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.closedir(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn closedir(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -98,7 +98,7 @@ pub(crate) async fn closedir(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.dup(I)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dup(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.fs.UnixNativeDispatcher.dup(I)I");
 }
@@ -107,7 +107,7 @@ pub(crate) async fn dup(_thread: Arc<Thread>, _parameters: Parameters) -> Result
     "sun/nio/fs/UnixNativeDispatcher.exists0(J)Z",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn exists_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -116,7 +116,7 @@ pub(crate) async fn exists_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.fclose(I)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fclose_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -125,7 +125,7 @@ pub(crate) async fn fclose_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.fclose(J)V", LessThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fclose_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -137,7 +137,7 @@ pub(crate) async fn fclose_1(
     "sun/nio/fs/UnixNativeDispatcher.fchmod(II)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fchmod(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     fchmod_0(thread, parameters).await
 }
@@ -146,7 +146,7 @@ pub(crate) async fn fchmod(thread: Arc<Thread>, parameters: Parameters) -> Resul
     "sun/nio/fs/UnixNativeDispatcher.fchmod0(II)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fchmod_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -158,7 +158,7 @@ pub(crate) async fn fchmod_0(
     "sun/nio/fs/UnixNativeDispatcher.fchmodat0(IJII)V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fchmodat_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -174,7 +174,7 @@ pub(crate) async fn fchmodat_0(
     "sun/nio/fs/UnixNativeDispatcher.fchmodatNoFollowSupported0()Z",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fchmodat_no_follow_supported_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -186,7 +186,7 @@ pub(crate) async fn fchmodat_no_follow_supported_0(
     "sun/nio/fs/UnixNativeDispatcher.fchown(III)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fchown(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     fchown_0(thread, parameters).await
 }
@@ -195,7 +195,7 @@ pub(crate) async fn fchown(thread: Arc<Thread>, parameters: Parameters) -> Resul
     "sun/nio/fs/UnixNativeDispatcher.fchown0(III)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fchown_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -204,7 +204,7 @@ pub(crate) async fn fchown_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.fdopendir(I)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fdopendir(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -216,7 +216,7 @@ pub(crate) async fn fdopendir(
     "sun/nio/fs/UnixNativeDispatcher.fgetxattr0(IJJI)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fgetxattr_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -228,7 +228,7 @@ pub(crate) async fn fgetxattr_0(
     "sun/nio/fs/UnixNativeDispatcher.flistxattr(IJI)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn flistxattr(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -240,7 +240,7 @@ pub(crate) async fn flistxattr(
     "sun/nio/fs/UnixNativeDispatcher.fopen0(JJ)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fopen_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -252,7 +252,7 @@ pub(crate) async fn fopen_0(
     "sun/nio/fs/UnixNativeDispatcher.fpathconf(II)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fpathconf(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -264,7 +264,7 @@ pub(crate) async fn fpathconf(
     "sun/nio/fs/UnixNativeDispatcher.fremovexattr0(IJ)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fremovexattr_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -276,7 +276,7 @@ pub(crate) async fn fremovexattr_0(
     "sun/nio/fs/UnixNativeDispatcher.fsetxattr0(IJJI)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fsetxattr_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -288,7 +288,7 @@ pub(crate) async fn fsetxattr_0(
     "sun/nio/fs/UnixNativeDispatcher.fstat(ILsun/nio/fs/UnixFileAttributes;)V",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fstat(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     fstat_0(thread, parameters).await
 }
@@ -297,7 +297,7 @@ pub(crate) async fn fstat(thread: Arc<Thread>, parameters: Parameters) -> Result
     "sun/nio/fs/UnixNativeDispatcher.fstat0(ILsun/nio/fs/UnixFileAttributes;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fstat_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -309,7 +309,7 @@ pub(crate) async fn fstat_0(
     "sun/nio/fs/UnixNativeDispatcher.fstatat0(IJILsun/nio/fs/UnixFileAttributes;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fstatat_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -318,7 +318,7 @@ pub(crate) async fn fstatat_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.futimens(IJJ)V", Equal(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn futimens(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     futimens_0(thread, parameters).await
 }
@@ -327,7 +327,7 @@ pub(crate) async fn futimens(thread: Arc<Thread>, parameters: Parameters) -> Res
     "sun/nio/fs/UnixNativeDispatcher.futimens0(IJJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn futimens_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -339,13 +339,13 @@ pub(crate) async fn futimens_0(
     "sun/nio/fs/UnixNativeDispatcher.futimes(IJJ)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn futimes(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     futimes_0(thread, parameters).await
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.futimes0(IJJ)V", Equal(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn futimes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -355,7 +355,7 @@ pub(crate) async fn futimes_0(
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getcwd()[B", Any)]
 #[expect(clippy::cast_possible_wrap)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn getcwd(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let current_dir_path =
         std::env::current_dir().map_err(|error| InternalError(format!("getcwd: {error}")))?;
@@ -371,7 +371,7 @@ pub(crate) async fn getcwd(_thread: Arc<Thread>, _parameters: Parameters) -> Res
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getgrgid(I)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn getgrgid(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -380,7 +380,7 @@ pub(crate) async fn getgrgid(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getgrnam0(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn getgrnam_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -392,7 +392,7 @@ pub(crate) async fn getgrnam_0(
     "sun/nio/fs/UnixNativeDispatcher.getlinelen(J)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn getlinelen(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -401,7 +401,7 @@ pub(crate) async fn getlinelen(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getpwnam0(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn getpwnam_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -410,7 +410,7 @@ pub(crate) async fn getpwnam_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getpwuid(I)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn getpwuid(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -419,7 +419,7 @@ pub(crate) async fn getpwuid(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.init()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let capabilities = SupportsFlags::empty();
     // TODO: Implement the capabilities check
@@ -428,7 +428,7 @@ pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.lchown0(JII)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn lchown_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -437,7 +437,7 @@ pub(crate) async fn lchown_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.link0(JJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn link_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.fs.UnixNativeDispatcher.link0(JJ)V");
 }
@@ -446,7 +446,7 @@ pub(crate) async fn link_0(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/nio/fs/UnixNativeDispatcher.lstat0(JLsun/nio/fs/UnixFileAttributes;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn lstat_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -458,7 +458,7 @@ pub(crate) async fn lstat_0(
     "sun/nio/fs/UnixNativeDispatcher.lutimes0(JJJ)V",
     Between(JAVA_17, JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn lutimes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -467,7 +467,7 @@ pub(crate) async fn lutimes_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.mkdir0(JI)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn mkdir_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -476,7 +476,7 @@ pub(crate) async fn mkdir_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.mknod0(JIJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn mknod_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -485,13 +485,13 @@ pub(crate) async fn mknod_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.open0(JII)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.fs.UnixNativeDispatcher.open0(JII)I");
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.openat0(IJII)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn openat_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -500,7 +500,7 @@ pub(crate) async fn openat_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.opendir0(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn opendir_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -512,7 +512,7 @@ pub(crate) async fn opendir_0(
     "sun/nio/fs/UnixNativeDispatcher.pathconf0(JI)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn pathconf_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -521,7 +521,7 @@ pub(crate) async fn pathconf_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.read(IJI)I", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     read_0(thread, parameters).await
 }
@@ -530,7 +530,7 @@ pub(crate) async fn read(thread: Arc<Thread>, parameters: Parameters) -> Result<
     "sun/nio/fs/UnixNativeDispatcher.read0(IJI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.fs.UnixNativeDispatcher.read0(IJI)I");
 }
@@ -539,7 +539,7 @@ pub(crate) async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/nio/fs/UnixNativeDispatcher.readdir(J)[B",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn readdir(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     readdir_0(thread, parameters).await
 }
@@ -548,7 +548,7 @@ pub(crate) async fn readdir(thread: Arc<Thread>, parameters: Parameters) -> Resu
     "sun/nio/fs/UnixNativeDispatcher.readdir0(J)[B",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn readdir_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -557,7 +557,7 @@ pub(crate) async fn readdir_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.readlink0(J)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn readlink_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -566,7 +566,7 @@ pub(crate) async fn readlink_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.realpath0(J)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn realpath_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -575,7 +575,7 @@ pub(crate) async fn realpath_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.rename0(JJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn rename_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -584,7 +584,7 @@ pub(crate) async fn rename_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.renameat0(IJIJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn renameat_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -593,13 +593,13 @@ pub(crate) async fn renameat_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.rewind(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn rewind(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.fs.UnixNativeDispatcher.rewind(J)V");
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.rmdir0(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn rmdir_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -611,7 +611,7 @@ pub(crate) async fn rmdir_0(
     "sun/nio/fs/UnixNativeDispatcher.stat0(JLsun/nio/fs/UnixFileAttributes;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn stat_0_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     let _ = stat_0_1(thread, parameters).await?;
     Ok(None)
@@ -621,7 +621,7 @@ pub(crate) async fn stat_0_0(thread: Arc<Thread>, parameters: Parameters) -> Res
     "sun/nio/fs/UnixNativeDispatcher.stat0(JLsun/nio/fs/UnixFileAttributes;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn stat_0_1(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -637,7 +637,7 @@ pub(crate) async fn stat_0_1(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.stat1(J)I", Between(JAVA_11, JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn stat_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.fs.UnixNativeDispatcher.stat1(J)I");
 }
@@ -646,7 +646,7 @@ pub(crate) async fn stat_1(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/nio/fs/UnixNativeDispatcher.statvfs0(JLsun/nio/fs/UnixFileStoreAttributes;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn statvfs_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -655,7 +655,7 @@ pub(crate) async fn statvfs_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.strerror(I)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn strerror(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -664,7 +664,7 @@ pub(crate) async fn strerror(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.symlink0(JJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn symlink_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -673,7 +673,7 @@ pub(crate) async fn symlink_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.unlink0(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unlink_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -682,7 +682,7 @@ pub(crate) async fn unlink_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.unlinkat0(IJI)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unlinkat_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -694,7 +694,7 @@ pub(crate) async fn unlinkat_0(
     "sun/nio/fs/UnixNativeDispatcher.utimes0(JJJ)V",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn utimes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -706,7 +706,7 @@ pub(crate) async fn utimes_0(
     "sun/nio/fs/UnixNativeDispatcher.utimensat0(IJJJI)V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn utimensat_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -718,7 +718,7 @@ pub(crate) async fn utimensat_0(
     "sun/nio/fs/UnixNativeDispatcher.write(IJI)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     write_0(thread, parameters).await
 }
@@ -727,7 +727,7 @@ pub(crate) async fn write(thread: Arc<Thread>, parameters: Parameters) -> Result
     "sun/nio/fs/UnixNativeDispatcher.write0(IJI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

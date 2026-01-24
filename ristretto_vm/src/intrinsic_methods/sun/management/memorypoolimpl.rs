@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "sun/management/MemoryPoolImpl.getCollectionUsage0()Ljava/lang/management/MemoryUsage;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_collection_usage_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -23,7 +23,7 @@ pub(crate) async fn get_collection_usage_0(
     "sun/management/MemoryPoolImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_memory_managers_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -37,7 +37,7 @@ pub(crate) async fn get_memory_managers_0(
     "sun/management/MemoryPoolImpl.getPeakUsage0()Ljava/lang/management/MemoryUsage;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_peak_usage_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -49,7 +49,7 @@ pub(crate) async fn get_peak_usage_0(
     "sun/management/MemoryPoolImpl.getUsage0()Ljava/lang/management/MemoryUsage;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_usage_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -58,7 +58,7 @@ pub(crate) async fn get_usage_0(
 }
 
 #[intrinsic_method("sun/management/MemoryPoolImpl.resetPeakUsage0()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn reset_peak_usage_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -67,7 +67,7 @@ pub(crate) async fn reset_peak_usage_0(
 }
 
 #[intrinsic_method("sun/management/MemoryPoolImpl.setCollectionThreshold0(JJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_collection_threshold_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -79,7 +79,7 @@ pub(crate) async fn set_collection_threshold_0(
     "sun/management/MemoryPoolImpl.setPoolCollectionSensor(Lsun/management/Sensor;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_pool_collection_sensor(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -91,7 +91,7 @@ pub(crate) async fn set_pool_collection_sensor(
     "sun/management/MemoryPoolImpl.setPoolUsageSensor(Lsun/management/Sensor;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_pool_usage_sensor(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -100,7 +100,7 @@ pub(crate) async fn set_pool_usage_sensor(
 }
 
 #[intrinsic_method("sun/management/MemoryPoolImpl.setUsageThreshold0(JJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_usage_threshold_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

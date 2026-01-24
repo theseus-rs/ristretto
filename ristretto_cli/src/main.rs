@@ -126,10 +126,18 @@ async fn common_main(mut cli: Arguments) -> Result<()> {
     startup_trace!("[cli] vm created");
 
     let parameters = cli.parameters.unwrap_or_default();
-    match vm.invoke_main(&parameters).await {
+    let result = match vm.invoke_main(&parameters).await {
         Ok(_) => Ok(()),
         Err(error) => process_error(error),
+    };
+
+    // Wait for all non-daemon threads to complete before exiting
+    // This matches JVM behavior where the VM waits for all non-daemon threads
+    if let Err(error) = vm.wait_for_non_daemon_threads().await {
+        eprintln!("Error waiting for threads: {error}");
     }
+
+    result
 }
 
 fn process_error(error: Error) -> Result<()> {

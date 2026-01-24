@@ -6,12 +6,12 @@ use crate::intrinsic_methods::properties;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use parking_lot::RwLock;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
 use ristretto_gc::Gc;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::env::consts::OS;
 use std::fmt::Debug;
@@ -88,7 +88,7 @@ fn arraycopy_within_helper<T: Clone>(
     "java/lang/System.arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn arraycopy(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -190,7 +190,7 @@ pub(crate) async fn arraycopy(
 }
 
 #[intrinsic_method("java/lang/System.allowSecurityManager()Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn allow_security_manager(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -199,7 +199,7 @@ pub(crate) async fn allow_security_manager(
 }
 
 #[intrinsic_method("java/lang/System.currentTimeMillis()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn current_time_millis(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -216,7 +216,7 @@ pub(crate) async fn current_time_millis(
     "java/lang/System.getSecurityManager()Ljava/lang/SecurityManager;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_security_manager(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -232,7 +232,7 @@ pub(crate) async fn get_security_manager(
 }
 
 #[intrinsic_method("java/lang/System.identityHashCode(Ljava/lang/Object;)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn identity_hash_code(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -245,7 +245,7 @@ pub(crate) async fn identity_hash_code(
     LessThanOrEqual(JAVA_11)
 )]
 /// Mechanism for initializing properties for Java versions <= 11
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_properties(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -273,7 +273,7 @@ pub(crate) async fn init_properties(
     "java/lang/System.mapLibraryName(Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn map_library_name(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -290,7 +290,7 @@ pub(crate) async fn map_library_name(
 }
 
 #[intrinsic_method("java/lang/System.nanoTime()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn nano_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -304,7 +304,7 @@ pub(crate) async fn nano_time(
 }
 
 #[intrinsic_method("java/lang/System.registerNatives()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_natives(
     thread: Arc<Thread>,
     _parameters: Parameters,
@@ -343,7 +343,7 @@ pub(crate) async fn register_natives(
 }
 
 #[intrinsic_method("java/lang/System.setIn0(Ljava/io/InputStream;)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_in_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -356,7 +356,7 @@ pub(crate) async fn set_in_0(
 }
 
 #[intrinsic_method("java/lang/System.setOut0(Ljava/io/PrintStream;)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_out_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -369,7 +369,7 @@ pub(crate) async fn set_out_0(
 }
 
 #[intrinsic_method("java/lang/System.setErr0(Ljava/io/PrintStream;)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_err_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -385,7 +385,7 @@ pub(crate) async fn set_err_0(
     "java/lang/System.setSecurityManager(Ljava/lang/SecurityManager;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_security_manager(
     _thread: Arc<Thread>,
     _parameters: Parameters,

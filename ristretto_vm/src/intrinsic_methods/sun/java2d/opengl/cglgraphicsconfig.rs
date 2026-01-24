@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/java2d/opengl/CGLGraphicsConfig.getCGLConfigInfo()J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_cgl_config_info_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn get_cgl_config_info_0(
     "sun/java2d/opengl/CGLGraphicsConfig.getCGLConfigInfo(III)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_cgl_config_info_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn get_cgl_config_info_1(
 }
 
 #[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.getOGLCapabilities(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_ogl_capabilities(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn get_ogl_capabilities(
 }
 
 #[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.initCGL()Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_cgl(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -51,7 +51,7 @@ pub(crate) async fn init_cgl(
 }
 
 #[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.nativeGetMaxTextureSize()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_max_texture_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,

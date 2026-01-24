@@ -1,21 +1,21 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/util/zip/ZipFile.close(J)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.ZipFile.close(J)V")
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.freeEntry(JJ)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_entry(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn free_entry(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getCommentBytes(J)[B", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_comment_bytes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn get_comment_bytes(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntry(J[BZ)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_entry(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn get_entry(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryBytes(JI)[B", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_entry_bytes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -51,7 +51,7 @@ pub(crate) async fn get_entry_bytes(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryCSize(J)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_entry_c_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn get_entry_c_size(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryCrc(J)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_entry_crc(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -69,7 +69,7 @@ pub(crate) async fn get_entry_crc(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryFlag(J)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_entry_flag(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -78,7 +78,7 @@ pub(crate) async fn get_entry_flag(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryMethod(J)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_entry_method(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -87,7 +87,7 @@ pub(crate) async fn get_entry_method(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntrySize(J)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_entry_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -96,7 +96,7 @@ pub(crate) async fn get_entry_size(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryTime(J)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_entry_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -105,7 +105,7 @@ pub(crate) async fn get_entry_time(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getManifestNum(J)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_manifest_num(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -114,7 +114,7 @@ pub(crate) async fn get_manifest_num(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getNextEntry(JI)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_next_entry(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -123,7 +123,7 @@ pub(crate) async fn get_next_entry(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getTotal(J)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_total(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -135,7 +135,7 @@ pub(crate) async fn get_total(
     "java/util/zip/ZipFile.getZipMessage(J)Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_zip_message(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -144,7 +144,7 @@ pub(crate) async fn get_zip_message(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.initIDs()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -156,19 +156,19 @@ pub(crate) async fn init_ids(
     "java/util/zip/ZipFile.open(Ljava/lang/String;IJZ)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn open(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.ZipFile.open(Ljava/lang/String;IJZ)J")
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.read(JJJ[BII)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.ZipFile.read(JJJ[BII)I")
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.startsWithLOC(J)Z", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn starts_with_loc(
     _thread: Arc<Thread>,
     _parameters: Parameters,

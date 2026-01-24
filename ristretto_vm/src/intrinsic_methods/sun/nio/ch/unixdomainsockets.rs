@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/nio/ch/UnixDomainSockets.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/lang/Object;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn accept_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn accept_0(
     "sun/nio/ch/UnixDomainSockets.bind0(Ljava/io/FileDescriptor;[B)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.bind0(Ljava/io/FileDescriptor;[B)V");
 }
@@ -35,7 +35,7 @@ pub(crate) async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/nio/ch/UnixDomainSockets.connect0(Ljava/io/FileDescriptor;[B)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn connect_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -44,7 +44,7 @@ pub(crate) async fn connect_0(
 }
 
 #[intrinsic_method("sun/nio/ch/UnixDomainSockets.init()Z", GreaterThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.UnixDomainSockets.init()Z");
 }
@@ -53,7 +53,7 @@ pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
     "sun/nio/ch/UnixDomainSockets.localAddress0(Ljava/io/FileDescriptor;)[B",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn local_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -62,7 +62,7 @@ pub(crate) async fn local_address_0(
 }
 
 #[intrinsic_method("sun/nio/ch/UnixDomainSockets.socket0()I", GreaterThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

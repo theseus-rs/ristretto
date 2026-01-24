@@ -21,6 +21,26 @@ use std::sync::Arc;
 /// Java class name, method name, and method descriptor. When a Java program calls
 /// a native method, the VM looks up the implementation in this registry and executes
 /// the corresponding Rust function.
+#[cfg(not(target_family = "wasm"))]
+pub type IntrinsicMethod = fn(
+    thread: Arc<Thread>,
+    parameters: Parameters,
+) -> Pin<Box<dyn Future<Output = Result<Option<Value>>> + Send>>;
+
+/// An intrinsic method represents a native Java method required by the Java Virtual Machine (JVM)
+/// that is implemented in Rust.
+///
+/// Intrinsic methods are native functions that implement Java functionality directly
+/// in Rust rather than in Java bytecode. These methods are registered with the VM
+/// and are called when their corresponding Java native methods are invoked.
+///
+/// # Usage
+///
+/// Intrinsic methods are registered in the `MethodRegistry` with their corresponding
+/// Java class name, method name, and method descriptor. When a Java program calls
+/// a native method, the VM looks up the implementation in this registry and executes
+/// the corresponding Rust function.
+#[cfg(target_family = "wasm")]
 pub type IntrinsicMethod = fn(
     thread: Arc<Thread>,
     parameters: Parameters,

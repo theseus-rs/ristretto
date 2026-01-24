@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/image/ImageRepresentation.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn init_ids(
     "sun/awt/image/ImageRepresentation.setDiffICM(IIII[IIILjava/awt/image/IndexColorModel;[BIILsun/awt/image/ByteComponentRaster;I)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_diff_icm(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -34,7 +34,7 @@ pub(crate) async fn set_diff_icm(
     "sun/awt/image/ImageRepresentation.setICMpixels(IIII[I[BIILsun/awt/image/IntegerComponentRaster;)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_icm_pixels(
     _thread: Arc<Thread>,
     _parameters: Parameters,

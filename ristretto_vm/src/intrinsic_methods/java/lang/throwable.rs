@@ -2,15 +2,15 @@ use crate::Result;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11};
 use ristretto_classloader::{Object, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/Throwable.fillInStackTrace(I)Ljava/lang/Throwable;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fill_in_stack_trace(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -118,7 +118,7 @@ pub(crate) async fn fill_in_stack_trace(
 }
 
 #[intrinsic_method("java/lang/Throwable.getStackTraceDepth()I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_stack_trace_depth(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -130,7 +130,7 @@ pub(crate) async fn get_stack_trace_depth(
     "java/lang/Throwable.getStackTraceElement(I)Ljava/lang/StackTraceElement;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_stack_trace_element(
     _thread: Arc<Thread>,
     _parameters: Parameters,

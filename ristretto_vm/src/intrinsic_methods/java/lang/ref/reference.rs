@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/ref/Reference.clear0()V", GreaterThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn clear_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn clear_0(
     "java/lang/ref/Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_and_clear_reference_pending_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -37,7 +37,7 @@ pub(crate) async fn get_and_clear_reference_pending_list(
     "java/lang/ref/Reference.hasReferencePendingList()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn has_reference_pending_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -50,7 +50,7 @@ pub(crate) async fn has_reference_pending_list(
     "java/lang/ref/Reference.refersTo0(Ljava/lang/Object;)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn refers_to_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -67,7 +67,7 @@ pub(crate) async fn refers_to_0(
     "java/lang/ref/Reference.waitForReferencePendingList()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn wait_for_reference_pending_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,

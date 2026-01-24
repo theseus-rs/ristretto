@@ -2,10 +2,10 @@ use crate::Result;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -13,7 +13,7 @@ use std::sync::Arc;
     "sun/reflect/Reflection.getCallerClass()Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_caller_class_1(
     thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn get_caller_class_1(
     "sun/reflect/Reflection.getCallerClass(I)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_caller_class_2(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -55,7 +55,7 @@ pub(crate) async fn get_caller_class_2(
     "sun/reflect/Reflection.getClassAccessFlags(Ljava/lang/Class;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_class_access_flags(
     thread: Arc<Thread>,
     mut parameters: Parameters,

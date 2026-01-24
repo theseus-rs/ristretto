@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "sun/lwawt/macosx/CDataTransferer.formatForIndex(J)Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn format_for_index(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -23,7 +23,7 @@ pub(crate) async fn format_for_index(
     "sun/lwawt/macosx/CDataTransferer.nativeDragQueryFile([B)[Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_drag_query_file(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,7 +35,7 @@ pub(crate) async fn native_drag_query_file(
     "sun/lwawt/macosx/CDataTransferer.registerFormatWithPasteboard(Ljava/lang/String;)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_format_with_pasteboard(
     _thread: Arc<Thread>,
     _parameters: Parameters,

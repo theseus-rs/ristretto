@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/lwawt/macosx/LWCToolkit.activateApplicationIgnoringOtherApps()V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn activate_application_ignoring_other_apps(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,13 +21,13 @@ pub(crate) async fn activate_application_ignoring_other_apps(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.beep()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn beep(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.LWCToolkit.beep()V")
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.createAWTRunLoopMediator()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_awt_run_loop_mediator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn create_awt_run_loop_mediator(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.doAWTRunLoopImpl(JZZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_awt_run_loop_impl(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -45,7 +45,7 @@ pub(crate) async fn do_awt_run_loop_impl(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.flushNativeSelectors()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn flush_native_selectors(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn flush_native_selectors(
     "sun/lwawt/macosx/LWCToolkit.getMultiClickTime()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_multi_click_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -69,7 +69,7 @@ pub(crate) async fn get_multi_click_time(
     "sun/lwawt/macosx/LWCToolkit.initAppkit(Ljava/lang/ThreadGroup;Z)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_appkit(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -78,7 +78,7 @@ pub(crate) async fn init_appkit(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -87,7 +87,7 @@ pub(crate) async fn init_ids(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isApplicationActive()Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_application_active(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -96,7 +96,7 @@ pub(crate) async fn is_application_active(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isCapsLockOn()Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_caps_lock_on(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -105,7 +105,7 @@ pub(crate) async fn is_caps_lock_on(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isEmbedded()Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_embedded(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -114,7 +114,7 @@ pub(crate) async fn is_embedded(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isInAquaSession()Z", Equal(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_in_aqua_session(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -123,7 +123,7 @@ pub(crate) async fn is_in_aqua_session(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.loadNativeColors([I[I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn load_native_colors(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -132,7 +132,7 @@ pub(crate) async fn load_native_colors(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.nativeSyncQueue(J)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_sync_queue(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -144,7 +144,7 @@ pub(crate) async fn native_sync_queue(
     "sun/lwawt/macosx/LWCToolkit.performOnMainThreadAfterDelay(Ljava/lang/Runnable;J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn perform_on_main_thread_after_delay(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -153,7 +153,7 @@ pub(crate) async fn perform_on_main_thread_after_delay(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.stopAWTRunLoop(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn stop_awt_run_loop(
     _thread: Arc<Thread>,
     _parameters: Parameters,

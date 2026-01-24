@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "sun/java2d/loops/MaskFill.DrawAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDDDD)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn draw_aa_pgram(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -25,7 +25,7 @@ pub(crate) async fn draw_aa_pgram(
     "sun/java2d/loops/MaskFill.FillAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDD)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fill_aa_pgram(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -39,7 +39,7 @@ pub(crate) async fn fill_aa_pgram(
     "sun/java2d/loops/MaskFill.MaskFill(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;IIII[BII)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn mask_fill(
     _thread: Arc<Thread>,
     _parameters: Parameters,

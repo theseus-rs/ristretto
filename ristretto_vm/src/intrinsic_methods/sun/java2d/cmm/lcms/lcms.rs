@@ -1,12 +1,12 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{
     Any, Equal, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -14,7 +14,7 @@ use std::sync::Arc;
     "sun/java2d/cmm/lcms/LCMS.colorConvert(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn color_convert_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -28,7 +28,7 @@ pub(crate) async fn color_convert_0(
     "sun/java2d/cmm/lcms/LCMS.colorConvert(JLsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V",
     Equal(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn color_convert_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn color_convert_1(
     "sun/java2d/cmm/lcms/LCMS.colorConvert(JIIIIIILjava/lang/Object;Ljava/lang/Object;II)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn color_convert_2(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -54,7 +54,7 @@ pub(crate) async fn color_convert_2(
     "sun/java2d/cmm/lcms/LCMS.createNativeTransform([JIIZIZLjava/lang/Object;)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_native_transform_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -66,7 +66,7 @@ pub(crate) async fn create_native_transform_0(
     "sun/java2d/cmm/lcms/LCMS.createNativeTransform([JIIILjava/lang/Object;)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_native_transform_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -75,7 +75,7 @@ pub(crate) async fn create_native_transform_1(
 }
 
 #[intrinsic_method("sun/java2d/cmm/lcms/LCMS.freeTransform(J)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_transform(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -87,7 +87,7 @@ pub(crate) async fn free_transform(
     "sun/java2d/cmm/lcms/LCMS.getProfileDataNative(J[B)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_profile_data_native_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -99,7 +99,7 @@ pub(crate) async fn get_profile_data_native_0(
     "sun/java2d/cmm/lcms/LCMS.getProfileDataNative(J)[B",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_profile_data_native_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -111,7 +111,7 @@ pub(crate) async fn get_profile_data_native_1(
     "sun/java2d/cmm/lcms/LCMS.getProfileID(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_profile_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -125,7 +125,7 @@ pub(crate) async fn get_profile_id(
     "sun/java2d/cmm/lcms/LCMS.getProfileSizeNative(J)I",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_profile_size_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -134,7 +134,7 @@ pub(crate) async fn get_profile_size_native(
 }
 
 #[intrinsic_method("sun/java2d/cmm/lcms/LCMS.getTagNative(JI)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_tag_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -146,7 +146,7 @@ pub(crate) async fn get_tag_native(
     "sun/java2d/cmm/lcms/LCMS.initLCMS(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_lcms(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -158,7 +158,7 @@ pub(crate) async fn init_lcms(
     "sun/java2d/cmm/lcms/LCMS.loadProfileNative([BLjava/lang/Object;)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn load_profile_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -167,7 +167,7 @@ pub(crate) async fn load_profile_native(
 }
 
 #[intrinsic_method("sun/java2d/cmm/lcms/LCMS.setTagDataNative(JI[B)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_tag_data_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,

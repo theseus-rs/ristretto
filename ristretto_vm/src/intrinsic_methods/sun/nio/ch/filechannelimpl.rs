@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Equal, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.initIDs()J", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -18,7 +18,7 @@ pub(crate) async fn init_ids(
 }
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.map0(IJJ)J", LessThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn map_0_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -27,7 +27,7 @@ pub(crate) async fn map_0_0(
 }
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.map0(IJJZ)J", Equal(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn map_0_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn map_0_1(
 }
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.maxDirectTransferSize0()I", Equal(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn max_direct_transfer_size_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn max_direct_transfer_size_0(
     "sun/nio/ch/FileChannelImpl.transferTo0(Ljava/io/FileDescriptor;JJLjava/io/FileDescriptor;)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn transfer_to_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -59,7 +59,7 @@ pub(crate) async fn transfer_to_0(
 }
 
 #[intrinsic_method("sun/nio/ch/FileChannelImpl.unmap0(JJ)I", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unmap_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

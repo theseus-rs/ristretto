@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_25};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/tools/attach/VirtualMachineImpl.checkPermissions(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn check_permissions(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn check_permissions(
     "sun/tools/attach/VirtualMachineImpl.close(I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.close(I)V")
 }
@@ -33,7 +33,7 @@ pub(crate) async fn close(_thread: Arc<Thread>, _parameters: Parameters) -> Resu
     "sun/tools/attach/VirtualMachineImpl.connect(ILjava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn connect(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -45,7 +45,7 @@ pub(crate) async fn connect(
     "sun/tools/attach/VirtualMachineImpl.createAttachFile0(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_attach_file_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn create_attach_file_0(
     "sun/tools/attach/VirtualMachineImpl.getTempDir()Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_temp_dir(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -69,7 +69,7 @@ pub(crate) async fn get_temp_dir(
     "sun/tools/attach/VirtualMachineImpl.read(I[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.read(I[BII)I")
 }
@@ -78,7 +78,7 @@ pub(crate) async fn read(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
     "sun/tools/attach/VirtualMachineImpl.sendQuitTo(I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn send_quit_to(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -90,7 +90,7 @@ pub(crate) async fn send_quit_to(
     "sun/tools/attach/VirtualMachineImpl.socket()I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.socket()I")
 }
@@ -99,7 +99,7 @@ pub(crate) async fn socket(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/tools/attach/VirtualMachineImpl.write(I[BII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.tools.attach.VirtualMachineImpl.write(I[BII)V")
 }
@@ -108,7 +108,7 @@ pub(crate) async fn write(_thread: Arc<Thread>, _parameters: Parameters) -> Resu
     "sun/tools/attach/VirtualMachineImpl.checkCatchesAndSendQuitTo(IZ)Z",
     Between(JAVA_17, JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn check_catches_and_send_quit_to(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

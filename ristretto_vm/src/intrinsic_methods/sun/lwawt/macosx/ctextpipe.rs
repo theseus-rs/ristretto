@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "sun/lwawt/macosx/CTextPipe.doDrawGlyphs(Lsun/java2d/SurfaceData;JLjava/awt/font/GlyphVector;FF)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_draw_glyphs(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -25,7 +25,7 @@ pub(crate) async fn do_draw_glyphs(
     "sun/lwawt/macosx/CTextPipe.doDrawString(Lsun/java2d/SurfaceData;JLjava/lang/String;DD)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_draw_string(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -37,7 +37,7 @@ pub(crate) async fn do_draw_string(
     "sun/lwawt/macosx/CTextPipe.doOneUnicode(Lsun/java2d/SurfaceData;JCFF)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_one_unicode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -49,7 +49,7 @@ pub(crate) async fn do_one_unicode(
     "sun/lwawt/macosx/CTextPipe.doUnicodes(Lsun/java2d/SurfaceData;J[CIIFF)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_unicodes(
     _thread: Arc<Thread>,
     _parameters: Parameters,

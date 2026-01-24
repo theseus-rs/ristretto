@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("apple/laf/JRSUIFocus.beginNativeFocus(JI)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn begin_native_focus(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn begin_native_focus(
 }
 
 #[intrinsic_method("apple/laf/JRSUIFocus.endNativeFocus(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn end_native_focus(
     _thread: Arc<Thread>,
     _parameters: Parameters,

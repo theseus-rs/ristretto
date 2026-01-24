@@ -1,10 +1,10 @@
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{ClassLoader, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -24,7 +24,7 @@ async fn boot_class_loader(thread: &Arc<Thread>) -> Result<Arc<ClassLoader>> {
     "jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_system_package_location(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -56,7 +56,7 @@ pub(crate) async fn get_system_package_location(
     "jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_system_package_names(
     thread: Arc<Thread>,
     _parameters: Parameters,
@@ -94,7 +94,7 @@ pub(crate) async fn get_system_package_names(
     "jdk/internal/loader/BootLoader.setBootLoaderUnnamedModule0(Ljava/lang/Module;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_boot_loader_unnamed_module_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,

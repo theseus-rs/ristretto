@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/Float.floatToRawIntBits(F)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn float_to_raw_int_bits(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn float_to_raw_int_bits(
 }
 
 #[intrinsic_method("java/lang/Float.intBitsToFloat(I)F", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn int_bits_to_float(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

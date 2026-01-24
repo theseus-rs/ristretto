@@ -1,18 +1,18 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_gc::GC;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::cmp::min;
 use std::sync::Arc;
 use sysinfo::System;
 
 #[intrinsic_method("java/lang/Runtime.availableProcessors()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn available_processors(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -23,7 +23,7 @@ pub(crate) async fn available_processors(
 }
 
 #[intrinsic_method("java/lang/Runtime.freeMemory()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_memory(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -39,14 +39,14 @@ pub(crate) async fn free_memory(
 }
 
 #[intrinsic_method("java/lang/Runtime.gc()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn gc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     GC.collect();
     Ok(None)
 }
 
 #[intrinsic_method("java/lang/Runtime.maxMemory()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn max_memory(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -58,7 +58,7 @@ pub(crate) async fn max_memory(
 }
 
 #[intrinsic_method("java/lang/Runtime.runFinalization0()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn run_finalization_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -67,7 +67,7 @@ pub(crate) async fn run_finalization_0(
 }
 
 #[intrinsic_method("java/lang/Runtime.traceInstructions(Z)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn trace_instructions(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -76,7 +76,7 @@ pub(crate) async fn trace_instructions(
 }
 
 #[intrinsic_method("java/lang/Runtime.traceMethodCalls(Z)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn trace_method_calls(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -85,7 +85,7 @@ pub(crate) async fn trace_method_calls(
 }
 
 #[intrinsic_method("java/lang/Runtime.totalMemory()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn total_memory(
     _thread: Arc<Thread>,
     _parameters: Parameters,

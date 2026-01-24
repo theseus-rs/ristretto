@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/opengl/CGLLayer.blitTexture(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn blit_texture(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn blit_texture(
 }
 
 #[intrinsic_method("sun/java2d/opengl/CGLLayer.nativeCreateLayer()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create_layer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn native_create_layer(
 }
 
 #[intrinsic_method("sun/java2d/opengl/CGLLayer.nativeSetScale(JD)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_set_scale(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -38,7 +38,7 @@ pub(crate) async fn native_set_scale(
     "sun/java2d/opengl/CGLLayer.validate(JLsun/java2d/opengl/CGLSurfaceData;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn validate(
     _thread: Arc<Thread>,
     _parameters: Parameters,

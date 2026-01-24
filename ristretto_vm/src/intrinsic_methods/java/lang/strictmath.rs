@@ -1,16 +1,16 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classfile::{JAVA_8, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::ops::Rem;
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/StrictMath.IEEEremainder(DD)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ieee_remainder(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -22,7 +22,7 @@ pub(crate) async fn ieee_remainder(
 }
 
 #[intrinsic_method("java/lang/StrictMath.acos(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn acos(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn acos(
 }
 
 #[intrinsic_method("java/lang/StrictMath.asin(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn asin(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -44,7 +44,7 @@ pub(crate) async fn asin(
 }
 
 #[intrinsic_method("java/lang/StrictMath.atan(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn atan(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -55,7 +55,7 @@ pub(crate) async fn atan(
 }
 
 #[intrinsic_method("java/lang/StrictMath.atan2(DD)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn atan_2(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -67,7 +67,7 @@ pub(crate) async fn atan_2(
 }
 
 #[intrinsic_method("java/lang/StrictMath.cbrt(D)D", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn cbrt(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -78,7 +78,7 @@ pub(crate) async fn cbrt(
 }
 
 #[intrinsic_method("java/lang/StrictMath.cos(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn cos(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let a = parameters.pop_double()?;
     let result = a.cos();
@@ -86,7 +86,7 @@ pub(crate) async fn cos(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
 }
 
 #[intrinsic_method("java/lang/StrictMath.cosh(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn cosh(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -97,7 +97,7 @@ pub(crate) async fn cosh(
 }
 
 #[intrinsic_method("java/lang/StrictMath.exp(D)D", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn exp(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let a = parameters.pop_double()?;
     let result = a.exp();
@@ -105,7 +105,7 @@ pub(crate) async fn exp(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
 }
 
 #[intrinsic_method("java/lang/StrictMath.expm1(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn expm_1(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -116,7 +116,7 @@ pub(crate) async fn expm_1(
 }
 
 #[intrinsic_method("java/lang/StrictMath.hypot(DD)D", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn hypot(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -128,7 +128,7 @@ pub(crate) async fn hypot(
 }
 
 #[intrinsic_method("java/lang/StrictMath.log(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn log(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let a = parameters.pop_double()?;
     let result = a.ln();
@@ -136,7 +136,7 @@ pub(crate) async fn log(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
 }
 
 #[intrinsic_method("java/lang/StrictMath.log10(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn log_10(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -147,7 +147,7 @@ pub(crate) async fn log_10(
 }
 
 #[intrinsic_method("java/lang/StrictMath.log1p(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn log_1p(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -158,7 +158,7 @@ pub(crate) async fn log_1p(
 }
 
 #[intrinsic_method("java/lang/StrictMath.pow(DD)D", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn pow(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let b = parameters.pop_double()?;
     let a = parameters.pop_double()?;
@@ -167,7 +167,7 @@ pub(crate) async fn pow(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
 }
 
 #[intrinsic_method("java/lang/StrictMath.sin(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn sin(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let a = parameters.pop_double()?;
     let result = a.sin();
@@ -175,7 +175,7 @@ pub(crate) async fn sin(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
 }
 
 #[intrinsic_method("java/lang/StrictMath.sinh(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn sinh(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -186,7 +186,7 @@ pub(crate) async fn sinh(
 }
 
 #[intrinsic_method("java/lang/StrictMath.sqrt(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn sqrt(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -197,7 +197,7 @@ pub(crate) async fn sqrt(
 }
 
 #[intrinsic_method("java/lang/StrictMath.tan(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn tan(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let a = parameters.pop_double()?;
     let result = a.tan();
@@ -205,7 +205,7 @@ pub(crate) async fn tan(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
 }
 
 #[intrinsic_method("java/lang/StrictMath.tanh(D)D", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn tanh(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

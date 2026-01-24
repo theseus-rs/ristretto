@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "com/apple/eawt/_AppMiscHandlers.nativeDisableSuddenTermination()V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_disable_sudden_termination(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -23,7 +23,7 @@ pub(crate) async fn native_disable_sudden_termination(
     "com/apple/eawt/_AppMiscHandlers.nativeEnableSuddenTermination()V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_enable_sudden_termination(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -32,7 +32,7 @@ pub(crate) async fn native_enable_sudden_termination(
 }
 
 #[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeOpenHelpViewer()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_open_help_viewer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -41,7 +41,7 @@ pub(crate) async fn native_open_help_viewer(
 }
 
 #[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeRequestActivation(Z)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_request_activation(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -50,7 +50,7 @@ pub(crate) async fn native_request_activation(
 }
 
 #[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeRequestUserAttention(Z)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_request_user_attention(
     _thread: Arc<Thread>,
     _parameters: Parameters,

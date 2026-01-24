@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "com/apple/laf/ScreenMenu.addMenuListeners(Lcom/apple/laf/ScreenMenu;J)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn add_menu_listeners(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn add_menu_listeners(
 }
 
 #[intrinsic_method("com/apple/laf/ScreenMenu.removeMenuListeners(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn remove_menu_listeners(
     _thread: Arc<Thread>,
     _parameters: Parameters,

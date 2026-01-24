@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "sun/lwawt/macosx/CInputMethodDescriptor.nativeGetAvailableLocales()Ljava/util/List;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_available_locales(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn native_get_available_locales(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CInputMethodDescriptor.nativeInit()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,

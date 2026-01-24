@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/String.intern()Ljava/lang/String;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn intern(
     thread: Arc<Thread>,
     mut parameters: Parameters,

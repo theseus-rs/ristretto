@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("com/apple/eawt/_AppEventHandler.nativeOpenCocoaAboutWindow()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_open_cocoa_about_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn native_open_cocoa_about_window(
     "com/apple/eawt/_AppEventHandler.nativeRegisterForNotification(I)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_register_for_notification(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -32,7 +32,7 @@ pub(crate) async fn native_register_for_notification(
     "com/apple/eawt/_AppEventHandler.nativeReplyToAppShouldTerminate(Z)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_reply_to_app_should_terminate(
     _thread: Arc<Thread>,
     _parameters: Parameters,

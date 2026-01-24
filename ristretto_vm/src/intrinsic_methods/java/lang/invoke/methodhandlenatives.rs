@@ -4,7 +4,6 @@ use crate::intrinsic_methods::jdk::internal::misc::r#unsafe::STATIC_FIELD_OFFSET
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
-use async_recursion::async_recursion;
 use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::{
     Any, Between, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
@@ -16,6 +15,7 @@ use ristretto_classfile::{
 };
 use ristretto_classloader::Error::IllegalAccessError;
 use ristretto_classloader::{Class, Method, Reference, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -69,7 +69,7 @@ bitflags! {
     "java/lang/invoke/MethodHandleNatives.clearCallSiteContext(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn clear_call_site_context(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -86,7 +86,7 @@ pub(crate) async fn clear_call_site_context(
     "java/lang/invoke/MethodHandleNatives.copyOutBootstrapArguments(Ljava/lang/Class;[III[Ljava/lang/Object;IZLjava/lang/Object;)V",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn copy_out_bootstrap_arguments(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -462,7 +462,7 @@ async fn resolve_method_handle(
     "java/lang/invoke/MethodHandleNatives.expand(Ljava/lang/invoke/MemberName;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn expand(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -476,7 +476,7 @@ pub(crate) async fn expand(
     "java/lang/invoke/MethodHandleNatives.getConstant(I)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_constant(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -493,7 +493,7 @@ pub(crate) async fn get_constant(
     "java/lang/invoke/MethodHandleNatives.getMemberVMInfo(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_member_vm_info(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -538,7 +538,7 @@ fn collect_interfaces(class: &Arc<Class>, result: &mut Vec<Arc<Class>>) -> Resul
     "java/lang/invoke/MethodHandleNatives.getMembers(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 #[expect(clippy::too_many_lines)]
 pub(crate) async fn get_members(
     thread: Arc<Thread>,
@@ -700,7 +700,7 @@ pub(crate) async fn get_members(
     "java/lang/invoke/MethodHandleNatives.getNamedCon(I[Ljava/lang/Object;)I",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_named_con(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -777,7 +777,7 @@ pub(crate) async fn get_named_con(
     "java/lang/invoke/MethodHandleNatives.init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init(thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let ref_object = parameters.pop()?;
     let member_name = parameters.pop()?;
@@ -944,7 +944,7 @@ fn init_from_field(_thread: &Thread, member_name: &Value, field_ref: &Value) -> 
     "java/lang/invoke/MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn object_field_offset(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1027,7 +1027,7 @@ fn resolve_holder_methods(
 }
 
 #[intrinsic_method("java/lang/invoke/MethodHandleNatives.registerNatives()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -1205,7 +1205,7 @@ async fn find_interface_method_from_params(
 }
 
 /// Recursively search interface hierarchy for a method.
-#[async_recursion(?Send)]
+#[async_method]
 async fn search_interface_hierarchy_for_method(
     interface: &Arc<Class>,
     method_name: &str,
@@ -1749,7 +1749,7 @@ pub fn check_field_access(
     "java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn resolve_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1777,7 +1777,7 @@ pub(crate) async fn resolve_0(
     "java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;Z)Ljava/lang/invoke/MemberName;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn resolve_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1805,7 +1805,7 @@ pub(crate) async fn resolve_1(
     "java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn resolve_2(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1834,7 +1834,7 @@ pub(crate) async fn resolve_2(
     "java/lang/invoke/MethodHandleNatives.setCallSiteTargetNormal(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_call_site_target_normal(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1850,7 +1850,7 @@ pub(crate) async fn set_call_site_target_normal(
     "java/lang/invoke/MethodHandleNatives.setCallSiteTargetVolatile(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_call_site_target_volatile(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1866,7 +1866,7 @@ pub(crate) async fn set_call_site_target_volatile(
     "java/lang/invoke/MethodHandleNatives.staticFieldBase(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn static_field_base(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1881,7 +1881,7 @@ pub(crate) async fn static_field_base(
     "java/lang/invoke/MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn static_field_offset(
     thread: Arc<Thread>,
     mut parameters: Parameters,

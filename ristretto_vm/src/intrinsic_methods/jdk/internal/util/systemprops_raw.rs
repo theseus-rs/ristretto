@@ -4,10 +4,10 @@ use crate::intrinsic_methods::properties;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -16,7 +16,7 @@ use std::sync::Arc;
     "jdk/internal/util/SystemProps$Raw.platformProperties()[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn platform_properties(
     thread: Arc<Thread>,
     _parameters: Parameters,
@@ -108,7 +108,7 @@ fn push_property(
     "jdk/internal/util/SystemProps$Raw.vmProperties()[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn vm_properties(
     thread: Arc<Thread>,
     _parameters: Parameters,
@@ -124,7 +124,7 @@ pub(crate) async fn vm_properties(
     let mut system_properties = vm.system_properties().clone();
     system_properties.insert(
         "java.home".to_string(),
-        java_home.to_string_lossy().as_ref().to_string(),
+        java_home.to_string_lossy().to_string(),
     );
     system_properties.insert("java.class.path".to_string(), class_path);
     system_properties.insert(

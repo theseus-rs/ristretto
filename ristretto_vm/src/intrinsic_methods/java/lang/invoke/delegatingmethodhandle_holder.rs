@@ -6,10 +6,10 @@ use super::methodhandle::dispatch_holder_method;
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -29,7 +29,7 @@ async fn holder_method_stub(
     "java/lang/invoke/DelegatingMethodHandle$Holder.delegate([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn delegate(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     holder_method_stub(thread, "delegate", parameters).await
 }
@@ -38,7 +38,7 @@ pub(crate) async fn delegate(thread: Arc<Thread>, parameters: Parameters) -> Res
     "java/lang/invoke/DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn reinvoke_l(
     thread: Arc<Thread>,
     parameters: Parameters,

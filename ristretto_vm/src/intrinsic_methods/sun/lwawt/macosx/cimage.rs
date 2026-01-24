@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCopyNSImageIntoArray(J[IIIII)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_copy_ns_image_into_array(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn native_copy_ns_image_into_array(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromArray([III)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create_ns_image_from_array(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn native_create_ns_image_from_array(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromArrays([[I[I[I)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create_ns_image_from_arrays(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,7 +35,7 @@ pub(crate) async fn native_create_ns_image_from_arrays(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromBytes([B)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create_ns_image_from_bytes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -47,7 +47,7 @@ pub(crate) async fn native_create_ns_image_from_bytes(
     "sun/lwawt/macosx/CImage.nativeCreateNSImageFromFileContents(Ljava/lang/String;)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create_ns_image_from_file_contents(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -56,7 +56,7 @@ pub(crate) async fn native_create_ns_image_from_file_contents(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromIconSelector(I)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create_ns_image_from_icon_selector(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -68,7 +68,7 @@ pub(crate) async fn native_create_ns_image_from_icon_selector(
     "sun/lwawt/macosx/CImage.nativeCreateNSImageFromImageName(Ljava/lang/String;)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create_ns_image_from_image_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -80,7 +80,7 @@ pub(crate) async fn native_create_ns_image_from_image_name(
     "sun/lwawt/macosx/CImage.nativeCreateNSImageOfFileFromLaunchServices(Ljava/lang/String;)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create_ns_image_of_file_from_launch_services(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -94,7 +94,7 @@ pub(crate) async fn native_create_ns_image_of_file_from_launch_services(
     "sun/lwawt/macosx/CImage.nativeGetNSImageRepresentationSizes(JDD)[Ljava/awt/geom/Dimension2D;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_ns_image_representation_sizes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -108,7 +108,7 @@ pub(crate) async fn native_get_ns_image_representation_sizes(
     "sun/lwawt/macosx/CImage.nativeGetNSImageSize(J)Ljava/awt/geom/Dimension2D;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_ns_image_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -117,7 +117,7 @@ pub(crate) async fn native_get_ns_image_size(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeGetPlatformImageBytes([III)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_platform_image_bytes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -129,7 +129,7 @@ pub(crate) async fn native_get_platform_image_bytes(
     "sun/lwawt/macosx/CImage.nativeResizeNSImageRepresentations(JDD)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_resize_ns_image_representations(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -138,7 +138,7 @@ pub(crate) async fn native_resize_ns_image_representations(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeSetNSImageSize(JDD)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_set_ns_image_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,

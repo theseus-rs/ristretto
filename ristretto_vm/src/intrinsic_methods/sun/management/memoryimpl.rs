@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "sun/management/MemoryImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_memory_managers_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -25,7 +25,7 @@ pub(crate) async fn get_memory_managers_0(
     "sun/management/MemoryImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_memory_pools_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -37,7 +37,7 @@ pub(crate) async fn get_memory_pools_0(
     "sun/management/MemoryImpl.getMemoryUsage0(Z)Ljava/lang/management/MemoryUsage;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_memory_usage_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -46,7 +46,7 @@ pub(crate) async fn get_memory_usage_0(
 }
 
 #[intrinsic_method("sun/management/MemoryImpl.setVerboseGC(Z)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_verbose_gc(
     _thread: Arc<Thread>,
     _parameters: Parameters,

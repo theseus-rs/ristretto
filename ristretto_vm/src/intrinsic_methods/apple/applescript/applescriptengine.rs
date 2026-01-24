@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "apple/applescript/AppleScriptEngine.createContextFrom(Ljava/lang/Object;)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_context_from(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn create_context_from(
     "apple/applescript/AppleScriptEngine.createObjectFrom(J)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_object_from(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn create_object_from(
     "apple/applescript/AppleScriptEngine.disposeContext(J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dispose_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn dispose_context(
     "apple/applescript/AppleScriptEngine.evalScript(Ljava/lang/String;J)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn eval_script(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn eval_script(
     "apple/applescript/AppleScriptEngine.evalScriptFromURL(Ljava/lang/String;J)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn eval_script_from_url(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -72,7 +72,7 @@ pub(crate) async fn eval_script_from_url(
     "apple/applescript/AppleScriptEngine.initNative()V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,

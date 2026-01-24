@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "java/util/prefs/FileSystemPreferences.chmod(Ljava/lang/String;I)I",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn chmod(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.prefs.FileSystemPreferences.chmod(Ljava/lang/String;I)I")
 }
@@ -20,7 +20,7 @@ pub(crate) async fn chmod(_thread: Arc<Thread>, _parameters: Parameters) -> Resu
     "java/util/prefs/FileSystemPreferences.lockFile0(Ljava/lang/String;IZ)[I",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn lock_file_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -29,7 +29,7 @@ pub(crate) async fn lock_file_0(
 }
 
 #[intrinsic_method("java/util/prefs/FileSystemPreferences.unlockFile0(I)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unlock_file_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/java2d/metal/MTLSurfaceData.clearWindow()V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn clear_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn clear_window(
     "sun/java2d/metal/MTLSurfaceData.getMTLTexturePointer(J)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_mtl_texture_pointer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn get_mtl_texture_pointer(
     "sun/java2d/metal/MTLSurfaceData.initFlipBackbuffer(J)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_flip_backbuffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn init_flip_backbuffer(
     "sun/java2d/metal/MTLSurfaceData.initOps(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ops(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn init_ops(
     "sun/java2d/metal/MTLSurfaceData.initRTexture(JZII)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_r_texture(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -72,7 +72,7 @@ pub(crate) async fn init_r_texture(
     "sun/java2d/metal/MTLSurfaceData.initTexture(JZII)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_texture(
     _thread: Arc<Thread>,
     _parameters: Parameters,

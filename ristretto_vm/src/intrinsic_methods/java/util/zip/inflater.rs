@@ -1,21 +1,21 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/util/zip/Inflater.end(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn end(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.Inflater.end(J)V")
 }
 
 #[intrinsic_method("java/util/zip/Inflater.getAdler(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_adler(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -27,7 +27,7 @@ pub(crate) async fn get_adler(
     "java/util/zip/Inflater.inflateBufferBuffer(JJIJI)J",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn inflate_buffer_buffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -39,7 +39,7 @@ pub(crate) async fn inflate_buffer_buffer(
     "java/util/zip/Inflater.inflateBufferBytes(JJI[BII)J",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn inflate_buffer_bytes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -51,7 +51,7 @@ pub(crate) async fn inflate_buffer_bytes(
     "java/util/zip/Inflater.inflateBytesBuffer(J[BIIJI)J",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn inflate_bytes_buffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn inflate_bytes_buffer(
 }
 
 #[intrinsic_method("java/util/zip/Inflater.inflateBytes(J[BII)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn inflate_bytes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -72,7 +72,7 @@ pub(crate) async fn inflate_bytes(
     "java/util/zip/Inflater.inflateBytesBytes(J[BII[BII)J",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn inflate_bytes_bytes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -81,13 +81,13 @@ pub(crate) async fn inflate_bytes_bytes(
 }
 
 #[intrinsic_method("java/util/zip/Inflater.init(Z)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.Inflater.init(Z)J")
 }
 
 #[intrinsic_method("java/util/zip/Inflater.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -96,13 +96,13 @@ pub(crate) async fn init_ids(
 }
 
 #[intrinsic_method("java/util/zip/Inflater.reset(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn reset(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.Inflater.reset(J)V")
 }
 
 #[intrinsic_method("java/util/zip/Inflater.setDictionary(J[BII)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_dictionary(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -114,7 +114,7 @@ pub(crate) async fn set_dictionary(
     "java/util/zip/Inflater.setDictionaryBuffer(JJI)V",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_dictionary_buffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.addSegment(I[F)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn add_segment(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn add_segment(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.appendPoly([I[IIII)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn append_poly(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn append_poly(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.closePath()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close_path(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,7 +35,7 @@ pub(crate) async fn close_path(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.curveTo(FFFFFF)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn curve_to(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -44,7 +44,7 @@ pub(crate) async fn curve_to(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.dispose()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dispose(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -53,7 +53,7 @@ pub(crate) async fn dispose(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.getNativeConsumer()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_consumer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -62,7 +62,7 @@ pub(crate) async fn get_native_consumer(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.getNativeIterator()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_iterator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -71,7 +71,7 @@ pub(crate) async fn get_native_iterator(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.getPathBox([I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_path_box(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -80,7 +80,7 @@ pub(crate) async fn get_path_box(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -89,7 +89,7 @@ pub(crate) async fn init_ids(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.intersectClipBox(IIII)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn intersect_clip_box(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -98,7 +98,7 @@ pub(crate) async fn intersect_clip_box(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.lineTo(FF)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn line_to(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -107,7 +107,7 @@ pub(crate) async fn line_to(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.moveTo(FF)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn move_to(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -116,7 +116,7 @@ pub(crate) async fn move_to(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.nextSpan([I)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn next_span(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -125,7 +125,7 @@ pub(crate) async fn next_span(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.pathDone()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn path_done(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -134,7 +134,7 @@ pub(crate) async fn path_done(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.quadTo(FFFF)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn quad_to(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -143,7 +143,7 @@ pub(crate) async fn quad_to(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.setNormalize(Z)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_normalize(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -152,7 +152,7 @@ pub(crate) async fn set_normalize(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.setOutputAreaXYXY(IIII)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_output_area_xyxy(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -161,7 +161,7 @@ pub(crate) async fn set_output_area_xyxy(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.setRule(I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_rule(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -170,7 +170,7 @@ pub(crate) async fn set_rule(
 }
 
 #[intrinsic_method("sun/java2d/pipe/ShapeSpanIterator.skipDownTo(I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn skip_down_to(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -1,3 +1,4 @@
+mod async_method;
 mod intrinsic;
 
 extern crate proc_macro;
@@ -42,4 +43,28 @@ use proc_macro::TokenStream;
 #[proc_macro_attribute]
 pub fn intrinsic_method(attributes: TokenStream, item: TokenStream) -> TokenStream {
     intrinsic::process(attributes, item)
+}
+
+/// A procedural attribute macro that applies `async_recursion` with platform-appropriate Send bounds.
+///
+/// This macro wraps `async_recursion` and handles the `Send` bound automatically:
+/// - On non-WASM targets: applies `#[async_recursion]` (with `Send` bound) for `tokio::spawn` compatibility
+/// - On WASM targets: applies `#[async_recursion(?Send)]` since WASM types like `JsValue` are not `Send`
+///
+/// # Usage
+///
+/// Use this macro instead of `#[async_recursion]` for async functions that need to work on both
+/// WASM and non-WASM targets:
+///
+/// ```text
+/// #[intrinsic_method("java/lang/Object.hashCode()I", Any)]
+/// #[async_method]
+/// async fn hash_code(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
+///     // actual logic
+///    ...
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn async_method(_attributes: TokenStream, item: TokenStream) -> TokenStream {
+    async_method::process(item)
 }

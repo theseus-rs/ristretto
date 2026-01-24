@@ -3,12 +3,12 @@ use crate::intrinsic_methods::java::io::fileoutputstream::file_handle_identifier
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::{Result, VM};
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
@@ -43,7 +43,7 @@ pub(crate) fn file_descriptor_from_java_object(
 }
 
 #[intrinsic_method("java/io/FileDescriptor.close0()V", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -85,7 +85,7 @@ pub(crate) async fn close_0(
 
 #[intrinsic_method("java/io/FileDescriptor.getAppend(I)Z", GreaterThanOrEqual(JAVA_11))]
 #[expect(clippy::match_same_arms)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_append(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -119,7 +119,7 @@ pub(crate) async fn get_append(
 }
 
 #[intrinsic_method("java/io/FileDescriptor.getHandle(I)J", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_handle(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -130,7 +130,7 @@ pub(crate) async fn get_handle(
 }
 
 #[intrinsic_method("java/io/FileDescriptor.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -139,13 +139,13 @@ pub(crate) async fn init_ids(
 }
 
 #[intrinsic_method("java/io/FileDescriptor.sync()V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn sync(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     sync_0(thread, parameters).await
 }
 
 #[intrinsic_method("java/io/FileDescriptor.sync0()V", GreaterThan(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn sync_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,

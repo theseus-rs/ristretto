@@ -1,17 +1,17 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CTrayIcon.nativeCreate()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -23,7 +23,7 @@ pub(crate) async fn native_create(
     "sun/lwawt/macosx/CTrayIcon.nativeGetIconLocation(J)Ljava/awt/geom/Point2D;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_icon_location(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,7 +35,7 @@ pub(crate) async fn native_get_icon_location(
     "sun/lwawt/macosx/CTrayIcon.nativeSetToolTip(JLjava/lang/String;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_set_tool_tip(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -47,7 +47,7 @@ pub(crate) async fn native_set_tool_tip(
     "sun/lwawt/macosx/CTrayIcon.nativeShowNotification(JLjava/lang/String;Ljava/lang/String;J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_show_notification(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -61,7 +61,7 @@ pub(crate) async fn native_show_notification(
     "sun/lwawt/macosx/CTrayIcon.setNativeImage(JJZ)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_native_image_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -73,7 +73,7 @@ pub(crate) async fn set_native_image_0(
     "sun/lwawt/macosx/CTrayIcon.setNativeImage(JJZZ)V",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_native_image_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,

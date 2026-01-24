@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardBeginTransaction(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn s_card_begin_transaction(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn s_card_begin_transaction(
     "sun/security/smartcardio/PCSC.SCardConnect(JLjava/lang/String;II)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn s_card_connect(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -29,7 +29,7 @@ pub(crate) async fn s_card_connect(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardControl(JI[B)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn s_card_control(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -38,7 +38,7 @@ pub(crate) async fn s_card_control(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardDisconnect(JI)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn s_card_disconnect(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -47,7 +47,7 @@ pub(crate) async fn s_card_disconnect(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardEndTransaction(JI)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn s_card_end_transaction(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -56,7 +56,7 @@ pub(crate) async fn s_card_end_transaction(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardEstablishContext(I)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn s_card_establish_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -68,7 +68,7 @@ pub(crate) async fn s_card_establish_context(
     "sun/security/smartcardio/PCSC.SCardGetStatusChange(JJ[I[Ljava/lang/String;)[I",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn s_card_get_status_change(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -80,7 +80,7 @@ pub(crate) async fn s_card_get_status_change(
     "sun/security/smartcardio/PCSC.SCardListReaders(J)[Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn s_card_list_readers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -89,7 +89,7 @@ pub(crate) async fn s_card_list_readers(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardStatus(J[B)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn s_card_status(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -98,7 +98,7 @@ pub(crate) async fn s_card_status(
 }
 
 #[intrinsic_method("sun/security/smartcardio/PCSC.SCardTransmit(JI[BII)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn s_card_transmit(
     _thread: Arc<Thread>,
     _parameters: Parameters,

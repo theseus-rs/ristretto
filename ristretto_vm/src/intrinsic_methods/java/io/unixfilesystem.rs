@@ -3,7 +3,6 @@ use crate::JavaError::RuntimeException;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
-use async_recursion::async_recursion;
 use bitflags::bitflags;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use filetime::{FileTime, set_file_mtime};
@@ -12,6 +11,7 @@ use ristretto_classfile::VersionSpecification::{
 };
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -45,7 +45,7 @@ bitflags! {
     "java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn canonicalize_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -74,7 +74,7 @@ pub(crate) async fn canonicalize_0(
     "java/io/UnixFileSystem.checkAccess(Ljava/io/File;I)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn check_access(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -86,7 +86,7 @@ pub(crate) async fn check_access(
     "java/io/UnixFileSystem.checkAccess0(Ljava/io/File;I)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn check_access_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -131,7 +131,7 @@ pub(crate) async fn check_access_0(
     "java/io/UnixFileSystem.createDirectory(Ljava/io/File;)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_directory(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -143,7 +143,7 @@ pub(crate) async fn create_directory(
     "java/io/UnixFileSystem.createDirectory0(Ljava/io/File;)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_directory_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -180,7 +180,7 @@ pub(crate) async fn create_directory_0(
     "java/io/UnixFileSystem.createFileExclusively(Ljava/lang/String;)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_file_exclusively(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -192,7 +192,7 @@ pub(crate) async fn create_file_exclusively(
     "java/io/UnixFileSystem.createFileExclusively0(Ljava/lang/String;)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_file_exclusively_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -229,7 +229,7 @@ pub(crate) async fn create_file_exclusively_0(
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.delete0(Ljava/io/File;)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn delete_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -263,7 +263,7 @@ pub(crate) async fn delete_0(
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.getBooleanAttributes0(Ljava/io/File;)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_boolean_attributes_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -296,7 +296,7 @@ pub(crate) async fn get_boolean_attributes_0(
     "java/io/UnixFileSystem.getLastModifiedTime(Ljava/io/File;)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_last_modified_time(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -308,7 +308,7 @@ pub(crate) async fn get_last_modified_time(
     "java/io/UnixFileSystem.getLastModifiedTime0(Ljava/io/File;)J",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_last_modified_time_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -357,7 +357,7 @@ pub(crate) async fn get_last_modified_time_0(
     "java/io/UnixFileSystem.getLength(Ljava/io/File;)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_length(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -369,7 +369,7 @@ pub(crate) async fn get_length(
     "java/io/UnixFileSystem.getLength0(Ljava/io/File;)J",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_length_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -408,7 +408,7 @@ pub(crate) async fn get_length_0(
     "java/io/UnixFileSystem.getNameMax0(Ljava/lang/String;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_name_max_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -427,7 +427,7 @@ pub(crate) async fn get_name_max_0(
     "java/io/UnixFileSystem.getSpace(Ljava/io/File;I)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_space(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -439,7 +439,7 @@ pub(crate) async fn get_space(
     "java/io/UnixFileSystem.getSpace0(Ljava/io/File;I)J",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_space_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -481,7 +481,7 @@ pub(crate) async fn get_space_0(
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -493,7 +493,7 @@ pub(crate) async fn init_ids(
     "java/io/UnixFileSystem.list(Ljava/io/File;)[Ljava/lang/String;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn list(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     list_0(thread, parameters).await
 }
@@ -502,7 +502,7 @@ pub(crate) async fn list(thread: Arc<Thread>, parameters: Parameters) -> Result<
     "java/io/UnixFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn list_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -565,7 +565,7 @@ pub(crate) async fn list_0(
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn rename_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -608,7 +608,7 @@ pub(crate) async fn rename_0(
     "java/io/UnixFileSystem.setLastModifiedTime(Ljava/io/File;J)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_last_modified_time(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -620,7 +620,7 @@ pub(crate) async fn set_last_modified_time(
     "java/io/UnixFileSystem.setLastModifiedTime0(Ljava/io/File;J)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_last_modified_time_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -654,7 +654,7 @@ pub(crate) async fn set_last_modified_time_0(
     "java/io/UnixFileSystem.setPermission(Ljava/io/File;IZZ)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_permission(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -666,7 +666,7 @@ pub(crate) async fn set_permission(
     "java/io/UnixFileSystem.setPermission0(Ljava/io/File;IZZ)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_permission_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -742,7 +742,7 @@ pub(crate) async fn set_permission_0(
     "java/io/UnixFileSystem.setReadOnly(Ljava/io/File;)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_read_only(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -754,7 +754,7 @@ pub(crate) async fn set_read_only(
     "java/io/UnixFileSystem.setReadOnly0(Ljava/io/File;)Z",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_read_only_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

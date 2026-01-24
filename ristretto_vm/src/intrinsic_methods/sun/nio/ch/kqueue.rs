@@ -1,21 +1,21 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/KQueue.create()I", GreaterThan(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.create()I");
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.filterOffset()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn filter_offset(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn filter_offset(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.flagsOffset()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn flags_offset(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn flags_offset(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.identOffset()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ident_offset(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn ident_offset(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.keventPoll(IJI)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn kevent_poll(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -51,7 +51,7 @@ pub(crate) async fn kevent_poll(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.keventRegister(IIII)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn kevent_register(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn kevent_register(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.keventSize()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn kevent_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -69,19 +69,19 @@ pub(crate) async fn kevent_size(
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.kqueue()I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn kqueue(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.kqueue()I");
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.poll(IJIJ)I", GreaterThan(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn poll(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.KQueue.poll(IJIJ)I");
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.register(IIII)I", GreaterThan(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

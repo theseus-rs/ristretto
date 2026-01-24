@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/util/TimeZone.getSystemGMTOffsetID()Ljava/lang/String;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_system_gmt_offset_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn get_system_gmt_offset_id(
     "java/util/TimeZone.getSystemTimeZoneID(Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_system_time_zone_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "java/net/NetworkInterface.boundInetAddress0(Ljava/net/InetAddress;)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn bound_inet_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn bound_inet_address_0(
 }
 
 #[intrinsic_method("java/net/NetworkInterface.getAll()[Ljava/net/NetworkInterface;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_all(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn get_all(
     "java/net/NetworkInterface.getByIndex0(I)Ljava/net/NetworkInterface;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_by_index_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -45,7 +45,7 @@ pub(crate) async fn get_by_index_0(
     "java/net/NetworkInterface.getByInetAddress0(Ljava/net/InetAddress;)Ljava/net/NetworkInterface;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_by_inet_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -59,7 +59,7 @@ pub(crate) async fn get_by_inet_address_0(
     "java/net/NetworkInterface.getByName0(Ljava/lang/String;)Ljava/net/NetworkInterface;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_by_name_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -68,7 +68,7 @@ pub(crate) async fn get_by_name_0(
 }
 
 #[intrinsic_method("java/net/NetworkInterface.getMTU0(Ljava/lang/String;I)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_mtu_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -77,7 +77,7 @@ pub(crate) async fn get_mtu_0(
 }
 
 #[intrinsic_method("java/net/NetworkInterface.getMacAddr0([BLjava/lang/String;I)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_mac_addr_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -86,13 +86,13 @@ pub(crate) async fn get_mac_addr_0(
 }
 
 #[intrinsic_method("java/net/NetworkInterface.init()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[intrinsic_method("java/net/NetworkInterface.isLoopback0(Ljava/lang/String;I)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_loopback_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -101,7 +101,7 @@ pub(crate) async fn is_loopback_0(
 }
 
 #[intrinsic_method("java/net/NetworkInterface.isP2P0(Ljava/lang/String;I)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_p2p_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -110,7 +110,7 @@ pub(crate) async fn is_p2p_0(
 }
 
 #[intrinsic_method("java/net/NetworkInterface.isUp0(Ljava/lang/String;I)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_up_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -122,7 +122,7 @@ pub(crate) async fn is_up_0(
     "java/net/NetworkInterface.supportsMulticast0(Ljava/lang/String;I)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn supports_multicast_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

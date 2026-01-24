@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/instrument/InstrumentationImpl.appendToClassLoaderSearch0(JLjava/lang/String;Z)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn append_to_class_loader_search_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn append_to_class_loader_search_0(
     "sun/instrument/InstrumentationImpl.getAllLoadedClasses0(J)[Ljava/lang/Class;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_all_loaded_classes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn get_all_loaded_classes_0(
     "sun/instrument/InstrumentationImpl.getInitiatedClasses0(JLjava/lang/ClassLoader;)[Ljava/lang/Class;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_initiated_classes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -50,7 +50,7 @@ pub(crate) async fn get_initiated_classes_0(
     "sun/instrument/InstrumentationImpl.getObjectSize0(JLjava/lang/Object;)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_object_size_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -62,7 +62,7 @@ pub(crate) async fn get_object_size_0(
     "sun/instrument/InstrumentationImpl.isModifiableClass0(JLjava/lang/Class;)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_modifiable_class_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -74,7 +74,7 @@ pub(crate) async fn is_modifiable_class_0(
     "sun/instrument/InstrumentationImpl.isRetransformClassesSupported0(J)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_retransform_classes_supported_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -86,7 +86,7 @@ pub(crate) async fn is_retransform_classes_supported_0(
     "sun/instrument/InstrumentationImpl.jarFile(J)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn jar_file(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -98,7 +98,7 @@ pub(crate) async fn jar_file(
     "sun/instrument/InstrumentationImpl.loadAgent0(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn load_agent_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -110,7 +110,7 @@ pub(crate) async fn load_agent_0(
     "sun/instrument/InstrumentationImpl.redefineClasses0(J[Ljava/lang/instrument/ClassDefinition;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn redefine_classes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -124,7 +124,7 @@ pub(crate) async fn redefine_classes_0(
     "sun/instrument/InstrumentationImpl.retransformClasses0(J[Ljava/lang/Class;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn retransform_classes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -136,7 +136,7 @@ pub(crate) async fn retransform_classes_0(
     "sun/instrument/InstrumentationImpl.setHasRetransformableTransformers(JZ)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_has_retransformable_transformers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -148,7 +148,7 @@ pub(crate) async fn set_has_retransformable_transformers(
     "sun/instrument/InstrumentationImpl.setHasTransformers(JZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_has_transformers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -160,7 +160,7 @@ pub(crate) async fn set_has_transformers(
     "sun/instrument/InstrumentationImpl.setNativeMethodPrefixes(J[Ljava/lang/String;Z)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_native_method_prefixes(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -3,11 +3,11 @@ use crate::Result;
 use crate::intrinsic_methods::java::lang::class;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::MethodAccessFlags;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::{Class as RistrettoClass, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -44,7 +44,7 @@ async fn get_caller_info(thread: &Arc<Thread>) -> Result<(String, Option<String>
     "jdk/internal/reflect/NativeMethodAccessorImpl.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 #[expect(clippy::too_many_lines)]
 pub(crate) async fn invoke_0(
     thread: Arc<Thread>,

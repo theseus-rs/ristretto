@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/nio/ch/DatagramDispatcher.dup0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dup_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramDispatcher.dup0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V");
 }
@@ -21,7 +21,7 @@ pub(crate) async fn dup_0(_thread: Arc<Thread>, _parameters: Parameters) -> Resu
     "sun/nio/ch/DatagramDispatcher.read0(Ljava/io/FileDescriptor;JI)I",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.DatagramDispatcher.read0(Ljava/io/FileDescriptor;JI)I");
 }
@@ -30,7 +30,7 @@ pub(crate) async fn read_0(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/nio/ch/DatagramDispatcher.readv0(Ljava/io/FileDescriptor;JI)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn readv_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn readv_0(
     "sun/nio/ch/DatagramDispatcher.write0(Ljava/io/FileDescriptor;JI)I",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -54,7 +54,7 @@ pub(crate) async fn write_0(
     "sun/nio/ch/DatagramDispatcher.writev0(Ljava/io/FileDescriptor;JI)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn writev_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

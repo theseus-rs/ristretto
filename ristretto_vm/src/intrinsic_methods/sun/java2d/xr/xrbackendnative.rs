@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/java2d/xr/XRBackendNative.GCRectanglesNative(IJ[II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn gc_rectangles_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn gc_rectangles_native(
     "sun/java2d/xr/XRBackendNative.XRAddGlyphsNative(I[JI[BI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn xr_add_glyphs_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn xr_add_glyphs_native(
     "sun/java2d/xr/XRBackendNative.XRCreateLinearGradientPaintNative([F[SIIIIII)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn xr_create_linear_gradient_paint_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn xr_create_linear_gradient_paint_native(
     "sun/java2d/xr/XRBackendNative.XRCreateRadialGradientPaintNative([F[SIIIIII)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn xr_create_radial_gradient_paint_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn xr_create_radial_gradient_paint_native(
     "sun/java2d/xr/XRBackendNative.XRFreeGlyphsNative(I[II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn xr_free_glyphs_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -72,7 +72,7 @@ pub(crate) async fn xr_free_glyphs_native(
     "sun/java2d/xr/XRBackendNative.XRSetClipNative(JIIIILsun/java2d/pipe/Region;Z)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn xr_set_clip_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -84,7 +84,7 @@ pub(crate) async fn xr_set_clip_native(
     "sun/java2d/xr/XRBackendNative.XRSetTransformNative(IIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn xr_set_transform_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -96,7 +96,7 @@ pub(crate) async fn xr_set_transform_native(
     "sun/java2d/xr/XRBackendNative.XRenderCompositeTextNative(IIIIIJ[I[III)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn x_render_composite_text_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -108,7 +108,7 @@ pub(crate) async fn x_render_composite_text_native(
     "sun/java2d/xr/XRBackendNative.XRenderCreateGlyphSetNative(J)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn x_render_create_glyph_set_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -120,7 +120,7 @@ pub(crate) async fn x_render_create_glyph_set_native(
     "sun/java2d/xr/XRBackendNative.XRenderRectanglesNative(IBSSSS[II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn x_render_rectangles_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -132,7 +132,7 @@ pub(crate) async fn x_render_rectangles_native(
     "sun/java2d/xr/XRBackendNative.copyArea(IIJIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn copy_area(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -141,7 +141,7 @@ pub(crate) async fn copy_area(
 }
 
 #[intrinsic_method("sun/java2d/xr/XRBackendNative.createGC(I)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_gc(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -153,7 +153,7 @@ pub(crate) async fn create_gc(
     "sun/java2d/xr/XRBackendNative.createPictureNative(IJ)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_picture_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -165,7 +165,7 @@ pub(crate) async fn create_picture_native(
     "sun/java2d/xr/XRBackendNative.createPixmap(IIII)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_pixmap(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -174,7 +174,7 @@ pub(crate) async fn create_pixmap(
 }
 
 #[intrinsic_method("sun/java2d/xr/XRBackendNative.freeGC(J)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_gc(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -186,7 +186,7 @@ pub(crate) async fn free_gc(
     "sun/java2d/xr/XRBackendNative.freePicture(I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_picture(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -198,7 +198,7 @@ pub(crate) async fn free_picture(
     "sun/java2d/xr/XRBackendNative.freePixmap(I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_pixmap(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -207,7 +207,7 @@ pub(crate) async fn free_pixmap(
 }
 
 #[intrinsic_method("sun/java2d/xr/XRBackendNative.initIDs()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -219,7 +219,7 @@ pub(crate) async fn init_ids(
     "sun/java2d/xr/XRBackendNative.padBlitNative(BIIIIIIIIIIIIIIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn pad_blit_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -231,7 +231,7 @@ pub(crate) async fn pad_blit_native(
     "sun/java2d/xr/XRBackendNative.putMaskNative(IJ[BIIIIIIIIFJ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_mask_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -243,7 +243,7 @@ pub(crate) async fn put_mask_native(
     "sun/java2d/xr/XRBackendNative.renderComposite(BIIIIIIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn render_composite(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -255,7 +255,7 @@ pub(crate) async fn render_composite(
     "sun/java2d/xr/XRBackendNative.renderCompositeTrapezoidsNative(BIJIII[I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn render_composite_trapezoids_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -267,7 +267,7 @@ pub(crate) async fn render_composite_trapezoids_native(
     "sun/java2d/xr/XRBackendNative.renderRectangle(IBSSSSIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn render_rectangle(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -279,7 +279,7 @@ pub(crate) async fn render_rectangle(
     "sun/java2d/xr/XRBackendNative.setFilter(II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_filter(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -291,7 +291,7 @@ pub(crate) async fn set_filter(
     "sun/java2d/xr/XRBackendNative.setGCExposures(JZ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_gc_exposures(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -303,7 +303,7 @@ pub(crate) async fn set_gc_exposures(
     "sun/java2d/xr/XRBackendNative.setGCForeground(JI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_gc_foreground(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -315,7 +315,7 @@ pub(crate) async fn set_gc_foreground(
     "sun/java2d/xr/XRBackendNative.setGCMode(JZ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_gc_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -327,7 +327,7 @@ pub(crate) async fn set_gc_mode(
     "sun/java2d/xr/XRBackendNative.setPictureRepeat(II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_picture_repeat(
     _thread: Arc<Thread>,
     _parameters: Parameters,

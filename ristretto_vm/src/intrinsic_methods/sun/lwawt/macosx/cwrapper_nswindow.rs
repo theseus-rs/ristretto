@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.addChildWindow(JJI)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn add_child_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn add_child_window(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.canBecomeMainWindow(J)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn can_become_main_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,13 +26,13 @@ pub(crate) async fn can_become_main_window(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.close(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSWindow.close(J)V")
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.deminiaturize(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn deminiaturize(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -41,7 +41,7 @@ pub(crate) async fn deminiaturize(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.isKeyWindow(J)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_key_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -50,7 +50,7 @@ pub(crate) async fn is_key_window(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.isZoomed(J)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_zoomed(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -59,7 +59,7 @@ pub(crate) async fn is_zoomed(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.makeFirstResponder(JJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn make_first_responder(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -68,7 +68,7 @@ pub(crate) async fn make_first_responder(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.makeKeyAndOrderFront(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn make_key_and_order_front(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -77,7 +77,7 @@ pub(crate) async fn make_key_and_order_front(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.makeKeyWindow(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn make_key_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -86,7 +86,7 @@ pub(crate) async fn make_key_window(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.makeMainWindow(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn make_main_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -95,7 +95,7 @@ pub(crate) async fn make_main_window(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.miniaturize(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn miniaturize(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -104,7 +104,7 @@ pub(crate) async fn miniaturize(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.orderFront(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn order_front(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -113,7 +113,7 @@ pub(crate) async fn order_front(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.orderFrontRegardless(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn order_front_regardless(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -122,7 +122,7 @@ pub(crate) async fn order_front_regardless(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.orderOut(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn order_out(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -131,7 +131,7 @@ pub(crate) async fn order_out(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.orderWindow(JIJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn order_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -140,7 +140,7 @@ pub(crate) async fn order_window(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.removeChildWindow(JJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn remove_child_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -149,7 +149,7 @@ pub(crate) async fn remove_child_window(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.setAlphaValue(JF)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_alpha_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -158,7 +158,7 @@ pub(crate) async fn set_alpha_value(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.setBackgroundColor(JI)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_background_color(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -167,7 +167,7 @@ pub(crate) async fn set_background_color(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.setLevel(JI)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_level(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -176,7 +176,7 @@ pub(crate) async fn set_level(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.setOpaque(JZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_opaque(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -185,7 +185,7 @@ pub(crate) async fn set_opaque(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CWrapper$NSWindow.zoom(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn zoom(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CWrapper$NSWindow.zoom(J)V")
 }

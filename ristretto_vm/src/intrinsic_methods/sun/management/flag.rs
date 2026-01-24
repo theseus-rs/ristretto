@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/management/Flag.getAllFlagNames()[Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_all_flag_names(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn get_all_flag_names(
     "sun/management/Flag.getFlags([Ljava/lang/String;[Lsun/management/Flag;I)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_flags(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn get_flags(
 }
 
 #[intrinsic_method("sun/management/Flag.getInternalFlagCount()I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_internal_flag_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn get_internal_flag_count(
 }
 
 #[intrinsic_method("sun/management/Flag.initialize()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn initialize(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -54,7 +54,7 @@ pub(crate) async fn initialize(
     "sun/management/Flag.setBooleanValue(Ljava/lang/String;Z)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_boolean_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -66,7 +66,7 @@ pub(crate) async fn set_boolean_value(
     "sun/management/Flag.setDoubleValue(Ljava/lang/String;D)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_double_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -78,7 +78,7 @@ pub(crate) async fn set_double_value(
     "sun/management/Flag.setLongValue(Ljava/lang/String;J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_long_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -90,7 +90,7 @@ pub(crate) async fn set_long_value(
     "sun/management/Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_string_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,

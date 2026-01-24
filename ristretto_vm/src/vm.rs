@@ -519,7 +519,7 @@ impl VM {
     /// if the class cannot be loaded
     pub async fn class<S>(&self, class_name: S) -> Result<Arc<Class>>
     where
-        S: AsRef<str> + Debug,
+        S: AsRef<str> + Debug + Send,
     {
         let thread = self.primordial_thread().await?;
         thread.class(class_name).await
@@ -580,8 +580,8 @@ impl VM {
         parameters: &[impl RustValue],
     ) -> Result<Option<Value>>
     where
-        C: AsRef<str> + Debug,
-        M: AsRef<str> + Debug,
+        C: AsRef<str> + Debug + Send + Sync,
+        M: AsRef<str> + Debug + Send + Sync,
     {
         let thread = self.primordial_thread().await?;
         thread.invoke(&class, &method, parameters).await
@@ -600,8 +600,8 @@ impl VM {
         parameters: &[impl RustValue],
     ) -> Result<Value>
     where
-        C: AsRef<str> + Debug,
-        M: AsRef<str> + Debug,
+        C: AsRef<str> + Debug + Send + Sync,
+        M: AsRef<str> + Debug + Send + Sync,
     {
         let thread = self.primordial_thread().await?;
         thread.try_invoke(&class, &method, parameters).await
@@ -619,8 +619,8 @@ impl VM {
         parameters: &[impl RustValue],
     ) -> Result<Value>
     where
-        C: AsRef<str> + Debug,
-        M: AsRef<str> + Debug,
+        C: AsRef<str> + Debug + Send + Sync,
+        M: AsRef<str> + Debug + Send + Sync,
     {
         let thread = self.primordial_thread().await?;
         thread.object(class_name, descriptor, parameters).await
@@ -634,6 +634,91 @@ impl VM {
     /// Get the call site cache for invokedynamic recursion prevention
     pub(crate) fn call_site_cache(&self) -> &CallSiteCache {
         &self.call_site_cache
+    }
+
+    /// Wait for all non-daemon threads to complete.
+    ///
+    /// This method should be called after the main method returns to ensure all spawned threads
+    /// have completed their execution before the VM shuts down. This is similar to how the JVM
+    /// waits for all non-daemon threads to complete before exiting.
+    ///
+    /// # Errors
+    ///
+    /// if waiting for threads fails
+    #[cfg(not(target_family = "wasm"))]
+    pub async fn wait_for_non_daemon_threads(&self) -> Result<()> {
+        // Poll until all spawned non-daemon threads have completed
+        // We check for threads other than the primordial thread (id=1) and skip daemon threads
+        loop {
+            // Collect join handles from non-daemon threads
+            let mut handles_to_await = Vec::new();
+
+            {
+                let mut handles = self.thread_handles.write().await;
+                // Find all non-daemon thread handles with join handles (excluding primordial thread)
+                let thread_ids: Vec<u64> = handles
+                    .iter()
+                    .filter(|(id, handle)| {
+                        **id != 1 && handle.join_handle.is_some() && !handle.daemon
+                    })
+                    .map(|(id, _)| *id)
+                    .collect();
+
+                for id in thread_ids {
+                    if let Some(mut handle) = handles.remove(&id)
+                        && let Some(join_handle) = handle.join_handle.take()
+                    {
+                        handles_to_await.push(join_handle);
+                    }
+                }
+            }
+
+            if handles_to_await.is_empty() {
+                // No more non-daemon threads with join handles, check if there are any remaining
+                let handles = self.thread_handles.read().await;
+                let remaining_non_daemon = handles
+                    .iter()
+                    .filter(|(id, handle)| **id != 1 && !handle.daemon)
+                    .count();
+                if remaining_non_daemon == 0 {
+                    break;
+                }
+                // Some non-daemon threads still exist but don't have join handles
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            } else {
+                // Await all collected join handles
+                for join_handle in handles_to_await {
+                    let _ = join_handle.await;
+                }
+            }
+        }
+
+        // Abort all remaining daemon threads - they shouldn't prevent VM exit
+        let mut daemon_handles = Vec::new();
+        {
+            let mut handles = self.thread_handles.write().await;
+            for (id, handle) in handles.iter_mut() {
+                if handle.daemon
+                    && let Some(join_handle) = handle.join_handle.take()
+                {
+                    join_handle.abort();
+                    daemon_handles.push((*id, join_handle));
+                }
+            }
+        }
+        // Wait for aborted tasks to finish
+        for (_id, join_handle) in daemon_handles {
+            let _ = join_handle.await; // This will return Err(JoinError::Cancelled) which is expected
+        }
+
+        Ok(())
+    }
+
+    /// Wait for all non-daemon threads to complete (WASM version - no-op).
+    #[cfg(target_family = "wasm")]
+    pub async fn wait_for_non_daemon_threads(&self) -> Result<()> {
+        // WASM uses spawn_local which doesn't support joining
+        Ok(())
     }
 }
 

@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageWriter.abortWrite(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn abort_write(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn abort_write(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageWriter.disposeWriter(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dispose_writer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -29,7 +29,7 @@ pub(crate) async fn dispose_writer(
     "com/sun/imageio/plugins/jpeg/JPEGImageWriter.initJPEGImageWriter()J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_jpeg_image_writer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -41,7 +41,7 @@ pub(crate) async fn init_jpeg_image_writer(
     "com/sun/imageio/plugins/jpeg/JPEGImageWriter.initWriterIDs(Ljava/lang/Class;Ljava/lang/Class;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_writer_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -52,7 +52,7 @@ pub(crate) async fn init_writer_ids(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageWriter.resetWriter(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn reset_writer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -61,7 +61,7 @@ pub(crate) async fn reset_writer(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageWriter.setDest(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_dest(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -73,7 +73,7 @@ pub(crate) async fn set_dest(
     "com/sun/imageio/plugins/jpeg/JPEGImageWriter.writeImage(J[BIII[IIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;Z[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;ZZZI[I[I[I[I[IZI)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write_image(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -87,7 +87,7 @@ pub(crate) async fn write_image(
     "com/sun/imageio/plugins/jpeg/JPEGImageWriter.writeTables(J[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write_tables(
     _thread: Arc<Thread>,
     _parameters: Parameters,

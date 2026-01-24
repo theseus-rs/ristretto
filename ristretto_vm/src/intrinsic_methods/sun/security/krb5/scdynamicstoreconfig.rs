@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/security/krb5/SCDynamicStoreConfig.getKerberosConfig()Ljava/util/Hashtable;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_kerberos_config_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn get_kerberos_config_0(
     "sun/security/krb5/SCDynamicStoreConfig.getKerberosConfig()Ljava/util/List;",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_kerberos_config_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn get_kerberos_config_1(
     "sun/security/krb5/SCDynamicStoreConfig.installNotificationCallback()V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn install_notification_callback(
     _thread: Arc<Thread>,
     _parameters: Parameters,

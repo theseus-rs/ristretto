@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/OSXOffScreenSurfaceData.clearSurfacePixels(II)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn clear_surface_pixels(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn clear_surface_pixels(
     "sun/java2d/OSXOffScreenSurfaceData.getSurfaceData(Ljava/awt/image/BufferedImage;)Lsun/java2d/SurfaceData;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_surface_data(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -34,7 +34,7 @@ pub(crate) async fn get_surface_data(
     "sun/java2d/OSXOffScreenSurfaceData.initCustomRaster(Ljava/nio/IntBuffer;IILjava/nio/ByteBuffer;Ljava/lang/Object;Ljava/nio/ByteBuffer;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_custom_raster(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -45,7 +45,7 @@ pub(crate) async fn init_custom_raster(
 }
 
 #[intrinsic_method("sun/java2d/OSXOffScreenSurfaceData.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn init_ids(
     "sun/java2d/OSXOffScreenSurfaceData.initRaster(Ljava/lang/Object;IIIIILjava/awt/image/IndexColorModel;ILjava/nio/ByteBuffer;Ljava/lang/Object;Ljava/nio/ByteBuffer;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_raster(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -71,7 +71,7 @@ pub(crate) async fn init_raster(
     "sun/java2d/OSXOffScreenSurfaceData.setSurfaceData(Ljava/awt/image/BufferedImage;Lsun/java2d/SurfaceData;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_surface_data(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -82,7 +82,7 @@ pub(crate) async fn set_surface_data(
 }
 
 #[intrinsic_method("sun/java2d/OSXOffScreenSurfaceData.syncToJavaPixels()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn sync_to_java_pixels(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -94,7 +94,7 @@ pub(crate) async fn sync_to_java_pixels(
     "sun/java2d/OSXOffScreenSurfaceData.xorSurfacePixels(Lsun/java2d/SurfaceData;IIIII)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn xor_surface_pixels(
     _thread: Arc<Thread>,
     _parameters: Parameters,

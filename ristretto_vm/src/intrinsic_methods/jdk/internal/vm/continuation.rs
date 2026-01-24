@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("jdk/internal/vm/Continuation.doYield()I", GreaterThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_yield(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn do_yield(
     "jdk/internal/vm/Continuation.enterSpecial(Ljdk/internal/vm/Continuation;ZZ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn enter_special(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn enter_special(
     "jdk/internal/vm/Continuation.isPinned0(Ljdk/internal/vm/ContinuationScope;)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_pinned_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn is_pinned_0(
 }
 
 #[intrinsic_method("jdk/internal/vm/Continuation.pin()V", GreaterThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn pin(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.pin()V")
 }
@@ -51,7 +51,7 @@ pub(crate) async fn pin(_thread: Arc<Thread>, _parameters: Parameters) -> Result
     "jdk/internal/vm/Continuation.registerNatives()V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn register_natives(
 }
 
 #[intrinsic_method("jdk/internal/vm/Continuation.unpin()V", GreaterThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unpin(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.vm.Continuation.unpin()V")
 }

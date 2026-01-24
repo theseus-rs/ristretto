@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "com/apple/laf/AquaFileView.getNativeDisplayName([BZ)Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_display_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn get_native_display_name(
 }
 
 #[intrinsic_method("com/apple/laf/AquaFileView.getNativeLSInfo([BZ)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_ls_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -32,7 +32,7 @@ pub(crate) async fn get_native_ls_info(
     "com/apple/laf/AquaFileView.getNativeMachineName()Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_machine_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -44,7 +44,7 @@ pub(crate) async fn get_native_machine_name(
     "com/apple/laf/AquaFileView.getNativePathForResolvedAlias([BZ)Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_path_for_resolved_alias(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -56,7 +56,7 @@ pub(crate) async fn get_native_path_for_resolved_alias(
     "com/apple/laf/AquaFileView.getNativePathToSharedJDKBundle()Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_path_to_shared_jdk_bundle(
     _thread: Arc<Thread>,
     _parameters: Parameters,

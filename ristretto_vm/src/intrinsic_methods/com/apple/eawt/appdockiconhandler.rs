@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("com/apple/eawt/_AppDockIconHandler.nativeGetDockIconImage()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_dock_icon_image(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn native_get_dock_icon_image(
     "com/apple/eawt/_AppDockIconHandler.nativeSetDockIconBadge(Ljava/lang/String;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_set_dock_icon_badge(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -30,7 +30,7 @@ pub(crate) async fn native_set_dock_icon_badge(
 }
 
 #[intrinsic_method("com/apple/eawt/_AppDockIconHandler.nativeSetDockIconImage(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_set_dock_icon_image(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn native_set_dock_icon_image(
     "com/apple/eawt/_AppDockIconHandler.nativeSetDockIconProgress(I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_set_dock_icon_progress(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -51,7 +51,7 @@ pub(crate) async fn native_set_dock_icon_progress(
 }
 
 #[intrinsic_method("com/apple/eawt/_AppDockIconHandler.nativeSetDockMenu(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_set_dock_menu(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/font/CCharToGlyphMapper.countGlyphs(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn count_glyphs(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn count_glyphs(
 }
 
 #[intrinsic_method("sun/font/CCharToGlyphMapper.nativeCharsToGlyphs(JI[C[I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_chars_to_glyphs(
     _thread: Arc<Thread>,
     _parameters: Parameters,

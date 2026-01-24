@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_25;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "java/lang/StackFrameInfo.expandStackFrameInfo()V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn expand_stack_frame_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,

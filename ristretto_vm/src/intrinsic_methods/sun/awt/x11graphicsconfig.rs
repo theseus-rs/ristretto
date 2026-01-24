@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/awt/X11GraphicsConfig.createBackBuffer(JI)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_back_buffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn create_back_buffer(
     "sun/awt/X11GraphicsConfig.destroyBackBuffer(J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn destroy_back_buffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn destroy_back_buffer(
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsConfig.dispose(J)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dispose(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn dispose(
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsConfig.getNumColors()I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_num_colors(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -54,7 +54,7 @@ pub(crate) async fn get_num_colors(
     "sun/awt/X11GraphicsConfig.getXResolution(I)D",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_x_resolution(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -66,7 +66,7 @@ pub(crate) async fn get_x_resolution(
     "sun/awt/X11GraphicsConfig.getYResolution(I)D",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_y_resolution(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -75,13 +75,13 @@ pub(crate) async fn get_y_resolution(
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsConfig.init(II)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.awt.X11GraphicsConfig.init(II)V")
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsConfig.initIDs()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -93,7 +93,7 @@ pub(crate) async fn init_ids(
     "sun/awt/X11GraphicsConfig.isTranslucencyCapable(J)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_translucency_capable(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -105,7 +105,7 @@ pub(crate) async fn is_translucency_capable(
     "sun/awt/X11GraphicsConfig.makeColorModel()Ljava/awt/image/ColorModel;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn make_color_model(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -117,7 +117,7 @@ pub(crate) async fn make_color_model(
     "sun/awt/X11GraphicsConfig.pGetBounds(I)Ljava/awt/Rectangle;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn p_get_bounds(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -126,7 +126,7 @@ pub(crate) async fn p_get_bounds(
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsConfig.swapBuffers(JI)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn swap_buffers(
     _thread: Arc<Thread>,
     _parameters: Parameters,

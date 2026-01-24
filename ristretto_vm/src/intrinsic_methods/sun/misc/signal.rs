@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/misc/Signal.findSignal(Ljava/lang/String;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find_signal(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn find_signal(
 }
 
 #[intrinsic_method("sun/misc/Signal.handle0(IJ)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn handle_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -30,7 +30,7 @@ pub(crate) async fn handle_0(
 }
 
 #[intrinsic_method("sun/misc/Signal.raise0(I)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn raise_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "java/security/AccessController.doPrivileged(Ljava/security/PrivilegedAction;)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_privileged_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -31,7 +31,7 @@ pub(crate) async fn do_privileged_1(
     "java/security/AccessController.doPrivileged(Ljava/security/PrivilegedAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_privileged_2(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -51,7 +51,7 @@ pub(crate) async fn do_privileged_2(
     "java/security/AccessController.doPrivileged(Ljava/security/PrivilegedExceptionAction;)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_privileged_3(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -70,7 +70,7 @@ pub(crate) async fn do_privileged_3(
     "java/security/AccessController.doPrivileged(Ljava/security/PrivilegedExceptionAction;Ljava/security/AccessControlContext;)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_privileged_4(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -90,7 +90,7 @@ pub(crate) async fn do_privileged_4(
     "java/security/AccessController.ensureMaterializedForStackWalk(Ljava/lang/Object;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ensure_materialized_for_stack_walk(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -102,7 +102,7 @@ pub(crate) async fn ensure_materialized_for_stack_walk(
     "java/security/AccessController.getInheritedAccessControlContext()Ljava/security/AccessControlContext;",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_inherited_access_control_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -116,7 +116,7 @@ pub(crate) async fn get_inherited_access_control_context(
     "java/security/AccessController.getProtectionDomain(Ljava/lang/Class;)Ljava/security/ProtectionDomain;",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_protection_domain(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -130,7 +130,7 @@ pub(crate) async fn get_protection_domain(
     "java/security/AccessController.getStackAccessControlContext()Ljava/security/AccessControlContext;",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_stack_access_control_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,

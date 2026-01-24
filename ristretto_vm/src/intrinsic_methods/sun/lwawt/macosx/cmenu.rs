@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/lwawt/macosx/CMenu.nativeAddSeparator(J)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_add_separator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn native_add_separator(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CMenu.nativeCreateMenu(JZI)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create_menu(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -30,7 +30,7 @@ pub(crate) async fn native_create_menu(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CMenu.nativeCreateSubMenu(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_create_sub_menu(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -39,7 +39,7 @@ pub(crate) async fn native_create_sub_menu(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CMenu.nativeDeleteItem(JI)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_delete_item(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn native_delete_item(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CMenu.nativeGetNSMenu(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_ns_menu(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn native_get_ns_menu(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CMenu.nativeSetMenuTitle(JLjava/lang/String;)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_set_menu_title(
     _thread: Arc<Thread>,
     _parameters: Parameters,

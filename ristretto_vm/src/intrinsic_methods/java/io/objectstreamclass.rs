@@ -2,9 +2,9 @@ use crate::Result;
 use crate::intrinsic_methods::java::lang::class::get_class;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "java/io/ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn has_static_initializer(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn has_static_initializer(
 }
 
 #[intrinsic_method("java/io/ObjectStreamClass.initNative()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,

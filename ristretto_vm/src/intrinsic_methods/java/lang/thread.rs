@@ -3,17 +3,16 @@ use crate::Result;
 use crate::handles::ThreadHandle;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 use std::time::Duration;
 #[cfg(not(target_family = "wasm"))]
 use thread_priority::{ThreadPriority, ThreadPriorityValue, set_current_thread_priority};
-use tokio::runtime::Builder;
 use tracing::error;
 
 bitflags! {
@@ -63,7 +62,7 @@ async fn get_thread(thread: &Arc<Thread>, thread_object: &Value) -> Result<Arc<T
 }
 
 #[intrinsic_method("java/lang/Thread.clearInterruptEvent()V", GreaterThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn clear_interrupt_event(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -75,7 +74,7 @@ pub(crate) async fn clear_interrupt_event(
 }
 
 #[intrinsic_method("java/lang/Thread.countStackFrames()I", LessThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn count_stack_frames(
     thread: Arc<Thread>,
     _parameters: Parameters,
@@ -89,7 +88,7 @@ pub(crate) async fn count_stack_frames(
     "java/lang/Thread.currentCarrierThread()Ljava/lang/Thread;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn current_carrier_thread(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -99,7 +98,7 @@ pub(crate) async fn current_carrier_thread(
 }
 
 #[intrinsic_method("java/lang/Thread.currentThread()Ljava/lang/Thread;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn current_thread(
     thread: Arc<Thread>,
     _parameters: Parameters,
@@ -112,7 +111,7 @@ pub(crate) async fn current_thread(
     "java/lang/Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dump_threads(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -124,7 +123,7 @@ pub(crate) async fn dump_threads(
     "java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ensure_materialized_for_stack_walk(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -136,7 +135,7 @@ pub(crate) async fn ensure_materialized_for_stack_walk(
     "java/lang/Thread.findScopedValueBindings()Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find_scoped_value_bindings(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -148,7 +147,7 @@ pub(crate) async fn find_scoped_value_bindings(
     "java/lang/Thread.getNextThreadIdOffset()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_next_thread_id_offset(
     thread: Arc<Thread>,
     _parameters: Parameters,
@@ -163,7 +162,7 @@ pub(crate) async fn get_next_thread_id_offset(
     "java/lang/Thread.getStackTrace0()Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_stack_trace_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -172,7 +171,7 @@ pub(crate) async fn get_stack_trace_0(
 }
 
 #[intrinsic_method("java/lang/Thread.getThreads()[Ljava/lang/Thread;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_threads(
     thread: Arc<Thread>,
     _parameters: Parameters,
@@ -193,7 +192,7 @@ pub(crate) async fn get_threads(
 }
 
 #[intrinsic_method("java/lang/Thread.holdsLock(Ljava/lang/Object;)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn holds_lock(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -202,7 +201,7 @@ pub(crate) async fn holds_lock(
 }
 
 #[intrinsic_method("java/lang/Thread.interrupt0()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn interrupt_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -215,7 +214,7 @@ pub(crate) async fn interrupt_0(
 }
 
 #[intrinsic_method("java/lang/Thread.isAlive()Z", LessThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_alive(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -226,7 +225,7 @@ pub(crate) async fn is_alive(
 }
 
 #[intrinsic_method("java/lang/Thread.isInterrupted(Z)Z", LessThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_interrupted(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -243,7 +242,7 @@ pub(crate) async fn is_interrupted(
 }
 
 #[intrinsic_method("java/lang/Thread.registerNatives()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -252,7 +251,7 @@ pub(crate) async fn register_natives(
 }
 
 #[intrinsic_method("java/lang/Thread.resume0()V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn resume_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -267,7 +266,7 @@ pub(crate) async fn resume_0(
     "java/lang/Thread.scopedValueCache()[Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn scoped_value_cache(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -279,7 +278,7 @@ pub(crate) async fn scoped_value_cache(
     "java/lang/Thread.setCurrentThread(Ljava/lang/Thread;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_current_thread(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -288,7 +287,7 @@ pub(crate) async fn set_current_thread(
 }
 
 #[intrinsic_method("java/lang/Thread.setNativeName(Ljava/lang/String;)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_native_name(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -303,7 +302,7 @@ pub(crate) async fn set_native_name(
 }
 
 #[intrinsic_method("java/lang/Thread.setPriority0(I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_priority_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -364,7 +363,7 @@ pub(crate) async fn set_priority_0(
     "java/lang/Thread.setScopedValueCache([Ljava/lang/Object;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_scoped_value_cache(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -373,121 +372,205 @@ pub(crate) async fn set_scoped_value_cache(
 }
 
 #[intrinsic_method("java/lang/Thread.sleep(J)V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn sleep(
-    _thread: Arc<Thread>,
+    #[cfg_attr(target_family = "wasm", allow(unused_variables))] thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    use crate::JavaError;
     let millis = parameters.pop_long()?;
+    if millis < 0 {
+        return Err(
+            JavaError::IllegalArgumentException("timeout value is negative".to_string()).into(),
+        );
+    }
     let millis = u64::try_from(millis)?;
     let duration = Duration::from_millis(millis);
+
     #[cfg(target_family = "wasm")]
     std::thread::sleep(duration);
+
     #[cfg(not(target_family = "wasm"))]
-    tokio::time::sleep(duration).await;
+    {
+        let interrupted = thread.sleep(duration).await;
+        if interrupted {
+            return Err(JavaError::InterruptedException("sleep interrupted".to_string()).into());
+        }
+    }
+
     Ok(None)
 }
 
 #[intrinsic_method("java/lang/Thread.sleep0(J)V", Equal(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn sleep_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     sleep(thread, parameters).await
 }
 
 #[intrinsic_method("java/lang/Thread.sleepNanos0(J)V", GreaterThanOrEqual(JAVA_25))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn sleep_nanos_0(
-    _thread: Arc<Thread>,
+    #[cfg_attr(target_family = "wasm", allow(unused_variables))] thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    use crate::JavaError;
     let nanos = parameters.pop_long()?;
+    if nanos < 0 {
+        return Err(
+            JavaError::IllegalArgumentException("timeout value is negative".to_string()).into(),
+        );
+    }
     let nanos = u64::try_from(nanos)?;
     let duration = Duration::from_nanos(nanos);
+
     #[cfg(target_family = "wasm")]
     std::thread::sleep(duration);
+
     #[cfg(not(target_family = "wasm"))]
-    tokio::time::sleep(duration).await;
+    {
+        let interrupted = thread.sleep(duration).await;
+        if interrupted {
+            return Err(JavaError::InterruptedException("sleep interrupted".to_string()).into());
+        }
+    }
+
     Ok(None)
 }
 
 #[intrinsic_method("java/lang/Thread.start0()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn start_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let thread_object = parameters.pop()?;
-    let (thread_class, thread_id) = {
+
+    // First, get the VM to generate a unique internal thread ID
+    let vm = thread.vm()?;
+
+    #[cfg_attr(target_family = "wasm", allow(unused_variables))]
+    let (thread_class, internal_thread_id, is_daemon) = {
         let mut thread_object = thread_object.as_object_mut()?;
         let thread_class = thread_object.class().clone();
-        let thread_id = thread_object.value("tid")?.as_u64()?;
+
+        // Check if thread has already been started (eetop != 0)
+        let eetop = thread_object
+            .value("eetop")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(0);
+        if eetop != 0 {
+            return Ok(None);
+        }
+
+        // Check if this is a daemon thread
+        // In Java 19+, daemon is in holder.daemon; in older versions, it's directly on Thread
+        let is_daemon = if let Ok(holder_value) = thread_object.value("holder")
+            && let Ok(holder) = holder_value.as_object_ref()
+        {
+            holder
+                .value("daemon")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+        } else {
+            thread_object
+                .value("daemon")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+        };
+
+        // Generate a unique internal thread ID for this execution
+        let internal_thread_id = vm.next_thread_id()?;
+
         // Associate the Java Thread object with the new internal thread and set its ID in `eetop`
-        thread_object.set_value("eetop", Value::from(thread_id))?;
-        (thread_class, thread_id)
+        thread_object.set_value("eetop", Value::from(internal_thread_id))?;
+        (thread_class, internal_thread_id, is_daemon)
     };
 
-    // Set thread status to RUNNABLE before spawning the OS thread
-    if let Err(e) = set_thread_status(&thread_object, ThreadState::RUNNABLE) {
-        error!("Failed to set thread status to RUNNABLE: {e}");
+    // Set thread status to RUNNABLE
+    if let Err(error) = set_thread_status(&thread_object, ThreadState::RUNNABLE) {
+        error!("Failed to set thread status to RUNNABLE: {error}");
     }
 
     let run_method = thread_class.try_get_method("run", "()V")?;
     let thread_value = thread_object.clone();
 
-    // Create a new internal thread (Arc<Thread>) and registered with the VM
-    let vm = thread.vm()?;
+    // Create a new internal thread (Arc<Thread>) and register with the VM
     let weak_vm = Arc::downgrade(&vm);
-    let new_thread = Thread::new(&weak_vm, thread_id);
+    let new_thread = Thread::new(&weak_vm, internal_thread_id);
     new_thread.set_java_object(thread_object.clone()).await;
 
-    // Spawn a new OS thread to run the target's run() method in a Tokio runtime
-    // Use a larger stack size (8 MB) to accommodate deeply nested async calls
-    // that occur during method handle invocations and invokedynamic resolution
-    let spawn_vm = vm.clone();
+    // Spawn a task to run the thread's run() method
     let spawn_thread = new_thread.clone();
-    let join_handle = std::thread::Builder::new()
-        .stack_size(8 * 1024 * 1024) // 8 MB stack
-        .spawn({
-            move || {
-                let runtime = Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .expect("Failed to create Tokio runtime for new thread");
-                // Execute the Runnable's run() method within the new thread's context
-                runtime.block_on(async move {
-                    let _ = spawn_thread
-                        .execute(&thread_class, &run_method, &[thread_value])
-                        .await;
-                    // Set thread status to TERMINATED and eetop to 0 after execution
-                    {
-                        if let Err(error) =
-                            set_thread_status(&thread_object, ThreadState::TERMINATED)
-                        {
-                            error!("Failed to set thread status to TERMINATED: {error}");
-                        }
-                        let mut thread_object = match thread_object.as_object_mut() {
-                            Ok(thread_object) => thread_object,
-                            Err(error) => {
-                                error!("Failed to get thread object: {error:?}");
-                                return;
-                            }
-                        };
-                        if let Err(error) = thread_object.set_value("eetop", Value::Long(0)) {
-                            error!("Failed to set eetop to 0: {error}");
-                        }
-                    }
-                    // Remove the thread from the VM's thread handles; this drops the JoinHandle which
-                    // in turn will drop the OS thread.
-                    let thread_handles = spawn_vm.thread_handles();
-                    thread_handles.remove(&thread_id).await;
-                });
-            }
-        })
-        .expect("Failed to spawn Java thread");
 
-    let thread_handle = ThreadHandle::from((new_thread, join_handle));
-    let thread_handles = vm.thread_handles();
-    thread_handles.insert(thread_id, thread_handle).await?;
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let join_handle = tokio::spawn(async move {
+            let _ = spawn_thread
+                .execute(&thread_class, &run_method, &[thread_value])
+                .await;
+
+            // Set thread status to TERMINATED and eetop to 0 after execution
+            if let Err(error) = set_thread_status(&thread_object, ThreadState::TERMINATED) {
+                error!("Failed to set thread status to TERMINATED: {error}");
+            }
+            if let Ok(mut thread_obj) = thread_object.as_object_mut()
+                && let Err(error) = thread_obj.set_value("eetop", Value::Long(0))
+            {
+                error!("Failed to set eetop to 0: {error}");
+            }
+
+            // Note: We intentionally do NOT remove the thread handle here.
+            // The VM's wait_for_non_daemon_threads() will await the JoinHandle
+            // and clean up the handle. Removing it here would prevent proper
+            // thread synchronization when calling Thread.join() or VM shutdown.
+        });
+
+        // Register the thread handle with the tokio JoinHandle and daemon flag
+        let thread_handle = ThreadHandle::from((new_thread, join_handle, is_daemon));
+        let thread_handles = vm.thread_handles();
+        thread_handles
+            .insert(internal_thread_id, thread_handle)
+            .await?;
+
+        // Yield to give the spawned task a chance to start running.
+        // This helps ensure the new thread enters its run() method before
+        // the calling thread continues, which is important for timing-sensitive
+        // operations like checking thread state immediately after start().
+        tokio::task::yield_now().await;
+    }
+
+    #[cfg(target_family = "wasm")]
+    {
+        let spawn_vm = vm.clone();
+        let spawn_thread_id = internal_thread_id;
+        wasm_bindgen_futures::spawn_local(async move {
+            let _ = spawn_thread
+                .execute(&thread_class, &run_method, &[thread_value])
+                .await;
+
+            // Set thread status to TERMINATED and eetop to 0 after execution
+            if let Err(error) = set_thread_status(&thread_object, ThreadState::TERMINATED) {
+                error!("Failed to set thread status to TERMINATED: {error}");
+            }
+            if let Ok(mut thread_obj) = thread_object.as_object_mut()
+                && let Err(error) = thread_obj.set_value("eetop", Value::Long(0))
+            {
+                error!("Failed to set eetop to 0: {error}");
+            }
+
+            // Remove the thread from the VM's thread handles
+            // (WASM doesn't support JoinHandles, so we clean up here)
+            let thread_handles = spawn_vm.thread_handles();
+            thread_handles.remove(&spawn_thread_id).await;
+        });
+
+        // Register the thread handle without a JoinHandle for WASM
+        let thread_handle = ThreadHandle::from(new_thread);
+        let thread_handles = vm.thread_handles();
+        thread_handles
+            .insert(internal_thread_id, thread_handle)
+            .await?;
+    }
 
     Ok(None)
 }
@@ -496,7 +579,7 @@ pub(crate) async fn start_0(
     "java/lang/Thread.stop0(Ljava/lang/Object;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn stop_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Err(UnsupportedOperationException(
         "java/lang/Thread.stop0(Ljava/lang/Object;)V is not supported".to_string(),
@@ -505,7 +588,7 @@ pub(crate) async fn stop_0(_thread: Arc<Thread>, _parameters: Parameters) -> Res
 }
 
 #[intrinsic_method("java/lang/Thread.suspend0()V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn suspend_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -517,7 +600,7 @@ pub(crate) async fn suspend_0(
 }
 
 #[intrinsic_method("java/lang/Thread.yield()V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn r#yield(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -536,7 +619,7 @@ pub(crate) async fn r#yield(
 }
 
 #[intrinsic_method("java/lang/Thread.yield0()V", GreaterThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn yield_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     r#yield(thread, parameters).await
 }

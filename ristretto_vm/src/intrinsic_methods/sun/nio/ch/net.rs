@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_25};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/nio/ch/Net.accept(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn accept(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "sun.nio.ch.Net.accept(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I"
@@ -23,7 +23,7 @@ pub(crate) async fn accept(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/nio/ch/Net.available(Ljava/io/FileDescriptor;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,13 +35,13 @@ pub(crate) async fn available(
     "sun/nio/ch/Net.bind0(Ljava/io/FileDescriptor;ZZLjava/net/InetAddress;I)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.bind0(Ljava/io/FileDescriptor;ZZLjava/net/InetAddress;I)V")
 }
 
 #[intrinsic_method("sun/nio/ch/Net.blockOrUnblock4(ZLjava/io/FileDescriptor;III)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn block_or_unblock_4(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -50,7 +50,7 @@ pub(crate) async fn block_or_unblock_4(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.blockOrUnblock6(ZLjava/io/FileDescriptor;[BI[B)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn block_or_unblock_6(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -59,7 +59,7 @@ pub(crate) async fn block_or_unblock_6(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.canIPv6SocketJoinIPv4Group0()Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn can_ipv6_socket_join_ipv4_group_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -68,7 +68,7 @@ pub(crate) async fn can_ipv6_socket_join_ipv4_group_0(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.canJoin6WithIPv4Group0()Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn can_join_6_with_ipv4_group_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -80,7 +80,7 @@ pub(crate) async fn can_join_6_with_ipv4_group_0(
     "sun/nio/ch/Net.canUseIPv6OptionsWithIPv4LocalAddress0()Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn can_use_ipv6_options_with_ipv4_local_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -92,7 +92,7 @@ pub(crate) async fn can_use_ipv6_options_with_ipv4_local_address_0(
     "sun/nio/ch/Net.connect0(ZLjava/io/FileDescriptor;Ljava/net/InetAddress;I)I",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn connect_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -104,7 +104,7 @@ pub(crate) async fn connect_0(
     "sun/nio/ch/Net.discardOOB(Ljava/io/FileDescriptor;)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn discard_oob(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -113,7 +113,7 @@ pub(crate) async fn discard_oob(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.getIntOption0(Ljava/io/FileDescriptor;ZII)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_int_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -122,7 +122,7 @@ pub(crate) async fn get_int_option_0(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.getInterface4(Ljava/io/FileDescriptor;)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_interface_4(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -131,7 +131,7 @@ pub(crate) async fn get_interface_4(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.getInterface6(Ljava/io/FileDescriptor;)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_interface_6(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -140,7 +140,7 @@ pub(crate) async fn get_interface_6(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -149,7 +149,7 @@ pub(crate) async fn init_ids(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.isExclusiveBindAvailable()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_exclusive_bind_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -158,7 +158,7 @@ pub(crate) async fn is_exclusive_bind_available(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.isIPv6Available0()Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_ipv6_available_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -167,7 +167,7 @@ pub(crate) async fn is_ipv6_available_0(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.isReusePortAvailable0()Z", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_reuse_port_available_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -176,7 +176,7 @@ pub(crate) async fn is_reuse_port_available_0(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.joinOrDrop4(ZLjava/io/FileDescriptor;III)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn join_or_drop_4(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -185,7 +185,7 @@ pub(crate) async fn join_or_drop_4(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.joinOrDrop6(ZLjava/io/FileDescriptor;[BI[B)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn join_or_drop_6(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -194,7 +194,7 @@ pub(crate) async fn join_or_drop_6(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.listen(Ljava/io/FileDescriptor;I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn listen(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.listen(Ljava/io/FileDescriptor;I)V")
 }
@@ -203,7 +203,7 @@ pub(crate) async fn listen(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/nio/ch/Net.localInetAddress(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn local_inet_address(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -212,7 +212,7 @@ pub(crate) async fn local_inet_address(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.localPort(Ljava/io/FileDescriptor;)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn local_port(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -221,7 +221,7 @@ pub(crate) async fn local_port(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.poll(Ljava/io/FileDescriptor;IJ)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn poll(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.Net.poll(Ljava/io/FileDescriptor;IJ)I")
 }
@@ -230,7 +230,7 @@ pub(crate) async fn poll(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
     "sun/nio/ch/Net.pollConnect(Ljava/io/FileDescriptor;J)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn poll_connect(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -239,7 +239,7 @@ pub(crate) async fn poll_connect(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.pollconnValue()S", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn pollconn_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -248,7 +248,7 @@ pub(crate) async fn pollconn_value(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.pollerrValue()S", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn pollerr_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -257,7 +257,7 @@ pub(crate) async fn pollerr_value(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.pollhupValue()S", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn pollhup_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -266,7 +266,7 @@ pub(crate) async fn pollhup_value(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.pollinValue()S", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn pollin_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -275,7 +275,7 @@ pub(crate) async fn pollin_value(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.pollnvalValue()S", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn pollnval_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -284,7 +284,7 @@ pub(crate) async fn pollnval_value(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.polloutValue()S", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn pollout_value(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -296,7 +296,7 @@ pub(crate) async fn pollout_value(
     "sun/nio/ch/Net.remoteInetAddress(Ljava/io/FileDescriptor;)Ljava/net/InetAddress;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn remote_inet_address(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -305,7 +305,7 @@ pub(crate) async fn remote_inet_address(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.remotePort(Ljava/io/FileDescriptor;)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn remote_port(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -317,7 +317,7 @@ pub(crate) async fn remote_port(
     "sun/nio/ch/Net.sendOOB(Ljava/io/FileDescriptor;B)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn send_oob(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -326,7 +326,7 @@ pub(crate) async fn send_oob(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.setIntOption0(Ljava/io/FileDescriptor;ZIIIZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_int_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -335,7 +335,7 @@ pub(crate) async fn set_int_option_0(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.setInterface4(Ljava/io/FileDescriptor;I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_interface_4(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -344,7 +344,7 @@ pub(crate) async fn set_interface_4(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.setInterface6(Ljava/io/FileDescriptor;I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_interface_6(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -356,7 +356,7 @@ pub(crate) async fn set_interface_6(
     "sun/nio/ch/Net.shouldSetBothIPv4AndIPv6Options0()Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn should_set_both_ipv4_and_ipv6_options_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -365,7 +365,7 @@ pub(crate) async fn should_set_both_ipv4_and_ipv6_options_0(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.shutdown(Ljava/io/FileDescriptor;I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn shutdown(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -374,7 +374,7 @@ pub(crate) async fn shutdown(
 }
 
 #[intrinsic_method("sun/nio/ch/Net.socket0(ZZZZ)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -386,7 +386,7 @@ pub(crate) async fn socket_0(
     "sun/nio/ch/Net.shouldShutdownWriteBeforeClose0()Z",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn should_shutdown_write_before_close_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

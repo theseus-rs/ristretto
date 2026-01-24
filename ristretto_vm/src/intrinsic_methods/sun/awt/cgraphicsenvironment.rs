@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/awt/CGraphicsEnvironment.deregisterDisplayReconfiguration(J)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn deregister_display_reconfiguration(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn deregister_display_reconfiguration(
 }
 
 #[intrinsic_method("sun/awt/CGraphicsEnvironment.getDisplayIDs()[I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_display_i_ds(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -30,7 +30,7 @@ pub(crate) async fn get_display_i_ds(
 }
 
 #[intrinsic_method("sun/awt/CGraphicsEnvironment.getMainDisplayID()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_main_display_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -39,7 +39,7 @@ pub(crate) async fn get_main_display_id(
 }
 
 #[intrinsic_method("sun/awt/CGraphicsEnvironment.initCocoa()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_cocoa(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn init_cocoa(
 }
 
 #[intrinsic_method("sun/awt/CGraphicsEnvironment.registerDisplayReconfiguration()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_display_reconfiguration(
     _thread: Arc<Thread>,
     _parameters: Parameters,

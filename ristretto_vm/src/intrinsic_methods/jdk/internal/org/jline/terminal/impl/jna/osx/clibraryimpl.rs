@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.initIDs()V",
     Equal(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn init_ids(
     "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.ioctl0(IJLjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$winsize;)V",
     Equal(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ioctl_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -38,7 +38,7 @@ pub(crate) async fn ioctl_0(
     "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.isatty(I)I",
     Equal(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn isatty(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.isatty(I)I")
 }
@@ -47,7 +47,7 @@ pub(crate) async fn isatty(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.tcgetattr(ILjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$termios;)V",
     Equal(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn tcgetattr(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -61,7 +61,7 @@ pub(crate) async fn tcgetattr(
     "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.tcsetattr(IILjdk/internal/org/jline/terminal/impl/jna/osx/CLibrary$termios;)V",
     Equal(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn tcsetattr(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -75,7 +75,7 @@ pub(crate) async fn tcsetattr(
     "jdk/internal/org/jline/terminal/impl/jna/osx/CLibraryImpl.ttyname_r(I[BI)V",
     Equal(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ttyname_r(
     _thread: Arc<Thread>,
     _parameters: Parameters,

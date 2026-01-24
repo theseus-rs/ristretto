@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CPrinterJob._safePrintLoop(JJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn safe_print_loop(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn safe_print_loop(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPrinterJob.abortDoc()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn abort_doc(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn abort_doc(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPrinterJob.createNSPrintInfo()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_ns_print_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,7 +35,7 @@ pub(crate) async fn create_ns_print_info(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPrinterJob.dispose(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dispose(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -47,7 +47,7 @@ pub(crate) async fn dispose(
     "sun/lwawt/macosx/CPrinterJob.getDefaultPage(Ljava/awt/print/PageFormat;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_default_page(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -56,7 +56,7 @@ pub(crate) async fn get_default_page(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CPrinterJob.printLoop(ZII)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn print_loop(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -68,7 +68,7 @@ pub(crate) async fn print_loop(
     "sun/lwawt/macosx/CPrinterJob.validatePaper(Ljava/awt/print/Paper;Ljava/awt/print/Paper;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn validate_paper(
     _thread: Arc<Thread>,
     _parameters: Parameters,

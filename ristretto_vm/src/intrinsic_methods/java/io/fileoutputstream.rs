@@ -8,12 +8,12 @@ use crate::intrinsic_methods::java::io::filedescriptor;
 use crate::intrinsic_methods::java::io::filedescriptor::file_descriptor_from_java_object;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(target_os = "wasi")]
 use std::fs::{File, OpenOptions};
@@ -72,13 +72,13 @@ pub(crate) fn raw_file_descriptor(file: &File) -> Result<i64> {
 }
 
 #[intrinsic_method("java/io/FileOutputStream.close0()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     filedescriptor::close_0(thread, parameters).await
 }
 
 #[intrinsic_method("java/io/FileOutputStream.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -87,7 +87,7 @@ pub(crate) async fn init_ids(
 }
 
 #[intrinsic_method("java/io/FileOutputStream.open0(Ljava/lang/String;Z)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn open_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -202,7 +202,7 @@ pub(crate) async fn open_0(
 }
 
 #[intrinsic_method("java/io/FileOutputStream.write(IZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -221,7 +221,7 @@ pub(crate) async fn write(
 }
 
 #[intrinsic_method("java/io/FileOutputStream.writeBytes([BIIZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write_bytes(
     thread: Arc<Thread>,
     mut parameters: Parameters,

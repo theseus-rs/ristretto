@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::env::consts::ARCH;
 use std::sync::Arc;
@@ -13,7 +13,7 @@ use std::sync::Arc;
     "java/util/concurrent/atomic/AtomicLong.VMSupportsCS8()Z",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn vm_supports_cs_8(
     _thread: Arc<Thread>,
     _parameters: Parameters,

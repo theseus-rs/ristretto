@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/java2d/metal/MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_mtl_config_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn get_mtl_config_info(
     "sun/java2d/metal/MTLGraphicsConfig.isMetalFrameworkAvailable()Z",
     Between(JAVA_17, JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_metal_framework_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn is_metal_framework_available(
     "sun/java2d/metal/MTLGraphicsConfig.nativeGetMaxTextureSize()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_max_texture_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn native_get_max_texture_size(
     "sun/java2d/metal/MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn try_load_metal_library(
     _thread: Arc<Thread>,
     _parameters: Parameters,

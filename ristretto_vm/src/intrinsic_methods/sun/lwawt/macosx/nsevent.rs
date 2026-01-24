@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/NSEvent.nsKeyModifiersToJavaKeyInfo([I[I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ns_key_modifiers_to_java_key_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -18,7 +18,7 @@ pub(crate) async fn ns_key_modifiers_to_java_key_info(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/NSEvent.nsToJavaChar(CI)C", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ns_to_java_char_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -27,7 +27,7 @@ pub(crate) async fn ns_to_java_char_0(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/NSEvent.nsToJavaChar(CIZ)C", GreaterThan(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ns_to_java_char_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn ns_to_java_char_1(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/NSEvent.nsToJavaKeyInfo([I[I)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ns_to_java_key_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn ns_to_java_key_info(
     "sun/lwawt/macosx/NSEvent.nsToJavaKeyModifiers(I)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ns_to_java_key_modifiers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn ns_to_java_key_modifiers(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/NSEvent.nsToJavaModifiers(I)I", GreaterThan(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ns_to_java_modifiers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -69,7 +69,7 @@ pub(crate) async fn ns_to_java_modifiers(
     "sun/lwawt/macosx/NSEvent.nsToJavaMouseModifiers(II)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ns_to_java_mouse_modifiers(
     _thread: Arc<Thread>,
     _parameters: Parameters,

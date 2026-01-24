@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_25;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/lwawt/macosx/CClipboard.checkPasteboardWithoutNotification()Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn check_pasteboard_without_notification(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn check_pasteboard_without_notification(
     "sun/lwawt/macosx/CClipboard.declareTypes([JLsun/awt/datatransfer/SunClipboard;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn declare_types(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn declare_types(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CClipboard.getClipboardData(J)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_clipboard_data(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn get_clipboard_data(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CClipboard.getClipboardFormats()[J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_clipboard_formats(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -51,7 +51,7 @@ pub(crate) async fn get_clipboard_formats(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CClipboard.setData([BJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_data(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -63,7 +63,7 @@ pub(crate) async fn set_data(
     "sun/lwawt/macosx/CClipboard.writeFileObjects([B)V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write_file_objects(
     _thread: Arc<Thread>,
     _parameters: Parameters,

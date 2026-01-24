@@ -2,10 +2,10 @@ use crate::Result;
 use crate::intrinsic_methods::jdk;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -13,7 +13,7 @@ use std::sync::Arc;
     "sun/reflect/NativeMethodAccessorImpl.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn invoke_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     jdk::internal::reflect::nativemethodaccessorimpl::invoke_0(thread, parameters).await
 }

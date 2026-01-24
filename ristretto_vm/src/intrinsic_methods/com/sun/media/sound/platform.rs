@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "com/sun/media/sound/Platform.nGetExtraLibraries()Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_get_extra_libraries(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn n_get_extra_libraries(
     "com/sun/media/sound/Platform.nGetLibraryForFeature(I)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_get_library_for_feature(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn n_get_library_for_feature(
 }
 
 #[intrinsic_method("com/sun/media/sound/Platform.nIsBigEndian()Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_is_big_endian(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -43,7 +43,7 @@ pub(crate) async fn n_is_big_endian(
 }
 
 #[intrinsic_method("com/sun/media/sound/Platform.nIsSigned8()Z", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_is_signed_8(
     _thread: Arc<Thread>,
     _parameters: Parameters,

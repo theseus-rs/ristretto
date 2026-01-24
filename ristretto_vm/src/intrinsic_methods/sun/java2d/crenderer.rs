@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/CRenderer.doArc(Lsun/java2d/SurfaceData;FFFFFFIZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_arc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.java2d.CRenderer.doArc(Lsun/java2d/SurfaceData;FFFFFFIZ)V");
 }
@@ -17,7 +17,7 @@ pub(crate) async fn do_arc(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/java2d/CRenderer.doImage(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_image(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -28,7 +28,7 @@ pub(crate) async fn do_image(
 }
 
 #[intrinsic_method("sun/java2d/CRenderer.doLine(Lsun/java2d/SurfaceData;FFFF)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_line(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -37,7 +37,7 @@ pub(crate) async fn do_line(
 }
 
 #[intrinsic_method("sun/java2d/CRenderer.doOval(Lsun/java2d/SurfaceData;FFFFZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_oval(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -46,7 +46,7 @@ pub(crate) async fn do_oval(
 }
 
 #[intrinsic_method("sun/java2d/CRenderer.doPoly(Lsun/java2d/SurfaceData;[I[IIZZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_poly(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -55,7 +55,7 @@ pub(crate) async fn do_poly(
 }
 
 #[intrinsic_method("sun/java2d/CRenderer.doRect(Lsun/java2d/SurfaceData;FFFFZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_rect(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -67,7 +67,7 @@ pub(crate) async fn do_rect(
     "sun/java2d/CRenderer.doRoundRect(Lsun/java2d/SurfaceData;FFFFFFZ)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_round_rect(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -79,7 +79,7 @@ pub(crate) async fn do_round_rect(
     "sun/java2d/CRenderer.doShape(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_shape(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -90,7 +90,7 @@ pub(crate) async fn do_shape(
 }
 
 #[intrinsic_method("sun/java2d/CRenderer.init()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
