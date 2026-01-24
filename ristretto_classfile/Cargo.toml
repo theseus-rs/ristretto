@@ -36,4 +36,4 @@ name = "class_file"
 
 [[bench]]
 harness = false
-name = "mutf8_benchmark"
+name = "mutf8"
