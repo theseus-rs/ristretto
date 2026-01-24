@@ -2,10 +2,10 @@ use crate::Result;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -13,7 +13,7 @@ use std::sync::Arc;
     "jdk/internal/loader/NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J",
     Equal(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find_entry_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -27,7 +27,7 @@ pub(crate) async fn find_entry_0(
     "jdk/internal/loader/NativeLibraries.findBuiltinLib(Ljava/lang/String;)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find_builtin_lib(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn find_builtin_lib(
     "jdk/internal/loader/NativeLibraries.load(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZZ)Z",
     Equal(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(Some(Value::Int(1)))
 }
@@ -57,7 +57,7 @@ pub(crate) async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "jdk/internal/loader/NativeLibraries.load(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn load_1(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(Some(Value::Int(1)))
 }
@@ -66,7 +66,7 @@ pub(crate) async fn load_1(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "jdk/internal/loader/NativeLibraries.unload(Ljava/lang/String;ZZJ)V",
     Equal(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unload_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -81,7 +81,7 @@ pub(crate) async fn unload_0(
     "jdk/internal/loader/NativeLibraries.unload(Ljava/lang/String;ZJ)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unload_1(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

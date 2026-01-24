@@ -2,13 +2,13 @@ use crate::Result;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::Constant;
 use ristretto_classfile::FieldType;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -34,7 +34,7 @@ fn field_type_to_name(field_type: &FieldType) -> String {
     "java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_extended_npe_message(
     thread: Arc<Thread>,
     mut parameters: Parameters,

@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
@@ -14,7 +14,7 @@ use tracing::debug;
     "jdk/internal/misc/CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn define_archived_modules(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -28,7 +28,7 @@ pub(crate) async fn define_archived_modules(
     "jdk/internal/misc/CDS.dumpClassList(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dump_class_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -40,7 +40,7 @@ pub(crate) async fn dump_class_list(
     "jdk/internal/misc/CDS.dumpDynamicArchive(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dump_dynamic_archive(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -49,7 +49,7 @@ pub(crate) async fn dump_dynamic_archive(
 }
 
 #[intrinsic_method("jdk/internal/misc/CDS.getCDSConfigStatus()I", GreaterThan(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_cds_config_status(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -62,7 +62,7 @@ pub(crate) async fn get_cds_config_status(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[expect(clippy::cast_possible_wrap)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_random_seed_for_dumping(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -78,7 +78,7 @@ pub(crate) async fn get_random_seed_for_dumping(
     "jdk/internal/misc/CDS.initializeFromArchive(Ljava/lang/Class;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn initialize_from_archive(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -91,7 +91,7 @@ pub(crate) async fn initialize_from_archive(
     "jdk/internal/misc/CDS.isDumpingArchive0()Z",
     Between(JAVA_17, JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_dumping_archive_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -103,7 +103,7 @@ pub(crate) async fn is_dumping_archive_0(
     "jdk/internal/misc/CDS.isDumpingClassList0()Z",
     Between(JAVA_17, JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_dumping_class_list_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -115,7 +115,7 @@ pub(crate) async fn is_dumping_class_list_0(
     "jdk/internal/misc/CDS.isSharingEnabled0()Z",
     Between(JAVA_17, JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_sharing_enabled_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -127,7 +127,7 @@ pub(crate) async fn is_sharing_enabled_0(
     "jdk/internal/misc/CDS.logLambdaFormInvoker(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn log_lambda_form_invoker(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -141,7 +141,7 @@ pub(crate) async fn log_lambda_form_invoker(
     "jdk/internal/misc/CDS.needsClassInitBarrier0(Ljava/lang/Class;)Z",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn needs_class_init_barrier_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

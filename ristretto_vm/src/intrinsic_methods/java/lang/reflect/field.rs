@@ -1,34 +1,35 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use byteorder::{BigEndian, WriteBytesExt};
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/reflect/Field.getTypeAnnotationBytes0()[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_type_annotation_bytes_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     // 'this' is the Field object
     let field_obj = parameters.pop()?;
-    let field_ref = field_obj.as_object_ref()?;
 
-    // Get the declaring class and slot to find the field
-    let declaring_class_value = field_ref.value("clazz")?;
-    let slot_i32 = field_ref.value("slot")?.as_i32()?;
-    let slot = usize::try_from(slot_i32)
-        .map_err(|_| crate::Error::InternalError(format!("Invalid slot value: {slot_i32}")))?;
+    let (class_name, slot) = {
+        let field_ref = field_obj.as_object_ref()?;
+        let declaring_class_value = field_ref.value("clazz")?;
+        let slot_i32 = field_ref.value("slot")?.as_i32()?;
+        let slot = usize::try_from(slot_i32)
+            .map_err(|_| crate::Error::InternalError(format!("Invalid slot value: {slot_i32}")))?;
+        let declaring_class_obj = declaring_class_value.as_object_ref()?;
+        let class_name = declaring_class_obj.value("name")?.as_string()?;
+        let class_name = class_name.replace('.', "/");
+        (class_name, slot)
+    };
 
-    // Get the actual class from the Class object
-    let declaring_class_obj = declaring_class_value.as_object_ref()?;
-    let class_name = declaring_class_obj.value("name")?.as_string()?;
-    let class_name = class_name.replace('.', "/");
     let declaring_class = thread.class(&class_name).await?;
 
     // Get the field name from the slot (offset)

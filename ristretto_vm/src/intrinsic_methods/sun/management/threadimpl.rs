@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "sun/management/ThreadImpl.dumpThreads0([JZZI)[Ljava/lang/management/ThreadInfo;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dump_threads_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -23,7 +23,7 @@ pub(crate) async fn dump_threads_0(
     "sun/management/ThreadImpl.findDeadlockedThreads0()[Ljava/lang/Thread;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find_deadlocked_threads_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,7 +35,7 @@ pub(crate) async fn find_deadlocked_threads_0(
     "sun/management/ThreadImpl.findMonitorDeadlockedThreads0()[Ljava/lang/Thread;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find_monitor_deadlocked_threads_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -44,7 +44,7 @@ pub(crate) async fn find_monitor_deadlocked_threads_0(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadAllocatedMemory0(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_thread_allocated_memory_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -53,7 +53,7 @@ pub(crate) async fn get_thread_allocated_memory_0(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadAllocatedMemory1([J[J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_thread_allocated_memory_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -65,7 +65,7 @@ pub(crate) async fn get_thread_allocated_memory_1(
     "sun/management/ThreadImpl.getThreadInfo1([JI[Ljava/lang/management/ThreadInfo;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_thread_info_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -74,7 +74,7 @@ pub(crate) async fn get_thread_info_1(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadTotalCpuTime0(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_thread_total_cpu_time_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -83,7 +83,7 @@ pub(crate) async fn get_thread_total_cpu_time_0(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadTotalCpuTime1([J[J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_thread_total_cpu_time_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -92,7 +92,7 @@ pub(crate) async fn get_thread_total_cpu_time_1(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadUserCpuTime0(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_thread_user_cpu_time_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -101,7 +101,7 @@ pub(crate) async fn get_thread_user_cpu_time_0(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadUserCpuTime1([J[J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_thread_user_cpu_time_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -110,7 +110,7 @@ pub(crate) async fn get_thread_user_cpu_time_1(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreads()[Ljava/lang/Thread;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_threads(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -119,7 +119,7 @@ pub(crate) async fn get_threads(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getTotalThreadAllocatedMemory()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_total_thread_allocated_memory(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -128,7 +128,7 @@ pub(crate) async fn get_total_thread_allocated_memory(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.resetContentionTimes0(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn reset_contention_times_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -137,7 +137,7 @@ pub(crate) async fn reset_contention_times_0(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.resetPeakThreadCount0()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn reset_peak_thread_count_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -146,7 +146,7 @@ pub(crate) async fn reset_peak_thread_count_0(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.setThreadAllocatedMemoryEnabled0(Z)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_thread_allocated_memory_enabled_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -158,7 +158,7 @@ pub(crate) async fn set_thread_allocated_memory_enabled_0(
     "sun/management/ThreadImpl.setThreadContentionMonitoringEnabled0(Z)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_thread_contention_monitoring_enabled_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -167,7 +167,7 @@ pub(crate) async fn set_thread_contention_monitoring_enabled_0(
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.setThreadCpuTimeEnabled0(Z)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_thread_cpu_time_enabled_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

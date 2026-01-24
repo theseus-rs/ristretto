@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/java2d/x11/X11SurfaceData.XSetCopyMode(J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn x_set_copy_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn x_set_copy_mode(
     "sun/java2d/x11/X11SurfaceData.XSetForeground(JI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn x_set_foreground(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn x_set_foreground(
     "sun/java2d/x11/X11SurfaceData.XSetXorMode(J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn x_set_xor_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn x_set_xor_mode(
     "sun/java2d/x11/X11SurfaceData.initIDs(Ljava/lang/Class;Z)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn init_ids(
     "sun/java2d/x11/X11SurfaceData.initSurface(IIIJ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_surface(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -72,7 +72,7 @@ pub(crate) async fn init_surface(
     "sun/java2d/x11/X11SurfaceData.isDgaAvailable()Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_dga_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -84,7 +84,7 @@ pub(crate) async fn is_dga_available(
     "sun/java2d/x11/X11SurfaceData.isShmPMAvailable()Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_shm_pm_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,

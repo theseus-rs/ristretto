@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,13 +12,13 @@ use std::sync::Arc;
     "sun/nio/ch/sctp/SctpNet.bindx(I[Ljava/net/InetAddress;IIZZ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn bindx(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.sctp.SctpNet.bindx(I[Ljava/net/InetAddress;IIZZ)V")
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.branch0(II)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn branch_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -27,7 +27,7 @@ pub(crate) async fn branch_0(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.close0(I)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -39,7 +39,7 @@ pub(crate) async fn close_0(
     "sun/nio/ch/sctp/SctpNet.connect0(ILjava/net/InetAddress;I)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn connect_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -51,7 +51,7 @@ pub(crate) async fn connect_0(
     "sun/nio/ch/sctp/SctpNet.getInitMsgOption0(I[I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_init_msg_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn get_init_msg_option_0(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.getIntOption0(II)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_int_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -72,7 +72,7 @@ pub(crate) async fn get_int_option_0(
     "sun/nio/ch/sctp/SctpNet.getLocalAddresses0(I)[Ljava/net/SocketAddress;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_local_addresses_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -84,7 +84,7 @@ pub(crate) async fn get_local_addresses_0(
     "sun/nio/ch/sctp/SctpNet.getPrimAddrOption0(II)Ljava/net/SocketAddress;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_prim_addr_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -96,7 +96,7 @@ pub(crate) async fn get_prim_addr_option_0(
     "sun/nio/ch/sctp/SctpNet.getRemoteAddresses0(II)[Ljava/net/SocketAddress;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_remote_addresses_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -105,13 +105,13 @@ pub(crate) async fn get_remote_addresses_0(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.init()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.listen0(II)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn listen_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -120,7 +120,7 @@ pub(crate) async fn listen_0(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.preClose0(I)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn pre_close_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -132,7 +132,7 @@ pub(crate) async fn pre_close_0(
     "sun/nio/ch/sctp/SctpNet.setInitMsgOption0(III)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_init_msg_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -141,7 +141,7 @@ pub(crate) async fn set_init_msg_option_0(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.setIntOption0(III)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_int_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -153,7 +153,7 @@ pub(crate) async fn set_int_option_0(
     "sun/nio/ch/sctp/SctpNet.setPeerPrimAddrOption0(IILjava/net/InetAddress;IZ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_peer_prim_addr_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -165,7 +165,7 @@ pub(crate) async fn set_peer_prim_addr_option_0(
     "sun/nio/ch/sctp/SctpNet.setPrimAddrOption0(IILjava/net/InetAddress;I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_prim_addr_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -174,7 +174,7 @@ pub(crate) async fn set_prim_addr_option_0(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.shutdown0(II)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn shutdown_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -183,7 +183,7 @@ pub(crate) async fn shutdown_0(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.socket0(Z)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/font/CFontManager.loadNativeDirFonts(Ljava/lang/String;)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn load_native_dir_fonts(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn load_native_dir_fonts(
 }
 
 #[intrinsic_method("sun/font/CFontManager.loadNativeFonts()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn load_native_fonts(
     _thread: Arc<Thread>,
     _parameters: Parameters,

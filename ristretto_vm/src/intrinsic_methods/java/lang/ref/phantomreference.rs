@@ -2,10 +2,10 @@ use crate::Result;
 use crate::intrinsic_methods::java::lang::r#ref::reference;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_25;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -13,13 +13,13 @@ use std::sync::Arc;
     "java/lang/ref/PhantomReference.clear0()V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn clear_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     reference::clear_0(thread, parameters).await
 }
 
 #[intrinsic_method("java/lang/ref/PhantomReference.refersTo0(Ljava/lang/Object;)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn refers_to_0(
     thread: Arc<Thread>,
     parameters: Parameters,

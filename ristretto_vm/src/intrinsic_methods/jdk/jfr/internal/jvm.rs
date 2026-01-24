@@ -1,12 +1,12 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{
     Between, Equal, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -14,7 +14,7 @@ use std::sync::Arc;
     "jdk/jfr/internal/JVM.abort(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn abort(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.abort(Ljava/lang/String;)V")
 }
@@ -23,7 +23,7 @@ pub(crate) async fn abort(_thread: Arc<Thread>, _parameters: Parameters) -> Resu
     "jdk/jfr/internal/JVM.addStringConstant(JLjava/lang/String;)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn add_string_constant(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -32,7 +32,7 @@ pub(crate) async fn add_string_constant(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.beginRecording()V", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn begin_recording(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -41,13 +41,13 @@ pub(crate) async fn begin_recording(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.commit(J)J", GreaterThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn commit(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.commit(J)J")
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.counterTime()J", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn counter_time(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -56,7 +56,7 @@ pub(crate) async fn counter_time(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.createJFR(Z)Z", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_jfr(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -65,7 +65,7 @@ pub(crate) async fn create_jfr(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.destroyJFR()Z", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn destroy_jfr(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -74,7 +74,7 @@ pub(crate) async fn destroy_jfr(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.emitDataLoss(J)V", GreaterThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn emit_data_loss(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -83,7 +83,7 @@ pub(crate) async fn emit_data_loss(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.emitEvent(JJJ)Z", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn emit_event(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -92,7 +92,7 @@ pub(crate) async fn emit_event(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.emitOldObjectSamples(JZ)V", Equal(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn emit_old_object_samples_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -104,7 +104,7 @@ pub(crate) async fn emit_old_object_samples_0(
     "jdk/jfr/internal/JVM.emitOldObjectSamples(JZZ)V",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn emit_old_object_samples_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -113,7 +113,7 @@ pub(crate) async fn emit_old_object_samples_1(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.endRecording()V", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn end_recording(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -125,7 +125,7 @@ pub(crate) async fn end_recording(
     "jdk/jfr/internal/JVM.exclude(Ljava/lang/Thread;)V",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn exclude(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -134,7 +134,7 @@ pub(crate) async fn exclude(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.flush()V", GreaterThan(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn flush_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -146,7 +146,7 @@ pub(crate) async fn flush_0(
     "jdk/jfr/internal/JVM.flush(Ljdk/jfr/internal/EventWriter;II)Z",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn flush_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -158,7 +158,7 @@ pub(crate) async fn flush_1(
     "jdk/jfr/internal/JVM.flush(Ljdk/jfr/internal/event/EventWriter;II)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn flush_2(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -170,7 +170,7 @@ pub(crate) async fn flush_2(
     "jdk/jfr/internal/JVM.getAllEventClasses()Ljava/util/List;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_all_event_classes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -182,7 +182,7 @@ pub(crate) async fn get_all_event_classes(
     "jdk/jfr/internal/JVM.getAllowedToDoEventRetransforms()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_allowed_to_do_event_retransforms(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -191,7 +191,7 @@ pub(crate) async fn get_allowed_to_do_event_retransforms(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.getChunkStartNanos()J", GreaterThan(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_chunk_start_nanos(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -203,7 +203,7 @@ pub(crate) async fn get_chunk_start_nanos(
     "jdk/jfr/internal/JVM.getClassId(Ljava/lang/Class;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_class_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -215,7 +215,7 @@ pub(crate) async fn get_class_id(
     "jdk/jfr/internal/JVM.getClassIdNonIntrinsic(Ljava/lang/Class;)J",
     Equal(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_class_id_non_intrinsic(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -227,7 +227,7 @@ pub(crate) async fn get_class_id_non_intrinsic(
     "jdk/jfr/internal/JVM.getConfiguration(Ljava/lang/Class;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_configuration(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -239,7 +239,7 @@ pub(crate) async fn get_configuration(
     "jdk/jfr/internal/JVM.getDumpPath()Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_dump_path(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -251,7 +251,7 @@ pub(crate) async fn get_dump_path(
     "jdk/jfr/internal/JVM.getEventWriter()Ljava/lang/Object;",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_event_writer_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -263,7 +263,7 @@ pub(crate) async fn get_event_writer_0(
     "jdk/jfr/internal/JVM.getEventWriter()Ljdk/jfr/internal/event/EventWriter;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_event_writer_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -275,7 +275,7 @@ pub(crate) async fn get_event_writer_1(
     "jdk/jfr/internal/JVM.getHandler(Ljava/lang/Class;)Ljava/lang/Object;",
     Equal(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_handler(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -287,7 +287,7 @@ pub(crate) async fn get_handler(
     "jdk/jfr/internal/JVM.getPid()Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_pid(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -296,7 +296,7 @@ pub(crate) async fn get_pid(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.getStackTraceId(I)J", LessThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_stack_trace_id_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -305,7 +305,7 @@ pub(crate) async fn get_stack_trace_id_0(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.getStackTraceId(IJ)J", GreaterThan(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_stack_trace_id_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -317,7 +317,7 @@ pub(crate) async fn get_stack_trace_id_1(
     "jdk/jfr/internal/JVM.getThreadId(Ljava/lang/Thread;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_thread_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -329,7 +329,7 @@ pub(crate) async fn get_thread_id(
     "jdk/jfr/internal/JVM.getTicksFrequency()J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_ticks_frequency(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -341,7 +341,7 @@ pub(crate) async fn get_ticks_frequency(
     "jdk/jfr/internal/JVM.getTimeConversionFactor()D",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_time_conversion_factor(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -353,7 +353,7 @@ pub(crate) async fn get_time_conversion_factor(
     "jdk/jfr/internal/JVM.getTypeId(Ljava/lang/String;)J",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_type_id_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -365,7 +365,7 @@ pub(crate) async fn get_type_id_0(
     "jdk/jfr/internal/JVM.getTypeId(Ljava/lang/Class;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_type_id_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -377,7 +377,7 @@ pub(crate) async fn get_type_id_1(
     "jdk/jfr/internal/JVM.getUnloadedEventClassCount()J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_unloaded_event_class_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -386,7 +386,7 @@ pub(crate) async fn get_unloaded_event_class_count(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.hostTotalMemory()J", GreaterThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn host_total_memory(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -398,7 +398,7 @@ pub(crate) async fn host_total_memory(
     "jdk/jfr/internal/JVM.hostTotalSwapMemory()J",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn host_total_swap_memory(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -410,7 +410,7 @@ pub(crate) async fn host_total_swap_memory(
     "jdk/jfr/internal/JVM.include(Ljava/lang/Thread;)V",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn include(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -419,7 +419,7 @@ pub(crate) async fn include(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.isAvailable()Z", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -428,7 +428,7 @@ pub(crate) async fn is_available(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.isContainerized()Z", GreaterThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_containerized(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -440,7 +440,7 @@ pub(crate) async fn is_containerized(
     "jdk/jfr/internal/JVM.isExcluded(Ljava/lang/Thread;)Z",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_excluded_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -452,7 +452,7 @@ pub(crate) async fn is_excluded_0(
     "jdk/jfr/internal/JVM.isExcluded(Ljava/lang/Class;)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_excluded_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -464,7 +464,7 @@ pub(crate) async fn is_excluded_1(
     "jdk/jfr/internal/JVM.isInstrumented(Ljava/lang/Class;)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_instrumented(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -473,7 +473,7 @@ pub(crate) async fn is_instrumented(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.isRecording()Z", GreaterThan(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_recording(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -485,7 +485,7 @@ pub(crate) async fn is_recording(
     "jdk/jfr/internal/JVM.log(IILjava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn log(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("jdk.jfr.internal.JVM.log(IILjava/lang/String;)V")
 }
@@ -494,7 +494,7 @@ pub(crate) async fn log(_thread: Arc<Thread>, _parameters: Parameters) -> Result
     "jdk/jfr/internal/JVM.logEvent(I[Ljava/lang/String;Z)V",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn log_event(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -503,7 +503,7 @@ pub(crate) async fn log_event(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.markChunkFinal()V", GreaterThan(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn mark_chunk_final(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -512,7 +512,7 @@ pub(crate) async fn mark_chunk_final(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.nanosNow()J", GreaterThanOrEqual(JAVA_25))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn nanos_now(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -524,7 +524,7 @@ pub(crate) async fn nanos_now(
     "jdk/jfr/internal/JVM.newEventWriter()Ljdk/jfr/internal/EventWriter;",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn new_event_writer_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -536,7 +536,7 @@ pub(crate) async fn new_event_writer_0(
     "jdk/jfr/internal/JVM.newEventWriter()Ljdk/jfr/internal/event/EventWriter;",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn new_event_writer_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -545,7 +545,7 @@ pub(crate) async fn new_event_writer_1(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.registerNatives()V", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -557,7 +557,7 @@ pub(crate) async fn register_natives(
     "jdk/jfr/internal/JVM.registerStackFilter([Ljava/lang/String;[Ljava/lang/String;)J",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_stack_filter(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -569,7 +569,7 @@ pub(crate) async fn register_stack_filter(
     "jdk/jfr/internal/JVM.retransformClasses([Ljava/lang/Class;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn retransform_classes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -581,7 +581,7 @@ pub(crate) async fn retransform_classes(
     "jdk/jfr/internal/JVM.setCompressedIntegers(Z)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_compressed_integers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -593,7 +593,7 @@ pub(crate) async fn set_compressed_integers(
     "jdk/jfr/internal/JVM.setConfiguration(Ljava/lang/Class;Ljdk/jfr/internal/event/EventConfiguration;)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_configuration(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -604,7 +604,7 @@ pub(crate) async fn set_configuration(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.setCutoff(JJ)Z", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_cutoff(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -616,7 +616,7 @@ pub(crate) async fn set_cutoff(
     "jdk/jfr/internal/JVM.setDumpPath(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_dump_path(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -625,7 +625,7 @@ pub(crate) async fn set_dump_path(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.setEnabled(JZ)V", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_enabled(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -637,7 +637,7 @@ pub(crate) async fn set_enabled(
     "jdk/jfr/internal/JVM.setFileNotification(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_file_notification(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -649,7 +649,7 @@ pub(crate) async fn set_file_notification(
     "jdk/jfr/internal/JVM.setForceInstrumentation(Z)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_force_instrumentation(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -661,7 +661,7 @@ pub(crate) async fn set_force_instrumentation(
     "jdk/jfr/internal/JVM.setGlobalBufferCount(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_global_buffer_count(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -673,7 +673,7 @@ pub(crate) async fn set_global_buffer_count(
     "jdk/jfr/internal/JVM.setGlobalBufferSize(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_global_buffer_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -685,7 +685,7 @@ pub(crate) async fn set_global_buffer_size(
     "jdk/jfr/internal/JVM.setHandler(Ljava/lang/Class;Ljdk/jfr/internal/handlers/EventHandler;)Z",
     Equal(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_handler(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -696,7 +696,7 @@ pub(crate) async fn set_handler(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.setMemorySize(J)V", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_memory_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -705,7 +705,7 @@ pub(crate) async fn set_memory_size(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.setMethodSamplingInterval(JJ)V", Equal(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_method_sampling_interval(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -717,7 +717,7 @@ pub(crate) async fn set_method_sampling_interval(
     "jdk/jfr/internal/JVM.setMethodSamplingPeriod(JJ)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_method_sampling_period(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -729,7 +729,7 @@ pub(crate) async fn set_method_sampling_period(
     "jdk/jfr/internal/JVM.setMiscellaneous(JJ)V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_miscellaneous(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -741,7 +741,7 @@ pub(crate) async fn set_miscellaneous(
     "jdk/jfr/internal/JVM.setOutput(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_output(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -753,7 +753,7 @@ pub(crate) async fn set_output(
     "jdk/jfr/internal/JVM.setRepositoryLocation(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_repository_location(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -762,7 +762,7 @@ pub(crate) async fn set_repository_location(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.setSampleThreads(Z)V", Between(JAVA_11, JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_sample_threads(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -771,7 +771,7 @@ pub(crate) async fn set_sample_threads(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.setStackDepth(I)V", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_stack_depth(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -783,7 +783,7 @@ pub(crate) async fn set_stack_depth(
     "jdk/jfr/internal/JVM.setStackTraceEnabled(JZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_stack_trace_enabled(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -795,7 +795,7 @@ pub(crate) async fn set_stack_trace_enabled(
     "jdk/jfr/internal/JVM.setThreadBufferSize(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_thread_buffer_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -804,7 +804,7 @@ pub(crate) async fn set_thread_buffer_size(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.setThreshold(JJ)Z", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_threshold(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -813,7 +813,7 @@ pub(crate) async fn set_threshold(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.setThrottle(JJJ)Z", GreaterThan(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_throttle(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -825,7 +825,7 @@ pub(crate) async fn set_throttle(
     "jdk/jfr/internal/JVM.shouldRotateDisk()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn should_rotate_disk(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -837,7 +837,7 @@ pub(crate) async fn should_rotate_disk(
     "jdk/jfr/internal/JVM.storeMetadataDescriptor([B)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn store_metadata_descriptor(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -849,7 +849,7 @@ pub(crate) async fn store_metadata_descriptor(
     "jdk/jfr/internal/JVM.subscribeLogLevel(Ljdk/jfr/internal/LogTag;I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn subscribe_log_level(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -861,7 +861,7 @@ pub(crate) async fn subscribe_log_level(
     "jdk/jfr/internal/JVM.uncaughtException(Ljava/lang/Thread;Ljava/lang/Throwable;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn uncaught_exception(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -873,7 +873,7 @@ pub(crate) async fn uncaught_exception(
     "jdk/jfr/internal/JVM.unregisterStackFilter(J)V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unregister_stack_filter(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -885,7 +885,7 @@ pub(crate) async fn unregister_stack_filter(
     "jdk/jfr/internal/JVM.drainStaleMethodTracerIds()[J",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn drain_stale_method_tracer_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -894,7 +894,7 @@ pub(crate) async fn drain_stale_method_tracer_ids(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.isProduct()Z", GreaterThanOrEqual(JAVA_25))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_product(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -903,7 +903,7 @@ pub(crate) async fn is_product(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.setCPUPeriod(J)V", GreaterThanOrEqual(JAVA_25))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_cpu_period(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -913,7 +913,7 @@ pub(crate) async fn set_cpu_period(
 }
 
 #[intrinsic_method("jdk/jfr/internal/JVM.setCPURate(D)V", GreaterThanOrEqual(JAVA_25))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_cpu_rate(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -926,7 +926,7 @@ pub(crate) async fn set_cpu_rate(
     "jdk/jfr/internal/JVM.setMethodTraceFilters([Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[I)[J",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_method_trace_filters(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

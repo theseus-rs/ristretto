@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/font/CFont.createNativeFont(Ljava/lang/String;I)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_native_font(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -18,7 +18,7 @@ pub(crate) async fn create_native_font(
 }
 
 #[intrinsic_method("sun/font/CFont.disposeNativeFont(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dispose_native_font(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -27,7 +27,7 @@ pub(crate) async fn dispose_native_font(
 }
 
 #[intrinsic_method("sun/font/CFont.getCGFontPtrNative(J)J", GreaterThan(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_cg_font_ptr_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn get_cg_font_ptr_native(
 }
 
 #[intrinsic_method("sun/font/CFont.getCascadeList(JLjava/util/ArrayList;)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_cascade_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn get_cascade_list(
     "sun/font/CFont.getLayoutTableCacheNative(J)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_layout_table_cache_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn get_layout_table_cache_native(
 }
 
 #[intrinsic_method("sun/font/CFont.getTableBytesNative(JI)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_table_bytes_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -66,7 +66,7 @@ pub(crate) async fn get_table_bytes_native(
 }
 
 #[intrinsic_method("sun/font/CFont.getWeightNative(J)F", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_weight_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -75,7 +75,7 @@ pub(crate) async fn get_weight_native(
 }
 
 #[intrinsic_method("sun/font/CFont.getWidthNative(J)F", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_width_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,

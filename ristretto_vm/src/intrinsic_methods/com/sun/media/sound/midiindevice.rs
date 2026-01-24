@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nClose(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_close(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn n_close(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nGetMessages(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_get_messages(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn n_get_messages(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nGetTimeStamp(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_get_time_stamp(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,13 +35,13 @@ pub(crate) async fn n_get_time_stamp(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nOpen(I)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_open(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.MidiInDevice.nOpen(I)J")
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nStart(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_start(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -50,7 +50,7 @@ pub(crate) async fn n_start(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nStop(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_stop(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.MidiInDevice.nStop(J)V")
 }

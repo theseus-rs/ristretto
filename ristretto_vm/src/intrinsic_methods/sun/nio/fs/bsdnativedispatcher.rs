@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/nio/fs/BsdNativeDispatcher.clonefile0(JJI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn clonefile_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn clonefile_0(
 }
 
 #[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.endfsstat(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn endfsstat(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn endfsstat(
     "sun/nio/fs/BsdNativeDispatcher.fsetattrlist0(IIJJJJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fsetattrlist_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -45,7 +45,7 @@ pub(crate) async fn fsetattrlist_0(
     "sun/nio/fs/BsdNativeDispatcher.fsstatEntry(JLsun/nio/fs/UnixMountEntry;)I",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn fsstat_entry(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -54,7 +54,7 @@ pub(crate) async fn fsstat_entry(
 }
 
 #[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.getfsstat()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn getfsstat(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -63,7 +63,7 @@ pub(crate) async fn getfsstat(
 }
 
 #[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.getmntonname0(J)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn getmntonname_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -72,7 +72,7 @@ pub(crate) async fn getmntonname_0(
 }
 
 #[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -84,7 +84,7 @@ pub(crate) async fn init_ids(
     "sun/nio/fs/BsdNativeDispatcher.setattrlist0(JIJJJJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn setattrlist_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

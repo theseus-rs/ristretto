@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CRobot.initRobot()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_robot(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -18,7 +18,7 @@ pub(crate) async fn init_robot(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CRobot.keyEvent(IZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn key_event(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -27,7 +27,7 @@ pub(crate) async fn key_event(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CRobot.mouseEvent(IIIIZZ)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn mouse_event_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn mouse_event_0(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CRobot.mouseEvent(IIIZZ)V", GreaterThan(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn mouse_event_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -45,7 +45,7 @@ pub(crate) async fn mouse_event_1(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CRobot.mouseWheel(I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn mouse_wheel(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn mouse_wheel(
     "sun/lwawt/macosx/CRobot.nativeGetScreenPixels(IIII[I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_screen_pixels_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -69,7 +69,7 @@ pub(crate) async fn native_get_screen_pixels_0(
     "sun/lwawt/macosx/CRobot.nativeGetScreenPixels(IIIID[I)V",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_screen_pixels_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,

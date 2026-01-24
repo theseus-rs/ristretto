@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/net/Inet4AddressImpl.getHostByAddr([B)Ljava/lang/String;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_host_by_addr(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn get_host_by_addr(
 }
 
 #[intrinsic_method("java/net/Inet4AddressImpl.getLocalHostName()Ljava/lang/String;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_local_host_name(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn get_local_host_name(
 }
 
 #[intrinsic_method("java/net/Inet4AddressImpl.isReachable0([BI[BI)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_reachable_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -38,7 +38,7 @@ pub(crate) async fn is_reachable_0(
     "java/net/Inet4AddressImpl.lookupAllHostAddr(Ljava/lang/String;)[Ljava/net/InetAddress;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn lookup_all_host_addr(
     _thread: Arc<Thread>,
     _parameters: Parameters,

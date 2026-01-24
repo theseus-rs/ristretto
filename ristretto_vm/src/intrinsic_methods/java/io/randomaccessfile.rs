@@ -12,12 +12,12 @@ use crate::intrinsic_methods::java::io::fileoutputstream::file_handle_identifier
 use crate::intrinsic_methods::java::io::fileoutputstream::raw_file_descriptor;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_17};
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(target_os = "wasi")]
 use std::fs::OpenOptions;
@@ -33,13 +33,13 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use zerocopy::transmute_ref;
 
 #[intrinsic_method("java/io/RandomAccessFile.close0()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     filedescriptor::close_0(thread, parameters).await
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.getFilePointer()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_file_pointer(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -81,7 +81,7 @@ pub(crate) async fn get_file_pointer(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -90,13 +90,13 @@ pub(crate) async fn init_ids(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.length()J", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn length(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     length_0(thread, parameters).await
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.length0()J", GreaterThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn length_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -140,7 +140,7 @@ pub(crate) async fn length_0(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.open0(Ljava/lang/String;I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 #[expect(clippy::too_many_lines)]
 pub(crate) async fn open_0(
     thread: Arc<Thread>,
@@ -260,7 +260,7 @@ pub(crate) async fn open_0(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.read0()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -289,7 +289,7 @@ pub(crate) async fn read_0(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.readBytes([BII)I", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read_bytes(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -301,7 +301,7 @@ pub(crate) async fn read_bytes(
     "java/io/RandomAccessFile.readBytes0([BII)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read_bytes_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -371,7 +371,7 @@ pub(crate) async fn read_bytes_0(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.seek0(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn seek_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -408,7 +408,7 @@ pub(crate) async fn seek_0(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.setLength(J)V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_length(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -417,7 +417,7 @@ pub(crate) async fn set_length(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.setLength0(J)V", GreaterThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_length_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -457,7 +457,7 @@ pub(crate) async fn set_length_0(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.write0(I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -476,7 +476,7 @@ pub(crate) async fn write_0(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.writeBytes([BII)V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write_bytes(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -488,7 +488,7 @@ pub(crate) async fn write_bytes(
     "java/io/RandomAccessFile.writeBytes0([BII)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn write_bytes_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,

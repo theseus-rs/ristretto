@@ -3,12 +3,12 @@ use crate::Result;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use parking_lot::RwLock;
 use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{Object, Reference, Value};
 use ristretto_gc::Gc;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -16,7 +16,7 @@ use std::sync::Arc;
     "java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_stack_trace_element(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -30,16 +30,20 @@ pub(crate) async fn init_stack_trace_element(
     "java/lang/StackTraceElement.initStackTraceElements([Ljava/lang/StackTraceElement;Ljava/lang/Throwable;)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_stack_trace_elements_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     // For Java 11-17: parameters are (stack_trace_elements[], throwable)
     let throwable = parameters.pop()?;
-    let throwable_ref = throwable.as_object_ref()?;
-    let back_trace = throwable_ref.value("backtrace")?;
-    let depth = throwable_ref.value("depth")?.as_i32()?;
+
+    let (back_trace, depth) = {
+        let throwable_ref = throwable.as_object_ref()?;
+        let back_trace = throwable_ref.value("backtrace")?;
+        let depth = throwable_ref.value("depth")?.as_i32()?;
+        (back_trace, depth)
+    };
 
     let Some(stack_trace_ref) = parameters.pop_reference()? else {
         return Err(InternalError("No stack trace object found".to_string()));
@@ -53,7 +57,7 @@ pub(crate) async fn init_stack_trace_elements_0(
     "java/lang/StackTraceElement.initStackTraceElements([Ljava/lang/StackTraceElement;Ljava/lang/Object;I)V",
     GreaterThan(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_stack_trace_elements_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -89,7 +93,6 @@ async fn init_stack_trace_elements_impl(
     let stack_element_class = thread.class("java/lang/StackTraceElement").await?;
 
     for index in 0..depth {
-        // Extract all frame data from backtrace before any await points
         let (class_name, method_name_value, descriptor_value, pc_int) = {
             let back_trace_guard = back_trace.as_reference()?;
             let Reference::Array(back_trace_array) = &*back_trace_guard else {

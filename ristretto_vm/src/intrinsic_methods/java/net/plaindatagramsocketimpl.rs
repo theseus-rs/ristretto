@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Between, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "java/net/PlainDatagramSocketImpl.bind0(ILjava/net/InetAddress;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.bind0(ILjava/net/InetAddress;)V")
 }
@@ -21,7 +21,7 @@ pub(crate) async fn bind_0(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "java/net/PlainDatagramSocketImpl.connect0(Ljava/net/InetAddress;I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn connect_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn connect_0(
     "java/net/PlainDatagramSocketImpl.dataAvailable()I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn data_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -45,7 +45,7 @@ pub(crate) async fn data_available(
     "java/net/PlainDatagramSocketImpl.datagramSocketClose()V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn datagram_socket_close(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn datagram_socket_close(
     "java/net/PlainDatagramSocketImpl.datagramSocketCreate()V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn datagram_socket_create(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -69,7 +69,7 @@ pub(crate) async fn datagram_socket_create(
     "java/net/PlainDatagramSocketImpl.disconnect0(I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn disconnect_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -78,7 +78,7 @@ pub(crate) async fn disconnect_0(
 }
 
 #[intrinsic_method("java/net/PlainDatagramSocketImpl.getTTL()B", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_ttl(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -90,7 +90,7 @@ pub(crate) async fn get_ttl(
     "java/net/PlainDatagramSocketImpl.getTimeToLive()I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_time_to_live(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -99,7 +99,7 @@ pub(crate) async fn get_time_to_live(
 }
 
 #[intrinsic_method("java/net/PlainDatagramSocketImpl.init()V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -108,7 +108,7 @@ pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
     "java/net/PlainDatagramSocketImpl.join(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn join(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "java.net.PlainDatagramSocketImpl.join(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V"
@@ -119,7 +119,7 @@ pub(crate) async fn join(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
     "java/net/PlainDatagramSocketImpl.leave(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn leave(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!(
         "java.net.PlainDatagramSocketImpl.leave(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V"
@@ -130,7 +130,7 @@ pub(crate) async fn leave(_thread: Arc<Thread>, _parameters: Parameters) -> Resu
     "java/net/PlainDatagramSocketImpl.peek(Ljava/net/InetAddress;)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn peek(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.peek(Ljava/net/InetAddress;)I")
 }
@@ -139,7 +139,7 @@ pub(crate) async fn peek(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
     "java/net/PlainDatagramSocketImpl.peekData(Ljava/net/DatagramPacket;)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn peek_data(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -151,7 +151,7 @@ pub(crate) async fn peek_data(
     "java/net/PlainDatagramSocketImpl.receive0(Ljava/net/DatagramPacket;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn receive_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -163,7 +163,7 @@ pub(crate) async fn receive_0(
     "java/net/PlainDatagramSocketImpl.send(Ljava/net/DatagramPacket;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn send(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.send(Ljava/net/DatagramPacket;)V")
 }
@@ -172,7 +172,7 @@ pub(crate) async fn send(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
     "java/net/PlainDatagramSocketImpl.send0(Ljava/net/DatagramPacket;)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn send_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.net.PlainDatagramSocketImpl.send0(Ljava/net/DatagramPacket;)V")
 }
@@ -181,7 +181,7 @@ pub(crate) async fn send_0(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "java/net/PlainDatagramSocketImpl.setTTL(B)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_ttl(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -193,7 +193,7 @@ pub(crate) async fn set_ttl(
     "java/net/PlainDatagramSocketImpl.setTimeToLive(I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_time_to_live(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -205,7 +205,7 @@ pub(crate) async fn set_time_to_live(
     "java/net/PlainDatagramSocketImpl.socketGetOption(I)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_get_option(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -217,7 +217,7 @@ pub(crate) async fn socket_get_option(
     "java/net/PlainDatagramSocketImpl.socketSetOption0(ILjava/lang/Object;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_set_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "apple/security/KeychainStore._addItemToKeychain(Ljava/lang/String;Z[B[C)J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn add_item_to_keychain(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn add_item_to_keychain(
 }
 
 #[intrinsic_method("apple/security/KeychainStore._getEncodedKeyData(J[C)[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_encoded_key_data(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -30,7 +30,7 @@ pub(crate) async fn get_encoded_key_data(
 }
 
 #[intrinsic_method("apple/security/KeychainStore._releaseKeychainItemRef(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn release_keychain_item_ref(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -39,7 +39,7 @@ pub(crate) async fn release_keychain_item_ref(
 }
 
 #[intrinsic_method("apple/security/KeychainStore._removeItemFromKeychain(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn remove_item_from_keychain(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -51,7 +51,7 @@ pub(crate) async fn remove_item_from_keychain(
     "apple/security/KeychainStore._scanKeychain()V",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn scan_keychain_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -63,7 +63,7 @@ pub(crate) async fn scan_keychain_0(
     "apple/security/KeychainStore._scanKeychain(Ljava/lang/String;)V",
     GreaterThan(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn scan_keychain_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,

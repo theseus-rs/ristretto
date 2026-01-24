@@ -263,7 +263,7 @@ fn test_vm(
         .stack_size(8 * 1024 * 1024) // 8 MB stack
         .spawn(move || {
             std::panic::catch_unwind(|| {
-                let runtime = tokio::runtime::Builder::new_current_thread()
+                let runtime = tokio::runtime::Builder::new_multi_thread()
                     .enable_all()
                     .build()
                     .map_err(|error| InternalError(error.to_string()))?;
@@ -280,7 +280,7 @@ fn test_vm(
             let normalized_actual = normalize_output(&output);
             if normalized_expected == normalized_actual {
                 info!(
-                    "Passed ({test_type}) {test_name} in {duration:.2?} (expected: {expected_duration:.2?})"
+                    "Passed ({test_type}) {test_name} in {duration:.2?} (target: {expected_duration:.2?})"
                 );
                 Ok(())
             } else {
@@ -328,6 +328,10 @@ async fn run_test(
     let vm = VM::new(configuration).await?;
     let parameters: Vec<&str> = Vec::new();
     let result = vm.invoke_main(&parameters).await;
+
+    // Wait for all spawned threads to complete before collecting output
+    let _ = vm.wait_for_non_daemon_threads().await;
+
     let stdout_lock = stdout.lock().await;
     let stdout = String::from_utf8_lossy(&stdout_lock).to_string();
     let stderr_lock = stderr.lock().await;

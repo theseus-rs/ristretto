@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageReader.abortRead(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn abort_read(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn abort_read(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.clearNativeReadAbortFlag(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn clear_native_read_abort_flag(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -30,7 +30,7 @@ pub(crate) async fn clear_native_read_abort_flag(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageReader.disposeReader(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dispose_reader(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn dispose_reader(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.initJPEGImageReader()J",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_jpeg_image_reader(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -54,7 +54,7 @@ pub(crate) async fn init_jpeg_image_reader(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.initReaderIDs(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_reader_i_ds(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -68,7 +68,7 @@ pub(crate) async fn init_reader_i_ds(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.readImage(IJ[BI[I[IIIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;IIZ)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read_image(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -82,7 +82,7 @@ pub(crate) async fn read_image(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.readImageHeader(JZZ)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read_image_header(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -94,7 +94,7 @@ pub(crate) async fn read_image_header(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.resetLibraryState(J)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn reset_library_state(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -103,7 +103,7 @@ pub(crate) async fn reset_library_state(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageReader.resetReader(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn reset_reader(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -115,7 +115,7 @@ pub(crate) async fn reset_reader(
     "com/sun/imageio/plugins/jpeg/JPEGImageReader.setOutColorSpace(JI)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_out_color_space(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -124,7 +124,7 @@ pub(crate) async fn set_out_color_space(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageReader.setSource(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_source(
     _thread: Arc<Thread>,
     _parameters: Parameters,

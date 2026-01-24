@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/awt/X11GraphicsDevice.configDisplayMode(IIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn config_display_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn config_display_mode(
     "sun/awt/X11GraphicsDevice.enterFullScreenExclusive(J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn enter_full_screen_exclusive(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn enter_full_screen_exclusive(
     "sun/awt/X11GraphicsDevice.enumDisplayModes(ILjava/util/ArrayList;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn enum_display_modes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn enum_display_modes(
     "sun/awt/X11GraphicsDevice.exitFullScreenExclusive(J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn exit_full_screen_exclusive(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn exit_full_screen_exclusive(
     "sun/awt/X11GraphicsDevice.getConfigColormap(II)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_config_colormap(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -72,7 +72,7 @@ pub(crate) async fn get_config_colormap(
     "sun/awt/X11GraphicsDevice.getConfigDepth(II)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_config_depth(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -84,7 +84,7 @@ pub(crate) async fn get_config_depth(
     "sun/awt/X11GraphicsDevice.getConfigVisualId(II)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_config_visual_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -96,7 +96,7 @@ pub(crate) async fn get_config_visual_id(
     "sun/awt/X11GraphicsDevice.getCurrentDisplayMode(I)Ljava/awt/DisplayMode;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_current_display_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -105,7 +105,7 @@ pub(crate) async fn get_current_display_mode(
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsDevice.getDisplay()J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_display(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -117,7 +117,7 @@ pub(crate) async fn get_display(
     "sun/awt/X11GraphicsDevice.getDoubleBufferVisuals(I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_double_buffer_visuals(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -126,7 +126,7 @@ pub(crate) async fn get_double_buffer_visuals(
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsDevice.getNumConfigs(I)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_num_configs(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -135,7 +135,7 @@ pub(crate) async fn get_num_configs(
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsDevice.initIDs()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -147,7 +147,7 @@ pub(crate) async fn init_ids(
     "sun/awt/X11GraphicsDevice.initXrandrExtension()Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_xrandr_extension(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -156,7 +156,7 @@ pub(crate) async fn init_xrandr_extension(
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsDevice.isDBESupported()Z", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_dbe_supported(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -168,7 +168,7 @@ pub(crate) async fn is_dbe_supported(
     "sun/awt/X11GraphicsDevice.resetNativeData(I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn reset_native_data(
     _thread: Arc<Thread>,
     _parameters: Parameters,

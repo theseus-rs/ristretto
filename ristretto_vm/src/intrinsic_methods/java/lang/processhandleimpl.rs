@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::process;
 use std::sync::Arc;
@@ -15,7 +15,7 @@ use sysinfo::{Pid, ProcessesToUpdate, Signal, System};
     "java/lang/ProcessHandleImpl.destroy0(JJZ)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn destroy_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn destroy_0(
     "java/lang/ProcessHandleImpl.getCurrentPid0()J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_current_pid_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -56,7 +56,7 @@ pub(crate) async fn get_current_pid_0(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[expect(clippy::similar_names)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_process_pids_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -140,7 +140,7 @@ pub(crate) async fn get_process_pids_0(
     "java/lang/ProcessHandleImpl.initNative()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -152,7 +152,7 @@ pub(crate) async fn init_native(
     "java/lang/ProcessHandleImpl.isAlive0(J)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_alive_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -178,7 +178,7 @@ pub(crate) async fn is_alive_0(
     "java/lang/ProcessHandleImpl.parent0(JJ)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn parent_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -206,7 +206,7 @@ pub(crate) async fn parent_0(
     "java/lang/ProcessHandleImpl.waitForProcessExit0(JZ)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn wait_for_process_exit_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

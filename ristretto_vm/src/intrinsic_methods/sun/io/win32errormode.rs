@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/io/Win32ErrorMode.setErrorMode(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_error_mode(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

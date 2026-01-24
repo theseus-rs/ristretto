@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, NotEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/awt/CGraphicsDevice.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_bounds(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn native_get_bounds(
     "sun/awt/CGraphicsDevice.nativeGetDisplayMode(I)Ljava/awt/DisplayMode;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_display_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn native_get_display_mode(
     "sun/awt/CGraphicsDevice.nativeGetDisplayModes(I)[Ljava/awt/DisplayMode;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_display_modes(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -45,7 +45,7 @@ pub(crate) async fn native_get_display_modes(
 }
 
 #[intrinsic_method("sun/awt/CGraphicsDevice.nativeGetScaleFactor(I)D", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_scale_factor(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn native_get_scale_factor(
     "sun/awt/CGraphicsDevice.nativeGetScreenInsets(I)Ljava/awt/Insets;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_screen_insets(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -66,7 +66,7 @@ pub(crate) async fn native_get_screen_insets(
 }
 
 #[intrinsic_method("sun/awt/CGraphicsDevice.nativeGetXResolution(I)D", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_x_resolution(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -75,7 +75,7 @@ pub(crate) async fn native_get_x_resolution(
 }
 
 #[intrinsic_method("sun/awt/CGraphicsDevice.nativeGetYResolution(I)D", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_y_resolution(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -84,7 +84,7 @@ pub(crate) async fn native_get_y_resolution(
 }
 
 #[intrinsic_method("sun/awt/CGraphicsDevice.nativeResetDisplayMode()V", NotEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_reset_display_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -93,7 +93,7 @@ pub(crate) async fn native_reset_display_mode(
 }
 
 #[intrinsic_method("sun/awt/CGraphicsDevice.nativeSetDisplayMode(IIIII)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_set_display_mode(
     _thread: Arc<Thread>,
     _parameters: Parameters,

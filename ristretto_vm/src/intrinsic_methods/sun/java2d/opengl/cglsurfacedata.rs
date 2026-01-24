@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/opengl/CGLSurfaceData.clearWindow()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn clear_window(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn clear_window(
     "sun/java2d/opengl/CGLSurfaceData.createCGLContextOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_cgl_context_on_surface(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,7 +35,7 @@ pub(crate) async fn create_cgl_context_on_surface(
     "sun/java2d/opengl/CGLSurfaceData.destroyCGLContext(J)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn destroy_cgl_context(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -47,7 +47,7 @@ pub(crate) async fn destroy_cgl_context(
     "sun/java2d/opengl/CGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ops(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -59,7 +59,7 @@ pub(crate) async fn init_ops(
     "sun/java2d/opengl/CGLSurfaceData.makeCGLContextCurrentOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)Z",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn make_cgl_context_current_on_surface(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -73,7 +73,7 @@ pub(crate) async fn make_cgl_context_current_on_surface(
     "sun/java2d/opengl/CGLSurfaceData.validate(IIIIZ)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn validate(
     _thread: Arc<Thread>,
     _parameters: Parameters,

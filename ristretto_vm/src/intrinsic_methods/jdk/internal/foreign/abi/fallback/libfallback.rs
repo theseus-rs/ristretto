@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{GreaterThan, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "jdk/internal/foreign/abi/fallback/LibFallback.alignof_double()I",
     GreaterThan(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn alignof_double(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn alignof_double(
     "jdk/internal/foreign/abi/fallback/LibFallback.alignof_long_long()I",
     GreaterThan(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn alignof_long_long(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn alignof_long_long(
     "jdk/internal/foreign/abi/fallback/LibFallback.createClosure(JLjava/lang/Object;[J)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_closure(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn create_closure(
     "jdk/internal/foreign/abi/fallback/LibFallback.doDowncall(JJJJJI)V",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_downcall_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn do_downcall_0(
     "jdk/internal/foreign/abi/fallback/LibFallback.doDowncall(JJJJLjava/lang/Object;JI[Ljava/lang/Object;I)V",
     GreaterThan(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn do_downcall_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -74,7 +74,7 @@ pub(crate) async fn do_downcall_1(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_default_abi()I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_default_abi(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -86,7 +86,7 @@ pub(crate) async fn ffi_default_abi(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_get_struct_offsets(IJJ)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_get_struct_offsets(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -98,7 +98,7 @@ pub(crate) async fn ffi_get_struct_offsets(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_prep_cif(JIIJJ)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_prep_cif(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -110,7 +110,7 @@ pub(crate) async fn ffi_prep_cif(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_prep_cif_var(JIIIJJ)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_prep_cif_var(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -122,7 +122,7 @@ pub(crate) async fn ffi_prep_cif_var(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_sizeof_int()I",
     GreaterThan(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_sizeof_int(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -134,7 +134,7 @@ pub(crate) async fn ffi_sizeof_int(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_sizeof_long()I",
     GreaterThan(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_sizeof_long(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -146,7 +146,7 @@ pub(crate) async fn ffi_sizeof_long(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_sizeof_short()I",
     GreaterThan(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_sizeof_short(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -158,7 +158,7 @@ pub(crate) async fn ffi_sizeof_short(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_sizeof_wchar()I",
     GreaterThan(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_sizeof_wchar(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -170,7 +170,7 @@ pub(crate) async fn ffi_sizeof_wchar(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_double()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_double(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -182,7 +182,7 @@ pub(crate) async fn ffi_type_double(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_float()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_float(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -194,7 +194,7 @@ pub(crate) async fn ffi_type_float(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_pointer()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_pointer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -206,7 +206,7 @@ pub(crate) async fn ffi_type_pointer(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_sint16()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_sint_16(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -218,7 +218,7 @@ pub(crate) async fn ffi_type_sint_16(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_sint32()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_sint_32(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -230,7 +230,7 @@ pub(crate) async fn ffi_type_sint_32(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_sint64()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_sint_64(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -242,7 +242,7 @@ pub(crate) async fn ffi_type_sint_64(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_sint8()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_sint_8(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -254,7 +254,7 @@ pub(crate) async fn ffi_type_sint_8(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_struct()S",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_struct(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -266,7 +266,7 @@ pub(crate) async fn ffi_type_struct(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_uint16()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_uint_16(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -278,7 +278,7 @@ pub(crate) async fn ffi_type_uint_16(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_uint32()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_uint_32(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -290,7 +290,7 @@ pub(crate) async fn ffi_type_uint_32(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_uint64()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_uint_64(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -302,7 +302,7 @@ pub(crate) async fn ffi_type_uint_64(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_uint8()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_uint_8(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -314,7 +314,7 @@ pub(crate) async fn ffi_type_uint_8(
     "jdk/internal/foreign/abi/fallback/LibFallback.ffi_type_void()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ffi_type_void(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -326,7 +326,7 @@ pub(crate) async fn ffi_type_void(
     "jdk/internal/foreign/abi/fallback/LibFallback.freeClosure(JJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_closure(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -338,7 +338,7 @@ pub(crate) async fn free_closure(
     "jdk/internal/foreign/abi/fallback/LibFallback.init()Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     Ok(None)
 }
@@ -347,7 +347,7 @@ pub(crate) async fn init(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
     "jdk/internal/foreign/abi/fallback/LibFallback.sizeofCif()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn sizeof_cif(
     _thread: Arc<Thread>,
     _parameters: Parameters,

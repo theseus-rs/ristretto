@@ -3,10 +3,10 @@ use crate::Result;
 use crate::intrinsic_methods::java::lang::class;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::{Class, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -58,7 +58,7 @@ async fn get_caller_module(thread: &Arc<Thread>) -> Result<Option<String>> {
     "jdk/internal/reflect/NativeConstructorAccessorImpl.newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn new_instance_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,

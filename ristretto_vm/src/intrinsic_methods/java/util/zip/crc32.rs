@@ -1,21 +1,21 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/util/zip/CRC32.update(II)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn update(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.util.zip.CRC32.update(II)I")
 }
 
 #[intrinsic_method("java/util/zip/CRC32.updateByteBuffer(IJII)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn update_byte_buffer(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn update_byte_buffer(
 }
 
 #[intrinsic_method("java/util/zip/CRC32.updateByteBuffer0(IJII)I", GreaterThan(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn update_byte_buffer_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn update_byte_buffer_0(
 }
 
 #[intrinsic_method("java/util/zip/CRC32.updateBytes(I[BII)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn update_bytes(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -42,7 +42,7 @@ pub(crate) async fn update_bytes(
 }
 
 #[intrinsic_method("java/util/zip/CRC32.updateBytes0(I[BII)I", GreaterThan(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn update_bytes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

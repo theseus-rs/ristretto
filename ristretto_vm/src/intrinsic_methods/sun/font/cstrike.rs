@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/font/CStrike.createNativeStrikePtr(J[D[DII)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn create_native_strike_ptr(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn create_native_strike_ptr(
 }
 
 #[intrinsic_method("sun/font/CStrike.disposeNativeStrikePtr(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dispose_native_strike_ptr(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn dispose_native_strike_ptr(
 }
 
 #[intrinsic_method("sun/font/CStrike.getFontMetrics(J)Lsun/font/StrikeMetrics;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_font_metrics(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,7 +35,7 @@ pub(crate) async fn get_font_metrics(
 }
 
 #[intrinsic_method("sun/font/CStrike.getGlyphImagePtrsNative(J[J[II)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_glyph_image_ptrs_native(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -44,7 +44,7 @@ pub(crate) async fn get_glyph_image_ptrs_native(
 }
 
 #[intrinsic_method("sun/font/CStrike.getNativeGlyphAdvance(JI)F", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_glyph_advance(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -56,7 +56,7 @@ pub(crate) async fn get_native_glyph_advance(
     "sun/font/CStrike.getNativeGlyphImageBounds(JILjava/awt/geom/Rectangle2D$Float;DD)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_glyph_image_bounds(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -68,7 +68,7 @@ pub(crate) async fn get_native_glyph_image_bounds(
     "sun/font/CStrike.getNativeGlyphOutline(JIDD)Ljava/awt/geom/GeneralPath;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_glyph_outline(
     _thread: Arc<Thread>,
     _parameters: Parameters,

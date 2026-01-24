@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CDesktopPeer._lsOpenFile(Ljava/lang/String;Z)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ls_open_file(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn ls_open_file(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CDesktopPeer._lsOpenURI(Ljava/lang/String;)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ls_open_uri(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.menuClosed(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn menu_closed(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -18,7 +18,7 @@ pub(crate) async fn menu_closed(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.menuItemSelected(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn menu_item_selected(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -27,7 +27,7 @@ pub(crate) async fn menu_item_selected(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.menuOpened(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn menu_opened(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -39,7 +39,7 @@ pub(crate) async fn menu_opened(
     "sun/lwawt/macosx/CAccessible.selectedCellsChanged(J)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn selected_cells_changed(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn selected_cells_changed(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.selectedTextChanged(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn selected_text_changed(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn selected_text_changed(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.selectionChanged(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn selection_changed(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -69,7 +69,7 @@ pub(crate) async fn selection_changed(
     "sun/lwawt/macosx/CAccessible.tableContentCacheClear(J)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn table_content_cache_clear(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -81,7 +81,7 @@ pub(crate) async fn table_content_cache_clear(
     "sun/lwawt/macosx/CAccessible.titleChanged(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn title_changed(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -93,7 +93,7 @@ pub(crate) async fn title_changed(
     "sun/lwawt/macosx/CAccessible.treeNodeCollapsed(J)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn tree_node_collapsed(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -105,7 +105,7 @@ pub(crate) async fn tree_node_collapsed(
     "sun/lwawt/macosx/CAccessible.treeNodeExpanded(J)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn tree_node_expanded(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -114,7 +114,7 @@ pub(crate) async fn tree_node_expanded(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.unregisterFromCocoaAXSystem(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unregister_from_cocoa_ax_system(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -123,7 +123,7 @@ pub(crate) async fn unregister_from_cocoa_ax_system(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.valueChanged(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn value_changed(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -3,11 +3,11 @@ use crate::intrinsic_methods::java::lang::class;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classloader::{Class, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -15,7 +15,7 @@ use std::sync::Arc;
     "jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn are_nest_mates(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -62,7 +62,7 @@ async fn get_nest_host(thread: &Arc<Thread>, class: Arc<Class>) -> Result<Arc<Cl
     "jdk/internal/reflect/Reflection.getCallerClass()Ljava/lang/Class;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_caller_class(
     thread: Arc<Thread>,
     _parameters: Parameters,
@@ -102,7 +102,7 @@ pub(crate) async fn get_caller_class(
     "jdk/internal/reflect/Reflection.getClassAccessFlags(Ljava/lang/Class;)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_class_access_flags(
     thread: Arc<Thread>,
     mut parameters: Parameters,

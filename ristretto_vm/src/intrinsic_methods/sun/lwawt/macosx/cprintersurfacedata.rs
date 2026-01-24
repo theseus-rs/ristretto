@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CPrinterSurfaceData._flush()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn flush(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.lwawt.macosx.CPrinterSurfaceData._flush()V")
 }
@@ -17,7 +17,7 @@ pub(crate) async fn flush(_thread: Arc<Thread>, _parameters: Parameters) -> Resu
     "sun/lwawt/macosx/CPrinterSurfaceData.initOps(JLjava/nio/ByteBuffer;[Ljava/lang/Object;II)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ops(
     _thread: Arc<Thread>,
     _parameters: Parameters,

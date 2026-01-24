@@ -1,16 +1,16 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use console::Term;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/io/Console.echo(Z)Z", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn echo(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn echo(
     "java/io/Console.encoding()Ljava/lang/String;",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn encoding(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -34,7 +34,7 @@ pub(crate) async fn encoding(
 }
 
 #[intrinsic_method("java/io/Console.istty()Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn istty(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let terminal = Term::stdout();
     let is_terminal = terminal.is_term();

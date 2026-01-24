@@ -4,12 +4,12 @@ use crate::configuration::VerifyMode;
 use crate::parameters::Parameters;
 use crate::rust_value::{RustValue, process_values};
 use crate::{Frame, Result, VM, jit};
-use async_recursion::async_recursion;
 use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{FieldAccessFlags, FieldType};
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Value};
+use ristretto_macros::async_method;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
@@ -150,6 +150,44 @@ impl Thread {
         }
     }
 
+    /// Sleep the thread for the specified duration.  The sleep is interruptible - if another
+    /// thread calls `interrupt()`, this method will return `true` to indicate the thread was
+    /// interrupted, clearing the interrupt flag.
+    ///
+    /// # Arguments
+    ///
+    /// * `duration` - The duration to sleep.
+    ///
+    /// # Returns
+    ///
+    /// Returns `true` if the sleep was interrupted, `false` if it completed normally.
+    pub async fn sleep(&self, duration: Duration) -> bool {
+        // Check if already interrupted - return immediately if so
+        if self.is_interrupted(true) {
+            return true;
+        }
+
+        if duration.is_zero() {
+            return false;
+        }
+
+        // Register for notification before sleeping
+        let notified = self.park_state.notify.notified();
+
+        tokio::select! {
+            biased;  // Prefer checking sleep completion first
+
+            () = tokio::time::sleep(duration) => {
+                // Sleep completed normally
+                false
+            }
+            () = notified => {
+                // We were notified - check if it was an interrupt
+                self.is_interrupted(true)
+            }
+        }
+    }
+
     /// Park the thread.  If the permit is available, it will be consumed and the thread will return
     /// immediately. If the permit is not available, the thread will be parked until it is unparked
     /// or the specified time has elapsed.
@@ -247,8 +285,8 @@ impl Thread {
     ///
     /// if the class cannot be loaded or initialized
     #[expect(clippy::multiple_bound_locations)]
-    #[async_recursion(?Send)]
-    pub(crate) async fn class<S: AsRef<str>>(&self, class_name: S) -> Result<Arc<Class>> {
+    #[async_method]
+    pub(crate) async fn class<S: AsRef<str> + Send>(&self, class_name: S) -> Result<Arc<Class>> {
         let class_name = class_name.as_ref();
 
         // Load the class; the class tracks its own initialization state
@@ -268,7 +306,7 @@ impl Thread {
     /// # Errors
     ///
     /// if the class cannot be loaded or linked
-    #[async_recursion(?Send)]
+    #[async_method]
     pub(crate) async fn load_and_link_class(&self, class_name: &str) -> Result<Arc<Class>> {
         let vm = self.vm()?;
         let class = {
@@ -400,7 +438,7 @@ impl Thread {
     /// # Errors
     ///
     /// if the class initialization fails
-    #[async_recursion(?Send)]
+    #[async_method]
     async fn initialize_class(&self, class: &Arc<Class>) -> Result<()> {
         use crate::JavaError::{ExceptionInInitializerError, NoClassDefFoundError};
         use ristretto_classloader::InitializationAction;
@@ -482,7 +520,7 @@ impl Thread {
     /// # Errors
     ///
     /// if the String object cannot be created
-    #[async_recursion(?Send)]
+    #[async_method]
     async fn initialize_string_constants(&self, class: &Arc<Class>) -> Result<()> {
         let constant_pool = class.constant_pool();
 
@@ -563,8 +601,8 @@ impl Thread {
         parameters: &[impl RustValue],
     ) -> Result<Option<Value>>
     where
-        C: AsRef<str>,
-        M: AsRef<str>,
+        C: AsRef<str> + Send + Sync,
+        M: AsRef<str> + Send + Sync,
     {
         let class = self.class(class).await?;
         let method = method.as_ref();
@@ -588,8 +626,8 @@ impl Thread {
         parameters: &[impl RustValue],
     ) -> Result<Value>
     where
-        C: AsRef<str>,
-        M: AsRef<str>,
+        C: AsRef<str> + Send + Sync,
+        M: AsRef<str> + Send + Sync,
     {
         let Some(value) = self.invoke(class, method, parameters).await? else {
             return Err(InternalError("No return value".into()));
@@ -760,8 +798,8 @@ impl Thread {
         parameters: &[impl RustValue],
     ) -> Result<Value>
     where
-        C: AsRef<str>,
-        M: AsRef<str>,
+        C: AsRef<str> + Send + Sync,
+        M: AsRef<str> + Send + Sync,
     {
         let class_name = class_name.as_ref();
         let descriptor = &format!("({})V", descriptor.as_ref());

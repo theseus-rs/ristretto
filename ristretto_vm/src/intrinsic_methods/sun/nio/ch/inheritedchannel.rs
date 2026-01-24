@@ -1,17 +1,17 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.addressFamily(I)I", GreaterThan(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn address_family(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn address_family(
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.close0(I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -29,13 +29,13 @@ pub(crate) async fn close_0(
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.dup(I)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dup(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.dup(I)I");
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.dup2(II)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn dup_2(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.dup2(II)V");
 }
@@ -44,7 +44,7 @@ pub(crate) async fn dup_2(_thread: Arc<Thread>, _parameters: Parameters) -> Resu
     "sun/nio/ch/InheritedChannel.inetPeerAddress0(I)Ljava/net/InetAddress;",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn inet_peer_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -53,7 +53,7 @@ pub(crate) async fn inet_peer_address_0(
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.initIDs()V", GreaterThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -62,7 +62,7 @@ pub(crate) async fn init_ids(
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.isConnected(I)Z", GreaterThan(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_connected(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -71,7 +71,7 @@ pub(crate) async fn is_connected(
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.open0(Ljava/lang/String;I)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("sun.nio.ch.InheritedChannel.open0(Ljava/lang/String;I)I");
 }
@@ -80,7 +80,7 @@ pub(crate) async fn open_0(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "sun/nio/ch/InheritedChannel.peerAddress0(I)Ljava/net/InetAddress;",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn peer_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -89,7 +89,7 @@ pub(crate) async fn peer_address_0(
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.peerPort0(I)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn peer_port_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -98,7 +98,7 @@ pub(crate) async fn peer_port_0(
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.soType0(I)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn so_type_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -110,7 +110,7 @@ pub(crate) async fn so_type_0(
     "sun/nio/ch/InheritedChannel.unixPeerAddress0(I)[B",
     GreaterThan(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unix_peer_address_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

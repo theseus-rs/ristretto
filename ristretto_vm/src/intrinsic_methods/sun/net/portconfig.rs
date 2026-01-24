@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/net/PortConfig.getLower0()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_lower_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn get_lower_0(
 }
 
 #[intrinsic_method("sun/net/PortConfig.getUpper0()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_upper_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

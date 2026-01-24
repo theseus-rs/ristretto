@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/Double.doubleToRawLongBits(D)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn double_to_raw_long_bits(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn double_to_raw_long_bits(
 }
 
 #[intrinsic_method("java/lang/Double.longBitsToDouble(J)D", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn long_bits_to_double(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

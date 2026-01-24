@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "sun/lwawt/macosx/CInputMethod.getNativeLocale()Ljava/util/Locale;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_locale(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -20,7 +20,7 @@ pub(crate) async fn get_native_locale(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CInputMethod.nativeEndComposition(J)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_end_composition(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -32,7 +32,7 @@ pub(crate) async fn native_end_composition(
     "sun/lwawt/macosx/CInputMethod.nativeGetCurrentInputMethodInfo()Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_get_current_input_method_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -44,7 +44,7 @@ pub(crate) async fn native_get_current_input_method_info(
     "sun/lwawt/macosx/CInputMethod.nativeHandleEvent(Lsun/lwawt/LWComponentPeer;Ljava/awt/AWTEvent;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_handle_event(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -55,7 +55,7 @@ pub(crate) async fn native_handle_event(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CInputMethod.nativeInit()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_init(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -67,7 +67,7 @@ pub(crate) async fn native_init(
     "sun/lwawt/macosx/CInputMethod.nativeNotifyPeer(JLsun/lwawt/macosx/CInputMethod;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn native_notify_peer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -79,7 +79,7 @@ pub(crate) async fn native_notify_peer(
     "sun/lwawt/macosx/CInputMethod.setNativeLocale(Ljava/lang/String;Z)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_native_locale(
     _thread: Arc<Thread>,
     _parameters: Parameters,

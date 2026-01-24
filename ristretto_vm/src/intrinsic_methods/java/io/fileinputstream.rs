@@ -11,12 +11,12 @@ use crate::intrinsic_methods::java::io::fileoutputstream::raw_file_descriptor;
 use crate::intrinsic_methods::java::io::{filedescriptor, randomaccessfile};
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25};
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(target_os = "wasi")]
 use std::fs::OpenOptions;
@@ -32,7 +32,7 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use zerocopy::transmute_ref;
 
 #[intrinsic_method("java/io/FileInputStream.available0()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn available_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -90,13 +90,13 @@ pub(crate) async fn available_0(
 }
 
 #[intrinsic_method("java/io/FileInputStream.close0()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn close_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     filedescriptor::close_0(thread, parameters).await
 }
 
 #[intrinsic_method("java/io/FileInputStream.initIDs()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_ids(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -108,7 +108,7 @@ pub(crate) async fn init_ids(
     "java/io/FileInputStream.isRegularFile0(Ljava/io/FileDescriptor;)Z",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_regular_file_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -151,13 +151,13 @@ pub(crate) async fn is_regular_file_0(
 }
 
 #[intrinsic_method("java/io/FileInputStream.length0()J", GreaterThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn length_0(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     randomaccessfile::length_0(thread, parameters).await
 }
 
 #[intrinsic_method("java/io/FileInputStream.open0(Ljava/lang/String;)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn open_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -243,7 +243,7 @@ pub(crate) async fn open_0(
 }
 
 #[intrinsic_method("java/io/FileInputStream.position0()J", GreaterThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn position_0(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -252,7 +252,7 @@ pub(crate) async fn position_0(
 }
 
 #[intrinsic_method("java/io/FileInputStream.read0()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -281,7 +281,7 @@ pub(crate) async fn read_0(
 }
 
 #[intrinsic_method("java/io/FileInputStream.readBytes([BII)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn read_bytes(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -356,7 +356,7 @@ pub(crate) async fn read_bytes(
 }
 
 #[intrinsic_method("java/io/FileInputStream.skip0(J)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn skip_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,

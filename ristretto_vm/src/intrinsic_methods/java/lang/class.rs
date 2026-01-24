@@ -5,7 +5,6 @@ use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::rust_value::RustValue;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use byteorder::{BigEndian, WriteBytesExt};
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
@@ -16,6 +15,7 @@ use ristretto_classfile::{
     MethodAccessFlags,
 };
 use ristretto_classloader::{Class, Method, Object, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -57,7 +57,7 @@ pub async fn get_class_no_init(thread: &Thread, object: &Value) -> Result<Arc<Cl
 }
 
 #[intrinsic_method("java/lang/Class.desiredAssertionStatus0(Ljava/lang/Class;)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn desired_assertion_status_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -69,7 +69,7 @@ pub(crate) async fn desired_assertion_status_0(
     "java/lang/Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn for_name_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -118,7 +118,7 @@ pub(crate) async fn for_name_0(
     "java/lang/Class.getClassAccessFlagsRaw0()I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_class_access_flags_raw_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -133,7 +133,7 @@ pub(crate) async fn get_class_access_flags_raw_0(
 }
 
 #[intrinsic_method("java/lang/Class.getClassFileVersion0()I", GreaterThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_class_file_version_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -154,7 +154,7 @@ pub(crate) async fn get_class_file_version_0(
     "java/lang/Class.getComponentType()Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_component_type(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -197,7 +197,7 @@ pub(crate) async fn get_component_type(
     "java/lang/Class.getConstantPool()Lsun/reflect/ConstantPool;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_constant_pool_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -213,7 +213,7 @@ pub(crate) async fn get_constant_pool_0(
     "java/lang/Class.getConstantPool()Ljdk/internal/reflect/ConstantPool;",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_constant_pool_1(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -226,7 +226,7 @@ pub(crate) async fn get_constant_pool_1(
 }
 
 #[intrinsic_method("java/lang/Class.getDeclaredClasses0()[Ljava/lang/Class;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_declared_classes_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -278,7 +278,7 @@ pub(crate) async fn get_declared_classes_0(
     "java/lang/Class.getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_declared_constructors_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -376,7 +376,7 @@ pub(crate) async fn get_declared_constructors_0(
 }
 
 #[intrinsic_method("java/lang/Class.getDeclaredFields0(Z)[Ljava/lang/reflect/Field;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_declared_fields_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -476,7 +476,7 @@ pub(crate) async fn get_declared_fields_0(
     Any
 )]
 #[expect(clippy::too_many_lines)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_declared_methods_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -596,7 +596,7 @@ pub(crate) async fn get_declared_methods_0(
 }
 
 #[intrinsic_method("java/lang/Class.getDeclaringClass0()Ljava/lang/Class;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_declaring_class_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -634,7 +634,7 @@ pub(crate) async fn get_declaring_class_0(
 }
 
 #[intrinsic_method("java/lang/Class.getEnclosingMethod0()[Ljava/lang/Object;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_enclosing_method_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -707,7 +707,7 @@ pub(crate) async fn get_exceptions(
 }
 
 #[intrinsic_method("java/lang/Class.getGenericSignature0()Ljava/lang/String;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_generic_signature_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -732,7 +732,7 @@ pub(crate) async fn get_generic_signature_0(
 }
 
 #[intrinsic_method("java/lang/Class.getInterfaces0()[Ljava/lang/Class;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_interfaces_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -756,7 +756,7 @@ pub(crate) async fn get_interfaces_0(
 }
 
 #[intrinsic_method("java/lang/Class.getModifiers()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_modifiers(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -804,7 +804,7 @@ pub(crate) async fn get_modifiers(
     "java/lang/Class.getName0()Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_name_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -817,7 +817,7 @@ pub(crate) async fn get_name_0(
 }
 
 #[intrinsic_method("java/lang/Class.getNestHost0()Ljava/lang/Class;", GreaterThan(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_nest_host_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -844,7 +844,7 @@ pub(crate) async fn get_nest_host_0(
     "java/lang/Class.getNestMembers0()[Ljava/lang/Class;",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_nest_members_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -876,7 +876,7 @@ pub(crate) async fn get_nest_members_0(
     "java/lang/Class.getPermittedSubclasses0()[Ljava/lang/Class;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_permitted_subclasses_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -891,7 +891,7 @@ pub(crate) async fn get_permitted_subclasses_0(
     "java/lang/Class.getPrimitiveClass(Ljava/lang/String;)Ljava/lang/Class;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_primitive_class(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -907,7 +907,7 @@ pub(crate) async fn get_primitive_class(
     "java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_protection_domain_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -917,7 +917,7 @@ pub(crate) async fn get_protection_domain_0(
 }
 
 #[intrinsic_method("java/lang/Class.getRawAnnotations()[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_raw_annotations(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -947,7 +947,7 @@ pub(crate) async fn get_raw_annotations(
 }
 
 #[intrinsic_method("java/lang/Class.getRawTypeAnnotations()[B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_raw_type_annotations(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -983,7 +983,7 @@ pub(crate) async fn get_raw_type_annotations(
     "java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_record_components_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1197,7 +1197,7 @@ async fn create_accessor_method(
     "java/lang/Class.getSigners()[Ljava/lang/Object;",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_signers(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -1210,7 +1210,7 @@ pub(crate) async fn get_signers(
     "java/lang/Class.getSimpleBinaryName0()Ljava/lang/String;",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_simple_binary_name_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1268,7 +1268,7 @@ pub(crate) async fn get_simple_binary_name_0(
 }
 
 #[intrinsic_method("java/lang/Class.getSuperclass()Ljava/lang/Class;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_superclass(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1292,7 +1292,7 @@ pub(crate) async fn get_superclass(
     "java/lang/Class.initClassName()Ljava/lang/String;",
     GreaterThan(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_class_name(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1306,7 +1306,7 @@ pub(crate) async fn init_class_name(
 }
 
 #[intrinsic_method("java/lang/Class.isArray()Z", LessThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_array(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1321,7 +1321,7 @@ pub(crate) async fn is_array(
 }
 
 #[intrinsic_method("java/lang/Class.isAssignableFrom(Ljava/lang/Class;)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_assignable_from(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1341,7 +1341,7 @@ pub(crate) async fn is_assignable_from(
 }
 
 #[intrinsic_method("java/lang/Class.isHidden()Z", GreaterThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_hidden(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1352,7 +1352,7 @@ pub(crate) async fn is_hidden(
 }
 
 #[intrinsic_method("java/lang/Class.isInstance(Ljava/lang/Object;)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_instance(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1379,7 +1379,7 @@ pub(crate) async fn is_instance(
 }
 
 #[intrinsic_method("java/lang/Class.isInterface()Z", LessThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_interface(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1394,7 +1394,7 @@ pub(crate) async fn is_interface(
 }
 
 #[intrinsic_method("java/lang/Class.isPrimitive()Z", LessThanOrEqual(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_primitive(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1409,7 +1409,7 @@ pub(crate) async fn is_primitive(
 }
 
 #[intrinsic_method("java/lang/Class.isRecord0()Z", GreaterThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_record_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -1425,7 +1425,7 @@ pub(crate) async fn is_record_0(
 }
 
 #[intrinsic_method("java/lang/Class.registerNatives()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -1437,7 +1437,7 @@ pub(crate) async fn register_natives(
     "java/lang/Class.setSigners([Ljava/lang/Object;)V",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_signers(
     _thread: Arc<Thread>,
     _parameters: Parameters,

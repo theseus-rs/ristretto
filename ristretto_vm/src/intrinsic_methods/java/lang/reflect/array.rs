@@ -4,9 +4,9 @@ use crate::Result;
 use crate::intrinsic_methods::java::lang::class::get_class;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::{Reference, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -20,7 +20,7 @@ fn get_class_name(value: &Value) -> Result<String> {
     "java/lang/reflect/Array.get(Ljava/lang/Object;I)Ljava/lang/Object;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let index = parameters.pop_int()?;
     let Some(reference) = parameters.pop_reference()? else {
@@ -96,7 +96,7 @@ pub(crate) async fn get(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getBoolean(Ljava/lang/Object;I)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_boolean(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -125,7 +125,7 @@ pub(crate) async fn get_boolean(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getByte(Ljava/lang/Object;I)B", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_byte(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -154,7 +154,7 @@ pub(crate) async fn get_byte(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getChar(Ljava/lang/Object;I)C", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_char(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -183,7 +183,7 @@ pub(crate) async fn get_char(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getDouble(Ljava/lang/Object;I)D", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_double(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -212,7 +212,7 @@ pub(crate) async fn get_double(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getFloat(Ljava/lang/Object;I)F", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_float(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -241,7 +241,7 @@ pub(crate) async fn get_float(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getInt(Ljava/lang/Object;I)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_int(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -270,7 +270,7 @@ pub(crate) async fn get_int(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getLength(Ljava/lang/Object;)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_length(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -300,7 +300,7 @@ pub(crate) async fn get_length(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getLong(Ljava/lang/Object;I)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_long(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -329,7 +329,7 @@ pub(crate) async fn get_long(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getShort(Ljava/lang/Object;I)S", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_short(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -361,7 +361,7 @@ pub(crate) async fn get_short(
     "java/lang/reflect/Array.multiNewArray(Ljava/lang/Class;[I)Ljava/lang/Object;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn multi_new_array(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -386,7 +386,7 @@ pub(crate) async fn multi_new_array(
     Ok(Some(Value::from(array)))
 }
 
-#[async_recursion(?Send)]
+#[async_method]
 async fn create_multi_dimensional_array(
     thread: &Thread,
     class_name: &str,
@@ -453,7 +453,7 @@ async fn create_multi_dimensional_array(
     "java/lang/reflect/Array.newArray(Ljava/lang/Class;I)Ljava/lang/Object;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn new_array(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -484,7 +484,7 @@ pub(crate) async fn new_array(
     "java/lang/reflect/Array.set(Ljava/lang/Object;ILjava/lang/Object;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Result<Option<Value>> {
     let value = parameters.pop()?;
     let index = parameters.pop_int()?;
@@ -582,7 +582,7 @@ pub(crate) async fn set(_thread: Arc<Thread>, mut parameters: Parameters) -> Res
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setBoolean(Ljava/lang/Object;IZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_boolean(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -613,7 +613,7 @@ pub(crate) async fn set_boolean(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setByte(Ljava/lang/Object;IB)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_byte(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -644,7 +644,7 @@ pub(crate) async fn set_byte(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setChar(Ljava/lang/Object;IC)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_char(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -675,7 +675,7 @@ pub(crate) async fn set_char(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setDouble(Ljava/lang/Object;ID)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_double(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -706,7 +706,7 @@ pub(crate) async fn set_double(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setFloat(Ljava/lang/Object;IF)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_float(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -737,7 +737,7 @@ pub(crate) async fn set_float(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setInt(Ljava/lang/Object;II)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_int(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -768,7 +768,7 @@ pub(crate) async fn set_int(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setLong(Ljava/lang/Object;IJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_long(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -799,7 +799,7 @@ pub(crate) async fn set_long(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setShort(Ljava/lang/Object;IS)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_short(
     _thread: Arc<Thread>,
     mut parameters: Parameters,

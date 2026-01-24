@@ -118,6 +118,15 @@ pub enum JavaError {
     /// - [IndexOutOfBoundsException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/IndexOutOfBoundsException.html)
     #[error("Index: {index}, Size {size}")]
     IndexOutOfBoundsException { index: i32, size: i32 },
+    /// `InterruptedException`
+    ///
+    /// Thrown when a thread is waiting, sleeping, or otherwise occupied, and the thread is
+    /// interrupted, either before or during the activity.
+    ///
+    /// # References
+    /// - [InterruptedException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/InterruptedException.html)
+    #[error("{0}")]
+    InterruptedException(String),
     /// `IOException`
     ///
     /// # References
@@ -199,6 +208,7 @@ impl JavaError {
             JavaError::IllegalArgumentException(_) => "java.lang.IllegalArgumentException",
             JavaError::IncompatibleClassChangeError(_) => "java.lang.IncompatibleClassChangeError",
             JavaError::IndexOutOfBoundsException { .. } => "java.lang.IndexOutOfBoundsException",
+            JavaError::InterruptedException(_) => "java.lang.InterruptedException",
             JavaError::IoException(_) => "java.io.IOException",
             JavaError::NoClassDefFoundError(_) => "java.lang.NoClassDefFoundError",
             JavaError::NoSuchFieldError(_) => "java.lang.NoSuchFieldError",

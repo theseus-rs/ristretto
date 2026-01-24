@@ -24,10 +24,10 @@ use crate::instruction::{
     tableswitch, wide,
 };
 use crate::{LocalVariables, OperandStack, Result, Thread};
-use async_recursion::async_recursion;
 use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::{Instruction, LookupSwitch, TableSwitch};
 use ristretto_classloader::{Class, Method, Value};
+use ristretto_macros::async_method;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 use tracing::{Level, debug, event_enabled};
@@ -167,7 +167,7 @@ impl Frame {
     ///    - Load the instruction at the current program counter
     ///    - Execute the instruction, which may modify locals and stack
     ///    - Process the execution result (continue, jump, or return)
-    #[async_recursion(?Send)]
+    #[async_method]
     pub async fn execute(&self, mut parameters: Vec<Value>) -> Result<Option<Value>> {
         let max_locals = self.method.max_locals();
         Frame::adjust_parameters(&mut parameters, max_locals);
@@ -175,8 +175,15 @@ impl Frame {
         let max_stack = self.method.max_stack();
         let stack = &mut OperandStack::with_max_size(max_stack);
         let code = self.method.code();
+        let mut instruction_count: u32 = 0;
 
         loop {
+            // Yield periodically to allow tokio to process cancellation and other tasks
+            instruction_count = instruction_count.wrapping_add(1);
+            if instruction_count.is_multiple_of(1024) {
+                tokio::task::yield_now().await;
+            }
+
             let program_counter = self.program_counter.load(Ordering::Relaxed);
             let Some(instruction) = code.get(program_counter) else {
                 return Err(InvalidProgramCounter(program_counter));

@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Equal, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/net/PlainSocketImpl.initProto()V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_proto(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn init_proto(
     "java/net/PlainSocketImpl.socketAccept(Ljava/net/SocketImpl;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_accept(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn socket_accept(
     "java/net/PlainSocketImpl.socketAvailable()I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -45,7 +45,7 @@ pub(crate) async fn socket_available(
     "java/net/PlainSocketImpl.socketBind(Ljava/net/InetAddress;I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_bind(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -54,7 +54,7 @@ pub(crate) async fn socket_bind(
 }
 
 #[intrinsic_method("java/net/PlainSocketImpl.socketClose0(Z)V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_close_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -66,7 +66,7 @@ pub(crate) async fn socket_close_0(
     "java/net/PlainSocketImpl.socketConnect(Ljava/net/InetAddress;II)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_connect(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -75,7 +75,7 @@ pub(crate) async fn socket_connect(
 }
 
 #[intrinsic_method("java/net/PlainSocketImpl.socketCreate(Z)V", LessThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_create_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -84,7 +84,7 @@ pub(crate) async fn socket_create_0(
 }
 
 #[intrinsic_method("java/net/PlainSocketImpl.socketCreate(ZZ)V", Equal(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_create_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -96,7 +96,7 @@ pub(crate) async fn socket_create_1(
     "java/net/PlainSocketImpl.socketGetOption(ILjava/lang/Object;)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_get_option(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -105,7 +105,7 @@ pub(crate) async fn socket_get_option(
 }
 
 #[intrinsic_method("java/net/PlainSocketImpl.socketListen(I)V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_listen(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -117,7 +117,7 @@ pub(crate) async fn socket_listen(
     "java/net/PlainSocketImpl.socketSendUrgentData(I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_send_urgent_data(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -129,7 +129,7 @@ pub(crate) async fn socket_send_urgent_data(
     "java/net/PlainSocketImpl.socketSetOption0(IZLjava/lang/Object;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_set_option_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -141,7 +141,7 @@ pub(crate) async fn socket_set_option_0(
     "java/net/PlainSocketImpl.socketShutdown(I)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn socket_shutdown(
     _thread: Arc<Thread>,
     _parameters: Parameters,

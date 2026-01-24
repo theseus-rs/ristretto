@@ -1,15 +1,15 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/StringUTF16.isBigEndian()Z", Between(JAVA_11, JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn is_big_endian(
     _thread: Arc<Thread>,
     _parameters: Parameters,

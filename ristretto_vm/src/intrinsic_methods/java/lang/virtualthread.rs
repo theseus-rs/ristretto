@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "java/lang/VirtualThread.notifyJvmtiDisableSuspend(Z)V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn notify_jvmti_disable_suspend(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -21,7 +21,7 @@ pub(crate) async fn notify_jvmti_disable_suspend(
 }
 
 #[intrinsic_method("java/lang/VirtualThread.notifyJvmtiEnd()V", GreaterThan(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn notify_jvmti_end(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -30,7 +30,7 @@ pub(crate) async fn notify_jvmti_end(
 }
 
 #[intrinsic_method("java/lang/VirtualThread.notifyJvmtiHideFrames(Z)V", Equal(JAVA_21))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn notify_jvmti_hide_frames(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -39,7 +39,7 @@ pub(crate) async fn notify_jvmti_hide_frames(
 }
 
 #[intrinsic_method("java/lang/VirtualThread.notifyJvmtiMount(Z)V", GreaterThan(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn notify_jvmti_mount(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn notify_jvmti_mount(
 }
 
 #[intrinsic_method("java/lang/VirtualThread.notifyJvmtiStart()V", GreaterThan(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn notify_jvmti_start(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn notify_jvmti_start(
 }
 
 #[intrinsic_method("java/lang/VirtualThread.notifyJvmtiUnmount(Z)V", GreaterThan(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn notify_jvmti_unmount(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -69,7 +69,7 @@ pub(crate) async fn notify_jvmti_unmount(
     "java/lang/VirtualThread.postPinnedEvent(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn post_pinned_event(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -81,7 +81,7 @@ pub(crate) async fn post_pinned_event(
     "java/lang/VirtualThread.registerNatives()V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -93,7 +93,7 @@ pub(crate) async fn register_natives(
     "java/lang/VirtualThread.takeVirtualThreadListToUnblock()Ljava/lang/VirtualThread;",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn take_virtual_thread_list_to_unblock(
     _thread: Arc<Thread>,
     _parameters: Parameters,

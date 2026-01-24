@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "sun/management/DiagnosticCommandImpl.executeDiagnosticCommand(Ljava/lang/String;)Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn execute_diagnostic_command(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn execute_diagnostic_command(
     "sun/management/DiagnosticCommandImpl.getDiagnosticCommandInfo([Ljava/lang/String;)[Lsun/management/DiagnosticCommandInfo;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_diagnostic_command_info(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -40,7 +40,7 @@ pub(crate) async fn get_diagnostic_command_info(
     "sun/management/DiagnosticCommandImpl.getDiagnosticCommands()[Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_diagnostic_commands(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -52,7 +52,7 @@ pub(crate) async fn get_diagnostic_commands(
     "sun/management/DiagnosticCommandImpl.setNotificationEnabled(Z)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_notification_enabled(
     _thread: Arc<Thread>,
     _parameters: Parameters,

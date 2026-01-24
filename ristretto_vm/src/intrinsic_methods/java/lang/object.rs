@@ -5,10 +5,10 @@ use crate::assignable::Assignable;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{ObjectArray, Reference, Value};
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 use std::time::Duration;
@@ -19,7 +19,7 @@ use std::time::Duration;
 ///
 /// - [java.lang.Object.clone()](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/Object.html#clone())
 #[intrinsic_method("java/lang/Object.clone()Ljava/lang/Object;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn clone(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -92,7 +92,7 @@ pub(crate) async fn clone(
 }
 
 #[intrinsic_method("java/lang/Object.getClass()Ljava/lang/Class;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_class(
     thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -111,7 +111,7 @@ pub(crate) async fn get_class(
 }
 
 #[intrinsic_method("java/lang/Object.hashCode()I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn hash_code(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -130,7 +130,7 @@ pub(crate) async fn hash_code(
 }
 
 #[intrinsic_method("java/lang/Object.notify()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn notify(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // For basic thread support, notify is a no-op since we don't have true monitor support yet.
     // In a full implementation, this would wake up one thread waiting on this object's monitor.
@@ -138,7 +138,7 @@ pub(crate) async fn notify(_thread: Arc<Thread>, _parameters: Parameters) -> Res
 }
 
 #[intrinsic_method("java/lang/Object.notifyAll()V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn notify_all(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -147,7 +147,7 @@ pub(crate) async fn notify_all(
 }
 
 #[intrinsic_method("java/lang/Object.registerNatives()V", LessThanOrEqual(JAVA_11))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -156,13 +156,13 @@ pub(crate) async fn register_natives(
 }
 
 #[intrinsic_method("java/lang/Object.wait(J)V", LessThanOrEqual(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn wait(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     wait_0(thread, parameters).await
 }
 
 #[intrinsic_method("java/lang/Object.wait0(J)V", GreaterThan(JAVA_17))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn wait_0(
     _thread: Arc<Thread>,
     mut parameters: Parameters,
@@ -201,18 +201,27 @@ pub(crate) async fn wait_0(
         };
 
         loop {
+            // Yield to allow other tasks to run (important for spawned thread tasks)
+            #[cfg(not(target_family = "wasm"))]
+            tokio::task::yield_now().await;
+
             // Check if the thread has terminated (eetop == 0)
+            // Use try_read to avoid blocking; this allows the spawned task to acquire write locks
             let is_terminated = if let Some(ref obj_ref) = object {
-                let guard = obj_ref.read();
-                if let Reference::Object(obj) = &*guard {
-                    if let Ok(eetop) = obj.value("eetop") {
-                        eetop.as_i64().unwrap_or(0) == 0
+                if let Some(guard) = obj_ref.try_read() {
+                    if let Reference::Object(obj) = &*guard {
+                        if let Ok(eetop) = obj.value("eetop") {
+                            eetop.as_i64().unwrap_or(0) == 0
+                        } else {
+                            // Can't read eetop, assume terminated
+                            true
+                        }
                     } else {
-                        // Can't read eetop, assume terminated
                         true
                     }
                 } else {
-                    true
+                    // Couldn't acquire lock, try again after sleep
+                    false
                 }
             } else {
                 true

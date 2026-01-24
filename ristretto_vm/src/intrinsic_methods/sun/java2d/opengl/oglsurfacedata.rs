@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/opengl/OGLSurfaceData.getTextureID(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_texture_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn get_texture_id(
 }
 
 #[intrinsic_method("sun/java2d/opengl/OGLSurfaceData.getTextureTarget(J)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_texture_target(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn get_texture_target(
 }
 
 #[intrinsic_method("sun/java2d/opengl/OGLSurfaceData.initFBObject(JZZZII)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_fb_object(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,7 +35,7 @@ pub(crate) async fn init_fb_object(
 }
 
 #[intrinsic_method("sun/java2d/opengl/OGLSurfaceData.initFlipBackbuffer(J)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_flip_backbuffer(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -44,7 +44,7 @@ pub(crate) async fn init_flip_backbuffer(
 }
 
 #[intrinsic_method("sun/java2d/opengl/OGLSurfaceData.initTexture(JZZZII)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn init_texture(
     _thread: Arc<Thread>,
     _parameters: Parameters,

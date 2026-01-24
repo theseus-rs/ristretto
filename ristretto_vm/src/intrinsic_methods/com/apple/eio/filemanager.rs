@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("com/apple/eio/FileManager._findFolder(SIZ)Ljava/lang/String;", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find_folder(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn find_folder(
 }
 
 #[intrinsic_method("com/apple/eio/FileManager._getFileCreator(Ljava/lang/String;)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_file_creator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn get_file_creator(
 }
 
 #[intrinsic_method("com/apple/eio/FileManager._getFileType(Ljava/lang/String;)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_file_type(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,7 +35,7 @@ pub(crate) async fn get_file_type(
 }
 
 #[intrinsic_method("com/apple/eio/FileManager._moveToTrash(Ljava/lang/String;)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn move_to_trash(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -44,7 +44,7 @@ pub(crate) async fn move_to_trash(
 }
 
 #[intrinsic_method("com/apple/eio/FileManager._openURL(Ljava/lang/String;)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn open_url(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -53,7 +53,7 @@ pub(crate) async fn open_url(
 }
 
 #[intrinsic_method("com/apple/eio/FileManager._revealInFinder(Ljava/lang/String;)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn reveal_in_finder(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -62,7 +62,7 @@ pub(crate) async fn reveal_in_finder(
 }
 
 #[intrinsic_method("com/apple/eio/FileManager._setFileCreator(Ljava/lang/String;I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_file_creator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -71,7 +71,7 @@ pub(crate) async fn set_file_creator(
 }
 
 #[intrinsic_method("com/apple/eio/FileManager._setFileType(Ljava/lang/String;I)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_file_type(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -83,7 +83,7 @@ pub(crate) async fn set_file_type(
     "com/apple/eio/FileManager._setFileTypeAndCreator(Ljava/lang/String;II)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_file_type_and_creator(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -95,7 +95,7 @@ pub(crate) async fn set_file_type_and_creator(
     "com/apple/eio/FileManager.getNativePathToApplicationBundle()Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_path_to_application_bundle(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -107,7 +107,7 @@ pub(crate) async fn get_native_path_to_application_bundle(
     "com/apple/eio/FileManager.getNativeResourceFromBundle(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_native_resource_from_bundle(
     _thread: Arc<Thread>,
     _parameters: Parameters,

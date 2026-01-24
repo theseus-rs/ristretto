@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use std::sync::Arc;
     "java/util/prefs/MacOSXPreferencesFile.addChildToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn add_child_to_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -25,7 +25,7 @@ pub(crate) async fn add_child_to_node(
     "java/util/prefs/MacOSXPreferencesFile.addKeyToNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn add_key_to_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -39,7 +39,7 @@ pub(crate) async fn add_key_to_node(
     "java/util/prefs/MacOSXPreferencesFile.addNode(Ljava/lang/String;Ljava/lang/String;JJ)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn add_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn add_node(
 }
 
 #[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.anyHost()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn any_host(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -57,7 +57,7 @@ pub(crate) async fn any_host(
 }
 
 #[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.anyUser()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn any_user(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -66,7 +66,7 @@ pub(crate) async fn any_user(
 }
 
 #[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.currentHost()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn current_host(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -75,7 +75,7 @@ pub(crate) async fn current_host(
 }
 
 #[intrinsic_method("java/util/prefs/MacOSXPreferencesFile.currentUser()J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn current_user(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -87,7 +87,7 @@ pub(crate) async fn current_user(
     "java/util/prefs/MacOSXPreferencesFile.getChildrenForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_children_for_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -101,7 +101,7 @@ pub(crate) async fn get_children_for_node(
     "java/util/prefs/MacOSXPreferencesFile.getKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_key_from_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -115,7 +115,7 @@ pub(crate) async fn get_key_from_node(
     "java/util/prefs/MacOSXPreferencesFile.getKeysForNode(Ljava/lang/String;Ljava/lang/String;JJ)[Ljava/lang/String;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_keys_for_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -129,7 +129,7 @@ pub(crate) async fn get_keys_for_node(
     "java/util/prefs/MacOSXPreferencesFile.removeChildFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn remove_child_from_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -143,7 +143,7 @@ pub(crate) async fn remove_child_from_node(
     "java/util/prefs/MacOSXPreferencesFile.removeKeyFromNode(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JJ)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn remove_key_from_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -157,7 +157,7 @@ pub(crate) async fn remove_key_from_node(
     "java/util/prefs/MacOSXPreferencesFile.removeNode(Ljava/lang/String;Ljava/lang/String;JJ)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn remove_node(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -171,7 +171,7 @@ pub(crate) async fn remove_node(
     "java/util/prefs/MacOSXPreferencesFile.synchronize(Ljava/lang/String;JJ)Z",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn synchronize(
     _thread: Arc<Thread>,
     _parameters: Parameters,

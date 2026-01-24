@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "java/lang/ClassLoader$NativeLibrary.find(Ljava/lang/String;)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.find(Ljava/lang/String;)J")
 }
@@ -21,7 +21,7 @@ pub(crate) async fn find(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
     "java/lang/ClassLoader$NativeLibrary.findEntry(Ljava/lang/String;)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn find_entry(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -33,7 +33,7 @@ pub(crate) async fn find_entry(
     "java/lang/ClassLoader$NativeLibrary.load(Ljava/lang/String;Z)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn load(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.load(Ljava/lang/String;Z)V")
 }
@@ -42,7 +42,7 @@ pub(crate) async fn load(_thread: Arc<Thread>, _parameters: Parameters) -> Resul
     "java/lang/ClassLoader$NativeLibrary.load0(Ljava/lang/String;ZZ)Z",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("java.lang.ClassLoader$NativeLibrary.load0(Ljava/lang/String;ZZ)Z")
 }
@@ -51,7 +51,7 @@ pub(crate) async fn load_0(_thread: Arc<Thread>, _parameters: Parameters) -> Res
     "java/lang/ClassLoader$NativeLibrary.unload(Ljava/lang/String;Z)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unload_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -63,7 +63,7 @@ pub(crate) async fn unload_0(
     "java/lang/ClassLoader$NativeLibrary.unload(Ljava/lang/String;ZJ)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unload_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,

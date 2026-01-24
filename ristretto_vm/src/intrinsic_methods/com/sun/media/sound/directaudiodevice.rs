@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nAvailable(JZ)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_available(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -17,7 +17,7 @@ pub(crate) async fn n_available(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nClose(JZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_close(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -26,7 +26,7 @@ pub(crate) async fn n_close(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nFlush(JZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_flush(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -35,7 +35,7 @@ pub(crate) async fn n_flush(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nGetBufferSize(JZ)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_get_buffer_size(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -44,7 +44,7 @@ pub(crate) async fn n_get_buffer_size(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nGetBytePosition(JZJ)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_get_byte_position(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -56,7 +56,7 @@ pub(crate) async fn n_get_byte_position(
     "com/sun/media/sound/DirectAudioDevice.nGetFormats(IIZLjava/util/Vector;)V",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_get_formats(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -65,7 +65,7 @@ pub(crate) async fn n_get_formats(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nIsStillDraining(JZ)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_is_still_draining(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -74,19 +74,19 @@ pub(crate) async fn n_is_still_draining(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nOpen(IIZIFIIIZZI)J", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_open(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.DirectAudioDevice.nOpen(IIZIFIIIZZI)J")
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nRead(J[BIII)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_read(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.DirectAudioDevice.nRead(J[BIII)I")
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nRequiresServicing(JZ)Z", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_requires_servicing(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -95,7 +95,7 @@ pub(crate) async fn n_requires_servicing(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nService(JZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_service(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -104,7 +104,7 @@ pub(crate) async fn n_service(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nSetBytePosition(JZJ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_set_byte_position(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -113,7 +113,7 @@ pub(crate) async fn n_set_byte_position(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nStart(JZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_start(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -122,13 +122,13 @@ pub(crate) async fn n_start(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nStop(JZ)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_stop(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     todo!("com.sun.media.sound.DirectAudioDevice.nStop(JZ)V")
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nWrite(J[BIIIFF)I", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn n_write(
     _thread: Arc<Thread>,
     _parameters: Parameters,

@@ -2,15 +2,15 @@ use crate::Result;
 use crate::intrinsic_methods::jdk;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/misc/Unsafe.addressSize()I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn address_size(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -22,7 +22,7 @@ pub(crate) async fn address_size(
     "sun/misc/Unsafe.allocateInstance(Ljava/lang/Class;)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn allocate_instance(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -31,7 +31,7 @@ pub(crate) async fn allocate_instance(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.allocateMemory(J)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn allocate_memory(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -43,7 +43,7 @@ pub(crate) async fn allocate_memory(
     "sun/misc/Unsafe.arrayBaseOffset(Ljava/lang/Class;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn array_base_offset(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -55,7 +55,7 @@ pub(crate) async fn array_base_offset(
     "sun/misc/Unsafe.arrayIndexScale(Ljava/lang/Class;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn array_index_scale(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -67,7 +67,7 @@ pub(crate) async fn array_index_scale(
     "sun/misc/Unsafe.compareAndSwapInt(Ljava/lang/Object;JII)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn compare_and_swap_int(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -79,7 +79,7 @@ pub(crate) async fn compare_and_swap_int(
     "sun/misc/Unsafe.compareAndSwapLong(Ljava/lang/Object;JJJ)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn compare_and_swap_long(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -91,7 +91,7 @@ pub(crate) async fn compare_and_swap_long(
     "sun/misc/Unsafe.compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn compare_and_swap_object(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -103,7 +103,7 @@ pub(crate) async fn compare_and_swap_object(
     "sun/misc/Unsafe.copyMemory(Ljava/lang/Object;JLjava/lang/Object;JJ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn copy_memory(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -115,7 +115,7 @@ pub(crate) async fn copy_memory(
     "sun/misc/Unsafe.defineAnonymousClass(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn define_anonymous_class(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -127,7 +127,7 @@ pub(crate) async fn define_anonymous_class(
     "sun/misc/Unsafe.defineClass(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn define_class(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -139,7 +139,7 @@ pub(crate) async fn define_class(
     "sun/misc/Unsafe.ensureClassInitialized(Ljava/lang/Class;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ensure_class_initialized(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -148,7 +148,7 @@ pub(crate) async fn ensure_class_initialized(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.freeMemory(J)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn free_memory(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -157,7 +157,7 @@ pub(crate) async fn free_memory(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.fullFence()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn full_fence(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -166,7 +166,7 @@ pub(crate) async fn full_fence(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.getAddress(J)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_address(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -178,7 +178,7 @@ pub(crate) async fn get_address(
     "sun/misc/Unsafe.getBoolean(Ljava/lang/Object;J)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_boolean(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -190,7 +190,7 @@ pub(crate) async fn get_boolean(
     "sun/misc/Unsafe.getBooleanVolatile(Ljava/lang/Object;J)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_boolean_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -199,7 +199,7 @@ pub(crate) async fn get_boolean_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.getByte(J)B", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_byte_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -211,7 +211,7 @@ pub(crate) async fn get_byte_1(
     "sun/misc/Unsafe.getByte(Ljava/lang/Object;J)B",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_byte_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -223,7 +223,7 @@ pub(crate) async fn get_byte_2(
     "sun/misc/Unsafe.getByteVolatile(Ljava/lang/Object;J)B",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_byte_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -232,7 +232,7 @@ pub(crate) async fn get_byte_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.getChar(J)C", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_char_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -244,7 +244,7 @@ pub(crate) async fn get_char_1(
     "sun/misc/Unsafe.getChar(Ljava/lang/Object;J)C",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_char_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -256,7 +256,7 @@ pub(crate) async fn get_char_2(
     "sun/misc/Unsafe.getCharVolatile(Ljava/lang/Object;J)C",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_char_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -265,7 +265,7 @@ pub(crate) async fn get_char_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.getDouble(J)D", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_double_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -277,7 +277,7 @@ pub(crate) async fn get_double_1(
     "sun/misc/Unsafe.getDouble(Ljava/lang/Object;J)D",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_double_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -289,7 +289,7 @@ pub(crate) async fn get_double_2(
     "sun/misc/Unsafe.getDoubleVolatile(Ljava/lang/Object;J)D",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_double_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -298,7 +298,7 @@ pub(crate) async fn get_double_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.getFloat(J)F", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_float_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -310,7 +310,7 @@ pub(crate) async fn get_float_1(
     "sun/misc/Unsafe.getFloat(Ljava/lang/Object;J)F",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_float_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -322,7 +322,7 @@ pub(crate) async fn get_float_2(
     "sun/misc/Unsafe.getFloatVolatile(Ljava/lang/Object;J)F",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_float_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -331,7 +331,7 @@ pub(crate) async fn get_float_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.getInt(J)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_int_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -343,7 +343,7 @@ pub(crate) async fn get_int_1(
     "sun/misc/Unsafe.getInt(Ljava/lang/Object;J)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_int_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -355,7 +355,7 @@ pub(crate) async fn get_int_2(
     "sun/misc/Unsafe.getIntVolatile(Ljava/lang/Object;J)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_int_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -364,7 +364,7 @@ pub(crate) async fn get_int_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.getLoadAverage([DI)I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_load_average(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -373,7 +373,7 @@ pub(crate) async fn get_load_average(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.getLong(J)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_long_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -385,7 +385,7 @@ pub(crate) async fn get_long_1(
     "sun/misc/Unsafe.getLong(Ljava/lang/Object;J)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_long_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -397,7 +397,7 @@ pub(crate) async fn get_long_2(
     "sun/misc/Unsafe.getLongVolatile(Ljava/lang/Object;J)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_long_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -409,7 +409,7 @@ pub(crate) async fn get_long_volatile(
     "sun/misc/Unsafe.getObject(Ljava/lang/Object;J)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_object(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -421,7 +421,7 @@ pub(crate) async fn get_object(
     "sun/misc/Unsafe.getObjectVolatile(Ljava/lang/Object;J)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_object_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -430,7 +430,7 @@ pub(crate) async fn get_object_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.getShort(J)S", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_short_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -442,7 +442,7 @@ pub(crate) async fn get_short_1(
     "sun/misc/Unsafe.getShort(Ljava/lang/Object;J)S",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_short_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -454,7 +454,7 @@ pub(crate) async fn get_short_2(
     "sun/misc/Unsafe.getShortVolatile(Ljava/lang/Object;J)S",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_short_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -463,7 +463,7 @@ pub(crate) async fn get_short_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.loadFence()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn load_fence(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -475,7 +475,7 @@ pub(crate) async fn load_fence(
     "sun/misc/Unsafe.monitorEnter(Ljava/lang/Object;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn monitor_enter(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -487,7 +487,7 @@ pub(crate) async fn monitor_enter(
     "sun/misc/Unsafe.monitorExit(Ljava/lang/Object;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn monitor_exit(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -499,7 +499,7 @@ pub(crate) async fn monitor_exit(
     "sun/misc/Unsafe.objectFieldOffset(Ljava/lang/reflect/Field;)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn object_field_offset(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -508,7 +508,7 @@ pub(crate) async fn object_field_offset(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.pageSize()I", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn page_size(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -517,13 +517,13 @@ pub(crate) async fn page_size(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.park(ZJ)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn park(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     jdk::internal::misc::r#unsafe::park(thread, parameters).await
 }
 
 #[intrinsic_method("sun/misc/Unsafe.putAddress(JJ)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_address(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -535,7 +535,7 @@ pub(crate) async fn put_address(
     "sun/misc/Unsafe.putBoolean(Ljava/lang/Object;JZ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_boolean(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -547,7 +547,7 @@ pub(crate) async fn put_boolean(
     "sun/misc/Unsafe.putBooleanVolatile(Ljava/lang/Object;JZ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_boolean_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -556,7 +556,7 @@ pub(crate) async fn put_boolean_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.putByte(JB)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_byte_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -568,7 +568,7 @@ pub(crate) async fn put_byte_1(
     "sun/misc/Unsafe.putByte(Ljava/lang/Object;JB)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_byte_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -580,7 +580,7 @@ pub(crate) async fn put_byte_2(
     "sun/misc/Unsafe.putByteVolatile(Ljava/lang/Object;JB)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_byte_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -589,7 +589,7 @@ pub(crate) async fn put_byte_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.putChar(JC)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_char_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -601,7 +601,7 @@ pub(crate) async fn put_char_1(
     "sun/misc/Unsafe.putChar(Ljava/lang/Object;JC)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_char_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -613,7 +613,7 @@ pub(crate) async fn put_char_2(
     "sun/misc/Unsafe.putCharVolatile(Ljava/lang/Object;JC)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_char_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -622,7 +622,7 @@ pub(crate) async fn put_char_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.putDouble(JD)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_double_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -634,7 +634,7 @@ pub(crate) async fn put_double_1(
     "sun/misc/Unsafe.putDouble(Ljava/lang/Object;JD)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_double_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -646,7 +646,7 @@ pub(crate) async fn put_double_2(
     "sun/misc/Unsafe.putDoubleVolatile(Ljava/lang/Object;JD)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_double_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -655,7 +655,7 @@ pub(crate) async fn put_double_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.putFloat(JF)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_float_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -667,7 +667,7 @@ pub(crate) async fn put_float_1(
     "sun/misc/Unsafe.putFloat(Ljava/lang/Object;JF)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_float_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -679,7 +679,7 @@ pub(crate) async fn put_float_2(
     "sun/misc/Unsafe.putFloatVolatile(Ljava/lang/Object;JF)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_float_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -688,7 +688,7 @@ pub(crate) async fn put_float_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.putInt(JI)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_int_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -700,7 +700,7 @@ pub(crate) async fn put_int_1(
     "sun/misc/Unsafe.putInt(Ljava/lang/Object;JI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_int_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -712,7 +712,7 @@ pub(crate) async fn put_int_2(
     "sun/misc/Unsafe.putIntVolatile(Ljava/lang/Object;JI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_int_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -721,7 +721,7 @@ pub(crate) async fn put_int_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.putLong(JJ)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_long_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -733,7 +733,7 @@ pub(crate) async fn put_long_1(
     "sun/misc/Unsafe.putLong(Ljava/lang/Object;JJ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_long_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -745,7 +745,7 @@ pub(crate) async fn put_long_2(
     "sun/misc/Unsafe.putLongVolatile(Ljava/lang/Object;JJ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_long_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -757,7 +757,7 @@ pub(crate) async fn put_long_volatile(
     "sun/misc/Unsafe.putObject(Ljava/lang/Object;JLjava/lang/Object;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_object(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -769,7 +769,7 @@ pub(crate) async fn put_object(
     "sun/misc/Unsafe.putObjectVolatile(Ljava/lang/Object;JLjava/lang/Object;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_object_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -781,7 +781,7 @@ pub(crate) async fn put_object_volatile(
     "sun/misc/Unsafe.putOrderedInt(Ljava/lang/Object;JI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_ordered_int(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -793,7 +793,7 @@ pub(crate) async fn put_ordered_int(
     "sun/misc/Unsafe.putOrderedLong(Ljava/lang/Object;JJ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_ordered_long(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -805,7 +805,7 @@ pub(crate) async fn put_ordered_long(
     "sun/misc/Unsafe.putOrderedObject(Ljava/lang/Object;JLjava/lang/Object;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_ordered_object(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -814,7 +814,7 @@ pub(crate) async fn put_ordered_object(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.putShort(JS)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_short_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -826,7 +826,7 @@ pub(crate) async fn put_short_1(
     "sun/misc/Unsafe.putShort(Ljava/lang/Object;JS)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_short_2(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -838,7 +838,7 @@ pub(crate) async fn put_short_2(
     "sun/misc/Unsafe.putShortVolatile(Ljava/lang/Object;JS)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn put_short_volatile(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -847,7 +847,7 @@ pub(crate) async fn put_short_volatile(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.reallocateMemory(JJ)J", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn reallocate_memory(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -856,7 +856,7 @@ pub(crate) async fn reallocate_memory(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.registerNatives()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn register_natives(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -868,7 +868,7 @@ pub(crate) async fn register_natives(
     "sun/misc/Unsafe.setMemory(Ljava/lang/Object;JJB)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_memory(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -880,7 +880,7 @@ pub(crate) async fn set_memory(
     "sun/misc/Unsafe.shouldBeInitialized(Ljava/lang/Class;)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn should_be_initialized(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -892,7 +892,7 @@ pub(crate) async fn should_be_initialized(
     "sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn static_field_base(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -904,7 +904,7 @@ pub(crate) async fn static_field_base(
     "sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn static_field_offset(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -913,7 +913,7 @@ pub(crate) async fn static_field_offset(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.storeFence()V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn store_fence(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -925,7 +925,7 @@ pub(crate) async fn store_fence(
     "sun/misc/Unsafe.throwException(Ljava/lang/Throwable;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn throw_exception(
     thread: Arc<Thread>,
     parameters: Parameters,
@@ -937,7 +937,7 @@ pub(crate) async fn throw_exception(
     "sun/misc/Unsafe.tryMonitorEnter(Ljava/lang/Object;)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn try_monitor_enter(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -946,7 +946,7 @@ pub(crate) async fn try_monitor_enter(
 }
 
 #[intrinsic_method("sun/misc/Unsafe.unpark(Ljava/lang/Object;)V", LessThanOrEqual(JAVA_8))]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn unpark(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
     jdk::internal::misc::r#unsafe::unpark(thread, parameters).await
 }

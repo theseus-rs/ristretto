@@ -1,14 +1,14 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/opengl/OGLTextRenderer.drawGlyphList(IZZZIFF[J[F)V", Any)]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn draw_glyph_list(
     _thread: Arc<Thread>,
     _parameters: Parameters,

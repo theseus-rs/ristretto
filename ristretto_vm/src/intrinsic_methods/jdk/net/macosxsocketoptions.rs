@@ -1,10 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ use std::sync::Arc;
     "jdk/net/MacOSXSocketOptions.getIpDontFragment0(IZ)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_ip_dont_fragment_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -24,7 +24,7 @@ pub(crate) async fn get_ip_dont_fragment_0(
     "jdk/net/MacOSXSocketOptions.getSoPeerCred0(I)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_so_peer_cred_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -36,7 +36,7 @@ pub(crate) async fn get_so_peer_cred_0(
     "jdk/net/MacOSXSocketOptions.getTcpKeepAliveIntvl0(I)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_tcp_keep_alive_intvl_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -48,7 +48,7 @@ pub(crate) async fn get_tcp_keep_alive_intvl_0(
     "jdk/net/MacOSXSocketOptions.getTcpKeepAliveProbes0(I)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_tcp_keep_alive_probes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -60,7 +60,7 @@ pub(crate) async fn get_tcp_keep_alive_probes_0(
     "jdk/net/MacOSXSocketOptions.getTcpKeepAliveTime0(I)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_tcp_keep_alive_time_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -72,7 +72,7 @@ pub(crate) async fn get_tcp_keep_alive_time_0(
     "jdk/net/MacOSXSocketOptions.getTcpkeepAliveProbes0(I)I",
     Equal(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn get_tcpkeep_alive_probes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -84,7 +84,7 @@ pub(crate) async fn get_tcpkeep_alive_probes_0(
     "jdk/net/MacOSXSocketOptions.ipDontFragmentSupported0()Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn ip_dont_fragment_supported_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -96,7 +96,7 @@ pub(crate) async fn ip_dont_fragment_supported_0(
     "jdk/net/MacOSXSocketOptions.keepAliveOptionsSupported0()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn keep_alive_options_supported_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -108,7 +108,7 @@ pub(crate) async fn keep_alive_options_supported_0(
     "jdk/net/MacOSXSocketOptions.setIpDontFragment0(IZZ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_ip_dont_fragment_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -120,7 +120,7 @@ pub(crate) async fn set_ip_dont_fragment_0(
     "jdk/net/MacOSXSocketOptions.setTcpKeepAliveIntvl0(II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_tcp_keep_alive_intvl_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -132,7 +132,7 @@ pub(crate) async fn set_tcp_keep_alive_intvl_0(
     "jdk/net/MacOSXSocketOptions.setTcpKeepAliveProbes0(II)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_tcp_keep_alive_probes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -144,7 +144,7 @@ pub(crate) async fn set_tcp_keep_alive_probes_0(
     "jdk/net/MacOSXSocketOptions.setTcpKeepAliveTime0(II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_tcp_keep_alive_time_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,
@@ -156,7 +156,7 @@ pub(crate) async fn set_tcp_keep_alive_time_0(
     "jdk/net/MacOSXSocketOptions.setTcpkeepAliveProbes0(II)V",
     Equal(JAVA_11)
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn set_tcpkeep_alive_probes_0(
     _thread: Arc<Thread>,
     _parameters: Parameters,

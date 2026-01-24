@@ -1,9 +1,9 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use async_recursion::async_recursion;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
+use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
@@ -30,7 +30,7 @@ use std::sync::Arc;
     "jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;",
     Any
 )]
-#[async_recursion(?Send)]
+#[async_method]
 pub(crate) async fn boot(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     // Create an empty Configuration for the boot layer
     // In a full implementation, this would be populated with resolved modules
