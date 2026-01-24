@@ -2,9 +2,9 @@ use crate::Error::{FieldNotFound, InvalidValueType, ParseError};
 use crate::Reference::{ByteArray, CharArray};
 use crate::field::FieldKey;
 use crate::{Class, Field, Reference, Result, Value};
+use ahash::AHashSet;
 use ristretto_classfile::JAVA_8;
 use ristretto_gc::{GarbageCollector, Trace};
-use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
@@ -314,7 +314,7 @@ impl Object {
     pub(crate) fn equal_with_visited(
         &self,
         other: &Object,
-        visited: &mut HashSet<((*const Class, *const Value), (*const Class, *const Value))>,
+        visited: &mut AHashSet<((*const Class, *const Value), (*const Class, *const Value))>,
     ) -> bool {
         // Optimization for the case where the two objects are the same reference.
         if std::ptr::eq(self, other) {
@@ -705,7 +705,7 @@ impl Trace for Object {
 
 impl PartialEq for Object {
     fn eq(&self, other: &Self) -> bool {
-        let mut visited = HashSet::new();
+        let mut visited = AHashSet::default();
         self.equal_with_visited(other, &mut visited)
     }
 }

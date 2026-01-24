@@ -8,8 +8,8 @@ use super::{
 };
 use crate::Error::InternalError;
 use crate::Result;
+use ahash::{AHashMap, AHashSet};
 use ristretto_classloader::{ClassPath, DEFAULT_JAVA_VERSION};
-use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::io::{Read, Write, stderr, stdin, stdout};
 use std::path::PathBuf;
@@ -40,7 +40,7 @@ pub struct ConfigurationBuilder {
     jar: Option<PathBuf>,
     java_home: Option<PathBuf>,
     java_version: Option<String>,
-    system_properties: HashMap<String, String>,
+    system_properties: AHashMap<String, String>,
     interpreted: bool,
     batch_compilation: bool,
     preview_features: bool,
@@ -50,7 +50,7 @@ pub struct ConfigurationBuilder {
     upgrade_module_path: Vec<PathBuf>,
     main_module: Option<MainModule>,
     add_modules: Vec<String>,
-    limit_modules: HashSet<String>,
+    limit_modules: AHashSet<String>,
     add_reads: Vec<ModuleRead>,
     add_exports: Vec<ModuleExport>,
     add_opens: Vec<ModuleOpens>,
@@ -84,7 +84,7 @@ impl ConfigurationBuilder {
             jar: None,
             java_home: None,
             java_version: None,
-            system_properties: HashMap::new(),
+            system_properties: AHashMap::default(),
             interpreted: false,
             batch_compilation: true,
             preview_features: false,
@@ -93,7 +93,7 @@ impl ConfigurationBuilder {
             upgrade_module_path: Vec::new(),
             main_module: None,
             add_modules: Vec::new(),
-            limit_modules: HashSet::new(),
+            limit_modules: AHashSet::default(),
             add_reads: Vec::new(),
             add_exports: Vec::new(),
             add_opens: Vec::new(),
@@ -154,7 +154,7 @@ impl ConfigurationBuilder {
 
     /// Set all system properties
     #[must_use]
-    pub fn system_properties(mut self, properties: HashMap<String, String>) -> Self {
+    pub fn system_properties(mut self, properties: AHashMap<String, String>) -> Self {
         self.system_properties = properties;
         self
     }
@@ -238,7 +238,7 @@ impl ConfigurationBuilder {
 
     /// Set the modules to limit observability (--limit-modules)
     #[must_use]
-    pub fn set_limit_modules(mut self, modules: HashSet<String>) -> Self {
+    pub fn set_limit_modules(mut self, modules: AHashSet<String>) -> Self {
         self.limit_modules = modules;
         self
     }
@@ -505,7 +505,7 @@ mod tests {
 
     #[test]
     fn test_system_properties() {
-        let mut props = HashMap::new();
+        let mut props = AHashMap::default();
         props.insert("k1".to_string(), "v1".to_string());
         props.insert("k2".to_string(), "v2".to_string());
 
@@ -621,7 +621,7 @@ mod tests {
 
     #[test]
     fn test_set_limit_modules() {
-        let mut modules = HashSet::new();
+        let mut modules = AHashSet::default();
         modules.insert("java.base".to_string());
 
         let config = ConfigurationBuilder::new()

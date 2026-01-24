@@ -1,12 +1,12 @@
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
+use ahash::AHashSet;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{ClassLoader, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Get the boot class loader for the current thread.
@@ -63,7 +63,7 @@ pub(crate) async fn get_system_package_names(
 ) -> Result<Option<Value>> {
     let boot_class_loader = boot_class_loader(&thread).await?;
     let class_path = boot_class_loader.class_path();
-    let mut package_names = HashSet::new();
+    let mut package_names = AHashSet::default();
 
     for class_path_entry in class_path.iter() {
         let class_names = class_path_entry.class_names().await?;

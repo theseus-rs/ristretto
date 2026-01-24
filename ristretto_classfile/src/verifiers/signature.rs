@@ -6,7 +6,7 @@
 
 use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::VerificationError;
-use std::collections::HashSet;
+use ahash::AHashSet;
 
 /// Represents a parsed type parameter with its name and bounds.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,7 +20,7 @@ pub(crate) struct TypeParameter {
 #[derive(Debug, Default)]
 pub(crate) struct SignatureContext {
     /// Type variables declared in this context (class or method type parameters)
-    declared_type_variables: HashSet<String>,
+    declared_type_variables: AHashSet<String>,
 }
 
 impl SignatureContext {

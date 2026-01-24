@@ -1,6 +1,6 @@
 use crate::Result;
+use ahash::AHashMap;
 use std::borrow::Borrow;
-use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 use tokio::sync::{RwLock, RwLockMappedWriteGuard, RwLockReadGuard, RwLockWriteGuard};
@@ -12,7 +12,7 @@ where
     K: Eq + Hash,
     V: Send + Sync,
 {
-    handles: Arc<RwLock<HashMap<K, V>>>,
+    handles: Arc<RwLock<AHashMap<K, V>>>,
 }
 
 impl<K, V> HandleManager<K, V>
@@ -23,7 +23,7 @@ where
     /// Creates a new `Handles` instance.
     pub fn new() -> Self {
         HandleManager {
-            handles: Arc::new(RwLock::new(HashMap::new())),
+            handles: Arc::new(RwLock::new(AHashMap::default())),
         }
     }
 
@@ -75,12 +75,12 @@ where
     }
 
     /// Returns a read lock on the handles.
-    pub async fn read(&self) -> RwLockReadGuard<'_, HashMap<K, V>> {
+    pub async fn read(&self) -> RwLockReadGuard<'_, AHashMap<K, V>> {
         self.handles.read().await
     }
 
     /// Returns a write lock on the handles.
-    pub async fn write(&self) -> RwLockWriteGuard<'_, HashMap<K, V>> {
+    pub async fn write(&self) -> RwLockWriteGuard<'_, AHashMap<K, V>> {
         self.handles.write().await
     }
 }

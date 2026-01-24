@@ -10,13 +10,13 @@ use crate::rust_value::RustValue;
 use crate::string_pool::StringPool;
 use crate::thread::Thread;
 use crate::{Configuration, ConfigurationBuilder, Result, startup_trace};
+use ahash::AHashMap;
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_21, JAVA_PREVIEW_MINOR_VERSION, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
     Class, ClassLoader, ClassPath, ClassPathEntry, Object, Value, runtime,
 };
 use ristretto_gc::{GC, Statistics};
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -302,7 +302,7 @@ impl VM {
 
     /// Get the system properties
     #[must_use]
-    pub fn system_properties(&self) -> &HashMap<String, String> {
+    pub fn system_properties(&self) -> &AHashMap<String, String> {
         self.configuration().system_properties()
     }
 

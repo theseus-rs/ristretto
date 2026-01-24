@@ -1,8 +1,8 @@
 use crate::Error::ClassNotFound;
 use crate::module::ResolvedConfiguration;
 use crate::{Class, ClassPath, Result, Value};
+use ahash::AHashMap;
 use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2};
-use std::collections::HashMap;
 use std::fmt::Display;
 use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
@@ -18,7 +18,7 @@ pub struct ClassLoader {
     name: String,
     class_path: ClassPath,
     parent: Arc<RwLock<Option<Arc<ClassLoader>>>>,
-    classes: Arc<RwLock<HashMap<String, Arc<Class>>>>,
+    classes: Arc<RwLock<AHashMap<String, Arc<Class>>>>,
     object: Arc<RwLock<Option<Value>>>,
     /// Module configuration for JPMS support.
     /// When set, the class loader will determine module names from packages during class loading.
@@ -33,7 +33,7 @@ impl ClassLoader {
             name: name.as_ref().to_string(),
             class_path,
             parent: Arc::new(RwLock::new(None)),
-            classes: Arc::new(RwLock::new(HashMap::new())),
+            classes: Arc::new(RwLock::new(AHashMap::default())),
             object: Arc::new(RwLock::new(None)),
             module_configuration: Arc::new(RwLock::new(None)),
         })
@@ -493,7 +493,8 @@ mod tests {
     #[tokio::test]
     async fn test_module_configuration() -> Result<()> {
         use crate::module::ResolvedConfiguration;
-        use std::collections::{BTreeMap, HashMap};
+        use ahash::AHashMap;
+        use std::collections::BTreeMap;
 
         // Create a module configuration with a package-to-module mapping
         let mut package_to_module = BTreeMap::new();
@@ -502,8 +503,8 @@ mod tests {
         let config = ResolvedConfiguration::new(
             BTreeMap::new(),
             package_to_module,
-            HashMap::new(),
-            HashMap::new(),
+            AHashMap::default(),
+            AHashMap::default(),
         );
 
         let class_path = ClassPath::from(&["."]);

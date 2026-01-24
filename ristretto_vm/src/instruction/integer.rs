@@ -74,6 +74,7 @@ pub(crate) fn iconst_5(stack: &mut OperandStack) -> Result<ExecutionResult> {
 /// # References
 ///
 /// - [JVMS §6.5.iload](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.iload)
+#[inline]
 pub(crate) fn iload(
     locals: &LocalVariables,
     stack: &mut OperandStack,

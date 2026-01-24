@@ -46,26 +46,31 @@ impl OperandStack {
     }
 
     /// Push an int value onto the operand stack.
+    #[inline]
     pub fn push_int(&mut self, value: i32) -> Result<()> {
         self.push(Value::Int(value))
     }
 
     /// Push a long value onto the operand stack.
+    #[inline]
     pub fn push_long(&mut self, value: i64) -> Result<()> {
         self.push(Value::Long(value))
     }
 
     /// Push a float value onto the operand stack.
+    #[inline]
     pub fn push_float(&mut self, value: f32) -> Result<()> {
         self.push(Value::Float(value))
     }
 
     /// Push a double value onto the operand stack.
+    #[inline]
     pub fn push_double(&mut self, value: f64) -> Result<()> {
         self.push(Value::Double(value))
     }
 
     /// Push a reference onto the operand stack.
+    #[inline]
     pub fn push_object(&mut self, value: Option<Gc<RwLock<Reference>>>) -> Result<()> {
         self.push(Value::Object(value))
     }
@@ -80,6 +85,7 @@ impl OperandStack {
     }
 
     /// Pop an int from the operand stack.
+    #[inline]
     pub fn pop_int(&mut self) -> Result<i32> {
         match self.pop()? {
             Value::Int(value) => Ok(value),
@@ -91,6 +97,7 @@ impl OperandStack {
     }
 
     /// Pop a long from the operand stack.
+    #[inline]
     pub fn pop_long(&mut self) -> Result<i64> {
         let value = match self.pop()? {
             Value::Long(value) => value,
@@ -105,6 +112,7 @@ impl OperandStack {
     }
 
     /// Pop a float from the operand stack.
+    #[inline]
     pub fn pop_float(&mut self) -> Result<f32> {
         match self.pop()? {
             Value::Float(value) => Ok(value),
@@ -116,6 +124,7 @@ impl OperandStack {
     }
 
     /// Pop a double from the operand stack.
+    #[inline]
     pub fn pop_double(&mut self) -> Result<f64> {
         let value = match self.pop()? {
             Value::Double(value) => value,
@@ -130,6 +139,7 @@ impl OperandStack {
     }
 
     /// Pop a null or object from the operand stack.
+    #[inline]
     pub fn pop_object(&mut self) -> Result<Option<Gc<RwLock<Reference>>>> {
         let value = self.pop()?;
         match value {
@@ -142,6 +152,7 @@ impl OperandStack {
     }
 
     /// Peek at the top value on the operand stack.
+    #[inline]
     pub fn peek(&mut self) -> Result<Value> {
         let Some(value) = self.stack.iter().last() else {
             return Err(OperandStackUnderflow);

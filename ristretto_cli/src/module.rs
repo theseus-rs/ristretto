@@ -4,10 +4,10 @@
 //! into module configuration settings applied to `ConfigurationBuilder`.
 
 use crate::argument::Arguments;
+use ahash::AHashSet;
 use ristretto_vm::{
     ConfigurationBuilder, MainModule, ModuleExport, ModuleOpens, ModulePatch, ModuleRead,
 };
-use std::collections::HashSet;
 use std::path::PathBuf;
 
 /// Applies module configuration from CLI arguments to a `ConfigurationBuilder`.
@@ -35,7 +35,7 @@ pub fn apply_module_configuration(
     }
 
     if let Some(modules) = cli.limit_modules.take() {
-        let limit_modules: HashSet<String> = modules.into_iter().collect();
+        let limit_modules: AHashSet<String> = modules.into_iter().collect();
         builder = builder.set_limit_modules(limit_modules);
     }
 

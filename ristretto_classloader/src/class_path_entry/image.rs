@@ -1,8 +1,8 @@
 use crate::Error::{ArchiveError, ClassNotFound};
 use crate::Result;
+use ahash::{AHashMap, RandomState};
 use ristretto_classfile::ClassFile;
 use ristretto_jimage::Image as JImage;
-use rustc_hash::{FxBuildHasher, FxHashMap};
 use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
 use std::io::Cursor;
@@ -15,7 +15,7 @@ pub struct Image {
     name: OsString,
     #[expect(clippy::struct_field_names)]
     image: Arc<JImage>,
-    packages: Arc<FxHashMap<Box<str>, u16>>,
+    packages: Arc<AHashMap<Box<str>, u16>>,
     modules: Arc<Vec<String>>,
 }
 
@@ -29,10 +29,10 @@ impl Image {
         let path = path.as_ref();
         let image = JImage::from_file(PathBuf::from(path).as_path())
             .map_err(|error| ArchiveError(error.to_string()))?;
-        let mut packages = FxHashMap::with_capacity_and_hasher(1_000, FxBuildHasher);
+        let mut packages = AHashMap::with_capacity_and_hasher(1_000, RandomState::new());
         let mut modules = Vec::with_capacity(100);
-        let mut module_indices: FxHashMap<String, u16> =
-            FxHashMap::with_capacity_and_hasher(100, FxBuildHasher);
+        let mut module_indices: AHashMap<String, u16> =
+            AHashMap::with_capacity_and_hasher(100, RandomState::new());
 
         for resource in &image {
             let resource = resource.map_err(|error| ArchiveError(error.to_string()))?;

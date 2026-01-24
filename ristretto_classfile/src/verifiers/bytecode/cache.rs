@@ -18,7 +18,7 @@
 //!
 //! - [JVMS §4.10 - Verification of class Files](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10)
 
-use std::collections::HashMap;
+use ahash::AHashMap;
 use std::sync::RwLock;
 
 use crate::FieldType;
@@ -78,10 +78,10 @@ pub struct VerificationCache {
     enabled: bool,
 
     /// Cached verification results.
-    results: RwLock<HashMap<MethodKey, CachedResult>>,
+    results: RwLock<AHashMap<MethodKey, CachedResult>>,
 
     /// Cached parsed descriptors.
-    descriptors: RwLock<HashMap<String, ParsedDescriptor>>,
+    descriptors: RwLock<AHashMap<String, ParsedDescriptor>>,
 
     /// Cache statistics.
     stats: RwLock<CacheStats>,
@@ -106,8 +106,8 @@ impl VerificationCache {
     pub fn new(enabled: bool) -> Self {
         Self {
             enabled,
-            results: RwLock::new(HashMap::new()),
-            descriptors: RwLock::new(HashMap::new()),
+            results: RwLock::new(AHashMap::default()),
+            descriptors: RwLock::new(AHashMap::default()),
             stats: RwLock::new(CacheStats::default()),
         }
     }

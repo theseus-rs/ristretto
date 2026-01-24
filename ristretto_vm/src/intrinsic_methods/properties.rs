@@ -2,8 +2,8 @@ use crate::Error::InternalError;
 use crate::java_object::JavaObject;
 use crate::thread::Thread;
 use crate::{Result, VM};
+use ahash::AHashMap;
 use ristretto_classloader::Value;
-use std::collections::HashMap;
 use std::env;
 use std::env::consts::{ARCH, OS};
 use std::path::MAIN_SEPARATOR_STR;
@@ -19,10 +19,10 @@ use std::sync::Arc;
 ///
 /// This function is called during Java system initialization when`System.getProperties()` is
 /// invoked from Java code.
-pub(crate) async fn system(thread: &Arc<Thread>) -> Result<HashMap<&'static str, Value>> {
+pub(crate) async fn system(thread: &Arc<Thread>) -> Result<AHashMap<&'static str, Value>> {
     let vm = thread.vm()?;
     let system_properties = system_properties(&vm)?;
-    let mut properties = HashMap::new();
+    let mut properties = AHashMap::default();
     for (key, value) in system_properties {
         let value = value.to_object(thread).await?;
         properties.insert(key, value);
@@ -46,8 +46,8 @@ pub(crate) async fn system(thread: &Arc<Thread>) -> Result<HashMap<&'static str,
 /// This function is used internally during JVM initialization or when properties need to be exposed
 /// to Java code via `System.getProperties()`.
 #[expect(clippy::too_many_lines)]
-fn system_properties(vm: &VM) -> Result<HashMap<&'static str, String>> {
-    let mut properties = HashMap::new();
+fn system_properties(vm: &VM) -> Result<AHashMap<&'static str, String>> {
+    let mut properties = AHashMap::default();
     let java_home = vm.java_home().to_string_lossy().to_string();
     let class_file_version = vm.java_class_file_version();
     let major_java_version = class_file_version.java();

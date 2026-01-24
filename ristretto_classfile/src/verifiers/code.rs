@@ -11,7 +11,7 @@ use crate::verifiers::error::Result;
 use crate::verifiers::error::VerifyError::{
     InvalidInstructionOffset, InvalidStackFrameOffset, VerificationError,
 };
-use std::collections::HashSet;
+use ahash::AHashSet;
 use std::io::Cursor;
 
 /// Verify the `Code` attribute.
@@ -70,7 +70,7 @@ pub(crate) fn verify(
     let num_inst_u16 = u16::try_from(num_instructions)?;
 
     // 1. Identify jump targets (these are instruction indices after parsing)
-    let mut jump_target_indices = HashSet::new();
+    let mut jump_target_indices = AHashSet::default();
     for instruction in code {
         match instruction {
             Instruction::Ifeq(target)
@@ -170,7 +170,7 @@ pub(crate) fn verify(
     }
 
     // 2. Verify StackMapTable (frame offsets are instruction indices after parsing)
-    let mut frame_instruction_indices = HashSet::new();
+    let mut frame_instruction_indices = AHashSet::default();
     let mut has_stack_map = false;
     for attribute in attributes {
         if let Attribute::StackMapTable { frames, .. } = attribute {

@@ -2,10 +2,10 @@ extern crate phf_codegen;
 extern crate syn;
 extern crate walkdir;
 
+use ahash::AHashMap;
 use ristretto_classfile::{
     JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25, Version, VersionSpecification,
 };
-use std::collections::HashMap;
 use std::env;
 use std::error::Error;
 use std::fs::File;
@@ -71,8 +71,8 @@ pub fn build() -> Result<(), Box<dyn Error>> {
 /// Retrieves intrinsic methods from the source path.
 fn get_intrinsic_methods(
     source_path: &PathBuf,
-) -> Result<HashMap<String, (String, VersionSpecification)>, Box<dyn Error>> {
-    let mut intrinsic_methods = HashMap::new();
+) -> Result<AHashMap<String, (String, VersionSpecification)>, Box<dyn Error>> {
+    let mut intrinsic_methods = AHashMap::default();
     for entry in WalkDir::new(source_path.clone()) // Or use src_dir if absolute path is preferred
         .into_iter()
         .filter_map(Result::ok)
@@ -89,7 +89,7 @@ fn get_intrinsic_methods(
 fn process_file_entry(
     source_path: &PathBuf,
     entry: &walkdir::DirEntry,
-    intrinsic_methods: &mut HashMap<String, (String, VersionSpecification)>,
+    intrinsic_methods: &mut AHashMap<String, (String, VersionSpecification)>,
 ) -> Result<(), Box<dyn Error>> {
     let file_name = entry.file_name().to_string_lossy();
     if !file_name.ends_with(".rs") {
@@ -154,7 +154,7 @@ impl Parse for IntrinsicMethodArgs {
 fn process_item(
     module: &str,
     item: &Item,
-    intrinsic_methods: &mut HashMap<String, (String, VersionSpecification)>,
+    intrinsic_methods: &mut AHashMap<String, (String, VersionSpecification)>,
 ) {
     if let Item::Fn(function) = item {
         let attribute = function
@@ -260,7 +260,7 @@ fn write_intrinsic_method_map(
     file: &mut File,
     version_name: &str,
     version: &Version,
-    intrinsic_methods: &HashMap<String, (String, VersionSpecification)>,
+    intrinsic_methods: &AHashMap<String, (String, VersionSpecification)>,
 ) -> Result<(), Box<dyn Error>> {
     let mut map_builder = phf_codegen::Map::<&str>::new();
 

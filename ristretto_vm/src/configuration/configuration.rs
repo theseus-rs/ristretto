@@ -4,9 +4,9 @@
 //! needed to configure and run the VM.
 
 use super::{MainModule, ModuleExport, ModuleOpens, ModulePatch, ModuleRead};
+use ahash::{AHashMap, AHashSet};
 pub use ristretto_classfile::VerifyMode;
 use ristretto_classloader::ClassPath;
-use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -26,7 +26,7 @@ pub struct Configuration {
     pub(super) jar: Option<PathBuf>,
     pub(super) java_home: Option<PathBuf>,
     pub(super) java_version: Option<String>,
-    pub(super) system_properties: HashMap<String, String>,
+    pub(super) system_properties: AHashMap<String, String>,
     pub(super) interpreted: bool,
     pub(super) batch_compilation: bool,
     pub(super) preview_features: bool,
@@ -36,7 +36,7 @@ pub struct Configuration {
     pub(super) upgrade_module_path: Vec<PathBuf>,
     pub(super) main_module: Option<MainModule>,
     pub(super) add_modules: Vec<String>,
-    pub(super) limit_modules: HashSet<String>,
+    pub(super) limit_modules: AHashSet<String>,
     pub(super) add_reads: Vec<ModuleRead>,
     pub(super) add_exports: Vec<ModuleExport>,
     pub(super) add_opens: Vec<ModuleOpens>,
@@ -97,7 +97,7 @@ impl Configuration {
     /// System properties are key-value pairs accessible via `System.getProperty()` in Java code.
     /// These properties configure various aspects of the Java runtime environment.
     #[must_use]
-    pub fn system_properties(&self) -> &HashMap<String, String> {
+    pub fn system_properties(&self) -> &AHashMap<String, String> {
         &self.system_properties
     }
 
@@ -207,7 +207,7 @@ impl Configuration {
 
     /// Returns the modules to limit observability (--limit-modules).
     #[must_use]
-    pub fn limit_modules(&self) -> &HashSet<String> {
+    pub fn limit_modules(&self) -> &AHashSet<String> {
         &self.limit_modules
     }
 
