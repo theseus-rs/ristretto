@@ -1,3 +1,6 @@
+use ristretto_classloader::{
+    JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION, JAVA_21_VERSION, JAVA_25_VERSION,
+};
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -34,25 +37,25 @@ async fn test_helloworld(java_verison: &str) -> Result<()> {
 #[ignore = "Java 8 support not fully implemented"]
 #[tokio::test]
 async fn test_helloworld_v8() -> Result<()> {
-    test_helloworld("8.472.08.1").await
+    test_helloworld(JAVA_8_VERSION).await
 }
 
 #[tokio::test]
 async fn test_helloworld_v11() -> Result<()> {
-    test_helloworld("11.0.29.7.1").await
+    test_helloworld(JAVA_11_VERSION).await
 }
 
 #[tokio::test]
 async fn test_helloworld_v17() -> Result<()> {
-    test_helloworld("17.0.17.10.1").await
+    test_helloworld(JAVA_17_VERSION).await
 }
 
 #[tokio::test]
 async fn test_helloworld_v21() -> Result<()> {
-    test_helloworld("21.0.9.10.1").await
+    test_helloworld(JAVA_21_VERSION).await
 }
 
 #[tokio::test]
 async fn test_helloworld_v25() -> Result<()> {
-    test_helloworld("25.0.1.8.1").await
+    test_helloworld(JAVA_25_VERSION).await
 }

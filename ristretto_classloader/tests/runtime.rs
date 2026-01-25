@@ -1,4 +1,7 @@
-use ristretto_classloader::{Result, runtime};
+use ristretto_classloader::{
+    JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION, JAVA_21_VERSION, JAVA_25_VERSION, Result,
+    runtime,
+};
 
 async fn test_runtime(version: &str, class_name: &str) -> Result<()> {
     let (_java_home, java_version, class_loader) = runtime::version_class_loader(version).await?;
@@ -17,25 +20,25 @@ async fn test_runtime(version: &str, class_name: &str) -> Result<()> {
 
 #[tokio::test]
 async fn test_get_runtime_v8() -> Result<()> {
-    test_runtime("8.472.08.1", "java.lang.Object").await
+    test_runtime(JAVA_8_VERSION, "java.lang.Object").await
 }
 
 #[tokio::test]
 async fn test_get_runtime_v11() -> Result<()> {
-    test_runtime("11.0.29.7.1", "java.lang.Object").await
+    test_runtime(JAVA_11_VERSION, "java.lang.Object").await
 }
 
 #[tokio::test]
 async fn test_get_runtime_v17() -> Result<()> {
-    test_runtime("17.0.17.10.1", "java.lang.Object").await
+    test_runtime(JAVA_17_VERSION, "java.lang.Object").await
 }
 
 #[tokio::test]
 async fn test_get_runtime_v21() -> Result<()> {
-    test_runtime("21.0.9.10.1", "java.lang.Object").await
+    test_runtime(JAVA_21_VERSION, "java.lang.Object").await
 }
 
 #[tokio::test]
 async fn test_get_runtime_v25() -> Result<()> {
-    test_runtime("25.0.1.8.1", "java.lang.Object").await
+    test_runtime(JAVA_25_VERSION, "java.lang.Object").await
 }

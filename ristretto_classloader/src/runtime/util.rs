@@ -195,10 +195,11 @@ pub(crate) fn parse_major_version(version: &str) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::bootstrap::{JAVA_11_VERSION, JAVA_21_VERSION};
 
     #[tokio::test]
     async fn test_get_runtime_archive_latest_exact() -> Result<()> {
-        let expected_version = "11.0.29.7.1";
+        let expected_version = JAVA_11_VERSION;
         let (version, file_name, archive) = get_runtime_archive(expected_version).await?;
         assert_eq!(expected_version, version);
         assert!(file_name.contains(expected_version));
@@ -249,7 +250,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_download_archive() -> Result<()> {
-        let version = "21.0.9.10.1";
+        let version = JAVA_21_VERSION;
         let (_file_name, archive) = download_archive(version).await?;
         assert!(!archive.is_empty());
         Ok(())
@@ -259,7 +260,7 @@ mod tests {
     async fn test_get_release_versions() -> Result<()> {
         let major_version = "21";
         let release_versions = get_release_versions(major_version).await?;
-        let expected_version = "21.0.9.10.1".to_string();
+        let expected_version = JAVA_21_VERSION.to_string();
         assert!(release_versions.contains(&expected_version));
         Ok(())
     }

@@ -168,6 +168,9 @@ mod tests {
     use crate::vm;
     use ristretto_classfile::JAVA_21;
     use ristretto_classloader::runtime;
+    use ristretto_classloader::{
+        JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION, JAVA_21_VERSION, JAVA_25_VERSION,
+    };
 
     #[tokio::test]
     async fn test_method() -> Result<()> {
@@ -311,26 +314,26 @@ mod tests {
 
     #[test]
     fn test_runtime_v8() -> Result<()> {
-        test_runtime("8.472.08.1")
+        test_runtime(JAVA_8_VERSION)
     }
 
     #[test]
     fn test_runtime_v11() -> Result<()> {
-        test_runtime("11.0.29.7.1")
+        test_runtime(JAVA_11_VERSION)
     }
 
     #[test]
     fn test_runtime_v17() -> Result<()> {
-        test_runtime("17.0.17.10.1")
+        test_runtime(JAVA_17_VERSION)
     }
 
     #[test]
     fn test_runtime_v21() -> Result<()> {
-        test_runtime("21.0.9.10.1")
+        test_runtime(JAVA_21_VERSION)
     }
 
     #[test]
     fn test_runtime_v25() -> Result<()> {
-        test_runtime("25.0.1.8.1")
+        test_runtime(JAVA_25_VERSION)
     }
 }
