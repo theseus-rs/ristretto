@@ -58,6 +58,8 @@ public class Test {
 
         Class<?> clazz = Test.class;
         Method[] methods = clazz.getDeclaredMethods();
+        // Sort methods by name for deterministic output
+        java.util.Arrays.sort(methods, (a, b) -> a.getName().compareTo(b.getName()));
 
         for (Method method : methods) {
             if (method.isAnnotationPresent(TestAnnotation.class)) {

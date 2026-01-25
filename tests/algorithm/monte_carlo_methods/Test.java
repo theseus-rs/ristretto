@@ -1,7 +1,7 @@
 import java.util.Random;
 
 public class Test {
-    private static final Random random = new Random();
+    private static final Random random = new Random(42);
 
     // Monte Carlo estimation of π
     public static double estimatePi(int numSamples) {
