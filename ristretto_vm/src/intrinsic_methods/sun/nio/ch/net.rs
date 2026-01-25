@@ -2,7 +2,7 @@ use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
-use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_25};
+use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -384,7 +384,7 @@ pub(crate) async fn socket_0(
 
 #[intrinsic_method(
     "sun/nio/ch/Net.shouldShutdownWriteBeforeClose0()Z",
-    GreaterThanOrEqual(JAVA_25)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub(crate) async fn should_shutdown_write_before_close_0(

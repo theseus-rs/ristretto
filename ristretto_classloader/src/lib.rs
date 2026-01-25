@@ -73,5 +73,8 @@ pub use method::Method;
 pub use object::Object;
 pub use reference::{ObjectArray, Reference};
 pub use ristretto_classfile::{BaseType, FieldAccessFlags, FieldType, MethodAccessFlags};
-pub use runtime::DEFAULT_JAVA_VERSION;
+pub use runtime::{
+    ALL_LTS_VERSIONS, DEFAULT_JAVA_VERSION, JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION,
+    JAVA_21_VERSION, JAVA_25_VERSION,
+};
 pub use value::Value;

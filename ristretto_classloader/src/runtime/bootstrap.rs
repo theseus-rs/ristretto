@@ -11,7 +11,30 @@ use tracing::{debug, warn};
 
 /// The default Java version used by the class loader. This is the version that will be used if no
 /// version is specified when creating a class loader.
-pub const DEFAULT_JAVA_VERSION: &str = "25.0.1.8.1";
+pub const DEFAULT_JAVA_VERSION: &str = JAVA_25_VERSION;
+
+/// Java 8 LTS version
+pub const JAVA_8_VERSION: &str = "8.482.08.1";
+
+/// Java 11 LTS version
+pub const JAVA_11_VERSION: &str = "11.0.30.7.1";
+
+/// Java 17 LTS version
+pub const JAVA_17_VERSION: &str = "17.0.18.8.1";
+
+/// Java 21 LTS version
+pub const JAVA_21_VERSION: &str = "21.0.10.7.1";
+
+/// Java 25 LTS version (also the default)
+pub const JAVA_25_VERSION: &str = "25.0.2.10.1";
+
+/// Array of all supported Java LTS versions for iteration in tests
+pub const ALL_LTS_VERSIONS: &[&str] = &[
+    JAVA_11_VERSION,
+    JAVA_17_VERSION,
+    JAVA_21_VERSION,
+    JAVA_25_VERSION,
+];
 
 /// The access flags for primitive classes in the Java runtime. These classes are public, final, and
 /// abstract, meaning they cannot be instantiated and do not have any methods or fields.
@@ -282,7 +305,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_class_loader_v8() -> Result<()> {
-        let version = "8.472.08.1";
+        let version = JAVA_8_VERSION;
         let (_java_home, java_version, class_loader) = version_class_loader(version).await?;
         assert_eq!(version, java_version);
         assert_eq!("bootstrap", class_loader.name());
@@ -291,7 +314,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_class_loader_v21() -> Result<()> {
-        let version = "21.0.9.10.1";
+        let version = JAVA_21_VERSION;
         let (_java_home, java_version, class_loader) = version_class_loader(version).await?;
         assert_eq!(version, java_version);
         assert_eq!("bootstrap", class_loader.name());

@@ -3,6 +3,7 @@
 //! dependencies.
 
 use ristretto_classfile::ClassFile;
+use ristretto_classloader::ALL_LTS_VERSIONS;
 use ristretto_classloader::runtime::{default_class_loader, version_class_loader};
 use ristretto_jimage::{Image, Result};
 use std::io::Cursor;
@@ -18,8 +19,7 @@ async fn get_test_image() -> Result<Image> {
 
 #[tokio::test]
 async fn test_image_for_all_java_lts_versions() -> Result<()> {
-    let versions = ["11.0.29.7.1", "17.0.17.10.1", "21.0.9.10.1", "25.0.1.8.1"];
-    for version in &versions {
+    for version in ALL_LTS_VERSIONS {
         let (java_home, _java_version, _class_loader) =
             version_class_loader(version).await.expect("java home");
         let path = java_home.join("lib").join("modules");

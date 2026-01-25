@@ -1,8 +1,10 @@
 use crate::Result;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
-use ristretto_classfile::JAVA_17;
-use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
+use ristretto_classfile::VersionSpecification::{
+    Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
+};
+use ristretto_classfile::{JAVA_17, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -44,6 +46,18 @@ pub(crate) async fn signal_0(thread: Arc<Thread>, parameters: Parameters) -> Res
     signal(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "sun/nio/ch/NativeThread.supportPendingSignals0()Z",
+    GreaterThanOrEqual(JAVA_25)
+)]
+#[async_method]
+pub(crate) async fn support_pending_signals_0(
+    _thread: Arc<Thread>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::from(false)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -81,6 +95,17 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let result = init(thread, Parameters::default()).await?;
         assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_support_pending_signals_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let value = support_pending_signals_0(thread, Parameters::default())
+            .await?
+            .expect("value");
+        let value = value.as_bool().expect("bool");
+        assert!(!value);
         Ok(())
     }
 }

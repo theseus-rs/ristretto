@@ -7,22 +7,25 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 
-#[intrinsic_method("sun/lwawt/macosx/CDesktopPeer._lsOpenFile(Ljava/lang/String;Z)I", Any)]
+#[intrinsic_method(
+    "sun/lwawt/macosx/CDesktopPeer._lsOpenFile(Ljava/lang/String;ILjava/lang/String;)I",
+    Any
+)]
 #[async_method]
 pub(crate) async fn ls_open_file(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CDesktopPeer._lsOpenFile(Ljava/lang/String;Z)I")
+    todo!("sun.lwawt.macosx.CDesktopPeer._lsOpenFile(Ljava/lang/String;ILjava/lang/String;)I")
 }
 
-#[intrinsic_method("sun/lwawt/macosx/CDesktopPeer._lsOpenURI(Ljava/lang/String;)I", Any)]
+#[intrinsic_method("sun/lwawt/macosx/CDesktopPeer._lsOpenURI(Ljava/lang/String;I)I", Any)]
 #[async_method]
 pub(crate) async fn ls_open_uri(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CDesktopPeer._lsOpenURI(Ljava/lang/String;)I")
+    todo!("sun.lwawt.macosx.CDesktopPeer._lsOpenURI(Ljava/lang/String;I)I")
 }
 
 #[cfg(test)]
@@ -31,7 +34,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CDesktopPeer._lsOpenFile(Ljava/lang/String;Z)I"
+        expected = "not yet implemented: sun.lwawt.macosx.CDesktopPeer._lsOpenFile(Ljava/lang/String;ILjava/lang/String;)I"
     )]
     async fn test_ls_open_file() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -40,7 +43,7 @@ mod tests {
 
     #[tokio::test]
     #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CDesktopPeer._lsOpenURI(Ljava/lang/String;)I"
+        expected = "not yet implemented: sun.lwawt.macosx.CDesktopPeer._lsOpenURI(Ljava/lang/String;I)I"
     )]
     async fn test_ls_open_uri() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
