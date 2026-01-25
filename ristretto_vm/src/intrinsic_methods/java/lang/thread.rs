@@ -438,6 +438,7 @@ pub(crate) async fn sleep_nanos_0(
 }
 
 #[intrinsic_method("java/lang/Thread.start0()V", Any)]
+#[expect(clippy::too_many_lines)]
 #[async_method]
 pub(crate) async fn start_0(
     thread: Arc<Thread>,
@@ -505,19 +506,37 @@ pub(crate) async fn start_0(
     #[cfg(not(target_family = "wasm"))]
     {
         let join_handle = tokio::spawn(async move {
+            // Use a RAII guard to ensure cleanup happens even if the thread panics
+            struct ThreadCleanup {
+                thread_object: Value,
+            }
+
+            impl Drop for ThreadCleanup {
+                fn drop(&mut self) {
+                    // Set thread status to TERMINATED and eetop to 0 after execution
+                    if let Err(error) =
+                        set_thread_status(&self.thread_object, ThreadState::TERMINATED)
+                    {
+                        error!("Failed to set thread status to TERMINATED: {error}");
+                    }
+                    if let Ok(mut thread_obj) = self.thread_object.as_object_mut() {
+                        let result = thread_obj.set_value("eetop", Value::Long(0));
+                        if let Err(error) = result {
+                            error!("Failed to set eetop to 0: {error}");
+                        }
+                    } else {
+                        error!("Failed to get mutable reference for thread object cleanup");
+                    }
+                }
+            }
+
+            let _cleanup = ThreadCleanup {
+                thread_object: thread_object.clone(),
+            };
+
             let _ = spawn_thread
                 .execute(&thread_class, &run_method, &[thread_value])
                 .await;
-
-            // Set thread status to TERMINATED and eetop to 0 after execution
-            if let Err(error) = set_thread_status(&thread_object, ThreadState::TERMINATED) {
-                error!("Failed to set thread status to TERMINATED: {error}");
-            }
-            if let Ok(mut thread_obj) = thread_object.as_object_mut()
-                && let Err(error) = thread_obj.set_value("eetop", Value::Long(0))
-            {
-                error!("Failed to set eetop to 0: {error}");
-            }
 
             // Note: We intentionally do NOT remove the thread handle here.
             // The VM's wait_for_non_daemon_threads() will await the JoinHandle

@@ -258,6 +258,7 @@ fn test_vm(
     // method handle invocations and invokedynamic resolution
     let java_version = java_version.to_string();
     let test_dir = test_dir.to_path_buf();
+    let test_timeout = Duration::from_secs(60);
     let result = std::thread::Builder::new()
         .stack_size(8 * 1024 * 1024) // 8 MB stack
         .spawn(move || {
@@ -266,7 +267,19 @@ fn test_vm(
                     .enable_all()
                     .build()
                     .map_err(|error| InternalError(error.to_string()))?;
-                runtime.block_on(run_test(&java_version, &test_dir, interpreted))
+                runtime.block_on(async {
+                    match tokio::time::timeout(
+                        test_timeout,
+                        run_test(&java_version, &test_dir, interpreted),
+                    )
+                    .await
+                    {
+                        Ok(result) => result,
+                        Err(_elapsed) => {
+                            Err(InternalError("Test timed out after 60 seconds".to_string()))
+                        }
+                    }
+                })
             })
         })
         .expect("Failed to spawn test thread")
