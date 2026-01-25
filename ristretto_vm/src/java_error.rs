@@ -100,6 +100,12 @@ pub enum JavaError {
     /// - [InaccessibleObjectException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/reflect/InaccessibleObjectException.html)
     #[error("{0}")]
     InaccessibleObjectException(String),
+    /// `IllegalMonitorStateException`
+    ///
+    /// # References
+    /// - [IllegalMonitorStateException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/IllegalMonitorStateException.html)
+    #[error("{0}")]
+    IllegalMonitorStateException(String),
     /// `IllegalArgumentException`
     ///
     /// # References
@@ -205,6 +211,7 @@ impl JavaError {
             JavaError::InaccessibleObjectException(_) => {
                 "java.lang.reflect.InaccessibleObjectException"
             }
+            JavaError::IllegalMonitorStateException(_) => "java.lang.IllegalMonitorStateException",
             JavaError::IllegalArgumentException(_) => "java.lang.IllegalArgumentException",
             JavaError::IncompatibleClassChangeError(_) => "java.lang.IncompatibleClassChangeError",
             JavaError::IndexOutOfBoundsException { .. } => "java.lang.IndexOutOfBoundsException",

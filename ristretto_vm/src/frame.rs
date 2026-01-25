@@ -664,8 +664,12 @@ impl Frame {
             Instruction::Instanceof(class_index) => Ok(InstructionResult::Async(Box::pin(
                 instanceof(self, stack, *class_index),
             ))),
-            Instruction::Monitorenter => monitorenter(stack).map(InstructionResult::Sync),
-            Instruction::Monitorexit => monitorexit(stack).map(InstructionResult::Sync),
+            Instruction::Monitorenter => Ok(InstructionResult::Async(Box::pin(monitorenter(
+                self, stack,
+            )))),
+            Instruction::Monitorexit => {
+                Ok(InstructionResult::Async(Box::pin(monitorexit(self, stack))))
+            }
             Instruction::Wide => wide().map(InstructionResult::Sync),
             Instruction::Multianewarray(index, dimensions) => Ok(InstructionResult::Async(
                 Box::pin(multianewarray(self, stack, *index, *dimensions)),

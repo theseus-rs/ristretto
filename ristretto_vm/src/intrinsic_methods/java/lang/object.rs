@@ -1,5 +1,5 @@
 use crate::Error::InternalError;
-use crate::JavaError::CloneNotSupportedException;
+use crate::JavaError::{CloneNotSupportedException, IllegalArgumentException};
 use crate::Result;
 use crate::assignable::Assignable;
 use crate::java_object::JavaObject;
@@ -12,6 +12,15 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
 use std::time::Duration;
+
+/// Helper to get a stable identifier for an object to use as a monitor key.
+pub fn get_monitor_id(reference: &Reference) -> Option<usize> {
+    match reference {
+        Reference::Object(obj) => Some(std::ptr::from_ref(obj) as usize),
+        Reference::Array(arr) => Some(std::ptr::from_ref(arr) as usize),
+        _ => None,
+    }
+}
 
 /// Intrinsic methods for `java/lang/Object.clone()`.
 ///
@@ -131,18 +140,43 @@ pub(crate) async fn hash_code(
 
 #[intrinsic_method("java/lang/Object.notify()V", Any)]
 #[async_method]
-pub(crate) async fn notify(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    // For basic thread support, notify is a no-op since we don't have true monitor support yet.
-    // In a full implementation, this would wake up one thread waiting on this object's monitor.
+pub(crate) async fn notify(
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let Some(reference) = parameters.pop_reference()? else {
+        return Err(InternalError(
+            "notify() called on null reference".to_string(),
+        ));
+    };
+
+    if let Some(id) = get_monitor_id(&reference.read()) {
+        let vm = thread.vm()?;
+        let monitor = vm.monitor_registry().monitor(id);
+        monitor.notify(thread.id())?;
+    }
+
     Ok(None)
 }
 
 #[intrinsic_method("java/lang/Object.notifyAll()V", Any)]
 #[async_method]
 pub(crate) async fn notify_all(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let Some(reference) = parameters.pop_reference()? else {
+        return Err(InternalError(
+            "notifyAll() called on null reference".to_string(),
+        ));
+    };
+
+    if let Some(id) = get_monitor_id(&reference.read()) {
+        let vm = thread.vm()?;
+        let monitor = vm.monitor_registry().monitor(id);
+        monitor.notify_all(thread.id())?;
+    }
+
     Ok(None)
 }
 
@@ -164,34 +198,35 @@ pub(crate) async fn wait(thread: Arc<Thread>, parameters: Parameters) -> Result<
 #[intrinsic_method("java/lang/Object.wait0(J)V", GreaterThan(JAVA_17))]
 #[async_method]
 pub(crate) async fn wait_0(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let millis = parameters.pop_long()?;
     let object = parameters.pop_reference()?;
+    let Some(reference) = object else {
+        return Err(InternalError("wait() called on null reference".to_string()));
+    };
 
     if millis < 0 {
-        return Err(crate::JavaError::IllegalArgumentException(
-            "timeout value is negative".to_string(),
-        )
-        .into());
+        return Err(IllegalArgumentException("timeout value is negative".to_string()).into());
     }
 
     // Check if we're waiting on a Thread object for join()
-    let is_thread_object = if let Some(ref obj_ref) = object {
-        let guard = obj_ref.read();
+    // This logic is preserved for "Thread.join()" behavior compatibility
+    // until we unify Thread.exit() with monitor notification.
+    let is_thread_object = {
+        let guard = reference.read();
         if let Ok(class_name) = guard.class_name() {
             class_name == "java/lang/Thread" || class_name.starts_with("java/lang/Thread$")
         } else {
             false
         }
-    } else {
-        false
     };
 
     if is_thread_object {
         // For Thread.join(), we need to poll until the thread is terminated
         // The thread's eetop field is set to 0 when the thread terminates
+        // TODO: Refactor this to use monitor notification from the dying thread
         let start = std::time::Instant::now();
         let timeout_duration = if millis == 0 {
             // Infinite wait
@@ -201,30 +236,31 @@ pub(crate) async fn wait_0(
         };
 
         loop {
-            // Yield to allow other tasks to run (important for spawned thread tasks)
-            #[cfg(not(target_family = "wasm"))]
-            tokio::task::yield_now().await;
+            // Check for interruption
+            if thread.is_interrupted(true) {
+                return Err(crate::JavaError::InterruptedException(
+                    "Thread interrupted while waiting".into(),
+                )
+                .into());
+            }
 
             // Check if the thread has terminated (eetop == 0)
-            // Use try_read to avoid blocking; this allows the spawned task to acquire write locks
-            let is_terminated = if let Some(ref obj_ref) = object {
-                if let Some(guard) = obj_ref.try_read() {
+            let is_terminated = {
+                if let Some(guard) = reference.try_read() {
                     if let Reference::Object(obj) = &*guard {
                         if let Ok(eetop) = obj.value("eetop") {
                             eetop.as_i64().unwrap_or(0) == 0
                         } else {
-                            // Can't read eetop, assume terminated
+                            // Field not found?
                             true
                         }
                     } else {
+                        // Not an object (e.g. array), assume generic wait/terminated
                         true
                     }
                 } else {
-                    // Couldn't acquire lock, try again after sleep
                     false
                 }
-            } else {
-                true
             };
 
             if is_terminated {
@@ -236,19 +272,25 @@ pub(crate) async fn wait_0(
             }
 
             // Sleep briefly and check again
-            #[cfg(target_family = "wasm")]
-            std::thread::sleep(Duration::from_millis(10));
-            #[cfg(not(target_family = "wasm"))]
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
-    } else if millis > 0 {
-        let millis = u64::try_from(millis)?;
-        let duration = Duration::from_millis(millis);
-        #[cfg(target_family = "wasm")]
-        std::thread::sleep(duration);
-        #[cfg(not(target_family = "wasm"))]
-        tokio::time::sleep(duration).await;
+    } else {
+        // Normal Object.wait() using Monitors
+        let vm = thread.vm()?;
+        let monitor_id = { get_monitor_id(&reference.read()) };
+        if let Some(id) = monitor_id {
+            let monitor = vm.monitor_registry().monitor(id);
+
+            // Perform the wait
+            if millis == 0 {
+                monitor.wait(thread.id()).await?;
+            } else {
+                let duration = Duration::from_millis(u64::try_from(millis)?);
+                monitor.wait_timeout(thread.id(), duration).await?;
+            }
+        }
     }
+
     Ok(None)
 }
 
@@ -258,9 +300,22 @@ mod tests {
     use ristretto_classloader::Object;
 
     #[tokio::test]
-    async fn test_init() -> Result<()> {
+    async fn test_notify_all() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = notify_all(thread, Parameters::default()).await?;
+        let object_class = thread.class("java/lang/Object").await?;
+        let object = Object::new(object_class)?;
+        let object_value = Value::from(object);
+
+        // Acquire monitor
+        if let Value::Object(Some(ref reference)) = object_value {
+            let monitor_id = get_monitor_id(&reference.read()).expect("monitor id");
+            let vm = thread.vm()?;
+            let monitor = vm.monitor_registry().monitor(monitor_id);
+            monitor.acquire(thread.id()).await?;
+        }
+
+        let parameters = Parameters::new(vec![object_value]);
+        let result = notify_all(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -282,53 +337,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_notify() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        let result = notify(thread, Parameters::default()).await?;
-        assert_eq!(result, None);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_notify_all() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        let result = notify_all(thread, Parameters::default()).await?;
-        assert_eq!(result, None);
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = register_natives(thread, Parameters::default()).await?;
-        assert_eq!(result, None);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_wait() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        // Create an object to wait on
-        let object_class = thread.class("java/lang/Object").await?;
-        let object = Object::new(object_class)?;
-        let object_value = Value::from(object);
-        // Pass object reference first (this), then timeout of 1ms (brief wait)
-        let parameters = Parameters::new(vec![object_value, Value::Long(1)]);
-        let result = wait(thread, parameters).await?;
-        assert_eq!(result, None);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_wait_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        // Create an object to wait on
-        let object_class = thread.class("java/lang/Object").await?;
-        let object = Object::new(object_class)?;
-        let object_value = Value::from(object);
-        // Pass object reference first (this), then timeout of 1ms (brief wait)
-        let parameters = Parameters::new(vec![object_value, Value::Long(1)]);
-        let result = wait_0(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
     }

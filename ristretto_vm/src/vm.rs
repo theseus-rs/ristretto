@@ -6,6 +6,7 @@ use crate::java_object::JavaObject;
 use crate::jit::Compiler;
 use crate::method_ref_cache::MethodRefCache;
 use crate::module_system::ModuleSystem;
+use crate::monitor::MonitorRegistry;
 use crate::rust_value::RustValue;
 use crate::string_pool::StringPool;
 use crate::thread::Thread;
@@ -71,6 +72,8 @@ pub struct VM {
     call_site_cache: CallSiteCache,
     /// Method reference cache for caching resolved method references with access checks.
     method_ref_cache: MethodRefCache,
+    /// The monitor registry for object monitors.
+    monitor_registry: MonitorRegistry,
 }
 
 /// VM
@@ -138,6 +141,7 @@ impl VM {
             string_pool: StringPool::new(),
             call_site_cache: CallSiteCache::new(),
             method_ref_cache: MethodRefCache::new(),
+            monitor_registry: MonitorRegistry::new(),
             module_system,
         });
         startup_trace!("[vm] vm allocation");
@@ -381,6 +385,11 @@ impl VM {
     /// so subsequent invocations are fast.
     pub(crate) fn method_ref_cache(&self) -> &MethodRefCache {
         &self.method_ref_cache
+    }
+
+    /// Get the monitor registry.
+    pub(crate) fn monitor_registry(&self) -> &MonitorRegistry {
+        &self.monitor_registry
     }
 
     /// Initialize the VM

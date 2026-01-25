@@ -59,6 +59,7 @@ mod jit;
 mod local_variables;
 mod method_ref_cache;
 mod module_system;
+pub mod monitor;
 mod operand_stack;
 mod parameters;
 mod rust_value;

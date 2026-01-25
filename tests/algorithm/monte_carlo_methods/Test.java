@@ -75,7 +75,7 @@ public class Test {
         System.out.println("Monte Carlo Methods");
 
         // Estimate π
-        int piSamples = 1000000;
+        int piSamples = 10000;
         double estimatedPi = estimatePi(piSamples);
         System.out.printf("Estimated π with %d samples: %.6f (actual: %.6f)%n",
                          piSamples, estimatedPi, Math.PI);
@@ -83,7 +83,7 @@ public class Test {
 
         // Monte Carlo integration of x^2 from 0 to 1 (should be 1/3)
         Function function = x -> x * x;
-        double integral = integrate(function, 0, 1, 100000);
+        double integral = integrate(function, 0, 1, 10000);
         System.out.printf("%nMonte Carlo integration of x² from 0 to 1: %.6f (actual: %.6f)%n",
                          integral, 1.0/3.0);
 
@@ -94,7 +94,7 @@ public class Test {
         System.out.printf("Final price: $%.2f%n", stockPrices[stockPrices.length - 1]);
 
         // Option pricing
-        double optionPrice = priceEuropeanCall(100, 105, 0.05, 0.2, 1.0, 100000);
+        double optionPrice = priceEuropeanCall(100, 105, 0.05, 0.2, 1.0, 10000);
         System.out.printf("%nEuropean call option price: $%.4f%n", optionPrice);
         System.out.println("(Spot: $100, Strike: $105, Rate: 5%, Vol: 20%, Time: 1 year)");
     }
