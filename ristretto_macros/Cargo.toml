@@ -19,5 +19,5 @@ workspace = true
 [dependencies]
 async-recursion = { workspace = true }
 quote = { workspace = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.27.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.28.0" }
 syn = { workspace = true, features = ["full"] }

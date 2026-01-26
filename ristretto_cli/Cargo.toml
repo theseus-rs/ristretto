@@ -30,8 +30,8 @@ ahash = { workspace = true }
 anstyle = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 os_info = { workspace = true }
-ristretto_gc = { path = "../ristretto_gc", version = "0.27.0" }
-ristretto_vm = { path = "../ristretto_vm", version = "0.27.0" }
+ristretto_gc = { path = "../ristretto_gc", version = "0.28.0" }
+ristretto_vm = { path = "../ristretto_vm", version = "0.28.0" }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
