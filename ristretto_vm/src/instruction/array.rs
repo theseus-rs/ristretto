@@ -12,23 +12,27 @@ use ristretto_classloader::{Reference, Value};
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.newarray>
 #[inline]
 pub(crate) fn newarray(
+    frame: &Frame,
     stack: &mut OperandStack,
     array_type: &ArrayType,
 ) -> Result<ExecutionResult> {
+    let thread = frame.thread()?;
+    let vm = thread.vm()?;
     let count = stack.pop_int()?;
     if count < 0 {
         return Err(NegativeArraySizeException(count.to_string()).into());
     }
     let count = usize::try_from(count)?;
+    let collector = vm.garbage_collector();
     let array = match array_type {
-        ArrayType::Boolean => Value::from(vec![false; count]),
-        ArrayType::Byte => Value::from(vec![0i8; count]),
-        ArrayType::Char => Value::from(vec![0 as char; count]),
-        ArrayType::Float => Value::from(vec![0.0f32; count]),
-        ArrayType::Double => Value::from(vec![0.0f64; count]),
-        ArrayType::Short => Value::from(vec![0i16; count]),
-        ArrayType::Int => Value::from(vec![0i32; count]),
-        ArrayType::Long => Value::from(vec![0i64; count]),
+        ArrayType::Boolean => Value::new_object(collector, Reference::from(vec![false; count])),
+        ArrayType::Byte => Value::new_object(collector, Reference::from(vec![0i8; count])),
+        ArrayType::Char => Value::new_object(collector, Reference::from(vec![0 as char; count])),
+        ArrayType::Float => Value::new_object(collector, Reference::from(vec![0.0f32; count])),
+        ArrayType::Double => Value::new_object(collector, Reference::from(vec![0.0f64; count])),
+        ArrayType::Short => Value::new_object(collector, Reference::from(vec![0i16; count])),
+        ArrayType::Int => Value::new_object(collector, Reference::from(vec![0i32; count])),
+        ArrayType::Long => Value::new_object(collector, Reference::from(vec![0i64; count])),
     };
     stack.push(array)?;
     Ok(Continue)
@@ -56,7 +60,9 @@ pub(crate) async fn anewarray(
         return Err(NegativeArraySizeException(count.to_string()).into());
     }
     let count = usize::try_from(count)?;
-    let array = Value::try_from((class, vec![Value::Object(None); count]))?;
+    let vm = thread.vm()?;
+    let reference = Reference::try_from((class, vec![Value::Object(None); count]))?;
+    let array = Value::new_object(vm.garbage_collector(), reference);
     stack.push(array)?;
     Ok(Continue)
 }
@@ -136,21 +142,40 @@ async fn create_multidimensional_array(
         if component_type.len() == 1 {
             // Primitive array
             let base_type = BaseType::parse(component_type.chars().next().unwrap_or_default())?;
+            let vm = thread.vm()?;
+            let collector = vm.garbage_collector();
             let array = match base_type {
-                BaseType::Char => Value::from(vec![0 as char; current_size]),
-                BaseType::Float => Value::from(vec![0.0f32; current_size]),
-                BaseType::Double => Value::from(vec![0.0f64; current_size]),
-                BaseType::Boolean | BaseType::Byte => Value::from(vec![0i8; current_size]),
-                BaseType::Short => Value::from(vec![0i16; current_size]),
-                BaseType::Int => Value::from(vec![0i32; current_size]),
-                BaseType::Long => Value::from(vec![0i64; current_size]),
+                BaseType::Char => {
+                    Value::new_object(collector, Reference::from(vec![0 as char; current_size]))
+                }
+                BaseType::Float => {
+                    Value::new_object(collector, Reference::from(vec![0.0f32; current_size]))
+                }
+                BaseType::Double => {
+                    Value::new_object(collector, Reference::from(vec![0.0f64; current_size]))
+                }
+                BaseType::Boolean | BaseType::Byte => {
+                    Value::new_object(collector, Reference::from(vec![0i8; current_size]))
+                }
+                BaseType::Short => {
+                    Value::new_object(collector, Reference::from(vec![0i16; current_size]))
+                }
+                BaseType::Int => {
+                    Value::new_object(collector, Reference::from(vec![0i32; current_size]))
+                }
+                BaseType::Long => {
+                    Value::new_object(collector, Reference::from(vec![0i64; current_size]))
+                }
             };
             Ok(array)
         } else {
             // Object array
             let array_class_name = format!("[L{component_type};");
             let array_class = thread.class(&array_class_name).await?;
-            let array = Value::try_from((array_class, vec![Value::Object(None); current_size]))?;
+            let vm = thread.vm()?;
+            let reference =
+                Reference::try_from((array_class, vec![Value::Object(None); current_size]))?;
+            let array = Value::new_object(vm.garbage_collector(), reference);
             Ok(array)
         }
     } else {
@@ -178,7 +203,9 @@ async fn create_multidimensional_array(
         }
 
         let array_class = thread.class(&array_class_name).await?;
-        let array = Value::try_from((array_class, elements))?;
+        let vm = thread.vm()?;
+        let reference = Reference::try_from((array_class, elements))?;
+        let array = Value::new_object(vm.garbage_collector(), reference);
         Ok(array)
     }
 }
@@ -192,11 +219,12 @@ mod tests {
     use ristretto_classfile::attributes::ArrayType;
     use std::sync::Arc;
 
-    #[test]
-    fn test_newarray_boolean() -> Result<()> {
+    #[tokio::test]
+    async fn test_newarray_boolean() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(stack, &ArrayType::Boolean)?;
+        let result = newarray(&frame, stack, &ArrayType::Boolean)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
         let reference = object.as_reference()?;
@@ -204,11 +232,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_newarray_byte() -> Result<()> {
+    #[tokio::test]
+    async fn test_newarray_byte() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(stack, &ArrayType::Byte)?;
+        let result = newarray(&frame, stack, &ArrayType::Byte)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
         let reference = object.as_reference()?;
@@ -216,11 +245,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_newarray_char() -> Result<()> {
+    #[tokio::test]
+    async fn test_newarray_char() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(stack, &ArrayType::Char)?;
+        let result = newarray(&frame, stack, &ArrayType::Char)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
         let reference = object.as_reference()?;
@@ -228,11 +258,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_newarray_double() -> Result<()> {
+    #[tokio::test]
+    async fn test_newarray_double() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(stack, &ArrayType::Double)?;
+        let result = newarray(&frame, stack, &ArrayType::Double)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
         let reference = object.as_reference()?;
@@ -240,11 +271,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_newarray_float() -> Result<()> {
+    #[tokio::test]
+    async fn test_newarray_float() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(stack, &ArrayType::Float)?;
+        let result = newarray(&frame, stack, &ArrayType::Float)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
         let reference = object.as_reference()?;
@@ -252,11 +284,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_newarray_int() -> Result<()> {
+    #[tokio::test]
+    async fn test_newarray_int() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(stack, &ArrayType::Int)?;
+        let result = newarray(&frame, stack, &ArrayType::Int)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
         let reference = object.as_reference()?;
@@ -264,11 +297,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_newarray_long() -> Result<()> {
+    #[tokio::test]
+    async fn test_newarray_long() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(stack, &ArrayType::Long)?;
+        let result = newarray(&frame, stack, &ArrayType::Long)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
         let reference = object.as_reference()?;
@@ -276,11 +310,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_newarray_short() -> Result<()> {
+    #[tokio::test]
+    async fn test_newarray_short() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(0)?;
-        let result = newarray(stack, &ArrayType::Short)?;
+        let result = newarray(&frame, stack, &ArrayType::Short)?;
         assert_eq!(Continue, result);
         let object = stack.pop()?;
         let reference = object.as_reference()?;
@@ -320,11 +355,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_arraylength_boolean() -> Result<()> {
+    #[tokio::test]
+    async fn test_arraylength_boolean() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(stack, &ArrayType::Boolean)?;
+        let result = newarray(&frame, stack, &ArrayType::Boolean)?;
         assert_eq!(Continue, result);
         let result = arraylength(stack)?;
         assert_eq!(Continue, result);
@@ -332,11 +368,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_arraylength_byte() -> Result<()> {
+    #[tokio::test]
+    async fn test_arraylength_byte() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(stack, &ArrayType::Byte)?;
+        let result = newarray(&frame, stack, &ArrayType::Byte)?;
         assert_eq!(Continue, result);
         let result = arraylength(stack)?;
         assert_eq!(Continue, result);
@@ -344,11 +381,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_arraylength_char() -> Result<()> {
+    #[tokio::test]
+    async fn test_arraylength_char() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(stack, &ArrayType::Char)?;
+        let result = newarray(&frame, stack, &ArrayType::Char)?;
         assert_eq!(Continue, result);
         let result = arraylength(stack)?;
         assert_eq!(Continue, result);
@@ -356,11 +394,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_arraylength_double() -> Result<()> {
+    #[tokio::test]
+    async fn test_arraylength_double() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(stack, &ArrayType::Double)?;
+        let result = newarray(&frame, stack, &ArrayType::Double)?;
         assert_eq!(Continue, result);
         let result = arraylength(stack)?;
         assert_eq!(Continue, result);
@@ -368,11 +407,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_arraylength_float() -> Result<()> {
+    #[tokio::test]
+    async fn test_arraylength_float() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(stack, &ArrayType::Float)?;
+        let result = newarray(&frame, stack, &ArrayType::Float)?;
         assert_eq!(Continue, result);
         let result = arraylength(stack)?;
         assert_eq!(Continue, result);
@@ -380,11 +420,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_arraylength_int() -> Result<()> {
+    #[tokio::test]
+    async fn test_arraylength_int() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(stack, &ArrayType::Int)?;
+        let result = newarray(&frame, stack, &ArrayType::Int)?;
         assert_eq!(Continue, result);
         let result = arraylength(stack)?;
         assert_eq!(Continue, result);
@@ -392,11 +433,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_arraylength_long() -> Result<()> {
+    #[tokio::test]
+    async fn test_arraylength_long() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(stack, &ArrayType::Long)?;
+        let result = newarray(&frame, stack, &ArrayType::Long)?;
         assert_eq!(Continue, result);
         let result = arraylength(stack)?;
         assert_eq!(Continue, result);
@@ -404,11 +446,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_arraylength_short() -> Result<()> {
+    #[tokio::test]
+    async fn test_arraylength_short() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
-        let result = newarray(stack, &ArrayType::Short)?;
+        let result = newarray(&frame, stack, &ArrayType::Short)?;
         assert_eq!(Continue, result);
         let result = arraylength(stack)?;
         assert_eq!(Continue, result);

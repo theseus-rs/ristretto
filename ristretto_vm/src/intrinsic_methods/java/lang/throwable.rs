@@ -4,7 +4,7 @@ use crate::parameters::Parameters;
 use crate::thread::Thread;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11};
-use ristretto_classloader::{Object, Value};
+use ristretto_classloader::{Object, Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -43,13 +43,17 @@ pub(crate) async fn fill_in_stack_trace(
         let line_number = method.line_number(program_counter);
         stack_element_object.set_value("lineNumber", Value::Int(i32::try_from(line_number)?))?;
 
-        stack_elements.push(Value::from(stack_element_object));
+        stack_elements.push(Value::new_object(
+            vm.garbage_collector(),
+            Reference::Object(stack_element_object),
+        ));
     }
 
     let stack_element_array_class = thread
         .class(format!("[L{stack_element_class};").as_str())
         .await?;
-    let stack_trace = Value::try_from((stack_element_array_class, stack_elements))?;
+    let reference = Reference::try_from((stack_element_array_class, stack_elements))?;
+    let stack_trace = Value::new_object(vm.garbage_collector(), reference);
 
     // Create the backtrace
     let _object_class = thread.class("java/lang/Object").await?;
@@ -94,12 +98,17 @@ pub(crate) async fn fill_in_stack_trace(
             class.to_object(&thread).await?,
             method_name,
             method_descriptor,
-            Value::from(program_counter_value),
+            Value::new_object(
+                vm.garbage_collector(),
+                Reference::Object(program_counter_value),
+            ),
         ];
-        let frame_info_array = Value::try_from((object_array_class.clone(), frame_info))?;
+        let reference = Reference::try_from((object_array_class.clone(), frame_info))?;
+        let frame_info_array = Value::new_object(vm.garbage_collector(), reference);
         backtrace_elements.push(frame_info_array);
     }
-    let backtrace = Value::try_from((object_array_class, backtrace_elements.clone()))?;
+    let reference = Reference::try_from((object_array_class, backtrace_elements.clone()))?;
+    let backtrace = Value::new_object(vm.garbage_collector(), reference);
     let backtrace_depth = i32::try_from(backtrace_elements.len())?;
 
     {

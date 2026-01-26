@@ -61,7 +61,6 @@ pub(crate) async fn get_cds_config_status(
     "jdk/internal/misc/CDS.getRandomSeedForDumping()J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[expect(clippy::cast_possible_wrap)]
 #[async_method]
 pub(crate) async fn get_random_seed_for_dumping(
     _thread: Arc<Thread>,
@@ -70,7 +69,7 @@ pub(crate) async fn get_random_seed_for_dumping(
     let version = env!("CARGO_PKG_VERSION");
     let mut hasher = DefaultHasher::new();
     version.hash(&mut hasher);
-    let hash = hasher.finish() as i64;
+    let hash: i64 = zerocopy::transmute!(hasher.finish());
     Ok(Some(Value::Long(hash)))
 }
 

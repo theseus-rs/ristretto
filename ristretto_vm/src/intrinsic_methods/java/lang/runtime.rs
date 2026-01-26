@@ -4,7 +4,6 @@ use crate::thread::Thread;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_gc::GC;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::cmp::min;
@@ -40,8 +39,8 @@ pub(crate) async fn free_memory(
 
 #[intrinsic_method("java/lang/Runtime.gc()V", Any)]
 #[async_method]
-pub(crate) async fn gc(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    GC.collect();
+pub(crate) async fn gc(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+    thread.vm()?.garbage_collector().collect();
     Ok(None)
 }
 

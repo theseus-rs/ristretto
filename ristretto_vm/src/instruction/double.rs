@@ -538,10 +538,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_daload() -> Result<()> {
+    #[tokio::test]
+    async fn test_daload() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Value::from(vec![42f64]);
+        let reference = Reference::from(vec![42f64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
         let result = daload(stack)?;
@@ -551,10 +553,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_daload_invalid_value() -> Result<()> {
+    #[tokio::test]
+    async fn test_daload_invalid_value() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Value::from(vec![42i32]);
+        let reference = Reference::from(vec![42i32]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object)?;
         stack.push_int(2)?;
         let result = daload(stack);
@@ -568,10 +572,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_daload_invalid_index_negative() -> Result<()> {
+    #[tokio::test]
+    async fn test_daload_invalid_index_negative() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Value::from(vec![42f64]);
+        let reference = Reference::from(vec![42f64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(-1)?;
         let result = daload(stack);
@@ -583,10 +589,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_daload_invalid_index() -> Result<()> {
+    #[tokio::test]
+    async fn test_daload_invalid_index() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Value::from(vec![42f64]);
+        let reference = Reference::from(vec![42f64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(2)?;
         let result = daload(stack);
@@ -608,10 +616,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_dastore() -> Result<()> {
+    #[tokio::test]
+    async fn test_dastore() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Value::from(vec![3f64]);
+        let reference = Reference::from(vec![3f64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
         stack.push_double(42f64)?;
@@ -620,10 +630,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_dastore_invalid_value() -> Result<()> {
+    #[tokio::test]
+    async fn test_dastore_invalid_value() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Value::from(vec![42i32]);
+        let reference = Reference::from(vec![42i32]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object)?;
         stack.push_int(2)?;
         stack.push_double(42f64)?;
@@ -638,10 +650,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_dastore_invalid_index_negative() -> Result<()> {
+    #[tokio::test]
+    async fn test_dastore_invalid_index_negative() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Value::from(vec![3f64]);
+        let reference = Reference::from(vec![3f64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(-1)?;
         stack.push_double(42f64)?;
@@ -654,10 +668,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_dastore_invalid_index() -> Result<()> {
+    #[tokio::test]
+    async fn test_dastore_invalid_index() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Value::from(vec![3f64]);
+        let reference = Reference::from(vec![3f64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(2)?;
         stack.push_double(42f64)?;

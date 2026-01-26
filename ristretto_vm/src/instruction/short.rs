@@ -82,10 +82,12 @@ mod test {
     use crate::Error::JavaError;
     use ristretto_classloader::Value;
 
-    #[test]
-    fn test_saload() -> Result<()> {
+    #[tokio::test]
+    async fn test_saload() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Value::from(vec![42i16]);
+        let reference = Reference::from(vec![42i16]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
         let result = saload(stack)?;
@@ -94,10 +96,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_saload_invalid_value() -> Result<()> {
+    #[tokio::test]
+    async fn test_saload_invalid_value() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Value::from(vec![42i32]);
+        let reference = Reference::from(vec![42i32]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object)?;
         stack.push_int(2)?;
         let result = saload(stack);
@@ -111,10 +115,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_saload_invalid_index_negative() -> Result<()> {
+    #[tokio::test]
+    async fn test_saload_invalid_index_negative() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Value::from(vec![42i16]);
+        let reference = Reference::from(vec![42i16]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(-1)?;
         let result = saload(stack);
@@ -126,10 +132,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_saload_invalid_index() -> Result<()> {
+    #[tokio::test]
+    async fn test_saload_invalid_index() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Value::from(vec![42i16]);
+        let reference = Reference::from(vec![42i16]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(2)?;
         let result = saload(stack);
@@ -151,10 +159,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_sastore() -> Result<()> {
+    #[tokio::test]
+    async fn test_sastore() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Value::from(vec![3i16]);
+        let reference = Reference::from(vec![3i16]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
         stack.push_int(42)?;
@@ -163,10 +173,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_sastore_invalid_value() -> Result<()> {
+    #[tokio::test]
+    async fn test_sastore_invalid_value() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Value::from(vec![42i32]);
+        let reference = Reference::from(vec![42i32]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object)?;
         stack.push_int(2)?;
         stack.push_int(42)?;
@@ -181,10 +193,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_sastore_invalid_index_negative() -> Result<()> {
+    #[tokio::test]
+    async fn test_sastore_invalid_index_negative() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Value::from(vec![3i16]);
+        let reference = Reference::from(vec![3i16]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(-1)?;
         stack.push_int(42)?;
@@ -197,10 +211,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_sastore_invalid_index() -> Result<()> {
+    #[tokio::test]
+    async fn test_sastore_invalid_index() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Value::from(vec![3i16]);
+        let reference = Reference::from(vec![3i16]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(2)?;
         stack.push_int(42)?;

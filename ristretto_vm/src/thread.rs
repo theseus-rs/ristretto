@@ -8,7 +8,7 @@ use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{FieldAccessFlags, FieldType};
 use ristretto_classloader::Error::MethodNotFound;
-use ristretto_classloader::{Class, Method, Object, Value};
+use ristretto_classloader::{Class, Method, Object, Reference, Value};
 use ristretto_macros::async_method;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
@@ -811,10 +811,13 @@ impl Thread {
         };
 
         let mut constructor_parameters = Vec::with_capacity(parameters.len() + 1);
-        let object = Value::from(Object::new(class.clone())?);
+        let object = Value::new_object(
+            self.vm()?.garbage_collector(),
+            Reference::Object(Object::new(class.clone())?),
+        );
         constructor_parameters.insert(0, object.clone());
         for parameter in parameters {
-            let value = parameter.to_value();
+            let value = parameter.to_value(self.vm()?.garbage_collector());
             constructor_parameters.push(value);
         }
         let parameters = process_values(self, &constructor_parameters).await?;

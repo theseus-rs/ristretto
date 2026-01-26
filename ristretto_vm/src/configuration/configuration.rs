@@ -7,6 +7,7 @@ use super::{MainModule, ModuleExport, ModuleOpens, ModulePatch, ModuleRead};
 use ahash::{AHashMap, AHashSet};
 pub use ristretto_classfile::VerifyMode;
 use ristretto_classloader::ClassPath;
+use ristretto_gc::GarbageCollector;
 use std::fmt::Debug;
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -31,6 +32,8 @@ pub struct Configuration {
     pub(super) batch_compilation: bool,
     pub(super) preview_features: bool,
     pub(super) verify_mode: VerifyMode,
+    // Garbage collector
+    pub(super) garbage_collector: Option<Arc<GarbageCollector>>,
     // JPMS module configuration fields
     pub(super) module_path: Vec<PathBuf>,
     pub(super) upgrade_module_path: Vec<PathBuf>,
@@ -119,6 +122,21 @@ impl Configuration {
         self.preview_features
     }
 
+    /// Returns the verification mode for class files.
+    #[must_use]
+    pub fn verify_mode(&self) -> VerifyMode {
+        self.verify_mode
+    }
+
+    /// Returns the garbage collector, if one was configured.
+    ///
+    /// Returns `None` if no garbage collector was explicitly configured,
+    /// in which case the VM will create a default one.
+    #[must_use]
+    pub fn garbage_collector(&self) -> Option<&Arc<GarbageCollector>> {
+        self.garbage_collector.as_ref()
+    }
+
     /// Returns a reference to the standard input stream.
     ///
     /// This stream is used for normal input from the VM and executed Java programs.
@@ -153,12 +171,6 @@ impl Configuration {
     #[must_use]
     pub fn batch_compilation(&self) -> bool {
         self.batch_compilation
-    }
-
-    /// Returns the verification mode for class files.
-    #[must_use]
-    pub fn verify_mode(&self) -> VerifyMode {
-        self.verify_mode
     }
 
     /// Returns the module path (-p or --module-path).

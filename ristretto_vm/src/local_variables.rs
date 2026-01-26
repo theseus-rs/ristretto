@@ -357,10 +357,12 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn test_get_object() -> Result<()> {
+    #[tokio::test]
+    async fn test_get_object() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let mut locals = LocalVariables::with_max_size(2);
-        let object = Value::from(vec![42i8]);
+        let reference = Reference::from(vec![42i8]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         locals.set_object(0, None)?;
         locals.set(1, object.clone())?;
         assert!(locals.get_object(0)?.is_none());
@@ -476,17 +478,22 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn test_set_object() -> Result<()> {
+    #[tokio::test]
+    async fn test_set_object() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let mut locals = LocalVariables::with_max_size(2);
-        let object = Reference::from(vec![42i8]);
+        let reference = Reference::from(vec![42i8]);
+        let object_value = Value::new_object(thread.vm()?.garbage_collector(), reference.clone());
+        let Value::Object(wrapped_object) = object_value else {
+            panic!("expected object")
+        };
+
         locals.set_object(0, None)?;
-        let wrapped_object = Gc::new(RwLock::new(object.clone())).clone_gc();
-        locals.set_object(1, Some(wrapped_object))?;
+        locals.set_object(1, wrapped_object)?;
         assert!(locals.get_object(0)?.is_none());
         let retrieved = locals.get_object(1)?;
         assert!(retrieved.is_some());
-        assert_eq!(*retrieved.expect("retrieved object").read(), object);
+        assert_eq!(*retrieved.expect("retrieved object").read(), reference);
         Ok(())
     }
 

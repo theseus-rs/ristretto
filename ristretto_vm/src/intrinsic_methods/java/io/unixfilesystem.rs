@@ -10,7 +10,7 @@ use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_11, JAVA_17};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(unix)]
@@ -560,7 +560,8 @@ pub(crate) async fn list_0(
     }
 
     let class = thread.class("java.lang.String").await?;
-    let paths = Value::try_from((class, entries))?;
+    let reference = Reference::try_from((class, entries))?;
+    let paths = Value::new_object(thread.vm()?.garbage_collector(), reference);
     Ok(Some(paths))
 }
 

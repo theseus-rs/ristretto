@@ -289,16 +289,23 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn test_pop_reference() -> Result<()> {
+    #[tokio::test]
+    async fn test_pop_reference() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let mut parameters = Parameters::default();
-        let object = Reference::from(vec![42i8]);
+        let reference = Reference::from(vec![42i8]);
         parameters.push_reference(None);
-        let wrapped_object = Gc::new(RwLock::new(object.clone())).clone_gc();
-        parameters.push_reference(Some(wrapped_object));
+        let value = Value::new_object(thread.vm()?.garbage_collector(), reference);
+        let Value::Object(wrapped_object) = value else {
+            panic!("expected object")
+        };
+        parameters.push_reference(wrapped_object);
+
         let popped = parameters.pop_reference()?;
         assert!(popped.is_some());
-        assert_eq!(*popped.expect("popped object").read(), object);
+        let popped_ref = popped.expect("popped object");
+        let guard = popped_ref.read();
+        assert!(matches!(*guard, Reference::ByteArray(_)));
         assert!(parameters.pop_reference()?.is_none());
         Ok(())
     }

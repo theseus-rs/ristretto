@@ -258,7 +258,10 @@ pub(crate) async fn read_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file_input_stream = parameters.pop()?;
-    let bytes = Value::from(vec![0i8; 1]);
+    let bytes = Value::new_object(
+        thread.vm()?.garbage_collector(),
+        Reference::from(vec![0i8; 1]),
+    );
     let mut parameters = Parameters::default();
     parameters.push(file_input_stream);
     parameters.push(bytes.clone());

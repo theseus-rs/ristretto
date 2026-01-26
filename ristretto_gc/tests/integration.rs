@@ -259,7 +259,7 @@ fn test_gc_statistics() -> Result<()> {
     let initial_stats = collector.statistics()?;
 
     // Allocate some objects
-    let _objects: Vec<_> = (0..10).map(Gc::new).collect();
+    let _objects: Vec<_> = (0..10).map(|i| Gc::new(&collector, i)).collect();
 
     // Trigger collection
     collector.collect();

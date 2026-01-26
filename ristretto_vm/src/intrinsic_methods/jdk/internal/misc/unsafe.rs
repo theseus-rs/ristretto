@@ -55,7 +55,9 @@ pub(crate) async fn allocate_instance(
     let class_object = parameters.pop()?;
     let class = get_class(&thread, &class_object).await?;
     let object = Object::new(class)?;
-    Ok(Some(Value::from(object)))
+    let vm = thread.vm()?;
+    let collector = &vm.garbage_collector();
+    Ok(Some(Value::from_object(collector, object)))
 }
 
 #[intrinsic_method(
@@ -2140,7 +2142,7 @@ mod tests {
         let class = thread.class("java/lang/Object").await?;
         let object = Object::new(class)?;
         let reference = Reference::Object(object);
-        let object_value = Value::from(reference);
+        let object_value = Value::new_object(thread.vm()?.garbage_collector(), reference);
 
         let mut parameters = Parameters::default();
         parameters.push(object_value);
@@ -2159,7 +2161,7 @@ mod tests {
         let class = thread.class("java/lang/Object").await?;
         let object = Object::new(class)?;
         let reference = Reference::Object(object);
-        let object_value = Value::from(reference);
+        let object_value = Value::new_object(thread.vm()?.garbage_collector(), reference);
 
         let mut parameters = Parameters::default();
         parameters.push(object_value);
@@ -2182,8 +2184,8 @@ mod tests {
         let source_ref = Reference::from(source);
         let dest_ref = Reference::from(dest);
 
-        let source_value = Value::from(source_ref);
-        let dest_value = Value::from(dest_ref);
+        let source_value = Value::new_object(thread.vm()?.garbage_collector(), source_ref);
+        let dest_value = Value::new_object(thread.vm()?.garbage_collector(), dest_ref);
 
         let mut parameters = Parameters::default();
         parameters.push(source_value);
@@ -2213,9 +2215,11 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         // Create class file bytes from Minimum.class
         let class_bytes = include_bytes!("../../../../../../classes/Minimum.class");
-        #[expect(clippy::cast_possible_wrap)]
-        let bytes: Vec<i8> = class_bytes.iter().map(|&b| b as i8).collect();
-        let bytes_value = Value::from(bytes);
+        let bytes: &[i8] = zerocopy::transmute_ref!(class_bytes.as_slice());
+        let bytes_value = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(bytes.to_vec()),
+        );
 
         // Get host class (java.lang.Object)
         let host_class = thread.class("java/lang/Object").await?;
@@ -2239,10 +2243,12 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         // Create class file bytes from Minimum.class
         let class_bytes = include_bytes!("../../../../../../classes/Minimum.class");
-        #[expect(clippy::cast_possible_wrap)]
-        let bytes: Vec<i8> = class_bytes.iter().map(|&b| b as i8).collect();
+        let bytes: &[i8] = zerocopy::transmute_ref!(class_bytes.as_slice());
         let bytes_len = bytes.len();
-        let bytes_value = Value::from(bytes);
+        let bytes_value = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(bytes.to_vec()),
+        );
 
         // Create the class name
         let class_name = "Minimum".to_object(&thread).await?;
@@ -2295,7 +2301,7 @@ mod tests {
     async fn test_get_load_average_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let loadavg = Reference::from(vec![0.0f64, 0.0, 0.0]);
-        let loadavg_value = Value::from(loadavg);
+        let loadavg_value = Value::new_object(thread.vm()?.garbage_collector(), loadavg);
         let mut parameters = Parameters::default();
         parameters.push(loadavg_value.clone());
         parameters.push_int(3); // nelems
@@ -2426,7 +2432,7 @@ mod tests {
     async fn test_set_memory_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let arr = Reference::from(vec![0i8, 0, 0, 0, 0, 0, 0, 0]);
-        let arr_value = Value::from(arr);
+        let arr_value = Value::new_object(thread.vm()?.garbage_collector(), arr);
         let mut parameters = Parameters::default();
         parameters.push(arr_value.clone());
         parameters.push_long(0); // offset

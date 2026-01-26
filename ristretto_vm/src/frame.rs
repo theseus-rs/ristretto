@@ -651,7 +651,7 @@ impl Frame {
                 Ok(InstructionResult::Async(Box::pin(new(self, stack, *index))))
             }
             Instruction::Newarray(array_type) => {
-                newarray(stack, array_type).map(InstructionResult::Sync)
+                newarray(self, stack, array_type).map(InstructionResult::Sync)
             }
             Instruction::Anewarray(index) => Ok(InstructionResult::Async(Box::pin(anewarray(
                 self, stack, *index,

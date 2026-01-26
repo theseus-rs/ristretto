@@ -2,7 +2,7 @@
 //!
 //! Tests collector configuration, statistics, collection cycles, and performance monitoring.
 
-use ristretto_gc::{Configuration, GC, GarbageCollector, Gc, Result, Trace};
+use ristretto_gc::{Configuration, GarbageCollector, Gc, Result, Trace};
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
@@ -40,24 +40,6 @@ fn test_collector_lifecycle() -> Result<()> {
 
     // Test that stopping again doesn't cause issues
     collector.stop()?;
-    Ok(())
-}
-
-#[test_log::test]
-fn test_global_collector() -> Result<()> {
-    // Test using the specific collector instance (not global)
-    let gc1 = Gc::new("global test 1");
-    let gc2 = Gc::new("global test 2");
-
-    GC.collect();
-    let stats = GC.statistics()?;
-
-    // Should show some allocation activity
-    assert!(stats.bytes_allocated > 0);
-
-    // Objects should be accessible
-    assert_eq!(**gc1, "global test 1");
-    assert_eq!(**gc2, "global test 2");
     Ok(())
 }
 
@@ -354,7 +336,7 @@ fn test_collection_phases() -> Result<()> {
     collector.start();
 
     // Test that collection goes through its phases without hanging
-    let objects: Vec<_> = (0..50).map(Gc::new).collect();
+    let objects: Vec<_> = (0..50).map(|i| Gc::new(&collector, i)).collect();
 
     // Trigger multiple collections
     for _ in 0..5 {

@@ -5,7 +5,7 @@ use crate::thread::Thread;
 use crate::{JavaObject, Result};
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{Constant, FieldType, JAVA_11};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -228,7 +228,8 @@ pub(crate) async fn get_member_ref_info_at_0(
     let descriptor = descriptor.to_object(&thread).await?;
     let string_class = thread.class("java/lang/String").await?;
     let string_array = vec![class_name, name, descriptor];
-    let results = Value::try_from((string_class, string_array))?;
+    let reference = Reference::try_from((string_class, string_array))?;
+    let results = Value::new_object(thread.vm()?.garbage_collector(), reference);
     Ok(Some(results))
 }
 
@@ -263,7 +264,8 @@ pub(crate) async fn get_method_at_0(
         parameters_classes.push(parameter_type);
     }
     let class = thread.class("java.lang.Class").await?;
-    let class_parameters = Value::try_from((class, parameters_classes))?;
+    let reference = Reference::try_from((class, parameters_classes))?;
+    let class_parameters = Value::new_object(thread.vm()?.garbage_collector(), reference);
 
     let method = if method_name == "<init>" {
         thread
@@ -390,7 +392,8 @@ pub(crate) async fn get_name_and_type_ref_info_at_0(
     let descriptor = descriptor.to_object(&thread).await?;
     let string_class = thread.class("java/lang/String").await?;
     let string_array = vec![name, descriptor];
-    let results = Value::try_from((string_class, string_array))?;
+    let result_ref = Reference::try_from((string_class, string_array))?;
+    let results = Value::new_object(thread.vm()?.garbage_collector(), result_ref);
     Ok(Some(results))
 }
 
@@ -567,7 +570,8 @@ pub(crate) mod tests {
         let class_loader = class_loader_lock.write().await;
         class_loader.register(class.clone()).await?;
         let object = Object::new(class)?;
-        Ok((vm, thread, Value::from(object)))
+        let value = Value::new_object(vm.garbage_collector(), Reference::Object(object));
+        Ok((vm, thread, value))
     }
 
     pub(crate) async fn get_class_at_test(get_class_at: IntrinsicMethod) -> Result<()> {

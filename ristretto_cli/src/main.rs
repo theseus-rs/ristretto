@@ -9,6 +9,7 @@ mod version;
 
 use argument::{Arguments, VerifyMode as CliVerifyMode};
 use clap::CommandFactory;
+use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
 use ristretto_vm::Error::{InternalError, Throwable};
 use ristretto_vm::{
     ClassPath, ConfigurationBuilder, Error, Result, VM, Value, VerifyMode, startup_trace,
@@ -83,6 +84,10 @@ async fn common_main(mut cli: Arguments) -> Result<()> {
     } else if let Some(ref jar) = cli.jar {
         configuration_builder = configuration_builder.jar(PathBuf::from(jar));
     }
+
+    let gc_config = GcConfigurationBuilder::new().build();
+    let garbage_collector = GarbageCollector::with_config(gc_config);
+    configuration_builder = configuration_builder.garbage_collector(garbage_collector);
 
     if let Some(ref properties) = cli.properties {
         for property in properties {

@@ -316,7 +316,7 @@ pub(crate) async fn new(
     let class = thread.class(class_name).await?;
     // Allocate object with all instance fields zeroed (does NOT call constructor)
     let object = Object::new(class)?;
-    let reference = Value::from(object);
+    let reference = Value::new_object(thread.vm()?.garbage_collector(), Reference::Object(object));
     stack.push(reference)?;
     Ok(Continue)
 }
@@ -570,8 +570,12 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
         let class = thread.class("java/lang/Object").await?;
-        let object = Value::from(vec![42i32]);
-        let array = Value::try_from((class, vec![object.clone()]))?;
+        let object = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::ByteArray(vec![42i8].into_boxed_slice()),
+        );
+        let reference = Reference::try_from((class, vec![object.clone()]))?;
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
         let result = aaload(stack)?;
@@ -580,10 +584,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_aaload_invalid_value() -> Result<()> {
+    #[tokio::test]
+    async fn test_aaload_invalid_value() -> Result<()> {
+        let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Value::from(vec![42i32]);
+        let reference = Reference::from(vec![42i32]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object)?;
         stack.push_int(2)?;
         let result = aaload(stack);
@@ -602,8 +608,12 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
         let class = thread.class("java/lang/Object").await?;
-        let object = Value::from(vec![42i32]);
-        let array = Value::try_from((class, vec![object.clone()]))?;
+        let object = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::ByteArray(vec![42i8].into_boxed_slice()),
+        );
+        let reference = Reference::try_from((class, vec![object.clone()]))?;
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(-1)?;
         let result = aaload(stack);
@@ -620,8 +630,12 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(2);
         let class = thread.class("java/lang/Object").await?;
-        let object = Value::from(vec![42i32]);
-        let array = Value::try_from((class, vec![object.clone()]))?;
+        let object = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::ByteArray(vec![42i8].into_boxed_slice()),
+        );
+        let reference = Reference::try_from((class, vec![object.clone()]))?;
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(2)?;
         let result = aaload(stack);
@@ -648,20 +662,26 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
         let class = thread.class("java/lang/Object").await?;
-        let object = Value::from(vec![3i32]);
-        let array = Value::try_from((class, vec![object]))?;
+        let object = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::ByteArray(vec![3i8].into_boxed_slice()),
+        );
+        let reference = Reference::try_from((class, vec![object.clone()]))?;
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
-        stack.push(Value::from(vec![3i32]))?;
+        stack.push(object)?;
         let result = aastore(stack)?;
         assert_eq!(Continue, result);
         Ok(())
     }
 
-    #[test]
-    fn test_aastore_invalid_value() -> Result<()> {
+    #[tokio::test]
+    async fn test_aastore_invalid_value() -> Result<()> {
+        let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Value::from(vec![42i32]);
+        let reference = Reference::from(vec![42i32]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object.clone())?;
         stack.push_int(0)?;
         stack.push(object)?;
@@ -681,8 +701,12 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
         let class = thread.class("java/lang/Object").await?;
-        let object = Value::from(vec![3i32]);
-        let array = Value::try_from((class, vec![object.clone()]))?;
+        let object = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::ByteArray(vec![3i8].into_boxed_slice()),
+        );
+        let reference = Reference::try_from((class, vec![object.clone()]))?;
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(-1)?;
         stack.push(object)?;
@@ -700,8 +724,12 @@ mod tests {
         let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
         let class = thread.class("java/lang/Object").await?;
-        let object = Value::from(vec![3i32]);
-        let array = Value::try_from((class, vec![object.clone()]))?;
+        let object = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::ByteArray(vec![3i8].into_boxed_slice()),
+        );
+        let reference = Reference::try_from((class, vec![object.clone()]))?;
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(2)?;
         stack.push(object)?;
@@ -714,10 +742,11 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_aastore_null_pointer() -> Result<()> {
+    #[tokio::test]
+    async fn test_aastore_null_pointer() -> Result<()> {
+        let (_vm, _thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Value::from(vec![3i32]);
+        let object = Value::Object(None);
         stack.push_object(None)?;
         stack.push_int(0)?;
         stack.push(object)?;
@@ -726,10 +755,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_areturn_object() -> Result<()> {
+    #[tokio::test]
+    async fn test_areturn_object() -> Result<()> {
+        let (_vm, thread, _frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
-        let object = Value::from(vec![42i8]);
+        let reference = Reference::from(vec![42i8]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object)?;
         let result = areturn(stack)?;
         assert!(matches!(result, Return(Some(Value::Object(_)))));
@@ -814,7 +845,10 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let object_class = thread.class("java/lang/Object").await?;
         let object = Object::new(object_class)?;
-        stack.push(Value::from(object))?;
+        stack.push(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(object),
+        ))?;
         let class_index = get_class_index(&mut frame, "java/lang/String")?;
         let result = checkcast(&frame, stack, class_index).await;
         assert!(matches!(
@@ -830,7 +864,9 @@ mod tests {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         let string_class = thread.class("[Ljava/lang/String;").await?;
-        let string_array = Value::from((string_class, Vec::new()));
+        let reference =
+            Reference::new_array(thread.vm()?.garbage_collector(), string_class, Vec::new());
+        let string_array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(string_array)?;
         let class_index = get_class_index(&mut frame, "[Ljava/lang/Object;")?;
         let result = checkcast(&frame, stack, class_index).await?;
@@ -869,7 +905,10 @@ mod tests {
         let stack = &mut OperandStack::with_max_size(1);
         let object_class = thread.class("java/lang/Object").await?;
         let object = Object::new(object_class)?;
-        stack.push(Value::from(object))?;
+        stack.push(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(object),
+        ))?;
         let class_index = get_class_index(&mut frame, "java/lang/String")?;
         let result = instanceof(&frame, stack, class_index).await?;
         assert_eq!(Continue, result);
@@ -882,7 +921,8 @@ mod tests {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         let string_class = thread.class("[Ljava/lang/String;").await?;
-        let string_array = Value::try_from((string_class, Vec::<Value>::new()))?;
+        let reference = Reference::try_from((string_class, Vec::<Value>::new()))?;
+        let string_array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(string_array)?;
         let class_index = get_class_index(&mut frame, "java/lang/Object")?;
         let result = instanceof(&frame, stack, class_index).await?;
@@ -896,7 +936,8 @@ mod tests {
         let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
         let object_class = thread.class("[Ljava/lang/Object;").await?;
-        let object_array = Value::try_from((object_class, Vec::<Value>::new()))?;
+        let reference = Reference::try_from((object_class, Vec::<Value>::new()))?;
+        let object_array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object_array)?;
         let class_index = get_class_index(&mut frame, "java/lang/String")?;
         let result = instanceof(&frame, stack, class_index).await?;
@@ -907,9 +948,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_instanceof_int_array_to_int_array() -> Result<()> {
-        let (_vm, _thread, mut frame) = crate::test::frame().await?;
+        let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
-        let int_array = Value::from(vec![0i32; 0]);
+        let int_array = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![0i32; 0]),
+        );
         stack.push(int_array)?;
         let class_index = get_class_index(&mut frame, "[I")?;
         let result = instanceof(&frame, stack, class_index).await?;
@@ -920,9 +964,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_instanceof_long_array_to_int_array() -> Result<()> {
-        let (_vm, _thread, mut frame) = crate::test::frame().await?;
+        let (_vm, thread, mut frame) = crate::test::frame().await?;
         let stack = &mut OperandStack::with_max_size(1);
-        let long_array = Value::from(Vec::<i64>::new());
+        let long_array = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(Vec::<i64>::new()),
+        );
         stack.push(long_array)?;
         let class_index = get_class_index(&mut frame, "[I")?;
         let result = instanceof(&frame, stack, class_index).await?;

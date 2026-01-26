@@ -6,6 +6,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
+use zerocopy::transmute;
 
 #[intrinsic_method("java/lang/Double.doubleToRawLongBits(D)J", Any)]
 #[async_method]
@@ -14,8 +15,7 @@ pub(crate) async fn double_to_raw_long_bits(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let double = parameters.pop_double()?;
-    #[expect(clippy::cast_possible_wrap)]
-    let bits = double.to_bits() as i64;
+    let bits: i64 = transmute!(double.to_bits());
     Ok(Some(Value::Long(bits)))
 }
 

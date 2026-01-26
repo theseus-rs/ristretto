@@ -366,8 +366,7 @@ pub(crate) fn lushr(stack: &mut OperandStack) -> Result<ExecutionResult> {
     #[expect(clippy::cast_sign_loss)]
     let value1 = value1 as u64;
     let result = value1 >> (value2 & 0x3f);
-    #[expect(clippy::cast_possible_wrap)]
-    let result = result as i64;
+    let result: i64 = zerocopy::transmute!(result);
     stack.push_long(result)?;
     Ok(Continue)
 }
@@ -586,10 +585,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_laload() -> Result<()> {
+    #[tokio::test]
+    async fn test_laload() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Value::from(vec![42i64]);
+        let reference = Reference::from(vec![42i64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
         let result = laload(stack)?;
@@ -598,10 +599,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_laload_invalid_value() -> Result<()> {
+    #[tokio::test]
+    async fn test_laload_invalid_value() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Value::from(vec![42i32]);
+        let reference = Reference::from(vec![42i32]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object)?;
         stack.push_int(2)?;
         let result = laload(stack);
@@ -615,10 +618,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_laload_invalid_index_negative() -> Result<()> {
+    #[tokio::test]
+    async fn test_laload_invalid_index_negative() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Value::from(vec![42i64]);
+        let reference = Reference::from(vec![42i64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(-1)?;
         let result = laload(stack);
@@ -630,10 +635,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_laload_invalid_index() -> Result<()> {
+    #[tokio::test]
+    async fn test_laload_invalid_index() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let array = Value::from(vec![42i64]);
+        let reference = Reference::from(vec![42i64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(2)?;
         let result = laload(stack);
@@ -655,10 +662,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_lastore() -> Result<()> {
+    #[tokio::test]
+    async fn test_lastore() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Value::from(vec![3i64]);
+        let reference = Reference::from(vec![3i64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(0)?;
         stack.push_long(42)?;
@@ -667,10 +676,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_lastore_invalid_value() -> Result<()> {
+    #[tokio::test]
+    async fn test_lastore_invalid_value() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let object = Value::from(vec![42i32]);
+        let reference = Reference::from(vec![42i32]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object)?;
         stack.push_int(2)?;
         stack.push_long(42)?;
@@ -685,10 +696,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_lastore_invalid_index_negative() -> Result<()> {
+    #[tokio::test]
+    async fn test_lastore_invalid_index_negative() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Value::from(vec![3i64]);
+        let reference = Reference::from(vec![3i64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(-1)?;
         stack.push_long(42)?;
@@ -701,10 +714,12 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_lastore_invalid_index() -> Result<()> {
+    #[tokio::test]
+    async fn test_lastore_invalid_index() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(3);
-        let array = Value::from(vec![3i64]);
+        let reference = Reference::from(vec![3i64]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(array)?;
         stack.push_int(2)?;
         stack.push_long(42)?;

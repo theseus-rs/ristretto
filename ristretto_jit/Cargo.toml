@@ -17,6 +17,7 @@ workspace = true
 ahash = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.27.0" }
 thiserror = { workspace = true }
+zerocopy = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 cranelift = { workspace = true, features = ["module", "native"] }

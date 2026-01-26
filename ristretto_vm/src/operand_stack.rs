@@ -194,6 +194,7 @@ mod tests {
     use super::*;
     use crate::operand_stack::OperandStack;
     use ristretto_classloader::Reference;
+    use ristretto_gc::GarbageCollector;
 
     #[test]
     fn test_drain_last() -> Result<()> {
@@ -317,7 +318,8 @@ mod tests {
         let mut stack = OperandStack::with_max_size(2);
         let object = Reference::from(vec![42i8]);
         stack.push_object(None)?;
-        let wrapped_object = Gc::new(RwLock::new(object.clone())).clone_gc();
+        let wrapped_object =
+            Gc::new(&GarbageCollector::new(), RwLock::new(object.clone())).clone_gc();
         stack.push_object(Some(wrapped_object))?;
         let popped = stack.pop_object()?;
         assert!(popped.is_some());

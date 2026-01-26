@@ -4,7 +4,7 @@ use crate::{Class, Object, Result};
 use parking_lot::{
     MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
 };
-use ristretto_gc::Gc;
+use ristretto_gc::{GarbageCollector, Gc};
 use std::fmt;
 use std::fmt::Display;
 use std::hash::{Hash, Hasher};
@@ -22,6 +22,24 @@ pub enum Value {
 }
 
 impl Value {
+    /// Create a new object value.
+    pub fn new_object(collector: &GarbageCollector, reference: Reference) -> Self {
+        Value::Object(Some(Gc::new(collector, RwLock::new(reference)).clone_gc()))
+    }
+
+    /// Create a new nullable object value.
+    pub fn new_opt_object(collector: &GarbageCollector, reference: Option<Reference>) -> Self {
+        match reference {
+            Some(reference) => Self::new_object(collector, reference),
+            None => Value::Object(None),
+        }
+    }
+
+    /// Create a new object value from an Object.
+    pub fn from_object(collector: &GarbageCollector, object: Object) -> Self {
+        Self::new_object(collector, Reference::from(object))
+    }
+
     /// Convert the object to a bool value.
     ///
     /// # Errors
@@ -729,126 +747,6 @@ impl From<f64> for Value {
     }
 }
 
-impl From<Vec<bool>> for Value {
-    fn from(value: Vec<bool>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<i8>> for Value {
-    fn from(value: Vec<i8>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<u8>> for Value {
-    fn from(value: Vec<u8>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<char>> for Value {
-    fn from(value: Vec<char>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<i16>> for Value {
-    fn from(value: Vec<i16>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<u16>> for Value {
-    fn from(value: Vec<u16>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<i32>> for Value {
-    fn from(value: Vec<i32>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<u32>> for Value {
-    fn from(value: Vec<u32>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<i64>> for Value {
-    fn from(value: Vec<i64>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<u64>> for Value {
-    fn from(value: Vec<u64>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<isize>> for Value {
-    fn from(value: Vec<isize>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<usize>> for Value {
-    fn from(value: Vec<usize>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<f32>> for Value {
-    fn from(value: Vec<f32>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Vec<f64>> for Value {
-    fn from(value: Vec<f64>) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<(Arc<Class>, Vec<Option<Reference>>)> for Value {
-    fn from(value: (Arc<Class>, Vec<Option<Reference>>)) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl TryFrom<(Arc<Class>, Vec<Value>)> for Value {
-    type Error = crate::Error;
-
-    fn try_from(value: (Arc<Class>, Vec<Value>)) -> Result<Self> {
-        let reference = Reference::try_from(value)?;
-        Ok(Value::from(Some(reference)))
-    }
-}
-
-impl From<Object> for Value {
-    fn from(value: Object) -> Self {
-        Value::from(Reference::from(value))
-    }
-}
-
-impl From<Reference> for Value {
-    fn from(reference: Reference) -> Self {
-        Value::from(Some(reference))
-    }
-}
-
-impl From<Option<Reference>> for Value {
-    fn from(reference: Option<Reference>) -> Self {
-        match reference {
-            Some(reference) => Value::Object(Some(Gc::new(RwLock::new(reference)).clone_gc())),
-            None => Value::Object(None),
-        }
-    }
-}
-
 impl TryInto<Vec<Value>> for Value {
     type Error = crate::Error;
 
@@ -874,9 +772,23 @@ impl From<Option<Gc<RwLock<Reference>>>> for Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Reference;
     use crate::{Class, Object, runtime};
+    use ristretto_gc::GarbageCollector;
     use std::hash::DefaultHasher;
     use std::sync::Arc;
+
+    fn test_ref(reference: impl Into<Reference>) -> Value {
+        Value::new_object(&GarbageCollector::new(), reference.into())
+    }
+
+    fn test_opt_ref(reference: Option<Reference>) -> Value {
+        Value::new_opt_object(&GarbageCollector::new(), reference)
+    }
+
+    fn test_value(value: impl Into<Value>) -> Value {
+        value.into()
+    }
 
     async fn load_class(class: &str) -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
@@ -924,7 +836,7 @@ mod tests {
         assert!(!value.is_category_2());
         assert_eq!(
             "byte[1, 2, 3]",
-            format!("{}", Value::from(vec![1i8, 2i8, 3i8]))
+            format!("{}", test_ref(vec![1i8, 2i8, 3i8]))
         );
     }
 
@@ -933,7 +845,7 @@ mod tests {
         let value = Value::Object(None);
         assert!(value.is_null());
 
-        let value = Value::from(Reference::from(vec![1i8, 2i8, 3i8]));
+        let value = test_ref(Reference::from(vec![1i8, 2i8, 3i8]));
         assert!(!value.is_null());
     }
 
@@ -942,14 +854,14 @@ mod tests {
         let value = Value::Object(None);
         assert!(!value.is_object());
 
-        let value = Value::from(Reference::from(vec![1i8, 2i8, 3i8]));
+        let value = test_ref(Reference::from(vec![1i8, 2i8, 3i8]));
         assert!(value.is_object());
     }
 
     #[test]
     fn test_as_reference() -> Result<()> {
         let reference = Reference::from(vec![1i8, 2i8, 3i8]);
-        let value = Value::from(reference);
+        let value = test_ref(reference);
         let reference = value.as_reference()?;
         let array = reference.as_byte_vec_ref()?;
         assert_eq!(array, vec![1, 2, 3]);
@@ -962,17 +874,17 @@ mod tests {
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
-    #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
     async fn test_string_format() -> Result<()> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
         let class = class_loader.load("java.lang.String").await?;
         let mut object = Object::new(class)?;
-        let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
-        let string_value = Value::from(string_bytes);
+        let bytes = "foo".as_bytes();
+        let string_bytes: &[i8] = zerocopy::transmute_ref!(bytes);
+        let string_value = test_ref(string_bytes.to_vec());
         assert!(!string_value.is_null());
         object.set_value("value", string_value)?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         assert_eq!("String(\"foo\")", value.to_string());
         let value = value.as_string()?;
         assert_eq!("foo".to_string(), value);
@@ -995,7 +907,7 @@ mod tests {
 
     #[test]
     fn test_clone() -> Result<()> {
-        let value = Value::from(vec![1i32]);
+        let value = test_ref(vec![1i32]);
         let clone = value.clone();
         assert_eq!(value, clone);
 
@@ -1098,8 +1010,8 @@ mod tests {
     async fn test_hash_object() -> Result<()> {
         let class_name = "java.lang.Object";
         let class = load_class(class_name).await?;
-        let value1 = Value::from(Object::new(class.clone())?);
-        let value2 = Value::from(Object::new(class.clone())?);
+        let value1 = test_ref(Object::new(class.clone())?);
+        let value2 = test_ref(Object::new(class.clone())?);
 
         let mut hasher = DefaultHasher::new();
         value1.hash(&mut hasher);
@@ -1126,7 +1038,7 @@ mod tests {
     async fn test_eq_object() -> Result<()> {
         let class_name = "java.lang.Object";
         let class = load_class(class_name).await?;
-        let value = Value::from(Object::new(class)?);
+        let value = test_ref(Object::new(class)?);
         assert_eq!(Value::Object(None), Value::Object(None));
         assert_eq!(value, value);
         assert_ne!(Value::Object(None), value);
@@ -1138,7 +1050,7 @@ mod tests {
         let class_name = "java.util.concurrent.atomic.AtomicReference";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
-        let value1 = Value::from(object);
+        let value1 = test_ref(object);
         let mut object = value1.as_object_mut()?;
         object.set_value("value", value1.clone())?;
         let value2 = value1.clone();
@@ -1171,19 +1083,19 @@ mod tests {
 
     #[test]
     fn test_from_i8() {
-        let value: Value = 42i8.into();
+        let value = Value::Int(i32::from(42i8));
         assert_eq!(Value::Int(42), value);
     }
 
     #[test]
     fn test_from_u8() {
-        let value: Value = 42u8.into();
+        let value = Value::Int(i32::from(42u8));
         assert_eq!(Value::Int(42), value);
     }
 
     #[test]
     fn test_from_char() {
-        let value: Value = 'a'.into();
+        let value = Value::Int('a' as i32);
         assert_eq!(Value::Int(97), value);
     }
 
@@ -1237,108 +1149,109 @@ mod tests {
 
     #[test]
     fn test_from_f32() {
-        let value: Value = 42.1f32.into();
+        let value = Value::Float(42.1f32);
         assert_eq!(Value::Float(42.1), value);
     }
 
     #[test]
     fn test_from_f64() {
-        let value: Value = 42.1f64.into();
+        let value = Value::Double(42.1f64);
         assert_eq!(Value::Double(42.1), value);
     }
 
     #[test]
     fn test_from_vec_bool() {
-        let value: Value = vec![true, false].into();
+        let value = test_ref(Reference::from(vec![true, false]));
         assert_eq!(
-            Value::from(Reference::BooleanArray(vec![1i8, 0i8].into_boxed_slice())),
+            test_ref(Reference::BooleanArray(vec![1i8, 0i8].into_boxed_slice())),
             value
         );
     }
 
     #[test]
     fn test_from_vec_i8() {
-        let value: Value = vec![1i8, 2i8].into();
-        assert_eq!(Value::from(Reference::from(vec![1i8, 2i8])), value);
+        let value = test_ref(Reference::from(vec![1i8, 2i8]));
+        assert_eq!(test_ref(Reference::from(vec![1i8, 2i8])), value);
     }
 
     #[test]
     fn test_from_vec_u8() {
-        let value: Value = vec![1u8, 2u8].into();
-        assert_eq!(Value::from(Reference::from(vec![1i8, 2i8])), value);
+        let value = test_ref(Reference::from(vec![1u8, 2u8]));
+        assert_eq!(test_ref(Reference::from(vec![1i8, 2i8])), value);
     }
 
     #[test]
     fn test_from_vec_char() {
-        let value: Value = vec!['a', 'b'].into();
-        assert_eq!(Value::from(Reference::from(vec!['a', 'b'])), value);
+        let value = test_ref(Reference::from(vec!['a', 'b']));
+        assert_eq!(test_ref(Reference::from(vec!['a', 'b'])), value);
     }
 
     #[test]
     fn test_from_vec_i16() {
-        let value: Value = vec![1i16, 2i16].into();
-        assert_eq!(Value::from(Reference::from(vec![1i16, 2i16])), value);
+        let value = test_ref(Reference::from(vec![1i16, 2i16]));
+        assert_eq!(test_ref(Reference::from(vec![1i16, 2i16])), value);
     }
 
     #[test]
     fn test_from_vec_u16() {
-        let value: Value = vec![1u16, 2u16].into();
-        assert_eq!(Value::from(Reference::from(vec![1i16, 2i16])), value);
+        let value = test_ref(Reference::from(vec![1u16, 2u16]));
+        assert_eq!(test_ref(Reference::from(vec![1i16, 2i16])), value);
     }
 
     #[test]
     fn test_from_vec_i32() {
-        let value: Value = vec![1i32, 2i32].into();
-        assert_eq!(Value::from(Reference::from(vec![1i32, 2i32])), value);
+        let value = test_ref(Reference::from(vec![1i32, 2i32]));
+        assert_eq!(test_ref(Reference::from(vec![1i32, 2i32])), value);
     }
 
     #[test]
     fn test_from_vec_u32() {
-        let value: Value = vec![1u32, 2u32].into();
-        assert_eq!(Value::from(Reference::from(vec![1i32, 2i32])), value);
+        let value = test_ref(Reference::from(vec![1u32, 2u32]));
+        assert_eq!(test_ref(Reference::from(vec![1i32, 2i32])), value);
     }
 
     #[test]
     fn test_from_vec_i64() {
-        let value: Value = vec![1i64, 2i64].into();
-        assert_eq!(Value::from(Reference::from(vec![1i64, 2i64])), value);
+        let value = test_ref(Reference::from(vec![1i64, 2i64]));
+        assert_eq!(test_ref(Reference::from(vec![1i64, 2i64])), value);
     }
 
     #[test]
     fn test_from_vec_u64() {
-        let value: Value = vec![1u64, 2u64].into();
-        assert_eq!(Value::from(Reference::from(vec![1i64, 2i64])), value);
+        let value = test_ref(Reference::from(vec![1u64, 2u64]));
+        assert_eq!(test_ref(Reference::from(vec![1i64, 2i64])), value);
     }
 
     #[test]
     fn test_from_vec_isize() {
-        let value: Value = vec![1isize, 2isize].into();
-        assert_eq!(Value::from(Reference::from(vec![1i64, 2i64])), value);
+        let value = test_ref(Reference::from(vec![1isize, 2isize]));
+        assert_eq!(test_ref(Reference::from(vec![1i64, 2i64])), value);
     }
 
     #[test]
     fn test_from_vec_usize() {
-        let value: Value = vec![1usize, 2usize].into();
-        assert_eq!(Value::from(Reference::from(vec![1i64, 2i64])), value);
+        let value = test_ref(Reference::from(vec![1usize, 2usize]));
+        assert_eq!(test_ref(Reference::from(vec![1i64, 2i64])), value);
     }
 
     #[test]
     fn test_from_vec_f32() {
-        let value: Value = vec![1.1f32, 2.2f32].into();
-        assert_eq!(Value::from(Reference::from(vec![1.1f32, 2.2f32])), value);
+        let value = test_ref(Reference::from(vec![1.1f32, 2.2f32]));
+        assert_eq!(test_ref(Reference::from(vec![1.1f32, 2.2f32])), value);
     }
 
     #[test]
     fn test_from_vec_f64() {
-        let value: Value = vec![1.1f64, 2.2f64].into();
-        assert_eq!(Value::from(Reference::from(vec![1.1f64, 2.2f64])), value);
+        let value = test_ref(Reference::from(vec![1.1f64, 2.2f64]));
+        assert_eq!(test_ref(Reference::from(vec![1.1f64, 2.2f64])), value);
     }
 
     #[tokio::test]
     async fn test_from_class_vec() -> Result<()> {
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let original_value = vec![Value::Object(None)];
-        let value = Value::try_from((original_class.clone(), original_value.clone()))?;
+        let reference = Reference::try_from((original_class.clone(), original_value.clone()))?;
+        let value = test_ref(reference);
         assert!(matches!(value, Value::Object(Some(_))));
         Ok(())
     }
@@ -1350,9 +1263,10 @@ mod tests {
         let class = load_class(class_name).await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let original_values = vec![value];
-        let value = Value::try_from((original_class.clone(), original_values.clone()))?;
+        let reference = Reference::try_from((original_class.clone(), original_values.clone()))?;
+        let value = test_ref(reference);
         assert!(matches!(value, Value::Object(Some(_))));
         Ok(())
     }
@@ -1360,10 +1274,10 @@ mod tests {
     #[tokio::test]
     async fn test_try_from_class_vec_error() -> Result<()> {
         let original_class = load_class("[Ljava/lang/Object;").await?;
-        let value = Value::from(42);
+        let value = Value::Int(42);
         let original_value = vec![value];
-        let value = Value::try_from((original_class.clone(), original_value.clone()));
-        assert!(matches!(value, Err(InvalidValueType(_))));
+        let result = Reference::try_from((original_class.clone(), original_value.clone()));
+        assert!(matches!(result, Err(InvalidValueType(_))));
         Ok(())
     }
 
@@ -1371,7 +1285,7 @@ mod tests {
     async fn test_from_object() -> Result<()> {
         let class = load_class("[Ljava/lang/Object;").await?;
         let object = Object::new(class)?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         assert!(matches!(value, Value::Object(Some(_))));
         Ok(())
     }
@@ -1381,7 +1295,7 @@ mod tests {
         let class = load_class("[Ljava/lang/Object;").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object);
-        let value = Value::from(reference);
+        let value = test_ref(reference);
         assert!(matches!(value, Value::Object(Some(_))));
         Ok(())
     }
@@ -1391,7 +1305,7 @@ mod tests {
         let class = load_class("[Ljava/lang/Object;").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object);
-        let value = Value::from(Some(reference));
+        let value = test_opt_ref(Some(reference));
         assert!(matches!(value, Value::Object(Some(_))));
         Ok(())
     }
@@ -1408,7 +1322,7 @@ mod tests {
         let class = load_class("java.lang.Boolean").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_bool()?;
         assert!(value);
         Ok(())
@@ -1426,7 +1340,7 @@ mod tests {
         let class = load_class("java.lang.Character").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_char()?;
         assert_eq!('*', value);
         Ok(())
@@ -1444,7 +1358,7 @@ mod tests {
         let class = load_class("java.lang.Byte").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_i8()?;
         assert_eq!(42, value);
         Ok(())
@@ -1462,7 +1376,7 @@ mod tests {
         let class = load_class("java.lang.Byte").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_u8()?;
         assert_eq!(42, value);
         Ok(())
@@ -1480,7 +1394,7 @@ mod tests {
         let class = load_class("java.lang.Short").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_i16()?;
         assert_eq!(42, value);
         Ok(())
@@ -1498,7 +1412,7 @@ mod tests {
         let class = load_class("java.lang.Short").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_u16()?;
         assert_eq!(42, value);
         Ok(())
@@ -1516,7 +1430,7 @@ mod tests {
         let class = load_class("java.lang.Integer").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_i32()?;
         assert_eq!(42, value);
         Ok(())
@@ -1534,7 +1448,7 @@ mod tests {
         let class = load_class("java.lang.Integer").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_u32()?;
         assert_eq!(42, value);
         Ok(())
@@ -1552,7 +1466,7 @@ mod tests {
         let class = load_class("java.lang.Long").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_i64()?;
         assert_eq!(42, value);
         Ok(())
@@ -1570,7 +1484,7 @@ mod tests {
         let class = load_class("java.lang.Long").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_u64()?;
         assert_eq!(42, value);
         Ok(())
@@ -1588,7 +1502,7 @@ mod tests {
         let class = load_class("java.lang.Long").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_isize()?;
         assert_eq!(42, value);
         Ok(())
@@ -1606,7 +1520,7 @@ mod tests {
         let class = load_class("java.lang.Long").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_usize()?;
         assert_eq!(42, value);
         Ok(())
@@ -1617,7 +1531,7 @@ mod tests {
         let class = load_class("java.lang.Float").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Float(42.1))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_f32()?;
         let value = value - 42.1f32;
         assert!(value.abs() < 0.1f32);
@@ -1645,7 +1559,7 @@ mod tests {
         let class = load_class("java.lang.Double").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Double(42.1))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let value = value.as_f64()?;
         let value = value - 42.1f64;
         assert!(value.abs() < 0.1f64);
@@ -1659,9 +1573,10 @@ mod tests {
         let class = load_class(class_name).await?;
         let mut object = Object::new(class.clone())?;
         object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let original_values = vec![value];
-        let value = Value::try_from((original_class.clone(), original_values.clone()))?;
+        let reference = Reference::try_from((original_class.clone(), original_values.clone()))?;
+        let value = test_ref(reference);
         let values: Vec<Value> = value.try_into()?;
         assert_eq!(original_values, values);
         Ok(())
@@ -1670,21 +1585,21 @@ mod tests {
     #[test]
     fn test_as_byte_vec_ref() -> Result<()> {
         let original_value = vec![42i8];
-        let value = Value::from(original_value.clone());
+        let value = test_ref(original_value.clone());
         assert_eq!(original_value, value.as_byte_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_byte_vec_ref_error() {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         let result = value.as_byte_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_byte_vec_mut() -> Result<()> {
-        let value = Value::from(vec![42i8]);
+        let value = test_ref(vec![42i8]);
         {
             let mut mutable_value = value.as_byte_vec_mut()?;
             mutable_value[0] = 3i8;
@@ -1696,28 +1611,28 @@ mod tests {
     #[test]
     fn test_as_byte_vec_mut_error() {
         let original_value = vec![42i32];
-        let value = Value::from(original_value.clone());
+        let value = test_ref(original_value.clone());
         let result = value.as_byte_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_char_vec_ref() -> Result<()> {
-        let value = Value::from(vec!['*']);
+        let value = test_ref(vec!['*']);
         assert_eq!(vec![42u16], value.as_char_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_char_vec_ref_error() {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         let result = value.as_char_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_char_vec_mut() -> Result<()> {
-        let value = Value::from(vec!['*']);
+        let value = test_ref(vec!['*']);
         {
             let mut mutable_value = value.as_char_vec_mut()?;
             mutable_value[0] = 50u16;
@@ -1728,7 +1643,7 @@ mod tests {
 
     #[test]
     fn test_as_char_vec_mut_error() {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         let result = value.as_char_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1736,21 +1651,21 @@ mod tests {
     #[test]
     fn test_as_short_vec_ref() -> Result<()> {
         let original_value = vec![42i16];
-        let value = Value::from(original_value.clone());
+        let value = test_ref(original_value.clone());
         assert_eq!(original_value, value.as_short_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_short_vec_ref_error() {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         let result = value.as_short_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_short_vec_mut() -> Result<()> {
-        let value = Value::from(vec![42i16]);
+        let value = test_ref(vec![42i16]);
         {
             let mut mutable_value = value.as_short_vec_mut()?;
             mutable_value[0] = 3i16;
@@ -1761,7 +1676,7 @@ mod tests {
 
     #[test]
     fn test_as_short_vec_mut_error() {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         let result = value.as_short_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1769,21 +1684,21 @@ mod tests {
     #[test]
     fn test_as_int_vec_ref() -> Result<()> {
         let original_value = vec![42i32];
-        let value = Value::from(original_value.clone());
+        let value = test_ref(original_value.clone());
         assert_eq!(original_value, value.as_int_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_int_vec_ref_error() {
-        let value = Value::from(vec![42i8]);
+        let value = test_ref(vec![42i8]);
         let result = value.as_int_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_int_vec_mut() -> Result<()> {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         {
             let mut mutable_value = value.as_int_vec_mut()?;
             mutable_value[0] = 3i32;
@@ -1794,7 +1709,7 @@ mod tests {
 
     #[test]
     fn test_as_int_vec_mut_error() {
-        let value = Value::from(vec![42i8]);
+        let value = test_ref(vec![42i8]);
         let result = value.as_int_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1802,21 +1717,21 @@ mod tests {
     #[test]
     fn test_as_long_vec_ref() -> Result<()> {
         let original_value = vec![42i64];
-        let value = Value::from(original_value.clone());
+        let value = test_ref(original_value.clone());
         assert_eq!(original_value, value.as_long_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_long_vec_ref_error() {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         let result = value.as_long_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_long_vec_mut() -> Result<()> {
-        let value = Value::from(vec![42i64]);
+        let value = test_ref(vec![42i64]);
         {
             let mut mutable_value = value.as_long_vec_mut()?;
             mutable_value[0] = 3i64;
@@ -1827,7 +1742,7 @@ mod tests {
 
     #[test]
     fn test_as_long_vec_mut_error() {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         let result = value.as_long_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1835,21 +1750,21 @@ mod tests {
     #[test]
     fn test_as_float_vec_ref() -> Result<()> {
         let original_value = vec![42.1f32];
-        let value = Value::from(original_value.clone());
+        let value = test_ref(original_value.clone());
         assert_eq!(original_value, value.as_float_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_float_vec_ref_error() {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         let result = value.as_float_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_float_vec_mut() -> Result<()> {
-        let value = Value::from(vec![42.1f32]);
+        let value = test_ref(vec![42.1f32]);
         {
             let mut mutable_value = value.as_float_vec_mut()?;
             mutable_value[0] = 3.45f32;
@@ -1860,7 +1775,7 @@ mod tests {
 
     #[test]
     fn test_as_float_vec_mut_error() {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         let result = value.as_float_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1868,21 +1783,21 @@ mod tests {
     #[test]
     fn test_as_double_vec_ref() -> Result<()> {
         let original_value = vec![42.1f64];
-        let value = Value::from(original_value.clone());
+        let value = test_ref(original_value.clone());
         assert_eq!(original_value, value.as_double_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_double_vec_ref_error() {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         let result = value.as_double_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_double_vec_mut() -> Result<()> {
-        let value = Value::from(vec![42.1f64]);
+        let value = test_ref(vec![42.1f64]);
         {
             let mut mutable_value = value.as_double_vec_mut()?;
             mutable_value[0] = 3.45f64;
@@ -1893,7 +1808,7 @@ mod tests {
 
     #[test]
     fn test_as_double_vec_mut_error() {
-        let value = Value::from(vec![42i32]);
+        let value = test_ref(vec![42i32]);
         let result = value.as_double_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
@@ -1902,7 +1817,9 @@ mod tests {
     async fn test_as_class_vec_ref() -> Result<()> {
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let original_value = vec![Value::Object(None)];
-        let value = Value::from((original_class.clone(), vec![None]));
+        let values = vec![Value::Object(None)];
+        let reference = Reference::try_from((original_class.clone(), values))?;
+        let value = test_ref(reference);
         let (class, value) = value.as_class_vec_ref()?;
         assert_eq!(original_class, class);
         assert_eq!(original_value, value.to_vec());
@@ -1912,7 +1829,9 @@ mod tests {
     #[tokio::test]
     async fn test_as_class_vec_mut() -> Result<()> {
         let object_class = load_class("[Ljava/lang/Object;").await?;
-        let value = Value::from((object_class.clone(), vec![None]));
+        let values = vec![Value::Object(None)];
+        let reference = Reference::try_from((object_class.clone(), values))?;
+        let value = test_ref(reference);
         {
             let (_class, mut mutable_reference) = value.as_class_vec_mut()?;
             mutable_reference[0] = Value::Int(42);
@@ -1926,7 +1845,7 @@ mod tests {
     async fn test_as_object_ref() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
-        let value = Value::from(object.clone());
+        let value = test_ref(object.clone());
         let result = value.as_object_ref()?.clone();
         assert_eq!(object, result);
         assert_eq!("java/lang/Object", object.class().name());
@@ -1937,7 +1856,7 @@ mod tests {
     async fn test_as_object_mut() -> Result<()> {
         let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
-        let value = Value::from(object.clone());
+        let value = test_ref(object.clone());
         let mut result = value.as_object_mut()?;
         result.set_value("value", Value::Int(42))?;
         Ok(())
@@ -1949,9 +1868,9 @@ mod tests {
         let class = load_class("java.lang.String").await?;
         let mut object = Object::new(class)?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
-        let string_value = Value::from(string_bytes);
+        let string_value = test_ref(string_bytes);
         object.set_value("value", string_value)?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let result = value.as_string()?;
         assert_eq!("foo".to_string(), result);
         Ok(())
@@ -1961,7 +1880,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes_byte_array() -> Result<()> {
-        let value = Value::from(vec![1i8, 2i8, 3i8, 4i8]);
+        let value = test_ref(vec![1i8, 2i8, 3i8, 4i8]);
         let bytes = value.as_bytes()?;
         assert_eq!(bytes.len(), 4);
         assert_eq!(&*bytes, &[1u8, 2u8, 3u8, 4u8]);
@@ -1970,7 +1889,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes_int_array() -> Result<()> {
-        let value = Value::from(vec![0x0102_0304i32]);
+        let value = test_ref(vec![0x0102_0304i32]);
         let bytes = value.as_bytes()?;
         assert_eq!(bytes.len(), 4);
         Ok(())
@@ -1978,7 +1897,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes_long_array() -> Result<()> {
-        let value = Value::from(vec![1i64, 2i64]);
+        let value = test_ref(vec![1i64, 2i64]);
         let bytes = value.as_bytes()?;
         assert_eq!(bytes.len(), 16); // 2 longs * 8 bytes each
         Ok(())
@@ -1986,7 +1905,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes_float_array() -> Result<()> {
-        let value = Value::from(vec![1.0f32, 2.0f32]);
+        let value = test_ref(vec![1.0f32, 2.0f32]);
         let bytes = value.as_bytes()?;
         assert_eq!(bytes.len(), 8); // 2 floats * 4 bytes each
         Ok(())
@@ -1994,7 +1913,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes_double_array() -> Result<()> {
-        let value = Value::from(vec![1.0f64]);
+        let value = test_ref(vec![1.0f64]);
         let bytes = value.as_bytes()?;
         assert_eq!(bytes.len(), 8);
         Ok(())
@@ -2002,7 +1921,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes_empty_array() -> Result<()> {
-        let value = Value::from(Vec::<i32>::new());
+        let value = test_ref(Vec::<i32>::new());
         let bytes = value.as_bytes()?;
         assert!(bytes.is_empty());
         Ok(())
@@ -2026,7 +1945,7 @@ mod tests {
     async fn test_as_bytes_object_error() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let result = value.as_bytes();
         assert!(result.is_err());
         Ok(())
@@ -2035,7 +1954,9 @@ mod tests {
     #[tokio::test]
     async fn test_as_bytes_object_array_error() -> Result<()> {
         let class = load_class("[Ljava/lang/Object;").await?;
-        let value = Value::from((class, vec![None]));
+        let values = vec![Value::Object(None)];
+        let reference = Reference::try_from((class, values))?;
+        let value = test_ref(reference);
         let result = value.as_bytes();
         assert!(result.is_err());
         Ok(())
@@ -2043,7 +1964,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes_mut_byte_array() -> Result<()> {
-        let value = Value::from(vec![1i8, 2i8, 3i8, 4i8]);
+        let value = test_ref(vec![1i8, 2i8, 3i8, 4i8]);
         {
             let mut bytes = value.as_bytes_mut()?;
             bytes[0] = 10;
@@ -2057,7 +1978,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes_mut_int_array() -> Result<()> {
-        let value = Value::from(vec![0i32]);
+        let value = test_ref(vec![0i32]);
         {
             let mut bytes = value.as_bytes_mut()?;
             bytes.fill(0xFF);
@@ -2069,7 +1990,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes_mut_long_array() -> Result<()> {
-        let value = Value::from(vec![0i64]);
+        let value = test_ref(Reference::from(vec![0i64]));
         {
             let mut bytes = value.as_bytes_mut()?;
             bytes.fill(0xFF);
@@ -2081,7 +2002,7 @@ mod tests {
 
     #[test]
     fn test_as_bytes_mut_float_array() -> Result<()> {
-        let value = Value::from(vec![0.0f32]);
+        let value = test_ref(Reference::from(vec![0.0f32]));
         {
             let mut bytes = value.as_bytes_mut()?;
             bytes.copy_from_slice(&1.0f32.to_ne_bytes());
@@ -2109,7 +2030,7 @@ mod tests {
     async fn test_as_bytes_mut_object_error() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let result = value.as_bytes_mut();
         assert!(result.is_err());
         Ok(())
@@ -2118,10 +2039,10 @@ mod tests {
     #[test]
     fn test_as_bytes_roundtrip() -> Result<()> {
         let original = vec![1i32, 2i32, 3i32, 4i32];
-        let value = Value::from(original.clone());
+        let value = test_ref(Reference::from(original.clone()));
         let bytes = value.as_bytes()?.to_vec();
 
-        let new_value = Value::from(vec![0i32; 4]);
+        let new_value = test_ref(Reference::from(vec![0i32; 4]));
         {
             let mut new_bytes = new_value.as_bytes_mut()?;
             new_bytes.copy_from_slice(&bytes);

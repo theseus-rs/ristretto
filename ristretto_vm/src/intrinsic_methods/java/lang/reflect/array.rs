@@ -383,7 +383,8 @@ pub(crate) async fn multi_new_array(
 
     let class_name = class.name();
     let array = create_multi_dimensional_array(&thread, class_name, &dimensions).await?;
-    Ok(Some(Value::from(array)))
+    let array = Value::new_object(thread.vm()?.garbage_collector(), array);
+    Ok(Some(array))
 }
 
 #[async_method]
@@ -415,7 +416,9 @@ async fn create_multi_dimensional_array(
             _ => {
                 let array_class_name = format!("[L{class_name};");
                 let class = thread.class(&array_class_name).await?;
-                Reference::from((class, vec![None; length]))
+                let vm = thread.vm()?;
+                let collector = &vm.garbage_collector();
+                Reference::new_array(collector, class, vec![None; length])
             }
         };
         Ok(array)
@@ -446,7 +449,9 @@ async fn create_multi_dimensional_array(
         };
 
         let class = thread.class(&array_class_name).await?;
-        Ok(Reference::from((class, elements)))
+        let vm = thread.vm()?;
+        let collector = &vm.garbage_collector();
+        Ok(Reference::new_array(collector, class, elements))
     }
 }
 #[intrinsic_method(
@@ -461,19 +466,22 @@ pub(crate) async fn new_array(
     let length = usize::try_from(parameters.pop_int()?)?;
     let class_name = get_class_name(&parameters.pop()?)?;
 
+    let vm = thread.vm()?;
+    let collector = &vm.garbage_collector();
     let array = match class_name.as_str() {
-        "boolean" => Value::from(vec![false; length]),
-        "byte" => Value::from(vec![0i8; length]),
-        "char" => Value::from(vec![0 as char; length]),
-        "float" => Value::from(vec![0.0f32; length]),
-        "double" => Value::from(vec![0.0f64; length]),
-        "int" => Value::from(vec![0i32; length]),
-        "long" => Value::from(vec![0i64; length]),
-        "short" => Value::from(vec![0i16; length]),
+        "boolean" => Value::new_object(collector, Reference::from(vec![false; length])),
+        "byte" => Value::new_object(collector, Reference::from(vec![0i8; length])),
+        "char" => Value::new_object(collector, Reference::from(vec![0 as char; length])),
+        "float" => Value::new_object(collector, Reference::from(vec![0.0f32; length])),
+        "double" => Value::new_object(collector, Reference::from(vec![0.0f64; length])),
+        "int" => Value::new_object(collector, Reference::from(vec![0i32; length])),
+        "long" => Value::new_object(collector, Reference::from(vec![0i64; length])),
+        "short" => Value::new_object(collector, Reference::from(vec![0i16; length])),
         _ => {
             let class_name = format!("[L{class_name};");
             let class = thread.class(&class_name).await?;
-            Value::from((class, vec![None; length]))
+            let reference = Reference::try_from((class, vec![Value::Object(None); length]))?;
+            Value::new_object(collector, reference)
         }
     };
 
@@ -837,7 +845,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_and_set() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let array = Value::from(vec![0i32]);
+        let array = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![0i32]),
+        );
         let index = Value::Int(0);
         let expected = 42i32;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
@@ -852,7 +863,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_and_set_boolean() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let array = Value::from(vec![false]);
+        let array = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![false]),
+        );
         let index = Value::Int(0);
         let expected = true;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
@@ -867,7 +881,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_and_set_byte() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let array = Value::from(vec![0i8]);
+        let array = Value::new_object(thread.vm()?.garbage_collector(), Reference::from(vec![0i8]));
         let index = Value::Int(0);
         let expected = 42i8;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
@@ -882,7 +896,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_and_set_char() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let array = Value::from(vec![0 as char]);
+        let array = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![0 as char]),
+        );
         let index = Value::Int(0);
         let expected = 42u16;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
@@ -897,7 +914,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_and_set_double() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let array = Value::from(vec![0.0f64]);
+        let array = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![0.0f64]),
+        );
         let index = Value::Int(0);
         let expected = 42.0f64;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
@@ -913,7 +933,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_and_set_float() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let array = Value::from(vec![0f32]);
+        let array = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![0f32]),
+        );
         let index = Value::Int(0);
         let expected = 42f32;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
@@ -929,7 +952,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_and_set_int() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let array = Value::from(vec![0i32]);
+        let array = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![0i32]),
+        );
         let index = Value::Int(0);
         let expected = 42i32;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
@@ -944,7 +970,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_length() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let array = Value::from(vec![1, 2, 3]);
+        let array = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![1, 2, 3]),
+        );
         let parameters = Parameters::new(vec![array]);
         let result = get_length(thread, parameters).await?.expect("Array length");
         let length = result.as_i32()?;
@@ -955,7 +984,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_and_set_long() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let array = Value::from(vec![0i64]);
+        let array = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![0i64]),
+        );
         let index = Value::Int(0);
         let expected = 42i64;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
@@ -970,7 +1002,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_and_set_short() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let array = Value::from(vec![0i16]);
+        let array = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![0i16]),
+        );
         let index = Value::Int(0);
         let expected = 42i16;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
@@ -984,8 +1019,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_multi_new_array_null_class() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let dimensions = Value::from(vec![1]);
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let dimensions = Value::new_object(vm.garbage_collector(), Reference::from(vec![1]));
         let parameters = Parameters::new(vec![Value::Object(None), dimensions]);
         let result = multi_new_array(thread.clone(), parameters).await;
         assert!(result.is_err());
@@ -997,7 +1032,10 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("int").await?;
         let class_object = class.to_object(&thread).await?;
-        let dimensions = Value::from(Vec::<i32>::new());
+        let dimensions = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(Vec::<i32>::new()),
+        );
         let parameters = Parameters::new(vec![class_object, dimensions]);
         let result = multi_new_array(thread.clone(), parameters).await;
         assert!(result.is_err());
@@ -1009,7 +1047,10 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("int").await?;
         let class_object = class.to_object(&thread).await?;
-        let dimensions = Value::from(vec![5i32]);
+        let dimensions = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![5i32]),
+        );
         let parameters = Parameters::new(vec![class_object, dimensions]);
 
         let array = multi_new_array(thread.clone(), parameters)
@@ -1025,7 +1066,10 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let class = thread.class("int").await?;
         let class_object = class.to_object(&thread).await?;
-        let dimensions = Value::from(vec![3i32, 4i32]);
+        let dimensions = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![3i32, 4i32]),
+        );
         let parameters = Parameters::new(vec![class_object, dimensions]);
 
         let array = multi_new_array(thread.clone(), parameters)

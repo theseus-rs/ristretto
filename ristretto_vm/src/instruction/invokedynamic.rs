@@ -348,7 +348,10 @@ async fn get_private_lookup(thread: &Thread, caller_class: &Arc<Class>) -> Resul
         caller_class.name()
     );
 
-    Ok(Value::from(lookup_instance))
+    Ok(Value::from_object(
+        thread.vm()?.garbage_collector(),
+        lookup_instance,
+    ))
 }
 
 /// **For Step 3.2** Resolves a Java class object corresponding to a field type.
@@ -409,7 +412,7 @@ async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Val
     }
     let class_array = thread.class("[Ljava/lang/Class;").await?;
     let reference_array = Reference::try_from((class_array, argument_classes))?;
-    let arguments = Value::from(reference_array);
+    let arguments = Value::new_object(thread.vm()?.garbage_collector(), reference_array);
 
     let method = method_type_class.try_get_method(
         "methodType",
@@ -507,7 +510,7 @@ pub async fn get_method_handle(
             trusted_lookup.set_value("lookupClass", class_object.clone())?;
             trusted_lookup.set_value("prevLookupClass", Value::Object(None))?;
             trusted_lookup.set_value("allowedModes", Value::Int(-1))?;
-            Value::from(trusted_lookup)
+            Value::from_object(thread.vm()?.garbage_collector(), trusted_lookup)
         } else {
             impl_lookup
         }
@@ -517,7 +520,7 @@ pub async fn get_method_handle(
         trusted_lookup.set_value("lookupClass", class_object.clone())?;
         trusted_lookup.set_value("prevLookupClass", Value::Object(None))?;
         trusted_lookup.set_value("allowedModes", Value::Int(-1))?;
-        Value::from(trusted_lookup)
+        Value::from_object(thread.vm()?.garbage_collector(), trusted_lookup)
     };
 
     // 4. Build the Java String and MethodType for the member
@@ -676,16 +679,16 @@ async fn resolve_static_bootstrap_arguments(
         let constant = constant_pool.try_get(*argument)?;
         match constant {
             Constant::Integer(value) => {
-                arguments.push(Value::from(*value));
+                arguments.push(Value::Int(*value));
             }
             Constant::Float(value) => {
-                arguments.push(Value::from(*value));
+                arguments.push(Value::Float(*value));
             }
             Constant::Long(value) => {
-                arguments.push(Value::from(*value));
+                arguments.push(Value::Long(*value));
             }
             Constant::Double(value) => {
-                arguments.push(Value::from(*value));
+                arguments.push(Value::Double(*value));
             }
             Constant::String(value) => {
                 let string = constant_pool.try_get_utf8(*value)?;
@@ -805,7 +808,10 @@ async fn adjust_varargs_static_arguments(
 
             // Convert Values directly to the array (preserving Gc pointers)
             let array_ref = Reference::try_from((array_class, boxed_varargs))?;
-            static_arguments.push(Value::from(array_ref));
+            static_arguments.push(Value::new_object(
+                thread.vm()?.garbage_collector(),
+                array_ref,
+            ));
 
             debug!(
                 "adjust_varargs_static_arguments: final static_arguments.len()={}",

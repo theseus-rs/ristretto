@@ -4,6 +4,8 @@ use crate::frame::ExecutionResult::{Continue, ContinueAtPosition, Return};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use indexmap::IndexMap;
+#[cfg(test)]
+use ristretto_classloader::Reference;
 
 /// # References
 ///
@@ -618,10 +620,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_if_acmpeq_equal() -> Result<()> {
+    #[tokio::test]
+    async fn test_if_acmpeq_equal() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?; // Need thread for collector
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Value::from(vec![42i8]);
+        let reference = Reference::from(vec![42i8]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object.clone())?;
         stack.push(object.clone())?;
         let result = if_acmpeq(stack, 3)?;
@@ -629,10 +633,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_if_acmpeq_not_equal() -> Result<()> {
+    #[tokio::test]
+    async fn test_if_acmpeq_not_equal() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Value::from(vec![42i8]);
+        let reference = Reference::from(vec![42i8]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push_object(None)?;
         stack.push(object.clone())?;
         let result = if_acmpeq(stack, 3)?;
@@ -685,10 +691,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_if_acmpne_equal() -> Result<()> {
+    #[tokio::test]
+    async fn test_if_acmpne_equal() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Value::from(vec![42i8]);
+        let reference = Reference::from(vec![42i8]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push(object.clone())?;
         stack.push(object.clone())?;
         let result = if_acmpne(stack, 3)?;
@@ -696,10 +704,12 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_if_acmpne_not_equal() -> Result<()> {
+    #[tokio::test]
+    async fn test_if_acmpne_not_equal() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(2);
-        let object = Value::from(vec![42i8]);
+        let reference = Reference::from(vec![42i8]);
+        let object = Value::new_object(thread.vm()?.garbage_collector(), reference);
         stack.push_object(None)?;
         stack.push(object.clone())?;
         let result = if_acmpne(stack, 3)?;
@@ -742,9 +752,13 @@ mod test {
 
         let stack = &mut OperandStack::with_max_size(2);
         let class1 = class1.as_reference()?.clone();
-        stack.push_object(Some(Gc::new(RwLock::new(class1)).clone_gc()))?;
+        stack.push_object(Some(
+            Gc::new(thread.vm()?.garbage_collector(), RwLock::new(class1)).clone_gc(),
+        ))?;
         let class2 = class2.as_reference()?.clone();
-        stack.push_object(Some(Gc::new(RwLock::new(class2)).clone_gc()))?;
+        stack.push_object(Some(
+            Gc::new(thread.vm()?.garbage_collector(), RwLock::new(class2)).clone_gc(),
+        ))?;
         let result = if_acmpne(stack, 3)?;
         assert_eq!(ContinueAtPosition(3), result);
         Ok(())
@@ -917,10 +931,14 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_ifnull_not_null() -> Result<()> {
+    #[tokio::test]
+    async fn test_ifnull_not_null() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(1);
-        let object = Value::from(vec![42i8]);
+        let object = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![42i8]),
+        );
         stack.push(object)?;
         let result = ifnull(stack, 3)?;
         assert_eq!(Continue, result);
@@ -936,10 +954,14 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_ifnonnull_not_null() -> Result<()> {
+    #[tokio::test]
+    async fn test_ifnonnull_not_null() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let stack = &mut OperandStack::with_max_size(1);
-        let object = Value::from(vec![42i8]);
+        let object = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![42i8]),
+        );
         stack.push(object)?;
         let result = ifnonnull(stack, 3)?;
         assert_eq!(ContinueAtPosition(3), result);

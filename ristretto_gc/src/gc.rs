@@ -1,8 +1,8 @@
+use crate::Finalize;
 use crate::collector::{GarbageCollector, Trace};
 use crate::error::Result;
 use crate::pointers::SafePtr;
 use crate::root_guard::GcRootGuard;
-use crate::{Finalize, GC};
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::fmt;
@@ -28,11 +28,11 @@ impl<T> Gc<T> {
     /// This returns a `GcRootGuard<T>` which ensures the object is rooted.
     /// To get the inner `Gc<T>` for use in data structures, use `guard.clone_gc()`.
     #[expect(clippy::new_ret_no_self)]
-    pub fn new(data: T) -> GcRootGuard<T>
+    pub fn new(collector: &GarbageCollector, data: T) -> GcRootGuard<T>
     where
         T: Send + Sync + Trace,
     {
-        Self::with_collector(&GC, data)
+        Self::with_collector(collector, data)
     }
 
     /// Constructs a new `Gc<T>` without rooting it.
@@ -42,20 +42,20 @@ impl<T> Gc<T> {
     /// The returned `Gc<T>` is not rooted. If a garbage collection cycle occurs before this `Gc<T>`
     /// is reachable from a root, it may be collected. Use this only when you are sure the object
     /// will be immediately rooted or stored in a reachable object.
-    pub unsafe fn new_unrooted(data: T) -> Self
+    pub unsafe fn new_unrooted(collector: &GarbageCollector, data: T) -> Self
     where
         T: Send + Sync,
     {
         // Safety: The caller guarantees that the returned Gc<T> will be rooted immediately
-        unsafe { Self::with_collector_unrooted(&GC, data) }
+        unsafe { Self::with_collector_unrooted(collector, data) }
     }
 
     /// Constructs a new `Gc<T>` with finalization support and registers it as a root.
-    pub fn new_with_finalizer(data: T) -> GcRootGuard<T>
+    pub fn new_with_finalizer(collector: &GarbageCollector, data: T) -> GcRootGuard<T>
     where
         T: Send + Sync + Finalize + Trace,
     {
-        Self::with_collector_and_finalizer(&GC, data)
+        Self::with_collector_and_finalizer(collector, data)
     }
 
     /// Constructs a new `Gc<T>` with a specific garbage collector and registers it as a root.
@@ -210,11 +210,11 @@ impl<T> Gc<T> {
     ///
     /// This must be called whenever a reference to a `Gc` object is written into
     /// a field of another object during concurrent execution.
-    pub fn write_barrier(&self)
+    pub fn write_barrier(&self, collector: &GarbageCollector)
     where
         T: Trace,
     {
-        GC.write_barrier(self);
+        collector.write_barrier(self);
     }
 }
 
@@ -255,12 +255,6 @@ unsafe impl<T: Sync + Send> Send for Gc<T> {}
 // 3. T is required to be Send + Sync by the constructor bounds
 // 4. The garbage collector handles thread safety for the underlying data
 unsafe impl<T: Sync + Send> Sync for Gc<T> {}
-
-impl<T: Default + Send + Sync + Trace> Default for GcRootGuard<T> {
-    fn default() -> Self {
-        Gc::new(T::default())
-    }
-}
 
 impl<T: fmt::Display> fmt::Display for Gc<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -318,12 +312,6 @@ impl<T> AsRef<T> for Gc<T> {
     }
 }
 
-impl<T: Send + Sync + Trace> From<T> for GcRootGuard<T> {
-    fn from(value: T) -> Self {
-        Gc::new(value)
-    }
-}
-
 impl<T: Trace> Trace for Gc<T> {
     fn trace(&self, collector: &GarbageCollector) {
         // Mark this object as reachable in the object registry
@@ -345,16 +333,18 @@ mod tests {
 
     #[test]
     fn test_creation_and_access() {
-        let gc = Gc::new(42);
+        let collector = GarbageCollector::new();
+        let gc = Gc::new(&collector, 42);
         assert_eq!(**gc, 42);
     }
 
     #[test]
     fn test_creation_with_different_types() {
-        let gc_int = Gc::new(123);
-        let gc_string = Gc::new("Hello, World!".to_string());
-        let gc_vec = Gc::new(vec![1, 2, 3, 4, 5]);
-        let gc_tuple = Gc::new((1, "test", 1.23));
+        let collector = GarbageCollector::new();
+        let gc_int = Gc::new(&collector, 123);
+        let gc_string = Gc::new(&collector, "Hello, World!".to_string());
+        let gc_vec = Gc::new(&collector, vec![1, 2, 3, 4, 5]);
+        let gc_tuple = Gc::new(&collector, (1, "test", 1.23));
 
         assert_eq!(**gc_int, 123);
         assert_eq!(**gc_string, "Hello, World!");
@@ -364,7 +354,8 @@ mod tests {
 
     #[test]
     fn test_clone() {
-        let gc1 = Gc::new(42);
+        let collector = GarbageCollector::new();
+        let gc1 = Gc::new(&collector, 42);
         let gc2 = gc1.clone();
 
         assert_eq!(**gc1, 42);
@@ -375,7 +366,8 @@ mod tests {
 
     #[test]
     fn test_multiple_clones() {
-        let gc1 = Gc::new("shared data".to_string());
+        let collector = GarbageCollector::new();
+        let gc1 = Gc::new(&collector, "shared data".to_string());
         let gc2 = gc1.clone();
         let gc3 = gc1.clone();
         let gc4 = gc2.clone();
@@ -395,7 +387,8 @@ mod tests {
     #[test]
     fn test_drop_behavior() {
         // Test that dropping clones doesn't affect the data
-        let gc1 = Gc::new(vec![1, 2, 3]);
+        let collector = GarbageCollector::new();
+        let gc1 = Gc::new(&collector, vec![1, 2, 3]);
         let gc2 = gc1.clone();
 
         drop(gc1);
@@ -405,8 +398,9 @@ mod tests {
 
     #[test]
     fn test_equality() {
-        let gc1 = Gc::new(42);
-        let gc2 = Gc::new(42);
+        let collector = GarbageCollector::new();
+        let gc1 = Gc::new(&collector, 42);
+        let gc2 = Gc::new(&collector, 42);
         let gc3 = gc1.clone();
 
         // Value equality
@@ -424,7 +418,8 @@ mod tests {
         map.insert("key1", 10);
         map.insert("key2", 20);
 
-        let gc_map = Gc::new(map);
+        let collector = GarbageCollector::new();
+        let gc_map = Gc::new(&collector, map);
         let gc_map_clone = gc_map.clone();
 
         assert_eq!(gc_map.get("key1"), Some(&10));
@@ -434,7 +429,8 @@ mod tests {
 
     #[test]
     fn test_as_ptr() {
-        let gc = Gc::new(42);
+        let collector = GarbageCollector::new();
+        let gc = Gc::new(&collector, 42);
         let ptr = gc.as_ptr();
 
         unsafe {
@@ -444,8 +440,9 @@ mod tests {
 
     #[test]
     fn test_ptr_eq() {
-        let gc1 = Gc::new(42);
-        let gc2 = Gc::new(42);
+        let collector = GarbageCollector::new();
+        let gc1 = Gc::new(&collector, 42);
+        let gc2 = Gc::new(&collector, 42);
         let gc3 = gc1.clone();
 
         assert!(Gc::ptr_eq(&*gc1, &*gc3)); // Same allocation
@@ -454,7 +451,8 @@ mod tests {
 
     #[test]
     fn test_borrow() {
-        let gc = Gc::new("test string".to_string());
+        let collector = GarbageCollector::new();
+        let gc = Gc::new(&collector, "test string".to_string());
         let borrowed: &String = gc.borrow();
 
         assert_eq!(borrowed, "test string");
@@ -463,7 +461,8 @@ mod tests {
 
     #[test]
     fn test_as_ref() {
-        let gc = Gc::new(vec![1, 2, 3, 4, 5]);
+        let collector = GarbageCollector::new();
+        let gc = Gc::new(&collector, vec![1, 2, 3, 4, 5]);
         let vec_ref: &Vec<i32> = gc.as_ref();
 
         assert_eq!(vec_ref.len(), 5);
@@ -472,13 +471,15 @@ mod tests {
 
     #[test]
     fn test_from_trait() {
-        let gc: GcRootGuard<i32> = 42.into();
+        let collector = GarbageCollector::new();
+        let gc = Gc::new(&collector, 42);
         assert_eq!(**gc, 42);
     }
 
     #[test]
     fn test_debug_display() {
-        let gc = Gc::new(42);
+        let collector = GarbageCollector::new();
+        let gc = Gc::new(&collector, 42);
         let debug_str = format!("{gc:?}");
         let display_str = format!("{gc}");
 
@@ -488,7 +489,8 @@ mod tests {
 
     #[test]
     fn test_pointer_format() {
-        let gc = Gc::new(42);
+        let collector = GarbageCollector::new();
+        let gc = Gc::new(&collector, 42);
         let ptr_str = format!("{:p}", &*gc);
 
         // Should format as a pointer (starts with 0x)
@@ -497,9 +499,10 @@ mod tests {
 
     #[test]
     fn test_ordering() {
-        let gc1 = Gc::new(10);
-        let gc2 = Gc::new(20);
-        let gc3 = Gc::new(10);
+        let collector = GarbageCollector::new();
+        let gc1 = Gc::new(&collector, 10);
+        let gc2 = Gc::new(&collector, 20);
+        let gc3 = Gc::new(&collector, 10);
 
         assert!(gc1 < gc2);
         assert!(gc2 > gc1);
@@ -509,9 +512,10 @@ mod tests {
     #[test]
     #[expect(clippy::mutable_key_type)]
     fn test_hash() {
-        let gc1 = Gc::new(42);
-        let gc2 = Gc::new(42);
-        let gc3 = Gc::new(43);
+        let collector = GarbageCollector::new();
+        let gc1 = Gc::new(&collector, 42);
+        let gc2 = Gc::new(&collector, 42);
+        let gc3 = Gc::new(&collector, 43);
 
         let mut set = HashSet::new();
         set.insert(gc1.clone());

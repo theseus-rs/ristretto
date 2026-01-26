@@ -1,4 +1,4 @@
-use ristretto_gc::{Finalize, GC, Gc};
+use ristretto_gc::{Finalize, GarbageCollector, Gc};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -77,11 +77,13 @@ impl ristretto_gc::Trace for TestObjectWithFinalizer {
 #[test]
 fn test_basic_drop_mechanism() {
     println!("Testing basic drop mechanism...");
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let (obj, dropped_flag) = TestObject::new(1);
 
     // Create a Gc object
-    let gc_object = Gc::new(obj);
+    let gc_object = Gc::new(&collector, obj);
 
     // Verify the object is not dropped yet
     assert!(!dropped_flag.load(Ordering::Acquire));
@@ -90,7 +92,7 @@ fn test_basic_drop_mechanism() {
     drop(gc_object);
 
     // Force garbage collection
-    GC.collect();
+    collector.collect();
 
     // Give the collector time to run
     std::thread::sleep(std::time::Duration::from_millis(100));
@@ -104,11 +106,13 @@ fn test_basic_drop_mechanism() {
 #[test]
 fn test_finalizer_mechanism() {
     println!("Testing finalizer mechanism...");
+    let collector = GarbageCollector::new();
+    collector.start();
 
     let (obj, finalized_flag, dropped_flag) = TestObjectWithFinalizer::new(2);
 
     // Create a Gc object with finalizer
-    let gc_object = Gc::new_with_finalizer(obj);
+    let gc_object = Gc::new_with_finalizer(&collector, obj);
 
     // Verify the object is not finalized or dropped yet
     assert!(!finalized_flag.load(Ordering::Acquire));
@@ -118,7 +122,7 @@ fn test_finalizer_mechanism() {
     drop(gc_object);
 
     // Force garbage collection
-    GC.collect();
+    collector.collect();
 
     // Give the collector time to run
     std::thread::sleep(std::time::Duration::from_millis(100));
@@ -135,13 +139,16 @@ fn test_finalizer_mechanism() {
 fn test_multiple_objects() {
     println!("Testing multiple objects...");
 
+    let collector = GarbageCollector::new();
+    collector.start();
+
     let mut objects = Vec::new();
     let mut drop_flags = Vec::new();
 
     // Create multiple objects
     for i in 0..5 {
         let (obj, dropped) = TestObject::new(i + 10);
-        objects.push(Gc::new(obj));
+        objects.push(Gc::new(&collector, obj));
         drop_flags.push(dropped);
     }
 
@@ -150,7 +157,7 @@ fn test_multiple_objects() {
 
     // Force garbage collection multiple times
     for _ in 0..3 {
-        GC.collect();
+        collector.collect();
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
 

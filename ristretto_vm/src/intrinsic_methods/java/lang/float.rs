@@ -6,6 +6,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
+use zerocopy::transmute;
 
 #[intrinsic_method("java/lang/Float.floatToRawIntBits(F)I", Any)]
 #[async_method]
@@ -14,8 +15,7 @@ pub(crate) async fn float_to_raw_int_bits(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let float = parameters.pop_float()?;
-    #[expect(clippy::cast_possible_wrap)]
-    let bits = float.to_bits() as i32;
+    let bits: i32 = transmute!(float.to_bits());
     Ok(Some(Value::Int(bits)))
 }
 
