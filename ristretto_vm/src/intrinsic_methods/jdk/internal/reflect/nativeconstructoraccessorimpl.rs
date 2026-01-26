@@ -146,6 +146,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::JavaObject;
     use crate::intrinsic_methods::registry::IntrinsicMethod;
+    use ristretto_classloader::Reference;
 
     pub(crate) async fn new_instance_test(new_instance: IntrinsicMethod) -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
@@ -155,7 +156,8 @@ pub(crate) mod tests {
         let class = thread.class("java/lang/Class").await?;
         let string_class = thread.class("java/lang/String").await?;
         let string_class_object = string_class.to_object(&thread).await?;
-        let arguments = Value::try_from((class.clone(), vec![string_class_object]))?;
+        let reference = Reference::try_from((class.clone(), vec![string_class_object]))?;
+        let arguments = Value::new_object(vm.garbage_collector(), reference);
 
         let constructor = vm
             .invoke(
@@ -167,7 +169,8 @@ pub(crate) mod tests {
             .expect("constructor");
 
         let string_parameter = "42".to_object(&thread).await?;
-        let parameters = Value::try_from((class, vec![string_parameter]))?;
+        let reference = Reference::try_from((class, vec![string_parameter]))?;
+        let parameters = Value::new_object(vm.garbage_collector(), reference);
         let parameters = Parameters::new(vec![constructor, parameters]);
         let result = new_instance(thread, parameters).await?.expect("integer");
         let result = result.as_object_ref()?;

@@ -266,7 +266,10 @@ pub(crate) async fn read_0(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let random_access_fie = parameters.pop()?;
-    let bytes = Value::from(vec![0i8; 1]);
+    let bytes = Value::new_object(
+        thread.vm()?.garbage_collector(),
+        Reference::from(vec![0i8; 1]),
+    );
     let mut parameters = Parameters::default();
     parameters.push(random_access_fie);
     parameters.push(bytes.clone());
@@ -465,7 +468,10 @@ pub(crate) async fn write_0(
     let append = parameters.pop_bool()?;
     let byte = i8::try_from(parameters.pop_int()?)?;
     let random_access_file = parameters.pop()?;
-    let bytes = Value::from(vec![byte]);
+    let bytes = Value::new_object(
+        thread.vm()?.garbage_collector(),
+        Reference::from(vec![byte]),
+    );
     let mut parameters = Parameters::default();
     parameters.push(random_access_file);
     parameters.push(bytes);

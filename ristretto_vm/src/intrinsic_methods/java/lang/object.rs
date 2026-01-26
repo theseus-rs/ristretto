@@ -64,7 +64,10 @@ pub(crate) async fn clone(
             ))
             .into());
         }
-        let value = Value::from(Reference::Object(object.clone()));
+        let value = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(object.clone()),
+        );
         return Ok(Some(value));
     }
 
@@ -96,7 +99,7 @@ pub(crate) async fn clone(
         }
         Reference::Object(_) => unreachable!("Handled above"),
     };
-    let value = Value::from(reference);
+    let value = Value::new_object(thread.vm()?.garbage_collector(), reference);
     Ok(Some(value))
 }
 
@@ -132,8 +135,7 @@ pub(crate) async fn hash_code(
     let hash_code = guard.hash_code();
     #[expect(clippy::cast_possible_truncation)]
     let hash_code = (hash_code ^ (hash_code >> 32)) as u32;
-    #[expect(clippy::cast_possible_wrap)]
-    let hash_code = hash_code as i32;
+    let hash_code: i32 = zerocopy::transmute!(hash_code);
 
     Ok(Some(Value::Int(hash_code)))
 }
@@ -304,7 +306,8 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let object_class = thread.class("java/lang/Object").await?;
         let object = Object::new(object_class)?;
-        let object_value = Value::from(object);
+        let object_value =
+            Value::new_object(thread.vm()?.garbage_collector(), Reference::Object(object));
 
         // Acquire monitor
         if let Value::Object(Some(ref reference)) = object_value {
@@ -327,7 +330,8 @@ mod tests {
         // Create a proper object for cloning test
         let object_class = thread.class("java/lang/Object").await?;
         let object = Object::new(object_class)?;
-        let object_value = Value::from(object);
+        let object_value =
+            Value::new_object(thread.vm()?.garbage_collector(), Reference::Object(object));
         let parameters = Parameters::new(vec![object_value]);
 
         // This should fail because Object doesn't implement Cloneable

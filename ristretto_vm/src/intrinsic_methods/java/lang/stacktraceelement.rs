@@ -218,7 +218,10 @@ async fn init_stack_trace_elements_impl(
 
         let stack_trace_elements = &mut stack_trace_array.elements;
         if let Some(element) = stack_trace_elements.get_mut(index) {
-            *element = Value::from(stack_element);
+            *element = Value::new_object(
+                thread.vm()?.garbage_collector(),
+                Reference::Object(stack_element),
+            );
         } else {
             return Err(InternalError(format!(
                 "Stack trace array too small: index {index}, len {}",

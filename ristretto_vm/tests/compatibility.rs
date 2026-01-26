@@ -1,6 +1,7 @@
 use rayon::prelude::*;
 use regex::Regex;
 use ristretto_classloader::{DEFAULT_JAVA_VERSION, runtime};
+use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
 use ristretto_vm::Error::InternalError;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
 use std::path::{Path, PathBuf};
@@ -323,12 +324,17 @@ async fn run_test(
     let class_path = ClassPath::from(&[test_dir]);
     let stdout = Arc::new(Mutex::new(Vec::new()));
     let stderr = Arc::new(Mutex::new(Vec::new()));
+
+    // Create a garbage collector configured to use only one thread
+    let gc_config = GcConfigurationBuilder::new().threads(1).build();
+    let garbage_collector = GarbageCollector::with_config(gc_config);
     let mut configuration_builder = ConfigurationBuilder::new()
         .class_path(class_path)
         .java_version(java_version)
         .main_class(TEST_CLASS_NAME)
         .stdout(stdout.clone())
-        .stderr(stderr.clone());
+        .stderr(stderr.clone())
+        .garbage_collector(garbage_collector);
 
     configuration_builder = configuration_builder.interpreted(interpreted);
     if !interpreted {

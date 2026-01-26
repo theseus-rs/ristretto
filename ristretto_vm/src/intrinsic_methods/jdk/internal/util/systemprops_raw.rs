@@ -7,7 +7,7 @@ use crate::thread::Thread;
 use ahash::AHashMap;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -86,7 +86,8 @@ pub(crate) async fn platform_properties(
     push_property(system_properties, &mut properties, "user.home")?;
     push_property(system_properties, &mut properties, "user.name")?;
 
-    let result = Value::try_from((string_array_class, properties))?;
+    let reference = Reference::try_from((string_array_class, properties))?;
+    let result = Value::new_object(vm.garbage_collector(), reference);
     Ok(Some(result))
 }
 
@@ -143,6 +144,7 @@ pub(crate) async fn vm_properties(
     }
 
     let string_array_class = thread.class("[Ljava/lang/String;").await?;
-    let result = Value::try_from((string_array_class, properties))?;
+    let reference = Reference::try_from((string_array_class, properties))?;
+    let result = Value::new_object(vm.garbage_collector(), reference);
     Ok(Some(result))
 }

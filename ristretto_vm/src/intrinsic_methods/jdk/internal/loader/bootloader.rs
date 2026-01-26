@@ -4,7 +4,7 @@ use crate::{JavaObject, Result};
 use ahash::AHashSet;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-use ristretto_classloader::{ClassLoader, Value};
+use ristretto_classloader::{ClassLoader, Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -86,7 +86,9 @@ pub(crate) async fn get_system_package_names(
     }
 
     let string_class = thread.class("java.lang.String").await?;
-    let package_names = Value::try_from((string_class, string_objects))?;
+    let reference = Reference::try_from((string_class, string_objects))?;
+    let vm = thread.vm()?;
+    let package_names = Value::new_object(vm.garbage_collector(), reference);
     Ok(Some(package_names))
 }
 

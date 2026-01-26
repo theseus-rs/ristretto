@@ -2463,6 +2463,7 @@ dependencies = [
  "anstyle",
  "clap",
  "os_info",
+ "ristretto_gc",
  "ristretto_vm",
  "tokio",
  "tracing",
@@ -2503,6 +2504,7 @@ dependencies = [
  "indexmap",
  "ristretto_classfile",
  "thiserror 2.0.18",
+ "zerocopy",
 ]
 
 [[package]]

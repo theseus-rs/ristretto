@@ -234,7 +234,8 @@ async fn resolve_method_type(thread: &Thread, descriptor: &str) -> Result<Value>
             let class = thread.class(&class_name).await?;
             param_classes.push(class.to_object(thread).await?);
         }
-        let param_array = Value::try_from((class_array_class, param_classes))?;
+        let reference = Reference::try_from((class_array_class, param_classes))?;
+        let param_array = Value::new_object(thread.vm()?.garbage_collector(), reference);
 
         let method = method_type_class.try_get_method(
             "methodType",
@@ -510,7 +511,8 @@ pub(crate) async fn get_member_vm_info(
     let flags = flags.to_object(&thread).await?;
     let object_array_class = thread.class("[Ljava/lang/Object;").await?;
     let values = vec![vmindex, flags];
-    let array = Value::try_from((object_array_class, values))?;
+    let reference = Reference::try_from((object_array_class, values))?;
+    let array = Value::new_object(thread.vm()?.garbage_collector(), reference);
     Ok(Some(array))
 }
 
@@ -1919,16 +1921,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_copy_out_bootstrap_arguments() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let collector = vm.garbage_collector();
         let mut parameters = Parameters::default();
 
         let string_class = thread.class("java.lang.String").await?;
         let caller = string_class.to_object(&thread).await?;
 
-        let index_info = Value::from(Reference::from(vec![0i32]));
+        let index_info = Value::new_object(collector, Reference::from(vec![0i32]));
 
         let object_array_class = thread.class("[Ljava/lang/Object;").await?;
-        let buffer = Value::try_from((object_array_class, vec![Value::Object(None)]))?;
+        let reference = Reference::try_from((object_array_class, vec![Value::Object(None)]))?;
+        let buffer = Value::new_object(collector, reference);
 
         // Function pops: if_not_available, resolve, pos, buf, end, start, index_info, caller
         // So we push in reverse: caller, index_info, start, end, buf, pos, resolve, if_not_available
@@ -1972,7 +1976,10 @@ mod tests {
             | (i32::from(ReferenceKind::GetStatic.kind()) << 24);
         member_name.set_value("flags", Value::Int(flags))?;
 
-        parameters.push(Value::from(member_name));
+        parameters.push(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(member_name),
+        ));
         let result = expand(thread, parameters).await?;
         assert_eq!(None, result);
         Ok(())
@@ -2000,7 +2007,10 @@ mod tests {
         let vmindex = "test_signature".to_object(&thread).await?;
         member_name.set_value("vmindex", vmindex)?;
 
-        parameters.push(Value::from(member_name));
+        parameters.push(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(member_name),
+        ));
 
         let result = get_member_vm_info(thread, parameters).await?;
 
@@ -2017,7 +2027,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_members() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let collector = vm.garbage_collector();
         let mut parameters = Parameters::default();
 
         let defc_class = thread.class("java.lang.Integer").await?;
@@ -2033,9 +2044,15 @@ mod tests {
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
         let mut elements = Vec::new();
         for _ in 0..10 {
-            elements.push(Value::from(Object::new(member_name_class.clone())?));
+            elements.push(Value::new_object(
+                collector,
+                Reference::Object(Object::new(member_name_class.clone())?),
+            ));
         }
-        let results = Value::try_from((member_name_array_class, elements))?;
+        let results = {
+            let reference = Reference::try_from((member_name_array_class, elements))?;
+            Value::new_object(collector, reference)
+        };
 
         parameters.push(defc);
         parameters.push(match_name);
@@ -2061,7 +2078,8 @@ mod tests {
         let mut parameters = Parameters::default();
 
         let object_array_class = thread.class("[Ljava/lang/Object;").await?;
-        let box_array = Value::try_from((object_array_class, vec![Value::Object(None)]))?;
+        let reference = Reference::try_from((object_array_class, vec![Value::Object(None)]))?;
+        let box_array = Value::new_object(thread.vm()?.garbage_collector(), reference);
 
         // which = 0 (GC_COUNT_MAX)
         parameters.push(Value::Int(0));
@@ -2079,7 +2097,8 @@ mod tests {
         let mut parameters = Parameters::default();
 
         let object_array_class = thread.class("[Ljava/lang/Object;").await?;
-        let box_array = Value::try_from((object_array_class, vec![Value::Object(None)]))?;
+        let reference = Reference::try_from((object_array_class, vec![Value::Object(None)]))?;
+        let box_array = Value::new_object(thread.vm()?.garbage_collector(), reference);
 
         // unknown index
         parameters.push(Value::Int(999));
@@ -2099,7 +2118,10 @@ mod tests {
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
         let member_name = Object::new(member_name_class)?;
 
-        parameters.push(Value::from(member_name));
+        parameters.push(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(member_name),
+        ));
         parameters.push(Value::Object(None));
 
         let result = init(thread, parameters).await?;
@@ -2109,7 +2131,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_init_with_field() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (vm, thread) = crate::test::thread().await?;
+        let collector = vm.garbage_collector();
         let mut parameters = Parameters::default();
 
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
@@ -2134,8 +2157,11 @@ mod tests {
             FieldAccessFlags::PUBLIC | FieldAccessFlags::STATIC | FieldAccessFlags::FINAL;
         field_object.set_value("modifiers", Value::Int(i32::from(modifiers.bits())))?;
 
-        parameters.push(Value::from(member_name));
-        parameters.push(Value::from(field_object));
+        parameters.push(Value::new_object(collector, Reference::Object(member_name)));
+        parameters.push(Value::new_object(
+            collector,
+            Reference::Object(field_object),
+        ));
 
         let result = init(thread, parameters).await?;
         assert_eq!(None, result);
@@ -2153,7 +2179,10 @@ mod tests {
         member_name.set_value("clazz", class)?;
         let value_string = "value".to_object(&thread).await?;
         member_name.set_value("name", value_string)?;
-        parameters.push(Value::from(member_name));
+        parameters.push(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(member_name),
+        ));
         let result = object_field_offset(thread, parameters).await?;
         assert_eq!(Some(Value::Long(5)), result);
         Ok(())
@@ -2181,13 +2210,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_call_site_target_normal() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let collector = vm.garbage_collector();
         let mut parameters = Parameters::default();
         let method_handle_class = thread.class("java.lang.invoke.MethodHandle").await?;
-        let method_handle = Value::from(Object::new(method_handle_class)?);
+        let method_handle = Value::new_object(
+            collector,
+            Reference::Object(Object::new(method_handle_class)?),
+        );
         parameters.push(method_handle);
         let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
-        let call_site = Value::from(Object::new(call_site_class)?);
+        let call_site =
+            Value::new_object(collector, Reference::Object(Object::new(call_site_class)?));
         parameters.push(call_site);
         let result = set_call_site_target_normal(thread, parameters).await?;
         assert_eq!(None, result);
@@ -2196,13 +2230,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_call_site_target_volatile() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let collector = vm.garbage_collector();
         let mut parameters = Parameters::default();
         let method_handle_class = thread.class("java.lang.invoke.MethodHandle").await?;
-        let method_handle = Value::from(Object::new(method_handle_class)?);
+        let method_handle = Value::new_object(
+            collector,
+            Reference::Object(Object::new(method_handle_class)?),
+        );
         parameters.push(method_handle);
         let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
-        let call_site = Value::from(Object::new(call_site_class)?);
+        let call_site =
+            Value::new_object(collector, Reference::Object(Object::new(call_site_class)?));
         parameters.push(call_site);
         let result = set_call_site_target_volatile(thread, parameters).await?;
         assert_eq!(None, result);
@@ -2218,7 +2257,10 @@ mod tests {
         let class_object = thread.class("java.lang.Integer").await?;
         let class = class_object.to_object(&thread).await?;
         member_name.set_value("clazz", class.clone())?;
-        parameters.push(Value::from(member_name));
+        parameters.push(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(member_name),
+        ));
         let result = static_field_base(thread, parameters).await?;
         assert_eq!(Some(class), result);
         Ok(())
@@ -2235,7 +2277,10 @@ mod tests {
         member_name.set_value("clazz", class)?;
         let value_string = "MAX_VALUE".to_object(&thread).await?;
         member_name.set_value("name", value_string)?;
-        parameters.push(Value::from(member_name));
+        parameters.push(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(member_name),
+        ));
         let result = static_field_offset(thread, parameters).await?;
         // The offset has the STATIC_FIELD_OFFSET_MASK set to indicate it's a static field
         assert_eq!(Some(Value::Long(2 | STATIC_FIELD_OFFSET_MASK)), result);
@@ -2270,7 +2315,10 @@ mod tests {
         let caller_class = thread.class("java.lang.Object").await?;
         let caller = caller_class.to_object(&thread).await?;
 
-        parameters.push(Value::from(member_name));
+        parameters.push(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(member_name),
+        ));
         parameters.push(caller);
 
         let result = resolve_0(thread, parameters).await?;
@@ -2302,7 +2350,10 @@ mod tests {
             | (i32::from(ReferenceKind::GetStatic.kind()) << 24);
         member_name.set_value("flags", Value::Int(flags))?;
 
-        parameters.push(Value::from(member_name));
+        parameters.push(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(member_name),
+        ));
         // caller (null)
         parameters.push(Value::Object(None));
         // speculative_resolve
@@ -2337,7 +2388,10 @@ mod tests {
             | (i32::from(ReferenceKind::GetStatic.kind()) << 24);
         member_name.set_value("flags", Value::Int(flags))?;
 
-        parameters.push(Value::from(member_name));
+        parameters.push(Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(member_name),
+        ));
         // caller (null)
         parameters.push(Value::Object(None));
         // lookup_mode (TRUSTED = -1 for full access)

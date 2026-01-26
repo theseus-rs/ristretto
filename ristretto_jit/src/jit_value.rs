@@ -154,9 +154,8 @@ impl TryInto<f32> for JitValue {
 }
 
 impl From<f64> for JitValue {
-    #[expect(clippy::cast_possible_wrap)]
     fn from(value: f64) -> JitValue {
-        let value = value.to_bits() as i64;
+        let value: i64 = zerocopy::transmute!(value.to_bits());
         JitValue {
             discriminant: F64,
             value,

@@ -8,7 +8,7 @@ use ristretto_classfile::VersionSpecification::{
     Any, Between, Equal, GreaterThanOrEqual, LessThan, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -354,19 +354,17 @@ pub(crate) async fn futimes_0(
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getcwd()[B", Any)]
-#[expect(clippy::cast_possible_wrap)]
 #[async_method]
-pub(crate) async fn getcwd(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
+pub(crate) async fn getcwd(thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
     let current_dir_path =
         std::env::current_dir().map_err(|error| InternalError(format!("getcwd: {error}")))?;
     let current_dir_str = current_dir_path.to_string_lossy();
-    let current_dir = current_dir_str
-        .as_bytes()
-        .to_vec()
-        .iter()
-        .map(|&b| b as i8)
-        .collect::<Vec<i8>>();
-    let current_dir_bytes = Value::from(current_dir);
+    let current_dir_bytes = current_dir_str.as_bytes();
+    let current_dir: &[i8] = zerocopy::transmute_ref!(current_dir_bytes);
+    let current_dir_bytes = Value::new_object(
+        thread.vm()?.garbage_collector(),
+        Reference::from(current_dir.to_vec()),
+    );
     Ok(Some(current_dir_bytes))
 }
 

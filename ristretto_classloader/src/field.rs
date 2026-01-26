@@ -316,7 +316,9 @@ impl FieldKey for &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Reference;
     use ristretto_classfile::FieldAccessFlags;
+    use ristretto_gc::GarbageCollector;
 
     #[test]
     fn test_field_new() {
@@ -447,7 +449,8 @@ mod tests {
             "test".to_string(),
             vec![],
         );
-        let value: Value = vec![42i32].into();
+        let collector = GarbageCollector::new();
+        let value = Value::new_object(&collector, Reference::from(vec![42i32]));
         field.check_value(&value)?;
         Ok(())
     }

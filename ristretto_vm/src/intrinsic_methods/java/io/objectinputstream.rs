@@ -97,14 +97,18 @@ pub(crate) async fn bytes_to_floats(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classloader::Reference;
 
     #[tokio::test]
     async fn test_bytes_to_doubles() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let bytes: Vec<i8> = vec![64, 8, 0, 0, 0, 0, 0, 0, 64, 69, 0, 0, 0, 0, 0, 0];
-        let source = Value::from(bytes);
-        let destination = Value::from(vec![0f64; 2]);
+        let source = Value::new_object(thread.vm()?.garbage_collector(), Reference::from(bytes));
+        let destination = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![0f64; 2]),
+        );
         parameters.push(source);
         parameters.push_int(0); // source position
         parameters.push(destination.clone());
@@ -122,8 +126,11 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let bytes: Vec<i8> = vec![64, 64, 0, 0, 66, 40, 0, 0];
-        let source = Value::from(bytes);
-        let destination = Value::from(vec![0f32; 2]);
+        let source = Value::new_object(thread.vm()?.garbage_collector(), Reference::from(bytes));
+        let destination = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::from(vec![0f32; 2]),
+        );
         parameters.push(source);
         parameters.push_int(0); // source position
         parameters.push(destination.clone());

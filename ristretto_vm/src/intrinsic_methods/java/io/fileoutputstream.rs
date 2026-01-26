@@ -12,7 +12,7 @@ use ristretto_classfile::JAVA_8;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(target_os = "wasi")]
@@ -210,7 +210,10 @@ pub(crate) async fn write(
     let append = parameters.pop_bool()?;
     let byte = i8::try_from(parameters.pop_int()?)?;
     let file_output_stream = parameters.pop()?;
-    let bytes = Value::from(vec![byte]);
+    let bytes = Value::new_object(
+        thread.vm()?.garbage_collector(),
+        Reference::from(vec![byte]),
+    );
     let mut parameters = Parameters::default();
     parameters.push(file_output_stream);
     parameters.push(bytes);

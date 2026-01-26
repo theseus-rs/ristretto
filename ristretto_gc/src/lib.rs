@@ -122,8 +122,8 @@ mod metadata;
 mod pointers;
 mod root_guard;
 
-pub use collector::{GC, GarbageCollector, Trace};
-pub use config::{Configuration, Statistics};
+pub use collector::{GarbageCollector, Trace};
+pub use config::{Configuration, ConfigurationBuilder, Statistics};
 pub use error::{Error, Result};
 pub use finalizer::Finalize;
 pub use gc::Gc;

@@ -713,8 +713,14 @@ impl PartialEq for Object {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Reference;
     use crate::runtime;
+    use ristretto_gc::GarbageCollector;
     use std::hash::DefaultHasher;
+
+    fn test_ref(reference: impl Into<Reference>) -> Value {
+        Value::new_object(&GarbageCollector::new(), reference.into())
+    }
 
     async fn java8_string_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) =
@@ -911,7 +917,7 @@ mod tests {
         let mut object = Object::new(class)?;
         #[expect(clippy::cast_possible_wrap)]
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
-        let string_value = Value::from(string_bytes);
+        let string_value = test_ref(string_bytes);
         object.set_value("value", string_value)?;
         assert_eq!("String(\"foo\")", object.to_string());
         Ok(())
@@ -928,12 +934,12 @@ mod tests {
             .iter()
             .map(|&b| b as i8)
             .collect();
-        let string_value = Value::from(string_bytes);
+        let string_value = test_ref(string_bytes);
         string_object.set_value("value", string_value)?;
 
         let class = load_class("java.lang.Class").await?;
         let mut object = Object::new(class)?;
-        object.set_value("name", Value::from(string_object))?;
+        object.set_value("name", test_ref(string_object))?;
         assert_eq!("Class(java.lang.Integer)", object.to_string());
         Ok(())
     }
@@ -1116,7 +1122,7 @@ mod tests {
             .iter()
             .map(|&b| b as char)
             .collect();
-        let string_value = Value::from(string_chars);
+        let string_value = test_ref(string_chars);
         object.set_value("value", string_value)?;
         let result = object.as_string()?;
         assert_eq!("foo".to_string(), result);
@@ -1127,7 +1133,7 @@ mod tests {
     async fn test_as_string_java8_invalid_byte_array_value() -> Result<()> {
         let class = java8_string_class().await?;
         let mut object = Object::new(class)?;
-        let string_value = Value::from(Vec::<i32>::new());
+        let string_value = test_ref(Vec::<i32>::new());
         object.set_value("value", string_value)?;
         let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));
@@ -1141,7 +1147,7 @@ mod tests {
         let mut object = Object::new(class)?;
         object.set_value("coder", Value::Int(0))?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
-        let string_value = Value::from(string_bytes);
+        let string_value = test_ref(string_bytes);
         object.set_value("value", string_value)?;
         let result = object.as_string()?;
         assert_eq!("foo".to_string(), result);
@@ -1160,7 +1166,7 @@ mod tests {
             .flat_map(u16::to_be_bytes)
             .map(|b| b as i8)
             .collect();
-        let string_value = Value::from(string_bytes);
+        let string_value = test_ref(string_bytes);
         object.set_value("value", string_value)?;
         let result = object.as_string()?;
         assert_eq!(value.to_string(), result);
@@ -1171,7 +1177,7 @@ mod tests {
     async fn test_as_string_invalid_char_array_value() -> Result<()> {
         let class = string_class().await?;
         let mut object = Object::new(class)?;
-        let string_value = Value::from(Vec::<i32>::new());
+        let string_value = test_ref(Vec::<i32>::new());
         object.set_value("value", string_value)?;
         let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));

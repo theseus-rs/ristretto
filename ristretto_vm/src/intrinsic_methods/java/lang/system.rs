@@ -399,12 +399,14 @@ pub(crate) async fn set_security_manager(
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::Error::JavaError;
+    use ristretto_gc::GarbageCollector;
 
     #[test]
     fn test_arraycopy_vec_basic_copy() -> Result<()> {
-        let source = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5]));
-        let destination = Gc::new(RwLock::new(vec![0, 0, 0, 0, 0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1, 2, 3, 4, 5]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0, 0, 0, 0, 0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 3)?;
         let destination = destination.read();
@@ -419,8 +421,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_offset_copy() -> Result<()> {
-        let source = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5]));
-        let destination = Gc::new(RwLock::new(vec![0, 0, 0, 0, 0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1, 2, 3, 4, 5]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0, 0, 0, 0, 0]));
 
         // Copy from source[1..3] to destination[2..4]
         arraycopy_vec(&source, 1, &destination, 2, 2)?;
@@ -436,8 +438,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_full_array_copy() -> Result<()> {
-        let source = Gc::new(RwLock::new(vec![10, 20, 30]));
-        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![10, 20, 30]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0, 0, 0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 3)?;
         let destination = destination.read();
@@ -450,8 +452,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_zero_length() -> Result<()> {
-        let source = Gc::new(RwLock::new(vec![1, 2, 3]));
-        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1, 2, 3]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0, 0, 0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 0)?;
         let destination = destination.read();
@@ -465,8 +467,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_single_element() -> Result<()> {
-        let source = Gc::new(RwLock::new(vec![42]));
-        let destination = Gc::new(RwLock::new(vec![0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![42]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0]));
 
         arraycopy_vec(&source, 0, &destination, 0, 1)?;
         let destination = destination.read();
@@ -477,8 +479,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_copy_to_end() -> Result<()> {
-        let source = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5]));
-        let destination = Gc::new(RwLock::new(vec![0, 0, 0, 0, 0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1, 2, 3, 4, 5]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0, 0, 0, 0, 0]));
 
         // Copy last 2 elements of source to last 2 positions of destination
         arraycopy_vec(&source, 3, &destination, 3, 2)?;
@@ -494,8 +496,11 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_overlapping_arrays_different_objects() -> Result<()> {
-        let source = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5]));
-        let destination = Gc::new(RwLock::new(vec![10, 11, 12, 13, 14]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1, 2, 3, 4, 5]));
+        let destination = Gc::new(
+            &GarbageCollector::new(),
+            RwLock::new(vec![10, 11, 12, 13, 14]),
+        );
 
         // This should work fine since they're different arrays
         arraycopy_vec(&source, 1, &destination, 0, 3)?;
@@ -511,8 +516,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_source_bounds_error() {
-        let source = Gc::new(RwLock::new(vec![1, 2, 3]));
-        let destination = Gc::new(RwLock::new(vec![0, 0, 0, 0, 0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1, 2, 3]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0, 0, 0, 0, 0]));
 
         // Try to copy 3 elements starting from position 2 (would need source[2,3,4] but only have [0,1,2])
         let result = arraycopy_vec(&source, 2, &destination, 0, 2);
@@ -525,8 +530,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_destination_bounds_error() {
-        let source = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5]));
-        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1, 2, 3, 4, 5]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0, 0, 0]));
 
         // Try to copy 3 elements to position 1 (would need dest[1,2,3] but only have [0,1,2])
         let result = arraycopy_vec(&source, 0, &destination, 1, 3);
@@ -538,8 +543,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_source_position_out_of_bounds() {
-        let source = Gc::new(RwLock::new(vec![1, 2, 3]));
-        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1, 2, 3]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0, 0, 0]));
 
         // Try to start copying from position 3 (doesn't exist)
         let result = arraycopy_vec(&source, 3, &destination, 0, 1);
@@ -552,8 +557,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_destination_position_out_of_bounds() {
-        let source = Gc::new(RwLock::new(vec![1, 2, 3]));
-        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1, 2, 3]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0, 0, 0]));
 
         // Try to start copying to position 3 (doesn't exist)
         let result = arraycopy_vec(&source, 0, &destination, 3, 1);
@@ -566,8 +571,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_exact_boundary() -> Result<()> {
-        let source = Gc::new(RwLock::new(vec![1, 2, 3]));
-        let destination = Gc::new(RwLock::new(vec![0, 0, 0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1, 2, 3]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0, 0, 0]));
 
         // Copy exactly to the boundary - should work
         arraycopy_vec(&source, 0, &destination, 0, 3)?;
@@ -581,8 +586,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_empty_arrays() -> Result<()> {
-        let source = Gc::new(RwLock::new(Vec::<i32>::new()));
-        let destination = Gc::new(RwLock::new(Vec::<i32>::new()));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(Vec::<i32>::new()));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(Vec::<i32>::new()));
 
         // Copying 0 elements from empty arrays should work
         arraycopy_vec(&source, 0, &destination, 0, 0)?;
@@ -591,8 +596,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_empty_source_error() {
-        let source = Gc::new(RwLock::new(Vec::<i32>::new()));
-        let destination = Gc::new(RwLock::new(vec![0]));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(Vec::<i32>::new()));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0]));
 
         // Try to copy from empty array
         let result = arraycopy_vec(&source, 0, &destination, 0, 1);
@@ -604,8 +609,8 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_empty_destination_error() {
-        let source = Gc::new(RwLock::new(vec![1]));
-        let destination = Gc::new(RwLock::new(Vec::<i32>::new()));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1]));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(Vec::<i32>::new()));
 
         // Try to copy to empty array
         let result = arraycopy_vec(&source, 0, &destination, 0, 1);
@@ -617,16 +622,18 @@ mod tests {
 
     #[test]
     fn test_arraycopy_vec_string_copy() -> Result<()> {
-        let source = Gc::new(RwLock::new(vec![
-            "hello".to_string(),
-            "world".to_string(),
-            "test".to_string(),
-        ]));
-        let destination = Gc::new(RwLock::new(vec![
-            String::new(),
-            String::new(),
-            String::new(),
-        ]));
+        let source = Gc::new(
+            &GarbageCollector::new(),
+            RwLock::new(vec![
+                "hello".to_string(),
+                "world".to_string(),
+                "test".to_string(),
+            ]),
+        );
+        let destination = Gc::new(
+            &GarbageCollector::new(),
+            RwLock::new(vec![String::new(), String::new(), String::new()]),
+        );
 
         arraycopy_vec(&source, 0, &destination, 0, 2)?;
         let destination = destination.read();
@@ -642,8 +649,8 @@ mod tests {
         let source_data: Vec<i32> = (0..1000).collect();
         let dest_data: Vec<i32> = vec![0; 1000];
 
-        let source = Gc::new(RwLock::new(source_data));
-        let destination = Gc::new(RwLock::new(dest_data));
+        let source = Gc::new(&GarbageCollector::new(), RwLock::new(source_data));
+        let destination = Gc::new(&GarbageCollector::new(), RwLock::new(dest_data));
 
         arraycopy_vec(&source, 100, &destination, 200, 500)?;
         let destination = destination.read();
@@ -695,9 +702,10 @@ mod tests {
     #[test]
     fn test_arraycopy_vec_overlapping_same_array_forward_shift() -> Result<()> {
         // Test shifting elements to the right within the same array (like StringBuilder insert)
-        let array = Gc::new(RwLock::new(vec![
-            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
-        ]));
+        let array = Gc::new(
+            &GarbageCollector::new(),
+            RwLock::new(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j']),
+        );
 
         // Shift "cdef" to the right by 2 positions to make room for insertion
         // This simulates what StringBuilder does when inserting text
@@ -720,7 +728,10 @@ mod tests {
     #[test]
     fn test_arraycopy_vec_overlapping_same_array_backward_shift() -> Result<()> {
         // Test shifting elements to the left within the same array
-        let array = Gc::new(RwLock::new(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']));
+        let array = Gc::new(
+            &GarbageCollector::new(),
+            RwLock::new(vec!['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']),
+        );
 
         // Shift "cdefgh" to the left by 1 position
         arraycopy_vec(&array, 2, &array, 1, 6)?;
@@ -740,7 +751,10 @@ mod tests {
     #[test]
     fn test_arraycopy_vec_non_overlapping_same_array() -> Result<()> {
         // Test copying within the same array but with non-overlapping regions
-        let array = Gc::new(RwLock::new(vec![1, 2, 3, 4, 5, 6, 7, 8]));
+        let array = Gc::new(
+            &GarbageCollector::new(),
+            RwLock::new(vec![1, 2, 3, 4, 5, 6, 7, 8]),
+        );
 
         // Copy first 3 elements to positions 5-7 (no overlap)
         arraycopy_vec(&array, 0, &array, 5, 3)?;

@@ -10,17 +10,10 @@ use rayon::prelude::*;
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Condvar, LazyLock, Mutex, RwLock, Weak};
+use std::sync::{Arc, Condvar, Mutex, RwLock, Weak};
 use std::thread;
 use sysinfo::System;
 use tracing::{debug, error, info, trace, warn};
-
-/// Global garbage collector instance
-pub static GC: LazyLock<Arc<GarbageCollector>> = LazyLock::new(|| {
-    let collector = GarbageCollector::new();
-    collector.start();
-    collector
-});
 
 /// Trait for objects that can be traced by the garbage collector.
 ///

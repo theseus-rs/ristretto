@@ -15,9 +15,9 @@ use ahash::AHashMap;
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_21, JAVA_PREVIEW_MINOR_VERSION, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
-    Class, ClassLoader, ClassPath, ClassPathEntry, Object, Value, runtime,
+    Class, ClassLoader, ClassPath, ClassPathEntry, Object, Reference, Value, runtime,
 };
-use ristretto_gc::{GC, Statistics};
+use ristretto_gc::{GarbageCollector, Statistics};
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -42,6 +42,8 @@ pub struct VM {
     module_system: ModuleSystem,
     /// The root class loader
     class_loader: Arc<RwLock<Arc<ClassLoader>>>,
+    /// The garbage collector for the VM.
+    garbage_collector: Arc<GarbageCollector>,
     /// The main class name
     main_class: Option<String>,
     /// The Java home directory
@@ -122,10 +124,17 @@ impl VM {
             .await;
         startup_trace!("[vm] class loader module config");
 
+        // Use the configured garbage collector or create a default one
+        let garbage_collector = configuration
+            .garbage_collector()
+            .cloned()
+            .unwrap_or_else(GarbageCollector::new);
+
         let vm = Arc::new_cyclic(|vm| VM {
             vm: vm.clone(),
             configuration,
             class_loader: Arc::new(RwLock::new(class_loader)),
+            garbage_collector,
             main_class,
             java_home,
             java_version,
@@ -310,18 +319,19 @@ impl VM {
         self.configuration().system_properties()
     }
 
+    /// Get the garbage collector.
+    pub fn garbage_collector(&self) -> &Arc<GarbageCollector> {
+        &self.garbage_collector
+    }
+
     /// Runs the garbage collector for the VM.
     pub fn gc(&self) {
-        // TODO: implement a per-vm garbage collector instead of using global one. This would allow
-        //       multiple VMs to run in the same process without interfering with each other.
-        GC.collect();
+        self.garbage_collector.collect();
     }
 
     /// Get VM statistics
     pub fn statistics(&self) -> Statistics {
-        // TODO: implement per-VM statistics instead of using global GC statistics. Also, create VM
-        //       statistics that include more than just GC such as class loading, etc.
-        GC.statistics().unwrap_or_default()
+        self.garbage_collector.statistics().unwrap_or_default()
     }
 
     /// Get the method registry
@@ -398,6 +408,9 @@ impl VM {
     ///
     /// if the VM cannot be initialized
     async fn initialize(&self) -> Result<()> {
+        self.garbage_collector.start();
+        startup_trace!("[vm] garbage collector started");
+
         self.initialize_primordial_thread().await?;
         startup_trace!("[vm] primordial thread");
 
@@ -494,13 +507,16 @@ impl VM {
             field_holder.set_value("priority", Value::Int(5))?;
             field_holder.set_value("stackSize", Value::Long(0))?;
             field_holder.set_value("threadStatus", Value::Int(4))?; // Runnable
-            let field_holder = Value::from(field_holder);
+            let field_holder =
+                Value::new_object(&self.garbage_collector, Reference::Object(field_holder));
 
             new_thread.set_value("holder", field_holder)?;
             new_thread.set_value("interrupted", Value::Int(0))?;
         }
 
-        thread.set_java_object(Value::from(new_thread)).await;
+        thread
+            .set_java_object(Value::from_object(&self.garbage_collector, new_thread))
+            .await;
         self.thread_handles
             .insert(thread.id(), ThreadHandle::from(thread))
             .await?;
@@ -566,7 +582,8 @@ impl VM {
         }
 
         let string_array_class = self.class("[Ljava/lang/String;").await?;
-        let string_parameter = Value::try_from((string_array_class, string_parameters))?;
+        let string_reference = Reference::try_from((string_array_class, string_parameters))?;
+        let string_parameter = Value::new_object(&self.garbage_collector, string_reference);
 
         self.invoke(
             &main_class_name,

@@ -1400,6 +1400,7 @@ mod tests {
         ClassAccessFlags, ClassFile, ConstantPool, Field, FieldAccessFlags, FieldType, JAVA_17,
     };
     use ristretto_classloader::Object;
+    use ristretto_classloader::Reference;
 
     /// Helper function to create a minimal `MemberName` object for testing
     async fn create_test_member_name(
@@ -1410,7 +1411,10 @@ mod tests {
         reference_kind: ReferenceKind,
     ) -> Result<Value> {
         let member_class = thread.class("java/lang/invoke/MemberName").await?;
-        let member = Value::from(Object::new(member_class)?);
+        let member = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(Object::new(member_class)?),
+        );
 
         // Set up the MemberName fields
         let class_name_string = class_name.replace('/', ".");
@@ -1506,7 +1510,10 @@ mod tests {
         .await?;
 
         let mh_class = register_method_handle_class(&thread).await?;
-        let method_handle = Value::from(Object::new(mh_class)?);
+        let method_handle = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(Object::new(mh_class)?),
+        );
         method_handle.as_object_mut()?.set_value("member", member)?;
 
         let arg = "42".to_object(&thread).await?;
@@ -1534,7 +1541,10 @@ mod tests {
         .await?;
 
         let mh_class = register_method_handle_class(&thread).await?;
-        let method_handle = Value::from(Object::new(mh_class)?);
+        let method_handle = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(Object::new(mh_class)?),
+        );
         method_handle.as_object_mut()?.set_value("member", member)?;
 
         let arg = "42".to_object(&thread).await?;
@@ -1562,7 +1572,10 @@ mod tests {
         .await?;
 
         let mh_class = register_method_handle_class(&thread).await?;
-        let method_handle = Value::from(Object::new(mh_class)?);
+        let method_handle = Value::new_object(
+            thread.vm()?.garbage_collector(),
+            Reference::Object(Object::new(mh_class)?),
+        );
         method_handle.as_object_mut()?.set_value("member", member)?;
 
         let args_class = thread.class("[Ljava/lang/Object;").await?;
@@ -1570,7 +1583,8 @@ mod tests {
             .object("java/lang/Integer", "I", &[Value::Int(42)])
             .await?;
         let args = vec![int_object];
-        let arguments = Value::try_from((args_class, args))?;
+        let reference = Reference::try_from((args_class, args))?;
+        let arguments = Value::new_object(thread.vm()?.garbage_collector(), reference);
 
         let mut parameters = Parameters::default();
         parameters.push(method_handle);

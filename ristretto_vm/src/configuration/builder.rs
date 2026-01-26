@@ -10,6 +10,7 @@ use crate::Error::InternalError;
 use crate::Result;
 use ahash::{AHashMap, AHashSet};
 use ristretto_classloader::{ClassPath, DEFAULT_JAVA_VERSION};
+use ristretto_gc::GarbageCollector;
 use std::fmt::Debug;
 use std::io::{Read, Write, stderr, stdin, stdout};
 use std::path::PathBuf;
@@ -45,6 +46,8 @@ pub struct ConfigurationBuilder {
     batch_compilation: bool,
     preview_features: bool,
     verify_mode: VerifyMode,
+    // Garbage collector
+    garbage_collector: Option<Arc<GarbageCollector>>,
     // JPMS module configuration fields
     module_path: Vec<PathBuf>,
     upgrade_module_path: Vec<PathBuf>,
@@ -89,6 +92,7 @@ impl ConfigurationBuilder {
             batch_compilation: true,
             preview_features: false,
             verify_mode: VerifyMode::default(),
+            garbage_collector: None,
             module_path: Vec::new(),
             upgrade_module_path: Vec::new(),
             main_module: None,
@@ -184,6 +188,15 @@ impl ConfigurationBuilder {
     #[must_use]
     pub fn verify_mode(mut self, verify_mode: VerifyMode) -> Self {
         self.verify_mode = verify_mode;
+        self
+    }
+
+    /// Set the garbage collector
+    ///
+    /// If not set, the VM will create a default garbage collector.
+    #[must_use]
+    pub fn garbage_collector(mut self, garbage_collector: Arc<GarbageCollector>) -> Self {
+        self.garbage_collector = Some(garbage_collector);
         self
     }
 
@@ -361,6 +374,7 @@ impl ConfigurationBuilder {
             batch_compilation: self.batch_compilation,
             preview_features: self.preview_features,
             verify_mode: self.verify_mode,
+            garbage_collector: self.garbage_collector,
             module_path: self.module_path,
             upgrade_module_path: self.upgrade_module_path,
             main_module: self.main_module,

@@ -6,7 +6,7 @@ use crate::thread::Thread;
 use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use std::sync::Arc;
@@ -187,7 +187,8 @@ pub(crate) async fn get_threads(
     }
 
     let thread_class = thread.class("java/lang/Thread").await?;
-    let threads = (thread_class, threads).try_into()?;
+    let reference = Reference::try_from((thread_class, threads))?;
+    let threads = Value::new_object(vm.garbage_collector(), reference);
     Ok(Some(threads))
 }
 

@@ -340,6 +340,7 @@ pub(crate) mod tests {
     use super::*;
     use crate::JavaObject;
     use crate::intrinsic_methods::registry::IntrinsicMethod;
+    use ristretto_classloader::Reference;
 
     pub(crate) async fn invoke_test(invoke: IntrinsicMethod) -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
@@ -350,7 +351,8 @@ pub(crate) mod tests {
         let class = thread.class("java/lang/Class").await?;
         let string_class = thread.class("java/lang/String").await?;
         let string_class_object = string_class.to_object(&thread).await?;
-        let arguments = Value::try_from((class.clone(), vec![string_class_object]))?;
+        let reference = Reference::try_from((class.clone(), vec![string_class_object]))?;
+        let arguments = Value::new_object(vm.garbage_collector(), reference);
 
         let method = vm
             .invoke(
@@ -362,7 +364,8 @@ pub(crate) mod tests {
             .expect("method");
 
         let string_parameter = "42".to_object(&thread).await?;
-        let parameters = Value::try_from((class, vec![string_parameter]))?;
+        let reference = Reference::try_from((class, vec![string_parameter]))?;
+        let parameters = Value::new_object(vm.garbage_collector(), reference);
         let parameters = Parameters::new(vec![method, Value::Object(None), parameters]);
         let value = invoke(thread, parameters)
             .await?

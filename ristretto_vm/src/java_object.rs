@@ -52,8 +52,7 @@ impl JavaObject for i8 {
 
 impl JavaObject for u8 {
     async fn to_object(&self, thread: &Thread) -> Result<Value> {
-        #[expect(clippy::cast_possible_wrap)]
-        let value = *self as i8;
+        let value: i8 = zerocopy::transmute!(*self);
         value.to_object(thread).await
     }
 }
@@ -70,8 +69,7 @@ impl JavaObject for i16 {
 
 impl JavaObject for u16 {
     async fn to_object(&self, thread: &Thread) -> Result<Value> {
-        #[expect(clippy::cast_possible_wrap)]
-        let value = *self as i16;
+        let value: i16 = zerocopy::transmute!(*self);
         value.to_object(thread).await
     }
 }
@@ -92,8 +90,7 @@ impl JavaObject for i32 {
 
 impl JavaObject for u32 {
     async fn to_object(&self, thread: &Thread) -> Result<Value> {
-        #[expect(clippy::cast_possible_wrap)]
-        let value = *self as i32;
+        let value: i32 = zerocopy::transmute!(*self);
         value.to_object(thread).await
     }
 }
@@ -110,8 +107,7 @@ impl JavaObject for i64 {
 
 impl JavaObject for u64 {
     async fn to_object(&self, thread: &Thread) -> Result<Value> {
-        #[expect(clippy::cast_possible_wrap)]
-        let value = *self as i64;
+        let value: i64 = zerocopy::transmute!(*self);
         value.to_object(thread).await
     }
 }
@@ -156,11 +152,12 @@ impl JavaObject for &str {
         let mut object = Object::new(class)?;
 
         let vm = thread.vm()?;
+        let collector = vm.garbage_collector();
         let java_class_file_version = vm.java_class_file_version();
         let array = if java_class_file_version <= &JAVA_8 {
             // Java 8 and below: store as UTF-16 char array
             let chars = self.encode_utf16().collect::<Vec<u16>>();
-            Value::from(Reference::CharArray(chars.into()))
+            Value::new_object(collector, Reference::CharArray(chars.into()))
         } else {
             if java_class_file_version >= &JAVA_17 {
                 object.set_value("hashIsZero", Value::Int(0))?;
@@ -172,25 +169,20 @@ impl JavaObject for &str {
                 // All chars fit in Latin1
                 (0, self.chars().map(|c| c as i8).collect())
             } else {
-                #[expect(clippy::cast_possible_wrap)]
                 // Must use UTF-16
-                (
-                    1,
-                    self.encode_utf16()
-                        .flat_map(u16::to_ne_bytes)
-                        .map(|b| b as i8)
-                        .collect(),
-                )
+                let utf16_bytes: Vec<u8> = self.encode_utf16().flat_map(u16::to_ne_bytes).collect();
+                let signed_bytes: &[i8] = zerocopy::transmute_ref!(utf16_bytes.as_slice());
+                (1, signed_bytes.to_vec())
             };
 
             object.set_value("coder", Value::Int(coder))?;
-            Value::from(bytes)
+            Value::new_object(collector, Reference::from(bytes))
         };
 
         object.set_value("value", array)?;
         object.set_value("hash", Value::Int(0))?;
 
-        let value = Value::from(object);
+        let value = Value::from_object(collector, object);
         Ok(value)
     }
 }
@@ -419,7 +411,8 @@ async fn create_boot_unnamed_module(thread: &Thread) -> Result<Value> {
     let module_object = Object::new(module_class)?;
     // All fields remain null/default which is correct for an unnamed boot module
 
-    Ok(Value::from(module_object))
+    let vm = thread.vm()?;
+    Ok(Value::from_object(vm.garbage_collector(), module_object))
 }
 
 /// Get the module for a class based on Java version and class loader.
@@ -510,7 +503,8 @@ async fn create_unnamed_module(thread: &Thread, class_loader_object: &Value) -> 
     // layer and descriptor remain null (default)
     // name remains null (unnamed module)
 
-    Ok(Value::from(module_object))
+    let vm = thread.vm()?;
+    Ok(Value::from_object(vm.garbage_collector(), module_object))
 }
 
 /// Build the constructor descriptor and parameters for creating a Class object based on Java version.

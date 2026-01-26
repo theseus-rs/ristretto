@@ -82,7 +82,10 @@ pub(crate) async fn get_parameters_0(
             }
 
             let result = Reference::try_from((parameter_array_class, result_params))?;
-            return Ok(Some(Value::from(result)));
+            return Ok(Some(Value::new_object(
+                thread.vm()?.garbage_collector(),
+                result,
+            )));
         }
     }
 
@@ -156,7 +159,10 @@ pub(crate) async fn get_type_annotation_bytes_0(
         .map(|b| Value::Int(i32::from(b)))
         .collect();
     let result = Reference::try_from((byte_array_class, byte_values))?;
-    Ok(Some(Value::from(result)))
+    Ok(Some(Value::new_object(
+        thread.vm()?.garbage_collector(),
+        result,
+    )))
 }
 
 #[cfg(test)]

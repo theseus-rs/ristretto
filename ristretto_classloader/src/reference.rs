@@ -796,11 +796,19 @@ impl From<Vec<f64>> for Reference {
     }
 }
 
-impl From<(Arc<Class>, Vec<Option<Reference>>)> for Reference {
-    fn from((class, value): (Arc<Class>, Vec<Option<Reference>>)) -> Self {
-        let elements = value.into_iter().map(Value::from).collect::<Vec<_>>();
+impl Reference {
+    /// Create a new object array reference.
+    pub fn new_array(
+        collector: &GarbageCollector,
+        class: Arc<Class>,
+        value: Vec<Option<Reference>>,
+    ) -> Self {
+        let elements = value
+            .into_iter()
+            .map(|opt_ref| Value::new_opt_object(collector, opt_ref))
+            .collect::<Vec<_>>();
         let object_array = ObjectArray {
-            class: class.clone(),
+            class,
             elements: elements.into_boxed_slice(),
         };
         Reference::Array(object_array)
@@ -836,9 +844,15 @@ impl From<Object> for Reference {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use crate::{Class, Result, Value, runtime};
+    use ristretto_gc::GarbageCollector;
     use std::hash::{DefaultHasher, Hasher};
     use std::sync::Arc;
+
+    fn test_ref(reference: impl Into<Reference>) -> Value {
+        Value::new_object(&GarbageCollector::new(), reference.into())
+    }
 
     async fn load_class(class: &str) -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
@@ -865,7 +879,7 @@ mod tests {
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class.clone())?;
         let values = vec![Some(Reference::from(object))];
-        let reference = Reference::from((class, values));
+        let reference = Reference::new_array(&GarbageCollector::new(), class, values);
         let collector = GarbageCollector::new();
         reference.trace(&collector);
         Ok(())
@@ -1163,7 +1177,7 @@ mod tests {
     #[tokio::test]
     async fn test_display_reference_array() -> Result<()> {
         let class = load_class("[Ljava/lang/Object;").await?;
-        let reference = Reference::from((class, vec![None]));
+        let reference = Reference::new_array(&GarbageCollector::new(), class, vec![None]);
         assert_eq!(reference.class_name()?, "[Ljava/lang/Object;");
         assert_eq!(reference.to_string(), "java/lang/Object[1]");
         Ok(())
@@ -1173,7 +1187,8 @@ mod tests {
     async fn test_as_class_vec_ref() -> Result<()> {
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let original_value = vec![Value::Object(None)];
-        let reference = Reference::from((original_class.clone(), vec![None]));
+        let reference =
+            Reference::new_array(&GarbageCollector::new(), original_class.clone(), vec![None]);
         let (class, value) = reference.as_class_vec_ref()?;
         assert_eq!(&original_class, class);
         assert_eq!(original_value, value.to_vec());
@@ -1190,7 +1205,8 @@ mod tests {
     #[tokio::test]
     async fn test_as_class_vec_mut() -> Result<()> {
         let object_class = load_class("[Ljava/lang/Object;").await?;
-        let mut reference = Reference::from((object_class.clone(), vec![None]));
+        let mut reference =
+            Reference::new_array(&GarbageCollector::new(), object_class.clone(), vec![None]);
         {
             let (_class, mutable_reference) = reference.as_class_vec_mut()?;
             mutable_reference[0] = Value::Int(42);
@@ -1580,7 +1596,7 @@ mod tests {
     #[tokio::test]
     async fn test_hash_code_reference_array() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
-        let reference = Reference::from((class.clone(), vec![None]));
+        let reference = Reference::new_array(&GarbageCollector::new(), class.clone(), vec![None]);
         assert_ne!(0, reference.hash_code());
         Ok(())
     }
@@ -1588,8 +1604,8 @@ mod tests {
     #[tokio::test]
     async fn test_hash_reference_array() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
-        let reference1 = Reference::from((class.clone(), vec![None]));
-        let reference2 = Reference::from((class.clone(), vec![None]));
+        let reference1 = Reference::new_array(&GarbageCollector::new(), class.clone(), vec![None]);
+        let reference2 = Reference::new_array(&GarbageCollector::new(), class.clone(), vec![None]);
         let mut hasher1 = DefaultHasher::new();
         reference1.hash(&mut hasher1);
         let hash1 = hasher1.finish();
@@ -1603,8 +1619,8 @@ mod tests {
     #[tokio::test]
     async fn test_ptr_eq_reference_array() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
-        let reference1 = Reference::from((class.clone(), vec![None]));
-        let reference2 = Reference::from((class.clone(), vec![None]));
+        let reference1 = Reference::new_array(&GarbageCollector::new(), class.clone(), vec![None]);
+        let reference2 = Reference::new_array(&GarbageCollector::new(), class.clone(), vec![None]);
         let reference3 = reference1.clone();
         assert!(reference1.ptr_eq(&reference1));
         assert!(!reference1.ptr_eq(&reference2));
@@ -1615,14 +1631,14 @@ mod tests {
     #[tokio::test]
     async fn test_clone_reference_array() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
-        let reference = Reference::from((class.clone(), vec![None]));
+        let reference = Reference::new_array(&GarbageCollector::new(), class.clone(), vec![None]);
         let mut clone = reference.clone();
         assert_eq!(reference, clone);
 
         {
             let (_class, array) = clone.as_class_vec_mut()?;
             if let Some(element) = array.get_mut(0) {
-                *element = Value::from(vec![1i8]);
+                *element = test_ref(vec![1i8]);
             }
         }
         assert_ne!(reference, clone);
@@ -1682,8 +1698,8 @@ mod tests {
     #[tokio::test]
     async fn test_array_eq() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
-        let reference1 = Reference::from((class.clone(), vec![]));
-        let reference2 = Reference::from((class, vec![]));
+        let reference1 = Reference::new_array(&GarbageCollector::new(), class.clone(), vec![]);
+        let reference2 = Reference::new_array(&GarbageCollector::new(), class, vec![]);
         assert_eq!(reference1, reference2);
         Ok(())
     }
@@ -1691,9 +1707,9 @@ mod tests {
     #[tokio::test]
     async fn test_array_eq_class_ne() -> Result<()> {
         let object_class = load_class("java.lang.Object").await?;
-        let reference1 = Reference::from((object_class, vec![]));
+        let reference1 = Reference::new_array(&GarbageCollector::new(), object_class, vec![]);
         let string_class = load_class("java.lang.String").await?;
-        let reference2 = Reference::from((string_class, vec![]));
+        let reference2 = Reference::new_array(&GarbageCollector::new(), string_class, vec![]);
         assert_ne!(reference1, reference2);
         Ok(())
     }
@@ -1701,8 +1717,8 @@ mod tests {
     #[tokio::test]
     async fn test_array_eq_value_ne() -> Result<()> {
         let class = load_class("java.lang.Object").await?;
-        let reference1 = Reference::from((class.clone(), vec![]));
-        let reference2 = Reference::from((class, vec![None]));
+        let reference1 = Reference::new_array(&GarbageCollector::new(), class.clone(), vec![]);
+        let reference2 = Reference::new_array(&GarbageCollector::new(), class, vec![None]);
         assert_ne!(reference1, reference2);
         Ok(())
     }
@@ -1919,7 +1935,11 @@ mod tests {
     async fn test_from_class_vec() -> Result<()> {
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let original_value = vec![None];
-        let reference = Reference::from((original_class.clone(), original_value.clone()));
+        let reference = Reference::new_array(
+            &GarbageCollector::new(),
+            original_class.clone(),
+            original_value.clone(),
+        );
         assert!(matches!(reference, Reference::Array(_)));
         Ok(())
     }
@@ -1931,7 +1951,7 @@ mod tests {
         let class = load_class(class_name).await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = Value::from(object);
+        let value = test_ref(object);
         let original_values = vec![value];
         let reference = Reference::try_from((original_class.clone(), original_values.clone()))?;
         assert!(matches!(reference, Reference::Array(_)));
@@ -1941,7 +1961,7 @@ mod tests {
     #[tokio::test]
     async fn test_try_from_class_vec_error() -> Result<()> {
         let original_class = load_class("[Ljava/lang/Object;").await?;
-        let value = Value::from(42);
+        let value = Value::Int(42);
         let original_value = vec![value];
         let reference = Reference::try_from((original_class.clone(), original_value.clone()));
         assert!(matches!(reference, Err(InvalidValueType(_))));
@@ -2113,13 +2133,13 @@ mod tests {
         Ok(())
     }
 
-    #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
     async fn test_as_string() -> Result<()> {
         let class = load_class("java/lang/String").await?;
         let mut object = Object::new(class)?;
-        let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
-        let string_value = Value::from(string_bytes);
+        let bytes = "foo".as_bytes();
+        let string_bytes: &[i8] = zerocopy::transmute_ref!(bytes);
+        let string_value = test_ref(string_bytes.to_vec());
         object.set_value("value", string_value)?;
         let reference = Reference::from(object);
         let result = reference.as_string()?;
@@ -2205,7 +2225,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_bytes_object_array_returns_none() -> Result<()> {
         let class = load_class("[Ljava/lang/Object;").await?;
-        let reference = Reference::from((class, vec![None]));
+        let reference = Reference::new_array(&GarbageCollector::new(), class, vec![None]);
         assert!(reference.as_bytes().is_none());
         Ok(())
     }
@@ -2321,7 +2341,7 @@ mod tests {
     #[tokio::test]
     async fn test_as_bytes_mut_object_array_returns_none() -> Result<()> {
         let class = load_class("[Ljava/lang/Object;").await?;
-        let mut reference = Reference::from((class, vec![None]));
+        let mut reference = Reference::new_array(&GarbageCollector::new(), class, vec![None]);
         assert!(reference.as_bytes_mut().is_none());
         Ok(())
     }
