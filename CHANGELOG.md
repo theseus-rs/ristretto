@@ -46,10 +46,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update java versions
 - add field initialization tests and docs
 - correct cyclic crate dependencies with ristretto_jimage
-- Merge pull request #630 from theseus-rs/optimize-async-instructions
-- Merge branch 'main' into optimize-async-instructions
-- Merge pull request #625 from theseus-rs/jit-backward-jump
-- Merge pull request #608 from theseus-rs/register-dynamically-created-classes
 - correct clippy lints
 - Implement invokedynamic support and MethodHandleNatives updates for JDK 17+ compatibility
 
@@ -83,9 +79,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other
 - update java versions
 - Merge pull request #630 from theseus-rs/optimize-async-instructions
-- Merge branch 'main' into optimize-async-instructions
-- Merge pull request #625 from theseus-rs/jit-backward-jump
-- Merge pull request #608 from theseus-rs/register-dynamically-created-classes
 - correct clippy lints
 - Implement invokedynamic support and MethodHandleNatives updates for JDK 17+ compatibility
 - update rustdoc references section
