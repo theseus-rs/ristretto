@@ -232,7 +232,9 @@ pub async fn process_values(thread: &Thread, values: &[impl RustValue]) -> Resul
 
         // Extract string_value before await to avoid holding guard across await point
         let string_value_opt = {
-            if let Ok(object) = value.as_object_ref() {
+            if matches!(value, Value::Object(Some(_)))
+                && let Ok(object) = value.as_object_ref()
+            {
                 let class_name = object.class().name();
                 if class_name.starts_with(STRING_PREFIX) {
                     Some(

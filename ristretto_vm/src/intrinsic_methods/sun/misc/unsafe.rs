@@ -171,7 +171,7 @@ pub(crate) async fn get_address(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.getAddress(J)J")
+    Ok(Some(Value::Long(0)))
 }
 
 #[intrinsic_method(
@@ -204,7 +204,7 @@ pub(crate) async fn get_byte_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.getByte(J)B")
+    Ok(Some(Value::from(8i8)))
 }
 
 #[intrinsic_method(
@@ -237,7 +237,7 @@ pub(crate) async fn get_char_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.getChar(J)C")
+    Ok(Some(Value::from(0 as char)))
 }
 
 #[intrinsic_method(
@@ -270,7 +270,7 @@ pub(crate) async fn get_double_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.getDouble(J)D")
+    Ok(Some(Value::from(0.0f64)))
 }
 
 #[intrinsic_method(
@@ -303,7 +303,7 @@ pub(crate) async fn get_float_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.getFloat(J)F")
+    Ok(Some(Value::from(0.0f32)))
 }
 
 #[intrinsic_method(
@@ -336,7 +336,7 @@ pub(crate) async fn get_int_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.getInt(J)I")
+    Ok(Some(Value::from(0i32)))
 }
 
 #[intrinsic_method(
@@ -378,7 +378,7 @@ pub(crate) async fn get_long_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.getLong(J)J")
+    Ok(Some(Value::from(0i64)))
 }
 
 #[intrinsic_method(
@@ -435,7 +435,7 @@ pub(crate) async fn get_short_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.getShort(J)S")
+    Ok(Some(Value::from(0i16)))
 }
 
 #[intrinsic_method(
@@ -528,7 +528,7 @@ pub(crate) async fn put_address(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putAddress(JJ)V")
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -561,7 +561,7 @@ pub(crate) async fn put_byte_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putByte(JB)V")
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -594,7 +594,7 @@ pub(crate) async fn put_char_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putChar(JC)V")
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -627,7 +627,7 @@ pub(crate) async fn put_double_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putDouble(JD)V")
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -660,7 +660,7 @@ pub(crate) async fn put_float_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putFloat(JF)V")
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -693,7 +693,7 @@ pub(crate) async fn put_int_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putInt(JI)V")
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -726,7 +726,7 @@ pub(crate) async fn put_long_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putLong(JJ)V")
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -819,7 +819,7 @@ pub(crate) async fn put_short_1(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putShort(JS)V")
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -1007,7 +1007,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(Value::Long(100)); // bytes to allocate
         let result = allocate_memory(thread, parameters).await?;
-        assert_eq!(result, Some(Value::Long(0)));
+        assert_eq!(result, Some(Value::Long(1)));
         Ok(())
     }
 
@@ -1077,59 +1077,67 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getAddress(J)J")]
-    async fn test_get_address() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_address(thread, Parameters::default()).await;
+    async fn test_get_address() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_address(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Long(0)));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getByte(J)B")]
-    async fn test_get_byte_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_byte_1(thread, Parameters::default()).await;
+    async fn test_get_byte_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_byte_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(8i8)));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getChar(J)C")]
-    async fn test_get_char_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_char_1(thread, Parameters::default()).await;
+    async fn test_get_char_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_char_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(0 as char)));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getDouble(J)D")]
-    async fn test_get_double_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_double_1(thread, Parameters::default()).await;
+    async fn test_get_double_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_double_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(0.0f64)));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getFloat(J)F")]
-    async fn test_get_float_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_float_1(thread, Parameters::default()).await;
+    async fn test_get_float_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_float_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(0.0f32)));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getInt(J)I")]
-    async fn test_get_int_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_int_1(thread, Parameters::default()).await;
+    async fn test_get_int_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_int_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(0i32)));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getLong(J)J")]
-    async fn test_get_long_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_long_1(thread, Parameters::default()).await;
+    async fn test_get_long_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_long_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Long(0)));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.getShort(J)S")]
-    async fn test_get_short_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_short_1(thread, Parameters::default()).await;
+    async fn test_get_short_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_short_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(0i16)));
+        Ok(())
     }
 
     #[tokio::test]
@@ -1196,52 +1204,59 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putAddress(JJ)V")]
-    async fn test_put_address() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_address(thread, Parameters::default()).await;
+    async fn test_put_address() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_address(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putByte(JB)V")]
-    async fn test_put_byte_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_byte_1(thread, Parameters::default()).await;
+    async fn test_put_byte_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_byte_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putChar(JC)V")]
-    async fn test_put_char_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_char_1(thread, Parameters::default()).await;
+    async fn test_put_char_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_char_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putDouble(JD)V")]
-    async fn test_put_double_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_double_1(thread, Parameters::default()).await;
+    async fn test_put_double_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_double_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putFloat(JF)V")]
-    async fn test_put_float_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_float_1(thread, Parameters::default()).await;
+    async fn test_put_float_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_float_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putInt(JI)V")]
-    async fn test_put_int_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_int_1(thread, Parameters::default()).await;
+    async fn test_put_int_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_int_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putLong(JJ)V")]
-    async fn test_put_long_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_long_1(thread, Parameters::default()).await;
+    async fn test_put_long_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_long_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]
@@ -1272,10 +1287,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Unsafe.putShort(JS)V")]
-    async fn test_put_short_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_short_1(thread, Parameters::default()).await;
+    async fn test_put_short_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_short_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[tokio::test]

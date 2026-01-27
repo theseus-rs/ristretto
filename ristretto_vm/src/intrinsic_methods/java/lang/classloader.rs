@@ -308,10 +308,14 @@ pub(crate) async fn find_bootstrap_class(
 )]
 #[async_method]
 pub(crate) async fn find_builtin_lib(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // Ristretto has not built-in libraries; all native methods are implemented in Rust
+    let library_name_str = parameters.pop()?.as_string()?;
+    if library_name_str.contains("zip") {
+        let library_name = library_name_str.to_object(&thread).await?;
+        return Ok(Some(library_name));
+    }
     Ok(Some(Value::Object(None)))
 }
 
@@ -383,12 +387,21 @@ pub(crate) async fn retrieve_directives(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::java_object::JavaObject;
 
     #[tokio::test]
     async fn test_find_builtin_lib() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = find_builtin_lib(thread, Parameters::default()).await?;
+        let mut parameters = Parameters::default();
+        parameters.push("foo".to_object(&thread).await?);
+        let result = find_builtin_lib(thread.clone(), parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
+
+        let mut parameters = Parameters::default();
+        parameters.push("zip".to_object(&thread).await?);
+        let result = find_builtin_lib(thread.clone(), parameters).await?;
+        let expected = "zip".to_object(&thread).await?;
+        assert_eq!(result, Some(expected));
         Ok(())
     }
 
