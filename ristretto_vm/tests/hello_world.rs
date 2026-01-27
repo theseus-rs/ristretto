@@ -34,7 +34,6 @@ async fn test_helloworld(java_verison: &str) -> Result<()> {
     Ok(())
 }
 
-#[ignore = "Java 8 support not fully implemented"]
 #[tokio::test]
 async fn test_helloworld_v8() -> Result<()> {
     test_helloworld(JAVA_8_VERSION).await

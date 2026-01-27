@@ -30,6 +30,7 @@ pub const JAVA_25_VERSION: &str = "25.0.2.10.1";
 
 /// Array of all supported Java LTS versions for iteration in tests
 pub const ALL_LTS_VERSIONS: &[&str] = &[
+    JAVA_8_VERSION,
     JAVA_11_VERSION,
     JAVA_17_VERSION,
     JAVA_21_VERSION,

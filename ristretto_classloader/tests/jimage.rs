@@ -20,10 +20,13 @@ async fn get_test_image() -> Result<Image> {
 #[tokio::test]
 async fn test_image_for_all_java_lts_versions() -> Result<()> {
     for version in ALL_LTS_VERSIONS {
-        let (java_home, _java_version, _class_loader) =
-            version_class_loader(version).await.expect("java home");
+        if version.starts_with("8.") || version.starts_with("1.") {
+            continue;
+        }
+        let (java_home, _java_version, _class_loader) = version_class_loader(version)
+            .await
+            .expect("java home");
         let path = java_home.join("lib").join("modules");
-        let _path_str = path.to_str().unwrap_or_default();
         let image = Image::from_file(&path)?;
 
         // Verify the Object class can be found for each version

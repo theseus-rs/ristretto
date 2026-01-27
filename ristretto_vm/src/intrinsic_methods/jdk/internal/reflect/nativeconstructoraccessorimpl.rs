@@ -63,7 +63,12 @@ pub(crate) async fn new_instance_0(
     thread: Arc<Thread>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let mut arguments: Vec<Value> = parameters.pop()?.try_into()?;
+    let arguments = parameters.pop()?;
+    let mut arguments: Vec<Value> = if arguments.is_null() {
+        Vec::new()
+    } else {
+        arguments.try_into()?
+    };
     let method = parameters.pop()?;
     let (class_object, parameter_types, modifiers, override_flag) = {
         let method = method.as_object_ref()?;

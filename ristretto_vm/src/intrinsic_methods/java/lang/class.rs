@@ -3,7 +3,7 @@ use crate::Result;
 use crate::assignable::Assignable;
 use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
-use crate::rust_value::RustValue;
+
 use crate::thread::Thread;
 use byteorder::{BigEndian, WriteBytesExt};
 use ristretto_classfile::VersionSpecification::{
@@ -420,14 +420,17 @@ pub(crate) async fn get_declared_fields_0(
             continue;
         }
 
-        let field_name = field.name();
+        let field_name = {
+            let vm = thread.vm()?;
+            vm.string_pool().intern(&thread, field.name()).await?
+        };
+
         let field_type_class_name = field.field_type().class_name();
         let field_type_class = thread.class(field_type_class_name).await?;
         let field_type = field_type_class.to_object(&thread).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
-        let slot = &class.field_offset(field_name)?;
+        let slot = &class.field_offset(field.name())?;
         let slot = Value::Int(i32::try_from(*slot)?);
-        let field_name = field.name().to_value(vm.garbage_collector());
 
         let mut field_signature = Value::Object(None);
         let mut annotations = Value::Object(None);
