@@ -36,6 +36,7 @@ dashmap = { workspace = true }
 dirs = { workspace = true }
 filetime = { workspace = true }
 indexmap = { workspace = true }
+jiff = { workspace = true }
 os_info = { workspace = true }
 parking_lot = { workspace = true }
 phf = { workspace = true }
