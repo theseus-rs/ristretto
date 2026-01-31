@@ -1,4 +1,5 @@
 use crate::Result;
+use crate::java_object::JavaObject;
 use crate::parameters::Parameters;
 use crate::thread::Thread;
 use ristretto_classfile::VersionSpecification::Any;
@@ -13,7 +14,10 @@ pub(crate) async fn get_system_gmt_offset_id(
     _thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.util.TimeZone.getSystemGMTOffsetID()Ljava/lang/String;")
+    // This method returns null to indicate that the system doesn't have a fixed GMT offset ID. The
+    // Java TimeZone class will then use the IANA timezone ID to determine the offset dynamically.
+    // Returning null is the correct behavior for most systems.
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -22,10 +26,15 @@ pub(crate) async fn get_system_gmt_offset_id(
 )]
 #[async_method]
 pub(crate) async fn get_system_time_zone_id(
-    _thread: Arc<Thread>,
+    thread: Arc<Thread>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.util.TimeZone.getSystemTimeZoneID(Ljava/lang/String;)Ljava/lang/String;")
+    // Get the system timezone ID (e.g., "America/New_York", "Europe/London")
+    let timezone_id = jiff::tz::TimeZone::system()
+        .iana_name()
+        .map_or_else(|| "UTC".to_string(), ToString::to_string);
+    let result = timezone_id.to_object(&thread).await?;
+    Ok(Some(result))
 }
 
 #[cfg(test)]
@@ -33,20 +42,20 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.util.TimeZone.getSystemGMTOffsetID()Ljava/lang/String;"
-    )]
     async fn test_get_system_gmt_offset_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_gmt_offset_id(thread, Parameters::default()).await;
+        let result = get_system_gmt_offset_id(thread, Parameters::default())
+            .await
+            .expect("result");
+        assert!(result.is_none());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.util.TimeZone.getSystemTimeZoneID(Ljava/lang/String;)Ljava/lang/String;"
-    )]
     async fn test_get_system_time_zone_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_time_zone_id(thread, Parameters::default()).await;
+        let result = get_system_time_zone_id(thread, Parameters::default())
+            .await
+            .expect("result");
+        assert!(result.is_some());
     }
 }
