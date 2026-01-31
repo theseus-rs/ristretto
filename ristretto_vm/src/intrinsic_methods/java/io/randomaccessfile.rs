@@ -328,8 +328,7 @@ pub(crate) async fn read_bytes_0(
         .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
     let file = &mut file_handle.file;
 
-    let capacity = length.saturating_sub(offset);
-    let mut buffer = vec![0u8; capacity];
+    let mut buffer = vec![0u8; length];
     let bytes_read: usize;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
