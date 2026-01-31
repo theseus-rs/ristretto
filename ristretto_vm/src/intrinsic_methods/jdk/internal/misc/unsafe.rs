@@ -1,5 +1,5 @@
 use crate::Error::{InternalError, InvalidOperand};
-use crate::JavaError::{ArrayIndexOutOfBoundsException, ClassFormatError};
+use crate::JavaError::{ArrayIndexOutOfBoundsException, ClassFormatError, NullPointerException};
 use crate::Result;
 use crate::intrinsic_methods::java::lang::class::get_class;
 use crate::java_object::JavaObject;
@@ -76,7 +76,7 @@ pub(crate) async fn allocate_memory_0(
         ))
         .into());
     }
-    Ok(Some(Value::Long(0)))
+    Ok(Some(Value::Long(1)))
 }
 
 #[intrinsic_method(
@@ -145,7 +145,7 @@ pub(crate) async fn compare_and_exchange_int(
     };
 
     let value = parameters.pop()?;
-    let current_value = if value.is_object() {
+    let current_value = if value.is_object() && !value.is_null() {
         let offset_long = *offset;
         if offset_long & STATIC_FIELD_OFFSET_MASK != 0 {
             // Extract class_name before await
@@ -213,7 +213,7 @@ pub(crate) async fn compare_and_exchange_long(
     };
 
     let value = parameters.pop()?;
-    let current_value = if value.is_object() {
+    let current_value = if value.is_object() && !value.is_null() {
         let offset_long = *offset;
         if offset_long & STATIC_FIELD_OFFSET_MASK != 0 {
             // Extract class_name before await
@@ -287,6 +287,12 @@ pub(crate) async fn compare_and_exchange_reference(
     let offset = parameters.pop_long()?;
     let offset = usize::try_from(offset & !STATIC_FIELD_OFFSET_MASK)?;
     let object = parameters.pop()?;
+    if object.is_null() {
+        return Err(NullPointerException(Some(
+            "compareAndExchangeReference: Reference cannot be null".to_string(),
+        ))
+        .into());
+    }
     let mut object = object.as_reference_mut()?;
 
     let result = match &mut *object {
@@ -349,7 +355,7 @@ pub(crate) async fn compare_and_set_int(
     };
 
     let value = parameters.pop()?;
-    let result = if value.is_object() {
+    let result = if value.is_object() && !value.is_null() {
         let offset_long = *offset;
         if offset_long & STATIC_FIELD_OFFSET_MASK != 0 {
             // Extract class_name before await
@@ -420,7 +426,7 @@ pub(crate) async fn compare_and_set_long(
     };
 
     let value = parameters.pop()?;
-    let result = if value.is_object() {
+    let result = if value.is_object() && !value.is_null() {
         let offset_long = *offset;
         if offset_long & STATIC_FIELD_OFFSET_MASK != 0 {
             // Extract class_name before await
@@ -497,6 +503,12 @@ pub(crate) async fn compare_and_set_reference(
     let offset = parameters.pop_long()?;
     let offset = usize::try_from(offset & !STATIC_FIELD_OFFSET_MASK)?;
     let reference = parameters.pop()?;
+    if reference.is_null() {
+        return Err(NullPointerException(Some(
+            "compareAndSetReference: Reference cannot be null".to_string(),
+        ))
+        .into());
+    }
     let mut reference = reference.as_reference_mut()?;
 
     let result = match &mut *reference {
@@ -615,6 +627,12 @@ pub(crate) async fn copy_swap_memory_0(
 
     // Get source bytes
     let src_bytes: Vec<u8> = {
+        if !src.is_object() || src.is_null() {
+            return Err(NullPointerException(Some(
+                "copySwapMemory0: source cannot be null".to_string(),
+            ))
+            .into());
+        }
         let src_ref = src.as_reference()?;
         let Some(bytes) = src_ref.as_bytes() else {
             return Err(InternalError(
@@ -641,6 +659,12 @@ pub(crate) async fn copy_swap_memory_0(
     }
 
     // Write to destination
+    if !dest.is_object() || dest.is_null() {
+        return Err(NullPointerException(Some(
+            "copySwapMemory0: destination cannot be null".to_string(),
+        ))
+        .into());
+    }
     let mut dest_ref = dest.as_reference_mut()?;
     let Some(dest_slice) = dest_ref.as_bytes_mut() else {
         return Err(InternalError(
@@ -897,9 +921,10 @@ async fn get_reference_type(
     let offset_long = parameters.pop_long()?;
     let Some(reference) = parameters.pop_reference()? else {
         let Some(base_type) = base_type else {
-            return Err(InternalError(
+            return Err(NullPointerException(Some(
                 "getReferenceType: Invalid reference".to_string(),
-            ));
+            ))
+            .into());
         };
         let value = match base_type {
             BaseType::Boolean
@@ -1097,9 +1122,9 @@ async fn put_reference_type(
     }
     let offset_long = parameters.pop_long()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(InternalError(
-            "putReferenceType: Invalid reference".to_string(),
-        ));
+        return Err(
+            NullPointerException(Some("putReferenceType: Invalid reference".to_string())).into(),
+        );
     };
 
     let is_static = offset_long & STATIC_FIELD_OFFSET_MASK != 0;
@@ -2063,7 +2088,7 @@ mod tests {
         parameters.push_long(1024); // Request 1024 bytes
         let result = allocate_memory_0(thread, parameters).await?;
         // The implementation returns 0 as a pseudo-address
-        assert_eq!(result, Some(Value::Long(0)));
+        assert_eq!(result, Some(Value::Long(1)));
         Ok(())
     }
 
