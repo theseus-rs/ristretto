@@ -20,7 +20,7 @@ pub const JAVA_8_VERSION: &str = "8.482.08.1";
 pub const JAVA_11_VERSION: &str = "11.0.30.7.1";
 
 /// Java 17 LTS version
-pub const JAVA_17_VERSION: &str = "17.0.18.8.1";
+pub const JAVA_17_VERSION: &str = "17.0.18.9.1";
 
 /// Java 21 LTS version
 pub const JAVA_21_VERSION: &str = "21.0.10.7.1";
