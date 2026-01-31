@@ -2587,6 +2587,7 @@ dependencies = [
  "dashmap",
  "dirs",
  "filetime",
+ "flate2",
  "getrandom 0.3.4",
  "indexmap",
  "jiff",

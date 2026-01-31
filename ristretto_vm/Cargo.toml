@@ -35,6 +35,7 @@ console = { workspace = true }
 dashmap = { workspace = true }
 dirs = { workspace = true }
 filetime = { workspace = true }
+flate2 = { workspace = true }
 indexmap = { workspace = true }
 jiff = { workspace = true }
 os_info = { workspace = true }
