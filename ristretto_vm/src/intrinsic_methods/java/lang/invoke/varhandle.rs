@@ -130,10 +130,10 @@ async fn invoke_var_handle_access_mode(
 )]
 #[async_method]
 pub(crate) async fn compare_and_exchange(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.compareAndExchange([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::CompareAndExchange).await
 }
 
 #[intrinsic_method(
@@ -142,12 +142,10 @@ pub(crate) async fn compare_and_exchange(
 )]
 #[async_method]
 pub(crate) async fn compare_and_exchange_acquire(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.VarHandle.compareAndExchangeAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::CompareAndExchangeAcquire).await
 }
 
 #[intrinsic_method(
@@ -156,12 +154,10 @@ pub(crate) async fn compare_and_exchange_acquire(
 )]
 #[async_method]
 pub(crate) async fn compare_and_exchange_release(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.VarHandle.compareAndExchangeRelease([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::CompareAndExchangeRelease).await
 }
 
 #[intrinsic_method(
@@ -170,10 +166,10 @@ pub(crate) async fn compare_and_exchange_release(
 )]
 #[async_method]
 pub(crate) async fn compare_and_set(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.compareAndSet([Ljava/lang/Object;)Z")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::CompareAndSet).await
 }
 
 #[intrinsic_method(
@@ -181,8 +177,8 @@ pub(crate) async fn compare_and_set(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub(crate) async fn get(_thread: Arc<Thread>, _parameters: Parameters) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.get([Ljava/lang/Object;)Ljava/lang/Object;")
+pub(crate) async fn get(thread: Arc<Thread>, parameters: Parameters) -> Result<Option<Value>> {
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::Get).await
 }
 
 #[intrinsic_method(
@@ -191,10 +187,10 @@ pub(crate) async fn get(_thread: Arc<Thread>, _parameters: Parameters) -> Result
 )]
 #[async_method]
 pub(crate) async fn get_acquire(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getAcquire([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAcquire).await
 }
 
 #[intrinsic_method(
@@ -203,10 +199,10 @@ pub(crate) async fn get_acquire(
 )]
 #[async_method]
 pub(crate) async fn get_and_add(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getAndAdd([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndAdd).await
 }
 
 #[intrinsic_method(
@@ -215,10 +211,10 @@ pub(crate) async fn get_and_add(
 )]
 #[async_method]
 pub(crate) async fn get_and_add_acquire(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getAndAddAcquire([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndAddAcquire).await
 }
 
 #[intrinsic_method(
@@ -227,10 +223,10 @@ pub(crate) async fn get_and_add_acquire(
 )]
 #[async_method]
 pub(crate) async fn get_and_add_release(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getAndAddRelease([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndAddRelease).await
 }
 
 #[intrinsic_method(
@@ -239,10 +235,10 @@ pub(crate) async fn get_and_add_release(
 )]
 #[async_method]
 pub(crate) async fn get_and_bitwise_and(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getAndBitwiseAnd([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndBitwiseAnd).await
 }
 
 #[intrinsic_method(
@@ -251,12 +247,10 @@ pub(crate) async fn get_and_bitwise_and(
 )]
 #[async_method]
 pub(crate) async fn get_and_bitwise_and_acquire(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.VarHandle.getAndBitwiseAndAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndBitwiseAndAcquire).await
 }
 
 #[intrinsic_method(
@@ -265,12 +259,10 @@ pub(crate) async fn get_and_bitwise_and_acquire(
 )]
 #[async_method]
 pub(crate) async fn get_and_bitwise_and_release(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.VarHandle.getAndBitwiseAndRelease([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndBitwiseAndRelease).await
 }
 
 #[intrinsic_method(
@@ -279,10 +271,10 @@ pub(crate) async fn get_and_bitwise_and_release(
 )]
 #[async_method]
 pub(crate) async fn get_and_bitwise_or(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getAndBitwiseOr([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndBitwiseOr).await
 }
 
 #[intrinsic_method(
@@ -291,12 +283,10 @@ pub(crate) async fn get_and_bitwise_or(
 )]
 #[async_method]
 pub(crate) async fn get_and_bitwise_or_acquire(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.VarHandle.getAndBitwiseOrAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndBitwiseOrAcquire).await
 }
 
 #[intrinsic_method(
@@ -305,12 +295,10 @@ pub(crate) async fn get_and_bitwise_or_acquire(
 )]
 #[async_method]
 pub(crate) async fn get_and_bitwise_or_release(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.VarHandle.getAndBitwiseOrRelease([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndBitwiseOrRelease).await
 }
 
 #[intrinsic_method(
@@ -319,10 +307,10 @@ pub(crate) async fn get_and_bitwise_or_release(
 )]
 #[async_method]
 pub(crate) async fn get_and_bitwise_xor(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getAndBitwiseXor([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndBitwiseXor).await
 }
 
 #[intrinsic_method(
@@ -331,12 +319,10 @@ pub(crate) async fn get_and_bitwise_xor(
 )]
 #[async_method]
 pub(crate) async fn get_and_bitwise_xor_acquire(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.VarHandle.getAndBitwiseXorAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndBitwiseXorAcquire).await
 }
 
 #[intrinsic_method(
@@ -345,12 +331,10 @@ pub(crate) async fn get_and_bitwise_xor_acquire(
 )]
 #[async_method]
 pub(crate) async fn get_and_bitwise_xor_release(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.invoke.VarHandle.getAndBitwiseXorRelease([Ljava/lang/Object;)Ljava/lang/Object;"
-    )
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndBitwiseXorRelease).await
 }
 
 #[intrinsic_method(
@@ -359,10 +343,10 @@ pub(crate) async fn get_and_bitwise_xor_release(
 )]
 #[async_method]
 pub(crate) async fn get_and_set(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getAndSet([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndSet).await
 }
 
 #[intrinsic_method(
@@ -371,10 +355,10 @@ pub(crate) async fn get_and_set(
 )]
 #[async_method]
 pub(crate) async fn get_and_set_acquire(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getAndSetAcquire([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndSetAcquire).await
 }
 
 #[intrinsic_method(
@@ -383,10 +367,10 @@ pub(crate) async fn get_and_set_acquire(
 )]
 #[async_method]
 pub(crate) async fn get_and_set_release(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getAndSetRelease([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetAndSetRelease).await
 }
 
 #[intrinsic_method(
@@ -395,10 +379,10 @@ pub(crate) async fn get_and_set_release(
 )]
 #[async_method]
 pub(crate) async fn get_opaque(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getOpaque([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetOpaque).await
 }
 
 #[intrinsic_method(
@@ -407,10 +391,10 @@ pub(crate) async fn get_opaque(
 )]
 #[async_method]
 pub(crate) async fn get_volatile(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.getVolatile([Ljava/lang/Object;)Ljava/lang/Object;")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::GetVolatile).await
 }
 
 #[intrinsic_method(
@@ -428,10 +412,10 @@ pub(crate) async fn set(thread: Arc<Thread>, parameters: Parameters) -> Result<O
 )]
 #[async_method]
 pub(crate) async fn set_opaque(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.setOpaque([Ljava/lang/Object;)V")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::SetOpaque).await
 }
 
 #[intrinsic_method(
@@ -440,10 +424,10 @@ pub(crate) async fn set_opaque(
 )]
 #[async_method]
 pub(crate) async fn set_release(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.setRelease([Ljava/lang/Object;)V")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::SetRelease).await
 }
 
 #[intrinsic_method(
@@ -452,10 +436,10 @@ pub(crate) async fn set_release(
 )]
 #[async_method]
 pub(crate) async fn set_volatile(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.setVolatile([Ljava/lang/Object;)V")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::SetVolatile).await
 }
 
 #[intrinsic_method(
@@ -464,10 +448,10 @@ pub(crate) async fn set_volatile(
 )]
 #[async_method]
 pub(crate) async fn weak_compare_and_set(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.weakCompareAndSet([Ljava/lang/Object;)Z")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::WeakCompareAndSet).await
 }
 
 #[intrinsic_method(
@@ -476,10 +460,10 @@ pub(crate) async fn weak_compare_and_set(
 )]
 #[async_method]
 pub(crate) async fn weak_compare_and_set_acquire(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.weakCompareAndSetAcquire([Ljava/lang/Object;)Z")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::WeakCompareAndSetAcquire).await
 }
 
 #[intrinsic_method(
@@ -488,10 +472,10 @@ pub(crate) async fn weak_compare_and_set_acquire(
 )]
 #[async_method]
 pub(crate) async fn weak_compare_and_set_plain(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.weakCompareAndSetPlain([Ljava/lang/Object;)Z")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::WeakCompareAndSetPlain).await
 }
 
 #[intrinsic_method(
@@ -500,10 +484,10 @@ pub(crate) async fn weak_compare_and_set_plain(
 )]
 #[async_method]
 pub(crate) async fn weak_compare_and_set_release(
-    _thread: Arc<Thread>,
-    _parameters: Parameters,
+    thread: Arc<Thread>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.invoke.VarHandle.weakCompareAndSetRelease([Ljava/lang/Object;)Z")
+    invoke_var_handle_access_mode(&thread, parameters, AccessMode::WeakCompareAndSetRelease).await
 }
 
 #[cfg(test)]
@@ -511,280 +495,220 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.compareAndExchange([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_compare_and_exchange() {
+    async fn test_compare_and_exchange_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compare_and_exchange(thread, Parameters::default()).await;
+        let result = compare_and_exchange(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.compareAndExchangeAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_compare_and_exchange_acquire() {
+    async fn test_compare_and_exchange_acquire_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compare_and_exchange_acquire(thread, Parameters::default()).await;
+        let result = compare_and_exchange_acquire(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.compareAndExchangeRelease([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_compare_and_exchange_release() {
+    async fn test_compare_and_exchange_release_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compare_and_exchange_release(thread, Parameters::default()).await;
+        let result = compare_and_exchange_release(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.compareAndSet([Ljava/lang/Object;)Z"
-    )]
-    async fn test_compare_and_set() {
+    async fn test_compare_and_set_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compare_and_set(thread, Parameters::default()).await;
+        let result = compare_and_set(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.get([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get() {
+    async fn test_get_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get(thread, Parameters::default()).await;
+        let result = get(thread, Parameters::default()).await;
+        // With no arguments, get should return an error
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_acquire() {
+    async fn test_get_acquire_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_acquire(thread, Parameters::default()).await;
+        let result = get_acquire(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndAdd([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_add() {
+    async fn test_get_and_add_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_add(thread, Parameters::default()).await;
+        let result = get_and_add(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndAddAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_add_acquire() {
+    async fn test_get_and_add_acquire_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_add_acquire(thread, Parameters::default()).await;
+        let result = get_and_add_acquire(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndAddRelease([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_add_release() {
+    async fn test_get_and_add_release_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_add_release(thread, Parameters::default()).await;
+        let result = get_and_add_release(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndBitwiseAnd([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_bitwise_and() {
+    async fn test_get_and_bitwise_and_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_bitwise_and(thread, Parameters::default()).await;
+        let result = get_and_bitwise_and(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndBitwiseAndAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_bitwise_and_acquire() {
+    async fn test_get_and_bitwise_and_acquire_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_bitwise_and_acquire(thread, Parameters::default()).await;
+        let result = get_and_bitwise_and_acquire(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndBitwiseAndRelease([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_bitwise_and_release() {
+    async fn test_get_and_bitwise_and_release_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_bitwise_and_release(thread, Parameters::default()).await;
+        let result = get_and_bitwise_and_release(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndBitwiseOr([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_bitwise_or() {
+    async fn test_get_and_bitwise_or_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_bitwise_or(thread, Parameters::default()).await;
+        let result = get_and_bitwise_or(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndBitwiseOrAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_bitwise_or_acquire() {
+    async fn test_get_and_bitwise_or_acquire_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_bitwise_or_acquire(thread, Parameters::default()).await;
+        let result = get_and_bitwise_or_acquire(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndBitwiseOrRelease([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_bitwise_or_release() {
+    async fn test_get_and_bitwise_or_release_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_bitwise_or_release(thread, Parameters::default()).await;
+        let result = get_and_bitwise_or_release(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndBitwiseXor([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_bitwise_xor() {
+    async fn test_get_and_bitwise_xor_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_bitwise_xor(thread, Parameters::default()).await;
+        let result = get_and_bitwise_xor(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndBitwiseXorAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_bitwise_xor_acquire() {
+    async fn test_get_and_bitwise_xor_acquire_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_bitwise_xor_acquire(thread, Parameters::default()).await;
+        let result = get_and_bitwise_xor_acquire(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndBitwiseXorRelease([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_bitwise_xor_release() {
+    async fn test_get_and_bitwise_xor_release_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_bitwise_xor_release(thread, Parameters::default()).await;
+        let result = get_and_bitwise_xor_release(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndSet([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_set() {
+    async fn test_get_and_set_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_set(thread, Parameters::default()).await;
+        let result = get_and_set(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndSetAcquire([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_set_acquire() {
+    async fn test_get_and_set_acquire_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_set_acquire(thread, Parameters::default()).await;
+        let result = get_and_set_acquire(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getAndSetRelease([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_and_set_release() {
+    async fn test_get_and_set_release_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_and_set_release(thread, Parameters::default()).await;
+        let result = get_and_set_release(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getOpaque([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_opaque() {
+    async fn test_get_opaque_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_opaque(thread, Parameters::default()).await;
+        let result = get_opaque(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.getVolatile([Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_get_volatile() {
+    async fn test_get_volatile_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_volatile(thread, Parameters::default()).await;
+        let result = get_volatile(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_set_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = set(thread, Parameters::default()).await;
-        // With no arguments, set should return an error
         assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.setOpaque([Ljava/lang/Object;)V"
-    )]
-    async fn test_set_opaque() {
+    async fn test_set_opaque_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_opaque(thread, Parameters::default()).await;
+        let result = set_opaque(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.setRelease([Ljava/lang/Object;)V"
-    )]
-    async fn test_set_release() {
+    async fn test_set_release_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_release(thread, Parameters::default()).await;
+        let result = set_release(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.setVolatile([Ljava/lang/Object;)V"
-    )]
-    async fn test_set_volatile() {
+    async fn test_set_volatile_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_volatile(thread, Parameters::default()).await;
+        let result = set_volatile(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.weakCompareAndSet([Ljava/lang/Object;)Z"
-    )]
-    async fn test_weak_compare_and_set() {
+    async fn test_weak_compare_and_set_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = weak_compare_and_set(thread, Parameters::default()).await;
+        let result = weak_compare_and_set(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.weakCompareAndSetAcquire([Ljava/lang/Object;)Z"
-    )]
-    async fn test_weak_compare_and_set_acquire() {
+    async fn test_weak_compare_and_set_acquire_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = weak_compare_and_set_acquire(thread, Parameters::default()).await;
+        let result = weak_compare_and_set_acquire(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.weakCompareAndSetPlain([Ljava/lang/Object;)Z"
-    )]
-    async fn test_weak_compare_and_set_plain() {
+    async fn test_weak_compare_and_set_plain_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = weak_compare_and_set_plain(thread, Parameters::default()).await;
+        let result = weak_compare_and_set_plain(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.invoke.VarHandle.weakCompareAndSetRelease([Ljava/lang/Object;)Z"
-    )]
-    async fn test_weak_compare_and_set_release() {
+    async fn test_weak_compare_and_set_release_requires_varhandle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = weak_compare_and_set_release(thread, Parameters::default()).await;
+        let result = weak_compare_and_set_release(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }
