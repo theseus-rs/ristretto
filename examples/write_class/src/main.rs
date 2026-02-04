@@ -1,5 +1,4 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::pedantic)]
 
 use ristretto_classfile::attributes::{Attribute, Instruction, LineNumber, MaxLocals, MaxStack};
 use ristretto_classfile::{

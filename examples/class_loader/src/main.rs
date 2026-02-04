@@ -1,5 +1,4 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::pedantic)]
 
 use ristretto_classloader::{ClassLoader, ClassPath, Result};
 

@@ -343,8 +343,6 @@ pub fn dispatch_conversion(instruction: &Instruction, frame: &mut Frame) -> Resu
 mod tests {
     use super::*;
 
-    // ==================== handle_i2l tests ====================
-
     #[test]
     fn test_i2l_success() {
         let mut frame = Frame::new(5, 10);
@@ -363,8 +361,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
-
-    // ==================== handle_i2f tests ====================
 
     #[test]
     fn test_i2f_success() {
@@ -385,8 +381,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
 
-    // ==================== handle_i2d tests ====================
-
     #[test]
     fn test_i2d_success() {
         let mut frame = Frame::new(5, 10);
@@ -405,8 +399,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
-
-    // ==================== handle_l2i tests ====================
 
     #[test]
     fn test_l2i_success() {
@@ -428,8 +420,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected long"));
     }
 
-    // ==================== handle_l2f tests ====================
-
     #[test]
     fn test_l2f_success() {
         let mut frame = Frame::new(5, 10);
@@ -450,8 +440,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected long"));
     }
 
-    // ==================== handle_l2d tests ====================
-
     #[test]
     fn test_l2d_success() {
         let mut frame = Frame::new(5, 10);
@@ -470,8 +458,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected long"));
     }
-
-    // ==================== handle_f2i tests ====================
 
     #[test]
     fn test_f2i_success() {
@@ -492,8 +478,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected float"));
     }
 
-    // ==================== handle_f2l tests ====================
-
     #[test]
     fn test_f2l_success() {
         let mut frame = Frame::new(5, 10);
@@ -513,8 +497,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected float"));
     }
 
-    // ==================== handle_f2d tests ====================
-
     #[test]
     fn test_f2d_success() {
         let mut frame = Frame::new(5, 10);
@@ -533,8 +515,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected float"));
     }
-
-    // ==================== handle_d2i tests ====================
 
     #[test]
     fn test_d2i_success() {
@@ -556,8 +536,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected double"));
     }
 
-    // ==================== handle_d2l tests ====================
-
     #[test]
     fn test_d2l_success() {
         let mut frame = Frame::new(5, 10);
@@ -576,8 +554,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected double"));
     }
-
-    // ==================== handle_d2f tests ====================
 
     #[test]
     fn test_d2f_success() {
@@ -599,8 +575,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected double"));
     }
 
-    // ==================== handle_i2b tests ====================
-
     #[test]
     fn test_i2b_success() {
         let mut frame = Frame::new(5, 10);
@@ -619,8 +593,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
-
-    // ==================== handle_i2c tests ====================
 
     #[test]
     fn test_i2c_success() {
@@ -641,8 +613,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
 
-    // ==================== handle_i2s tests ====================
-
     #[test]
     fn test_i2s_success() {
         let mut frame = Frame::new(5, 10);
@@ -661,8 +631,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
-
-    // ==================== dispatch_conversion tests ====================
 
     #[test]
     fn test_dispatch_i2l() {

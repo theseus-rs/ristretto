@@ -1,0 +1,22 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "Ristretto Package Object Model"
+edition.workspace = true
+keywords = ["java", "jvm", "pom"]
+license.workspace = true
+name = "ristretto_pom"
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+quick-xml = { workspace = true, features = ["serialize"] }
+serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

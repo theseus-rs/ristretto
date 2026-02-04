@@ -511,8 +511,6 @@ mod tests {
         ResolvedConfiguration::new(resolved, package_to_module, AHashMap::default(), add_opens)
     }
 
-    // ==================== AccessCheckResult tests ====================
-
     #[test]
     fn test_access_check_result_allowed() {
         let result = AccessCheckResult::Allowed;
@@ -558,8 +556,6 @@ mod tests {
         assert_eq!(format!("{result}"), "package not opened for reflection");
     }
 
-    // ==================== Same module access tests ====================
-
     #[test]
     fn test_same_module_access_always_allowed() {
         let module_a = create_resolved_module(create_descriptor("module.a"), vec![]);
@@ -585,8 +581,6 @@ mod tests {
             AccessCheckResult::Allowed
         );
     }
-
-    // ==================== Readability tests ====================
 
     #[test]
     fn test_readable_module_exported_package() {
@@ -647,8 +641,6 @@ mod tests {
 
         assert!(checker.can_read("module.a", JAVA_BASE_MODULE));
     }
-
-    // ==================== Export tests ====================
 
     #[test]
     fn test_non_exported_package_denied() {
@@ -712,8 +704,6 @@ mod tests {
             AccessCheckResult::Allowed
         );
     }
-
-    // ==================== Opens tests ====================
 
     #[test]
     fn test_exported_but_not_opened_package() {
@@ -806,8 +796,6 @@ mod tests {
         );
     }
 
-    // ==================== Unnamed module tests ====================
-
     #[test]
     fn test_unnamed_module_access_exported_package() {
         let descriptor_b = create_descriptor_with_exports("module.b", vec![("module.b/api", None)]);
@@ -885,8 +873,6 @@ mod tests {
             AccessCheckResult::NotOpened
         );
     }
-
-    // ==================== Error conversion tests ====================
 
     #[test]
     fn test_to_error_not_readable() {

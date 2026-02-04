@@ -266,8 +266,6 @@ pub fn dispatch_comparison(instruction: &Instruction, frame: &mut Frame) -> Resu
 mod tests {
     use super::*;
 
-    // ==================== handle_lcmp tests ====================
-
     #[test]
     fn test_lcmp_success() {
         let mut frame = Frame::new(5, 10);
@@ -301,8 +299,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected long"));
     }
 
-    // ==================== handle_fcmp tests ====================
-
     #[test]
     fn test_fcmp_success() {
         let mut frame = Frame::new(5, 10);
@@ -334,8 +330,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected float"));
     }
-
-    // ==================== handle_dcmp tests ====================
 
     #[test]
     fn test_dcmp_success() {
@@ -369,8 +363,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected double"));
     }
 
-    // ==================== handle_if_int tests ====================
-
     #[test]
     fn test_if_int_success() {
         let mut frame = Frame::new(5, 10);
@@ -399,8 +391,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
-
-    // ==================== handle_if_icmp tests ====================
 
     #[test]
     fn test_if_icmp_success() {
@@ -433,8 +423,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
-
-    // ==================== handle_if_acmp tests ====================
 
     #[test]
     fn test_if_acmp_success() {
@@ -487,8 +475,6 @@ mod tests {
                 .contains("expected reference")
         );
     }
-
-    // ==================== handle_ifnull tests ====================
 
     #[test]
     fn test_ifnull_success() {
@@ -546,8 +532,6 @@ mod tests {
                 .contains("expected reference")
         );
     }
-
-    // ==================== dispatch_comparison tests ====================
 
     #[test]
     fn test_dispatch_lcmp() {

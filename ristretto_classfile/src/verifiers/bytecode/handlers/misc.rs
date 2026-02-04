@@ -376,14 +376,10 @@ mod tests {
         }
     }
 
-    // ==================== handle_nop tests ====================
-
     #[test]
     fn test_nop_success() {
         assert!(handle_nop().is_ok());
     }
-
-    // ==================== handle_aconst_null tests ====================
 
     #[test]
     fn test_aconst_null_success() {
@@ -392,16 +388,12 @@ mod tests {
         assert_eq!(*frame.peek().unwrap(), VerificationType::Null);
     }
 
-    // ==================== handle_iconst tests ====================
-
     #[test]
     fn test_iconst_success() {
         let mut frame = Frame::new(5, 10);
         handle_iconst(&mut frame).unwrap();
         assert_eq!(*frame.peek().unwrap(), VerificationType::Integer);
     }
-
-    // ==================== handle_lconst tests ====================
 
     #[test]
     fn test_lconst_success() {
@@ -410,16 +402,12 @@ mod tests {
         assert_eq!(frame.stack_depth(), 2);
     }
 
-    // ==================== handle_fconst tests ====================
-
     #[test]
     fn test_fconst_success() {
         let mut frame = Frame::new(5, 10);
         handle_fconst(&mut frame).unwrap();
         assert_eq!(*frame.peek().unwrap(), VerificationType::Float);
     }
-
-    // ==================== handle_dconst tests ====================
 
     #[test]
     fn test_dconst_success() {
@@ -428,16 +416,12 @@ mod tests {
         assert_eq!(frame.stack_depth(), 2);
     }
 
-    // ==================== handle_push_int tests ====================
-
     #[test]
     fn test_push_int_success() {
         let mut frame = Frame::new(5, 10);
         handle_push_int(&mut frame).unwrap();
         assert_eq!(*frame.peek().unwrap(), VerificationType::Integer);
     }
-
-    // ==================== handle_ldc tests ====================
 
     #[test]
     fn test_ldc_integer_success() {
@@ -500,8 +484,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_ldc2_w tests ====================
-
     #[test]
     fn test_ldc2_w_long_success() {
         let class_file = create_test_class_file();
@@ -547,8 +529,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_monitorenter tests ====================
-
     #[test]
     fn test_monitorenter_success() {
         let mut frame = Frame::new(5, 10);
@@ -582,8 +562,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_monitorexit tests ====================
-
     #[test]
     fn test_monitorexit_success() {
         let mut frame = Frame::new(5, 10);
@@ -608,14 +586,10 @@ mod tests {
         );
     }
 
-    // ==================== handle_wide tests ====================
-
     #[test]
     fn test_wide_success() {
         assert!(handle_wide().is_ok());
     }
-
-    // ==================== handle_reserved tests ====================
 
     #[test]
     fn test_reserved_breakpoint_success() {
@@ -645,8 +619,6 @@ mod tests {
                 .contains("Implementation-dependent")
         );
     }
-
-    // ==================== dispatch_misc tests ====================
 
     #[test]
     fn test_dispatch_nop() {

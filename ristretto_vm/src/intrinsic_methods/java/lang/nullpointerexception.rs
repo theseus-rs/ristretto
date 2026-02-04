@@ -988,10 +988,6 @@ mod tests {
         assert_eq!(analyzer.describe_source(&source), "\"<unknown>\"");
     }
 
-    // ========================================
-    // Tests for count_slots
-    // ========================================
-
     #[tokio::test]
     async fn test_count_slots_no_params() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -1108,10 +1104,6 @@ mod tests {
         assert_eq!(analyzer.count_slots("([[I)V"), 1);
     }
 
-    // ========================================
-    // Tests for get_extended_npe_message
-    // ========================================
-
     #[tokio::test]
     async fn test_get_extended_npe_message_empty_params() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -1142,10 +1134,6 @@ mod tests {
         let value = result.unwrap();
         assert!(matches!(value, Some(Value::Object(None))));
     }
-
-    // ========================================
-    // Tests for Source enum Clone
-    // ========================================
 
     #[test]
     fn test_source_clone_local() {
@@ -1206,10 +1194,6 @@ mod tests {
         assert!(matches!(cloned, Source::Unknown));
     }
 
-    // ========================================
-    // Tests for Source Debug trait
-    // ========================================
-
     #[test]
     fn test_source_debug_local() {
         let source = Source::Local(3);
@@ -1263,10 +1247,6 @@ mod tests {
         assert_eq!(debug_str, "Unknown");
     }
 
-    // ========================================
-    // Tests for get_local_name (currently always returns None)
-    // ========================================
-
     #[tokio::test]
     async fn test_get_local_name_returns_none() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -1279,10 +1259,6 @@ mod tests {
         assert!(analyzer.get_local_name(100).is_none());
     }
 
-    // ========================================
-    // Tests for NpeAnalyzer::new
-    // ========================================
-
     #[tokio::test]
     async fn test_npe_analyzer_new() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -1292,10 +1268,6 @@ mod tests {
         // Just verify it can be created without panicking
         let _analyzer = NpeAnalyzer::new(thread, class, method);
     }
-
-    // ========================================
-    // Tests for analyze with empty code
-    // ========================================
 
     #[tokio::test]
     async fn test_analyze_returns_none_for_invalid_bci() {
@@ -1308,10 +1280,6 @@ mod tests {
         let result = analyzer.analyze(999_999);
         assert!(result.is_none());
     }
-
-    // ========================================
-    // Tests for describe_source with nested fields
-    // ========================================
 
     #[tokio::test]
     async fn test_describe_source_field_with_field_receiver() {

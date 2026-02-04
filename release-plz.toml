@@ -15,6 +15,7 @@ changelog_include = [
     "ristretto_jimage",
     "ristretto_jit",
     "ristretto_macros",
+    "ristretto_pom",
     "ristretto_vm",
 ]
 git_release_enable = true
