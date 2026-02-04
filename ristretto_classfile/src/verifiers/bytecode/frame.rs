@@ -117,10 +117,6 @@ impl Frame {
         self.stack.is_empty()
     }
 
-    // ========================================================================
-    // Stack Operations
-    // ========================================================================
-
     /// Pushes a verification type onto the operand stack.
     ///
     /// # Arguments
@@ -254,10 +250,6 @@ impl Frame {
         self.stack.clear();
     }
 
-    // ========================================================================
-    // Local Variable Operations
-    // ========================================================================
-
     /// Gets the type at a local variable index.
     ///
     /// # Arguments
@@ -367,10 +359,6 @@ impl Frame {
         Ok(ty)
     }
 
-    // ========================================================================
-    // Frame Merging
-    // ========================================================================
-
     /// Merges another frame into this frame.
     ///
     /// This implements the type merging rules from [JVMS §4.10.1.2](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.2) for
@@ -436,10 +424,6 @@ impl Frame {
 
         Ok(changed)
     }
-
-    // ========================================================================
-    // Object Initialization
-    // ========================================================================
 
     /// Replaces all occurrences of an uninitialized type with an initialized type.
     ///

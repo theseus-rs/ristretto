@@ -1158,8 +1158,6 @@ mod tests {
         assert!(module_system.get_all_exports().is_empty());
     }
 
-    // ==================== AccessCheckResult tests ====================
-
     #[test]
     fn test_access_check_result_allowed() {
         let result = AccessCheckResult::Allowed;
@@ -1201,8 +1199,6 @@ mod tests {
         assert!(denial_message.unwrap().contains("not opened"));
         assert_eq!(format!("{result}"), "package not opened for reflection");
     }
-
-    // ==================== check_dynamic_access tests ====================
 
     #[test]
     fn test_check_dynamic_access_same_module() {
@@ -1266,8 +1262,6 @@ mod tests {
             module_system.check_dynamic_access(ALL_UNNAMED, "java.base", "java/lang/internal");
         assert_eq!(result, AccessCheckResult::NotExported);
     }
-
-    // ==================== check_dynamic_reflection_access tests ====================
 
     #[test]
     fn test_check_dynamic_reflection_access_same_module() {
@@ -1343,8 +1337,6 @@ mod tests {
         assert_eq!(result, AccessCheckResult::NotOpened);
     }
 
-    // ==================== Utility function tests ====================
-
     #[test]
     fn test_package_from_class_name() {
         assert_eq!(
@@ -1407,8 +1399,6 @@ mod tests {
         assert!(error_message.contains("unnamed module"));
         assert!(error_message.contains("java.base"));
     }
-
-    // ==================== ModuleSystem::new async tests ====================
 
     #[tokio::test]
     async fn test_module_system_new_with_add_exports() {
@@ -1600,8 +1590,6 @@ mod tests {
 
         Ok(())
     }
-
-    // ==================== require_access tests ====================
 
     #[test]
     fn test_require_access_same_module_success() {

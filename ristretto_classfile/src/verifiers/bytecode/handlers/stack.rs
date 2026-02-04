@@ -490,8 +490,6 @@ pub fn dispatch_stack(instruction: &Instruction, frame: &mut Frame) -> Result<bo
 mod tests {
     use super::*;
 
-    // ==================== handle_pop tests ====================
-
     #[test]
     fn test_pop_category1() {
         let mut frame = Frame::new(5, 10);
@@ -531,8 +529,6 @@ mod tests {
                 .contains("pop cannot be used on category 2 values")
         );
     }
-
-    // ==================== handle_pop2 tests ====================
 
     #[test]
     fn test_pop2_category2() {
@@ -601,8 +597,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_dup tests ====================
-
     #[test]
     fn test_dup_success() {
         let mut frame = Frame::new(5, 10);
@@ -643,8 +637,6 @@ mod tests {
                 .contains("dup cannot be used on category 2 values")
         );
     }
-
-    // ==================== handle_dup_x1 tests ====================
 
     #[test]
     fn test_dup_x1_success() {
@@ -692,8 +684,6 @@ mod tests {
                 .contains("dup_x1: value2 must be category 1")
         );
     }
-
-    // ==================== handle_dup_x2 tests ====================
 
     #[test]
     fn test_dup_x2_form1_three_category1() {
@@ -792,8 +782,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_dup2 tests ====================
-
     #[test]
     fn test_dup2_category2_success() {
         let mut frame = Frame::new(5, 10);
@@ -859,8 +847,6 @@ mod tests {
                 .contains("dup2: value2 must be category 1")
         );
     }
-
-    // ==================== handle_dup2_x1 tests ====================
 
     #[test]
     fn test_dup2_x1_form1_three_category1() {
@@ -968,8 +954,6 @@ mod tests {
                 .contains("dup2_x1: value3 must be category 1")
         );
     }
-
-    // ==================== handle_dup2_x2 tests ====================
 
     #[test]
     fn test_dup2_x2_form1_four_category1() {
@@ -1178,8 +1162,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_swap tests ====================
-
     #[test]
     fn test_swap_success() {
         let mut frame = Frame::new(5, 10);
@@ -1223,8 +1205,6 @@ mod tests {
                 .contains("swap: value2 must be category 1")
         );
     }
-
-    // ==================== dispatch_stack tests ====================
 
     #[test]
     fn test_dispatch_pop() {
