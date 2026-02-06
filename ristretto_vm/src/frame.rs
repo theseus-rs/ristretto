@@ -410,12 +410,8 @@ impl Frame {
             Instruction::Dconst_1 => dconst_1(stack).map(InstructionResult::Sync),
             Instruction::Bipush(value) => bipush(stack, *value).map(InstructionResult::Sync),
             Instruction::Sipush(value) => sipush(stack, *value).map(InstructionResult::Sync),
-            Instruction::Ldc(index) => {
-                Ok(InstructionResult::Async(Box::pin(ldc(self, stack, *index))))
-            }
-            Instruction::Ldc_w(index) => Ok(InstructionResult::Async(Box::pin(ldc_w(
-                self, stack, *index,
-            )))),
+            Instruction::Ldc(index) => ldc(self, stack, *index),
+            Instruction::Ldc_w(index) => ldc_w(self, stack, *index),
             Instruction::Ldc2_w(index) => ldc2_w(self, stack, *index).map(InstructionResult::Sync),
             Instruction::Iload(index) => iload(locals, stack, *index).map(InstructionResult::Sync),
             Instruction::Lload(index) => lload(locals, stack, *index).map(InstructionResult::Sync),
