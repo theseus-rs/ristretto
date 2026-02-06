@@ -2452,6 +2452,7 @@ dependencies = [
  "flate2",
  "indexmap",
  "indoc",
+ "memchr",
  "parking_lot",
  "reqwest",
  "ristretto_classfile",
