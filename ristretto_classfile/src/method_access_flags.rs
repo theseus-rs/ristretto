@@ -121,7 +121,7 @@ impl MethodAccessFlags {
     /// assert_eq!(flags.bits(), 0x0009);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<MethodAccessFlags> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<MethodAccessFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let method_access_flags = MethodAccessFlags::from_bits_truncate(access_flags);
         Ok(method_access_flags)

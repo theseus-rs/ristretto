@@ -88,7 +88,10 @@ impl Method {
     /// assert_eq!(method.descriptor_index, 6);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(constant_pool: &ConstantPool, bytes: &mut Cursor<Vec<u8>>) -> Result<Method> {
+    pub fn from_bytes(
+        constant_pool: &ConstantPool,
+        bytes: &mut Cursor<impl AsRef<[u8]> + Clone>,
+    ) -> Result<Method> {
         let access_flags = MethodAccessFlags::from_bytes(bytes)?;
         let name_index = bytes.read_u16::<BigEndian>()?;
         let descriptor_index = bytes.read_u16::<BigEndian>()?;

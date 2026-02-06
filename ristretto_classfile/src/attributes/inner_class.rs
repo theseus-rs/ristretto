@@ -98,7 +98,7 @@ impl InnerClass {
     /// assert_eq!(inner_class.access_flags, NestedClassAccessFlags::PUBLIC);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<InnerClass> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<InnerClass> {
         let class_info_index = bytes.read_u16::<BigEndian>()?;
         let outer_class_info_index = bytes.read_u16::<BigEndian>()?;
         let name_index = bytes.read_u16::<BigEndian>()?;

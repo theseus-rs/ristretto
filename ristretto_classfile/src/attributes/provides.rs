@@ -75,7 +75,7 @@ impl Provides {
     /// assert_eq!(provides.with_index, vec![2]);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Provides> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Provides> {
         let index = bytes.read_u16::<BigEndian>()?;
         let to_index_count = bytes.read_u16::<BigEndian>()?;
         let mut with_index = Vec::with_capacity(to_index_count as usize);

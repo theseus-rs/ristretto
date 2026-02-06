@@ -151,7 +151,7 @@ impl ClassFile {
     /// println!("Class version: {}", class_file.version);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ClassFile> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]> + Clone>) -> Result<ClassFile> {
         let magic = bytes.read_u32::<BigEndian>()?;
         if magic != MAGIC {
             return Err(InvalidMagicNumber(magic));

@@ -391,7 +391,7 @@ impl Version {
     ///
     /// # Errors
     /// Returns an error if reading from the byte cursor fails or if the version is invalid.
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Version> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Version> {
         let minor = bytes.read_u16::<BigEndian>()?;
         let major = bytes.read_u16::<BigEndian>()?;
         Version::from(major, minor)

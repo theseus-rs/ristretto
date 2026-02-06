@@ -113,7 +113,7 @@ impl ArrayType {
     /// }
     /// # Ok::<(), Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ArrayType> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ArrayType> {
         let code = bytes.read_u8()?;
 
         let array_type = match code {

@@ -97,7 +97,7 @@ impl Requires {
     /// # Errors
     ///
     /// Returns an error if reading from the byte stream fails.
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Requires> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Requires> {
         let index = bytes.read_u16::<BigEndian>()?;
         let flags = RequiresFlags::from_bytes(bytes)?;
         let version_index = bytes.read_u16::<BigEndian>()?;

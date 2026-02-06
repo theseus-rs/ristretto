@@ -71,7 +71,7 @@ impl Opens {
     /// assert_eq!(opens.to_index, vec![3]);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Opens> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Opens> {
         let index = bytes.read_u16::<BigEndian>()?;
         let flags = OpensFlags::from_bytes(bytes)?;
         let to_index_count = bytes.read_u16::<BigEndian>()?;

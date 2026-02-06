@@ -1469,7 +1469,7 @@ impl Instruction {
     ///
     /// Returns an error if the instruction is invalid.
     #[expect(clippy::too_many_lines)]
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Instruction> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Instruction> {
         let current_position = i32::try_from(bytes.position())?;
         let code = bytes.read_u8()?;
 
@@ -1774,7 +1774,7 @@ impl Instruction {
     /// # Errors
     ///
     /// Returns an error if the offset is invalid.
-    fn read_offset(bytes: &mut Cursor<Vec<u8>>, current_position: i32) -> Result<u16> {
+    fn read_offset(bytes: &mut Cursor<impl AsRef<[u8]>>, current_position: i32) -> Result<u16> {
         let offset = bytes.read_i16::<BigEndian>()?;
         let position = u16::try_from(current_position + i32::from(offset))?;
         Ok(position)

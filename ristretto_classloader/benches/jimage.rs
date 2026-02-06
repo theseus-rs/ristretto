@@ -34,7 +34,7 @@ async fn get_image() -> Result<Image> {
 
 fn load_class(image: &Image, class_name: &str) -> Result<()> {
     let resource = image.get_resource(class_name)?;
-    let mut bytes = Cursor::new(resource.data().to_vec());
+    let mut bytes = Cursor::new(resource.data());
     let _class_file = ClassFile::from_bytes(&mut bytes).expect("read classfile");
     Ok(())
 }

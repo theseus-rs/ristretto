@@ -148,7 +148,7 @@ impl SystemModuleFinder {
                 continue;
             }
 
-            let mut cursor = Cursor::new(resource.data().to_vec());
+            let mut cursor = Cursor::new(resource.data());
             let class_file = ClassFile::from_bytes(&mut cursor)
                 .map_err(|e| ModuleError::DescriptorParseError(e.to_string()))?;
 

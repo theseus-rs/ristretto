@@ -91,7 +91,7 @@ impl NestedClassAccessFlags {
     /// assert_eq!(flags, NestedClassAccessFlags::PUBLIC);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<NestedClassAccessFlags> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<NestedClassAccessFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let access_flags = NestedClassAccessFlags::from_bits_truncate(access_flags);
         Ok(access_flags)

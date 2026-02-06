@@ -260,7 +260,7 @@ impl ConstantPool {
     /// assert_eq!(1, constant_pool.len());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ConstantPool> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ConstantPool> {
         let mut constant_pool = ConstantPool::default();
         let constant_pool_count =
             bytes

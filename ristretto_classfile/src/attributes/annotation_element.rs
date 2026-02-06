@@ -186,7 +186,7 @@ impl AnnotationElement {
     /// assert!(AnnotationElement::from_bytes(&mut cursor).is_err());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<AnnotationElement> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<AnnotationElement> {
         let tag = bytes.read_u8()?;
 
         let element = match tag {

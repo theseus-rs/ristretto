@@ -76,7 +76,7 @@ impl ModuleAccessFlags {
     /// assert_eq!(flags, ModuleAccessFlags::OPEN);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ModuleAccessFlags> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ModuleAccessFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let access_flags = ModuleAccessFlags::from_bits_truncate(access_flags);
         Ok(access_flags)

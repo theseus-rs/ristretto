@@ -101,7 +101,7 @@ impl Image {
             .get_resource(&full_name)
             .map_err(|error| ArchiveError(error.to_string()))?;
 
-        let mut cursor = Cursor::new(resource.data().to_vec());
+        let mut cursor = Cursor::new(resource.data());
         let class_file = ClassFile::from_bytes(&mut cursor)?;
         Ok(class_file)
     }

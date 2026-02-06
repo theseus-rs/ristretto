@@ -315,7 +315,7 @@ impl Constant {
     /// assert_eq!(constant, Constant::Utf8("Hello".to_string()));
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Constant> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Constant> {
         let tag = bytes.read_u8()?;
         let constant = match tag {
             1 => {

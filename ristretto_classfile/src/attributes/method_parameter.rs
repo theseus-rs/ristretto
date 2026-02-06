@@ -65,7 +65,7 @@ impl MethodParameter {
     /// assert_eq!(method_parameter.access_flags, MethodAccessFlags::PUBLIC);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<MethodParameter> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<MethodParameter> {
         let name_index = bytes.read_u16::<BigEndian>()?;
         let access_flags = MethodAccessFlags::from_bytes(bytes)?;
         let bootstrap_method = MethodParameter {

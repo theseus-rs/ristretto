@@ -86,7 +86,10 @@ impl Record {
     /// assert!(record.attributes.is_empty());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(constant_pool: &ConstantPool, bytes: &mut Cursor<Vec<u8>>) -> Result<Record> {
+    pub fn from_bytes(
+        constant_pool: &ConstantPool,
+        bytes: &mut Cursor<impl AsRef<[u8]> + Clone>,
+    ) -> Result<Record> {
         let name_index = bytes.read_u16::<BigEndian>()?;
         let descriptor_index = bytes.read_u16::<BigEndian>()?;
         let attributes_count = bytes.read_u16::<BigEndian>()? as usize;

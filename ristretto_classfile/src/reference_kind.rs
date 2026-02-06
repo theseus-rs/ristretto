@@ -98,7 +98,7 @@ impl ReferenceKind {
     /// assert!(result.is_err());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ReferenceKind> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ReferenceKind> {
         let byte = bytes.read_u8()?;
         ReferenceKind::try_from(byte)
     }
