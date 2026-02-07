@@ -140,7 +140,7 @@ pub struct Frame {
 }
 
 /// Number of instructions to execute before yielding to the Tokio runtime
-const INSTRUCTION_YIELD_COUNT: u32 = 1024;
+const INSTRUCTION_YIELD_COUNT: u32 = 4096;
 
 impl Frame {
     /// Create a new frame for the specified class. To invoke a method on an object reference, the

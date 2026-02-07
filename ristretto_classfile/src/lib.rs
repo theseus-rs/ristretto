@@ -89,8 +89,6 @@
 
 #![forbid(unsafe_code)]
 
-extern crate core;
-
 pub mod attributes;
 mod base_type;
 mod class_access_flags;

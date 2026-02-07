@@ -3,6 +3,7 @@ use crate::module::ResolvedConfiguration;
 use crate::{Class, ClassPath, Result, Value};
 use ahash::AHashMap;
 use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2};
+use std::borrow::Cow;
 use std::fmt::Display;
 use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
@@ -81,13 +82,15 @@ impl ClassLoader {
     ///
     /// if the class file cannot be read.
     pub async fn load_with_status(&self, class_name: &str) -> Result<(Arc<Class>, bool)> {
-        let class_name_internal = class_name.replace('.', "/");
-        let class_name_internal = class_name_internal.as_str();
+        let class_name_internal = match memchr::memchr(b'.', class_name.as_bytes()) {
+            None => Cow::Borrowed(class_name),
+            Some(_) => Cow::Owned(class_name.replace('.', "/")),
+        };
 
         // Check if the class is already loaded in this class loader.
         {
             let classes = self.classes.read().await;
-            if let Some(class) = classes.get(class_name_internal) {
+            if let Some(class) = classes.get::<str>(class_name_internal.as_ref()) {
                 return Ok((Arc::clone(class), true));
             }
         }
@@ -100,20 +103,20 @@ impl ClassLoader {
         }
 
         if class_name_internal.starts_with('[') {
-            if let Ok(class) = self.create_array_class(class_name_internal) {
-                return Ok(self.cache_class(class_name_internal, class).await);
+            if let Ok(class) = self.create_array_class(&class_name_internal) {
+                return Ok(self.cache_class(&class_name_internal, class).await);
             }
         } else {
             let class_path = self.class_path();
-            if let Ok(class_file) = class_path.read_class(class_name_internal).await {
+            if let Ok(class_file) = class_path.read_class(&class_name_internal).await {
                 let class = Class::from(Some(self.this.clone()), class_file)?;
-                self.set_class_module_name(&class, class_name_internal)
+                self.set_class_module_name(&class, &class_name_internal)
                     .await?;
-                return Ok(self.cache_class(class_name_internal, class).await);
+                return Ok(self.cache_class(&class_name_internal, class).await);
             }
         }
 
-        Err(ClassNotFound(class_name_internal.to_string()))
+        Err(ClassNotFound(class_name_internal.into()))
     }
 
     /// Determines and sets the module name for a class based on its package.
