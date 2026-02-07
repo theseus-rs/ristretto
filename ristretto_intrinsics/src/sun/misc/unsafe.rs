@@ -1,0 +1,1372 @@
+use crate::jdk;
+use ristretto_classfile::JAVA_8;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
+use ristretto_classloader::Value;
+use ristretto_macros::async_method;
+use ristretto_macros::intrinsic_method;
+use ristretto_types::{Parameters, Result};
+use std::sync::Arc;
+
+#[intrinsic_method("sun/misc/Unsafe.addressSize()I", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn address_size<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::address_size_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.allocateInstance(Ljava/lang/Class;)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn allocate_instance<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::allocate_instance(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.allocateMemory(J)J", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn allocate_memory<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::allocate_memory_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.arrayBaseOffset(Ljava/lang/Class;)I",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn array_base_offset<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::array_base_offset_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.arrayIndexScale(Ljava/lang/Class;)I",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn array_index_scale<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::array_index_scale_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.compareAndSwapInt(Ljava/lang/Object;JII)Z",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn compare_and_swap_int<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::compare_and_set_int(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.compareAndSwapLong(Ljava/lang/Object;JJJ)Z",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn compare_and_swap_long<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::compare_and_set_long(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn compare_and_swap_object<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::compare_and_set_reference(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.copyMemory(Ljava/lang/Object;JLjava/lang/Object;JJ)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn copy_memory<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::copy_memory_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.defineAnonymousClass(Ljava/lang/Class;[B[Ljava/lang/Object;)Ljava/lang/Class;",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn define_anonymous_class<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::define_anonymous_class_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.defineClass(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;)Ljava/lang/Class;",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn define_class<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::define_class_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.ensureClassInitialized(Ljava/lang/Class;)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn ensure_class_initialized<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::ensure_class_initialized_0(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.freeMemory(J)V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn free_memory<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::free_memory_0(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.fullFence()V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn full_fence<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::full_fence(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.getAddress(J)J", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_address<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::Long(0)))
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getBoolean(Ljava/lang/Object;J)Z",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_boolean<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_boolean(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getBooleanVolatile(Ljava/lang/Object;J)Z",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_boolean_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_boolean_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.getByte(J)B", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_byte_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::from(8i8)))
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getByte(Ljava/lang/Object;J)B",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_byte_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_byte(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getByteVolatile(Ljava/lang/Object;J)B",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_byte_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_byte_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.getChar(J)C", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_char_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::from(0 as char)))
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getChar(Ljava/lang/Object;J)C",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_char_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_char(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getCharVolatile(Ljava/lang/Object;J)C",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_char_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_char_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.getDouble(J)D", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_double_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::from(0.0f64)))
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getDouble(Ljava/lang/Object;J)D",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_double_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_double(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getDoubleVolatile(Ljava/lang/Object;J)D",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_double_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_double_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.getFloat(J)F", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_float_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::from(0.0f32)))
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getFloat(Ljava/lang/Object;J)F",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_float_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_float(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getFloatVolatile(Ljava/lang/Object;J)F",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_float_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_float_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.getInt(J)I", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_int_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::from(0i32)))
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getInt(Ljava/lang/Object;J)I",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_int_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_int(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getIntVolatile(Ljava/lang/Object;J)I",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_int_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_int_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.getLoadAverage([DI)I", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_load_average<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_load_average_0(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.getLong(J)J", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_long_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::from(0i64)))
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getLong(Ljava/lang/Object;J)J",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_long_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_long(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getLongVolatile(Ljava/lang/Object;J)J",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_long_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_long_volatile(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getObject(Ljava/lang/Object;J)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_object<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_reference(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getObjectVolatile(Ljava/lang/Object;J)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_object_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_reference_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.getShort(J)S", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_short_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::from(0i16)))
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getShort(Ljava/lang/Object;J)S",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_short_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_short(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.getShortVolatile(Ljava/lang/Object;J)S",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn get_short_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::get_short_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.loadFence()V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn load_fence<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::load_fence(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.monitorEnter(Ljava/lang/Object;)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn monitor_enter<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.misc.Unsafe.monitorEnter(Ljava/lang/Object;)V")
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.monitorExit(Ljava/lang/Object;)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn monitor_exit<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.misc.Unsafe.monitorExit(Ljava/lang/Object;)V")
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.objectFieldOffset(Ljava/lang/reflect/Field;)J",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn object_field_offset<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::object_field_offset_0(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.pageSize()I", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn page_size<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::page_size(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.park(ZJ)V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn park<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::park(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.putAddress(JJ)V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn put_address<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putBoolean(Ljava/lang/Object;JZ)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_boolean<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_boolean(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putBooleanVolatile(Ljava/lang/Object;JZ)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_boolean_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_boolean_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.putByte(JB)V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn put_byte_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putByte(Ljava/lang/Object;JB)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_byte_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_byte(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putByteVolatile(Ljava/lang/Object;JB)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_byte_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_byte_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.putChar(JC)V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn put_char_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putChar(Ljava/lang/Object;JC)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_char_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_char(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putCharVolatile(Ljava/lang/Object;JC)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_char_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_char_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.putDouble(JD)V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn put_double_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putDouble(Ljava/lang/Object;JD)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_double_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_double(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putDoubleVolatile(Ljava/lang/Object;JD)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_double_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_double_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.putFloat(JF)V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn put_float_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putFloat(Ljava/lang/Object;JF)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_float_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_float(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putFloatVolatile(Ljava/lang/Object;JF)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_float_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_float_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.putInt(JI)V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn put_int_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putInt(Ljava/lang/Object;JI)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_int_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_int(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putIntVolatile(Ljava/lang/Object;JI)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_int_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_int_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.putLong(JJ)V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn put_long_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putLong(Ljava/lang/Object;JJ)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_long_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_long(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putLongVolatile(Ljava/lang/Object;JJ)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_long_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_long_volatile(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putObject(Ljava/lang/Object;JLjava/lang/Object;)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_object<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_reference(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putObjectVolatile(Ljava/lang/Object;JLjava/lang/Object;)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_object_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_reference_volatile(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putOrderedInt(Ljava/lang/Object;JI)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_ordered_int<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.misc.Unsafe.putOrderedInt(Ljava/lang/Object;JI)V")
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putOrderedLong(Ljava/lang/Object;JJ)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_ordered_long<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.misc.Unsafe.putOrderedLong(Ljava/lang/Object;JJ)V")
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putOrderedObject(Ljava/lang/Object;JLjava/lang/Object;)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_ordered_object<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.misc.Unsafe.putOrderedObject(Ljava/lang/Object;JLjava/lang/Object;)V")
+}
+
+#[intrinsic_method("sun/misc/Unsafe.putShort(JS)V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn put_short_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putShort(Ljava/lang/Object;JS)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_short_2<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_short(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.putShortVolatile(Ljava/lang/Object;JS)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn put_short_volatile<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::put_short_volatile(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.reallocateMemory(JJ)J", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn reallocate_memory<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::reallocate_memory_0(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.registerNatives()V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.setMemory(Ljava/lang/Object;JJB)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn set_memory<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::set_memory_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.shouldBeInitialized(Ljava/lang/Class;)Z",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn should_be_initialized<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::should_be_initialized_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn static_field_base<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::static_field_base_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn static_field_offset<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::static_field_offset_0(thread, parameters).await
+}
+
+#[intrinsic_method("sun/misc/Unsafe.storeFence()V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn store_fence<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::store_fence(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.throwException(Ljava/lang/Throwable;)V",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn throw_exception<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::throw_exception(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "sun/misc/Unsafe.tryMonitorEnter(Ljava/lang/Object;)Z",
+    LessThanOrEqual(JAVA_8)
+)]
+#[async_method]
+pub async fn try_monitor_enter<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("sun.misc.Unsafe.tryMonitorEnter(Ljava/lang/Object;)Z")
+}
+
+#[intrinsic_method("sun/misc/Unsafe.unpark(Ljava/lang/Object;)V", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn unpark<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    jdk::internal::misc::r#unsafe::unpark(thread, parameters).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::jdk::internal::misc::r#unsafe::{
+        BOOLEAN_SIZE, BYTE_SIZE, CHAR_SIZE, DOUBLE_SIZE, FLOAT_SIZE, INT_SIZE, LONG_SIZE,
+        REFERENCE_SIZE, SHORT_SIZE, STATIC_FIELD_OFFSET_MASK,
+    };
+    use ristretto_types::JavaObject;
+    use ristretto_types::Thread;
+
+    /// Creates a java.lang.reflect.Field for testing purposes.
+    async fn create_field<T: Thread + 'static>(thread: &T) -> Result<Value> {
+        let string_class = thread.class("java/lang/String").await?;
+        let string_class_object = string_class.to_object(thread).await?;
+        let descriptor =
+            "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IZILjava/lang/String;[B";
+        let parameters = vec![
+            string_class_object,              // Declaring Class
+            "value".to_object(thread).await?, // Field name
+            Value::Object(None),              // Type
+            Value::Int(0),                    // Modifiers
+            Value::from(false),               // Trusted Final
+            Value::Int(0),                    // Slot
+            "[B".to_object(thread).await?,    // Signature
+            Value::Object(None),              // Annotations
+        ];
+        thread
+            .object("java/lang/reflect/Field", descriptor, &parameters)
+            .await
+    }
+
+    #[tokio::test]
+    async fn test_address_size() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = address_size(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(8)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_allocate_instance() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let class = thread.class("java.lang.Object").await?;
+        let class_object = class.to_object(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(class_object);
+        let result = allocate_instance(thread, parameters).await?;
+        assert!(matches!(result, Some(Value::Object(_))));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_allocate_memory() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let mut parameters = Parameters::default();
+        parameters.push(Value::Long(100)); // bytes to allocate
+        let result = allocate_memory(thread, parameters).await?;
+        assert_eq!(result, Some(Value::Long(1)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_array_base_offset() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = array_base_offset(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(0)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_array_index_scale() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let tests = vec![
+            ("[Z", BOOLEAN_SIZE),
+            ("[B", BYTE_SIZE),
+            ("[C", CHAR_SIZE),
+            ("[S", SHORT_SIZE),
+            ("[I", INT_SIZE),
+            ("[F", FLOAT_SIZE),
+            ("[J", LONG_SIZE),
+            ("[D", DOUBLE_SIZE),
+            ("[Ljava/lang/Object;", REFERENCE_SIZE),
+        ];
+
+        for (class_name, expected_scale) in tests {
+            let expected_scale = i32::try_from(expected_scale)?;
+            let class = thread.class(class_name).await?;
+            let class_object = class.to_object(&thread).await?;
+            let parameters = Parameters::new(vec![class_object]);
+            let result = array_index_scale(thread.clone(), parameters)
+                .await?
+                .expect("scale");
+            let scale = result.as_i32()?;
+            assert_eq!(expected_scale, scale);
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ensure_class_initialized() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let string_class = thread.class("java/lang/String").await?;
+        let class_object = string_class.to_object(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(class_object);
+        let result = ensure_class_initialized(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_free_memory() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = free_memory(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_full_fence() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = full_fence(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_address() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_address(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Long(0)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_byte_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_byte_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(8i8)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_char_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_char_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(0 as char)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_double_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_double_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(0.0f64)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_float_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_float_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(0.0f32)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_int_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_int_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(0i32)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_long_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_long_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Long(0)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_short_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_short_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(0i16)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_fence() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = load_fence(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.monitorEnter(Ljava/lang/Object;)V"
+    )]
+    async fn test_monitor_enter() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = monitor_enter(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.monitorExit(Ljava/lang/Object;)V"
+    )]
+    async fn test_monitor_exit() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = monitor_exit(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_object_field_offset() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let field = create_field(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(field);
+        let value = object_field_offset(thread, parameters)
+            .await?
+            .expect("offset");
+        let offset = value.as_i64()?;
+        assert_eq!(offset, 0);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_page_size() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let value = page_size(thread, Parameters::default())
+            .await?
+            .expect("page_size");
+        let page_size = value.as_i32()?;
+        let expected_page_size;
+
+        #[cfg(target_os = "macos")]
+        {
+            expected_page_size = 16_384;
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            expected_page_size = 4_096;
+        }
+
+        assert_eq!(page_size, expected_page_size);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_put_address() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_address(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_put_byte_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_byte_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_put_char_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_char_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_put_double_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_double_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_put_float_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_float_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_put_int_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_int_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_put_long_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_long_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.putOrderedInt(Ljava/lang/Object;JI)V"
+    )]
+    async fn test_put_ordered_int() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = put_ordered_int(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.putOrderedLong(Ljava/lang/Object;JJ)V"
+    )]
+    async fn test_put_ordered_long() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = put_ordered_long(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.putOrderedObject(Ljava/lang/Object;JLjava/lang/Object;)V"
+    )]
+    async fn test_put_ordered_object() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = put_ordered_object(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_put_short_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = put_short_1(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_should_be_initialized() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        // Create a Class object for testing - the class is already initialized
+        let string_class = thread.class("java/lang/String").await?;
+        let class_object = string_class.to_object(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(class_object);
+        let result = should_be_initialized(thread, parameters).await?;
+        // String class is already initialized, so should return false (should NOT be initialized)
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_static_field_base() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let field = create_field(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(field);
+        let value = static_field_base(thread.clone(), parameters)
+            .await?
+            .expect("object");
+        // static_field_base returns the declaring class (clazz field) of the Field
+        let string_class = thread.class("java/lang/String").await?;
+        let string_class_object = string_class.to_object(&thread).await?;
+        assert_eq!(value, string_class_object);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_static_field_offset() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let field = create_field(&thread).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(field);
+        let value = static_field_offset(thread, parameters)
+            .await?
+            .expect("offset");
+        let offset = value.as_i64()?;
+        assert_eq!(offset, STATIC_FIELD_OFFSET_MASK);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_store_fence() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result =
+            crate::jdk::internal::misc::r#unsafe::store_fence(thread, Parameters::default())
+                .await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: sun.misc.Unsafe.tryMonitorEnter(Ljava/lang/Object;)Z"
+    )]
+    async fn test_try_monitor_enter() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = try_monitor_enter(thread, Parameters::default()).await;
+    }
+}

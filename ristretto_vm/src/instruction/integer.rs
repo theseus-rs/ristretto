@@ -1,8 +1,8 @@
 use crate::Error::InvalidStackValue;
+use crate::JavaError::ArithmeticException;
 use crate::JavaError::{ArrayIndexOutOfBoundsException, NullPointerException};
 use crate::frame::ExecutionResult::Return;
 use crate::frame::{ExecutionResult, ExecutionResult::Continue};
-use crate::java_error::JavaError::ArithmeticException;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{Result, Value};
@@ -496,7 +496,7 @@ pub(crate) fn ireturn(stack: &mut OperandStack) -> Result<ExecutionResult> {
 mod tests {
     use super::*;
     use crate::Error::{InvalidOperand, JavaError};
-    use crate::java_error::JavaError::ArithmeticException;
+    use crate::JavaError::ArithmeticException;
 
     #[test]
     fn test_iconst_m1() -> Result<()> {

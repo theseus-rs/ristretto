@@ -2,8 +2,8 @@ use crate::Result;
 use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::Frame;
-use crate::intrinsic_methods::java::lang::object::get_monitor_id;
 use crate::operand_stack::OperandStack;
+use ristretto_intrinsics::get_monitor_id;
 
 /// # References
 ///

@@ -12,10 +12,12 @@ changelog_include = [
     "ristretto_classfile",
     "ristretto_classloader",
     "ristretto_gc",
+    "ristretto_intrinsics",
     "ristretto_jimage",
     "ristretto_jit",
     "ristretto_macros",
     "ristretto_pom",
+    "ristretto_types",
     "ristretto_vm",
 ]
 git_release_enable = true

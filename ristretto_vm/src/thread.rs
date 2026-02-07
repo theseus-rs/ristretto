@@ -1,8 +1,9 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::JavaError::{RuntimeException, VerifyError};
+use crate::Parameters;
+use crate::RustValue;
 use crate::configuration::VerifyMode;
-use crate::parameters::Parameters;
-use crate::rust_value::{RustValue, process_values};
+use crate::rust_value::process_values;
 use crate::{Frame, Result, VM, jit};
 use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::Attribute;
@@ -57,6 +58,7 @@ pub struct Thread {
 
 impl Thread {
     /// Create a new thread.
+    #[must_use]
     pub fn new(vm: &Weak<VM>, id: u64) -> Arc<Self> {
         let vm_ref = vm.clone();
         let name = format!("Thread-{id}");
@@ -286,7 +288,7 @@ impl Thread {
     /// if the class cannot be loaded or initialized
     #[expect(clippy::multiple_bound_locations)]
     #[async_method]
-    pub(crate) async fn class<S: AsRef<str> + Send>(&self, class_name: S) -> Result<Arc<Class>> {
+    pub async fn class<S: AsRef<str> + Send>(&self, class_name: S) -> Result<Arc<Class>> {
         let class_name = class_name.as_ref();
 
         // Load the class; the class tracks its own initialization state
@@ -851,6 +853,132 @@ impl Thread {
                 eprintln!("    at {class_name}.{method_name}({source})");
             }
         }
+    }
+}
+
+impl ristretto_types::Thread for Thread {
+    type Vm = VM;
+    type Frame = crate::Frame;
+
+    fn id(&self) -> u64 {
+        self.id
+    }
+
+    fn vm(&self) -> Result<Arc<VM>> {
+        Thread::vm(self)
+    }
+
+    fn name(&self) -> ristretto_types::BoxFuture<'_, String> {
+        Box::pin(async move { Thread::name(self).await })
+    }
+
+    fn set_name<'a>(&'a self, name: &'a str) -> ristretto_types::BoxFuture<'a, ()> {
+        Box::pin(async move { Thread::set_name(self, name).await })
+    }
+
+    fn java_object(&self) -> ristretto_types::BoxFuture<'_, Value> {
+        Box::pin(async move { Thread::java_object(self).await })
+    }
+
+    fn set_java_object(&self, value: Value) -> ristretto_types::BoxFuture<'_, ()> {
+        Box::pin(async move { Thread::set_java_object(self, value).await })
+    }
+
+    fn frames(&self) -> ristretto_types::BoxFuture<'_, Result<Vec<Arc<crate::Frame>>>> {
+        Box::pin(async move { Thread::frames(self).await })
+    }
+
+    fn interrupt(&self) {
+        Thread::interrupt(self);
+    }
+
+    fn is_interrupted(&self, clear_interrupt: bool) -> bool {
+        Thread::is_interrupted(self, clear_interrupt)
+    }
+
+    fn sleep(&self, duration: Duration) -> ristretto_types::BoxFuture<'_, bool> {
+        Box::pin(async move { Thread::sleep(self, duration).await })
+    }
+
+    fn park(&self, is_absolute: bool, time: u64) -> ristretto_types::BoxFuture<'_, Result<()>> {
+        Box::pin(async move { Thread::park(self, is_absolute, time).await })
+    }
+
+    fn unpark(&self) {
+        Thread::unpark(self);
+    }
+
+    fn class<'a>(
+        &'a self,
+        class_name: &'a str,
+    ) -> ristretto_types::BoxFuture<'a, Result<Arc<Class>>> {
+        Box::pin(async move { Thread::class(self, class_name).await })
+    }
+
+    fn load_and_link_class<'a>(
+        &'a self,
+        class_name: &'a str,
+    ) -> ristretto_types::BoxFuture<'a, Result<Arc<Class>>> {
+        Box::pin(async move { Thread::load_and_link_class(self, class_name).await })
+    }
+
+    fn register_class(&self, class: Arc<Class>) -> ristretto_types::BoxFuture<'_, Result<()>> {
+        Box::pin(async move { Thread::register_class(self, class).await })
+    }
+
+    fn invoke<'a>(
+        &'a self,
+        class: &'a str,
+        method: &'a str,
+        parameters: &'a [Value],
+    ) -> ristretto_types::BoxFuture<'a, Result<Option<Value>>> {
+        Box::pin(async move { Thread::invoke(self, class, method, parameters).await })
+    }
+
+    fn try_invoke<'a>(
+        &'a self,
+        class: &'a str,
+        method: &'a str,
+        parameters: &'a [Value],
+    ) -> ristretto_types::BoxFuture<'a, Result<Value>> {
+        Box::pin(async move { Thread::try_invoke(self, class, method, parameters).await })
+    }
+
+    fn execute<'a>(
+        &'a self,
+        class: &'a Arc<Class>,
+        method: &'a Arc<Method>,
+        parameters: &'a [Value],
+    ) -> ristretto_types::BoxFuture<'a, Result<Option<Value>>> {
+        Box::pin(async move { Thread::execute(self, class, method, parameters).await })
+    }
+
+    fn try_execute<'a>(
+        &'a self,
+        class: &'a Arc<Class>,
+        method: &'a Arc<Method>,
+        parameters: &'a [Value],
+    ) -> ristretto_types::BoxFuture<'a, Result<Value>> {
+        Box::pin(async move { Thread::try_execute(self, class, method, parameters).await })
+    }
+
+    fn object<'a>(
+        &'a self,
+        class_name: &'a str,
+        descriptor: &'a str,
+        parameters: &'a [Value],
+    ) -> ristretto_types::BoxFuture<'a, Result<Value>> {
+        Box::pin(async move { Thread::object(self, class_name, descriptor, parameters).await })
+    }
+
+    fn intern_string<'a>(
+        &'a self,
+        string: &'a str,
+    ) -> ristretto_types::BoxFuture<'a, Result<Value>> {
+        Box::pin(async move {
+            let vm = Thread::vm(self)?;
+            vm.string_pool().intern(self, string).await
+        })
     }
 }
 

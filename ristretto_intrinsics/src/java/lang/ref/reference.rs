@@ -1,0 +1,152 @@
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::{JAVA_11, JAVA_17};
+use ristretto_classloader::Value;
+use ristretto_macros::async_method;
+use ristretto_macros::intrinsic_method;
+use ristretto_types::{Parameters, Result};
+use std::sync::Arc;
+
+#[intrinsic_method("java/lang/ref/Reference.clear0()V", GreaterThanOrEqual(JAVA_17))]
+#[async_method]
+pub async fn clear_0<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let object = parameters.pop()?;
+    let mut object = object.as_object_mut()?;
+    object.set_value("referent", Value::Object(None))?;
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "java/lang/ref/Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn get_and_clear_reference_pending_list<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    // TODO: Implement when the pending list is implemented
+    Ok(Some(Value::Object(None)))
+}
+
+#[intrinsic_method(
+    "java/lang/ref/Reference.hasReferencePendingList()Z",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn has_reference_pending_list<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    // TODO: Implement when the pending list is implemented
+    Ok(Some(Value::from(false)))
+}
+
+#[intrinsic_method(
+    "java/lang/ref/Reference.refersTo0(Ljava/lang/Object;)Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
+#[async_method]
+pub async fn refers_to_0<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let object_parameter = parameters.pop()?;
+    let reference = parameters.pop()?;
+    let reference = reference.as_object_ref()?;
+    let object = reference.value("referent")?;
+    let refers_to = object == object_parameter;
+    Ok(Some(Value::from(refers_to)))
+}
+
+#[intrinsic_method(
+    "java/lang/ref/Reference.waitForReferencePendingList()V",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn wait_for_reference_pending_list<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    // TODO: Implement when the pending list is implemented
+    Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ristretto_types::JavaObject;
+
+    #[tokio::test]
+    async fn test_clear_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let value = "foo".to_object(&thread).await?;
+        let weak_reference = vm
+            .object(
+                "java/lang/ref/WeakReference",
+                "Ljava/lang/Object;",
+                &[value],
+            )
+            .await?;
+        let mut parameters = Parameters::default();
+        parameters.push(weak_reference.clone());
+
+        let result = clear_0(thread, parameters).await?;
+        assert_eq!(result, None);
+        let weak_reference = weak_reference.as_object_ref()?;
+        let referent = weak_reference.value("referent")?;
+        assert_eq!(referent, Value::Object(None));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_and_clear_reference_pending_list() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = get_and_clear_reference_pending_list(thread, Parameters::default())
+            .await?
+            .expect("pending list");
+        assert_eq!(result, Value::Object(None));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_has_reference_pending_list() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let value = has_reference_pending_list(thread, Parameters::default())
+            .await?
+            .expect("has pending list");
+        let has_pending_list = value.as_bool()?;
+        assert!(!has_pending_list);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_refers_to_0() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let value = "foo".to_object(&thread).await?;
+        let weak_reference = vm
+            .object(
+                "java/lang/ref/WeakReference",
+                "Ljava/lang/Object;",
+                std::slice::from_ref(&value),
+            )
+            .await?;
+        let mut parameters = Parameters::default();
+        parameters.push(weak_reference.clone());
+        parameters.push(value);
+        let value = refers_to_0(thread, parameters).await?.expect("refers to");
+        let refers_to = value.as_bool()?;
+        assert!(refers_to);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_reference_pending_list() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = wait_for_reference_pending_list(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+}

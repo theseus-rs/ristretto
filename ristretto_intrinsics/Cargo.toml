@@ -1,0 +1,60 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "Intrinsic methods for the Ristretto JVM"
+edition.workspace = true
+keywords = ["java", "jvm"]
+license.workspace = true
+name = "ristretto_intrinsics"
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+name = "ristretto_intrinsics"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+ahash = { workspace = true }
+async-recursion = { workspace = true }
+bitflags = { workspace = true }
+byteorder = { workspace = true }
+console = { workspace = true }
+dirs = { workspace = true }
+filetime = { workspace = true }
+flate2 = { workspace = true }
+jiff = { workspace = true }
+os_info = { workspace = true }
+parking_lot = { workspace = true }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.28.0" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.28.0" }
+ristretto_gc = { path = "../ristretto_gc", version = "0.28.0" }
+ristretto_macros = { path = "../ristretto_macros", version = "0.28.0" }
+ristretto_types = { path = "../ristretto_types", version = "0.28.0" }
+sys-locale = { workspace = true }
+sysinfo = { workspace = true }
+tracing = { workspace = true }
+whoami = { workspace = true }
+zerocopy = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+thread-priority = { workspace = true }
+tokio = { workspace = true, features = ["fs", "time"] }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+tokio = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+
+[dev-dependencies]
+ristretto_vm = { path = "../ristretto_vm", version = "0.28.0" }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+[package.metadata.cargo-machete]
+ignored = [
+    # used by async functions in proc macros
+    "async-recursion",
+]
