@@ -155,13 +155,13 @@ use crate::JavaError::BootstrapMethodError;
 use crate::assignable::Assignable;
 use crate::call_site_cache::CallSiteKey;
 use crate::frame::{ExecutionResult, Frame};
-use crate::intrinsic_methods::java::lang::invoke::methodhandle::call_method_handle_target;
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
 use ristretto_classfile::attributes::{Attribute, BootstrapMethod};
 use ristretto_classfile::{Constant, ConstantPool, FieldType, ReferenceKind};
 use ristretto_classloader::{Class, Method, Reference, Value};
+use ristretto_intrinsics::call_method_handle_target;
 use std::sync::Arc;
 use tracing::debug;
 

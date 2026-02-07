@@ -718,6 +718,20 @@ impl Frame {
     }
 }
 
+impl ristretto_types::Frame for Frame {
+    fn class(&self) -> &Arc<Class> {
+        &self.class
+    }
+
+    fn method(&self) -> &Arc<Method> {
+        &self.method
+    }
+
+    fn program_counter(&self) -> usize {
+        self.program_counter.load(Ordering::Relaxed)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

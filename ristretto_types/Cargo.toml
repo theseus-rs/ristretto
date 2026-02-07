@@ -1,0 +1,34 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "Types and traits for the Ristretto JVM"
+edition.workspace = true
+keywords = ["java", "jvm"]
+license.workspace = true
+name = "ristretto_types"
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+name = "ristretto_types"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+ahash = { workspace = true }
+bitflags = { workspace = true }
+parking_lot = { workspace = true }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.28.0" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.28.0" }
+ristretto_gc = { path = "../ristretto_gc", version = "0.28.0" }
+ristretto_jit = { path = "../ristretto_jit", version = "0.28.0" }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+zerocopy = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros", "fs"] }
+tempfile = { workspace = true }

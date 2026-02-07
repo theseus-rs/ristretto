@@ -28,12 +28,16 @@ use ristretto_classloader::module::{
     AccessCheck, ModuleFinder, ModuleFinderChain, ModulePathFinder, ResolvedConfiguration,
     Resolver, SystemModuleFinder,
 };
+use ristretto_types::ModuleAccess;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
 // Re-export AccessCheckResult from classloader - this is the canonical location
 pub use ristretto_classloader::module::AccessCheckResult;
+
+// Re-export DefinedModule from ristretto_types for shared access
+pub use ristretto_types::DefinedModule;
 
 /// Special constant for "all unnamed modules" target.
 pub const ALL_UNNAMED: &str = "ALL-UNNAMED";
@@ -79,37 +83,7 @@ pub struct ModuleSystem {
     boot_unnamed_module: RwLock<Option<Value>>,
 }
 
-/// Information about a defined module.
-#[derive(Clone, Debug)]
-pub struct DefinedModule {
-    /// Module name.
-    pub name: String,
-    /// Whether the module is open (all packages implicitly opened).
-    pub is_open: bool,
-    /// Module version (optional).
-    pub version: Option<String>,
-    /// Module location (optional, e.g., path to JAR).
-    pub location: Option<String>,
-    /// Packages contained in this module.
-    pub packages: AHashSet<String>,
-    /// The java.lang.Module object for this module (set during defineModule0).
-    pub module_object: Option<Value>,
-}
-
-impl DefinedModule {
-    /// Creates a new defined module.
-    #[must_use]
-    pub fn new(name: String, is_open: bool) -> Self {
-        Self {
-            name,
-            is_open,
-            version: None,
-            location: None,
-            packages: AHashSet::default(),
-            module_object: None,
-        }
-    }
-}
+// DefinedModule is re-exported from ristretto_types above
 
 impl ModuleSystem {
     /// Creates a new module system initialized with command-line options and resolved modules.
@@ -981,6 +955,58 @@ impl ModuleSystem {
         let to = to_module.unwrap_or(ALL_UNNAMED);
         let error_msg = Self::illegal_access_error(from, to, to_class_name, result);
         Err(InaccessibleObjectException(error_msg).into())
+    }
+}
+
+impl ModuleAccess for ModuleSystem {
+    fn add_export(&self, source_module: &str, package: &str, target_module: Option<&str>) {
+        ModuleSystem::add_export(self, source_module, package, target_module);
+    }
+
+    fn add_export_to_all(&self, source_module: &str, package: &str) {
+        ModuleSystem::add_export_to_all(self, source_module, package);
+    }
+
+    fn add_export_to_all_unnamed(&self, source_module: &str, package: &str) {
+        ModuleSystem::add_export_to_all_unnamed(self, source_module, package);
+    }
+
+    fn add_read(&self, source_module: &str, target_module: &str) {
+        ModuleSystem::add_read(self, source_module, target_module);
+    }
+
+    fn define_module(&self, module: DefinedModule) {
+        ModuleSystem::define_module(self, module);
+    }
+
+    fn check_reflection_access(
+        &self,
+        from_module: Option<&str>,
+        to_module: Option<&str>,
+        to_class_name: &str,
+    ) -> AccessCheckResult {
+        ModuleSystem::check_reflection_access(self, from_module, to_module, to_class_name)
+    }
+
+    fn require_reflection_access(
+        &self,
+        from_module: Option<&str>,
+        to_module: Option<&str>,
+        to_class_name: &str,
+    ) -> Result<()> {
+        ModuleSystem::require_reflection_access(self, from_module, to_module, to_class_name)
+    }
+
+    fn set_boot_unnamed_module(&self, module: Value) {
+        ModuleSystem::set_boot_unnamed_module(self, module);
+    }
+
+    fn boot_unnamed_module(&self) -> Option<Value> {
+        ModuleSystem::boot_unnamed_module(self)
+    }
+
+    fn get_module_for_package(&self, package: &str) -> Option<Value> {
+        ModuleSystem::get_module_for_package(self, package)
     }
 }
 

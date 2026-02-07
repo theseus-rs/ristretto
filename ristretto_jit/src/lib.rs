@@ -5,29 +5,9 @@
 //! [![License](https://img.shields.io/crates/l/ristretto_jit)](https://github.com/theseus-rs/ristretto#license)
 //! [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
 //!
-//! ## Overview
-//!
 //! Ristretto JIT provides a Just-In-Time compiler for the Ristretto VM. The JIT compiler generates
 //! native code from Ristretto VM bytecode, allowing for high-performance execution directly on the
 //! host machine.
-//!
-//! ## Architecture
-//!
-//! The JIT compiler follows a multi-stage compilation pipeline:
-//!
-//! 1. **Bytecode Analysis** - Analyzes Java bytecode for control flow patterns
-//! 2. **Control Flow Graph Construction** - Builds a block based control flow graph
-//! 3. **SSA Transformation** - Converts stack-based operations to Static Single Assignment form
-//! 4. **Native Code Generation** - Generates optimized machine code
-//! 5. **Function Binding** - Creates callable native functions
-//!
-//! ## Features
-//!
-//! - **Fast execution** through native code generation
-//! - **Automatic optimization** of bytecode patterns
-//! - **Control flow graph analysis** for complex branching logic
-//! - **Platform-specific compilation** for x86-64, aarch64 (ARM64), s390x (IBM Z) and riscv64
-//! - **Comprehensive error handling** with detailed error messages
 //!
 //! ## Platform Support
 //!

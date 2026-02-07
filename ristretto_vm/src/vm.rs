@@ -1,13 +1,12 @@
 use crate::Error::InternalError;
+use crate::RustValue;
 use crate::call_site_cache::CallSiteCache;
-use crate::handles::{FileHandle, HandleManager, MemberHandle, ThreadHandle};
 use crate::intrinsic_methods::MethodRegistry;
 use crate::java_object::JavaObject;
 use crate::jit::Compiler;
 use crate::method_ref_cache::MethodRefCache;
 use crate::module_system::ModuleSystem;
 use crate::monitor::MonitorRegistry;
-use crate::rust_value::RustValue;
 use crate::string_pool::StringPool;
 use crate::thread::Thread;
 use crate::{Configuration, ConfigurationBuilder, Result, startup_trace};
@@ -18,12 +17,16 @@ use ristretto_classloader::{
     Class, ClassLoader, ClassPath, ClassPathEntry, Object, Reference, Value, runtime,
 };
 use ristretto_gc::{GarbageCollector, Statistics};
+use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle};
+
+type ThreadHandle = ristretto_types::handles::ThreadHandle<Thread>;
 use std::ffi::OsStr;
 use std::fmt::Debug;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use tracing::debug;
 
 /// The offset to add to the major version to get the class file version.  Java 1.0 has a class
@@ -745,6 +748,124 @@ impl VM {
     pub async fn wait_for_non_daemon_threads(&self) -> Result<()> {
         // WASM uses spawn_local which doesn't support joining
         Ok(())
+    }
+}
+
+impl ristretto_types::VM for VM {
+    type ThreadType = Thread;
+    type ModuleSystem = ModuleSystem;
+
+    fn garbage_collector(&self) -> &Arc<GarbageCollector> {
+        &self.garbage_collector
+    }
+
+    fn java_home(&self) -> &PathBuf {
+        &self.java_home
+    }
+
+    fn java_version(&self) -> &str {
+        &self.java_version
+    }
+
+    fn java_major_version(&self) -> u16 {
+        self.java_major_version
+    }
+
+    fn java_class_file_version(&self) -> &Version {
+        &self.java_class_file_version
+    }
+
+    fn system_properties(&self) -> &AHashMap<String, String> {
+        self.configuration.system_properties()
+    }
+
+    fn next_thread_id(&self) -> Result<u64> {
+        VM::next_thread_id(self)
+    }
+
+    fn next_hidden_class_suffix(&self) -> Result<u64> {
+        VM::next_hidden_class_suffix(self)
+    }
+
+    fn class<'a>(
+        &'a self,
+        class_name: &'a str,
+    ) -> ristretto_types::BoxFuture<'a, Result<Arc<Class>>> {
+        Box::pin(async move { VM::class(self, class_name).await })
+    }
+
+    fn invoke_main<'a>(
+        &'a self,
+        parameters: &'a [&'a str],
+    ) -> ristretto_types::BoxFuture<'a, Result<Option<Value>>> {
+        Box::pin(async move { VM::invoke_main(self, parameters).await })
+    }
+
+    fn module_system(&self) -> &ModuleSystem {
+        &self.module_system
+    }
+
+    fn class_path(&self) -> &ClassPath {
+        self.configuration.class_path()
+    }
+
+    fn verify_mode(&self) -> ristretto_classfile::VerifyMode {
+        self.configuration.verify_mode()
+    }
+
+    fn preview_features(&self) -> bool {
+        self.configuration.preview_features()
+    }
+
+    fn stdin(&self) -> Arc<Mutex<dyn Read + Send + Sync>> {
+        self.configuration.stdin()
+    }
+
+    fn stdout(&self) -> Arc<Mutex<dyn Write + Send + Sync>> {
+        self.configuration.stdout()
+    }
+
+    fn stderr(&self) -> Arc<Mutex<dyn Write + Send + Sync>> {
+        self.configuration.stderr()
+    }
+
+    fn file_handles(&self) -> &HandleManager<String, FileHandle> {
+        VM::file_handles(self)
+    }
+
+    fn thread_handles(
+        &self,
+    ) -> &HandleManager<u64, ristretto_types::handles::ThreadHandle<Thread>> {
+        VM::thread_handles(self)
+    }
+
+    fn monitor_registry(&self) -> &MonitorRegistry {
+        VM::monitor_registry(self)
+    }
+
+    fn class_loader(&self) -> Arc<RwLock<Arc<ClassLoader>>> {
+        VM::class_loader(self)
+    }
+
+    fn intern_string<'a>(
+        &'a self,
+        thread: &'a Thread,
+        string: &'a str,
+    ) -> ristretto_types::BoxFuture<'a, Result<Value>> {
+        Box::pin(async move { self.string_pool.intern(thread, string).await })
+    }
+
+    fn object<'a>(
+        &'a self,
+        class_name: &'a str,
+        descriptor: &'a str,
+        parameters: &'a [Value],
+    ) -> ristretto_types::BoxFuture<'a, Result<Value>> {
+        Box::pin(async move { VM::object(self, class_name, descriptor, parameters).await })
+    }
+
+    fn create_thread(&self, id: u64) -> Result<Arc<Thread>> {
+        Ok(Thread::new(&self.vm, id))
     }
 }
 

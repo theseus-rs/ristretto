@@ -5,8 +5,6 @@
 //! [![License](https://img.shields.io/crates/l/ristretto_classfile)](https://github.com/theseus-rs/ristretto#license)
 //! [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
 //!
-//! ## Getting Started
-//!
 //! Implementation of the [JVM Class File Format](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html)
 //! that is used to read, write and verify Java classes.
 //!
@@ -82,10 +80,6 @@
 //! fs::write("HelloWorld.class", buffer)?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
-//!
-//! ## Safety
-//!
-//! This crate uses `#![forbid(unsafe_code)]` to ensure everything is implemented in 100% safe Rust.
 
 #![forbid(unsafe_code)]
 

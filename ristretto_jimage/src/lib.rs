@@ -5,8 +5,6 @@
 //! [![License](https://img.shields.io/crates/l/ristretto_jimage)](https://github.com/theseus-rs/ristretto#license)
 //! [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
 //!
-//! ## Getting Started
-//!
 //! `JImage` is a file format introduced in Java 9 to store Java runtime resources efficiently. This
 //! crate provides a reader for `JImage` files, allowing you to access and manipulate the resources
 //! contained within them.

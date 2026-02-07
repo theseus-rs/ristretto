@@ -1,5 +1,15 @@
+//! # Ristretto Macros
+//!
+//! [![Code Coverage](https://codecov.io/gh/theseus-rs/ristretto/branch/main/graph/badge.svg)](https://codecov.io/gh/theseus-rs/ristretto)
+//! [![Benchmarks](https://img.shields.io/badge/%F0%9F%90%B0_bencher-enabled-6ec241)](https://bencher.dev/perf/theseus-rs-ristretto)
+//! [![License](https://img.shields.io/crates/l/ristretto_macros)](https://github.com/theseus-rs/ristretto#license)
+//! [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
+//!
+//! This crate provides procedural macros for the Ristretto JVM.
+
 mod async_method;
 mod intrinsic;
+mod intrinsic_registry;
 
 extern crate proc_macro;
 
@@ -67,4 +77,23 @@ pub fn intrinsic_method(attributes: TokenStream, item: TokenStream) -> TokenStre
 #[proc_macro_attribute]
 pub fn async_method(_attributes: TokenStream, item: TokenStream) -> TokenStream {
     async_method::process(item)
+}
+
+/// A procedural macro that generates the intrinsic method registry at compile time.
+///
+/// This macro scans the `ristretto_intrinsics/src/` directory for functions annotated with
+/// `#[intrinsic_method]`, extracts their signatures and version specifications, and generates
+/// static PHF (Perfect Hash Function) maps for each supported Java version.
+///
+/// # Usage
+///
+/// ```text
+/// generate_intrinsic_registry!();
+/// ```
+///
+/// This generates static PHF maps named `JAVA_8`, `JAVA_11`, `JAVA_17`, `JAVA_21`, and `JAVA_25`,
+/// each mapping method signatures to their intrinsic method implementations.
+#[proc_macro]
+pub fn generate_intrinsic_registry(input: TokenStream) -> TokenStream {
+    intrinsic_registry::process(input)
 }

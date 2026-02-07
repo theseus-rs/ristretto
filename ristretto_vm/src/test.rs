@@ -1,6 +1,8 @@
 use crate::configuration::VerifyMode;
 use crate::frame::Frame;
-use crate::{Class, ConfigurationBuilder, Result, Thread, VM};
+use crate::thread::Thread;
+use crate::vm::VM;
+use crate::{Class, ConfigurationBuilder, Result};
 use ristretto_classfile::{ClassFile, ConstantPool, MethodAccessFlags};
 use ristretto_classloader::ClassPath;
 use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};

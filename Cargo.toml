@@ -4,10 +4,12 @@ default-members = [
     "ristretto_classloader",
     "ristretto_cli",
     "ristretto_gc",
+    "ristretto_intrinsics",
     "ristretto_jit",
     "ristretto_jimage",
     "ristretto_macros",
     "ristretto_pom",
+    "ristretto_types",
     "ristretto_vm",
 ]
 members = [
@@ -16,10 +18,12 @@ members = [
     "ristretto_classloader",
     "ristretto_cli",
     "ristretto_gc",
+    "ristretto_intrinsics",
     "ristretto_jimage",
     "ristretto_jit",
     "ristretto_macros",
     "ristretto_pom",
+    "ristretto_types",
     "ristretto_vm",
 ]
 resolver = "3"
@@ -83,7 +87,7 @@ regex = "1.12.3"
 reqwest = "0.13.2"
 serde = "1.0.228"
 serde_plain = "1.0.2"
-stacker = "0.1.22"
+stacker = "0.1.23"
 syn = "2.0.114"
 sysinfo = "0.38.1"
 sys-locale = "0.3.2"
