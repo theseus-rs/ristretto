@@ -85,7 +85,7 @@ impl OpensFlags {
     /// assert_eq!(flags, OpensFlags::SYNTHETIC);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<OpensFlags> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<OpensFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let access_flags = OpensFlags::from_bits_truncate(access_flags);
         Ok(access_flags)

@@ -54,7 +54,7 @@ async fn test_get_resource_and_parse_classfile() -> Result<()> {
     let resource = image.get_resource(resource_name)?;
     assert_eq!(resource_name, resource.full_name());
 
-    let mut bytes = Cursor::new(resource.data().to_vec());
+    let mut bytes = Cursor::new(resource.data());
     let class_file = ClassFile::from_bytes(&mut bytes).expect("read classfile");
     let class_name = class_file.class_name().expect("class name");
     assert_eq!(class_name, "java/lang/Object");

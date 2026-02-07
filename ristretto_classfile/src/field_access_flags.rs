@@ -115,7 +115,7 @@ impl FieldAccessFlags {
     /// assert!(flags.contains(FieldAccessFlags::STATIC));
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<FieldAccessFlags> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<FieldAccessFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let access_flags = FieldAccessFlags::from_bits_truncate(access_flags);
         Ok(access_flags)

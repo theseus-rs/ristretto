@@ -323,7 +323,7 @@ impl StackFrame {
     /// assert!(matches!(frame, StackFrame::SameFrame { frame_type: 10 }));
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<StackFrame> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<StackFrame> {
         let frame_type = bytes.read_u8()?;
         let frame = match frame_type {
             0..=63 => StackFrame::SameFrame { frame_type },

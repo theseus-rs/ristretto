@@ -104,7 +104,7 @@ impl AnnotationValuePair {
     /// );
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<AnnotationValuePair> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<AnnotationValuePair> {
         let name_index = bytes.read_u16::<BigEndian>()?;
         let value = AnnotationElement::from_bytes(bytes)?;
         let annotation_value_pair = AnnotationValuePair { name_index, value };

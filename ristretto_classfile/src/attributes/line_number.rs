@@ -101,7 +101,7 @@ impl LineNumber {
     /// assert_eq!(ln_entry.line_number, 20);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<LineNumber> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<LineNumber> {
         let line_number = LineNumber {
             start_pc: bytes.read_u16::<BigEndian>()?,
             line_number: bytes.read_u16::<BigEndian>()?,

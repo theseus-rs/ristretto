@@ -89,7 +89,7 @@ impl Exports {
     /// assert_eq!(exports_directive.to_index[0], 15);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Exports> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Exports> {
         let index = bytes.read_u16::<BigEndian>()?;
         let flags = ExportsFlags::from_bytes(bytes)?;
         let to_index_count = bytes.read_u16::<BigEndian>()?;

@@ -69,7 +69,7 @@ impl BootstrapMethod {
     /// assert_eq!(bsm.arguments[1], 12);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<BootstrapMethod> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<BootstrapMethod> {
         let bootstrap_method_ref = bytes.read_u16::<BigEndian>()?;
         let arguments_count = bytes.read_u16::<BigEndian>()? as usize;
         let mut arguments = Vec::with_capacity(arguments_count);

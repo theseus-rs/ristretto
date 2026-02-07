@@ -164,7 +164,7 @@ impl TargetType {
     /// assert_eq!(target_type_empty, TargetType::Empty { target_type: 0x13 });
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<TargetType> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<TargetType> {
         let target_type = bytes.read_u8()?;
 
         let array_type = match target_type {

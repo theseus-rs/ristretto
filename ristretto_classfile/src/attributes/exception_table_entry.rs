@@ -89,7 +89,7 @@ impl ExceptionTableEntry {
     /// assert_eq!(entry.catch_type, 2);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ExceptionTableEntry> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ExceptionTableEntry> {
         let start_pc = bytes.read_u16::<BigEndian>()?;
         let end_pc = bytes.read_u16::<BigEndian>()?;
         let range_pc = start_pc..end_pc;

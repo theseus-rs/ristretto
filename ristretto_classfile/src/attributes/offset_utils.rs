@@ -37,12 +37,12 @@ use std::io::Cursor;
 /// - returns `Error::Io` if there is an issue reading from the byte cursor.
 /// - returns `Error::TryFromIntError` if a conversion from a numeric type fails.
 pub(crate) fn instructions_from_bytes(
-    bytes: &mut Cursor<Vec<u8>>,
+    bytes: &mut Cursor<impl AsRef<[u8]>>,
 ) -> Result<(AHashMap<u16, u16>, Vec<Instruction>)> {
     let mut instructions = Vec::new();
     let mut byte_to_instruction_map = AHashMap::default();
     let mut instruction_to_byte_map = AHashMap::default();
-    while bytes.position() < bytes.get_ref().len() as u64 {
+    while bytes.position() < bytes.get_ref().as_ref().len() as u64 {
         let byte_position = u16::try_from(bytes.position())?;
         let instruction_position = u16::try_from(instructions.len())?;
         byte_to_instruction_map.insert(byte_position, instruction_position);
