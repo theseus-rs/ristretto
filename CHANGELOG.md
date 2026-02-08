@@ -7,6 +7,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_pom` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.28.0...ristretto_pom-v0.29.0) - 2026-02-08
+
+### Added
+- add ristretto_pom crate
+
+### Other
+- create ristretto_intrinsics and ristretto_types crates
+
+## `ristretto_cli` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/v0.28.0...v0.29.0) - 2026-02-08
+
+### Added
+- add ristretto_pom crate
+- implement java.lang.Record
+- implement java/util/zip package
+
+### Fixed
+- improve Java 8 support
+
+### Other
+- create ristretto_intrinsics and ristretto_types crates
+- Merge branch 'main' into perf-jimage-class-load
+- refactor ClassFile::from_bytes interface to avoid allocation when loading classes
+- Merge pull request #639 from theseus-rs/upgrade-java-17
+- update Java 17 tests to 17.0.18.9.1
+- increase instruction yield count
+- optimize ldc/ldc_w to load integer and float synchronously
+- Merge pull request #643 from theseus-rs/implement-zip
+
+## `ristretto_vm` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.28.0...ristretto_vm-v0.29.0) - 2026-02-08
+
+### Added
+- implement java.lang.Record
+- add ristretto_pom crate
+- implement java/util/zip package
+
+### Fixed
+- improve Java 8 support
+
+### Other
+- create ristretto_intrinsics and ristretto_types crates
+- increase instruction yield count
+- optimize ldc/ldc_w to load integer and float synchronously
+- Merge pull request #643 from theseus-rs/implement-zip
+
+## `ristretto_intrinsics` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.28.0...ristretto_intrinsics-v0.29.0) - 2026-02-08
+
+### Added
+- implement java.lang.Record
+
+### Other
+- create ristretto_intrinsics and ristretto_types crates
+
+## `ristretto_types` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.28.0...ristretto_types-v0.29.0) - 2026-02-08
+
+### Added
+- implement java.lang.Record
+
+### Other
+- create ristretto_intrinsics and ristretto_types crates
+
+## `ristretto_jit` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.28.0...ristretto_jit-v0.29.0) - 2026-02-08
+
+### Other
+- create ristretto_intrinsics and ristretto_types crates
+
+## `ristretto_macros` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.28.0...ristretto_macros-v0.29.0) - 2026-02-08
+
+### Added
+- implement java.lang.Record
+
+### Other
+- create ristretto_intrinsics and ristretto_types crates
+
+## `ristretto_classloader` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.28.0...ristretto_classloader-v0.29.0) - 2026-02-08
+
+### Added
+- implement java.lang.Record
+- add ristretto_pom crate
+
+### Other
+- create ristretto_intrinsics and ristretto_types crates
+- Merge branch 'main' into perf-jimage-class-load
+- refactor ClassFile::from_bytes interface to avoid allocation when loading classes
+- Merge pull request #639 from theseus-rs/upgrade-java-17
+- update Java 17 tests to 17.0.18.9.1
+
+## `ristretto_jimage` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.28.0...ristretto_jimage-v0.29.0) - 2026-02-08
+
+### Other
+- create ristretto_intrinsics and ristretto_types crates
+
+## `ristretto_gc` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.28.0...ristretto_gc-v0.29.0) - 2026-02-08
+
+### Other
+- create ristretto_intrinsics and ristretto_types crates
+
+## `ristretto_classfile` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.28.0...ristretto_classfile-v0.29.0) - 2026-02-08
+
+### Added
+- add ristretto_pom crate
+
+### Other
+- create ristretto_intrinsics and ristretto_types crates
+- Merge branch 'main' into perf-jimage-class-load
+- refactor ClassFile::from_bytes interface to avoid allocation when loading classes
+
 ## `ristretto_cli` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/v0.27.0...v0.28.0) - 2026-01-26
 
 ### Added
