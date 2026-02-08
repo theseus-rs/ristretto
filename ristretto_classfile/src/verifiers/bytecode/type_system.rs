@@ -110,10 +110,6 @@ pub enum VerificationType {
 }
 
 impl VerificationType {
-    // ========================================================================
-    // Constants for well-known types
-    // ========================================================================
-
     /// Creates the `java/lang/Object` type.
     #[inline]
     #[must_use]
@@ -155,10 +151,6 @@ impl VerificationType {
     pub fn java_io_serializable() -> Self {
         Self::Object(Arc::from("java/io/Serializable"))
     }
-
-    // ========================================================================
-    // Type predicates
-    // ========================================================================
 
     /// Returns `true` if this is a category 1 type (takes one slot).
     #[inline]
@@ -230,10 +222,6 @@ impl VerificationType {
         matches!(self, Self::Null)
     }
 
-    // ========================================================================
-    // Array type operations
-    // ========================================================================
-
     /// Gets the component type if this is an array.
     ///
     /// Returns `None` if not an array type.
@@ -273,10 +261,6 @@ impl VerificationType {
     pub fn make_array(self) -> Self {
         Self::Array(Box::new(self))
     }
-
-    // ========================================================================
-    // Type conversions
-    // ========================================================================
 
     /// Converts a `FieldType` to a `VerificationType`.
     ///
@@ -347,10 +331,6 @@ impl VerificationType {
             _ => None,
         }
     }
-
-    // ========================================================================
-    // Type checking and assignability
-    // ========================================================================
 
     /// Checks if this type is assignable to the target type.
     ///

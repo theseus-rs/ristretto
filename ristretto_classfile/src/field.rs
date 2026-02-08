@@ -85,7 +85,10 @@ impl Field {
     /// assert_eq!(field.descriptor_index, descriptor_index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(constant_pool: &ConstantPool, bytes: &mut Cursor<Vec<u8>>) -> Result<Field> {
+    pub fn from_bytes(
+        constant_pool: &ConstantPool,
+        bytes: &mut Cursor<impl AsRef<[u8]> + Clone>,
+    ) -> Result<Field> {
         let access_flags = FieldAccessFlags::from_bytes(bytes)?;
         let name_index = bytes.read_u16::<BigEndian>()?;
         let descriptor_index = bytes.read_u16::<BigEndian>()?;

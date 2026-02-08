@@ -83,8 +83,6 @@ mod tests {
     use crate::verifiers::bytecode::handlers::test_utils::{MockContext, StrictMockContext};
     use std::sync::Arc;
 
-    // ==================== handle_athrow tests ====================
-
     #[test]
     fn test_athrow_object_success() {
         let ctx = MockContext;
@@ -199,8 +197,6 @@ mod tests {
         // Should succeed because we assume Object types are valid
         handle_athrow(&mut frame, &ctx).unwrap();
     }
-
-    // ==================== dispatch_exceptions tests ====================
 
     #[test]
     fn test_dispatch_athrow_success() {

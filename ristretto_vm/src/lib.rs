@@ -38,22 +38,17 @@
 //! # Ok(())
 //! # }
 //! ```
-//!
-//! ## Safety
-//!
-//! This crate uses `#![forbid(unsafe_code)]` to ensure everything is implemented in 100% safe Rust.
 
 #![forbid(unsafe_code)]
 
 mod assignable;
 mod call_site_cache;
 mod configuration;
-mod error;
 mod frame;
-mod handles;
 mod instruction;
 mod intrinsic_methods;
-mod java_error;
+
+pub use intrinsic_methods::IntrinsicMethod;
 mod java_object;
 mod jit;
 mod local_variables;
@@ -61,7 +56,6 @@ mod method_ref_cache;
 mod module_system;
 pub mod monitor;
 mod operand_stack;
-mod parameters;
 mod rust_value;
 pub mod startup_trace;
 mod string_pool;
@@ -74,13 +68,12 @@ pub use configuration::{
     Configuration, ConfigurationBuilder, MainModule, ModuleExport, ModuleOpens, ModulePatch,
     ModuleRead, VerifyMode,
 };
-pub use error::{Error, Result};
 pub(crate) use frame::Frame;
-pub use java_error::JavaError;
 pub use java_object::JavaObject;
 pub(crate) use local_variables::LocalVariables;
 pub use module_system::{ALL_UNNAMED, AccessCheckResult, DefinedModule, ModuleSystem};
 pub(crate) use operand_stack::OperandStack;
 pub use ristretto_classloader::{Class, ClassPath, DEFAULT_JAVA_VERSION, Object, Reference, Value};
-pub(crate) use thread::Thread;
+pub use ristretto_types::{Error, JavaError, Parameters, Result, RustValue};
+pub use thread::Thread;
 pub use vm::VM;

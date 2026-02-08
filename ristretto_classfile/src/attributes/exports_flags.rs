@@ -80,7 +80,7 @@ impl ExportsFlags {
     /// assert_eq!(flags_mandated, ExportsFlags::MANDATED);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ExportsFlags> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ExportsFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let access_flags = ExportsFlags::from_bits_truncate(access_flags);
         Ok(access_flags)

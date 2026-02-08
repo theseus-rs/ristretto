@@ -93,7 +93,7 @@ impl Annotation {
     /// }
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Annotation> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Annotation> {
         let type_index = bytes.read_u16::<BigEndian>()?;
         let elements_count = bytes.read_u16::<BigEndian>()? as usize;
         let mut elements = Vec::with_capacity(elements_count);

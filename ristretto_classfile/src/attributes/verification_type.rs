@@ -113,7 +113,7 @@ impl VerificationType {
     /// assert_eq!(verification_type, VerificationType::Object { cpool_index: 10 });
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<VerificationType> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<VerificationType> {
         let tag = bytes.read_u8()?;
 
         let verification_type = match tag {

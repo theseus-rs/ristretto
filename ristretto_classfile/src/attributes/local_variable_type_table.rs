@@ -93,7 +93,7 @@ impl LocalVariableTypeTable {
     /// assert_eq!(lvt_entry.index, 1);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<LocalVariableTypeTable> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<LocalVariableTypeTable> {
         let start_pc = bytes.read_u16::<BigEndian>()?;
         let length = bytes.read_u16::<BigEndian>()?;
         let name_index = bytes.read_u16::<BigEndian>()?;

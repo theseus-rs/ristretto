@@ -20,10 +20,17 @@ async fn get_test_image() -> Result<Image> {
 #[tokio::test]
 async fn test_image_for_all_java_lts_versions() -> Result<()> {
     for version in ALL_LTS_VERSIONS {
+        let major_version = version
+            .split('.')
+            .next()
+            .and_then(|version| version.parse::<u32>().ok())
+            .expect("major version");
+        if major_version <= 8 {
+            continue;
+        }
         let (java_home, _java_version, _class_loader) =
             version_class_loader(version).await.expect("java home");
         let path = java_home.join("lib").join("modules");
-        let _path_str = path.to_str().unwrap_or_default();
         let image = Image::from_file(&path)?;
 
         // Verify the Object class can be found for each version
@@ -47,7 +54,7 @@ async fn test_get_resource_and_parse_classfile() -> Result<()> {
     let resource = image.get_resource(resource_name)?;
     assert_eq!(resource_name, resource.full_name());
 
-    let mut bytes = Cursor::new(resource.data().to_vec());
+    let mut bytes = Cursor::new(resource.data());
     let class_file = ClassFile::from_bytes(&mut bytes).expect("read classfile");
     let class_name = class_file.class_name().expect("class name");
     assert_eq!(class_name, "java/lang/Object");

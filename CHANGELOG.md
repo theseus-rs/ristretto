@@ -7,6 +7,174 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_cli` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/v0.27.0...v0.28.0) - 2026-01-26
+
+### Added
+- implement async threading
+- initial jpms support
+- implement comprehensive bytecode and attribute verification
+- implement invokedynamic instruction
+- implement hidden classes
+- enhance interface method resolution and string constant initialization
+- implement reflection
+- implement lambda support
+- configure class object module
+- add monitorenter and monitorexit instructions
+- initial threading implementation
+- implement java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String;
+- implement jdk/internal/loader/BootLoader.setBootLoaderUnnamedModule0(Ljava/lang/Module;)V
+- implement java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;
+
+### Fixed
+- isolate GC to VM instance
+- improve performance
+- improve cli exception cause reporting
+- optimize mutf8
+- correct tableswitch and lookupswitch negative offsets
+- update class loading to comply with JVMS 5.5
+- handle backward jumps to method entry and enable ignored tests
+- stub java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String; to return null
+- register dynamically created classes
+
+### Other
+- improve lint configuration
+- rename mutf8 benchmark
+- Fix lookupswitch type cast error
+- Add test for lookupswitch bug
+- update to reqwest=0.13.0
+- update rustdoc references section
+- update java versions
+- add field initialization tests and docs
+- correct cyclic crate dependencies with ristretto_jimage
+- correct clippy lints
+- Implement invokedynamic support and MethodHandleNatives updates for JDK 17+ compatibility
+
+## `ristretto_vm` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.27.0...ristretto_vm-v0.28.0) - 2026-01-26
+
+### Added
+- add monitorenter and monitorexit instructions
+- implement async threading
+- enhance interface method resolution and string constant initialization
+- initial threading implementation
+- implement reflection
+- implement lambda support
+- implement invokedynamic instruction
+- implement hidden classes
+- implement java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String;
+- configure class object module
+- implement jdk/internal/loader/BootLoader.setBootLoaderUnnamedModule0(Ljava/lang/Module;)V
+- initial jpms support
+- implement comprehensive bytecode and attribute verification
+- implement java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;
+
+### Fixed
+- isolate GC to VM instance
+- handle backward jumps to method entry and enable ignored tests
+- improve performance
+- correct tableswitch and lookupswitch negative offsets
+- stub java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String; to return null
+- register dynamically created classes
+- update class loading to comply with JVMS 5.5
+
+### Other
+- update java versions
+- Merge pull request #630 from theseus-rs/optimize-async-instructions
+- correct clippy lints
+- Implement invokedynamic support and MethodHandleNatives updates for JDK 17+ compatibility
+- update rustdoc references section
+- add field initialization tests and docs
+- improve lint configuration
+
+## `ristretto_macros` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.27.0...ristretto_macros-v0.28.0) - 2026-01-26
+
+### Added
+- implement async threading
+
+### Fixed
+- improve performance
+
+### Other
+- improve lint configuration
+
+## `ristretto_jit` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.27.0...ristretto_jit-v0.28.0) - 2026-01-26
+
+### Added
+- implement lambda support
+
+### Fixed
+- isolate GC to VM instance
+- handle backward jumps to method entry and enable ignored tests
+- improve performance
+- correct tableswitch and lookupswitch negative offsets
+
+### Other
+- update rustdoc references section
+- improve lint configuration
+
+## `ristretto_classloader` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.27.0...ristretto_classloader-v0.28.0) - 2026-01-26
+
+### Added
+- enhance interface method resolution and string constant initialization
+- implement reflection
+- implement lambda support
+- implement invokedynamic instruction
+- implement hidden classes
+- configure class object module
+- initial jpms support
+
+### Fixed
+- isolate GC to VM instance
+- improve performance
+- update class loading to comply with JVMS 5.5
+
+### Other
+- update java versions
+- update to reqwest=0.13.0
+- update rustdoc references section
+- add field initialization tests and docs
+- improve lint configuration
+- correct cyclic crate dependencies with ristretto_jimage
+
+## `ristretto_jimage` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.27.0...ristretto_jimage-v0.28.0) - 2026-01-26
+
+### Other
+- improve lint configuration
+- correct cyclic crate dependencies with ristretto_jimage
+
+## `ristretto_gc` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.27.0...ristretto_gc-v0.28.0) - 2026-01-26
+
+### Added
+- implement reflection
+- implement lambda support
+- initial jpms support
+
+### Fixed
+- isolate GC to VM instance
+
+### Other
+- improve lint configuration
+
+## `ristretto_classfile` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.27.0...ristretto_classfile-v0.28.0) - 2026-01-26
+
+### Added
+- implement invokedynamic instruction
+- implement hidden classes
+- initial jpms support
+- implement comprehensive bytecode and attribute verification
+
+### Fixed
+- optimize mutf8
+- improve performance
+- correct tableswitch and lookupswitch negative offsets
+
+### Other
+- rename mutf8 benchmark
+- Fix lookupswitch type cast error
+- Add test for lookupswitch bug
+- update to reqwest=0.13.0
+- update rustdoc references section
+- improve lint configuration
+
 ## `ristretto_cli` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/v0.26.0...v0.27.0) - 2025-12-09
 
 ### Added

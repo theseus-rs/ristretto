@@ -1,0 +1,148 @@
+use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual};
+use ristretto_classfile::{JAVA_17, JAVA_21};
+use ristretto_classloader::Value;
+use ristretto_macros::async_method;
+use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaObject;
+use ristretto_types::VM;
+use ristretto_types::{Parameters, Result};
+use std::sync::Arc;
+
+#[intrinsic_method(
+    "jdk/internal/loader/NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J",
+    Equal(JAVA_17)
+)]
+#[async_method]
+pub async fn find_entry_0<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!(
+        "jdk.internal.loader.NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J"
+    )
+}
+
+#[intrinsic_method(
+    "jdk/internal/loader/NativeLibraries.findBuiltinLib(Ljava/lang/String;)Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_17)
+)]
+#[async_method]
+pub async fn find_builtin_lib<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let library_file_name = parameters.pop()?.as_string()?;
+    let vm = thread.vm()?;
+    let library_path = vm
+        .java_home()
+        .join("lib")
+        .join(library_file_name)
+        .to_string_lossy()
+        .to_string();
+    let library_name = library_path.to_object(&thread).await?;
+    Ok(Some(library_name))
+}
+
+#[intrinsic_method(
+    "jdk/internal/loader/NativeLibraries.load(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZZ)Z",
+    Equal(JAVA_17)
+)]
+#[async_method]
+pub async fn load_0<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::Int(1)))
+}
+
+#[intrinsic_method(
+    "jdk/internal/loader/NativeLibraries.load(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;ZZ)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn load_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::Int(1)))
+}
+
+#[intrinsic_method(
+    "jdk/internal/loader/NativeLibraries.unload(Ljava/lang/String;ZZJ)V",
+    Equal(JAVA_17)
+)]
+#[async_method]
+pub async fn unload_0<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _handle = parameters.pop_long()?;
+    let _is_builtin = parameters.pop_bool()?;
+    let _name = parameters.pop()?.as_string()?;
+    Ok(None)
+}
+
+#[intrinsic_method(
+    "jdk/internal/loader/NativeLibraries.unload(Ljava/lang/String;ZJ)V",
+    GreaterThanOrEqual(JAVA_17)
+)]
+#[async_method]
+pub async fn unload_1<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _handle = parameters.pop_long()?;
+    let _is_builtin = parameters.pop_bool()?;
+    let _name = parameters.pop()?.as_string()?;
+    Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.loader.NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J"
+    )]
+    async fn test_find_entry_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = find_entry_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_load_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = load_0(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(1)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = load_1(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(1)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_unload_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let name = "foo".to_object(&thread).await?;
+        let parameters = Parameters::new(vec![name, Value::Int(1), Value::Long(2)]);
+        let result = unload_0(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_unload_1() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let name = "foo".to_object(&thread).await?;
+        let parameters = Parameters::new(vec![name, Value::Int(1), Value::Long(2)]);
+        let result = unload_1(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+}

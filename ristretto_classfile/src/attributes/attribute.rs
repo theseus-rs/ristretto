@@ -684,7 +684,7 @@ impl Attribute {
     #[expect(clippy::too_many_lines)]
     pub fn from_bytes(
         constant_pool: &ConstantPool,
-        bytes: &mut Cursor<Vec<u8>>,
+        bytes: &mut Cursor<impl AsRef<[u8]> + Clone>,
     ) -> Result<Attribute> {
         let name_index = bytes.read_u16::<BigEndian>()?;
         let Some(Constant::Utf8(attribute_name)) = constant_pool.get(name_index) else {
@@ -1092,7 +1092,7 @@ impl Attribute {
 
     fn from_bytes_code_attributes(
         constant_pool: &ConstantPool,
-        bytes: &mut Cursor<Vec<u8>>,
+        bytes: &mut Cursor<impl AsRef<[u8]> + Clone>,
         byte_to_instruction_map: &AHashMap<u16, u16>,
     ) -> Result<Vec<Attribute>> {
         let attributes_count = bytes.read_u16::<BigEndian>()?;

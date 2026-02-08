@@ -140,7 +140,7 @@ pub struct Frame {
 }
 
 /// Number of instructions to execute before yielding to the Tokio runtime
-const INSTRUCTION_YIELD_COUNT: u32 = 1024;
+const INSTRUCTION_YIELD_COUNT: u32 = 4096;
 
 impl Frame {
     /// Create a new frame for the specified class. To invoke a method on an object reference, the
@@ -410,12 +410,8 @@ impl Frame {
             Instruction::Dconst_1 => dconst_1(stack).map(InstructionResult::Sync),
             Instruction::Bipush(value) => bipush(stack, *value).map(InstructionResult::Sync),
             Instruction::Sipush(value) => sipush(stack, *value).map(InstructionResult::Sync),
-            Instruction::Ldc(index) => {
-                Ok(InstructionResult::Async(Box::pin(ldc(self, stack, *index))))
-            }
-            Instruction::Ldc_w(index) => Ok(InstructionResult::Async(Box::pin(ldc_w(
-                self, stack, *index,
-            )))),
+            Instruction::Ldc(index) => ldc(self, stack, *index),
+            Instruction::Ldc_w(index) => ldc_w(self, stack, *index),
             Instruction::Ldc2_w(index) => ldc2_w(self, stack, *index).map(InstructionResult::Sync),
             Instruction::Iload(index) => iload(locals, stack, *index).map(InstructionResult::Sync),
             Instruction::Lload(index) => lload(locals, stack, *index).map(InstructionResult::Sync),
@@ -719,6 +715,20 @@ impl Frame {
             }
             Instruction::Ret_w(index) => ret_w(locals, *index).map(InstructionResult::Sync),
         }
+    }
+}
+
+impl ristretto_types::Frame for Frame {
+    fn class(&self) -> &Arc<Class> {
+        &self.class
+    }
+
+    fn method(&self) -> &Arc<Method> {
+        &self.method
+    }
+
+    fn program_counter(&self) -> usize {
+        self.program_counter.load(Ordering::Relaxed)
     }
 }
 

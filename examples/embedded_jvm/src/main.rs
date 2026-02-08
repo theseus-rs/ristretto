@@ -1,5 +1,4 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::pedantic)]
 #![allow(clippy::result_large_err)]
 
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};

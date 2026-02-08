@@ -173,10 +173,6 @@ impl<'a> ConstantPoolResolver<'a> {
     }
 }
 
-// ============================================================================
-// Object Creation
-// ============================================================================
-
 /// Handles `new` - create new object.
 ///
 /// Stack: ... → ..., objectref
@@ -284,10 +280,6 @@ pub fn handle_multianewarray(frame: &mut Frame, class_name: &str, dimensions: u8
     let array_type = parse_type_descriptor(class_name)?;
     frame.push(array_type)
 }
-
-// ============================================================================
-// Field Access
-// ============================================================================
 
 /// Handles `getfield` - get instance field.
 ///
@@ -435,10 +427,6 @@ pub fn handle_putstatic<C: VerificationContext>(
 
     Ok(())
 }
-
-// ============================================================================
-// Method Invocation
-// ============================================================================
 
 /// Handles method invocation instructions.
 ///
@@ -627,10 +615,6 @@ pub fn handle_invokedynamic<C: VerificationContext>(
     Ok(())
 }
 
-// ============================================================================
-// Type Checks
-// ============================================================================
-
 /// Handles `checkcast` - check object type.
 ///
 /// Stack: ..., objectref → ..., objectref
@@ -686,10 +670,6 @@ pub fn handle_instanceof(frame: &mut Frame) -> Result<()> {
     frame.push(VerificationType::Integer)
 }
 
-// ============================================================================
-// Array Operations
-// ============================================================================
-
 /// Handles `arraylength` - get array length.
 ///
 /// Stack: ..., arrayref → ..., length (int)
@@ -725,10 +705,6 @@ pub fn handle_arraylength(frame: &mut Frame) -> Result<()> {
 
     frame.push(VerificationType::Integer)
 }
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
 
 /// Parses a type descriptor into a `VerificationType`.
 fn parse_type_descriptor(descriptor: &str) -> Result<VerificationType> {
@@ -835,16 +811,12 @@ mod tests {
         }
     }
 
-    // ==================== ConstantPoolResolver::new tests ====================
-
     #[test]
     fn test_constant_pool_resolver_new() {
         let class_file = create_test_class_file_with_refs();
         let resolver = ConstantPoolResolver::new(&class_file);
         assert_eq!(resolver.class_file, &class_file);
     }
-
-    // ==================== ConstantPoolResolver::resolve_field_ref tests ====================
 
     #[test]
     fn test_resolve_field_ref_success() {
@@ -876,8 +848,6 @@ mod tests {
         let result = resolver.resolve_field_ref(10);
         assert!(result.is_err());
     }
-
-    // ==================== ConstantPoolResolver::resolve_method_ref tests ====================
 
     #[test]
     fn test_resolve_method_ref_success() {
@@ -922,8 +892,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // ==================== ConstantPoolResolver::resolve_class tests ====================
-
     #[test]
     fn test_resolve_class_success() {
         let class_file = create_test_class_file_with_refs();
@@ -961,8 +929,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // ==================== ConstantPoolResolver::resolve_invoke_dynamic tests ====================
-
     #[test]
     fn test_resolve_invoke_dynamic_success() {
         let class_file = create_test_class_file_with_refs();
@@ -991,8 +957,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // ==================== handle_new tests ====================
-
     #[test]
     fn test_handle_new_success() {
         let mut frame = Frame::new(5, 10);
@@ -1010,8 +974,6 @@ mod tests {
 
         assert_eq!(*frame.peek().unwrap(), VerificationType::Uninitialized(42));
     }
-
-    // ==================== handle_newarray tests ====================
 
     #[test]
     fn test_handle_newarray_int_success() {
@@ -1054,8 +1016,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_anewarray tests ====================
-
     #[test]
     fn test_handle_anewarray_success() {
         let mut frame = Frame::new(5, 10);
@@ -1089,8 +1049,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_multianewarray tests ====================
-
     #[test]
     fn test_handle_multianewarray_success() {
         let mut frame = Frame::new(5, 10);
@@ -1119,8 +1077,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_getstatic tests ====================
-
     #[test]
     fn test_handle_getstatic_int() {
         let mut frame = Frame::new(5, 10);
@@ -1148,8 +1104,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_putstatic tests ====================
-
     #[test]
     fn test_handle_putstatic_int_success() {
         let ctx = MockContext;
@@ -1170,8 +1124,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
-
-    // ==================== handle_getfield tests ====================
 
     #[test]
     fn test_handle_getfield_success() {
@@ -1206,8 +1158,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
 
-    // ==================== handle_putfield tests ====================
-
     #[test]
     fn test_handle_putfield_success() {
         let ctx = MockContext;
@@ -1230,8 +1180,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
-
-    // ==================== handle_checkcast tests ====================
 
     #[test]
     fn test_handle_checkcast_success() {
@@ -1275,8 +1223,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_instanceof tests ====================
-
     #[test]
     fn test_handle_instanceof_success() {
         let mut frame = Frame::new(5, 10);
@@ -1312,8 +1258,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_arraylength tests ====================
-
     #[test]
     fn test_handle_arraylength_success() {
         let mut frame = Frame::new(5, 10);
@@ -1345,8 +1289,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected array"));
     }
-
-    // ==================== parse_type_descriptor tests ====================
 
     #[test]
     fn test_parse_type_descriptor_int() {
@@ -1399,8 +1341,6 @@ mod tests {
             ))))
         );
     }
-
-    // ==================== handle_invoke tests ====================
 
     #[test]
     fn test_handle_invoke_static_no_args_void_return() {
@@ -1503,8 +1443,6 @@ mod tests {
         assert_eq!(frame.stack_depth(), 2); // Long takes 2 slots
     }
 
-    // ==================== handle_invokespecial tests ====================
-
     #[test]
     fn test_handle_invokespecial_constructor_uninitialized() {
         let ctx = MockContext;
@@ -1599,8 +1537,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
 
-    // ==================== handle_invokedynamic tests ====================
-
     #[test]
     fn test_handle_invokedynamic_no_args_void_return() {
         let ctx = MockContext;
@@ -1660,8 +1596,6 @@ mod tests {
         handle_invokedynamic(&mut frame, "(Ljava/lang/String;)V", &ctx).unwrap();
         assert!(frame.is_stack_empty());
     }
-
-    // ==================== handle_newarray all types tests ====================
 
     #[test]
     fn test_handle_newarray_boolean() {
@@ -1723,8 +1657,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_anewarray additional tests ====================
-
     #[test]
     fn test_handle_anewarray_nested_array() {
         let mut frame = Frame::new(5, 10);
@@ -1740,8 +1672,6 @@ mod tests {
             _ => panic!("Expected array type"),
         }
     }
-
-    // ==================== handle_arraylength additional tests ====================
 
     #[test]
     fn test_handle_arraylength_legacy_array_representation() {
@@ -1764,8 +1694,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected array"));
     }
-
-    // ==================== parse_type_descriptor error tests ====================
 
     #[test]
     fn test_parse_type_descriptor_invalid_fails() {

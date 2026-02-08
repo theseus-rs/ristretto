@@ -58,7 +58,7 @@ impl TargetPath {
     /// assert_eq!(target_path.type_argument_index, 0);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<TargetPath> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<TargetPath> {
         let type_path_kind = bytes.read_u8()?;
         let type_argument_index = bytes.read_u8()?;
 

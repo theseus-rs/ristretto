@@ -315,7 +315,7 @@ impl Constant {
     /// assert_eq!(constant, Constant::Utf8("Hello".to_string()));
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<Constant> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Constant> {
         let tag = bytes.read_u8()?;
         let constant = match tag {
             1 => {
@@ -757,8 +757,6 @@ mod test {
         test_constant(&constant, &expected_bytes, 20, &VERSION_55_0)
     }
 
-    // ==================== Eq tests - success conditions ====================
-
     #[test]
     fn test_eq_utf8_equal() {
         let a = Constant::Utf8("hello".to_string());
@@ -948,8 +946,6 @@ mod test {
         assert_eq!(a, b);
     }
 
-    // ==================== Eq tests - failure conditions ====================
-
     #[test]
     fn test_eq_utf8_not_equal() {
         let a = Constant::Utf8("hello".to_string());
@@ -1136,8 +1132,6 @@ mod test {
         let b = Constant::Package(2);
         assert_ne!(a, b);
     }
-
-    // ==================== Eq tests - different variant types ====================
 
     #[test]
     fn test_eq_different_variants_not_equal() {

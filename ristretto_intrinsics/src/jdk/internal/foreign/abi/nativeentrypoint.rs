@@ -1,0 +1,76 @@
+use ristretto_classfile::JAVA_21;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classloader::Value;
+use ristretto_macros::async_method;
+use ristretto_macros::intrinsic_method;
+use ristretto_types::{Parameters, Result};
+use std::sync::Arc;
+
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/NativeEntryPoint.freeDowncallStub0(J)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn free_downcall_stub_0<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!("jdk.internal.foreign.abi.NativeEntryPoint.freeDowncallStub0(J)Z")
+}
+
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/NativeEntryPoint.makeDowncallStub(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;ZIZ)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn make_downcall_stub<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    todo!(
+        "jdk.internal.foreign.abi.NativeEntryPoint.makeDowncallStub(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;Z)J"
+    )
+}
+
+#[intrinsic_method(
+    "jdk/internal/foreign/abi/NativeEntryPoint.registerNatives()V",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.foreign.abi.NativeEntryPoint.freeDowncallStub0(J)Z"
+    )]
+    async fn test_free_downcall_stub_0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = free_downcall_stub_0(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    #[should_panic(
+        expected = "not yet implemented: jdk.internal.foreign.abi.NativeEntryPoint.makeDowncallStub(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;Z)J"
+    )]
+    async fn test_make_downcall_stub() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let _ = make_downcall_stub(thread, Parameters::default()).await;
+    }
+
+    #[tokio::test]
+    async fn test_register_natives() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = register_natives(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+}

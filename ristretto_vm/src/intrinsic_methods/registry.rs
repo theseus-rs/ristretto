@@ -1,7 +1,6 @@
-use crate::Result;
 use crate::intrinsic_methods::intrinsics;
-use crate::parameters::Parameters;
 use crate::thread::Thread;
+use crate::{Parameters, Result};
 use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::future::Future;

@@ -15,10 +15,6 @@ use crate::verifiers::bytecode::frame::Frame;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::error::{Result, VerifyError};
 
-// ============================================================================
-// Integer Arithmetic
-// ============================================================================
-
 /// Handles integer binary operations (iadd, isub, imul, idiv, irem).
 ///
 /// Stack: ..., value1, value2 → ..., result
@@ -69,10 +65,6 @@ pub fn handle_int_unary(frame: &mut Frame) -> Result<()> {
 
     frame.push(VerificationType::Integer)
 }
-
-// ============================================================================
-// Long Arithmetic
-// ============================================================================
 
 /// Handles long binary operations (ladd, lsub, lmul, ldiv, lrem, land, lor, lxor).
 ///
@@ -154,10 +146,6 @@ pub fn handle_long_unary(frame: &mut Frame) -> Result<()> {
     frame.push_category2(VerificationType::Long)
 }
 
-// ============================================================================
-// Float Arithmetic
-// ============================================================================
-
 /// Handles float binary operations (fadd, fsub, fmul, fdiv, frem).
 ///
 /// # Errors
@@ -204,10 +192,6 @@ pub fn handle_float_unary(frame: &mut Frame) -> Result<()> {
 
     frame.push(VerificationType::Float)
 }
-
-// ============================================================================
-// Double Arithmetic
-// ============================================================================
 
 /// Handles double binary operations (dadd, dsub, dmul, ddiv, drem).
 ///
@@ -256,10 +240,6 @@ pub fn handle_double_unary(frame: &mut Frame) -> Result<()> {
     frame.push_category2(VerificationType::Double)
 }
 
-// ============================================================================
-// Increment
-// ============================================================================
-
 /// Handles `iinc` - increment local variable by constant.
 ///
 /// This does not affect the operand stack.
@@ -281,10 +261,6 @@ pub fn handle_iinc(frame: &mut Frame, index: u16) -> Result<()> {
     // iinc doesn't change the type, just the value
     Ok(())
 }
-
-// ============================================================================
-// Dispatcher
-// ============================================================================
 
 /// Dispatches arithmetic instructions to their handlers.
 ///
@@ -360,8 +336,6 @@ pub fn dispatch_math(instruction: &Instruction, frame: &mut Frame) -> Result<boo
 mod tests {
     use super::*;
 
-    // ==================== handle_int_binary tests ====================
-
     #[test]
     fn test_int_binary_success() {
         let mut frame = Frame::new(5, 10);
@@ -395,8 +369,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
 
-    // ==================== handle_int_unary tests ====================
-
     #[test]
     fn test_int_unary_success() {
         let mut frame = Frame::new(5, 10);
@@ -415,8 +387,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
-
-    // ==================== handle_long_binary tests ====================
 
     #[test]
     fn test_long_binary_success() {
@@ -449,8 +419,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected long"));
     }
-
-    // ==================== handle_long_shift tests ====================
 
     #[test]
     fn test_long_shift_success() {
@@ -494,8 +462,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_long_unary tests ====================
-
     #[test]
     fn test_long_unary_success() {
         let mut frame = Frame::new(5, 10);
@@ -514,8 +480,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected long"));
     }
-
-    // ==================== handle_float_binary tests ====================
 
     #[test]
     fn test_float_binary_success() {
@@ -549,8 +513,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected float"));
     }
 
-    // ==================== handle_float_unary tests ====================
-
     #[test]
     fn test_float_unary_success() {
         let mut frame = Frame::new(5, 10);
@@ -569,8 +531,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected float"));
     }
-
-    // ==================== handle_double_binary tests ====================
 
     #[test]
     fn test_double_binary_success() {
@@ -604,8 +564,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected double"));
     }
 
-    // ==================== handle_double_unary tests ====================
-
     #[test]
     fn test_double_unary_success() {
         let mut frame = Frame::new(5, 10);
@@ -624,8 +582,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected double"));
     }
-
-    // ==================== handle_iinc tests ====================
 
     #[test]
     fn test_iinc_success() {
@@ -646,8 +602,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
-
-    // ==================== dispatch_math tests ====================
 
     #[test]
     fn test_dispatch_iadd() {

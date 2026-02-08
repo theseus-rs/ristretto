@@ -83,7 +83,7 @@ impl ParameterAnnotation {
     /// assert_eq!(element.value, AnnotationElement::Byte { const_value_index: 42 });
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<ParameterAnnotation> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ParameterAnnotation> {
         let annotations_count = bytes.read_u16::<BigEndian>()? as usize;
         let mut annotations = Vec::with_capacity(annotations_count);
         for _ in 0..annotations_count {

@@ -83,7 +83,7 @@ impl LocalVariableTarget {
     /// assert_eq!(lv_target.index, 2);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<LocalVariableTarget> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<LocalVariableTarget> {
         let start_pc = bytes.read_u16::<BigEndian>()?;
         let length = bytes.read_u16::<BigEndian>()?;
         let index = bytes.read_u16::<BigEndian>()?;

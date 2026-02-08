@@ -125,7 +125,7 @@ impl TypeAnnotation {
     /// assert_eq!(type_annotation, expected);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<TypeAnnotation> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<TypeAnnotation> {
         let target_type = TargetType::from_bytes(bytes)?;
 
         let type_path_count = bytes.read_u8()? as usize;

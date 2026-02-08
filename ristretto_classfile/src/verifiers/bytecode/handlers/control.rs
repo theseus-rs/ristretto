@@ -326,14 +326,10 @@ mod tests {
     use crate::verifiers::bytecode::handlers::test_utils::{MockContext, StrictMockContext};
     use indexmap::IndexMap;
 
-    // ==================== handle_return tests ====================
-
     #[test]
     fn test_return_success() {
         assert!(handle_return().is_ok());
     }
-
-    // ==================== handle_ireturn tests ====================
 
     #[test]
     fn test_ireturn_success() {
@@ -374,8 +370,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("method returns"));
     }
 
-    // ==================== handle_lreturn tests ====================
-
     #[test]
     fn test_lreturn_success() {
         let mut frame = Frame::new(5, 10);
@@ -413,8 +407,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("method returns"));
     }
-
-    // ==================== handle_freturn tests ====================
 
     #[test]
     fn test_freturn_success() {
@@ -454,8 +446,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("method returns"));
     }
 
-    // ==================== handle_dreturn tests ====================
-
     #[test]
     fn test_dreturn_success() {
         let mut frame = Frame::new(5, 10);
@@ -493,8 +483,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("method returns"));
     }
-
-    // ==================== handle_areturn tests ====================
 
     #[test]
     fn test_areturn_success() {
@@ -554,8 +542,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("not assignable"));
     }
 
-    // ==================== handle_tableswitch tests ====================
-
     #[test]
     fn test_tableswitch_success() {
         let mut frame = Frame::new(5, 10);
@@ -595,8 +581,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_lookupswitch tests ====================
-
     #[test]
     fn test_lookupswitch_success() {
         let mut frame = Frame::new(5, 10);
@@ -625,8 +609,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected int key"));
     }
 
-    // ==================== reject_jsr tests ====================
-
     #[test]
     fn test_reject_jsr_version_51_fails() {
         let result = reject_jsr(51);
@@ -649,8 +631,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("not supported"));
     }
 
-    // ==================== reject_ret tests ====================
-
     #[test]
     fn test_reject_ret_version_51_fails() {
         let result = reject_ret(51);
@@ -664,8 +644,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not supported"));
     }
-
-    // ==================== dispatch_control tests ====================
 
     #[test]
     fn test_dispatch_goto() {

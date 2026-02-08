@@ -213,10 +213,6 @@ pub fn handle_astore(frame: &mut Frame, index: u16) -> Result<()> {
     frame.set_local(index, ty)
 }
 
-// ============================================================================
-// Array Load Operations
-// ============================================================================
-
 /// Handles `iaload` - load int from array.
 ///
 /// Stack: ..., arrayref, index -> ..., value
@@ -429,10 +425,6 @@ pub fn handle_saload<C: VerificationContext>(frame: &mut Frame, _context: &C) ->
 
     frame.push(VerificationType::Integer)
 }
-
-// ============================================================================
-// Array Store Operations
-// ============================================================================
 
 /// Handles `iastore` - store int into array.
 ///
@@ -687,10 +679,6 @@ pub fn handle_sastore<C: VerificationContext>(frame: &mut Frame, _context: &C) -
     verify_array_of(&array_type, &VerificationType::Integer, "sastore")
 }
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
 /// Verifies that a type is an array of the expected component type.
 fn verify_array_of(
     array_type: &VerificationType,
@@ -897,8 +885,6 @@ mod tests {
     use super::*;
     use crate::verifiers::bytecode::handlers::test_utils::MockContext;
 
-    // ==================== handle_iload tests ====================
-
     #[test]
     fn test_iload_success() {
         let mut frame = Frame::new(5, 10);
@@ -917,8 +903,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected int"));
     }
-
-    // ==================== handle_lload tests ====================
 
     #[test]
     fn test_lload_success() {
@@ -943,8 +927,6 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("expected long"));
     }
 
-    // ==================== handle_fload tests ====================
-
     #[test]
     fn test_fload_success() {
         let mut frame = Frame::new(5, 10);
@@ -963,8 +945,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected float"));
     }
-
-    // ==================== handle_dload tests ====================
 
     #[test]
     fn test_dload_success() {
@@ -988,8 +968,6 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected double"));
     }
-
-    // ==================== handle_aload tests ====================
 
     #[test]
     fn test_aload_success() {
@@ -1026,8 +1004,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_istore tests ====================
-
     #[test]
     fn test_istore_success() {
         let mut frame = Frame::new(5, 10);
@@ -1051,8 +1027,6 @@ mod tests {
                 .contains("expected int on stack")
         );
     }
-
-    // ==================== handle_lstore tests ====================
 
     #[test]
     fn test_lstore_success() {
@@ -1078,8 +1052,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_fstore tests ====================
-
     #[test]
     fn test_fstore_success() {
         let mut frame = Frame::new(5, 10);
@@ -1104,8 +1076,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_dstore tests ====================
-
     #[test]
     fn test_dstore_success() {
         let mut frame = Frame::new(5, 10);
@@ -1129,8 +1099,6 @@ mod tests {
                 .contains("expected double on stack")
         );
     }
-
-    // ==================== handle_astore tests ====================
 
     #[test]
     fn test_astore_success() {
@@ -1164,8 +1132,6 @@ mod tests {
                 .contains("expected reference on stack")
         );
     }
-
-    // ==================== handle_iaload tests ====================
 
     #[test]
     fn test_iaload_success() {
@@ -1214,8 +1180,6 @@ mod tests {
         let result = handle_iaload(&mut frame, &ctx);
         assert!(result.is_err());
     }
-
-    // ==================== handle_iastore tests ====================
 
     #[test]
     fn test_iastore_success() {
@@ -1273,8 +1237,6 @@ mod tests {
                 .contains("expected int index")
         );
     }
-
-    // ==================== handle_aaload tests ====================
 
     #[test]
     fn test_aaload_success() {
@@ -1340,8 +1302,6 @@ mod tests {
         );
     }
 
-    // ==================== parse_array_component tests ====================
-
     #[test]
     fn test_parse_array_component_int() {
         assert_eq!(
@@ -1387,8 +1347,6 @@ mod tests {
         );
     }
 
-    // ==================== dispatch_load_store tests ====================
-
     #[test]
     fn test_dispatch_iload_0() {
         let ctx = MockContext;
@@ -1430,8 +1388,6 @@ mod tests {
         let handled = dispatch_load_store(&Instruction::Nop, &mut frame, &ctx).unwrap();
         assert!(!handled);
     }
-
-    // ==================== handle_laload tests ====================
 
     #[test]
     fn test_laload_success() {
@@ -1492,8 +1448,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // ==================== handle_faload tests ====================
-
     #[test]
     fn test_faload_success() {
         let ctx = MockContext;
@@ -1542,8 +1496,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // ==================== handle_daload tests ====================
-
     #[test]
     fn test_daload_success() {
         let ctx = MockContext;
@@ -1591,8 +1543,6 @@ mod tests {
         let result = handle_daload(&mut frame, &ctx);
         assert!(result.is_err());
     }
-
-    // ==================== handle_baload tests ====================
 
     #[test]
     fn test_baload_success() {
@@ -1643,8 +1593,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // ==================== handle_caload tests ====================
-
     #[test]
     fn test_caload_success() {
         let ctx = MockContext;
@@ -1680,8 +1628,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_saload tests ====================
-
     #[test]
     fn test_saload_success() {
         let ctx = MockContext;
@@ -1716,8 +1662,6 @@ mod tests {
                 .contains("expected int index")
         );
     }
-
-    // ==================== handle_lastore tests ====================
 
     #[test]
     fn test_lastore_success() {
@@ -1776,8 +1720,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_fastore tests ====================
-
     #[test]
     fn test_fastore_success() {
         let ctx = MockContext;
@@ -1835,8 +1777,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_dastore tests ====================
-
     #[test]
     fn test_dastore_success() {
         let ctx = MockContext;
@@ -1893,8 +1833,6 @@ mod tests {
                 .contains("expected int index")
         );
     }
-
-    // ==================== handle_aastore tests ====================
 
     #[test]
     fn test_aastore_success() {
@@ -2017,8 +1955,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_bastore tests ====================
-
     #[test]
     fn test_bastore_success() {
         let ctx = MockContext;
@@ -2076,8 +2012,6 @@ mod tests {
                 .contains("expected int index")
         );
     }
-
-    // ==================== handle_castore tests ====================
 
     #[test]
     fn test_castore_success() {
@@ -2137,8 +2071,6 @@ mod tests {
         );
     }
 
-    // ==================== handle_sastore tests ====================
-
     #[test]
     fn test_sastore_success() {
         let ctx = MockContext;
@@ -2196,8 +2128,6 @@ mod tests {
                 .contains("expected int index")
         );
     }
-
-    // ==================== parse_array_component error tests ====================
 
     #[test]
     fn test_parse_array_component_byte() {
@@ -2267,8 +2197,6 @@ mod tests {
         );
     }
 
-    // ==================== aaload legacy array tests ====================
-
     #[test]
     fn test_aaload_legacy_array_representation() {
         let ctx = MockContext;
@@ -2300,8 +2228,6 @@ mod tests {
                 .contains("expected array reference")
         );
     }
-
-    // ==================== Additional dispatch tests ====================
 
     #[test]
     fn test_dispatch_lload_0() {
@@ -2612,8 +2538,6 @@ mod tests {
         assert!(handled);
     }
 
-    // ==================== verify_array_of tests (implicit) ====================
-
     #[test]
     fn test_iaload_not_array_fails() {
         let ctx = MockContext;
@@ -2665,8 +2589,6 @@ mod tests {
         let result = handle_iastore(&mut frame, &ctx);
         assert!(result.is_err());
     }
-
-    // ==================== verify_byte_or_boolean_array tests (implicit) ====================
 
     #[test]
     fn test_baload_not_array_fails() {

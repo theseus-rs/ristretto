@@ -102,7 +102,7 @@ impl RequiresFlags {
     /// assert!(flags.contains(RequiresFlags::STATIC_PHASE));
     /// assert!(!flags.contains(RequiresFlags::SYNTHETIC));
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<Vec<u8>>) -> Result<RequiresFlags> {
+    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<RequiresFlags> {
         let access_flags = bytes.read_u16::<BigEndian>()?;
         let access_flags = RequiresFlags::from_bits_truncate(access_flags);
         Ok(access_flags)

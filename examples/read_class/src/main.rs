@@ -1,5 +1,4 @@
 #![forbid(unsafe_code)]
-#![deny(clippy::pedantic)]
 
 use anyhow::{Result, bail};
 use ristretto_classfile::ClassFile;
