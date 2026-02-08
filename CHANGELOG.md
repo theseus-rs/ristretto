@@ -27,20 +27,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 - create ristretto_intrinsics and ristretto_types crates
-- Merge branch 'main' into perf-jimage-class-load
 - refactor ClassFile::from_bytes interface to avoid allocation when loading classes
-- Merge pull request #639 from theseus-rs/upgrade-java-17
 - update Java 17 tests to 17.0.18.9.1
 - increase instruction yield count
 - optimize ldc/ldc_w to load integer and float synchronously
-- Merge pull request #643 from theseus-rs/implement-zip
 
 ## `ristretto_vm` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.28.0...ristretto_vm-v0.29.0) - 2026-02-08
 
 ### Added
 - implement java.lang.Record
 - add ristretto_pom crate
-- implement java/util/zip package
 
 ### Fixed
 - improve Java 8 support
@@ -49,7 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - create ristretto_intrinsics and ristretto_types crates
 - increase instruction yield count
 - optimize ldc/ldc_w to load integer and float synchronously
-- Merge pull request #643 from theseus-rs/implement-zip
 
 ## `ristretto_intrinsics` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.28.0...ristretto_intrinsics-v0.29.0) - 2026-02-08
 
@@ -88,9 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 - create ristretto_intrinsics and ristretto_types crates
-- Merge branch 'main' into perf-jimage-class-load
 - refactor ClassFile::from_bytes interface to avoid allocation when loading classes
-- Merge pull request #639 from theseus-rs/upgrade-java-17
 - update Java 17 tests to 17.0.18.9.1
 
 ## `ristretto_jimage` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.28.0...ristretto_jimage-v0.29.0) - 2026-02-08
@@ -110,7 +103,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 - create ristretto_intrinsics and ristretto_types crates
-- Merge branch 'main' into perf-jimage-class-load
 - refactor ClassFile::from_bytes interface to avoid allocation when loading classes
 
 ## `ristretto_cli` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/v0.27.0...v0.28.0) - 2026-01-26
