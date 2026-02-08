@@ -1,10 +1,14 @@
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_21, JAVA_25};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Error::InternalError;
+use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
+
+use crate::sun::nio::fs::managed_files;
 
 #[intrinsic_method(
     "sun/nio/ch/UnixFileDispatcherImpl.allocationGranularity0()J",
@@ -36,10 +40,13 @@ pub async fn available_0<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn close_int_fd<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.UnixFileDispatcherImpl.closeIntFD(I)V")
+    let fd = parameters.pop_int()?;
+    let vm = thread.vm()?;
+    managed_files::close(vm.nio_file_handles(), fd).await;
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -120,10 +127,39 @@ pub async fn pwrite_0<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn read_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.UnixFileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I")
+    let count = parameters.pop_int()?;
+    let address = parameters.pop_long()?;
+    let fd_value = parameters.pop()?;
+
+    let fd = {
+        let guard = fd_value.as_reference()?;
+        let Reference::Object(object) = &*guard else {
+            return Err(InternalError("read0: not an object".to_string()));
+        };
+        object.value("fd")?.as_i32()?
+    };
+
+    let count = usize::try_from(count)?;
+    let mut buf = vec![0u8; count];
+
+    let vm = thread.vm()?;
+    match managed_files::read(vm.nio_file_handles(), fd, &mut buf).await {
+        Ok(n) => {
+            if n > 0 {
+                vm.native_memory().write_bytes(address, &buf[..n]);
+            }
+            Ok(Some(Value::Int(i32::try_from(n)?)))
+        }
+        Err(e) => {
+            let errno = e.raw_os_error().unwrap_or(5);
+            Err(InternalError(format!(
+                "UnixFileDispatcherImpl.read0: errno={errno}"
+            )))
+        }
+    }
 }
 
 #[intrinsic_method(
@@ -257,12 +293,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.UnixFileDispatcherImpl.closeIntFD(I)V"
-    )]
     async fn test_close_int_fd() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_int_fd(thread, Parameters::default()).await;
+        let params = Parameters::new(vec![Value::Int(-1)]);
+        let result = close_int_fd(thread, params).await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
@@ -320,12 +355,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.UnixFileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I"
-    )]
     async fn test_read_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = read_0(thread, Parameters::default()).await;
+        let result = read_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

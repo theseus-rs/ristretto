@@ -1,4 +1,5 @@
 import java.lang.reflect.*;
+import java.util.Arrays;
 
 public class Test {
 
@@ -37,6 +38,7 @@ public class Test {
         System.out.println("--- Test Record Methods ---");
         Class<Point> pointClass = Point.class;
         Method[] methods = pointClass.getDeclaredMethods();
+        Arrays.sort(methods, (a, b) -> a.getName().compareTo(b.getName()));
 
         System.out.println("Number of methods: " + methods.length);
         for (Method method : methods) {

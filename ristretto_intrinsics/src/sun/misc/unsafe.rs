@@ -1012,7 +1012,11 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(Value::Long(100)); // bytes to allocate
         let result = allocate_memory(thread, parameters).await?;
-        assert_eq!(result, Some(Value::Long(1)));
+        let addr = result.expect("address").as_i64()?;
+        assert!(
+            addr >= 0x1000_0000,
+            "Expected managed memory address, got {addr}"
+        );
         Ok(())
     }
 
@@ -1068,7 +1072,14 @@ mod tests {
     #[tokio::test]
     async fn test_free_memory() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = free_memory(thread, Parameters::default()).await?;
+        // First allocate memory, then free it
+        let mut alloc_params = Parameters::default();
+        alloc_params.push(Value::Long(64));
+        let result = allocate_memory(thread.clone(), alloc_params).await?;
+        let addr = result.expect("address").as_i64()?;
+        let mut free_params = Parameters::default();
+        free_params.push(Value::Long(addr));
+        let result = free_memory(thread, free_params).await?;
         assert_eq!(result, None);
         Ok(())
     }

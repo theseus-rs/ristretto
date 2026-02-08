@@ -343,10 +343,22 @@ pub async fn find_loaded_class_0<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn init_system_class_loader<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // Ristretto initializes the system class loader in the VM
+    let vm = thread.vm()?;
+    if *vm.java_class_file_version() > JAVA_8
+        && let Ok(class_loaders) = thread.class("jdk/internal/loader/ClassLoaders").await
+        && let Ok(method) =
+            class_loaders.try_get_method("appClassLoader", "()Ljava/lang/ClassLoader;")
+        && let Ok(Some(loader)) = thread
+            .execute(&class_loaders, &method, &[] as &[Value])
+            .await
+    {
+        let cl_class = thread.class("java/lang/ClassLoader").await?;
+        cl_class.set_static_value("scl", loader.clone())?;
+        return Ok(Some(loader));
+    }
     Ok(Some(Value::Object(None)))
 }
 
@@ -409,7 +421,7 @@ mod tests {
     async fn test_init_system_class_loader() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = init_system_class_loader(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Object(None)));
+        assert!(result.is_some());
         Ok(())
     }
 

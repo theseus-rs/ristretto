@@ -38,9 +38,9 @@ pub async fn define_class_0<T: ristretto_types::Thread + 'static>(
     let mut cursor = Cursor::new(bytes[offset..offset + length].to_vec());
     let class_file = match ClassFile::from_bytes(&mut cursor) {
         Ok(class_file) => class_file,
-        Err(e) => {
-            error!("ClassFormatError in Proxy.defineClass0: {e}");
-            return Err(ClassFormatError(e.to_string()).into());
+        Err(error) => {
+            error!("ClassFormatError in Proxy.defineClass0: {error}");
+            return Err(ClassFormatError(error.to_string()).into());
         }
     };
 

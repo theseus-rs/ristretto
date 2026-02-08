@@ -5,6 +5,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
+use std::time::Duration;
 
 #[intrinsic_method(
     "java/lang/VirtualThread.notifyJvmtiDisableSuspend(Z)V",
@@ -96,7 +97,9 @@ pub async fn take_virtual_thread_list_to_unblock<T: ristretto_types::Thread + 's
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // Return null to indicate no virtual threads to unblock
+    // This method is supposed to block until there are virtual threads to unblock.
+    // Sleep to avoid busy-waiting; the daemon thread will be aborted on VM shutdown.
+    tokio::time::sleep(Duration::from_secs(60)).await;
     Ok(Some(Value::Object(None)))
 }
 

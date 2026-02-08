@@ -1,4 +1,5 @@
 use crate::java::io::fileoutputstream::file_handle_identifier;
+use crate::sun::nio::fs::managed_files;
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
@@ -31,8 +32,7 @@ pub(crate) fn file_descriptor_from_java_object<V: VM>(
         }
         #[cfg(target_os = "windows")]
         {
-            let fd = file_descriptor.value("handle")?.as_i64()?;
-            fd
+            file_descriptor.value("handle")?.as_i64()?
         }
     } else {
         let fd = file_descriptor.value("fd")?.as_i32()?;
@@ -62,10 +62,12 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
     }
 
     let Some(handle) = file_handles.remove(&handle_identifier).await else {
-        return Err(IoException(format!(
-            "File handle not found for identifier: {handle_identifier}"
-        ))
-        .into());
+        let fd_int = i32::try_from(fd).unwrap_or(-1);
+        if fd_int >= 0 {
+            let nio_file_handles = vm.nio_file_handles();
+            managed_files::close(nio_file_handles, fd_int).await;
+        }
+        return Ok(None);
     };
 
     #[cfg(target_family = "wasm")]

@@ -146,9 +146,9 @@ pub async fn inflate_bytes<T: ristretto_types::Thread + 'static>(
         .decompress(input, &mut output_buffer, FlushDecompress::None);
     let _status = match result {
         Ok(status) => status,
-        Err(e) => {
+        Err(error) => {
             return Err(ristretto_types::Error::InternalError(format!(
-                "Decompression error: {e}"
+                "Decompression error: {error}"
             )));
         }
     };
@@ -269,14 +269,14 @@ pub async fn inflate_bytes_bytes<T: ristretto_types::Thread + 'static>(
 
     let (status, need_dict) = match result {
         Ok(status) => (Some(status), false),
-        Err(e) => {
+        Err(error) => {
             // Check if this is a "needs dictionary" error
-            if e.needs_dictionary().is_some() {
+            if error.needs_dictionary().is_some() {
                 context.needs_dict = true;
                 (None, true)
             } else {
                 return Err(ristretto_types::Error::InternalError(format!(
-                    "Decompression error: {e}"
+                    "Decompression error: {error}"
                 )));
             }
         }

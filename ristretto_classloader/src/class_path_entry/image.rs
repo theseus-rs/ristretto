@@ -188,4 +188,16 @@ mod tests {
         }
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_read_inner_class() -> Result<()> {
+        let (java_home, _java_version, _class_loader) = default_class_loader().await?;
+        let image_path = java_home.join("lib").join("modules");
+        if image_path.exists() {
+            let image = Image::new(&image_path)?;
+            let class_file = image.read_class("java/io/ObjectInputFilter$Config").await?;
+            assert_eq!("java/io/ObjectInputFilter$Config", class_file.class_name()?);
+        }
+        Ok(())
+    }
 }

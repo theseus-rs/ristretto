@@ -77,7 +77,7 @@ pub(crate) fn process(input: TokenStream) -> TokenStream {
     };
 
     let intrinsic_methods = get_intrinsic_methods(&source_path)
-        .unwrap_or_else(|e| panic!("Failed to get intrinsic methods: {e}"));
+        .unwrap_or_else(|error| panic!("Failed to get intrinsic methods: {error}"));
 
     let mut version_maps = Vec::new();
     for (version_name, version) in JAVA_VERSIONS {
@@ -276,7 +276,7 @@ fn generate_intrinsic_method_map(
     let map_str = map_builder.build().to_string();
     let map_tokens: TokenStream2 = map_str
         .parse()
-        .unwrap_or_else(|e| panic!("Failed to parse generated PHF map: {e}"));
+        .unwrap_or_else(|error| panic!("Failed to parse generated PHF map: {error}"));
 
     quote! {
         #[deny(clippy::large_stack_arrays)]
