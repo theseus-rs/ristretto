@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" id="oranda" class="dark">
+  <head>
+    <title>ristretto</title>
+    
+      <meta property="og:url" content="https://theseus-rs.github.io/ristretto/ristretto_cli/" />
+    
+    
+      <link rel="icon" href="/ristretto/ristretto_cli/favicon.ico" />
+    
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+      <meta name="description" content="A Java Virtual Machine (JVM) CLI." />
+      <meta property="og:description" content="A Java Virtual Machine (JVM) CLI." />
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ristretto" />
+    
+    
+    
+    <meta http-equiv="Permissions-Policy" content="interest-cohort=()" />
+    <link rel="stylesheet" href="/ristretto/ristretto_cli/oranda-v0.6.1.css" />
+    
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-body">
+        
+          <div class="repo_banner">
+            <a href="https://github.com/theseus-rs/ristretto">
+              <div class="github-icon" aria-hidden="true"></div>
+              Check out our GitHub!
+            </a>
+          </div>
+        
+
+        <main>
+          <header>
+            
+            <h1 class="title">ristretto</h1>
+            
+  <nav class="nav">
+    <ul>
+      <li><a href="/ristretto/ristretto_cli/">Home</a></li>
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/artifacts/">Install</a></li>
+      
+
+      
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/changelog/">Changelog</a></li>
+      
+    </ul>
+  </nav>
+
+          </header>
+
+          
+  <div>
+    <h1>v0.9.0</h1>
+    <div class="releases-body">
+      
+      
+      <section class="release ">
+  
+  <div class="release-info">
+    <span class="flex items-center gap-2">
+      <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>
+      v0.9.0
+    </span>
+    <span class="flex items-center gap-2">
+      
+        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'><path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>
+        Oct 15 2024 at 16:26 UTC
+      
+    </span>
+  </div>
+  <div class="release-body">
+    <h2>💥 Breaking changes</h2>
+<ul>
+<li>update vm to be async (#56)</li>
+<li>rename VM.class() to VM.load_class() and VM.load() to VM.class() (#68)</li>
+</ul>
+<h2>✨ Enhancements</h2>
+<ul>
+<li>add stack size to frame debug logging (#65)</li>
+<li>enable wasm32 builds (#61)</li>
+<li>update vm to be async (#56)</li>
+<li>implement Reflection.getCallerClass() (#55)</li>
+<li>implement native method CDS.getRandomSeedForDumping()J (#48)</li>
+<li>add support for invoking interface method ref (#47)</li>
+</ul>
+<h2>🐞 Bug fixes</h2>
+<ul>
+<li>stub implementation of java.lang.ref.Reflection.refersTo0() (#69)</li>
+<li>correct invokeinterface instruction class resolution (#67)</li>
+<li>increase windows stack size to 8MB (#66)</li>
+<li>implement Class.getSuperclass() and Class.isAssignableFrom() (#64)</li>
+<li>correct invokespecial instructions to only use methods from the class hierarchy (#63)</li>
+<li>implement java.lang.Throwable.fillInStackTrace() (#62)</li>
+<li>implement java.lang.System.mapLibraryName() (#60)</li>
+<li>implement java.lang.System.identityHashCode() (#59)</li>
+<li>implement java.io.UnixFileSystem.initIDs() (#58)</li>
+<li>implement Class.is_array (#57)</li>
+<li>corrected bug where lushr instruction was using incorrect mask (#50)</li>
+<li>correct class interface loading and association (#49)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>rename VM.class() to VM.load_class() and VM.load() to VM.class() (#68)</li>
+<li>update frame to have interior mutability (#54)</li>
+<li>update Frame to reference CallStack (#53)</li>
+<li>update CallStack to store reference to VM (#52)</li>
+<li>update call stack to have interior mutability of frames (#51)</li>
+</ul>
+
+  </div>
+</section>
+    </div>
+  </div>
+
+        </main>
+      </div>
+
+      <footer>
+        
+          <a href="https://github.com/theseus-rs/ristretto"><div class="github-icon" aria-hidden="true"></div></a>
+        
+        <span>
+          ristretto, Apache-2.0 OR MIT
+        </span>
+      </footer>
+    </div>
+
+    
+    
+
+    
+  </body>
+</html>

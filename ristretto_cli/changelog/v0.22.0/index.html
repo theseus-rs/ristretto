@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" id="oranda" class="dark">
+  <head>
+    <title>ristretto</title>
+    
+      <meta property="og:url" content="https://theseus-rs.github.io/ristretto/ristretto_cli/" />
+    
+    
+      <link rel="icon" href="/ristretto/ristretto_cli/favicon.ico" />
+    
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+      <meta name="description" content="A Java Virtual Machine (JVM) CLI." />
+      <meta property="og:description" content="A Java Virtual Machine (JVM) CLI." />
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ristretto" />
+    
+    
+    
+    <meta http-equiv="Permissions-Policy" content="interest-cohort=()" />
+    <link rel="stylesheet" href="/ristretto/ristretto_cli/oranda-v0.6.1.css" />
+    
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-body">
+        
+          <div class="repo_banner">
+            <a href="https://github.com/theseus-rs/ristretto">
+              <div class="github-icon" aria-hidden="true"></div>
+              Check out our GitHub!
+            </a>
+          </div>
+        
+
+        <main>
+          <header>
+            
+            <h1 class="title">ristretto</h1>
+            
+  <nav class="nav">
+    <ul>
+      <li><a href="/ristretto/ristretto_cli/">Home</a></li>
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/artifacts/">Install</a></li>
+      
+
+      
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/changelog/">Changelog</a></li>
+      
+    </ul>
+  </nav>
+
+          </header>
+
+          
+  <div>
+    <h1>v0.22.0</h1>
+    <div class="releases-body">
+      
+      
+      <section class="release ">
+  
+  <div class="release-info">
+    <span class="flex items-center gap-2">
+      <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>
+      v0.22.0
+    </span>
+    <span class="flex items-center gap-2">
+      
+        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'><path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>
+        Jul  8 2025 at 00:19 UTC
+      
+    </span>
+  </div>
+  <div class="release-body">
+    <h3>Added</h3>
+<ul>
+<li>add Eq trait to class file attributes</li>
+<li>implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;</li>
+<li>implement jdk/internal/misc/Unsafe.park(ZJ)V and jdk/internal/misc/Unsafe.unpark(Ljava/lang/Object;)V</li>
+<li>implement java/lang/ref/Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;</li>
+<li>implement java/lang/ref/Reference.hasReferencePendingList()Z and java/lang/ref/Reference.waitForReferencePendingList()V</li>
+<li>implement java/lang/Thread.start0()V</li>
+<li>implement jdk/internal/vm/ContinuationSupport.isSupported0()Z</li>
+<li>implement java/lang/Thread.setPriority0(I)V</li>
+<li>implement java.lang.Thread resume, suspend and stop methods to return UnsupportedOperationException</li>
+<li>implement java/lang/Thread.clearInterruptEvent()V, java/lang/Thread.interrupt0()V, java/lang/Thread.isInterrupted(Z)Z</li>
+<li>implement java/lang/Thread.getThreads()[Ljava/lang/Thread;</li>
+<li>implement java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V</li>
+<li>implement jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z</li>
+<li>implement jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J</li>
+<li>implement jdk/internal/misc/Unsafe.pageSize()I and sun/misc/Unsafe.pageSize()I</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>correct java/lang/Object.hashCode()I</li>
+<li>correct if_icmpeq and if_icmpne instructions</li>
+<li>correct field shadowing logic</li>
+<li>correct and optimize class polymorphic method lookups</li>
+<li>correct java/lang/invoke/MethodHandleNatives resolve access check logic</li>
+<li>correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()</li>
+<li>correct integer/long div/rem instructions when dividing by zero</li>
+<li>correct double/float div/rem instructions when dividing by zero</li>
+<li>correct jdk/internal/misc/Unsafe.get(...) methods to handle partial byte buffers</li>
+<li>correct array index out of bounds behavior</li>
+<li>add class, method type and method handle support to invokedynamic static bootstrap argument resolution</li>
+<li>correct class retrieval for java/lang/invoke/MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J</li>
+<li>define empty configuration for jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;</li>
+<li>use thread execute for internal vm calls</li>
+<li>lookup classes using existing thread context instead of vm</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>update Cargo.toml dependencies</li>
+<li>[<strong>breaking</strong>] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs</li>
+<li>reduced direct usages of Reference</li>
+<li>remove fields from object instances</li>
+<li>[<strong>breaking</strong>] refactor class and object fields</li>
+<li>add eq trait to value and reference</li>
+<li>[<strong>breaking</strong>] refactor VM invoke interfaces to combine method name and method descriptor argument into a single method signature argument</li>
+<li>update compatibility tests to run in parallel</li>
+<li>update to Rust 1.88.0</li>
+<li>update JavaObject.to_object(&amp;VM) -&gt; JavaObject.to_object(&amp;Thread)</li>
+<li>refactored file handle management and created thread handles</li>
+</ul>
+
+  </div>
+</section>
+    </div>
+  </div>
+
+        </main>
+      </div>
+
+      <footer>
+        
+          <a href="https://github.com/theseus-rs/ristretto"><div class="github-icon" aria-hidden="true"></div></a>
+        
+        <span>
+          ristretto, Apache-2.0 OR MIT
+        </span>
+      </footer>
+    </div>
+
+    
+    
+
+    
+  </body>
+</html>

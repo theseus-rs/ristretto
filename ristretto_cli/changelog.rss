@@ -1,0 +1,806 @@
+<?xml version="1.0" encoding="utf-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>ristretto Changelog</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog</link><description>Changelog information for ristretto</description><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><atom:link href="http://127.0.0.1:7979/ristretto/ristretto_cli/changelog.rss" rel="self"/><item><title>v0.29.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.29.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.29.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add ristretto_pom crate</li>
+<li>implement java.lang.Record</li>
+<li>implement java/util/zip package</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>improve Java 8 support</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>create ristretto_intrinsics and ristretto_types crates</li>
+<li>refactor ClassFile::from_bytes interface to avoid allocation when loading classes</li>
+<li>update Java 17 tests to 17.0.18.9.1</li>
+<li>increase instruction yield count</li>
+<li>optimize ldc/ldc_w to load integer and float synchronously</li>
+</ul>
+]]></content:encoded></item><item><title>v0.28.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.28.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.28.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>implement async threading</li>
+<li>initial jpms support</li>
+<li>implement comprehensive bytecode and attribute verification</li>
+<li>implement invokedynamic instruction</li>
+<li>implement hidden classes</li>
+<li>enhance interface method resolution and string constant initialization</li>
+<li>implement reflection</li>
+<li>implement lambda support</li>
+<li>configure class object module</li>
+<li>add monitorenter and monitorexit instructions</li>
+<li>initial threading implementation</li>
+<li>implement java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String;</li>
+<li>implement jdk/internal/loader/BootLoader.setBootLoaderUnnamedModule0(Ljava/lang/Module;)V</li>
+<li>implement java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>isolate GC to VM instance</li>
+<li>improve performance</li>
+<li>improve cli exception cause reporting</li>
+<li>optimize mutf8</li>
+<li>correct tableswitch and lookupswitch negative offsets</li>
+<li>update class loading to comply with JVMS 5.5</li>
+<li>handle backward jumps to method entry and enable ignored tests</li>
+<li>stub java/lang/NullPointerException.getExtendedNPEMessage()Ljava/lang/String; to return null</li>
+<li>register dynamically created classes</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>improve lint configuration</li>
+<li>rename mutf8 benchmark</li>
+<li>Fix lookupswitch type cast error</li>
+<li>Add test for lookupswitch bug</li>
+<li>update to reqwest=0.13.0</li>
+<li>update rustdoc references section</li>
+<li>update java versions</li>
+<li>add field initialization tests and docs</li>
+<li>correct cyclic crate dependencies with ristretto_jimage</li>
+<li>correct clippy lints</li>
+<li>Implement invokedynamic support and MethodHandleNatives updates for JDK 17+ compatibility</li>
+</ul>
+]]></content:encoded></item><item><title>v0.27.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.27.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.27.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add jimage support</li>
+<li>implement jdk.internal.misc.Unsafe</li>
+<li>load classes using JImage</li>
+<li>add java.lang.Class nestmate support</li>
+<li>implement java.lang.invoke.MethodHandleNatives</li>
+<li>implement java.lang.MethodHandle linkTo* methods</li>
+<li>implement jdk/internal/misc/CDS.logLambdaFormInvoker(Ljava/lang/String;)V</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>disable ansi colors in logs when not writing to the terminal</li>
+<li>correct logic for determining the latest corretto release to account for missing OS packages</li>
+<li>fixes endianness handling to be architecture aware instead of hardcoding</li>
+<li>add check for java.lang.NegativeArraySizeException</li>
+<li>correct Unsafe get/put primitive array support</li>
+<li>update unsafe byte array to support all base types</li>
+<li>correct Java 25 system property definitions</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>move Gc&lt;RwLock&lt;&gt;&gt; from Reference to Value::Object()</li>
+<li>address clippy errors</li>
+<li>update rustdoc references to point to java 25</li>
+<li>update java version in readme</li>
+<li>update to java 25.0.0.36.1</li>
+<li>update array references to Box&lt;[T]&gt; instead of Vec</li>
+<li>update default java version to 25.0.1.8.1</li>
+<li>improve GC safety with rooted objects</li>
+<li>update java versions</li>
+<li>update gc docs</li>
+<li>simplify jit branch type casting</li>
+<li>optimize jit tableswitch instruction</li>
+<li>update jit docs</li>
+<li>update Cargo.toml dependencies</li>
+<li>remove unnecessary mutex and code generation from startup_trace macro</li>
+</ul>
+]]></content:encoded></item><item><title>v0.26.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.26.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.26.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>calculate clap styles at compile time instead of runtime</li>
+<li>add startup tracing</li>
+<li>add Java 25 support</li>
+<li>add java/lang/invoke/MemberName.vmindex</li>
+<li>optimize logging startup</li>
+<li>implement invokedynamic call site cache</li>
+<li>implement java/lang/Class.isRecord0()Z</li>
+<li>add member handles</li>
+<li>reduce memory allocations during primordial thread creation</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>correct java.lang.Object.clone()</li>
+<li>correct class name generation for anewarray instruction</li>
+<li>never deep clone java.lang.Class objects</li>
+<li>use private java.lang.Class constructor to create a Class object</li>
+<li>update frame exception handling to create throwable using the current thread instead of the primordial thread</li>
+<li>correct polymorphic calls to java.lang.invoke Holder inner classes</li>
+<li>correct JVM initialization process to call java.lang.ref.Reference.&lt;clinit&gt;()</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>update CallSiteCache to use a DashMap instead of RwLock</li>
+<li>[<strong>breaking</strong>] switch to OsStr/OsString and classpath handling</li>
+<li>correct lint errors</li>
+<li>remove superfluous Class arc usage</li>
+<li>reduce memory allocations and locks when registering primitives with the boot class loader</li>
+<li>replace Reference std::sync::RwLock with parking_lot::RwLock</li>
+<li>update Cargo.toml dependencies</li>
+<li>define MemberNameFlags::REFERENCE_KIND_MASK using MemberNameFlags::REFERENCE_KIND_SHIFT</li>
+<li>update start tracing sum logic</li>
+<li>correct lint errors</li>
+<li>update compatibility tests</li>
+</ul>
+]]></content:encoded></item><item><title>v0.25.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.25.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.25.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add parallel jit compiler</li>
+<li>update GC threads to be configurable; default to 50% of cpu cores</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>correct default interface method resolution</li>
+<li>correct instanceof operations</li>
+<li>address stack overflow in invokedynamic instruction</li>
+<li>correct definition of the ristretto/internal/access/JavaLangRefAccess class</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>replace Value TryInto with as_&lt;type&gt;</li>
+<li>replace Value.to_&lt;type&gt; methods with TryInto</li>
+<li>remove ConcurrentVec</li>
+<li>update Cargo.toml dependencies</li>
+<li>refactor Reference and Object to improve memory and lock utilization</li>
+<li>replace Reference TryInto&lt;type&gt; with as_&lt;type&gt;</li>
+<li>replace Object TryInto&lt;type&gt; with as_&lt;type&gt;</li>
+<li>implement value, reference and object  hash</li>
+<li>refactor usages of Reference to Value</li>
+<li>correct clippy lint warnings</li>
+<li>remove debugging code</li>
+<li>update to cranelift=0.122.0, criterion=0.7.0</li>
+</ul>
+]]></content:encoded></item><item><title>v0.24.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.24.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.24.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add background jit compiler</li>
+<li>improve class loader reflection; initial class loader and module support</li>
+<li>implement java/lang/reflect/Array</li>
+<li>implement java/lang/String.intern()Ljava/lang/String;</li>
+<li>add initial string pool</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>update cli to allow -cp argument for classpath</li>
+<li>do not deep clone java.lang.Class objects</li>
+<li>unbox primitives for constructor reflection</li>
+<li>correct class loading hierarchy logic</li>
+<li>correct java/lang/Class.getRawAnnotations()[B and java/lang/Class.getRawTypeAnnotations()[B to return zero length in byte array when there are no annotations</li>
+<li>correct private method invocation</li>
+<li>reduce gc memory utilization</li>
+<li>add Unsafe support for getting/setting Class static fields</li>
+<li>update java/lang/invoke/MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J to get the correct class name</li>
+<li>update java/lang/Class.forName0 to throw ClassNotFoundException for primitive types</li>
+<li>correct multinewarray instruction</li>
+<li>correct jdk.internal.misc.Unsafe put methods</li>
+<li>correct inherited static method invocation</li>
+<li>correct java/lang/System.arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>introduce -X cli arguments and move --int to -Xint</li>
+<li>stub java/lang/invoke/DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;</li>
+<li>stub java/lang/invoke/DelegatingMethodHandle$Holder.delegate([Ljava/lang/Object;)Ljava/lang/Object;</li>
+<li>stub java/lang/invoke/Invokers$Holder.invoker([Ljava/lang/Object;)Ljava/lang/Object;</li>
+<li>stub java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;</li>
+<li>consolidate array class creation</li>
+<li>upgrade default java version to 21.0.8.9.1</li>
+<li>move primitive and array class creation into class loader</li>
+<li>remove use of custom garbage collector box</li>
+<li>update jit and main readme</li>
+<li>add timing to compatibility tests</li>
+<li>add method and string integration tests</li>
+</ul>
+]]></content:encoded></item><item><title>v0.23.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.23.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.23.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add garbage collector</li>
+<li>implement jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String; and jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;</li>
+<li>add parallel garbage collection</li>
+<li>add jit lookupswitch</li>
+<li>add jit tableswitch</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>improve unsafe support for byte offsets</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>update Cargo.toml dependencies</li>
+<li>remove unnecessary test classes</li>
+<li>improve compatibility test messages</li>
+</ul>
+]]></content:encoded></item><item><title>v0.22.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.22.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.22.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add Eq trait to class file attributes</li>
+<li>implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;</li>
+<li>implement jdk/internal/misc/Unsafe.park(ZJ)V and jdk/internal/misc/Unsafe.unpark(Ljava/lang/Object;)V</li>
+<li>implement java/lang/ref/Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;</li>
+<li>implement java/lang/ref/Reference.hasReferencePendingList()Z and java/lang/ref/Reference.waitForReferencePendingList()V</li>
+<li>implement java/lang/Thread.start0()V</li>
+<li>implement jdk/internal/vm/ContinuationSupport.isSupported0()Z</li>
+<li>implement java/lang/Thread.setPriority0(I)V</li>
+<li>implement java.lang.Thread resume, suspend and stop methods to return UnsupportedOperationException</li>
+<li>implement java/lang/Thread.clearInterruptEvent()V, java/lang/Thread.interrupt0()V, java/lang/Thread.isInterrupted(Z)Z</li>
+<li>implement java/lang/Thread.getThreads()[Ljava/lang/Thread;</li>
+<li>implement java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V</li>
+<li>implement jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z</li>
+<li>implement jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J</li>
+<li>implement jdk/internal/misc/Unsafe.pageSize()I and sun/misc/Unsafe.pageSize()I</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>correct java/lang/Object.hashCode()I</li>
+<li>correct if_icmpeq and if_icmpne instructions</li>
+<li>correct field shadowing logic</li>
+<li>correct and optimize class polymorphic method lookups</li>
+<li>correct java/lang/invoke/MethodHandleNatives resolve access check logic</li>
+<li>correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()</li>
+<li>correct integer/long div/rem instructions when dividing by zero</li>
+<li>correct double/float div/rem instructions when dividing by zero</li>
+<li>correct jdk/internal/misc/Unsafe.get(...) methods to handle partial byte buffers</li>
+<li>correct array index out of bounds behavior</li>
+<li>add class, method type and method handle support to invokedynamic static bootstrap argument resolution</li>
+<li>correct class retrieval for java/lang/invoke/MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J</li>
+<li>define empty configuration for jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;</li>
+<li>use thread execute for internal vm calls</li>
+<li>lookup classes using existing thread context instead of vm</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>update Cargo.toml dependencies</li>
+<li>[<strong>breaking</strong>] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs</li>
+<li>reduced direct usages of Reference</li>
+<li>remove fields from object instances</li>
+<li>[<strong>breaking</strong>] refactor class and object fields</li>
+<li>add eq trait to value and reference</li>
+<li>[<strong>breaking</strong>] refactor VM invoke interfaces to combine method name and method descriptor argument into a single method signature argument</li>
+<li>update compatibility tests to run in parallel</li>
+<li>update to Rust 1.88.0</li>
+<li>update JavaObject.to_object(&amp;VM) -&gt; JavaObject.to_object(&amp;Thread)</li>
+<li>refactored file handle management and created thread handles</li>
+</ul>
+]]></content:encoded></item><item><title>v0.21.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.21.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.21.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add java.io.ObjectInputStream and java.io.ObjectOutputStream intrinsics</li>
+<li>add intrinsic support for basic file io</li>
+<li>add java/lang/ref/PhantomReference intrinsics</li>
+<li>add OS specific file intrinsics</li>
+<li>implemented java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>correct mutf-8 class file string encoding/decoding as well as add utf-16 Java 9+ string support</li>
+<li>add invokedynamic bootstrap method descriptor verification</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>[<strong>breaking</strong>] change VM parameter types from Vec to &amp;[T] for zero-allocation and improved ergonomics</li>
+<li>optimize Reference enum memory</li>
+<li>[<strong>breaking</strong>] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &amp;str instead of &amp;String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.</li>
+<li>create compile time intrinsic method registry</li>
+<li>add classfile attributes documentation</li>
+<li>update rust doc formatting</li>
+<li>add constants for java versions</li>
+<li>optimize file reads by removing iterative type conversion from u8-&gt;i8. Optimized Reference Vec signed&lt;-&gt;unsigned type conversions.</li>
+<li>add java.lang.invoke.DirectMethodHandle$Holder trampoline methods on class definition</li>
+<li>remove unnecessary version file parsing on startup when the full java version is specified</li>
+<li>remove unnecessary call to obtain current directory on initialization</li>
+<li>update to phf=0.12.1</li>
+<li>remove lint warning on windows</li>
+<li>remove unnecessary java version from intrinsics registry</li>
+<li>correct clippy lints</li>
+</ul>
+]]></content:encoded></item><item><title>v0.20.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.20.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.20.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add jit support for ret and ret_w</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>[<strong>breaking</strong>] update MaxLocals to correctly handle static/virtual methods and category 2 (long/double) types</li>
+<li>update Version.supports() to take a reference to self</li>
+<li>correct stack overflow error in java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;</li>
+<li>corrected jit bug where float was being treated as a double in ldc and ldc_w instructions</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>update Cargo.toml dependencies</li>
+<li>improve attribute code coverage</li>
+<li>improve classfile documentation</li>
+<li>stub support for polymorphic intrinsic methods</li>
+<li>add jit ldc, ldc_w, and ldc2_w error tests</li>
+<li>improve jit ret_w code coverage</li>
+<li>stub java.lang.invoke.DirectMethodHandle$Holder</li>
+<li>rename native_methods module to intrinsic_methods</li>
+</ul>
+]]></content:encoded></item><item><title>v0.19.2</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.19.2</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.19.2</guid><content:encoded><![CDATA[<h3>Fixed</h3>
+<ul>
+<li>java/lang/Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method; set void return types to void class instead of null</li>
+<li>correct invokedynamic get_method_type to handle descriptors without parameters</li>
+<li>correct jit jsr and jsr_w instructions</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>add jit pop2 category2 test</li>
+<li>add jit stack tests</li>
+<li>add jit test coverage for dcmpg, dcmpl, fcmpg, fcmpl, lcmp</li>
+<li>update Cargo.toml dependencies</li>
+</ul>
+]]></content:encoded></item><item><title>v0.19.1</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.19.1</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.19.1</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add java.lang.invoke.MethodHandleNatives objectFieldOffset(..), staticFieldBase(..) and staticFieldOffset(..)</li>
+<li>add java.lang.invoke.MethodHandleNatives setCallSiteTargetNormal(..) and setCallSiteTargetVolatile(..)</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>update jit dcmpg, dcmpl, fcmpg, fcmpl to correctly handle NaN</li>
+<li>correct java.lang.invoke.MethodHandleNatives.resolve(..) field support</li>
+<li>correct jit dreturn and freturn</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>add jit double math tests</li>
+<li>add jit long math tests</li>
+<li>add jit float math tests</li>
+<li>add jit integer math tests</li>
+<li>add jit debug, monitor, and nop tests</li>
+<li>add jit convert instruction tests</li>
+<li>add jit bipush and sipush instruction tests</li>
+<li>add jit primitive load and store instruction tests</li>
+<li>update to cranelift=0.120.0</li>
+<li>update cfg doc formatting</li>
+<li>add jit test coverage</li>
+<li>update Cargo.lock dependencies</li>
+<li>update Cargo.toml dependencies</li>
+<li>update default java version to 21.0.7.6.1</li>
+<li>update to cranelift=0.120.0</li>
+<li>stub invokedynamic caller method handle lookup</li>
+<li>stub invokedynamic static bootstrap arguments</li>
+<li>expand invokedynamic stub by obtaining MethodType parameter for bootstrap method</li>
+<li>stub invokedynamic bootstrap method lookup</li>
+</ul>
+]]></content:encoded></item><item><title>v0.19.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.19.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.19.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>implement basic jit branch instructions</li>
+<li>enable creation of jit control flow graph blocks</li>
+<li>generate jit control flow graph using cranelift blocks</li>
+<li>optimize operand stack layout</li>
+<li>optimize jit Instruction::Return</li>
+<li>optimize operand stack to prevent allocation when not used; e.g. Object.&lt;init&gt;()</li>
+<li>implement jit operand stack</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>add jit cfg exception blocks</li>
+<li>add jit block support for ifnull and ifnonnull</li>
+<li>add jit control flow logic for if_acmpeq and if_acmpne</li>
+<li>correct lcmp, dcmpl, dcmpg, fcmpl, fcmpg to pass stack values through block params</li>
+<li>correct jit dcmpl, dcmpg, fcmpl, fcmpg to emit float instructions instead of int.</li>
+<li>correct jit invoke* instruction parameter processing</li>
+<li>correct jit field, invoke and stack simulation errors</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>minor jit readme update</li>
+<li>simplify jit stack implementations</li>
+<li>update to Rust 1.87.0</li>
+<li>improve jit instruction simulation test coverage</li>
+<li>refactor to use block params for OperandStack</li>
+<li>update jit operand stack to use cranelift stack slot</li>
+<li>only enable jit verifier when debug assertions are enabled</li>
+<li>update to clap=4.5.38, os_info=3.11.0, sysinfo=0.35.1, tempfile=3.20.0</li>
+</ul>
+]]></content:encoded></item><item><title>v0.18.1</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.18.1</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.18.1</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add jit <code>&lt;init&gt;</code> method support</li>
+</ul>
+]]></content:encoded></item><item><title>v0.18.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.18.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.18.0</guid><content:encoded><![CDATA[<h3>Fixed</h3>
+<ul>
+<li>improve jit error handling</li>
+<li>update JIT compiler to retain state between invocations and define unique function names</li>
+<li>correct long and double jit locals</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>add java compatibility tests</li>
+<li>update invokeinterface test to expect interface method</li>
+<li>Fix bug where Instruction::stack_delta panics when processing an InvokeInterface because it calls the wrong try_get*ref function (<a href="https://github.com/theseus-rs/ristretto/pull/319" rel="noopener noreferrer">#319</a>)</li>
+<li>add javac -parameters compiler flag to include parameter metadata in class files</li>
+<li>update jit to track JVM locals as cranelift variables</li>
+</ul>
+]]></content:encoded></item><item><title>v0.17.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.17.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.17.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add initial jit compilier</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>remove custom method optimizations</li>
+</ul>
+]]></content:encoded></item><item><title>v0.16.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.16.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.16.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add MaxLocals trait for calculating method max_locals values</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>update Cargo.lock dependencies</li>
+<li>[<strong>breaking</strong>] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(&amp;ConstantPool) to more accurately calculate the maximum stack size</li>
+</ul>
+]]></content:encoded></item><item><title>v0.15.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.15.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.15.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add Instruction::stack_utilization()</li>
+<li>add memory usage in debug output</li>
+<li>optimize obtaining invoke parameters from the stack</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>remove unnecessary Reference.class_name() string</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>update JVM specification links to point to Java 24</li>
+<li>correct wasm build configuration</li>
+<li>update to Rust 1.86.0</li>
+<li>encapsulate use of ConcurrentVec</li>
+<li>correct sysinfo physical_core_count() call</li>
+</ul>
+]]></content:encoded></item><item><title>v0.14.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.14.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.14.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>implement jdk.internal.reflect.ConstantPool</li>
+<li>implement reflection constructors and methods</li>
+<li>add java.lang.Class reflection annotations for fields, constructors and methods</li>
+<li>implement java.io.Console encoding() and istty()</li>
+<li>add java.lang.Class reflection signatures for fields, constructors and methods</li>
+<li>implement sun.reflect.ConstantPool</li>
+<li>implement jdk.internal.reflect.ConstantPool</li>
+<li>implement java.lang.Class.getConstantPool()</li>
+<li>implement java.lang.Class getRawAnnotations()[B and getRawTypeAnnotations()[B</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>correct jdk.internal.misc.Unsafe get_reference_type() byte array types</li>
+<li>update java.lang.Class.getSuperclass() to return null</li>
+<li>correct field and method annotation length encoding</li>
+<li>return stub boot ModuleLayer</li>
+<li>correct invokespecial to handle interface methods</li>
+<li>correct handling of null annotations</li>
+<li>correct class annotation modifier</li>
+<li>correct java.lang.Class.getModifiers() to return ENUM flag</li>
+<li>correct bugs in java.lang.Class.getSuperclass()</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>update Cargo.toml dependencies</li>
+</ul>
+]]></content:encoded></item><item><title>v0.13.1</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.13.1</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.13.1</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>update to Rust 2024 edition</li>
+<li>add bool support to parameters</li>
+<li>add Java 24 support</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>update java.lang.invoke.MethodHandleNatives.resolve() to support fields</li>
+<li>make class object singleton</li>
+<li>correct if_acmpeq and if_acmpne instructions when comparing class references</li>
+<li>remove unnecessary clone in values returned from frame</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>add internal thread print_stack_trace() function for debugging</li>
+<li>update to getrandom=0.3.1</li>
+<li>refactor Class constructor functions to return Arc</li>
+<li>update dependencies</li>
+</ul>
+]]></content:encoded></item><item><title>v0.13.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.13.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.13.0</guid><content:encoded><![CDATA[<h3>Added</h3>
+<ul>
+<li>add Java 25 class file support</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>correct StackFrame offset delta byte to instruction mapping</li>
+<li>correct exception byte to instruction offset conversion error</li>
+<li>remove unnecessary parameter cloning</li>
+<li>remove unnecessary clone from LocalVariables</li>
+<li>correct bug in java.lang.Class.getDeclaredMethods0() where class constructors were incorrectly returned</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>update Cargo.toml dependencies</li>
+<li>add enum documentation</li>
+<li>add vm benchmarks</li>
+<li>update VM to support LTS and latest Java versions only</li>
+<li>update java runtime versions</li>
+<li>move invokedynamic into separate module</li>
+</ul>
+]]></content:encoded></item><item><title>v0.12.3</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.12.3</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.12.3</guid><content:encoded><![CDATA[<h2>✨ Enhancements</h2>
+<ul>
+<li>implement Value::TryInto and Reference::TryInto for class vec (#221)</li>
+<li>implement java.lang.Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method; (#218)</li>
+</ul>
+<h2>🐞 Bug fixes</h2>
+<ul>
+<li>remove unnecessary clone() for Value::TryInto and Reference::TryInto (#224)</li>
+<li>correct java.lang.Class.getComponentType() (#222)</li>
+<li>correct invalid return value for java.lang.Class.initClassName()Ljava/lang/String; (#220)</li>
+<li>implement java.lang.Class.getDeclaredConstructors0(Z)[Ljava/lang/reflect/Constructor; (#215)</li>
+<li>implement java.lang.ref.Finalizer (#212)</li>
+<li>implement java.lang.Class.getDeclaredClasses0()[Ljava/lang/Class; (#211)</li>
+<li>implement java.lang.Class.getInterfaces0()[Ljava/lang/Class; (#210)</li>
+<li>implement sun.nio.ch.IOUtil.iovMax()I and sun.nio.ch.IOUtil.writeMax()J (#208)</li>
+<li>implement java.lang.ProcessHandleImpl (#207)</li>
+<li>correct null handling of caller argument in MethodHandleNatives.resolve() (#204)</li>
+<li>remove unnecessary use of Arc from LocalVariables (#200)</li>
+</ul>
+<h2>📦 Build system</h2>
+<ul>
+<li>update bitflags, clap, thiserror and cargo dist (#209)</li>
+<li>update to Rust 1.84.0 (#206)</li>
+<li>bump reqwest from 0.12.11 to 0.12.12 (#205)</li>
+<li>upgrade cargo dist to 0.27.0 (#201)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>rename Arguments struct to Parameters (#225)</li>
+<li>add sun.* native method tests (#223)</li>
+<li>verify native method definitions (#219)</li>
+<li>improve test coverage (#216)</li>
+<li>update dirs and convert-case (#217)</li>
+<li>limit method creation to require ClassFile references (#214)</li>
+<li>consolidate method construction (#213)</li>
+<li>encapsulate OperandStack to Frame and remove unnecessary uses of Arc/RwLock (#203)</li>
+<li>encapsulate LocalVariables to Frame and remove unnecessary uses of Arc/RwLock (#202)</li>
+<li>display JAVA_VERSION or default java version for the CLI --version option (#198)</li>
+</ul>
+]]></content:encoded></item><item><title>v0.12.2</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.12.2</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.12.2</guid><content:encoded><![CDATA[<h2>✨ Enhancements</h2>
+<ul>
+<li>optimize java.lang.Math and java.lang.StrictMath methods with Rust implementations (#181)</li>
+</ul>
+<h2>🐞 Bug fixes</h2>
+<ul>
+<li>implement java.lang.invoke.MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName; (#194)</li>
+<li>implement jdk.internal.misc.Unsafe.shouldBeInitialized0(Ljava/lang/Class;)Z (#193)</li>
+<li>implement deep clone for java.lang.Object.clone() (#192)</li>
+<li>implement java.lang.Class.isInstance(Ljava/lang/Object;)Z (#189)</li>
+<li>implement java.lang.Class.getDeclaringClass0() (#188)</li>
+<li>correct value returned from java.lang.Class.getName() (#187)</li>
+<li>update class loading to support package.ClassName format for VM, Thread and ClassLoader (#183)</li>
+<li>update java.lang.Class.getSimpleBinaryName0() to work with class objects (#186)</li>
+<li>update java.lang.Class.getDeclaringClass0() to return null instead of void (#184)</li>
+<li>update java.lang.Class.getEnclosingMethod0() to use the class file EnclosingMethod attribute per 4.7.7 (#185)</li>
+<li>correct exception handling class check (#182)</li>
+<li>implement java.lang.StrictMath (#180)</li>
+</ul>
+<h2>📦 Build system</h2>
+<ul>
+<li>enable auditable, cyclonedx and github attestations (#197)</li>
+<li>upgrade to cargo dist 0.26.1 (#196)</li>
+<li>upgrade to cargo dist 0.26.0 and add new builds (#195)</li>
+<li>conditionally register macos native functions (#191)</li>
+<li>update serde and thiserror (#190)</li>
+<li>update x86_64-apple-darwin release to use macos-13 (#179)</li>
+</ul>
+]]></content:encoded></item><item><title>v0.12.1</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.12.1</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.12.1</guid><content:encoded><![CDATA[<h2>🐞 Bug fixes</h2>
+<ul>
+<li>implement preview features flag (#178)</li>
+<li>correct object array lengt allocation for java.lang.reflect.Array.newArray(Ljava/lang/Class;I)Ljava/lang/Object; (#177)</li>
+<li>correct minimum value handling for ineg and lneg instructions (#176)</li>
+<li>implement java.lang.ProcessHandleImpl.getCurrentPid0()J (#175)</li>
+<li>correct exception handling by translating ranges to/from bytes/instructions (#172)</li>
+<li>implement numerous jdk.internal.misc.Unsafe get&lt;type&gt;() and put&lt;type&gt;() methods (#171)</li>
+<li>implement jdk.internal.misc.Unsafe.objectFieldOffset0(Ljava/lang/reflect/Field;)J (#170)</li>
+<li>correct java.lang.Class.getDeclaredFields0(Z)[Ljava/lang/reflect/Field; to work with latest Java versions (#169)</li>
+<li>add properties to jdk.internal.util.SystemProps$Raw.vmProperties()[Ljava/lang/String; (#168)</li>
+<li>correct line number offsets (#167)</li>
+<li>implement java.lang.String.intern()Ljava/lang/String; (#166)</li>
+<li>implement java.util.concurrent.atomic.AtomicLong.VMSupportsCS8()Z (#165)</li>
+<li>implement java.lang.Float.intBitsToFloat(I)F (#164)</li>
+<li>implement java.lang.ClassLoader methods (#161)</li>
+<li>correct getCallerClass() to return null instead of void (#159)</li>
+</ul>
+<h2>📖 Documentation</h2>
+<ul>
+<li>update documentation links to point to latest jvm version (#174)</li>
+</ul>
+<h2>📦 Build system</h2>
+<ul>
+<li>update dependencies (#158)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>improve todo docs (#163)</li>
+<li>refactor native methods into a module hierarchy (#162)</li>
+<li>add System.getSecurityManager() and System.setSecurityManager() implementations (#160)</li>
+</ul>
+]]></content:encoded></item><item><title>v0.12.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.12.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.12.0</guid><content:encoded><![CDATA[<h2>💥 Breaking changes</h2>
+<ul>
+<li>create JavaError to convert Rust error to Java exceptions (#139)</li>
+<li>rename Value.to_object() -&gt; Value.to_reference(). remove Value.try_to_object(). add Reference::TryInto&lt;Object&gt;, Value::TryInto&lt;Object&gt;, and Value::TryInto&lt;Reference&gt;. (#135)</li>
+</ul>
+<h2>✨ Enhancements</h2>
+<ul>
+<li>add ClassPath.class_names() (#145)</li>
+<li>optimize class equality check (#140)</li>
+</ul>
+<h2>🐞 Bug fixes</h2>
+<ul>
+<li>correct errors with Java 11 initialization (#154)</li>
+<li>correct Java 8 string handling to encode Rust strings as UTF-16 (#153)</li>
+<li>add Class.fields() and update Class.get_declared_fields_0() to use the class fields instead of the object fields (#152)</li>
+<li>correct field initialization (#151)</li>
+<li>correct FieldType.class_name() to handle object arrays and multi-arrays (#150)</li>
+<li>implement java.lang.Class.getDeclaredFields0() and sun.misc.Unsafe.* methods (#149)</li>
+<li>implement java.security.AccessController.doPrivileged() methods (#148)</li>
+<li>stub native methods (#147)</li>
+<li>update class names to support modules (#146)</li>
+<li>add java.lang.invoke.MethodHandleNatives.registerNatives()V and jdk.internal.misc.PreviewFeatures.isPreviewEnabled()Z (#144)</li>
+<li>correct Object.clone() to behave as a reference copy (#143)</li>
+<li>set String.hashIsZero to false when creating a new string in Java 17+ (#141)</li>
+<li>add java.lang.reflect.Array.newArray(Ljava/lang/Class;I)Ljava/lang/Object; (#137)</li>
+<li>add BaseType.class_name() and FieldType.class_name() (#136)</li>
+<li>rename Value.to_object() -&gt; Value.to_reference(). remove Value.try_to_object(). add Reference::TryInto&lt;Object&gt;, Value::TryInto&lt;Object&gt;, and Value::TryInto&lt;Reference&gt;. (#135)</li>
+<li>correct checkcast/instanceof instructions for Object[] (#134)</li>
+<li>implement Java ArithmeticException for / by zero (#133)</li>
+<li>add java.lang.Class.getModifiers()I and jdk.internal.reflect.Reflection.getClassAccessFlags(Ljava/lang/Class;)I (#132)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>update to Rust 1.83 (#155)</li>
+<li>rename Arguments.[pop|push]_object() -&gt; Arguments.[pop|push]_reference() (#142)</li>
+<li>create JavaError to convert Rust error to Java exceptions (#139)</li>
+<li>order object field debug output (#138)</li>
+</ul>
+]]></content:encoded></item><item><title>v0.11.1</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.11.1</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.11.1</guid><content:encoded><![CDATA[<h2>🐞 Bug fixes</h2>
+<ul>
+<li>add java.lang.Class.getComponentType()Ljava/lang/Class; for Java 8 (#130)</li>
+<li>enable legacy Java system property initialization (#128)</li>
+<li>initialize VM; call System.initPhase2() and System.initPhase3() (#127)</li>
+<li>add jdk.internal.misc.Unsafe put&lt;primitive&gt; methods (#126)</li>
+<li>add jdk.internal.misc.Unsafe.copyMemory0(Ljava/lang/Object;JLjava/lang/Object;JJ)V (#125)</li>
+<li>add Class.componentType for array classes (#124)</li>
+<li>correct implementation of jdk.internalmisc.Unsafe for int and long (#123)</li>
+<li>add jdk.internal.misc.CDS.getCDSConfigStatus()I (#122)</li>
+<li>add java.lang.Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class; and java.security.AccessController.getStackAccessControlContext()Ljava/security/AccessControlContext; (#121)</li>
+<li>remove unnecessary thread creation for new objects (#119)</li>
+</ul>
+<h2>📦 Build system</h2>
+<ul>
+<li>update dist to 0.25.1 (#131)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>update method registry to conditionally register methods based on java version (#129)</li>
+<li>add primordial thread (#120)</li>
+</ul>
+]]></content:encoded></item><item><title>v0.11.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.11.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.11.0</guid><content:encoded><![CDATA[<h2>💥 Breaking changes</h2>
+<ul>
+<li>refactor VM.load_class() -&gt; Thread.class() and VM.new_object() -&gt; VM.object() (#116)</li>
+<li>implement TryInto for Value, Reference and Object (#105)</li>
+</ul>
+<h2>✨ Enhancements</h2>
+<ul>
+<li>add string support to RustValue (#115)</li>
+<li>add VM.new_object() (#114)</li>
+<li>update class loader to support primitive classes (#109)</li>
+<li>add JavaObject trait (#106)</li>
+<li>implement TryInto for Value, Reference and Object (#105)</li>
+</ul>
+<h2>🐞 Bug fixes</h2>
+<ul>
+<li>add Class.getDeclaringClass0()java/lang/Class, Class.getSigners()Ljava/lang/Object;, Class.isHidden()Z, Class.setSigners(Ljava/lang/Object;)V (#113)</li>
+<li>add Class.getClassAccessFlagsRaw0()I, Class.getClassFileVersion0()I and Class.getPermittedSubclasses0()[Ljava/lang/Class; (#112)</li>
+<li>add Class.isInterface()Z (#111)</li>
+<li>update Unsafe.compareAndSetReference() to support Objects (#110)</li>
+<li>implement jdk.internal.misc.VM.initializeFromArchive(Ljava/lang/Class;)V, jdk.internal.misc.Unsafe.addressSize0()I, jdk.internal.misc.Unsafe.isBigEndian0()Z, jdk.internal.misc.Unsafe.unalignedAccess0()Z (#104)</li>
+<li>correct is_assignable_from, checkcast and instanceof array handling (#103)</li>
+<li>add awt native initIDs() methods (#101)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>refactor invoke (#118)</li>
+<li>delegate VM.object() -&gt; Thread.object() (#117)</li>
+<li>refactor VM.load_class() -&gt; Thread.class() and VM.new_object() -&gt; VM.object() (#116)</li>
+<li>improve object debug output (#108)</li>
+<li>update parent reference (#107)</li>
+<li>remove explicit use of box pin (#102)</li>
+</ul>
+]]></content:encoded></item><item><title>v0.10.1</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.10.1</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.10.1</guid><content:encoded><![CDATA[<h2>✨ Enhancements</h2>
+<ul>
+<li>add environment variable support (#98)</li>
+</ul>
+<h2>🐞 Bug fixes</h2>
+<ul>
+<li>pass command line arguments as a string array to main methods (#97)</li>
+<li>correct invokedynamic instruction debug logging (#96)</li>
+<li>create array class for anewarray instruction (#95)</li>
+<li>correct invokedynamic bytecode serialization (#93)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>simplify native method implementations (#94)</li>
+<li>move additional logic into instruction functions (#92)</li>
+<li>refactor VM internals for threading support (#91)</li>
+</ul>
+]]></content:encoded></item><item><title>v0.10.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.10.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.10.0</guid><content:encoded><![CDATA[<h2>💥 Breaking changes</h2>
+<ul>
+<li>implement java.home system property (#80)</li>
+</ul>
+<h2>✨ Enhancements</h2>
+<ul>
+<li>implement multianewarray instruction (#89)</li>
+<li>implement system properties (#82)</li>
+<li>implement athrow instruction (#78)</li>
+</ul>
+<h2>🐞 Bug fixes</h2>
+<ul>
+<li>correct bug setting StackTraceElement.declaringClass (#90)</li>
+<li>update cli to print stack trace when a throwable is returned from the vm (#88)</li>
+<li>implement java.io.WinNTFileSystem.initIDs() (#87)</li>
+<li>implement sun.nio.fs.UnixNativeDispatcher (#86)</li>
+<li>implement java.io.UnixFileSystem.getBooleanAttributes0() (#85)</li>
+<li>correct handling of finally blocks (#84)</li>
+<li>implement jdk.internal.loader.NativeLibraries.findBuiltinLib() (#83)</li>
+<li>implement java.home system property (#80)</li>
+<li>correct invoke instruction error messages (#77)</li>
+<li>correct exception table handler_pc offsets to/from instructions/bytes (#75)</li>
+<li>remove unnecessary clone of method code (#71)</li>
+</ul>
+<h2>📦 Build system</h2>
+<ul>
+<li>update to cargo-dist 0.23.0 (#81)</li>
+<li>update corretto versions (#79)</li>
+<li>update to Rust 1.82.0 (#73)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>update corretto versions (#79)</li>
+<li>refactor default runtime version constant (#76)</li>
+<li>rename CodeException to ExceptionTableEntry to better align with JVM specification naming (#74)</li>
+<li>implement async Thread.sleep() and Thread.yield() (#72)</li>
+<li>rename RuntimeError to InternalError (#70)</li>
+</ul>
+]]></content:encoded></item><item><title>v0.9.0</title><link>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.9.0</link><category domain="https://github.com/theseus-rs/ristretto">ristretto Changelog</category><guid>http://127.0.0.1:7979/ristretto/ristretto_cli/changelog/v0.9.0</guid><content:encoded><![CDATA[<h2>💥 Breaking changes</h2>
+<ul>
+<li>update vm to be async (#56)</li>
+<li>rename VM.class() to VM.load_class() and VM.load() to VM.class() (#68)</li>
+</ul>
+<h2>✨ Enhancements</h2>
+<ul>
+<li>add stack size to frame debug logging (#65)</li>
+<li>enable wasm32 builds (#61)</li>
+<li>update vm to be async (#56)</li>
+<li>implement Reflection.getCallerClass() (#55)</li>
+<li>implement native method CDS.getRandomSeedForDumping()J (#48)</li>
+<li>add support for invoking interface method ref (#47)</li>
+</ul>
+<h2>🐞 Bug fixes</h2>
+<ul>
+<li>stub implementation of java.lang.ref.Reflection.refersTo0() (#69)</li>
+<li>correct invokeinterface instruction class resolution (#67)</li>
+<li>increase windows stack size to 8MB (#66)</li>
+<li>implement Class.getSuperclass() and Class.isAssignableFrom() (#64)</li>
+<li>correct invokespecial instructions to only use methods from the class hierarchy (#63)</li>
+<li>implement java.lang.Throwable.fillInStackTrace() (#62)</li>
+<li>implement java.lang.System.mapLibraryName() (#60)</li>
+<li>implement java.lang.System.identityHashCode() (#59)</li>
+<li>implement java.io.UnixFileSystem.initIDs() (#58)</li>
+<li>implement Class.is_array (#57)</li>
+<li>corrected bug where lushr instruction was using incorrect mask (#50)</li>
+<li>correct class interface loading and association (#49)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>rename VM.class() to VM.load_class() and VM.load() to VM.class() (#68)</li>
+<li>update frame to have interior mutability (#54)</li>
+<li>update Frame to reference CallStack (#53)</li>
+<li>update CallStack to store reference to VM (#52)</li>
+<li>update call stack to have interior mutability of frames (#51)</li>
+</ul>
+]]></content:encoded></item></channel></rss>

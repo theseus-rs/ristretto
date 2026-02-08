@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" id="oranda" class="dark">
+  <head>
+    <title>ristretto</title>
+    
+      <meta property="og:url" content="https://theseus-rs.github.io/ristretto/ristretto_cli/" />
+    
+    
+      <link rel="icon" href="/ristretto/ristretto_cli/favicon.ico" />
+    
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+      <meta name="description" content="A Java Virtual Machine (JVM) CLI." />
+      <meta property="og:description" content="A Java Virtual Machine (JVM) CLI." />
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ristretto" />
+    
+    
+    
+    <meta http-equiv="Permissions-Policy" content="interest-cohort=()" />
+    <link rel="stylesheet" href="/ristretto/ristretto_cli/oranda-v0.6.1.css" />
+    
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-body">
+        
+          <div class="repo_banner">
+            <a href="https://github.com/theseus-rs/ristretto">
+              <div class="github-icon" aria-hidden="true"></div>
+              Check out our GitHub!
+            </a>
+          </div>
+        
+
+        <main>
+          <header>
+            
+            <h1 class="title">ristretto</h1>
+            
+  <nav class="nav">
+    <ul>
+      <li><a href="/ristretto/ristretto_cli/">Home</a></li>
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/artifacts/">Install</a></li>
+      
+
+      
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/changelog/">Changelog</a></li>
+      
+    </ul>
+  </nav>
+
+          </header>
+
+          
+  <div>
+    <h1>v0.12.0</h1>
+    <div class="releases-body">
+      
+      
+      <section class="release ">
+  
+  <div class="release-info">
+    <span class="flex items-center gap-2">
+      <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>
+      v0.12.0
+    </span>
+    <span class="flex items-center gap-2">
+      
+        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'><path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>
+        Nov 29 2024 at 18:55 UTC
+      
+    </span>
+  </div>
+  <div class="release-body">
+    <h2>💥 Breaking changes</h2>
+<ul>
+<li>create JavaError to convert Rust error to Java exceptions (#139)</li>
+<li>rename Value.to_object() -&gt; Value.to_reference(). remove Value.try_to_object(). add Reference::TryInto&lt;Object&gt;, Value::TryInto&lt;Object&gt;, and Value::TryInto&lt;Reference&gt;. (#135)</li>
+</ul>
+<h2>✨ Enhancements</h2>
+<ul>
+<li>add ClassPath.class_names() (#145)</li>
+<li>optimize class equality check (#140)</li>
+</ul>
+<h2>🐞 Bug fixes</h2>
+<ul>
+<li>correct errors with Java 11 initialization (#154)</li>
+<li>correct Java 8 string handling to encode Rust strings as UTF-16 (#153)</li>
+<li>add Class.fields() and update Class.get_declared_fields_0() to use the class fields instead of the object fields (#152)</li>
+<li>correct field initialization (#151)</li>
+<li>correct FieldType.class_name() to handle object arrays and multi-arrays (#150)</li>
+<li>implement java.lang.Class.getDeclaredFields0() and sun.misc.Unsafe.* methods (#149)</li>
+<li>implement java.security.AccessController.doPrivileged() methods (#148)</li>
+<li>stub native methods (#147)</li>
+<li>update class names to support modules (#146)</li>
+<li>add java.lang.invoke.MethodHandleNatives.registerNatives()V and jdk.internal.misc.PreviewFeatures.isPreviewEnabled()Z (#144)</li>
+<li>correct Object.clone() to behave as a reference copy (#143)</li>
+<li>set String.hashIsZero to false when creating a new string in Java 17+ (#141)</li>
+<li>add java.lang.reflect.Array.newArray(Ljava/lang/Class;I)Ljava/lang/Object; (#137)</li>
+<li>add BaseType.class_name() and FieldType.class_name() (#136)</li>
+<li>rename Value.to_object() -&gt; Value.to_reference(). remove Value.try_to_object(). add Reference::TryInto&lt;Object&gt;, Value::TryInto&lt;Object&gt;, and Value::TryInto&lt;Reference&gt;. (#135)</li>
+<li>correct checkcast/instanceof instructions for Object[] (#134)</li>
+<li>implement Java ArithmeticException for / by zero (#133)</li>
+<li>add java.lang.Class.getModifiers()I and jdk.internal.reflect.Reflection.getClassAccessFlags(Ljava/lang/Class;)I (#132)</li>
+</ul>
+<h2>🛠️ Other improvements</h2>
+<ul>
+<li>update to Rust 1.83 (#155)</li>
+<li>rename Arguments.[pop|push]_object() -&gt; Arguments.[pop|push]_reference() (#142)</li>
+<li>create JavaError to convert Rust error to Java exceptions (#139)</li>
+<li>order object field debug output (#138)</li>
+</ul>
+
+  </div>
+</section>
+    </div>
+  </div>
+
+        </main>
+      </div>
+
+      <footer>
+        
+          <a href="https://github.com/theseus-rs/ristretto"><div class="github-icon" aria-hidden="true"></div></a>
+        
+        <span>
+          ristretto, Apache-2.0 OR MIT
+        </span>
+      </footer>
+    </div>
+
+    
+    
+
+    
+  </body>
+</html>
