@@ -34,13 +34,13 @@ os_info = { workspace = true }
 parking_lot = { workspace = true }
 phf = { workspace = true }
 rayon = { workspace = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.28.0" }
-ristretto_classloader = { path = "../ristretto_classloader", version = "0.28.0" }
-ristretto_gc = { path = "../ristretto_gc", version = "0.28.0" }
-ristretto_intrinsics = { path = "../ristretto_intrinsics", version = "0.28.0" }
-ristretto_jit = { path = "../ristretto_jit", version = "0.28.0" }
-ristretto_macros = { path = "../ristretto_macros", version = "0.28.0" }
-ristretto_types = { path = "../ristretto_types", version = "0.28.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.29.0" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.29.0" }
+ristretto_gc = { path = "../ristretto_gc", version = "0.29.0" }
+ristretto_intrinsics = { path = "../ristretto_intrinsics", version = "0.29.0" }
+ristretto_jit = { path = "../ristretto_jit", version = "0.29.0" }
+ristretto_macros = { path = "../ristretto_macros", version = "0.29.0" }
+ristretto_types = { path = "../ristretto_types", version = "0.29.0" }
 stacker = { workspace = true }
 sysinfo = { workspace = true }
 sys-locale = { workspace = true }
