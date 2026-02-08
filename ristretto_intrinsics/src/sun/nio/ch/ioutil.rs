@@ -1,8 +1,9 @@
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_21};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Error::InternalError;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -46,9 +47,17 @@ pub async fn fd_limit<T: ristretto_types::Thread + 'static>(
 #[async_method]
 pub async fn fd_val<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.IOUtil.fdVal(Ljava/io/FileDescriptor;)I");
+    let fd_value = parameters.pop()?;
+    let fd = {
+        let guard = fd_value.as_reference()?;
+        let Reference::Object(object) = &*guard else {
+            return Err(InternalError("fdVal: not an object".to_string()));
+        };
+        object.value("fd")?.as_i32()?
+    };
+    Ok(Some(Value::Int(fd)))
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.initIDs()V", Any)]
@@ -91,9 +100,16 @@ pub async fn random_bytes<T: ristretto_types::Thread + 'static>(
 #[async_method]
 pub async fn setfd_val<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.IOUtil.setfdVal(Ljava/io/FileDescriptor;I)V");
+    let fd_int = parameters.pop_int()?;
+    let fd_value = parameters.pop()?;
+    let mut guard = fd_value.as_reference_mut()?;
+    let Reference::Object(object) = &mut *guard else {
+        return Err(InternalError("setfdVal: not an object".to_string()));
+    };
+    object.set_value("fd", Value::Int(fd_int))?;
+    Ok(None)
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.write1(IB)I", GreaterThanOrEqual(JAVA_11))]
@@ -150,12 +166,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.IOUtil.fdVal(Ljava/io/FileDescriptor;)I"
-    )]
     async fn test_fd_val() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fd_val(thread, Parameters::default()).await;
+        let result = fd_val(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -189,12 +203,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.IOUtil.setfdVal(Ljava/io/FileDescriptor;I)V"
-    )]
     async fn test_setfd_val() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = setfd_val(thread, Parameters::default()).await;
+        let result = setfd_val(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

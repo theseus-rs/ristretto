@@ -10,7 +10,11 @@ use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::NullPointerException;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
+#[cfg(target_family = "unix")]
+use std::os::unix::fs::MetadataExt;
 use std::sync::Arc;
+
+use super::managed_files;
 
 bitflags! {
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -30,6 +34,51 @@ bitflags! {
     }
 }
 
+#[cfg(target_family = "unix")]
+#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+fn set_unix_metadata_fields(
+    object: &mut ristretto_classloader::Object,
+    metadata: &std::fs::Metadata,
+) -> Result<()> {
+    object.set_value("st_mode", Value::Int(metadata.mode() as i32))?;
+    object.set_value("st_ino", Value::Long(metadata.ino() as i64))?;
+    object.set_value("st_dev", Value::Long(metadata.dev() as i64))?;
+    object.set_value("st_rdev", Value::Long(metadata.rdev() as i64))?;
+    object.set_value("st_nlink", Value::Int(metadata.nlink() as i32))?;
+    object.set_value("st_uid", Value::Int(metadata.uid() as i32))?;
+    object.set_value("st_gid", Value::Int(metadata.gid() as i32))?;
+    object.set_value("st_size", Value::Long(metadata.size() as i64))?;
+    object.set_value("st_atime_sec", Value::Long(metadata.atime()))?;
+    object.set_value("st_atime_nsec", Value::Long(metadata.atime_nsec()))?;
+    object.set_value("st_mtime_sec", Value::Long(metadata.mtime()))?;
+    object.set_value("st_mtime_nsec", Value::Long(metadata.mtime_nsec()))?;
+    object.set_value("st_ctime_sec", Value::Long(metadata.ctime()))?;
+    object.set_value("st_ctime_nsec", Value::Long(metadata.ctime_nsec()))?;
+    Ok(())
+}
+
+#[cfg(not(target_family = "unix"))]
+fn set_unix_metadata_fields(
+    object: &mut ristretto_classloader::Object,
+    _metadata: &std::fs::Metadata,
+) -> Result<()> {
+    object.set_value("st_mode", Value::Int(0))?;
+    object.set_value("st_ino", Value::Long(0))?;
+    object.set_value("st_dev", Value::Long(0))?;
+    object.set_value("st_rdev", Value::Long(0))?;
+    object.set_value("st_nlink", Value::Int(0))?;
+    object.set_value("st_uid", Value::Int(0))?;
+    object.set_value("st_gid", Value::Int(0))?;
+    object.set_value("st_size", Value::Long(0))?;
+    object.set_value("st_atime_sec", Value::Long(0))?;
+    object.set_value("st_atime_nsec", Value::Long(0))?;
+    object.set_value("st_mtime_sec", Value::Long(0))?;
+    object.set_value("st_mtime_nsec", Value::Long(0))?;
+    object.set_value("st_ctime_sec", Value::Long(0))?;
+    object.set_value("st_ctime_nsec", Value::Long(0))?;
+    Ok(())
+}
+
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.access0(JI)V", LessThan(JAVA_21))]
 #[async_method]
 pub async fn access_0_0<T: ristretto_types::Thread + 'static>(
@@ -45,10 +94,22 @@ pub async fn access_0_0<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn access_0_1<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.access0(JI)I");
+    let _mode = parameters.pop_int()?;
+    let path_address = parameters.pop_long()?;
+
+    let vm = thread.vm()?;
+    let path_bytes = vm.native_memory().read_cstring(path_address);
+    let path_str = String::from_utf8(path_bytes)
+        .map_err(|error| InternalError(format!("Invalid path encoding: {error}")))?;
+
+    if std::path::Path::new(&path_str).exists() {
+        Ok(Some(Value::Int(0)))
+    } else {
+        Ok(Some(Value::Int(-1)))
+    }
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.chmod0(JI)V", Any)]
@@ -84,10 +145,13 @@ pub async fn close<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn close_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.close0(I)V");
+    let fd = parameters.pop_int()?;
+    let vm = thread.vm()?;
+    managed_files::close(vm.nio_file_handles(), fd).await;
+    Ok(None)
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.closedir(J)V", Any)]
@@ -313,10 +377,45 @@ pub async fn fstat<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn fstat_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fstat0(ILsun/nio/fs/UnixFileAttributes;)V");
+    let attributes = parameters.pop()?;
+    if attributes.is_null() {
+        return Err(NullPointerException(Some("attributes is null".to_string())).into());
+    }
+    let fd = parameters.pop_int()?;
+
+    let vm = thread.vm()?;
+    let metadata = managed_files::metadata(vm.nio_file_handles(), fd)
+        .await
+        .map_err(|e| InternalError(format!("fstat0: {}", e.raw_os_error().unwrap_or(5))))?;
+
+    let mut guard = attributes.as_reference_mut()?;
+    let Reference::Object(object) = &mut *guard else {
+        return Err(InternalError(
+            "fstat0: attributes is not an object".to_string(),
+        ));
+    };
+
+    set_unix_metadata_fields(object, &metadata)?;
+
+    #[cfg(target_os = "macos")]
+    {
+        use std::os::macos::fs::MetadataExt as MacMetadataExt;
+        object.set_value("st_birthtime_sec", Value::Long(metadata.st_birthtime()))?;
+        object.set_value(
+            "st_birthtime_nsec",
+            Value::Long(metadata.st_birthtime_nsec()),
+        )?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        object.set_value("st_birthtime_sec", Value::Long(0))?;
+        object.set_value("st_birthtime_nsec", Value::Long(0))?;
+    }
+
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -514,10 +613,29 @@ pub async fn mknod_0<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.open0(JII)I", Any)]
 #[async_method]
 pub async fn open_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.open0(JII)I");
+    let mode = parameters.pop_int()?;
+    let flags = parameters.pop_int()?;
+    let path_address = parameters.pop_long()?;
+
+    let vm = thread.vm()?;
+    // Read the null-terminated path from managed native memory
+    let path_bytes = vm.native_memory().read_cstring(path_address);
+    let path_str = String::from_utf8(path_bytes)
+        .map_err(|error| InternalError(format!("Invalid path encoding: {error}")))?;
+
+    let fd = vm.next_nio_fd();
+    match managed_files::open(vm.nio_file_handles(), fd, &path_str, flags, mode).await {
+        Ok(fd) => Ok(Some(Value::Int(fd))),
+        Err(error) => {
+            let errno = error.raw_os_error().unwrap_or(2);
+            Err(InternalError(format!(
+                "sun.nio.fs.UnixException: errno={errno} path={path_str}"
+            )))
+        }
+    }
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.openat0(IJII)I", Any)]
@@ -565,10 +683,31 @@ pub async fn read<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn read_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.read0(IJI)I");
+    let count = parameters.pop_int()?;
+    let address = parameters.pop_long()?;
+    let fd = parameters.pop_int()?;
+
+    let count = usize::try_from(count)?;
+    let mut buf = vec![0u8; count];
+
+    let vm = thread.vm()?;
+    match managed_files::read(vm.nio_file_handles(), fd, &mut buf).await {
+        Ok(n) => {
+            if n > 0 {
+                vm.native_memory().write_bytes(address, &buf[..n]);
+            }
+            Ok(Some(Value::Int(i32::try_from(n)?)))
+        }
+        Err(error) => {
+            let errno = error.raw_os_error().unwrap_or(5);
+            Err(InternalError(format!(
+                "sun.nio.fs.UnixException: errno={errno}"
+            )))
+        }
+    }
 }
 
 #[intrinsic_method(
@@ -607,10 +746,29 @@ pub async fn readlink_0<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.realpath0(J)[B", Any)]
 #[async_method]
 pub async fn realpath_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.realpath0(J)[B");
+    let path_address = parameters.pop_long()?;
+
+    let vm = thread.vm()?;
+    let path_bytes = vm.native_memory().read_cstring(path_address);
+    let path_str = String::from_utf8(path_bytes)
+        .map_err(|error| InternalError(format!("Invalid path encoding: {error}")))?;
+
+    let canonical = std::fs::canonicalize(&path_str).map_err(|error| {
+        let errno = error.raw_os_error().unwrap_or(2);
+        InternalError(format!(
+            "sun.nio.fs.UnixException: errno={errno} path={path_str}"
+        ))
+    })?;
+
+    let canonical_bytes = canonical.to_string_lossy().into_owned().into_bytes();
+    let canonical_i8: &[i8] = zerocopy::transmute_ref!(canonical_bytes.as_slice());
+    Ok(Some(Value::new_object(
+        thread.vm()?.garbage_collector(),
+        Reference::from(canonical_i8.to_vec()),
+    )))
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.rename0(JJ)V", Any)]
@@ -668,15 +826,53 @@ pub async fn stat_0_0<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn stat_0_1<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let attributes = parameters.pop()?;
     if attributes.is_null() {
         return Err(NullPointerException(Some("attributes is null".to_string())).into());
     }
-    let _path = parameters.pop_long()?;
-    // TODO: Implement the stat0 method
+    let path_address = parameters.pop_long()?;
+
+    // Read the null-terminated path from managed native memory
+    let vm = thread.vm()?;
+    let path_bytes = vm.native_memory().read_cstring(path_address);
+    let path_str = String::from_utf8(path_bytes)
+        .map_err(|error| InternalError(format!("Invalid path encoding: {error}")))?;
+
+    let metadata = match std::fs::metadata(path_str) {
+        Ok(m) => m,
+        Err(error) => {
+            let errno = error.raw_os_error().unwrap_or(2);
+            return Ok(Some(Value::Int(errno)));
+        }
+    };
+
+    let mut guard = attributes.as_reference_mut()?;
+    let Reference::Object(object) = &mut *guard else {
+        return Err(InternalError(
+            "stat0: attributes is not an object".to_string(),
+        ));
+    };
+
+    set_unix_metadata_fields(object, &metadata)?;
+
+    // Birth time - macOS supports it, Linux may not
+    #[cfg(target_os = "macos")]
+    {
+        use std::os::macos::fs::MetadataExt as MacMetadataExt;
+        object.set_value("st_birthtime_sec", Value::Long(metadata.st_birthtime()))?;
+        object.set_value(
+            "st_birthtime_nsec",
+            Value::Long(metadata.st_birthtime_nsec()),
+        )?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        object.set_value("st_birthtime_sec", Value::Long(0))?;
+        object.set_value("st_birthtime_nsec", Value::Long(0))?;
+    }
 
     Ok(Some(Value::Int(0)))
 }
@@ -780,10 +976,26 @@ pub async fn write<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn write_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.write0(IJI)I");
+    let count = parameters.pop_int()?;
+    let address = parameters.pop_long()?;
+    let fd = parameters.pop_int()?;
+
+    let count = usize::try_from(count)?;
+    let vm = thread.vm()?;
+    let data = vm.native_memory().read_bytes(address, count);
+
+    match managed_files::write(vm.nio_file_handles(), fd, &data).await {
+        Ok(n) => Ok(Some(Value::Int(i32::try_from(n)?))),
+        Err(error) => {
+            let errno = error.raw_os_error().unwrap_or(5);
+            Err(InternalError(format!(
+                "sun.nio.fs.UnixException: errno={errno}"
+            )))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -799,7 +1011,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.access0(JI)I")]
     async fn test_access_0_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = access_0_1(thread, Parameters::default()).await;
@@ -820,14 +1031,12 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.close0(I)V")]
     async fn test_close() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = close(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.close0(I)V")]
     async fn test_close_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = close_0(thread, Parameters::default()).await;
@@ -956,18 +1165,12 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fstat0(ILsun/nio/fs/UnixFileAttributes;)V"
-    )]
     async fn test_fstat() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = fstat(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fstat0(ILsun/nio/fs/UnixFileAttributes;)V"
-    )]
     async fn test_fstat_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = fstat_0(thread, Parameters::default()).await;
@@ -1125,7 +1328,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.open0(JII)I")]
     async fn test_open_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = open_0(thread, Parameters::default()).await;
@@ -1157,14 +1359,12 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.read0(IJI)I")]
     async fn test_read() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = read(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.read0(IJI)I")]
     async fn test_read_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = read_0(thread, Parameters::default()).await;
@@ -1194,9 +1394,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.realpath0(J)[B"
-    )]
     async fn test_realpath_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = realpath_0(thread, Parameters::default()).await;
@@ -1233,6 +1430,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(target_family = "unix")]
     async fn test_stat_0_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let unix_file_attributes = thread
@@ -1245,6 +1443,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(target_family = "unix")]
     async fn test_stat_0_1() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let unix_file_attributes = thread
@@ -1252,8 +1451,8 @@ mod tests {
             .await?;
         let parameters = Parameters::new(vec![Value::Long(0), unix_file_attributes]);
         let result = stat_0_1(thread, parameters).await?;
-        let result = result.expect("stat").as_i32()?;
-        assert_eq!(result, 0);
+        // With address 0, path resolves to empty string; stat returns an errno
+        assert!(result.is_some());
         Ok(())
     }
 
@@ -1320,14 +1519,12 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.write0(IJI)I")]
     async fn test_write() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = write(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.write0(IJI)I")]
     async fn test_write_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = write_0(thread, Parameters::default()).await;

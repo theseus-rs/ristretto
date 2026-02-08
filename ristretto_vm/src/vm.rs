@@ -17,6 +17,7 @@ use ristretto_classloader::{
     Class, ClassLoader, ClassPath, ClassPathEntry, Object, Reference, Value, runtime,
 };
 use ristretto_gc::{GarbageCollector, Statistics};
+use ristretto_types::NativeMemory;
 use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle};
 
 type ThreadHandle = ristretto_types::handles::ThreadHandle<Thread>;
@@ -24,7 +25,7 @@ use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 use tokio::sync::{Mutex, RwLock};
 use tracing::debug;
@@ -63,12 +64,18 @@ pub struct VM {
     compiler: Option<Compiler>,
     /// Counter for generating unique hidden class name suffixes
     hidden_class_counter: AtomicU64,
+    /// Per-VM native memory manager.
+    native_memory: NativeMemory,
     /// The next thread ID
     next_thread_id: AtomicU64,
     /// The VM thread handles
     thread_handles: HandleManager<u64, ThreadHandle>,
     /// The VM file handles
     file_handles: HandleManager<String, FileHandle>,
+    /// NIO file descriptor handles.
+    nio_file_handles: HandleManager<i32, std::fs::File>,
+    /// The next NIO file descriptor number.
+    next_nio_fd: AtomicI32,
     /// The VM member handles used for dynamic invocation
     member_handles: HandleManager<String, MemberHandle>,
     /// The string pool for interned strings
@@ -147,8 +154,11 @@ impl VM {
             compiler,
             hidden_class_counter: AtomicU64::new(1),
             next_thread_id: AtomicU64::new(1),
+            native_memory: NativeMemory::new(),
             thread_handles: HandleManager::new(),
             file_handles: HandleManager::new(),
+            nio_file_handles: HandleManager::new(),
+            next_nio_fd: AtomicI32::new(1000),
             member_handles: HandleManager::new(),
             string_pool: StringPool::new(),
             call_site_cache: CallSiteCache::new(),
@@ -841,6 +851,18 @@ impl ristretto_types::VM for VM {
 
     fn monitor_registry(&self) -> &MonitorRegistry {
         VM::monitor_registry(self)
+    }
+
+    fn native_memory(&self) -> &NativeMemory {
+        &self.native_memory
+    }
+
+    fn nio_file_handles(&self) -> &HandleManager<i32, std::fs::File> {
+        &self.nio_file_handles
+    }
+
+    fn next_nio_fd(&self) -> i32 {
+        self.next_nio_fd.fetch_add(1, Ordering::Relaxed)
     }
 
     fn class_loader(&self) -> Arc<RwLock<Arc<ClassLoader>>> {

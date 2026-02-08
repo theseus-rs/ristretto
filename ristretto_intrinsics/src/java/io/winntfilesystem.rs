@@ -97,11 +97,35 @@ pub async fn delete_0<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method(
+    "java/io/WinNTFileSystem.getFinalPath0(Ljava/lang/String;)Ljava/lang/String;",
+    Any
+)]
+#[async_method]
+pub async fn get_final_path_0<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    canonicalize_0(thread, parameters).await
+}
+
+#[intrinsic_method(
     "java/io/WinNTFileSystem.getBooleanAttributes(Ljava/io/File;)I",
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn get_boolean_attributes<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    unixfilesystem::get_boolean_attributes_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.getBooleanAttributes0(Ljava/io/File;)I",
+    GreaterThanOrEqual(JAVA_17)
+)]
+#[async_method]
+pub async fn get_boolean_attributes_0<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -521,7 +545,7 @@ mod tests {
 
         #[cfg(target_os = "windows")]
         {
-            let value = result.expect("roots");
+            let value = result.expect("roots").expect("value");
             let count = value.as_i32().expect("count");
             assert!(count > 0);
         }

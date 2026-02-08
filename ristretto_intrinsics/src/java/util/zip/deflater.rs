@@ -125,9 +125,9 @@ pub async fn deflate_bytes<T: ristretto_types::Thread + 'static>(
 
     let status = match status {
         Ok(s) => s,
-        Err(e) => {
+        Err(error) => {
             return Err(ristretto_types::Error::InternalError(format!(
-                "Compression error: {e}"
+                "Compression error: {error}"
             )));
         }
     };
@@ -307,9 +307,9 @@ pub async fn deflate_bytes_bytes<T: ristretto_types::Thread + 'static>(
         .compress(&input_bytes, &mut output_buffer, flush);
     let status = match status {
         Ok(s) => s,
-        Err(e) => {
+        Err(error) => {
             return Err(ristretto_types::Error::InternalError(format!(
-                "Compression error: {e}"
+                "Compression error: {error}"
             )));
         }
     };
@@ -516,10 +516,9 @@ pub async fn set_dictionary<T: ristretto_types::Thread + 'static>(
         .into());
     };
 
-    // flate2's set_dictionary is available but requires careful usage
-    if let Err(e) = context.compress.set_dictionary(&dict_bytes) {
+    if let Err(error) = context.compress.set_dictionary(&dict_bytes) {
         return Err(ristretto_types::Error::InternalError(format!(
-            "Failed to set dictionary: {e}"
+            "Failed to set dictionary: {error}"
         )));
     }
 

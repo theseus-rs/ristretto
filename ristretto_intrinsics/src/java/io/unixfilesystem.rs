@@ -14,7 +14,7 @@ use ristretto_types::Parameters;
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{JavaObject, Result};
-#[cfg(unix)]
+#[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -102,7 +102,7 @@ pub async fn check_access_0<T: ristretto_types::Thread + 'static>(
         return Ok(Some(Value::from(false)));
     };
 
-    #[cfg(unix)]
+    #[cfg(target_family = "unix")]
     let (can_read, can_write, can_execute) = {
         let mode = metadata.permissions().mode();
         // Check if any read bit is set (owner, group, or other)
@@ -118,7 +118,7 @@ pub async fn check_access_0<T: ristretto_types::Thread + 'static>(
         let readonly = metadata.permissions().readonly();
         // On non-Unix, use readonly flag for write permission
         // and assume read/execute are always available
-        (!readonly || true, !readonly, true)
+        (true, !readonly, true)
     };
 
     let allowed = (!access_mode.contains(FileAccessMode::READ) || can_read)
@@ -684,10 +684,10 @@ pub async fn set_permission_0<T: ristretto_types::Thread + 'static>(
         let file = file.as_object_ref()?;
         file.value("path")?.as_string()?
     };
-    let path = std::path::PathBuf::from(path);
+    let path = PathBuf::from(path);
     let modified: bool;
 
-    #[cfg(not(unix))]
+    #[cfg(target_family = "wasm")]
     {
         let _ = owner_only;
         let _ = enable;
@@ -696,7 +696,27 @@ pub async fn set_permission_0<T: ristretto_types::Thread + 'static>(
         modified = false;
     }
 
-    #[cfg(unix)]
+    #[cfg(not(any(target_family = "wasm", target_family = "unix")))]
+    {
+        let _ = owner_only;
+        let metadata = tokio::fs::metadata(&path).await?;
+        let mut permissions = metadata.permissions();
+
+        match access {
+            1 => {
+                // write
+                permissions.set_readonly(!enable);
+                modified = tokio::fs::set_permissions(&path, permissions).await.is_ok();
+            }
+            0 | 2 => {
+                // read or execute
+                modified = true;
+            }
+            _ => modified = false,
+        }
+    }
+
+    #[cfg(target_family = "unix")]
     {
         let metadata = tokio::fs::metadata(&path).await?;
         let mut permissions = metadata.permissions();

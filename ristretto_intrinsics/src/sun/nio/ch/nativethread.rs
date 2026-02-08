@@ -14,7 +14,8 @@ pub async fn current<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.NativeThread.current()J");
+    let id_val: i64 = tokio::task::try_id().map_or(1, |id| format!("{id}").parse().unwrap_or(1));
+    Ok(Some(Value::Long(id_val)))
 }
 
 #[intrinsic_method("sun/nio/ch/NativeThread.current0()J", GreaterThan(JAVA_17))]
@@ -41,7 +42,7 @@ pub async fn signal<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.NativeThread.signal(J)V");
+    Ok(None)
 }
 
 #[intrinsic_method("sun/nio/ch/NativeThread.signal0(J)V", GreaterThan(JAVA_17))]
@@ -70,28 +71,26 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.NativeThread.current()J")]
     async fn test_current() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = current(thread, Parameters::default()).await;
+        let result = current(thread, Parameters::default()).await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.NativeThread.current()J")]
     async fn test_current_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = current_0(thread, Parameters::default()).await;
+        let result = current_0(thread, Parameters::default()).await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.NativeThread.signal(J)V")]
     async fn test_signal() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = signal(thread, Parameters::default()).await;
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.NativeThread.signal(J)V")]
     async fn test_signal_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = signal_0(thread, Parameters::default()).await;

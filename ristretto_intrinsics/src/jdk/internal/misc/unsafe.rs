@@ -68,7 +68,7 @@ pub async fn allocate_instance<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn allocate_memory_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let bytes = parameters.pop_long()?;
@@ -80,7 +80,13 @@ pub async fn allocate_memory_0<T: ristretto_types::Thread + 'static>(
             .into(),
         );
     }
-    Ok(Some(Value::Long(1)))
+    if bytes == 0 {
+        return Ok(Some(Value::Long(0)));
+    }
+    let size = usize::try_from(bytes)?;
+    let vm = thread.vm()?;
+    let address = vm.native_memory().allocate(size);
+    Ok(Some(Value::Long(address)))
 }
 
 #[intrinsic_method(
@@ -582,21 +588,69 @@ pub async fn compare_and_set_reference<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn copy_memory_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _bytes = usize::try_from(parameters.pop_long()?)?;
-    let _destination_offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut destination) = parameters.pop()? else {
-        return Err(InternalError(
-            "copyMemory0: Invalid destination".to_string(),
-        ));
-    };
-    let _source_offset = usize::try_from(parameters.pop_long()?)?;
-    let Value::Object(ref mut source) = parameters.pop()? else {
-        return Err(InternalError("copyMemory0: Invalid source".to_string()));
-    };
-    destination.clone_from(source);
+    let bytes = usize::try_from(parameters.pop_long()?)?;
+    let destination_offset = parameters.pop_long()?;
+    let mut destination = parameters.pop()?;
+    let source_offset = parameters.pop_long()?;
+    let source = parameters.pop()?;
+
+    if bytes == 0 {
+        return Ok(None);
+    }
+
+    let src_is_null = source.is_null();
+    let dst_is_null = destination.is_null();
+
+    let vm = thread.vm()?;
+    let native_mem = vm.native_memory();
+
+    match (src_is_null, dst_is_null) {
+        (true, true) => {
+            // native-to-native
+            let data = native_mem.read_bytes(source_offset, bytes);
+            native_mem.write_bytes(destination_offset, &data);
+        }
+        (false, true) => {
+            // array-to-native
+            let Value::Object(Some(src_ref)) = &source else {
+                return Ok(None);
+            };
+            let guard = src_ref.read();
+            if let Some(src_bytes) = guard.as_bytes() {
+                let src_off = usize::try_from(source_offset)?;
+                let copy_len = bytes.min(src_bytes.len().saturating_sub(src_off));
+                if copy_len > 0 {
+                    native_mem
+                        .write_bytes(destination_offset, &src_bytes[src_off..src_off + copy_len]);
+                }
+            }
+        }
+        (true, false) => {
+            // native-to-array
+            let Value::Object(Some(dst_ref)) = &destination else {
+                return Ok(None);
+            };
+            let data = native_mem.read_bytes(source_offset, bytes);
+            let mut guard = dst_ref.write();
+            if let Some(dst_bytes) = guard.as_bytes_mut() {
+                let dst_off = usize::try_from(destination_offset)?;
+                let copy_len = bytes.min(dst_bytes.len().saturating_sub(dst_off));
+                if copy_len > 0 {
+                    dst_bytes[dst_off..dst_off + copy_len].copy_from_slice(&data[..copy_len]);
+                }
+            }
+        }
+        (false, false) => {
+            // array-to-array
+            if let (Value::Object(dst), Value::Object(src)) = (&mut destination, &source) {
+                dst.clone_from(src);
+            }
+        }
+    }
+
     Ok(None)
 }
 
@@ -884,9 +938,14 @@ pub async fn ensure_class_initialized_0<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn free_memory_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let address = parameters.pop_long()?;
+    if address != 0 {
+        let vm = thread.vm()?;
+        vm.native_memory().free(address);
+    }
     Ok(None)
 }
 
@@ -1128,9 +1187,32 @@ async fn put_reference_type<T: ristretto_types::Thread + 'static>(
     }
     let offset_long = parameters.pop_long()?;
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(
-            NullPointerException(Some("putReferenceType: Invalid reference".to_string())).into(),
-        );
+        // Null base object indicates native memory operation
+        let vm = thread.vm()?;
+        let native_mem = vm.native_memory();
+        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        match (base_type, &value) {
+            (Some(BaseType::Byte | BaseType::Boolean), Value::Int(v)) => {
+                native_mem.write_bytes(offset_long, &[*v as u8]);
+            }
+            (Some(BaseType::Short | BaseType::Char), Value::Int(v)) => {
+                native_mem.write_bytes(offset_long, &(*v as i16).to_ne_bytes());
+            }
+            (Some(BaseType::Int), Value::Int(v)) => {
+                native_mem.write_bytes(offset_long, &v.to_ne_bytes());
+            }
+            (Some(BaseType::Long), Value::Long(v)) => {
+                native_mem.write_bytes(offset_long, &v.to_ne_bytes());
+            }
+            (Some(BaseType::Float), Value::Float(v)) => {
+                native_mem.write_bytes(offset_long, &v.to_ne_bytes());
+            }
+            (Some(BaseType::Double), Value::Double(v)) => {
+                native_mem.write_bytes(offset_long, &v.to_ne_bytes());
+            }
+            _ => {}
+        }
+        return Ok(None);
     };
 
     let is_static = offset_long & STATIC_FIELD_OFFSET_MASK != 0;
@@ -1884,10 +1966,14 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     if vm.java_major_version() >= 17 {
-        // Set the endian to big endian
         let class = thread.class("jdk.internal.misc.UnsafeConstants").await?;
+        let address_size = i32::try_from(REFERENCE_SIZE)?;
+        class.set_static_value("ADDRESS_SIZE0", Value::Int(address_size))?;
         let big_endian = cfg!(target_endian = "big");
         class.set_static_value("BIG_ENDIAN", Value::from(big_endian))?;
+        let unaligned = cfg!(any(target_arch = "x86", target_arch = "x86_64"));
+        class.set_static_value("UNALIGNED_ACCESS", Value::from(unaligned))?;
+        class.set_static_value("PAGE_SIZE", Value::Int(4096))?;
     }
     Ok(None)
 }
@@ -1898,7 +1984,7 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn set_memory_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -1911,6 +1997,11 @@ pub async fn set_memory_0<T: ristretto_types::Thread + 'static>(
     let offset = usize::try_from(offset)?;
 
     if object.is_null() {
+        // Null base means native memory
+        let address = i64::try_from(offset)?;
+        let data = vec![value; bytes];
+        let vm = thread.vm()?;
+        vm.native_memory().write_bytes(address, &data);
         return Ok(None);
     }
 
@@ -2124,8 +2215,12 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_long(1024); // Request 1024 bytes
         let result = allocate_memory_0(thread, parameters).await?;
-        // The implementation returns 0 as a pseudo-address
-        assert_eq!(result, Some(Value::Long(1)));
+        // The implementation returns a managed memory address (>= 0x1000_0000)
+        let addr = result.expect("address").as_i64()?;
+        assert!(
+            addr >= 0x1000_0000,
+            "Expected managed memory address, got {addr}"
+        );
         Ok(())
     }
 
@@ -2346,7 +2441,14 @@ mod tests {
     #[tokio::test]
     async fn test_free_memory_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = free_memory_0(thread, Parameters::default()).await?;
+        // First allocate memory, then free it
+        let mut alloc_params = Parameters::default();
+        alloc_params.push_long(64);
+        let result = allocate_memory_0(thread.clone(), alloc_params).await?;
+        let addr = result.expect("address").as_i64()?;
+        let mut free_params = Parameters::default();
+        free_params.push_long(addr);
+        let result = free_memory_0(thread, free_params).await?;
         assert_eq!(result, None);
         Ok(())
     }

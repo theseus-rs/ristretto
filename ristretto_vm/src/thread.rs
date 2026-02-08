@@ -461,7 +461,13 @@ impl Thread {
                 }
                 InitializationAction::WaitForInitialization => {
                     // Step 4: Another thread is initializing, wait and recheck
-                    class.wait_for_initialization().await;
+                    // Use a timeout to handle race conditions where the notification was sent
+                    // before we started waiting.
+                    let _ = tokio::time::timeout(
+                        Duration::from_millis(10),
+                        class.wait_for_initialization(),
+                    )
+                    .await;
                     // Loop will continue to recheck the state
                 }
                 InitializationAction::ShouldInitialize => {

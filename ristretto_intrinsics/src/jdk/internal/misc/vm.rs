@@ -96,7 +96,7 @@ pub async fn latest_user_defined_loader_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.VM.latestUserDefinedLoader0()Ljava/lang/ClassLoader;")
+    Ok(Some(Value::Object(None)))
 }
 
 #[cfg(test)]
@@ -166,11 +166,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.VM.latestUserDefinedLoader0()Ljava/lang/ClassLoader;"
-    )]
-    async fn test_latest_user_defined_loader_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = latest_user_defined_loader_0(thread, Parameters::default()).await;
+    async fn test_latest_user_defined_loader_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = latest_user_defined_loader_0(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
     }
 }

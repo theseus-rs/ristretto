@@ -14,6 +14,7 @@ mod java_error;
 mod java_object;
 pub mod module_access;
 pub mod monitor;
+pub mod native_memory;
 mod parameters;
 mod rust_value;
 mod thread;
@@ -27,6 +28,7 @@ pub use java_object::JavaObject;
 pub use module_access::{
     ALL_UNNAMED, AccessCheckResult, DefinedModule, ModuleAccess, package_from_class_name,
 };
+pub use native_memory::NativeMemory;
 pub use parameters::Parameters;
 pub use rust_value::RustValue;
 use std::pin::Pin;
