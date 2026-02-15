@@ -65,12 +65,12 @@ public class Test {
         final boolean[] dataReady = {false};
 
         Thread producer = new Thread(() -> {
-            System.out.println("Producer: Producing data");
             try {
                 Thread.sleep(50);
             } catch (InterruptedException e) {
                 System.out.println("Producer interrupted");
             }
+            System.out.println("Producer: Producing data");
             synchronized (lock) {
                 dataReady[0] = true;
                 System.out.println("Producer: Data ready, notifying");
@@ -92,8 +92,8 @@ public class Test {
             }
         });
 
-        producer.start();
         consumer.start();
+        producer.start();
 
         try {
             producer.join();

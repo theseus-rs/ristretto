@@ -1,3 +1,4 @@
+use crate::java::lang::thread::{ThreadState, set_thread_status};
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{ObjectArray, Reference, Value};
@@ -5,7 +6,9 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Assignable;
 use ristretto_types::Error::InternalError;
-use ristretto_types::JavaError::{CloneNotSupportedException, IllegalArgumentException};
+use ristretto_types::JavaError::{
+    CloneNotSupportedException, IllegalArgumentException, InterruptedException,
+};
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
 use ristretto_types::VM;
@@ -217,83 +220,38 @@ pub async fn wait_0<T: ristretto_types::Thread + 'static>(
         return Err(IllegalArgumentException("timeout value is negative".to_string()).into());
     }
 
-    // Check if we're waiting on a Thread object for join()
-    // This logic is preserved for "Thread.join()" behavior compatibility
-    // until we unify Thread.exit() with monitor notification.
-    let is_thread_object = {
-        let guard = reference.read();
-        if let Ok(class_name) = guard.class_name() {
-            class_name == "java/lang/Thread" || class_name.starts_with("java/lang/Thread$")
-        } else {
-            false
-        }
-    };
+    // Use standard monitor wait / notify for all objects including Thread objects. Thread
+    // termination calls notifyAll() on the Thread object's monitor, so Thread.join() works
+    // correctly via the monitor mechanism.
+    let vm = thread.vm()?;
+    let monitor_id = { get_monitor_id(&reference.read()) };
+    if let Some(id) = monitor_id {
+        let monitor = vm.monitor_registry().monitor(id);
+        let thread_clone = thread.clone();
+        let is_interrupted = move || thread_clone.is_interrupted(false);
 
-    if is_thread_object {
-        // For Thread.join(), we need to poll until the thread is terminated
-        // The thread's eetop field is set to 0 when the thread terminates
-        // TODO: Refactor this to use monitor notification from the dying thread
-        let start = std::time::Instant::now();
-        let timeout_duration = if millis == 0 {
-            // Infinite wait
-            Duration::from_secs(u64::MAX)
+        let thread_object = thread.java_object().await;
+        let interrupted = if millis == 0 {
+            let _ = set_thread_status(&thread_object, ThreadState::WAITING);
+            let result = monitor
+                .wait_interruptibly(thread.id(), is_interrupted)
+                .await;
+            let _ = set_thread_status(&thread_object, ThreadState::RUNNABLE);
+            result?
         } else {
-            Duration::from_millis(u64::try_from(millis)?)
+            let duration = Duration::from_millis(u64::try_from(millis)?);
+            let _ = set_thread_status(&thread_object, ThreadState::TIMED_WAITING);
+            let result = monitor
+                .wait_timeout_interruptibly(thread.id(), duration, is_interrupted)
+                .await;
+            let _ = set_thread_status(&thread_object, ThreadState::RUNNABLE);
+            result?
         };
 
-        loop {
-            // Check for interruption
-            if thread.is_interrupted(true) {
-                return Err(ristretto_types::JavaError::InterruptedException(
-                    "Thread interrupted while waiting".into(),
-                )
-                .into());
-            }
-
-            // Check if the thread has terminated (eetop == 0)
-            let is_terminated = {
-                if let Some(guard) = reference.try_read() {
-                    if let Reference::Object(obj) = &*guard {
-                        if let Ok(eetop) = obj.value("eetop") {
-                            eetop.as_i64().unwrap_or(0) == 0
-                        } else {
-                            // Field not found?
-                            true
-                        }
-                    } else {
-                        // Not an object (e.g. array), assume generic wait/terminated
-                        true
-                    }
-                } else {
-                    false
-                }
-            };
-
-            if is_terminated {
-                return Ok(None);
-            }
-
-            if start.elapsed() >= timeout_duration {
-                return Ok(None);
-            }
-
-            // Sleep briefly and check again
-            tokio::time::sleep(Duration::from_millis(10)).await;
-        }
-    } else {
-        // Normal Object.wait() using Monitors
-        let vm = thread.vm()?;
-        let monitor_id = { get_monitor_id(&reference.read()) };
-        if let Some(id) = monitor_id {
-            let monitor = vm.monitor_registry().monitor(id);
-
-            // Perform the wait
-            if millis == 0 {
-                monitor.wait(thread.id()).await?;
-            } else {
-                let duration = Duration::from_millis(u64::try_from(millis)?);
-                monitor.wait_timeout(thread.id(), duration).await?;
-            }
+        if interrupted {
+            // Clear the interrupt flag (consumed by InterruptedException)
+            thread.is_interrupted(true);
+            return Err(InterruptedException("Thread interrupted while waiting".into()).into());
         }
     }
 

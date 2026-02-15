@@ -4,6 +4,7 @@ use crate::frame::ExecutionResult::Continue;
 use crate::frame::Frame;
 use crate::operand_stack::OperandStack;
 use ristretto_intrinsics::get_monitor_id;
+use ristretto_intrinsics::java::lang::thread::{ThreadState, set_thread_status};
 
 /// # References
 ///
@@ -26,7 +27,10 @@ pub(crate) async fn monitorenter(
         let thread = frame.thread()?;
         let vm = thread.vm()?;
         let monitor = vm.monitor_registry().monitor(id);
+        let thread_object = thread.java_object().await;
+        let _ = set_thread_status(&thread_object, ThreadState::BLOCKED);
         monitor.acquire(thread.id()).await?;
+        let _ = set_thread_status(&thread_object, ThreadState::RUNNABLE);
     }
 
     Ok(Continue)

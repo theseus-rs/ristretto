@@ -1,12 +1,14 @@
 //! Call site cache for invokedynamic instruction.
 //!
 //! This module provides a thread-safe cache that tracks the resolution state of invokedynamic call
-//! sites.
+//! sites. When multiple threads attempt to resolve the same call site concurrently, only the first
+//! thread performs the resolution while others wait for the result.
 
-use crate::Error::InternalError;
 use crate::Result;
 use dashmap::DashMap;
 use ristretto_classloader::Value;
+use std::sync::Arc;
+use tokio::sync::Notify;
 
 /// Unique identifier for an invokedynamic call site
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -30,8 +32,8 @@ impl CallSiteKey {
 /// State of an invokedynamic call site resolution
 #[derive(Debug, Clone)]
 pub enum CallSiteState {
-    /// Call site resolution is currently in progress
-    InProgress,
+    /// Call site resolution is currently in progress; waiters are notified when done
+    InProgress(Arc<Notify>),
     /// Call site has been successfully resolved
     Resolved(Value),
 }
@@ -54,8 +56,8 @@ impl CallSiteCache {
     /// Resolves a call site given a key and a resolver function.
     ///
     /// This method checks if the call site is already being resolved or has been resolved
-    /// (returning cached result). If neither, it marks the call site as in progress, executes the
-    /// resolver function, and caches the result.
+    /// (returning cached result). If another thread is currently resolving this call site,
+    /// this method waits for that resolution to complete and returns the cached result.
     ///
     /// # Arguments
     ///
@@ -68,10 +70,7 @@ impl CallSiteCache {
     ///
     /// # Errors
     ///
-    /// Returns an error if:
-    /// - Recursive call site resolution is detected
-    /// - The resolver function fails
-    /// - Cache operations fail
+    /// Returns an error if the resolver function fails
     pub async fn resolve_with_cache<F, Fut>(&self, key: CallSiteKey, resolver: F) -> Result<Value>
     where
         F: FnOnce() -> Fut,
@@ -82,29 +81,38 @@ impl CallSiteCache {
         debug!("CallSiteCache: Checking cache for key: {key:?}");
 
         // Check current state
-        match self.states.get(&key) {
-            Some(ref state) => match &**state {
-                CallSiteState::InProgress => {
-                    debug!("CallSiteCache: RECURSION DETECTED for key: {key:?}");
-                    return Err(InternalError(format!(
-                        "Recursive invokedynamic call site resolution detected for class '{}' at index {}",
-                        key.class_name, key.instruction_index
-                    )));
+        loop {
+            let wait_notify = {
+                if let Some(ref state) = self.states.get(&key) {
+                    match &**state {
+                        CallSiteState::InProgress(notify) => {
+                            // Another thread is resolving this call site; wait for it
+                            debug!("CallSiteCache: Another thread resolving, waiting: {key:?}");
+                            Some(notify.clone())
+                        }
+                        CallSiteState::Resolved(value) => {
+                            debug!("CallSiteCache: Returning cached result for key: {key:?}");
+                            return Ok(value.clone());
+                        }
+                    }
+                } else {
+                    debug!("CallSiteCache: Key not found in cache, will resolve: {key:?}");
+                    None
                 }
-                CallSiteState::Resolved(value) => {
-                    debug!("CallSiteCache: Returning cached result for key: {key:?}");
-                    return Ok(value.clone());
-                }
-            },
-            None => {
-                debug!("CallSiteCache: Key not found in cache, will resolve: {key:?}");
-                // Call site not yet resolved, continue to resolution
+            }; // DashMap guard is dropped here
+
+            if let Some(notify) = wait_notify {
+                notify.notified().await;
+            } else {
+                break;
             }
         }
 
-        // Mark as in progress
+        // Mark as in progress with a Notify so other threads can wait
+        let notify = Arc::new(Notify::new());
         debug!("CallSiteCache: Marking as InProgress: {key:?}");
-        self.states.insert(key.clone(), CallSiteState::InProgress);
+        self.states
+            .insert(key.clone(), CallSiteState::InProgress(notify.clone()));
 
         // Perform resolution
         debug!("CallSiteCache: Starting resolution for key: {key:?}");
@@ -123,9 +131,13 @@ impl CallSiteCache {
         } else {
             // Remove in-progress marker on failure to allow retry
             debug!("CallSiteCache: Removing failed resolution from cache for key: {key:?}");
-            self.states
-                .remove_if(&key, |_, state| matches!(state, CallSiteState::InProgress));
+            self.states.remove_if(&key, |_, state| {
+                matches!(state, CallSiteState::InProgress(_))
+            });
         }
+
+        // Notify all waiters that resolution is complete (or failed)
+        notify.notify_waiters();
 
         result
     }
@@ -172,29 +184,36 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_call_site_cache_prevents_recursion() {
+    async fn test_call_site_cache_concurrent_resolution() -> Result<()> {
         let cache = Arc::new(CallSiteCache::new());
         let key = CallSiteKey::new("TestClass".to_string(), 42);
+        let expected_value = Value::Object(None);
 
-        let cache_clone = cache.clone();
-        let key_clone = key.clone();
+        // Spawn two tasks that try to resolve the same key concurrently
+        let cache1 = cache.clone();
+        let key1 = key.clone();
+        let expected1 = expected_value.clone();
+        let handle1 = tokio::spawn(async move {
+            cache1
+                .resolve_with_cache(key1, || async { Ok(expected1) })
+                .await
+        });
 
-        let result = cache
-            .resolve_with_cache(key, || async move {
-                // This should detect recursion and fail
-                cache_clone
-                    .resolve_with_cache(key_clone, || async { Ok(Value::Object(None)) })
-                    .await
-            })
-            .await;
+        let cache2 = cache.clone();
+        let key2 = key.clone();
+        let expected2 = expected_value.clone();
+        let handle2 = tokio::spawn(async move {
+            cache2
+                .resolve_with_cache(key2, || async { Ok(expected2) })
+                .await
+        });
 
-        assert!(result.is_err());
-        assert!(
-            result
-                .expect_err("Should return an error")
-                .to_string()
-                .contains("Recursive invokedynamic")
-        );
+        let result1 = handle1.await.unwrap()?;
+        let result2 = handle2.await.unwrap()?;
+
+        assert_eq!(result1, expected_value);
+        assert_eq!(result2, expected_value);
+        Ok(())
     }
 
     #[tokio::test]

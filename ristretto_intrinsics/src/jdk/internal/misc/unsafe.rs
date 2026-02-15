@@ -1,4 +1,5 @@
 use crate::java::lang::class::get_class;
+use crate::java::lang::thread::{ThreadState, set_thread_status};
 use ristretto_classfile::ClassFile;
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{BaseType, JAVA_11, JAVA_17};
@@ -1687,7 +1688,15 @@ pub async fn park<T: ristretto_types::Thread + 'static>(
 ) -> Result<Option<Value>> {
     let time = u64::try_from(parameters.pop_long()?)?;
     let is_absolute = parameters.pop_bool()?;
+    let thread_object = thread.java_object().await;
+    let state = if time == 0 {
+        ThreadState::WAITING
+    } else {
+        ThreadState::TIMED_WAITING
+    };
+    let _ = set_thread_status(&thread_object, state);
     thread.park(is_absolute, time).await?;
+    let _ = set_thread_status(&thread_object, ThreadState::RUNNABLE);
     Ok(None)
 }
 
@@ -2128,9 +2137,28 @@ pub async fn unaligned_access_0<T: ristretto_types::Thread + 'static>(
 #[async_method]
 pub async fn unpark<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    thread.unpark();
+    let target_object = parameters.pop()?;
+    // unpark(null) is a no-op per JVM spec
+    let thread_id = {
+        let Ok(target_object) = target_object.as_object_ref() else {
+            return Ok(None);
+        };
+        let Ok(eetop) = target_object.value("eetop") else {
+            return Ok(None);
+        };
+        eetop.as_i64().unwrap_or(0)
+    };
+    if thread_id == 0 {
+        return Ok(None);
+    }
+    let thread_id = u64::try_from(thread_id)?;
+    let vm = thread.vm()?;
+    let thread_handles = vm.thread_handles();
+    if let Some(thread_handle) = thread_handles.get(&thread_id).await {
+        thread_handle.thread.unpark();
+    }
     Ok(None)
 }
 
@@ -2689,7 +2717,9 @@ mod tests {
     #[tokio::test]
     async fn test_unpark() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = unpark(thread, Parameters::default()).await?;
+        let mut parameters = Parameters::default();
+        parameters.push(Value::Object(None)); // null thread = no-op
+        let result = unpark(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
     }
