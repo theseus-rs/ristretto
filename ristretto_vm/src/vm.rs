@@ -495,8 +495,18 @@ impl VM {
         let thread_id = self.next_thread_id()?;
         let thread = Thread::new(&self.vm, thread_id);
         let thread_id = i64::try_from(thread.id())?;
-        let thread_group = thread
+        // Create the system thread group (no-arg constructor creates system group)
+        let system_group = thread
             .object("java.lang.ThreadGroup", "", &[] as &[Value])
+            .await?;
+        // Create the main thread group with system as parent, matching JVM behavior
+        let main_name: Value = "main".to_object(&thread).await?;
+        let thread_group = thread
+            .object(
+                "java.lang.ThreadGroup",
+                "Ljava/lang/ThreadGroup;Ljava/lang/String;",
+                &[system_group, main_name],
+            )
             .await?;
         let java_version = self.java_class_file_version();
 

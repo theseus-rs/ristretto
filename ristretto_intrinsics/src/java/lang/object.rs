@@ -5,7 +5,9 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Assignable;
 use ristretto_types::Error::InternalError;
-use ristretto_types::JavaError::{CloneNotSupportedException, IllegalArgumentException};
+use ristretto_types::JavaError::{
+    CloneNotSupportedException, IllegalArgumentException, InterruptedException,
+};
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
 use ristretto_types::VM;
@@ -286,13 +288,25 @@ pub async fn wait_0<T: ristretto_types::Thread + 'static>(
         let monitor_id = { get_monitor_id(&reference.read()) };
         if let Some(id) = monitor_id {
             let monitor = vm.monitor_registry().monitor(id);
+            let thread_clone = thread.clone();
+            let is_interrupted = move || thread_clone.is_interrupted(false);
 
-            // Perform the wait
-            if millis == 0 {
-                monitor.wait(thread.id()).await?;
+            // Perform the wait with interrupt checking
+            let interrupted = if millis == 0 {
+                monitor
+                    .wait_interruptibly(thread.id(), is_interrupted)
+                    .await?
             } else {
                 let duration = Duration::from_millis(u64::try_from(millis)?);
-                monitor.wait_timeout(thread.id(), duration).await?;
+                monitor
+                    .wait_timeout_interruptibly(thread.id(), duration, is_interrupted)
+                    .await?
+            };
+
+            if interrupted {
+                // Clear the interrupt flag (consumed by InterruptedException)
+                thread.is_interrupted(true);
+                return Err(InterruptedException("Thread interrupted while waiting".into()).into());
             }
         }
     }

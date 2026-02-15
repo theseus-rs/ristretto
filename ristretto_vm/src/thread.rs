@@ -1,5 +1,5 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
-use crate::JavaError::{RuntimeException, VerifyError};
+use crate::JavaError::{RuntimeException, StackOverflowError, VerifyError};
 use crate::Parameters;
 use crate::RustValue;
 use crate::configuration::VerifyMode;
@@ -702,6 +702,15 @@ impl Thread {
             }
             .into());
         } else {
+            // Check for native stack overflow before creating a new frame
+            if let Some(remaining) = stacker::remaining_stack()
+                && remaining < 512 * 1024
+            {
+                return Err(StackOverflowError(format!(
+                    "{class_name}.{method_name}{method_descriptor}"
+                ))
+                .into());
+            }
             let frame = Arc::new(Frame::new(&self.thread, class, method));
 
             // Limit the scope of the write lock to just adding the frame to the thread. This

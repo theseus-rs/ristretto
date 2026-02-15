@@ -541,9 +541,32 @@ pub async fn start_0<T: ristretto_types::Thread + 'static>(
                 thread_object: thread_object.clone(),
             };
 
-            let _ = spawn_thread
+            let result = spawn_thread
                 .execute(&thread_class, &run_method, &[thread_value])
                 .await;
+
+            // Handle uncaught exceptions per JVM spec:
+            // 1. Thread's uncaughtExceptionHandler
+            // 2. ThreadGroup's uncaughtException
+            // 3. Default uncaughtExceptionHandler
+            if let Err(ristretto_types::Error::Throwable(throwable)) = result {
+                let throwable_val = throwable.clone();
+                let thread_ref = thread_object.clone();
+
+                // Try to call the thread's dispatchUncaughtException method
+                // which handles the full JVM dispatch chain
+                if let Ok(dispatch_method) = thread_class
+                    .try_get_method("dispatchUncaughtException", "(Ljava/lang/Throwable;)V")
+                {
+                    let _ = spawn_thread
+                        .execute(
+                            &thread_class,
+                            &dispatch_method,
+                            &[thread_ref, throwable_val],
+                        )
+                        .await;
+                }
+            }
 
             // Note: We intentionally do NOT remove the thread handle here.
             // The VM's wait_for_non_daemon_threads() will await the JoinHandle

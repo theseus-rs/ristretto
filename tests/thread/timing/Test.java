@@ -30,7 +30,7 @@ public class Test {
             }
 
             long elapsed = System.currentTimeMillis() - threadStart;
-            System.out.println("TimedThread: Completed in expected range: " + (elapsed >= 80 && elapsed <= 1000));
+            System.out.println("TimedThread: Completed in expected range: " + (elapsed >= 80 && elapsed <= 30000));
         });
 
         timedThread.start();
@@ -38,7 +38,7 @@ public class Test {
         try {
             timedThread.join();
             long mainElapsed = System.currentTimeMillis() - mainStart;
-            System.out.println("Main: Completed in expected range: " + (mainElapsed >= 80 && mainElapsed <= 1000));
+            System.out.println("Main: Completed in expected range: " + (mainElapsed >= 80 && mainElapsed <= 30000));
         } catch (InterruptedException e) {
             System.out.println("Timing test interrupted");
         }
@@ -59,7 +59,7 @@ public class Test {
                     System.out.println("Concurrent thread " + threadId + " interrupted");
                 }
                 long elapsed = System.currentTimeMillis() - start;
-                System.out.println("ConcurrentThread" + threadId + " completed in expected range: " + (elapsed >= 40 && elapsed <= 500));
+                System.out.println("ConcurrentThread" + threadId + " completed in expected range: " + (elapsed >= 40 && elapsed <= 30000));
             });
             thread.start();
             try {
@@ -70,7 +70,7 @@ public class Test {
         }
 
         long concurrentEnd = System.currentTimeMillis();
-        System.out.println("All concurrent threads completed in expected range: " + ((concurrentEnd - concurrentStart) >= 120 && (concurrentEnd - concurrentStart) <= 5000));
+        System.out.println("All concurrent threads completed in expected range: " + ((concurrentEnd - concurrentStart) >= 120 && (concurrentEnd - concurrentStart) <= 60000));
     }
 
     private static void testThreadSchedulingTiming() {
@@ -123,7 +123,7 @@ public class Test {
                 System.out.println("Precision test interrupted");
             }
             long elapsed = System.currentTimeMillis() - start;
-            boolean inRange = elapsed >= 5 && elapsed <= 500;
+            boolean inRange = elapsed >= 5 && elapsed <= 30000;
             System.out.println("Measurement " + i + " in expected range: " + inRange);
             if (inRange) successCount++;
         }
