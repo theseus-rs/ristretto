@@ -14,7 +14,11 @@ use tracing::{debug, error, info, trace};
 use tracing_subscriber::{EnvFilter, fmt};
 
 /// Regex to filter which tests to run. Defaults to matching all tests.
-static TEST_FILTER: LazyLock<Regex> = LazyLock::new(|| Regex::new(".*").expect("valid regex"));
+/// Set the `TEST_FILTER` environment variable to a regex pattern to filter tests.
+static TEST_FILTER: LazyLock<Regex> = LazyLock::new(|| {
+    let pattern = std::env::var("TEST_FILTER").unwrap_or_else(|_| ".*".to_string());
+    Regex::new(&pattern).expect("valid regex")
+});
 const TEST_CLASS_NAME: &str = "Test";
 const TEST_FILE: &str = "Test.java";
 const IGNORE_FILE: &str = "ignore.txt";
@@ -37,7 +41,7 @@ fn normalize_output(output: &str) -> String {
 }
 
 #[test]
-fn compatibility_tests() -> Result<()> {
+fn c() -> Result<()> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let tests_root_dir = cargo_manifest.join("..").join("tests").canonicalize()?;
 

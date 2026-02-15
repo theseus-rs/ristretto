@@ -1,2 +1,0 @@
-Thread tests hang due to concurrent execution issues with tokio::spawn.
-The spawned thread task blocks when trying to execute the run() method.

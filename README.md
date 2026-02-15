@@ -54,11 +54,6 @@ surrogates from Java's UTF-16 encoding. Any unpaired surrogates will be replaced
 The JIT compiler only supports functions that use primitive type byte codes. The JIT compiler is not implemented for
 functions that use object byte code or call other functions.
 
-#### Threading
-
-Threading is partially implemented. The JVM has been structured to implement threading using async with the `tokio`
-runtime.
-
 #### Runtime Native Methods
 
 The Java runtime requires hundreds of native methods. This project aims to provide Rust equivalents for these methods

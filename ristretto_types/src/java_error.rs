@@ -175,6 +175,12 @@ pub enum JavaError {
     /// - [RuntimeException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/RuntimeException.html)
     #[error("{0}")]
     RuntimeException(String),
+    /// `StackOverflowError`
+    ///
+    /// # References
+    /// - [StackOverflowError](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/StackOverflowError.html)
+    #[error("{0}")]
+    StackOverflowError(String),
     /// `UnsupportedOperationException`
     ///
     /// # References
@@ -223,6 +229,7 @@ impl JavaError {
             JavaError::NegativeArraySizeException(_) => "java.lang.NegativeArraySizeException",
             JavaError::NullPointerException(_) => "java.lang.NullPointerException",
             JavaError::RuntimeException(_) => "java.lang.RuntimeException",
+            JavaError::StackOverflowError(_) => "java.lang.StackOverflowError",
             JavaError::UnsupportedOperationException(_) => {
                 "java.lang.UnsupportedOperationException"
             }
@@ -449,6 +456,13 @@ mod tests {
     fn test_runtime_exception() {
         let error = JavaError::RuntimeException("foo".to_string());
         assert_eq!(error.class_name(), "java.lang.RuntimeException");
+        assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
+    fn test_stack_overflow_error() {
+        let error = JavaError::StackOverflowError("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.StackOverflowError");
         assert_eq!(error.message(), "foo");
     }
 

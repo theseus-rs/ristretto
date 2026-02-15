@@ -1,3 +1,6 @@
+import java.util.*;
+import java.util.concurrent.*;
+
 public class Test {
     public static void main(String[] args) {
         System.out.println("=== Exception Tests ===");
@@ -106,12 +109,10 @@ public class Test {
             synchronized (waitLock) {
                 try {
                     System.out.println("WaitExceptionThread: Going to wait");
-                    waitLock.wait(100); // Wait with timeout
+                    waitLock.wait(500);
                     System.out.println("WaitExceptionThread: Wait completed");
                 } catch (InterruptedException e) {
                     System.out.println("WaitExceptionThread: Wait interrupted");
-                } catch (Exception e) {
-                    System.out.println("WaitExceptionThread: Other exception: " + e.getClass().getSimpleName());
                 }
             }
         });
@@ -120,7 +121,7 @@ public class Test {
 
         try {
             Thread.sleep(50);
-            waitExceptionThread.interrupt(); // Cause InterruptedException
+            waitExceptionThread.interrupt();
             waitExceptionThread.join();
         } catch (InterruptedException e) {
             System.out.println("Wait exception test interrupted");
@@ -129,9 +130,10 @@ public class Test {
 
     private static void testMultipleExceptionsInThreadGroup() {
         System.out.println("Test 5: Multiple exceptions in thread group");
+        ConcurrentLinkedQueue<String> messages = new ConcurrentLinkedQueue<>();
         ThreadGroup exceptionGroup = new ThreadGroup("ExceptionGroup") {
             public void uncaughtException(Thread t, Throwable e) {
-                System.out.println("ExceptionGroup: Thread " + t.getName() +
+                messages.add("ExceptionGroup: Thread " + t.getName() +
                                  " had uncaught " + e.getClass().getSimpleName());
             }
         };
@@ -142,7 +144,7 @@ public class Test {
         for (int i = 0; i < 3; i++) {
             final int threadId = i;
             exceptionThreads[i] = new Thread(exceptionGroup, () -> {
-                System.out.println("GroupExceptionThread" + threadId + ": About to throw " + exceptionTypes[threadId]);
+                messages.add("GroupExceptionThread" + threadId + ": About to throw " + exceptionTypes[threadId]);
                 switch (threadId) {
                     case 0:
                         throw new RuntimeException("Group runtime exception");
@@ -165,6 +167,12 @@ public class Test {
         } catch (InterruptedException e) {
             System.out.println("Group exception test interrupted");
         }
+
+        List<String> sorted = new ArrayList<>(messages);
+        Collections.sort(sorted);
+        for (String msg : sorted) {
+            System.out.println(msg);
+        }
     }
 
     private static void testExceptionPropagationAndTermination() {
@@ -183,7 +191,6 @@ public class Test {
             } catch (RuntimeException e) {
                 System.out.println("TerminationThread: Caught RuntimeException: " + e.getMessage());
                 System.out.println("TerminationThread: Thread will terminate");
-                // Thread terminates here due to uncaught exception propagation
                 throw e;
             } catch (InterruptedException e) {
                 System.out.println("TerminationThread: Interrupted");
@@ -210,7 +217,6 @@ public class Test {
         Thread errorThread = new Thread(() -> {
             try {
                 System.out.println("ErrorThread: About to cause StackOverflowError");
-                // This will cause StackOverflowError
                 recursiveMethod(0);
             } catch (StackOverflowError e) {
                 System.out.println("ErrorThread: Caught StackOverflowError");
@@ -229,9 +235,6 @@ public class Test {
     }
 
     private static void recursiveMethod(int depth) {
-        if (depth > 10000) { // Prevent infinite recursion in case of deep stack
-            throw new RuntimeException("Stopped recursion at depth " + depth);
-        }
         recursiveMethod(depth + 1);
     }
 }

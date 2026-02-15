@@ -1,3 +1,6 @@
+import java.util.*;
+import java.util.concurrent.*;
+
 public class Test {
     public static void main(String[] args) {
         System.out.println("=== Virtual Thread Tests ===");
@@ -10,13 +13,9 @@ public class Test {
     }
 
     private static void testVirtualThreadSupportCheck() {
-        // Note: Virtual threads were introduced in Java 19 as preview and finalized in Java 21
-        // These tests will work on compatible JVMs, otherwise they'll show compatibility info
-
         try {
             System.out.println("Test 1: Virtual thread support check");
 
-            // Try to create a virtual thread using reflection for compatibility
             Class<?> threadClass = Thread.class;
             java.lang.reflect.Method ofVirtualMethod = null;
 
@@ -24,25 +23,18 @@ public class Test {
                 ofVirtualMethod = threadClass.getMethod("ofVirtual");
                 System.out.println("Virtual thread support: Available");
 
-                // Test virtual thread creation and execution
                 Object builderObj = ofVirtualMethod.invoke(null);
                 java.lang.reflect.Method startMethod = builderObj.getClass().getMethod("start", Runnable.class);
 
                 Thread virtualThread = (Thread) startMethod.invoke(builderObj, (Runnable) () -> {
-                    System.out.println("VirtualThread: Running on " + Thread.currentThread());
+                    System.out.println("VirtualThread: Running");
                     System.out.println("VirtualThread: Is virtual: " + Thread.currentThread().isVirtual());
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        System.out.println("VirtualThread interrupted");
-                    }
                 });
 
                 virtualThread.join();
 
             } catch (NoSuchMethodException e) {
                 System.out.println("Virtual thread support: Not available (requires Java 19+)");
-                System.out.println("Running alternative tests with platform threads");
                 runPlatformThreadTests();
             }
 
@@ -55,13 +47,11 @@ public class Test {
     private static void testPlatformThreadCharacteristics() {
         System.out.println("Test 2: Platform thread characteristics");
         Thread platformThread = new Thread(() -> {
-            System.out.println("PlatformThread: Running on " + Thread.currentThread());
             System.out.println("PlatformThread: Name: " + Thread.currentThread().getName());
             System.out.println("PlatformThread: Priority: " + Thread.currentThread().getPriority());
             System.out.println("PlatformThread: ThreadGroup: " + Thread.currentThread().getThreadGroup().getName());
 
             try {
-                // Check if isVirtual method exists
                 java.lang.reflect.Method isVirtualMethod = Thread.class.getMethod("isVirtual");
                 boolean isVirtual = (Boolean) isVirtualMethod.invoke(Thread.currentThread());
                 System.out.println("PlatformThread: Is virtual: " + isVirtual);
@@ -80,23 +70,23 @@ public class Test {
 
     private static void testMultipleThreadCreation() {
         System.out.println("Test 3: Multiple thread creation");
-        int threadCount = 10; // Would be much higher with virtual threads
+        int threadCount = 10;
         Thread[] threads = new Thread[threadCount];
+        ConcurrentLinkedQueue<String> messages = new ConcurrentLinkedQueue<>();
 
         for (int i = 0; i < threadCount; i++) {
             final int threadId = i;
             threads[i] = new Thread(() -> {
-                System.out.println("Thread" + threadId + ": Starting work");
+                messages.add("Thread" + threadId + ": Starting work");
                 try {
-                    Thread.sleep(50 + (threadId * 10)); // Staggered timing
+                    Thread.sleep(10);
                 } catch (InterruptedException e) {
-                    System.out.println("Thread" + threadId + " interrupted");
+                    messages.add("Thread" + threadId + " interrupted");
                 }
-                System.out.println("Thread" + threadId + ": Work completed");
+                messages.add("Thread" + threadId + ": Work completed");
             });
         }
 
-        long startTime = System.currentTimeMillis();
         for (Thread thread : threads) {
             thread.start();
         }
@@ -105,27 +95,34 @@ public class Test {
             for (Thread thread : threads) {
                 thread.join();
             }
-            long endTime = System.currentTimeMillis();
-            System.out.println("All " + threadCount + " threads completed in " + (endTime - startTime) + "ms");
         } catch (InterruptedException e) {
             System.out.println("Multiple thread test interrupted");
         }
+
+        List<String> sorted = new ArrayList<>(messages);
+        Collections.sort(sorted);
+        for (String msg : sorted) {
+            System.out.println(msg);
+        }
+        System.out.println("All " + threadCount + " threads completed");
     }
 
     private static void runPlatformThreadTests() {
         System.out.println("Running enhanced platform thread tests:");
 
-        // Test platform thread pools simulation
-        Thread[] workerPool = new Thread[5];
+        int workerCount = 5;
+        Thread[] workerPool = new Thread[workerCount];
+        ConcurrentLinkedQueue<String> messages = new ConcurrentLinkedQueue<>();
+
         for (int i = 0; i < workerPool.length; i++) {
             final int workerId = i;
             workerPool[i] = new Thread(() -> {
                 for (int j = 0; j < 3; j++) {
-                    System.out.println("Worker" + workerId + ": Task " + j);
+                    messages.add("Worker" + workerId + ": Task " + j);
                     try {
-                        Thread.sleep(100);
+                        Thread.sleep(10);
                     } catch (InterruptedException e) {
-                        System.out.println("Worker" + workerId + " interrupted");
+                        messages.add("Worker" + workerId + " interrupted");
                         break;
                     }
                 }
@@ -142,6 +139,12 @@ public class Test {
             }
         } catch (InterruptedException e) {
             System.out.println("Worker pool test interrupted");
+        }
+
+        List<String> sorted = new ArrayList<>(messages);
+        Collections.sort(sorted);
+        for (String msg : sorted) {
+            System.out.println(msg);
         }
     }
 }

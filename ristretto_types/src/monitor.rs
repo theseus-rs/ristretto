@@ -103,6 +103,109 @@ impl Monitor {
     /// # Errors
     /// if the current thread does not own the monitor.
     pub async fn wait(&self, thread_id: u64) -> Result<()> {
+        let saved_count = self.release_for_wait(thread_id)?;
+        self.wait_count.fetch_add(1, Ordering::SeqCst);
+        let notified = self.notify.notified();
+        notified.await;
+        self.wait_count.fetch_sub(1, Ordering::SeqCst);
+        self.reacquire_after_wait(thread_id, saved_count).await
+    }
+
+    /// Wait for notification with a timeout.
+    ///
+    /// # Errors
+    /// if the current thread does not own the monitor.
+    pub async fn wait_timeout(
+        &self,
+        thread_id: u64,
+        duration: std::time::Duration,
+    ) -> Result<bool> {
+        let saved_count = self.release_for_wait(thread_id)?;
+        self.wait_count.fetch_add(1, Ordering::SeqCst);
+        let notified = self.notify.notified();
+        let result = tokio::time::timeout(duration, notified).await;
+        self.wait_count.fetch_sub(1, Ordering::SeqCst);
+        self.reacquire_after_wait(thread_id, saved_count).await?;
+
+        match result {
+            Ok(()) => Ok(true),
+            Err(_) => Ok(false),
+        }
+    }
+
+    /// Wait for notification, checking interrupt flag periodically.
+    /// Returns true if interrupted, false if notified.
+    ///
+    /// # Errors
+    /// if the current thread does not own the monitor.
+    pub async fn wait_interruptibly<F>(&self, thread_id: u64, is_interrupted: F) -> Result<bool>
+    where
+        F: Fn() -> bool,
+    {
+        let saved_count = self.release_for_wait(thread_id)?;
+        self.wait_count.fetch_add(1, Ordering::SeqCst);
+
+        let mut interrupted = false;
+        loop {
+            if is_interrupted() {
+                interrupted = true;
+                break;
+            }
+            let notified = self.notify.notified();
+            if let Ok(()) =
+                tokio::time::timeout(std::time::Duration::from_millis(10), notified).await
+            {
+                break; // Notified
+            }
+        }
+
+        self.wait_count.fetch_sub(1, Ordering::SeqCst);
+        self.reacquire_after_wait(thread_id, saved_count).await?;
+        Ok(interrupted)
+    }
+
+    /// Wait for notification with timeout, checking interrupt flag periodically.
+    /// Returns true if interrupted, false if notified or timed out.
+    ///
+    /// # Errors
+    /// if the current thread does not own the monitor.
+    pub async fn wait_timeout_interruptibly<F>(
+        &self,
+        thread_id: u64,
+        duration: std::time::Duration,
+        is_interrupted: F,
+    ) -> Result<bool>
+    where
+        F: Fn() -> bool,
+    {
+        let saved_count = self.release_for_wait(thread_id)?;
+        self.wait_count.fetch_add(1, Ordering::SeqCst);
+
+        let deadline = tokio::time::Instant::now() + duration;
+        let mut interrupted = false;
+        loop {
+            if is_interrupted() {
+                interrupted = true;
+                break;
+            }
+            let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+            if remaining.is_zero() {
+                break; // Timed out
+            }
+            let poll_duration = remaining.min(std::time::Duration::from_millis(10));
+            let notified = self.notify.notified();
+            if let Ok(()) = tokio::time::timeout(poll_duration, notified).await {
+                break; // Notified
+            }
+        }
+
+        self.wait_count.fetch_sub(1, Ordering::SeqCst);
+        self.reacquire_after_wait(thread_id, saved_count).await?;
+        Ok(interrupted)
+    }
+
+    /// Release the monitor for wait, returning the saved entry count.
+    fn release_for_wait(&self, thread_id: u64) -> Result<usize> {
         let saved_count = {
             let owner = self.owner.lock();
             if *owner != Some(thread_id) {
@@ -122,11 +225,11 @@ impl Monitor {
             self.lock.add_permits(1);
         }
 
-        self.wait_count.fetch_add(1, Ordering::SeqCst);
-        let notified = self.notify.notified();
-        notified.await;
-        self.wait_count.fetch_sub(1, Ordering::SeqCst);
+        Ok(saved_count)
+    }
 
+    /// Re-acquire the monitor after wait, restoring the saved entry count.
+    async fn reacquire_after_wait(&self, thread_id: u64, saved_count: usize) -> Result<()> {
         let permit = self
             .lock
             .acquire()
@@ -142,59 +245,6 @@ impl Monitor {
         }
 
         Ok(())
-    }
-
-    /// Wait for notification with a timeout.
-    ///
-    /// # Errors
-    /// if the current thread does not own the monitor.
-    pub async fn wait_timeout(
-        &self,
-        thread_id: u64,
-        duration: std::time::Duration,
-    ) -> Result<bool> {
-        let saved_count = {
-            let owner = self.owner.lock();
-            if *owner != Some(thread_id) {
-                return Err(crate::JavaError::IllegalMonitorStateException(
-                    "Current thread does not own the monitor".into(),
-                )
-                .into());
-            }
-            *self.entry_count.lock()
-        };
-
-        {
-            let mut owner = self.owner.lock();
-            *owner = None;
-            let mut count = self.entry_count.lock();
-            *count = 0;
-            self.lock.add_permits(1);
-        }
-
-        self.wait_count.fetch_add(1, Ordering::SeqCst);
-        let notified = self.notify.notified();
-        let result = tokio::time::timeout(duration, notified).await;
-        self.wait_count.fetch_sub(1, Ordering::SeqCst);
-
-        let permit = self
-            .lock
-            .acquire()
-            .await
-            .map_err(|_| Error::InternalError("Monitor semaphore closed".into()))?;
-        permit.forget();
-
-        {
-            let mut owner = self.owner.lock();
-            *owner = Some(thread_id);
-            let mut count = self.entry_count.lock();
-            *count = saved_count;
-        }
-
-        match result {
-            Ok(()) => Ok(true),
-            Err(_) => Ok(false),
-        }
     }
 
     /// Notify one waiting thread.
