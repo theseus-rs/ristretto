@@ -1,5 +1,5 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
-use crate::JavaError::{RuntimeException, VerifyError};
+use crate::JavaError::{RuntimeException, StackOverflowError, VerifyError};
 use crate::Parameters;
 use crate::RustValue;
 use crate::configuration::VerifyMode;
@@ -7,9 +7,10 @@ use crate::rust_value::process_values;
 use crate::{Frame, Result, VM, jit};
 use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::Attribute;
-use ristretto_classfile::{FieldAccessFlags, FieldType};
+use ristretto_classfile::{FieldAccessFlags, FieldType, MethodAccessFlags};
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
+use ristretto_intrinsics::get_monitor_id;
 use ristretto_macros::async_method;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
@@ -217,9 +218,12 @@ impl Thread {
 
         // Calculate target time or duration
         if time == 0 {
-            // Double-check if we have been unparked before sleeping
-            while self.park_state.permit.swap(false, Ordering::Acquire) {
+            // Infinite park: wait until unparked
+            loop {
                 self.park_state.notify.notified().await;
+                if self.park_state.permit.swap(false, Ordering::Acquire) {
+                    break;
+                }
             }
         } else if is_absolute {
             // Absolute timestamp (milliseconds since epoch)
@@ -643,6 +647,41 @@ impl Thread {
         Ok(value)
     }
 
+    /// Acquire the monitor for an `ACC_SYNCHRONIZED` method. For instance methods, locks on `this`
+    /// (first parameter). For static methods, locks on the class object.
+    async fn acquire_sync_monitor(
+        &self,
+        class: &Arc<Class>,
+        method: &Arc<Method>,
+        parameters: &[Value],
+    ) -> Result<Option<Arc<ristretto_types::monitor::Monitor>>> {
+        if !method
+            .access_flags()
+            .contains(MethodAccessFlags::SYNCHRONIZED)
+        {
+            return Ok(None);
+        }
+        let monitor_id = if method.is_static() {
+            if let Ok(Some(Value::Object(Some(ref reference)))) = class.object() {
+                get_monitor_id(&reference.read())
+            } else {
+                None
+            }
+        } else if let Some(Value::Object(Some(reference))) = parameters.first() {
+            get_monitor_id(&reference.read())
+        } else {
+            None
+        };
+        if let Some(id) = monitor_id {
+            let vm = self.vm()?;
+            let monitor = vm.monitor_registry().monitor(id);
+            monitor.acquire(self.id).await?;
+            Ok(Some(monitor))
+        } else {
+            Ok(None)
+        }
+    }
+
     /// Add a new frame to the thread and invoke the method. To invoke a method on an object
     /// reference, the object reference must be the first parameter in the parameters vector.
     ///
@@ -660,6 +699,12 @@ impl Thread {
         let method_descriptor = method.descriptor();
         let vm = self.vm()?;
         let parameters = process_values(self, parameters).await?;
+
+        // Handle ACC_SYNCHRONIZED: acquire monitor before method execution.
+        let sync_monitor = self
+            .acquire_sync_monitor(class, method, &parameters)
+            .await?;
+
         let method_registry = vm.method_registry();
         let rust_method = method_registry.method(class_name, method_name, method_descriptor);
         // If the method is not found in the registry, try to JIT compile it.
@@ -695,6 +740,10 @@ impl Thread {
             let result = jit::execute(&jit_method, method, parameters);
             (result, false)
         } else if method.is_native() {
+            // Release synchronized monitor before returning error
+            if let Some(ref monitor) = sync_monitor {
+                let _ = monitor.release(self.id);
+            }
             return Err(MethodNotFound {
                 class_name: class_name.to_string(),
                 method_name: method_name.to_string(),
@@ -702,6 +751,19 @@ impl Thread {
             }
             .into());
         } else {
+            // Check for native stack overflow before creating a new frame
+            if let Some(remaining) = stacker::remaining_stack()
+                && remaining < 512 * 1024
+            {
+                // Release synchronized monitor before returning error
+                if let Some(ref monitor) = sync_monitor {
+                    let _ = monitor.release(self.id);
+                }
+                return Err(StackOverflowError(format!(
+                    "{class_name}.{method_name}{method_descriptor}"
+                ))
+                .into());
+            }
             let frame = Arc::new(Frame::new(&self.thread, class, method));
 
             // Limit the scope of the write lock to just adding the frame to the thread. This
@@ -714,6 +776,11 @@ impl Thread {
             let result = frame.execute(parameters).await;
             (result, true)
         };
+
+        // Release ACC_SYNCHRONIZED monitor after method execution (even on error)
+        if let Some(monitor) = sync_monitor {
+            let _ = monitor.release(self.id);
+        }
 
         if event_enabled!(Level::DEBUG) {
             let result = match &result {

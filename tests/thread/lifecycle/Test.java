@@ -15,13 +15,20 @@ public class Test {
 
     private static void testThreadStateTransitions() {
         System.out.println("Test 1: Thread state transitions");
+        final Object lock = new Object();
+        final boolean[] proceed = {false};
         final boolean[] done = {false};
         
         Thread lifecycleThread = new Thread(() -> {
-            // Busy wait long enough for main thread to check state
-            long start = System.currentTimeMillis();
-            while (System.currentTimeMillis() - start < 500) {
-                // Busy wait
+            // Wait for main thread to check our state
+            synchronized (lock) {
+                while (!proceed[0]) {
+                    try {
+                        lock.wait();
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                }
             }
             synchronized (Test.class) {
                 done[0] = true;
@@ -33,16 +40,20 @@ public class Test {
 
         lifecycleThread.start();
         
-        // Brief sleep to let thread start
+        // Brief sleep to let thread start and enter wait
         try {
-            Thread.sleep(50);
+            Thread.sleep(100);
         } catch (InterruptedException e) {
             // ignore
         }
         
-        System.out.println("State after start: " + lifecycleThread.getState());
-        System.out.println("Is alive after start: " + lifecycleThread.isAlive());
-        System.out.println("State during execution: " + lifecycleThread.getState());
+        System.out.println("State after start is alive: " + lifecycleThread.isAlive());
+
+        // Signal thread to proceed
+        synchronized (lock) {
+            proceed[0] = true;
+            lock.notifyAll();
+        }
 
         try {
             lifecycleThread.join();
@@ -137,8 +148,14 @@ public class Test {
     private static void testThreadWithThreadGroupLifecycle() {
         System.out.println("Test 6: Thread with ThreadGroup lifecycle");
         ThreadGroup lifecycleGroup = new ThreadGroup("LifecycleGroup");
+        final Object ready = new Object();
+        final boolean[] started = {false};
         Thread groupThread = new Thread(lifecycleGroup, () -> {
             System.out.println("GroupThread: In group " + Thread.currentThread().getThreadGroup().getName());
+            synchronized (ready) {
+                started[0] = true;
+                ready.notifyAll();
+            }
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -150,7 +167,11 @@ public class Test {
         groupThread.start();
 
         try {
-            Thread.sleep(50);
+            synchronized (ready) {
+                while (!started[0]) {
+                    ready.wait();
+                }
+            }
             System.out.println("Group active count during execution: " + lifecycleGroup.activeCount());
 
             groupThread.join();

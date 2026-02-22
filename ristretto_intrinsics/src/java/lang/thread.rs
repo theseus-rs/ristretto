@@ -25,11 +25,17 @@ bitflags! {
     pub struct ThreadState: i32 {
         const TERMINATED = 0x02;
         const RUNNABLE = 0x04;
+        const WAITING = 0x10;
+        const TIMED_WAITING = 0x20;
+        const BLOCKED = 0x400;
     }
 }
 
 /// Set the thread status in the thread object, handling both old and new (Java 19+) layouts.
-fn set_thread_status(thread_object: &Value, status: ThreadState) -> Result<()> {
+///
+/// # Errors
+/// if the thread object does not have a `threadStatus` field.
+pub fn set_thread_status(thread_object: &Value, status: ThreadState) -> Result<()> {
     let mut thread_object = thread_object.as_object_mut()?;
     // Try to set via holder (Java 19+), fall back to direct field (older versions)
     if let Ok(holder_value) = thread_object.value("holder")
@@ -400,7 +406,10 @@ pub async fn sleep<T: ristretto_types::Thread + 'static>(
 
     #[cfg(not(target_family = "wasm"))]
     {
+        let thread_object = thread.java_object().await;
+        let _ = set_thread_status(&thread_object, ThreadState::TIMED_WAITING);
         let interrupted = thread.sleep(duration).await;
+        let _ = set_thread_status(&thread_object, ThreadState::RUNNABLE);
         if interrupted {
             return Err(JavaError::InterruptedException("sleep interrupted".to_string()).into());
         }
@@ -436,7 +445,10 @@ pub async fn sleep_nanos_0<T: ristretto_types::Thread + 'static>(
 
     #[cfg(not(target_family = "wasm"))]
     {
+        let thread_object = thread.java_object().await;
+        let _ = set_thread_status(&thread_object, ThreadState::TIMED_WAITING);
         let interrupted = thread.sleep(duration).await;
+        let _ = set_thread_status(&thread_object, ThreadState::RUNNABLE);
         if interrupted {
             return Err(InterruptedException("sleep interrupted".to_string()).into());
         }
@@ -537,13 +549,59 @@ pub async fn start_0<T: ristretto_types::Thread + 'static>(
                 }
             }
 
-            let _cleanup = ThreadCleanup {
+            let cleanup = ThreadCleanup {
                 thread_object: thread_object.clone(),
             };
 
-            let _ = spawn_thread
+            let result = spawn_thread
                 .execute(&thread_class, &run_method, &[thread_value])
                 .await;
+
+            // Handle uncaught exceptions per JVM specification:
+            // 1. Thread's uncaughtExceptionHandler
+            // 2. ThreadGroup's uncaughtException
+            // 3. Default uncaughtExceptionHandler
+            if let Err(ristretto_types::Error::Throwable(throwable)) = result {
+                let throwable_val = throwable.clone();
+                let thread_ref = thread_object.clone();
+
+                // Try to call the thread's dispatchUncaughtException method
+                // which handles the full JVM dispatch chain
+                if let Ok(dispatch_method) = thread_class
+                    .try_get_method("dispatchUncaughtException", "(Ljava/lang/Throwable;)V")
+                {
+                    let _ = spawn_thread
+                        .execute(
+                            &thread_class,
+                            &dispatch_method,
+                            &[thread_ref, throwable_val],
+                        )
+                        .await;
+                }
+            }
+
+            // Explicitly drop the cleanup guard to set TERMINATED + eetop=0 before we notify
+            // waiting threads (Thread.join() callers).
+            drop(cleanup);
+
+            // Per theJVM specification, Thread.exit() calls notifyAll() on the Thread object so
+            // that Thread.join() callers are woken up via the monitor. We must acquire the monitor
+            // before notifying to prevent a race where the join() caller checks isAlive() (true),
+            // then the thread dies and notifies before wait() is called, causing a lost
+            // notification.
+            if let Value::Object(Some(ref reference)) = thread_object {
+                let monitor_id = crate::get_monitor_id(&reference.read());
+                if let Some(id) = monitor_id
+                    && let Ok(vm) = spawn_thread.vm()
+                {
+                    let monitor = vm.monitor_registry().monitor(id);
+                    let thread_id = spawn_thread.id();
+                    if monitor.acquire(thread_id).await.is_ok() {
+                        let _ = monitor.notify_all(thread_id);
+                        let _ = monitor.release(thread_id);
+                    }
+                }
+            }
 
             // Note: We intentionally do NOT remove the thread handle here.
             // The VM's wait_for_non_daemon_threads() will await the JoinHandle
