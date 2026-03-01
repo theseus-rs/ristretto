@@ -8,6 +8,7 @@
 
 mod assignable;
 mod error;
+mod extensions;
 mod frame;
 pub mod handles;
 mod java_error;
@@ -23,6 +24,7 @@ mod vm;
 
 pub use assignable::Assignable;
 pub use error::{Error, Result};
+pub use extensions::Extensions;
 pub use frame::Frame;
 pub use java_error::JavaError;
 pub use java_object::JavaObject;

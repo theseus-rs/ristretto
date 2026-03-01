@@ -1659,7 +1659,7 @@ pub async fn is_instance<T: Thread + 'static>(
     let self_object = parameters.pop()?;
     let self_class = get_class_no_init(&thread, &self_object).await?;
 
-    if compare_object.is_null() {
+    if compare_object.is_null() || !compare_object.is_object() {
         return Ok(Some(Value::from(false)));
     }
     let compare_class_name = {
