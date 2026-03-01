@@ -1,12 +1,14 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Error::InternalError;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
+use tracing::debug;
 
-/// Access mode ordinals from java.lang.invoke.VarHandle.AccessMode
+/// Access mode categories for `VarHandle` operations.
 #[derive(Debug, Clone, Copy)]
 #[repr(i32)]
 enum AccessMode {
@@ -43,29 +45,772 @@ enum AccessMode {
     GetAndBitwiseXorAcquire = 30,
 }
 
-/// Invokes a `VarHandle` access mode by getting the `MethodHandle` for that mode and invoking it.
-///
-/// Per JVM spec, `VarHandle` polymorphic methods dispatch to `MethodHandle`s stored in the
-/// `VarHandle`'s `methodHandleTable`.
+/// The storage type of a `VarHandle`, determined structurally from its fields.
+#[derive(Debug)]
+enum VarHandleStorage {
+    FieldInstance { field_offset: usize },
+    FieldStatic { field_offset: usize },
+    Array,
+}
+
+/// Classify a `VarHandle` by inspecting its fields structurally to determine how it performs
+/// access.
+fn classify_var_handle(var_handle: &Value) -> Option<VarHandleStorage> {
+    let vh_ref = var_handle.as_object_ref().ok()?;
+
+    // Array VarHandles have an `ashift` field
+    if vh_ref.value("ashift").is_ok() {
+        return Some(VarHandleStorage::Array);
+    }
+
+    // Field-based VarHandles have a `fieldOffset` field
+    let field_offset = vh_ref.value("fieldOffset").ok()?.as_i64().ok()?;
+
+    // Static field VarHandles have a `base` field (the Class mirror)
+    if vh_ref.value("base").is_ok() {
+        // Strip STATIC_FIELD_OFFSET_MASK (bit 62) set by Unsafe.staticFieldOffset0
+        let offset = usize::try_from(field_offset & !(1i64 << 62)).ok()?;
+        Some(VarHandleStorage::FieldStatic {
+            field_offset: offset,
+        })
+    } else {
+        let offset = usize::try_from(field_offset).ok()?;
+        Some(VarHandleStorage::FieldInstance {
+            field_offset: offset,
+        })
+    }
+}
+
+/// Convert a `Value` to an i64 for numeric operations.
+fn value_to_i64(value: &Value) -> Result<i64> {
+    match value {
+        Value::Int(i) => Ok(i64::from(*i)),
+        Value::Long(l) => Ok(*l),
+        _ => Err(InternalError(format!("Cannot convert {value:?} to i64"))),
+    }
+}
+
+/// Apply an i64 arithmetic result, producing a `Value` matching the type of `old`.
+fn apply_numeric_result(old: &Value, result: i64) -> Result<Value> {
+    match old {
+        Value::Int(_) =>
+        {
+            #[expect(clippy::cast_possible_truncation)]
+            Ok(Value::Int(result as i32))
+        }
+        Value::Long(_) => Ok(Value::Long(result)),
+        _ => Err(InternalError(format!(
+            "Cannot apply numeric result to {old:?}"
+        ))),
+    }
+}
+
+/// Read a field value from a target object `Value` at the given offset.
+fn read_field_by_offset(target: &Value, offset: usize) -> Result<Value> {
+    let obj = target.as_object_ref()?;
+    let class = obj.class();
+    let field_name = class.field_name(offset)?;
+    Ok(obj.value(&field_name)?)
+}
+
+/// Write a field value to a target object `Value` at the given offset.
+fn write_field_by_offset(target: &Value, offset: usize, value: Value) -> Result<()> {
+    let mut object = target.as_object_mut()?;
+    let class = object.class().clone();
+    let field_name = class.field_name(offset)?;
+    Ok(object.set_value(&field_name, value)?)
+}
+
+/// Directly implements `VarHandle` access modes by inspecting the `VarHandle`'s fields
+/// structurally and performing field access without going through the JDK's
+/// `MethodHandle`/`LambdaForm` chain.
 #[async_method]
 async fn invoke_var_handle_access_mode<T: ristretto_types::Thread + 'static>(
     thread: &Arc<T>,
     parameters: Parameters,
     access_mode: AccessMode,
 ) -> Result<Option<Value>> {
-    // Get all parameters as a vector
     let all_params = parameters.into_vec();
     if all_params.is_empty() {
-        return Err(ristretto_types::Error::InternalError(
+        return Err(InternalError(
             "VarHandle access mode requires at least the VarHandle".to_string(),
         ));
     }
 
-    // First parameter is the VarHandle itself (this)
+    let var_handle = &all_params[0];
+    let remaining_args = &all_params[1..];
+    let storage = classify_var_handle(var_handle);
+
+    debug!(
+        "VarHandle access: storage={:?}, mode={:?}, args={}",
+        storage,
+        access_mode,
+        remaining_args.len()
+    );
+
+    match storage {
+        Some(VarHandleStorage::FieldInstance { field_offset }) => {
+            dispatch_field_instance(access_mode, field_offset, remaining_args)
+        }
+        Some(VarHandleStorage::FieldStatic { field_offset }) => {
+            let base_object = {
+                let vh_ref = var_handle.as_object_ref()?;
+                vh_ref.value("base")?
+            };
+            dispatch_field_static(
+                thread,
+                access_mode,
+                field_offset,
+                &base_object,
+                remaining_args,
+            )
+            .await
+        }
+        Some(VarHandleStorage::Array) => dispatch_array(access_mode, remaining_args),
+        None => {
+            debug!("VarHandle: unrecognized structure, falling back to toMethodHandle",);
+            invoke_via_method_handle(thread, all_params, access_mode).await
+        }
+    }
+}
+
+/// Dispatch a `VarHandle` access mode on an instance field.
+#[expect(clippy::too_many_lines)]
+fn dispatch_field_instance(
+    access_mode: AccessMode,
+    offset: usize,
+    args: &[Value],
+) -> Result<Option<Value>> {
+    match access_mode {
+        AccessMode::Get
+        | AccessMode::GetVolatile
+        | AccessMode::GetAcquire
+        | AccessMode::GetOpaque => {
+            let target = args
+                .first()
+                .ok_or_else(|| InternalError("VarHandle.get: missing target object".into()))?;
+            let value = read_field_by_offset(target, offset)?;
+            Ok(Some(value))
+        }
+        AccessMode::Set
+        | AccessMode::SetVolatile
+        | AccessMode::SetRelease
+        | AccessMode::SetOpaque => {
+            let target = args
+                .first()
+                .ok_or_else(|| InternalError("VarHandle.set: missing target object".into()))?;
+            let new_value = args
+                .get(1)
+                .ok_or_else(|| InternalError("VarHandle.set: missing value".into()))?;
+            write_field_by_offset(target, offset, new_value.clone())?;
+            Ok(None)
+        }
+        AccessMode::CompareAndSet
+        | AccessMode::WeakCompareAndSet
+        | AccessMode::WeakCompareAndSetPlain
+        | AccessMode::WeakCompareAndSetAcquire
+        | AccessMode::WeakCompareAndSetRelease => {
+            let target = args
+                .first()
+                .ok_or_else(|| InternalError("VarHandle.CAS: missing target".into()))?;
+            let expected = args
+                .get(1)
+                .ok_or_else(|| InternalError("VarHandle.CAS: missing expected".into()))?;
+            let new_value = args
+                .get(2)
+                .ok_or_else(|| InternalError("VarHandle.CAS: missing new value".into()))?;
+            // Hold a single write lock for the entire read-check-write to ensure atomicity
+            let mut object = target.as_object_mut()?;
+            let class = object.class().clone();
+            let field_name = class.field_name(offset)?;
+            let current = object.value(&field_name)?;
+            if values_equal(&current, expected) {
+                object.set_value(&field_name, new_value.clone())?;
+                Ok(Some(Value::Int(1)))
+            } else {
+                Ok(Some(Value::Int(0)))
+            }
+        }
+        AccessMode::CompareAndExchange
+        | AccessMode::CompareAndExchangeAcquire
+        | AccessMode::CompareAndExchangeRelease => {
+            let target = args
+                .first()
+                .ok_or_else(|| InternalError("VarHandle.CAE: missing target".into()))?;
+            let expected = args
+                .get(1)
+                .ok_or_else(|| InternalError("VarHandle.CAE: missing expected".into()))?;
+            let new_val = args
+                .get(2)
+                .ok_or_else(|| InternalError("VarHandle.CAE: missing new value".into()))?;
+            let mut object = target.as_object_mut()?;
+            let class = object.class().clone();
+            let field_name = class.field_name(offset)?;
+            let current = object.value(&field_name)?;
+            if values_equal(&current, expected) {
+                object.set_value(&field_name, new_val.clone())?;
+            }
+            Ok(Some(current))
+        }
+        AccessMode::GetAndSet | AccessMode::GetAndSetAcquire | AccessMode::GetAndSetRelease => {
+            let target = args
+                .first()
+                .ok_or_else(|| InternalError("VarHandle.getAndSet: missing target".into()))?;
+            let new_value = args
+                .get(1)
+                .ok_or_else(|| InternalError("VarHandle.getAndSet: missing new value".into()))?;
+            let mut object = target.as_object_mut()?;
+            let class = object.class().clone();
+            let field_name = class.field_name(offset)?;
+            let old = object.value(&field_name)?;
+            object.set_value(&field_name, new_value.clone())?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndAdd | AccessMode::GetAndAddAcquire | AccessMode::GetAndAddRelease => {
+            let target = args
+                .first()
+                .ok_or_else(|| InternalError("VarHandle.getAndAdd: missing target".into()))?;
+            let delta = args
+                .get(1)
+                .ok_or_else(|| InternalError("VarHandle.getAndAdd: missing delta".into()))?;
+            let mut object = target.as_object_mut()?;
+            let class = object.class().clone();
+            let field_name = class.field_name(offset)?;
+            let old = object.value(&field_name)?;
+            let old_i64 = value_to_i64(&old)?;
+            let delta_i64 = value_to_i64(delta)?;
+            let new_value = apply_numeric_result(&old, old_i64.wrapping_add(delta_i64))?;
+            object.set_value(&field_name, new_value)?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndBitwiseOr
+        | AccessMode::GetAndBitwiseOrAcquire
+        | AccessMode::GetAndBitwiseOrRelease => {
+            let target = args
+                .first()
+                .ok_or_else(|| InternalError("VarHandle.getAndBitwiseOr: missing target".into()))?;
+            let mask = args
+                .get(1)
+                .ok_or_else(|| InternalError("VarHandle.getAndBitwiseOr: missing mask".into()))?;
+            let mut object = target.as_object_mut()?;
+            let class = object.class().clone();
+            let field_name = class.field_name(offset)?;
+            let old = object.value(&field_name)?;
+            let old_i64 = value_to_i64(&old)?;
+            let mask_i64 = value_to_i64(mask)?;
+            let new_value = apply_numeric_result(&old, old_i64 | mask_i64)?;
+            object.set_value(&field_name, new_value)?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndBitwiseAnd
+        | AccessMode::GetAndBitwiseAndAcquire
+        | AccessMode::GetAndBitwiseAndRelease => {
+            let target = args.first().ok_or_else(|| {
+                InternalError("VarHandle.getAndBitwiseAnd: missing target".into())
+            })?;
+            let mask = args
+                .get(1)
+                .ok_or_else(|| InternalError("VarHandle.getAndBitwiseAnd: missing mask".into()))?;
+            let mut object = target.as_object_mut()?;
+            let class = object.class().clone();
+            let field_name = class.field_name(offset)?;
+            let old = object.value(&field_name)?;
+            let old_i64 = value_to_i64(&old)?;
+            let mask_i64 = value_to_i64(mask)?;
+            let new_value = apply_numeric_result(&old, old_i64 & mask_i64)?;
+            object.set_value(&field_name, new_value)?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndBitwiseXor
+        | AccessMode::GetAndBitwiseXorAcquire
+        | AccessMode::GetAndBitwiseXorRelease => {
+            let target = args.first().ok_or_else(|| {
+                InternalError("VarHandle.getAndBitwiseXor: missing target".into())
+            })?;
+            let mask = args
+                .get(1)
+                .ok_or_else(|| InternalError("VarHandle.getAndBitwiseXor: missing mask".into()))?;
+            let mut object = target.as_object_mut()?;
+            let class = object.class().clone();
+            let field_name = class.field_name(offset)?;
+            let old = object.value(&field_name)?;
+            let old_i64 = value_to_i64(&old)?;
+            let mask_i64 = value_to_i64(mask)?;
+            let new_value = apply_numeric_result(&old, old_i64 ^ mask_i64)?;
+            object.set_value(&field_name, new_value)?;
+            Ok(Some(old))
+        }
+    }
+}
+
+/// Dispatch a `VarHandle` access mode on a static field.
+#[async_method]
+#[expect(clippy::too_many_lines)]
+async fn dispatch_field_static<T: ristretto_types::Thread + 'static>(
+    thread: &Arc<T>,
+    access_mode: AccessMode,
+    offset: usize,
+    base_object: &Value,
+    args: &[Value],
+) -> Result<Option<Value>> {
+    // base_obj is the Class mirror; get the class name from it
+    let class_name = {
+        let base_ref = base_object.as_object_ref()?;
+        base_ref.value("name")?.as_string()?
+    };
+    let class = thread.class(&class_name).await?;
+    let field_name = class.field_name(offset)?;
+
+    match access_mode {
+        AccessMode::Get
+        | AccessMode::GetVolatile
+        | AccessMode::GetAcquire
+        | AccessMode::GetOpaque => {
+            let value = class.static_value(&field_name)?;
+            Ok(Some(value))
+        }
+        AccessMode::Set
+        | AccessMode::SetVolatile
+        | AccessMode::SetRelease
+        | AccessMode::SetOpaque => {
+            let new_value = args
+                .first()
+                .ok_or_else(|| InternalError("VarHandle static set: missing value".into()))?;
+            class.set_static_value(&field_name, new_value.clone())?;
+            Ok(None)
+        }
+        AccessMode::CompareAndSet
+        | AccessMode::WeakCompareAndSet
+        | AccessMode::WeakCompareAndSetPlain
+        | AccessMode::WeakCompareAndSetAcquire
+        | AccessMode::WeakCompareAndSetRelease => {
+            let expected = args
+                .first()
+                .ok_or_else(|| InternalError("VarHandle static CAS: missing expected".into()))?;
+            let new_value = args
+                .get(1)
+                .ok_or_else(|| InternalError("VarHandle static CAS: missing new value".into()))?;
+            let current = class.static_value(&field_name)?;
+            if values_equal(&current, expected) {
+                class.set_static_value(&field_name, new_value.clone())?;
+                Ok(Some(Value::Int(1)))
+            } else {
+                Ok(Some(Value::Int(0)))
+            }
+        }
+        AccessMode::CompareAndExchange
+        | AccessMode::CompareAndExchangeAcquire
+        | AccessMode::CompareAndExchangeRelease => {
+            let expected = args
+                .first()
+                .ok_or_else(|| InternalError("VarHandle static CAE: missing expected".into()))?;
+            let new_value = args
+                .get(1)
+                .ok_or_else(|| InternalError("VarHandle static CAE: missing new value".into()))?;
+            let current = class.static_value(&field_name)?;
+            if values_equal(&current, expected) {
+                class.set_static_value(&field_name, new_value.clone())?;
+            }
+            Ok(Some(current))
+        }
+        AccessMode::GetAndSet | AccessMode::GetAndSetAcquire | AccessMode::GetAndSetRelease => {
+            let new_value = args.first().ok_or_else(|| {
+                InternalError("VarHandle static getAndSet: missing new value".into())
+            })?;
+            let old = class.static_value(&field_name)?;
+            class.set_static_value(&field_name, new_value.clone())?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndAdd | AccessMode::GetAndAddAcquire | AccessMode::GetAndAddRelease => {
+            let delta = args
+                .first()
+                .ok_or_else(|| InternalError("VarHandle static getAndAdd: missing delta".into()))?;
+            let old = class.static_value(&field_name)?;
+            let old_i64 = value_to_i64(&old)?;
+            let delta_i64 = value_to_i64(delta)?;
+            let new_value = apply_numeric_result(&old, old_i64.wrapping_add(delta_i64))?;
+            class.set_static_value(&field_name, new_value)?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndBitwiseOr
+        | AccessMode::GetAndBitwiseOrAcquire
+        | AccessMode::GetAndBitwiseOrRelease => {
+            let mask = args.first().ok_or_else(|| {
+                InternalError("VarHandle static getAndBitwiseOr: missing mask".into())
+            })?;
+            let old = class.static_value(&field_name)?;
+            let old_i64 = value_to_i64(&old)?;
+            let mask_i64 = value_to_i64(mask)?;
+            let new_value = apply_numeric_result(&old, old_i64 | mask_i64)?;
+            class.set_static_value(&field_name, new_value)?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndBitwiseAnd
+        | AccessMode::GetAndBitwiseAndAcquire
+        | AccessMode::GetAndBitwiseAndRelease => {
+            let mask = args.first().ok_or_else(|| {
+                InternalError("VarHandle static getAndBitwiseAnd: missing mask".into())
+            })?;
+            let old = class.static_value(&field_name)?;
+            let old_i64 = value_to_i64(&old)?;
+            let mask_i64 = value_to_i64(mask)?;
+            let new_value = apply_numeric_result(&old, old_i64 & mask_i64)?;
+            class.set_static_value(&field_name, new_value)?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndBitwiseXor
+        | AccessMode::GetAndBitwiseXorAcquire
+        | AccessMode::GetAndBitwiseXorRelease => {
+            let mask = args.first().ok_or_else(|| {
+                InternalError("VarHandle static getAndBitwiseXor: missing mask".into())
+            })?;
+            let old = class.static_value(&field_name)?;
+            let old_i64 = value_to_i64(&old)?;
+            let mask_i64 = value_to_i64(mask)?;
+            let new_value = apply_numeric_result(&old, old_i64 ^ mask_i64)?;
+            class.set_static_value(&field_name, new_value)?;
+            Ok(Some(old))
+        }
+    }
+}
+
+/// Dispatch a `VarHandle` access mode on an array element.
+#[expect(clippy::too_many_lines)]
+fn dispatch_array(access_mode: AccessMode, args: &[Value]) -> Result<Option<Value>> {
+    let target = args
+        .first()
+        .ok_or_else(|| InternalError("VarHandle array: missing array".into()))?;
+    let index = args
+        .get(1)
+        .ok_or_else(|| InternalError("VarHandle array: missing index".into()))?;
+    let idx = usize::try_from(index.as_i32()?).map_err(|e| InternalError(e.to_string()))?;
+
+    match access_mode {
+        AccessMode::Get
+        | AccessMode::GetVolatile
+        | AccessMode::GetAcquire
+        | AccessMode::GetOpaque => read_array_element(target, idx),
+        AccessMode::Set
+        | AccessMode::SetVolatile
+        | AccessMode::SetRelease
+        | AccessMode::SetOpaque => {
+            let new_value = args
+                .get(2)
+                .ok_or_else(|| InternalError("VarHandle array set: missing value".into()))?;
+            write_array_element(target, idx, new_value)?;
+            Ok(None)
+        }
+        AccessMode::CompareAndSet
+        | AccessMode::WeakCompareAndSet
+        | AccessMode::WeakCompareAndSetPlain
+        | AccessMode::WeakCompareAndSetAcquire
+        | AccessMode::WeakCompareAndSetRelease => {
+            let expected = args
+                .get(2)
+                .ok_or_else(|| InternalError("VarHandle array CAS: missing expected".into()))?;
+            let new_value = args
+                .get(3)
+                .ok_or_else(|| InternalError("VarHandle array CAS: missing new value".into()))?;
+            // Hold a single write lock for the entire read-check-write to ensure atomicity
+            let (current, success) = cas_array_element(target, idx, expected, new_value)?;
+            let _ = current;
+            Ok(Some(Value::from(success)))
+        }
+        AccessMode::CompareAndExchange
+        | AccessMode::CompareAndExchangeAcquire
+        | AccessMode::CompareAndExchangeRelease => {
+            let expected = args
+                .get(2)
+                .ok_or_else(|| InternalError("VarHandle array CAE: missing expected".into()))?;
+            let new_value = args
+                .get(3)
+                .ok_or_else(|| InternalError("VarHandle array CAE: missing new value".into()))?;
+            let (current, _success) = cas_array_element(target, idx, expected, new_value)?;
+            Ok(Some(current))
+        }
+        AccessMode::GetAndSet | AccessMode::GetAndSetAcquire | AccessMode::GetAndSetRelease => {
+            let new_value = args.get(2).ok_or_else(|| {
+                InternalError("VarHandle array getAndSet: missing new value".into())
+            })?;
+            let old = atomic_read_write_array(target, idx, |_old| Ok(new_value.clone()))?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndAdd | AccessMode::GetAndAddAcquire | AccessMode::GetAndAddRelease => {
+            let delta = args
+                .get(2)
+                .ok_or_else(|| InternalError("VarHandle array getAndAdd: missing delta".into()))?;
+            let delta_i64 = value_to_i64(delta)?;
+            let old = atomic_read_write_array(target, idx, |old| {
+                let old_i64 = value_to_i64(old)?;
+                apply_numeric_result(old, old_i64.wrapping_add(delta_i64))
+            })?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndBitwiseOr
+        | AccessMode::GetAndBitwiseOrAcquire
+        | AccessMode::GetAndBitwiseOrRelease => {
+            let mask = args.get(2).ok_or_else(|| {
+                InternalError("VarHandle array getAndBitwiseOr: missing mask".into())
+            })?;
+            let mask_i64 = value_to_i64(mask)?;
+            let old = atomic_read_write_array(target, idx, |old| {
+                apply_numeric_result(old, value_to_i64(old)? | mask_i64)
+            })?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndBitwiseAnd
+        | AccessMode::GetAndBitwiseAndAcquire
+        | AccessMode::GetAndBitwiseAndRelease => {
+            let mask = args.get(2).ok_or_else(|| {
+                InternalError("VarHandle array getAndBitwiseAnd: missing mask".into())
+            })?;
+            let mask_i64 = value_to_i64(mask)?;
+            let old = atomic_read_write_array(target, idx, |old| {
+                apply_numeric_result(old, value_to_i64(old)? & mask_i64)
+            })?;
+            Ok(Some(old))
+        }
+        AccessMode::GetAndBitwiseXor
+        | AccessMode::GetAndBitwiseXorAcquire
+        | AccessMode::GetAndBitwiseXorRelease => {
+            let mask = args.get(2).ok_or_else(|| {
+                InternalError("VarHandle array getAndBitwiseXor: missing mask".into())
+            })?;
+            let mask_i64 = value_to_i64(mask)?;
+            let old = atomic_read_write_array(target, idx, |old| {
+                apply_numeric_result(old, value_to_i64(old)? ^ mask_i64)
+            })?;
+            Ok(Some(old))
+        }
+    }
+}
+
+/// Read an element from an array at the given index.
+fn read_array_element(target: &Value, index: usize) -> Result<Option<Value>> {
+    let arr_ref = target.as_reference()?;
+    match &*arr_ref {
+        Reference::IntArray(array) => Ok(array.get(index).map(|v| Value::Int(*v))),
+        Reference::LongArray(array) => Ok(array.get(index).map(|v| Value::Long(*v))),
+        Reference::FloatArray(array) => Ok(array.get(index).map(|v| Value::Float(*v))),
+        Reference::DoubleArray(array) => Ok(array.get(index).map(|v| Value::Double(*v))),
+        Reference::ByteArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
+        Reference::CharArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
+        Reference::ShortArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
+        Reference::Array(object_array) => Ok(object_array.elements.get(index).cloned()),
+        _ => Err(InternalError(
+            "VarHandle array: unsupported array type".into(),
+        )),
+    }
+}
+
+/// Write a value to an array at the given index.
+fn write_array_element(target: &Value, index: usize, new_value: &Value) -> Result<()> {
+    let mut arr_ref = target.as_reference_mut()?;
+    match &mut *arr_ref {
+        Reference::IntArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.as_i32()?;
+        }
+        Reference::LongArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.as_i64()?;
+        }
+        Reference::FloatArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.as_f32()?;
+        }
+        Reference::DoubleArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.as_f64()?;
+        }
+        Reference::ByteArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            #[expect(clippy::cast_possible_truncation)]
+            {
+                *slot = new_value.as_i32()? as i8;
+            }
+        }
+        Reference::CharArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            {
+                *slot = new_value.as_i32()? as u16;
+            }
+        }
+        Reference::ShortArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            #[expect(clippy::cast_possible_truncation)]
+            {
+                *slot = new_value.as_i32()? as i16;
+            }
+        }
+        Reference::Array(object_array) => {
+            let slot = object_array
+                .elements
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.clone();
+        }
+        _ => {
+            return Err(InternalError(
+                "VarHandle array: unsupported array type for write".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Read the current value from a mutable reference at the given array index.
+fn read_from_ref(reference: &Reference, index: usize) -> Result<Option<Value>> {
+    match reference {
+        Reference::IntArray(array) => Ok(array.get(index).map(|v| Value::Int(*v))),
+        Reference::LongArray(array) => Ok(array.get(index).map(|v| Value::Long(*v))),
+        Reference::FloatArray(array) => Ok(array.get(index).map(|v| Value::Float(*v))),
+        Reference::DoubleArray(array) => Ok(array.get(index).map(|v| Value::Double(*v))),
+        Reference::ByteArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
+        Reference::CharArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
+        Reference::ShortArray(array) => Ok(array.get(index).map(|v| Value::Int(i32::from(*v)))),
+        Reference::Array(object_array) => Ok(object_array.elements.get(index).cloned()),
+        _ => Err(InternalError(
+            "VarHandle array: unsupported array type".into(),
+        )),
+    }
+}
+
+/// Write a value to a mutable reference at the given array index.
+#[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn write_to_ref(reference: &mut Reference, index: usize, new_value: &Value) -> Result<()> {
+    match reference {
+        Reference::IntArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.as_i32()?;
+        }
+        Reference::LongArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.as_i64()?;
+        }
+        Reference::FloatArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.as_f32()?;
+        }
+        Reference::DoubleArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.as_f64()?;
+        }
+        Reference::ByteArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.as_i32()? as i8;
+        }
+        Reference::CharArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.as_i32()? as u16;
+        }
+        Reference::ShortArray(array) => {
+            let slot = array
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.as_i32()? as i16;
+        }
+        Reference::Array(object_array) => {
+            let slot = object_array
+                .elements
+                .get_mut(index)
+                .ok_or_else(|| InternalError(format!("array index {index} out of bounds")))?;
+            *slot = new_value.clone();
+        }
+        _ => {
+            return Err(InternalError(
+                "VarHandle array: unsupported array type for write".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Atomic compare and swap on an array element under a single write lock.
+fn cas_array_element(
+    target: &Value,
+    index: usize,
+    expected: &Value,
+    new_value: &Value,
+) -> Result<(Value, bool)> {
+    let mut array_ref = target.as_reference_mut()?;
+    let current = read_from_ref(&array_ref, index)?
+        .ok_or_else(|| InternalError("VarHandle array CAS: index out of bounds".into()))?;
+    let equal = values_equal(&current, expected);
+    if equal {
+        write_to_ref(&mut array_ref, index, new_value)?;
+    }
+    Ok((current, equal))
+}
+
+/// Atomic read-modify-write on an array element under a single write lock.
+fn atomic_read_write_array<F>(target: &Value, index: usize, compute: F) -> Result<Value>
+where
+    F: FnOnce(&Value) -> Result<Value>,
+{
+    let mut array_ref = target.as_reference_mut()?;
+    let old = read_from_ref(&array_ref, index)?
+        .ok_or_else(|| InternalError("VarHandle array: index out of bounds".into()))?;
+    let new_val = compute(&old)?;
+    write_to_ref(&mut array_ref, index, &new_val)?;
+    Ok(old)
+}
+
+/// Compare two values for equality using their actual `Value` types.
+fn values_equal(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Int(a_val), Value::Int(b_val)) => a_val == b_val,
+        (Value::Long(a_val), Value::Long(b_val)) => a_val == b_val,
+        (Value::Float(a_val), Value::Float(b_val)) => a_val.to_bits() == b_val.to_bits(),
+        (Value::Double(a_val), Value::Double(b_val)) => a_val.to_bits() == b_val.to_bits(),
+        (Value::Object(None), Value::Object(None)) => true,
+        (Value::Object(Some(a_ref)), Value::Object(Some(b_ref))) => std::ptr::eq(
+            std::ptr::from_ref(a_ref.as_ref()).cast::<u8>(),
+            std::ptr::from_ref(b_ref.as_ref()).cast::<u8>(),
+        ),
+        _ => false,
+    }
+}
+
+/// Fallback: invoke via `toMethodHandle()` for unrecognized `VarHandle` subclasses.
+#[async_method]
+async fn invoke_via_method_handle<T: ristretto_types::Thread + 'static>(
+    thread: &Arc<T>,
+    all_params: Vec<Value>,
+    access_mode: AccessMode,
+) -> Result<Option<Value>> {
     let var_handle = all_params[0].clone();
     let remaining_args: Vec<Value> = all_params[1..].to_vec();
 
-    // Get the AccessMode enum value
+    let access_mode_ordinal = access_mode as i32;
+
     let access_mode_class = thread
         .class("java/lang/invoke/VarHandle$AccessMode")
         .await?;
@@ -74,24 +819,22 @@ async fn invoke_var_handle_access_mode<T: ristretto_types::Thread + 'static>(
     let values_result = thread
         .execute(&access_mode_class, &values_method, &[] as &[Value])
         .await?;
-    let values_array = values_result.ok_or_else(|| {
-        ristretto_types::Error::InternalError("AccessMode.values() returned null".to_string())
-    })?;
+    let values_array = values_result
+        .ok_or_else(|| InternalError("AccessMode.values() returned null".to_string()))?;
 
-    // Get the AccessMode enum constant at the ordinal
     let access_mode_value = {
         let values_ref = values_array.as_reference()?;
         let (_, elements) = values_ref.as_class_vec_ref()?;
-        let ordinal = access_mode as usize;
+        let ordinal =
+            usize::try_from(access_mode_ordinal).map_err(|e| InternalError(e.to_string()))?;
         if ordinal >= elements.len() {
-            return Err(ristretto_types::Error::InternalError(format!(
+            return Err(InternalError(format!(
                 "AccessMode ordinal {ordinal} out of bounds"
             )));
         }
         elements[ordinal].clone()
     };
 
-    // Call toMethodHandle(AccessMode) to get a MethodHandle that's bound to this VarHandle
     let var_handle_class = thread.class("java/lang/invoke/VarHandle").await?;
     let to_method_handle = var_handle_class.try_get_method(
         "toMethodHandle",
@@ -106,18 +849,12 @@ async fn invoke_var_handle_access_mode<T: ristretto_types::Thread + 'static>(
         )
         .await?;
 
-    let method_handle = mh_result.ok_or_else(|| {
-        ristretto_types::Error::InternalError("VarHandle.toMethodHandle returned null".to_string())
-    })?;
+    let method_handle = mh_result
+        .ok_or_else(|| InternalError("VarHandle.toMethodHandle returned null".to_string()))?;
 
-    // Build the arguments for the MethodHandle invoke:
-    // [method_handle, ...remaining_args]
-    // The MethodHandle from toMethodHandle is already bound to the VarHandle
     let mut invoke_args = vec![method_handle];
     invoke_args.extend(remaining_args);
 
-    // Invoke the MethodHandle using the same mechanism as MethodHandle.invoke
-    // This calls the invoke intrinsic method which handles LambdaForm dispatch
     let invoke_params = Parameters::new(invoke_args);
     super::methodhandle::invoke(thread.clone(), invoke_params).await
 }
