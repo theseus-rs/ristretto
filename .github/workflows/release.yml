@@ -131,6 +131,9 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           fi
+      - name: "Install musl audio dependencies"
+        if: "${{ contains(matrix.targets, 'x86_64-unknown-linux-musl') }}"
+        run: ".github/scripts/setup-musl-audio.sh"
       - uses: swatinem/rust-cache@v2
         with:
           key: ${{ join(matrix.targets, '-') }}

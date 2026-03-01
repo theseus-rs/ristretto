@@ -26,6 +26,11 @@ use tokio::sync::{Notify, RwLock};
 use tokio::time::{Instant, timeout_at};
 use tracing::{Level, debug, event_enabled};
 
+#[cfg(not(target_family = "wasm"))]
+// Leave room for another interpreter transition without rejecting legitimate bootstrap work on
+// Tokio's smaller worker-thread stacks.
+const NATIVE_STACK_RED_ZONE: usize = 128 * 1024;
+
 /// A state that is used to park a thread.  The thread will be parked until it is unparked by
 /// another thread or interrupted.
 #[derive(Debug)]
@@ -652,7 +657,7 @@ impl Thread {
                             }
                             Err(error) => {
                                 // Step 8: <clinit> threw, mark as Erroneous
-                                let error_msg = format!("{error}");
+                                let error_msg = format!("{error:#}");
                                 class.fail_initialization(error_msg.clone())?;
                                 // Wrap in ExceptionInInitializerError (only first time)
                                 return Err(ExceptionInInitializerError(error_msg).into());
@@ -908,7 +913,7 @@ impl Thread {
             // Check for native stack overflow before creating a new frame
             #[cfg(not(target_family = "wasm"))]
             if let Some(remaining) = stacker::remaining_stack()
-                && remaining < 512 * 1024
+                && remaining < NATIVE_STACK_RED_ZONE
             {
                 // Release synchronized monitor before returning error
                 if let Some(ref monitor) = sync_monitor {
@@ -1332,6 +1337,44 @@ mod tests {
         let object = thread.object("java/lang/Integer", "I", &[42]).await?;
         let value = object.as_i32()?;
         assert_eq!(42, value);
+        Ok(())
+    }
+
+    #[cfg(not(feature = "audio"))]
+    #[tokio::test]
+    async fn test_disabled_audio_returns_unsatisfied_link_error() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let mut constant_pool = ristretto_classfile::ConstantPool::default();
+        let this_class =
+            constant_pool.add_class("com/sun/media/sound/DirectAudioDeviceProvider")?;
+        let name_index = constant_pool.add_utf8("nGetNumDevices")?;
+        let descriptor_index = constant_pool.add_utf8("()I")?;
+        let method = ristretto_classfile::Method {
+            access_flags: MethodAccessFlags::PUBLIC
+                | MethodAccessFlags::STATIC
+                | MethodAccessFlags::NATIVE,
+            name_index,
+            descriptor_index,
+            ..Default::default()
+        };
+        let class_file = ristretto_classfile::ClassFile {
+            constant_pool,
+            this_class,
+            methods: vec![method],
+            ..Default::default()
+        };
+        let class = Class::from(None, class_file)?;
+        let method = class.try_get_method("nGetNumDevices", "()I")?;
+
+        let error = thread
+            .execute(&class, &method, &[] as &[Value])
+            .await
+            .expect_err("disabled audio intrinsic should fail");
+        assert!(matches!(
+            error,
+            crate::Error::JavaError(UnsatisfiedLinkError(message))
+                if message == "'com/sun/media/sound/DirectAudioDeviceProvider.nGetNumDevices()I'"
+        ));
         Ok(())
     }
 

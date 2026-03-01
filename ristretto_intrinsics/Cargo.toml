@@ -38,9 +38,11 @@ zip = { workspace = true, features = ["deflate"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 console = { workspace = true }
+cpal = { workspace = true, optional = true }
 dirs = { workspace = true }
 filetime = { workspace = true }
 libc = { workspace = true }
+midir = { workspace = true, optional = true }
 os_info = { workspace = true }
 socket2 = { workspace = true }
 sysinfo = { workspace = true }
@@ -50,6 +52,7 @@ whoami = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation-sys = { workspace = true }
+coreaudio-sys = { workspace = true, optional = true }
 
 [target.'cfg(target_family = "windows")'.dependencies]
 os_pipe = { workspace = true }
@@ -71,11 +74,46 @@ windows-sys = { workspace = true, features = [
 tokio = { workspace = true }
 
 [target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dependencies]
+js-sys = { version = "0.3", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
 wasm-bindgen-futures = { workspace = true }
+web-sys = { version = "0.3", optional = true, features = [
+    "AudioBuffer",
+    "AudioBufferSourceNode",
+    "AudioContext",
+    "AudioContextOptions",
+    "AudioContextState",
+    "AudioDestinationNode",
+    "BaseAudioContext",
+    "GainNode",
+    "GainOptions",
+    "MidiAccess",
+    "MidiInput",
+    "MidiInputMap",
+    "MidiMessageEvent",
+    "MidiOptions",
+    "MidiOutput",
+    "MidiOutputMap",
+    "MidiPort",
+    "Navigator",
+    "Performance",
+    "Window",
+] }
+
+[features]
+default = ["audio"]
+audio = [
+    "dep:coreaudio-sys",
+    "dep:cpal",
+    "dep:js-sys",
+    "dep:midir",
+    "dep:wasm-bindgen",
+    "dep:web-sys",
+]
 
 [dev-dependencies]
 ristretto_test_util = { path = "../ristretto_test_util", version = "0.31.0" }
-ristretto_vm = { path = "../ristretto_vm", version = "0.31.0" }
+ristretto_vm = { path = "../ristretto_vm", version = "0.31.0", default-features = false }
 tempfile = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]

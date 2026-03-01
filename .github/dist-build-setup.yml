@@ -1,0 +1,3 @@
+- name: Install musl audio dependencies
+  if: ${{ contains(matrix.targets, 'x86_64-unknown-linux-musl') }}
+  run: .github/scripts/setup-musl-audio.sh

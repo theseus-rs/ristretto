@@ -31,7 +31,7 @@ parking_lot = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.31.0" }
 ristretto_classloader = { path = "../ristretto_classloader", version = "0.31.0" }
 ristretto_gc = { path = "../ristretto_gc", version = "0.31.0" }
-ristretto_intrinsics = { path = "../ristretto_intrinsics", version = "0.31.0" }
+ristretto_intrinsics = { path = "../ristretto_intrinsics", version = "0.31.0", default-features = false }
 ristretto_jit = { path = "../ristretto_jit", version = "0.31.0" }
 ristretto_macros = { path = "../ristretto_macros", version = "0.31.0" }
 ristretto_types = { path = "../ristretto_types", version = "0.31.0" }
@@ -73,7 +73,10 @@ rayon = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
-default = ["rustls-tls"]
+default = ["audio", "rustls-tls"]
+audio = [
+    "ristretto_intrinsics/audio",
+]
 native-tls = [
     "ristretto_classloader/native-tls",
 ]

@@ -31,6 +31,12 @@ publish-jobs = ["homebrew"]
 tap = "theseus-rs/homebrew-tap"
 # Target platforms to build apps for (Rust target-triple syntax)
 targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
+# Extra setup for package managers cargo-dist does not support directly.
+github-build-setup = "../dist-build-setup.yml"
+
+[dist.dependencies.apt]
+libasound2-dev = { version = "*", targets = ["aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu"] }
+pkg-config = { version = "*", targets = ["aarch64-unknown-linux-gnu", "x86_64-unknown-linux-gnu"] }
 
 [dist.github-custom-runners]
 global = "ubuntu-latest"
@@ -39,12 +45,10 @@ global = "ubuntu-latest"
 runner = "macos-26"
 
 [dist.github-custom-runners.aarch64-unknown-linux-gnu]
-runner = "ubuntu-latest"
-container = { image = "quay.io/pypa/manylinux_2_28_x86_64", host = "x86_64-unknown-linux-musl" }
+runner = "ubuntu-26.04-arm"
 
 [dist.github-custom-runners.x86_64-unknown-linux-gnu]
 runner = "ubuntu-latest"
-container = { image = "quay.io/pypa/manylinux_2_28_x86_64", host = "x86_64-unknown-linux-musl" }
 
 [dist.github-custom-runners.x86_64-unknown-linux-musl]
 runner = "ubuntu-latest"

@@ -240,6 +240,30 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "audio")]
+    #[test]
+    fn test_audio_method_registered() {
+        let method_registry = MethodRegistry::new(&JAVA_21);
+        let result = method_registry.method(
+            "com/sun/media/sound/DirectAudioDeviceProvider",
+            "nGetNumDevices",
+            "()I",
+        );
+        assert!(result.is_some());
+    }
+
+    #[cfg(not(feature = "audio"))]
+    #[test]
+    fn test_audio_method_not_registered() {
+        let method_registry = MethodRegistry::new(&JAVA_21);
+        let result = method_registry.method(
+            "com/sun/media/sound/DirectAudioDeviceProvider",
+            "nGetNumDevices",
+            "()I",
+        );
+        assert!(result.is_none());
+    }
+
     /// Get all the intrinsic methods for a given Java runtime targeting the specified OS / arch.
     async fn get_intrinsic_methods(version: &str, os: &str, arch: &str) -> Result<Vec<String>> {
         let (_java_home, _java_version, class_loader) =
