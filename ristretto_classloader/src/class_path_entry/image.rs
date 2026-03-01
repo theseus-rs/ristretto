@@ -72,6 +72,48 @@ impl Image {
         &self.name
     }
 
+    /// Read a resource from the image by name.
+    ///
+    /// The resource name should be a path like `java/lang/Object.class` or
+    /// `META-INF/services/javax.sound.sampled.spi.AudioFileReader`.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    #[expect(clippy::unused_async)]
+    pub async fn read_resource<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
+        let name = name.as_ref();
+        let (package, _file_name) = name.rsplit_once('/').unwrap_or(("", name));
+
+        if let Some(&module_index) = self.packages.get(package) {
+            let module = &self.modules[module_index as usize];
+            let capacity = module.len() + name.len() + 2;
+            let mut full_name = String::with_capacity(capacity);
+            full_name.push('/');
+            full_name.push_str(module);
+            full_name.push('/');
+            full_name.push_str(name);
+            if let Ok(resource) = self.image.get_resource(&full_name) {
+                return Ok(Some(resource.data().to_vec()));
+            }
+        }
+
+        // Try all modules when the package is not in the index (e.g. META-INF/services)
+        for module in self.modules.iter() {
+            let capacity = module.len() + name.len() + 2;
+            let mut full_name = String::with_capacity(capacity);
+            full_name.push('/');
+            full_name.push_str(module);
+            full_name.push('/');
+            full_name.push_str(name);
+            if let Ok(resource) = self.image.get_resource(&full_name) {
+                return Ok(Some(resource.data().to_vec()));
+            }
+        }
+
+        Ok(None)
+    }
+
     /// Read a class from the image.
     ///
     /// # Errors

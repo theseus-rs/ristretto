@@ -30,11 +30,41 @@ impl Directory {
         &self.name
     }
 
+    /// Read a resource from the directory by name.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    pub async fn read_resource<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
+        let name = name.as_ref();
+        let path = self.path.join(name);
+
+        #[cfg(not(target_family = "wasm"))]
+        {
+            match tokio::fs::read(&path).await {
+                Ok(bytes) => Ok(Some(bytes)),
+                Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
+                Err(err) => Err(crate::Error::IoError(err)),
+            }
+        }
+
+        #[cfg(target_family = "wasm")]
+        {
+            match std::fs::read(&path) {
+                Ok(bytes) => Ok(Some(bytes)),
+                Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
+                Err(err) => Err(crate::Error::IoError(err)),
+            }
+        }
+    }
+
     /// Read a class from the directory.
     ///
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
+    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
         let name = name.as_ref();
         let parts = name.split('.').collect::<Vec<_>>();

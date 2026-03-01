@@ -15,7 +15,8 @@ pub async fn expand_stack_frame_info<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.StackFrameInfo.expandStackFrameInfo()V")
+    // No-op: fields are eagerly populated during callStackWalk
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -23,11 +24,10 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.StackFrameInfo.expandStackFrameInfo()V"
-    )]
-    async fn test_expand_stack_frame_info() {
+    async fn test_expand_stack_frame_info() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = expand_stack_frame_info(thread, Parameters::default()).await;
+        let result = expand_stack_frame_info(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 }

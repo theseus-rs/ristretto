@@ -15,7 +15,7 @@ pub async fn n_get_extra_libraries<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.media.sound.Platform.nGetExtraLibraries()Ljava/lang/String;")
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method(
@@ -27,7 +27,7 @@ pub async fn n_get_library_for_feature<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.media.sound.Platform.nGetLibraryForFeature(I)I")
+    Ok(Some(Value::Int(0)))
 }
 
 #[intrinsic_method("com/sun/media/sound/Platform.nIsBigEndian()Z", Any)]
@@ -46,7 +46,7 @@ pub async fn n_is_signed_8<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.media.sound.Platform.nIsSigned8()Z")
+    Ok(Some(Value::from(false)))
 }
 
 #[cfg(test)]
@@ -54,21 +54,19 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.media.sound.Platform.nGetExtraLibraries()Ljava/lang/String;"
-    )]
-    async fn test_n_get_extra_libraries() {
+    async fn test_n_get_extra_libraries() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_extra_libraries(thread, Parameters::default()).await;
+        let result = n_get_extra_libraries(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.media.sound.Platform.nGetLibraryForFeature(I)I"
-    )]
-    async fn test_n_get_library_for_feature() {
+    async fn test_n_get_library_for_feature() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_library_for_feature(thread, Parameters::default()).await;
+        let result = n_get_library_for_feature(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(0)));
+        Ok(())
     }
 
     #[tokio::test]
@@ -81,9 +79,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: com.sun.media.sound.Platform.nIsSigned8()Z")]
-    async fn test_n_is_signed_8() {
+    async fn test_n_is_signed_8() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_is_signed_8(thread, Parameters::default()).await;
+        let result = n_is_signed_8(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
     }
 }

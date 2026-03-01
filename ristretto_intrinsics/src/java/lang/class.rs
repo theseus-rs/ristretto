@@ -1460,7 +1460,7 @@ pub async fn is_hidden<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.isInstance(Ljava/lang/Object;)Z", Any)]
 #[async_method]
-pub async fn is_instance<T: ristretto_types::Thread + 'static>(
+pub async fn is_instance<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1468,13 +1468,14 @@ pub async fn is_instance<T: ristretto_types::Thread + 'static>(
     let self_object = parameters.pop()?;
     let self_class = get_class_no_init(&thread, &self_object).await?;
 
-    if compare_object.is_null() {
+    if compare_object.is_null() || !compare_object.is_object() {
         return Ok(Some(Value::from(false)));
     }
-    let compare_object_class = {
-        let compare_object = compare_object.as_object_ref()?;
-        compare_object.class().clone()
+    let compare_class_name = {
+        let compare_reference = compare_object.as_reference()?;
+        compare_reference.class_name()?.clone()
     };
+    let compare_object_class = thread.load_and_link_class(&compare_class_name).await?;
     if self_class
         .is_assignable_from(&thread, &compare_object_class)
         .await?

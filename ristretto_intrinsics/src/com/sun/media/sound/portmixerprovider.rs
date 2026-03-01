@@ -11,7 +11,9 @@ pub async fn n_get_num_devices<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.media.sound.PortMixerProvider.nGetNumDevices()I")
+    // Return 0 because we don't have native port mixer support.
+    // PortMixerInfo objects can't be created without native library support.
+    Ok(Some(Value::Int(0)))
 }
 
 #[intrinsic_method(
@@ -21,11 +23,12 @@ pub async fn n_get_num_devices<T: ristretto_types::Thread + 'static>(
 #[async_method]
 pub async fn n_new_port_mixer_info<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "com.sun.media.sound.PortMixerProvider.nNewPortMixerInfo(I)Lcom/sun/media/sound/PortMixerProvider$PortMixerInfo;"
-    )
+    let _index = parameters.pop_int()?;
+    // PortMixerInfo is constructed by Java code using the native index.
+    // Return null to indicate the info should be constructed by Java.
+    Ok(Some(Value::Object(None)))
 }
 
 #[cfg(test)]
@@ -33,20 +36,20 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.media.sound.PortMixerProvider.nGetNumDevices()I"
-    )]
-    async fn test_n_get_num_devices() {
+    async fn test_n_get_num_devices() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_num_devices(thread, Parameters::default()).await;
+        let result = n_get_num_devices(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(0)));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.media.sound.PortMixerProvider.nNewPortMixerInfo(I)Lcom/sun/media/sound/PortMixerProvider$PortMixerInfo;"
-    )]
-    async fn test_n_new_port_mixer_info() {
+    async fn test_n_new_port_mixer_info() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_new_port_mixer_info(thread, Parameters::default()).await;
+        let mut params = Parameters::default();
+        params.push(Value::Int(0));
+        let result = n_new_port_mixer_info(thread, params).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
     }
 }

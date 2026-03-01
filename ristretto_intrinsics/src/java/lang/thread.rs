@@ -366,8 +366,9 @@ pub async fn set_priority_0<T: ristretto_types::Thread + 'static>(
             }
             _ => ThreadPriority::Max,
         };
-        set_current_thread_priority(priority)
-            .map_err(|error| RuntimeException(format!("Unable to set thread priority: {error}")))?;
+        // On Linux, setting thread priority may fail with EACCES if the process does not have
+        // CAP_SYS_NICE.
+        let _ = set_current_thread_priority(priority);
     }
 
     Ok(None)
@@ -386,9 +387,10 @@ pub async fn set_scoped_value_cache<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.sleep(J)V", LessThanOrEqual(JAVA_17))]
+#[cfg_attr(target_family = "wasm", expect(clippy::needless_pass_by_value))]
 #[async_method]
 pub async fn sleep<T: ristretto_types::Thread + 'static>(
-    #[cfg_attr(target_family = "wasm", allow(unused_variables))] thread: Arc<T>,
+    #[cfg_attr(target_family = "wasm", expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     use ristretto_types::JavaError;
@@ -428,9 +430,10 @@ pub async fn sleep_0<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.sleepNanos0(J)V", GreaterThanOrEqual(JAVA_25))]
+#[cfg_attr(target_family = "wasm", expect(clippy::needless_pass_by_value))]
 #[async_method]
 pub async fn sleep_nanos_0<T: ristretto_types::Thread + 'static>(
-    #[cfg_attr(target_family = "wasm", allow(unused_variables))] thread: Arc<T>,
+    #[cfg_attr(target_family = "wasm", expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let nanos = parameters.pop_long()?;
@@ -469,7 +472,7 @@ pub async fn start_0<T: ristretto_types::Thread + 'static>(
     // First, get the VM to generate a unique internal thread ID
     let vm = thread.vm()?;
 
-    #[cfg_attr(target_family = "wasm", allow(unused_variables))]
+    #[cfg_attr(target_family = "wasm", expect(unused_variables))]
     let (thread_class, internal_thread_id, is_daemon) = {
         let mut thread_object = thread_object.as_object_mut()?;
         let thread_class = thread_object.class().clone();
