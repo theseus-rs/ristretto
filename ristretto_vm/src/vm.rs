@@ -17,6 +17,7 @@ use ristretto_classloader::{
     Class, ClassLoader, ClassPath, ClassPathEntry, Object, Reference, Value, runtime,
 };
 use ristretto_gc::{GarbageCollector, Statistics};
+use ristretto_types::Extensions;
 use ristretto_types::NativeMemory;
 use ristretto_types::ResourceManager;
 #[cfg(not(target_family = "wasm"))]
@@ -92,6 +93,8 @@ pub struct VM {
     method_ref_cache: MethodRefCache,
     /// The monitor registry for object monitors.
     monitor_registry: MonitorRegistry,
+    /// Per-VM extensions container for storing subsystem state.
+    extensions: Extensions,
 }
 
 /// VM
@@ -173,6 +176,7 @@ impl VM {
             method_ref_cache: MethodRefCache::new(),
             monitor_registry: MonitorRegistry::new(),
             module_system,
+            extensions: Extensions::new(),
         });
         startup_trace!("[vm] vm allocation");
 
@@ -936,6 +940,10 @@ impl ristretto_types::VM for VM {
 
     fn create_thread(&self, id: u64) -> Result<Arc<Thread>> {
         Ok(Thread::new(&self.vm, id))
+    }
+
+    fn extensions(&self) -> &Extensions {
+        &self.extensions
     }
 }
 

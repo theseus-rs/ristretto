@@ -118,20 +118,6 @@ impl ModuleSystem {
             return Ok(module_system);
         }
 
-        // Fast path: Skip expensive module resolution for simple classpath applications
-        // that don't use JPMS features (no module path, no main module, no custom limits)
-        let is_simple_classpath_app = configuration.module_path().is_empty()
-            && configuration.main_module().is_none()
-            && configuration.limit_modules().is_empty()
-            && configuration.upgrade_module_path().is_empty();
-
-        if is_simple_classpath_app {
-            debug!("Simple classpath application; skipping full module resolution");
-            module_system.resolved_configuration =
-                Self::create_fallback_configuration(configuration);
-            return Ok(module_system);
-        }
-
         // Build the module finder chain
         let finder_chain = Self::build_finder_chain(configuration, java_home).await;
 
@@ -388,17 +374,25 @@ impl ModuleSystem {
             return;
         }
 
-        let default_modules = [
-            "java.logging",
-            "java.management",
-            "java.naming",
-            "java.security.sasl",
-            "java.xml",
-        ];
+        // Per JEP 261, classpath applications get all java.* modules (the full SE API)
+        // plus modules that provide service implementations. This matches the real JVM
+        // behavior where the boot layer contains all platform modules.
+        for reference in finder_chain.find_all() {
+            let name = reference.name().to_string();
+            if name.starts_with("java.") && !root_modules.contains(&name) {
+                root_modules.push(name);
+            }
+        }
 
-        for module in default_modules {
-            if finder_chain.find(module).is_some() && !root_modules.contains(&module.to_string()) {
-                root_modules.push(module.to_string());
+        // Also include jdk.* modules that provide service implementations needed by
+        // platform APIs (e.g., jdk.localedata provides locale services)
+        for reference in finder_chain.find_all() {
+            let name = reference.name();
+            if name.starts_with("jdk.")
+                && !reference.descriptor().provides.is_empty()
+                && !root_modules.contains(&name.to_string())
+            {
+                root_modules.push(name.to_string());
             }
         }
     }
@@ -692,7 +686,7 @@ impl ModuleSystem {
     pub fn get_module_for_package(&self, package: &str) -> Option<Value> {
         // First check the defined modules from defineModule0 calls
         let modules = self.modules.read();
-        for module in modules.values() {
+        for (_name, module) in &*modules {
             // Convert package name from internal format (java/lang) to dot format (java.lang)
             let dot_package = package.replace('/', ".");
             if module.packages.contains(&dot_package) || module.packages.contains(package) {

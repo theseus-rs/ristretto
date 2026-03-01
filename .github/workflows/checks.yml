@@ -34,6 +34,8 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
+      - name: Install Linux dependencies
+        run: .github/scripts/setup-linux.sh
       - name: Check the project
         run: |
           cargo check --workspace --all-targets --all-features
@@ -47,6 +49,8 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
+      - name: Install Linux dependencies
+        run: .github/scripts/setup-linux.sh
       - name: Check lints
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -76,6 +80,8 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
+      - name: Install Linux dependencies
+        run: .github/scripts/setup-linux.sh
       - name: Check documentation
         env:
           RUSTDOCFLAGS: -D warnings
