@@ -181,7 +181,7 @@ pub async fn invoke_0<T: ristretto_types::Thread + 'static>(
                     let caller_display = if caller.is_empty() {
                         // For unnamed modules, include the identity hash code
                         if caller_module_hash != 0 {
-                            format!("unnamed module @{:x}", caller_module_hash & 0xFFFF_FFFF)
+                            format!("unnamed module @{caller_module_hash:x}")
                         } else {
                             "unnamed module".to_string()
                         }

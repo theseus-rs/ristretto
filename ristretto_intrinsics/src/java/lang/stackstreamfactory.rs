@@ -15,7 +15,7 @@ pub async fn check_stack_walk_modes<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.StackStreamFactory.checkStackWalkModes()Z")
+    Ok(Some(Value::Int(1)))
 }
 
 #[cfg(test)]
@@ -23,11 +23,10 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.StackStreamFactory.checkStackWalkModes()Z"
-    )]
-    async fn test_check_stack_walk_modes() {
+    async fn test_check_stack_walk_modes() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = check_stack_walk_modes(thread, Parameters::default()).await;
+        let result = check_stack_walk_modes(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(1)));
+        Ok(())
     }
 }

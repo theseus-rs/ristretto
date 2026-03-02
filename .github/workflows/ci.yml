@@ -65,6 +65,10 @@ jobs:
           targets: ${{ matrix.target }}
           toolchain: stable
 
+      - name: Install Linux dependencies
+        if: ${{ startsWith(matrix.platform, 'linux') || startsWith(matrix.platform, 'wasm32') }}
+        run: .github/scripts/setup-linux.sh
+
       - name: Build
         if: ${{ matrix.platform == 'wasm32-unknown' }}
         env:

@@ -31,7 +31,7 @@ pub async fn available_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.UnixFileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I")
+    Ok(Some(Value::Int(0)))
 }
 
 #[intrinsic_method(
@@ -284,12 +284,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.UnixFileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I"
-    )]
     async fn test_available_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = available_0(thread, Parameters::default()).await;
+        let result = available_0(thread, Parameters::default()).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some(Value::Int(0)));
     }
 
     #[tokio::test]

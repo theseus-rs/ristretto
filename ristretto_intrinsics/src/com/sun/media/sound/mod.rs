@@ -1,3 +1,4 @@
+pub mod audio_state;
 pub mod directaudiodevice;
 pub mod directaudiodeviceprovider;
 pub mod midiindevice;

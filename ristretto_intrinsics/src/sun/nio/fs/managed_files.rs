@@ -1,8 +1,18 @@
+use parking_lot::RwLock;
 use ristretto_types::handles::{HandleManager, NioFile};
+use std::collections::HashMap;
 #[cfg(target_family = "wasm")]
 use std::io::{Read, Seek, Write};
+use std::sync::atomic::{AtomicI32, Ordering};
 #[cfg(not(target_family = "wasm"))]
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
+
+/// Counter for generating unique Windows file handles.
+static WINDOWS_HANDLE_COUNTER: AtomicI32 = AtomicI32::new(0x1000);
+
+/// Map from file handle/fd to its filesystem path (for `GetFinalPathNameByHandle` emulation).
+static FILE_PATHS: std::sync::LazyLock<RwLock<HashMap<i32, String>>> =
+    std::sync::LazyLock::new(|| RwLock::new(HashMap::new()));
 
 pub(crate) async fn open(
     nio_file_handles: &HandleManager<i32, NioFile>,
@@ -99,6 +109,7 @@ pub(crate) async fn write(
 
 pub(crate) async fn close(nio_file_handles: &HandleManager<i32, NioFile>, fd: i32) {
     nio_file_handles.remove(&fd).await;
+    FILE_PATHS.write().remove(&fd);
 }
 
 pub(crate) async fn metadata(
@@ -140,4 +151,53 @@ pub(crate) async fn seek(
     {
         file.seek(pos)
     }
+}
+
+/// Get the file size for the given file descriptor.
+pub(crate) async fn file_size(
+    nio_file_handles: &HandleManager<i32, NioFile>,
+    fd: i32,
+) -> std::io::Result<i64> {
+    let meta = metadata(nio_file_handles, fd).await?;
+    #[expect(clippy::cast_possible_wrap)]
+    Ok(meta.len() as i64)
+}
+
+/// Open a file Windows-style (for `CreateFile` emulation) and return a handle.
+pub(crate) async fn open_windows(
+    nio_file_handles: &HandleManager<i32, NioFile>,
+    path: &str,
+) -> std::io::Result<i32> {
+    let fd = WINDOWS_HANDLE_COUNTER.fetch_add(1, Ordering::Relaxed);
+
+    #[cfg(not(target_family = "wasm"))]
+    let file = tokio::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(false)
+        .open(path)
+        .await
+        .or_else(|_| {
+            // Fall back to read-only if read-write fails
+            std::fs::OpenOptions::new()
+                .read(true)
+                .open(path)
+                .map(tokio::fs::File::from_std)
+        })?;
+
+    #[cfg(target_family = "wasm")]
+    let file = std::fs::OpenOptions::new().read(true).open(path)?;
+
+    nio_file_handles
+        .insert(fd, file)
+        .await
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
+
+    FILE_PATHS.write().insert(fd, path.to_string());
+    Ok(fd)
+}
+
+/// Get the filesystem path associated with a handle (for `GetFinalPathNameByHandle` emulation).
+pub(crate) fn get_path(_nio_file_handles: &HandleManager<i32, NioFile>, fd: i32) -> String {
+    FILE_PATHS.read().get(&fd).cloned().unwrap_or_default()
 }

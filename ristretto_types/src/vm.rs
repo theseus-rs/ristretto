@@ -1,3 +1,4 @@
+use crate::Extensions;
 use crate::Result;
 use crate::handles::{FileHandle, HandleManager, NioFile, ThreadHandle};
 use crate::module_access::ModuleAccess;
@@ -133,6 +134,9 @@ pub trait VM: Send + Sync {
     /// # Errors
     /// Returns an error if the thread cannot be created.
     fn create_thread(&self, id: u64) -> Result<Arc<Self::ThreadType>>;
+
+    /// Get the per-VM extensions container for storing subsystem state.
+    fn extensions(&self) -> &Extensions;
 }
 
 /// Blanket implementation of VM for `Arc<V>` where `V: VM`.
@@ -258,5 +262,9 @@ impl<V: VM> VM for Arc<V> {
 
     fn create_thread(&self, id: u64) -> Result<Arc<Self::ThreadType>> {
         (**self).create_thread(id)
+    }
+
+    fn extensions(&self) -> &Extensions {
+        (**self).extensions()
     }
 }

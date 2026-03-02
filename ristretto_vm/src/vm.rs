@@ -17,6 +17,7 @@ use ristretto_classloader::{
     Class, ClassLoader, ClassPath, ClassPathEntry, Object, Reference, Value, runtime,
 };
 use ristretto_gc::{GarbageCollector, Statistics};
+use ristretto_types::Extensions;
 use ristretto_types::NativeMemory;
 use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle, NioFile};
 
@@ -86,6 +87,8 @@ pub struct VM {
     method_ref_cache: MethodRefCache,
     /// The monitor registry for object monitors.
     monitor_registry: MonitorRegistry,
+    /// Per-VM extensions container for subsystem state (e.g., audio).
+    extensions: Extensions,
 }
 
 /// VM
@@ -165,6 +168,7 @@ impl VM {
             method_ref_cache: MethodRefCache::new(),
             monitor_registry: MonitorRegistry::new(),
             module_system,
+            extensions: Extensions::new(),
         });
         startup_trace!("[vm] vm allocation");
 
@@ -764,7 +768,12 @@ impl VM {
     }
 
     /// Wait for all non-daemon threads to complete (WASM version - no-op).
+    ///
+    /// # Errors
+    ///
+    /// This function currently always succeeds on WASM targets.
     #[cfg(target_family = "wasm")]
+    #[expect(clippy::unused_async)]
     pub async fn wait_for_non_daemon_threads(&self) -> Result<()> {
         // WASM uses spawn_local which doesn't support joining
         Ok(())
@@ -898,6 +907,10 @@ impl ristretto_types::VM for VM {
 
     fn create_thread(&self, id: u64) -> Result<Arc<Thread>> {
         Ok(Thread::new(&self.vm, id))
+    }
+
+    fn extensions(&self) -> &Extensions {
+        &self.extensions
     }
 }
 

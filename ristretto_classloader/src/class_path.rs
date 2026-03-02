@@ -73,6 +73,23 @@ impl ClassPath {
         Err(ClassNotFound(name.to_string()))
     }
 
+    /// Read a resource from the class path.
+    ///
+    /// Returns `Ok(None)` if the resource is not found in any entry.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    pub async fn read_resource<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
+        let name = name.as_ref();
+        for class_path_entry in self.iter() {
+            if let Ok(Some(bytes)) = class_path_entry.read_resource(name).await {
+                return Ok(Some(bytes));
+            }
+        }
+        Ok(None)
+    }
+
     /// Get the class names in the class path.
     ///
     /// # Errors

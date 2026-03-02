@@ -204,6 +204,7 @@ fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
 /// # Errors
 ///
 /// An error will be returned if the archive cannot be extracted.
+#[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
 async fn extract_archive(
     version: &str,
     file_name: &str,
