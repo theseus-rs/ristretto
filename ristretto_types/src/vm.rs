@@ -1,5 +1,5 @@
 use crate::Result;
-use crate::handles::{FileHandle, HandleManager, ThreadHandle};
+use crate::handles::{FileHandle, HandleManager, NioFile, ThreadHandle};
 use crate::module_access::ModuleAccess;
 use crate::monitor::MonitorRegistry;
 use crate::native_memory::NativeMemory;
@@ -93,7 +93,7 @@ pub trait VM: Send + Sync {
     fn file_handles(&self) -> &HandleManager<String, FileHandle>;
 
     /// Get the NIO file descriptor handles manager.
-    fn nio_file_handles(&self) -> &HandleManager<i32, std::fs::File>;
+    fn nio_file_handles(&self) -> &HandleManager<i32, NioFile>;
 
     /// Get the next NIO file descriptor number.
     fn next_nio_fd(&self) -> i32;
@@ -223,7 +223,7 @@ impl<V: VM> VM for Arc<V> {
         (**self).file_handles()
     }
 
-    fn nio_file_handles(&self) -> &HandleManager<i32, std::fs::File> {
+    fn nio_file_handles(&self) -> &HandleManager<i32, NioFile> {
         (**self).nio_file_handles()
     }
 
