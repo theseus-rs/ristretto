@@ -311,10 +311,30 @@ pub async fn read_bytes<T: ristretto_types::Thread + 'static>(
 
     let bytes_read = if fd == 0 {
         let stdin_lock = vm.stdin();
-        let mut stdin = stdin_lock.lock().await;
-        stdin
-            .read(&mut buffer[0..length])
-            .map_err(|error| IoException(error.to_string()))?
+
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let (data, n) = tokio::task::spawn_blocking(move || {
+                let mut stdin = stdin_lock.blocking_lock();
+                let mut buf = vec![0u8; length];
+                let n = stdin
+                    .read(&mut buf[0..length])
+                    .map_err(|error| IoException(error.to_string()))?;
+                Ok::<_, ristretto_types::Error>((buf, n))
+            })
+            .await
+            .map_err(|error| IoException(error.to_string()))??;
+            buffer[..n].copy_from_slice(&data[..n]);
+            n
+        }
+
+        #[cfg(target_family = "wasm")]
+        {
+            let mut stdin = stdin_lock.lock().await;
+            stdin
+                .read(&mut buffer[0..length])
+                .map_err(|error| IoException(error.to_string()))?
+        }
     } else {
         let file_handles = vm.file_handles();
         let handle_identifier = file_handle_identifier(fd);

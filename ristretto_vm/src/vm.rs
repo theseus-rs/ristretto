@@ -18,7 +18,7 @@ use ristretto_classloader::{
 };
 use ristretto_gc::{GarbageCollector, Statistics};
 use ristretto_types::NativeMemory;
-use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle};
+use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle, NioFile};
 
 type ThreadHandle = ristretto_types::handles::ThreadHandle<Thread>;
 use std::ffi::OsStr;
@@ -73,7 +73,7 @@ pub struct VM {
     /// The VM file handles
     file_handles: HandleManager<String, FileHandle>,
     /// NIO file descriptor handles.
-    nio_file_handles: HandleManager<i32, std::fs::File>,
+    nio_file_handles: HandleManager<i32, NioFile>,
     /// The next NIO file descriptor number.
     next_nio_fd: AtomicI32,
     /// The VM member handles used for dynamic invocation
@@ -867,7 +867,7 @@ impl ristretto_types::VM for VM {
         &self.native_memory
     }
 
-    fn nio_file_handles(&self) -> &HandleManager<i32, std::fs::File> {
+    fn nio_file_handles(&self) -> &HandleManager<i32, NioFile> {
         &self.nio_file_handles
     }
 

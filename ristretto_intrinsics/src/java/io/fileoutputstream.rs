@@ -253,17 +253,53 @@ pub async fn write_bytes<T: ristretto_types::Thread + 'static>(
     match fd {
         1 => {
             let stdout_lock = vm.stdout();
-            let mut stdout = stdout_lock.lock().await;
-            stdout
-                .write_all(&bytes[offset..offset + length])
-                .map_err(|error| IoException(error.to_string()))?;
+            let data = bytes[offset..offset + length].to_vec();
+
+            #[cfg(not(target_family = "wasm"))]
+            {
+                tokio::task::spawn_blocking(move || {
+                    let mut stdout = stdout_lock.blocking_lock();
+                    stdout
+                        .write_all(&data)
+                        .map_err(|error| IoException(error.to_string()))?;
+                    Ok::<_, ristretto_types::Error>(())
+                })
+                .await
+                .map_err(|error| IoException(error.to_string()))??;
+            }
+
+            #[cfg(target_family = "wasm")]
+            {
+                let mut stdout = stdout_lock.lock().await;
+                stdout
+                    .write_all(&data)
+                    .map_err(|error| IoException(error.to_string()))?;
+            }
         }
         2 => {
             let stderr_lock = vm.stderr();
-            let mut stderr = stderr_lock.lock().await;
-            stderr
-                .write_all(&bytes[offset..offset + length])
-                .map_err(|error| IoException(error.to_string()))?;
+            let data = bytes[offset..offset + length].to_vec();
+
+            #[cfg(not(target_family = "wasm"))]
+            {
+                tokio::task::spawn_blocking(move || {
+                    let mut stderr = stderr_lock.blocking_lock();
+                    stderr
+                        .write_all(&data)
+                        .map_err(|error| IoException(error.to_string()))?;
+                    Ok::<_, ristretto_types::Error>(())
+                })
+                .await
+                .map_err(|error| IoException(error.to_string()))??;
+            }
+
+            #[cfg(target_family = "wasm")]
+            {
+                let mut stderr = stderr_lock.lock().await;
+                stderr
+                    .write_all(&data)
+                    .map_err(|error| IoException(error.to_string()))?;
+            }
         }
         _ => {
             let file_handles = vm.file_handles();
