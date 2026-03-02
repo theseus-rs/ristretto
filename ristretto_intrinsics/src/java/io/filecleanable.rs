@@ -1,4 +1,3 @@
-use crate::java::io::fileoutputstream::file_handle_identifier;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
@@ -40,8 +39,7 @@ pub async fn cleanup_close_0<T: ristretto_types::Thread + 'static>(
         return Ok(None);
     }
 
-    let handle_identifier = file_handle_identifier(fd);
-    if let Some(handle) = file_handles.remove(&handle_identifier).await {
+    if let Some(handle) = file_handles.remove(&fd).await {
         #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
         {
             let _ = handle;
@@ -66,7 +64,7 @@ pub async fn cleanup_close_0<T: ristretto_types::Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::java::io::fileoutputstream::raw_file_descriptor;
+    use crate::java::io::filedescriptor::raw_file_descriptor;
     use ristretto_types::handles::FileHandle;
     use tokio::fs::{File, remove_file};
 
@@ -90,8 +88,7 @@ mod tests {
         let file = File::create(file_name).await?;
         let fd = raw_file_descriptor(&file)?;
         let file_handle: FileHandle = (file, false).into();
-        let handle_identifier = file_handle_identifier(0);
-        file_handles.insert(handle_identifier, file_handle).await?;
+        file_handles.insert(fd, file_handle).await?;
 
         let mut parameters = Parameters::default();
         parameters.push_int(i32::try_from(fd)?);

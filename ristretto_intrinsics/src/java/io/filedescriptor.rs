@@ -1,5 +1,3 @@
-use crate::java::io::fileoutputstream::file_handle_identifier;
-use crate::sun::nio::fs::managed_files;
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
@@ -41,6 +39,56 @@ pub(crate) fn file_descriptor_from_java_object<V: VM>(
     Ok(fd)
 }
 
+/// Per-VM counter for generating synthetic file descriptors on WebAssembly.
+#[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
+struct WasmFdCounter(std::sync::atomic::AtomicI64);
+
+/// Returns a raw file descriptor for the current platform. On WebAssembly, it returns a negative
+/// counter as WebAssembly does not support file descriptors in the same way as traditional
+/// operating systems.
+#[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
+pub(crate) fn raw_file_descriptor(
+    _file: &str,
+    resource_manager: &ristretto_types::ResourceManager,
+) -> Result<i64> {
+    use std::sync::atomic::Ordering;
+    let counter =
+        resource_manager.get_or_init(|| WasmFdCounter(std::sync::atomic::AtomicI64::new(-1000)))?;
+    Ok(counter.0.fetch_sub(1, Ordering::Relaxed))
+}
+
+/// Converts a `File` into its corresponding file descriptor, which is an integer value that
+/// represents the file handle in the operating system.
+#[cfg(target_os = "wasi")]
+#[expect(clippy::unnecessary_wraps)]
+pub(crate) fn raw_file_descriptor(file: &std::fs::File) -> Result<i64> {
+    use std::os::wasi::io::AsRawFd;
+    let fd = file.as_raw_fd();
+    Ok(i64::from(fd))
+}
+
+/// Converts a `File` into its corresponding file descriptor, which is an integer value that
+/// represents the file handle in the operating system.
+#[cfg(not(target_family = "wasm"))]
+#[expect(clippy::unnecessary_wraps)]
+pub(crate) fn raw_file_descriptor(file: &tokio::fs::File) -> Result<i64> {
+    #[cfg(target_os = "windows")]
+    let file_descriptor = {
+        use std::os::windows::io::AsRawHandle;
+        let fd = file.as_raw_handle() as usize;
+        i64::try_from(fd)?
+    };
+
+    #[cfg(not(target_os = "windows"))]
+    let file_descriptor = {
+        use std::os::unix::io::AsRawFd;
+        let fd = file.as_raw_fd();
+        i64::from(fd)
+    };
+
+    Ok(file_descriptor)
+}
+
 #[intrinsic_method("java/io/FileDescriptor.close0()V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
 pub async fn close_0<T: ristretto_types::Thread + 'static>(
@@ -51,7 +99,6 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
-    let handle_identifier = file_handle_identifier(fd);
 
     {
         let mut file_descriptor = file_descriptor.as_object_mut()?;
@@ -61,12 +108,7 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
         }
     }
 
-    let Some(handle) = file_handles.remove(&handle_identifier).await else {
-        let fd_int = i32::try_from(fd).unwrap_or(-1);
-        if fd_int >= 0 {
-            let nio_file_handles = vm.nio_file_handles();
-            managed_files::close(nio_file_handles, fd_int).await;
-        }
+    let Some(handle) = file_handles.remove(&fd).await else {
         return Ok(None);
     };
 
@@ -109,10 +151,10 @@ pub async fn get_append<T: ristretto_types::Thread + 'static>(
             let vm = thread.vm()?;
             let file_handles = vm.file_handles();
             let fd = i64::from(handle);
-            let handle_identifier = file_handle_identifier(fd);
-            let file_handle = file_handles.get(&handle_identifier).await.ok_or_else(|| {
-                IoException(format!("File handle not found: {handle_identifier}"))
-            })?;
+            let file_handle = file_handles
+                .get(&fd)
+                .await
+                .ok_or_else(|| IoException(format!("File handle not found: {fd}")))?;
             file_handle.append
         }
     };
@@ -158,11 +200,10 @@ pub async fn sync_0<T: ristretto_types::Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
-    let handle_identifier = file_handle_identifier(fd);
     let file_handle = file_handles
-        .get_mut(&handle_identifier)
+        .get_mut(&fd)
         .await
-        .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
+        .ok_or_else(|| IoException(format!("File handle not found: {fd}")))?;
     let file = &file_handle.file;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]

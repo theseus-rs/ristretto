@@ -1,8 +1,7 @@
 use crate::java::io::filedescriptor;
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
-use crate::java::io::fileoutputstream::file_handle_identifier;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
-use crate::java::io::fileoutputstream::raw_file_descriptor;
+use crate::java::io::filedescriptor::raw_file_descriptor;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
@@ -56,11 +55,10 @@ pub async fn get_file_pointer<T: ristretto_types::Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
-    let handle_identifier = file_handle_identifier(fd);
     let mut file_handle = file_handles
-        .get_mut(&handle_identifier)
+        .get_mut(&fd)
         .await
-        .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
+        .ok_or_else(|| IoException(format!("File handle not found: {fd}")))?;
     let file = &mut file_handle.file;
     let position: u64;
 
@@ -116,11 +114,10 @@ pub async fn length_0<T: ristretto_types::Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
-    let handle_identifier = file_handle_identifier(fd);
     let file_handle = file_handles
-        .get(&handle_identifier)
+        .get(&fd)
         .await
-        .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
+        .ok_or_else(|| IoException(format!("File handle not found: {fd}")))?;
     let file = &file_handle.file;
     let length: u64;
 
@@ -228,8 +225,7 @@ pub async fn open_0<T: ristretto_types::Thread + 'static>(
                 let vm = thread.vm()?;
                 let file_handles = vm.file_handles();
                 let file_handle: FileHandle = (file, false).into();
-                let handle_identifier = file_handle_identifier(fd);
-                file_handles.insert(handle_identifier, file_handle).await?;
+                file_handles.insert(fd, file_handle).await?;
 
                 {
                     let mut file_descriptor = file_descriptor.as_object_mut()?;
@@ -328,11 +324,10 @@ pub async fn read_bytes_0<T: ristretto_types::Thread + 'static>(
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
 
     let file_handles = vm.file_handles();
-    let handle_identifier = file_handle_identifier(fd);
     let mut file_handle = file_handles
-        .get_mut(&handle_identifier)
+        .get_mut(&fd)
         .await
-        .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
+        .ok_or_else(|| IoException(format!("File handle not found: {fd}")))?;
     let file = &mut file_handle.file;
 
     let mut buffer = vec![0u8; length];
@@ -394,11 +389,10 @@ pub async fn seek_0<T: ristretto_types::Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
-    let handle_identifier = file_handle_identifier(fd);
     let mut file_handle = file_handles
-        .get_mut(&handle_identifier)
+        .get_mut(&fd)
         .await
-        .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
+        .ok_or_else(|| IoException(format!("File handle not found: {fd}")))?;
     let file = &mut file_handle.file;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -440,11 +434,10 @@ pub async fn set_length_0<T: ristretto_types::Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
-    let handle_identifier = file_handle_identifier(fd);
     let file_handle = file_handles
-        .get_mut(&handle_identifier)
+        .get_mut(&fd)
         .await
-        .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
+        .ok_or_else(|| IoException(format!("File handle not found: {fd}")))?;
     let file = &file_handle.file;
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -522,11 +515,10 @@ pub async fn write_bytes_0<T: ristretto_types::Thread + 'static>(
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
 
     let file_handles = vm.file_handles();
-    let handle_identifier = file_handle_identifier(fd);
     let mut file_handle = file_handles
-        .get_mut(&handle_identifier)
+        .get_mut(&fd)
         .await
-        .ok_or_else(|| IoException(format!("File handle not found: {handle_identifier}")))?;
+        .ok_or_else(|| IoException(format!("File handle not found: {fd}")))?;
     let mode = file_handle.mode;
     let file = &mut file_handle.file;
 

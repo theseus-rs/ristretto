@@ -5,7 +5,7 @@ mod manager;
 mod member;
 mod thread;
 
-pub use file::{FileHandle, FileModeFlags, NioFile};
+pub use file::{FileHandle, FileModeFlags};
 pub use manager::HandleManager;
 pub use member::MemberHandle;
 pub use thread::ThreadHandle;

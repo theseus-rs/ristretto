@@ -27,7 +27,7 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
         object.value("fd")?.as_i32()?
     };
     let vm = thread.vm()?;
-    managed_files::close(vm.nio_file_handles(), fd).await;
+    managed_files::close(vm.file_handles(), i64::from(fd)).await;
     Ok(None)
 }
 

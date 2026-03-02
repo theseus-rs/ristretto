@@ -38,6 +38,9 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - Url class loading from jars and modules
 - Reading, writing, and verifying classes
 - A low-pause, concurrent, parallel mark-and-sweep garbage collector
+- Fully asynchronous execution using Rust's async/await
+    - java.lang.Thread
+    - java.io and java.nio
 - Parallel Just-In-Time (JIT) compilation for x86-64, aarch64, s390x and riscv64
 
 ### Limitations

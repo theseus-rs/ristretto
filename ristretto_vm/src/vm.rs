@@ -18,14 +18,15 @@ use ristretto_classloader::{
 };
 use ristretto_gc::{GarbageCollector, Statistics};
 use ristretto_types::NativeMemory;
-use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle, NioFile};
+use ristretto_types::ResourceManager;
+use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle};
 
 type ThreadHandle = ristretto_types::handles::ThreadHandle<Thread>;
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 use tokio::sync::{Mutex, RwLock};
 use tracing::debug;
@@ -66,16 +67,14 @@ pub struct VM {
     hidden_class_counter: AtomicU64,
     /// Per-VM native memory manager.
     native_memory: NativeMemory,
+    /// Per-VM type-erased resource storage for intrinsic subsystems.
+    resource_manager: ResourceManager,
     /// The next thread ID
     next_thread_id: AtomicU64,
     /// The VM thread handles
     thread_handles: HandleManager<u64, ThreadHandle>,
     /// The VM file handles
-    file_handles: HandleManager<String, FileHandle>,
-    /// NIO file descriptor handles.
-    nio_file_handles: HandleManager<i32, NioFile>,
-    /// The next NIO file descriptor number.
-    next_nio_fd: AtomicI32,
+    file_handles: HandleManager<i64, FileHandle>,
     /// The VM member handles used for dynamic invocation
     member_handles: HandleManager<String, MemberHandle>,
     /// The string pool for interned strings
@@ -155,10 +154,9 @@ impl VM {
             hidden_class_counter: AtomicU64::new(1),
             next_thread_id: AtomicU64::new(1),
             native_memory: NativeMemory::new(),
+            resource_manager: ResourceManager::new(),
             thread_handles: HandleManager::new(),
             file_handles: HandleManager::new(),
-            nio_file_handles: HandleManager::new(),
-            next_nio_fd: AtomicI32::new(1000),
             member_handles: HandleManager::new(),
             string_pool: StringPool::new(),
             call_site_cache: CallSiteCache::new(),
@@ -393,7 +391,7 @@ impl VM {
     }
 
     /// Get the VM file handles
-    pub(crate) fn file_handles(&self) -> &HandleManager<String, FileHandle> {
+    pub(crate) fn file_handles(&self) -> &HandleManager<i64, FileHandle> {
         &self.file_handles
     }
 
@@ -535,6 +533,15 @@ impl VM {
 
             new_thread.set_value("holder", field_holder)?;
             new_thread.set_value("interrupted", Value::Int(0))?;
+
+            // Initialize interruptLock which is used by NIO's blockedOn()
+            // (normally set by field initializer in <init>, but we skip <init>)
+            let object_class = thread.class("java.lang.Object").await?;
+            let interrupt_lock = Object::new(object_class)?;
+            new_thread.set_value(
+                "interruptLock",
+                Value::from_object(&self.garbage_collector, interrupt_lock),
+            )?;
         }
 
         thread
@@ -849,7 +856,7 @@ impl ristretto_types::VM for VM {
         self.configuration.stderr()
     }
 
-    fn file_handles(&self) -> &HandleManager<String, FileHandle> {
+    fn file_handles(&self) -> &HandleManager<i64, FileHandle> {
         VM::file_handles(self)
     }
 
@@ -867,12 +874,8 @@ impl ristretto_types::VM for VM {
         &self.native_memory
     }
 
-    fn nio_file_handles(&self) -> &HandleManager<i32, NioFile> {
-        &self.nio_file_handles
-    }
-
-    fn next_nio_fd(&self) -> i32 {
-        self.next_nio_fd.fetch_add(1, Ordering::Relaxed)
+    fn resource_manager(&self) -> &ResourceManager {
+        &self.resource_manager
     }
 
     fn class_loader(&self) -> Arc<RwLock<Arc<ClassLoader>>> {

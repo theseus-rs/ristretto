@@ -150,7 +150,7 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
 ) -> Result<Option<Value>> {
     let fd = parameters.pop_int()?;
     let vm = thread.vm()?;
-    managed_files::close(vm.nio_file_handles(), fd).await;
+    managed_files::close(vm.file_handles(), i64::from(fd)).await;
     Ok(None)
 }
 
@@ -387,9 +387,14 @@ pub async fn fstat_0<T: ristretto_types::Thread + 'static>(
     let fd = parameters.pop_int()?;
 
     let vm = thread.vm()?;
-    let metadata = managed_files::metadata(vm.nio_file_handles(), fd)
+    let metadata = managed_files::metadata(vm.file_handles(), i64::from(fd))
         .await
-        .map_err(|e| InternalError(format!("fstat0: {}", e.raw_os_error().unwrap_or(5))))?;
+        .map_err(|e| {
+            InternalError(format!(
+                "fstat0: {}",
+                e.raw_os_error().unwrap_or(5 /* EIO */)
+            ))
+        })?;
 
     let mut guard = attributes.as_reference_mut()?;
     let Reference::Object(object) = &mut *guard else {
@@ -626,9 +631,16 @@ pub async fn open_0<T: ristretto_types::Thread + 'static>(
     let path_str = String::from_utf8(path_bytes)
         .map_err(|error| InternalError(format!("Invalid path encoding: {error}")))?;
 
-    let fd = vm.next_nio_fd();
-    match managed_files::open(vm.nio_file_handles(), fd, &path_str, flags, mode).await {
-        Ok(fd) => Ok(Some(Value::Int(fd))),
+    match managed_files::open(
+        vm.file_handles(),
+        vm.resource_manager(),
+        &path_str,
+        flags,
+        mode,
+    )
+    .await
+    {
+        Ok(fd) => Ok(Some(Value::Int(i32::try_from(fd)?))),
         Err(error) => {
             let errno = error.raw_os_error().unwrap_or(2);
             Err(InternalError(format!(
@@ -694,7 +706,7 @@ pub async fn read_0<T: ristretto_types::Thread + 'static>(
     let mut buf = vec![0u8; count];
 
     let vm = thread.vm()?;
-    match managed_files::read(vm.nio_file_handles(), fd, &mut buf).await {
+    match managed_files::read(vm.file_handles(), i64::from(fd), &mut buf).await {
         Ok(n) => {
             if n > 0 {
                 vm.native_memory().write_bytes(address, &buf[..n]);
@@ -702,7 +714,7 @@ pub async fn read_0<T: ristretto_types::Thread + 'static>(
             Ok(Some(Value::Int(i32::try_from(n)?)))
         }
         Err(error) => {
-            let errno = error.raw_os_error().unwrap_or(5);
+            let errno = error.raw_os_error().unwrap_or(5 /* EIO */);
             Err(InternalError(format!(
                 "sun.nio.fs.UnixException: errno={errno}"
             )))
@@ -987,10 +999,10 @@ pub async fn write_0<T: ristretto_types::Thread + 'static>(
     let vm = thread.vm()?;
     let data = vm.native_memory().read_bytes(address, count);
 
-    match managed_files::write(vm.nio_file_handles(), fd, &data).await {
+    match managed_files::write(vm.file_handles(), i64::from(fd), &data).await {
         Ok(n) => Ok(Some(Value::Int(i32::try_from(n)?))),
         Err(error) => {
-            let errno = error.raw_os_error().unwrap_or(5);
+            let errno = error.raw_os_error().unwrap_or(5 /* EIO */);
             Err(InternalError(format!(
                 "sun.nio.fs.UnixException: errno={errno}"
             )))
