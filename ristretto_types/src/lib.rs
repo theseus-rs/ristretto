@@ -16,6 +16,7 @@ pub mod module_access;
 pub mod monitor;
 pub mod native_memory;
 mod parameters;
+mod resource_manager;
 mod rust_value;
 mod thread;
 mod vm;
@@ -30,6 +31,7 @@ pub use module_access::{
 };
 pub use native_memory::NativeMemory;
 pub use parameters::Parameters;
+pub use resource_manager::ResourceManager;
 pub use rust_value::RustValue;
 use std::pin::Pin;
 pub use thread::Thread;

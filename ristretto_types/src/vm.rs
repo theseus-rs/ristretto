@@ -1,8 +1,9 @@
 use crate::Result;
-use crate::handles::{FileHandle, HandleManager, NioFile, ThreadHandle};
+use crate::handles::{FileHandle, HandleManager, ThreadHandle};
 use crate::module_access::ModuleAccess;
 use crate::monitor::MonitorRegistry;
 use crate::native_memory::NativeMemory;
+use crate::resource_manager::ResourceManager;
 use ahash::AHashMap;
 use ristretto_classfile::{VerifyMode, Version};
 use ristretto_classloader::{Class, ClassLoader, ClassPath, Value};
@@ -89,14 +90,11 @@ pub trait VM: Send + Sync {
     /// Get the native memory manager.
     fn native_memory(&self) -> &NativeMemory;
 
+    /// Get the resource manager for type-erased per-VM resource storage.
+    fn resource_manager(&self) -> &ResourceManager;
+
     /// Get the file handles manager.
-    fn file_handles(&self) -> &HandleManager<String, FileHandle>;
-
-    /// Get the NIO file descriptor handles manager.
-    fn nio_file_handles(&self) -> &HandleManager<i32, NioFile>;
-
-    /// Get the next NIO file descriptor number.
-    fn next_nio_fd(&self) -> i32;
+    fn file_handles(&self) -> &HandleManager<i64, FileHandle>;
 
     /// Get the thread handles manager.
     fn thread_handles(&self) -> &HandleManager<u64, ThreadHandle<Self::ThreadType>>;
@@ -215,20 +213,16 @@ impl<V: VM> VM for Arc<V> {
         (**self).native_memory()
     }
 
+    fn resource_manager(&self) -> &ResourceManager {
+        (**self).resource_manager()
+    }
+
     fn thread_handles(&self) -> &HandleManager<u64, ThreadHandle<Self::ThreadType>> {
         (**self).thread_handles()
     }
 
-    fn file_handles(&self) -> &HandleManager<String, FileHandle> {
+    fn file_handles(&self) -> &HandleManager<i64, FileHandle> {
         (**self).file_handles()
-    }
-
-    fn nio_file_handles(&self) -> &HandleManager<i32, NioFile> {
-        (**self).nio_file_handles()
-    }
-
-    fn next_nio_fd(&self) -> i32 {
-        (**self).next_nio_fd()
     }
 
     fn monitor_registry(&self) -> &MonitorRegistry {

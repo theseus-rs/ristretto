@@ -1,13 +1,5 @@
 use bitflags::bitflags;
 
-/// Platform-specific NIO file type.
-#[cfg(not(target_family = "wasm"))]
-pub type NioFile = tokio::fs::File;
-
-/// Platform-specific NIO file type.
-#[cfg(target_family = "wasm")]
-pub type NioFile = std::fs::File;
-
 bitflags! {
     /// File Mode Flags
     ///

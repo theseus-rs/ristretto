@@ -9,7 +9,7 @@ use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqua
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::{Parameters, Result};
+use ristretto_types::{Parameters, Result, VM as _};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -21,35 +21,38 @@ struct InflaterContext {
     needs_dict: bool,  // true = currently waiting for dictionary to be set
 }
 
-/// Global storage for Inflater (decompression) contexts.
-/// Maps a handle ID to an `InflaterContext` instance.
-static INFLATER_HANDLES: RwLock<Option<HashMap<i64, InflaterContext>>> = RwLock::new(None);
-static NEXT_INFLATER_ID: AtomicI64 = AtomicI64::new(1);
+/// Per-VM storage for Inflater (decompression) contexts.
+struct InflaterState {
+    handles: RwLock<HashMap<i64, InflaterContext>>,
+    next_id: AtomicI64,
+}
 
-fn get_or_init_inflaters() -> &'static RwLock<Option<HashMap<i64, InflaterContext>>> {
-    let guard = INFLATER_HANDLES.read();
-    if guard.is_none() {
-        drop(guard);
-        let mut guard = INFLATER_HANDLES.write();
-        if guard.is_none() {
-            *guard = Some(HashMap::new());
+impl InflaterState {
+    fn new() -> Self {
+        Self {
+            handles: RwLock::new(HashMap::new()),
+            next_id: AtomicI64::new(1),
         }
     }
-    &INFLATER_HANDLES
+}
+
+fn get_inflater_state<T: ristretto_types::Thread + 'static>(
+    thread: &Arc<T>,
+) -> Result<Arc<InflaterState>> {
+    let vm = thread.vm()?;
+    vm.resource_manager().get_or_init(InflaterState::new)
 }
 
 #[intrinsic_method("java/util/zip/Inflater.end(J)V", Any)]
 #[async_method]
 pub async fn end<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let handle = parameters.pop_long()?;
-    let inflaters = get_or_init_inflaters();
-    let mut guard = inflaters.write();
-    if let Some(map) = guard.as_mut() {
-        map.remove(&handle);
-    }
+    let state = get_inflater_state(&thread)?;
+    let mut guard = state.handles.write();
+    guard.remove(&handle);
     Ok(None)
 }
 
@@ -102,7 +105,7 @@ pub async fn inflate_bytes_buffer<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("java/util/zip/Inflater.inflateBytes(J[BII)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
 pub async fn inflate_bytes<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let len = parameters.pop_int()?;
@@ -124,14 +127,9 @@ pub async fn inflate_bytes<T: ristretto_types::Thread + 'static>(
     let off = off as usize;
     let len = len as usize;
 
-    let inflaters = get_or_init_inflaters();
-    let mut guard = inflaters.write();
-    let Some(map) = guard.as_mut() else {
-        return Err(ristretto_types::Error::InternalError(
-            "Inflater handles not initialized".to_string(),
-        ));
-    };
-    let Some(context) = map.get_mut(&handle) else {
+    let state = get_inflater_state(&thread)?;
+    let mut guard = state.handles.write();
+    let Some(context) = guard.get_mut(&handle) else {
         return Err(ristretto_types::JavaError::RuntimeException(
             "Inflater has been closed".to_string(),
         )
@@ -181,7 +179,7 @@ pub async fn inflate_bytes<T: ristretto_types::Thread + 'static>(
 #[async_method]
 #[expect(clippy::too_many_lines)]
 pub async fn inflate_bytes_bytes<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let output_len_i32 = parameters.pop_int()?;
@@ -244,14 +242,9 @@ pub async fn inflate_bytes_bytes<T: ristretto_types::Thread + 'static>(
     };
 
     // Get the inflater
-    let inflaters = get_or_init_inflaters();
-    let mut guard = inflaters.write();
-    let Some(map) = guard.as_mut() else {
-        return Err(ristretto_types::Error::InternalError(
-            "Inflater handles not initialized".to_string(),
-        ));
-    };
-    let Some(context) = map.get_mut(&handle) else {
+    let state = get_inflater_state(&thread)?;
+    let mut guard = state.handles.write();
+    let Some(context) = guard.get_mut(&handle) else {
         return Err(ristretto_types::JavaError::RuntimeException(
             "Inflater has been closed".to_string(),
         )
@@ -321,7 +314,7 @@ pub async fn inflate_bytes_bytes<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("java/util/zip/Inflater.init(Z)J", Any)]
 #[async_method]
 pub async fn init<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let nowrap = parameters.pop_int()? != 0;
@@ -338,12 +331,10 @@ pub async fn init<T: ristretto_types::Thread + 'static>(
     };
 
     // Store and return handle
-    let handle = NEXT_INFLATER_ID.fetch_add(1, Ordering::SeqCst);
-    let inflaters = get_or_init_inflaters();
-    let mut guard = inflaters.write();
-    if let Some(map) = guard.as_mut() {
-        map.insert(handle, context);
-    }
+    let state = get_inflater_state(&thread)?;
+    let handle = state.next_id.fetch_add(1, Ordering::SeqCst);
+    let mut guard = state.handles.write();
+    guard.insert(handle, context);
 
     Ok(Some(Value::Long(handle)))
 }
@@ -360,19 +351,14 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("java/util/zip/Inflater.reset(J)V", Any)]
 #[async_method]
 pub async fn reset<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let handle = parameters.pop_long()?;
 
-    let inflaters = get_or_init_inflaters();
-    let mut guard = inflaters.write();
-    let Some(map) = guard.as_mut() else {
-        return Err(ristretto_types::Error::InternalError(
-            "Inflater handles not initialized".to_string(),
-        ));
-    };
-    let Some(context) = map.get_mut(&handle) else {
+    let state = get_inflater_state(&thread)?;
+    let mut guard = state.handles.write();
+    let Some(context) = guard.get_mut(&handle) else {
         return Err(ristretto_types::JavaError::RuntimeException(
             "Inflater has been closed".to_string(),
         )
@@ -386,7 +372,7 @@ pub async fn reset<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("java/util/zip/Inflater.setDictionary(J[BII)V", Any)]
 #[async_method]
 pub async fn set_dictionary<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let len = parameters.pop_int()?;
@@ -421,14 +407,9 @@ pub async fn set_dictionary<T: ristretto_types::Thread + 'static>(
     };
 
     // Set dictionary on the decompressor
-    let inflaters = get_or_init_inflaters();
-    let mut guard = inflaters.write();
-    let Some(map) = guard.as_mut() else {
-        return Err(ristretto_types::Error::InternalError(
-            "Inflater handles not initialized".to_string(),
-        ));
-    };
-    let Some(context) = map.get_mut(&handle) else {
+    let state = get_inflater_state(&thread)?;
+    let mut guard = state.handles.write();
+    let Some(context) = guard.get_mut(&handle) else {
         return Err(ristretto_types::JavaError::RuntimeException(
             "Inflater has been closed".to_string(),
         )

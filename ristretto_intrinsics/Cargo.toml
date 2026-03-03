@@ -26,6 +26,7 @@ console = { workspace = true }
 dirs = { workspace = true }
 filetime = { workspace = true }
 flate2 = { workspace = true }
+getrandom = { workspace = true }
 jiff = { workspace = true }
 os_info = { workspace = true }
 parking_lot = { workspace = true }
@@ -42,7 +43,10 @@ zerocopy = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 thread-priority = { workspace = true }
-tokio = { workspace = true, features = ["fs", "time"] }
+tokio = { workspace = true, features = ["fs", "net", "time"] }
+
+[target.'cfg(target_family = "windows")'.dependencies]
+os_pipe = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 tokio = { workspace = true }

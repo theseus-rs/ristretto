@@ -1,5 +1,7 @@
 use crate::java::io::filedescriptor;
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+use crate::java::io::filedescriptor::raw_file_descriptor;
 use ristretto_classfile::JAVA_8;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::JAVA_11;
@@ -17,60 +19,17 @@ use ristretto_types::VM;
 use ristretto_types::handles::FileHandle;
 use ristretto_types::{Parameters, Result};
 #[cfg(target_os = "wasi")]
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
-use std::io::{ErrorKind, SeekFrom};
+use std::io::ErrorKind;
 #[cfg(target_os = "wasi")]
-use std::io::{Seek, Write};
+use std::io::Write;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
-use tokio::fs::{File, OpenOptions};
+use tokio::fs::OpenOptions;
 #[cfg(not(target_family = "wasm"))]
-use tokio::io::{AsyncSeekExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 use zerocopy::transmute_ref;
-
-/// Generates a unique identifier for a file handle based on its integer value.  This is used to
-/// track file handles in the VM's handles table.
-pub(crate) fn file_handle_identifier(handle: i64) -> String {
-    format!("file:{handle}")
-}
-
-/// Returns a raw file descriptor for the current platform. On WebAssembly, it returns -1 as
-/// WebAssembly does not support file descriptors in the same way as traditional operating systems.
-#[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-pub(crate) fn raw_file_descriptor() -> i64 {
-    -1
-}
-
-/// Converts a `File` into its corresponding file descriptor, which is an integer value that
-/// represents the file handle in the operating system. This is used to interact with the file
-/// system at a lower level.
-#[cfg(any(not(target_family = "wasm"), target_os = "wasi"))]
-#[expect(clippy::unnecessary_wraps)]
-pub(crate) fn raw_file_descriptor(file: &File) -> Result<i64> {
-    #[cfg(target_os = "wasi")]
-    let file_descriptor = {
-        use std::os::wasi::io::AsRawFd;
-        let fd = file.as_raw_fd();
-        i64::from(fd)
-    };
-
-    #[cfg(target_os = "windows")]
-    let file_descriptor = {
-        use std::os::windows::io::AsRawHandle;
-        let fd = file.as_raw_handle() as usize;
-        i64::try_from(fd)?
-    };
-
-    #[cfg(not(any(target_family = "wasm", target_os = "windows")))]
-    let file_descriptor = {
-        use std::os::unix::io::AsRawFd;
-        let fd = file.as_raw_fd();
-        i64::from(fd)
-    };
-
-    Ok(file_descriptor)
-}
 
 #[intrinsic_method("java/io/FileOutputStream.close0()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
@@ -170,9 +129,8 @@ pub async fn open_0<T: ristretto_types::Thread + 'static>(
                 let fd = raw_file_descriptor(&file)?;
                 let vm = thread.vm()?;
                 let file_handles = vm.file_handles();
-                let file_handle: FileHandle = (file, false).into();
-                let handle_identifier = file_handle_identifier(fd);
-                file_handles.insert(handle_identifier, file_handle).await?;
+                let file_handle: FileHandle = (file, append).into();
+                file_handles.insert(fd, file_handle).await?;
 
                 {
                     let mut file_descriptor = file_descriptor.as_object_mut()?;
@@ -233,7 +191,7 @@ pub async fn write_bytes<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let append = parameters.pop_bool()?;
+    let _append = parameters.pop_bool()?;
     let length = usize::try_from(parameters.pop_int()?)?;
     let offset = usize::try_from(parameters.pop_int()?)?;
     let bytes = parameters.pop()?;
@@ -254,85 +212,40 @@ pub async fn write_bytes<T: ristretto_types::Thread + 'static>(
         1 => {
             let stdout_lock = vm.stdout();
             let data = bytes[offset..offset + length].to_vec();
-
-            #[cfg(not(target_family = "wasm"))]
-            {
-                tokio::task::spawn_blocking(move || {
-                    let mut stdout = stdout_lock.blocking_lock();
-                    stdout
-                        .write_all(&data)
-                        .map_err(|error| IoException(error.to_string()))?;
-                    Ok::<_, ristretto_types::Error>(())
-                })
-                .await
-                .map_err(|error| IoException(error.to_string()))??;
-            }
-
-            #[cfg(target_family = "wasm")]
-            {
-                let mut stdout = stdout_lock.lock().await;
-                stdout
-                    .write_all(&data)
-                    .map_err(|error| IoException(error.to_string()))?;
-            }
+            let mut stdout = stdout_lock.lock().await;
+            stdout
+                .write_all(&data)
+                .map_err(|error| IoException(error.to_string()))?;
         }
         2 => {
             let stderr_lock = vm.stderr();
             let data = bytes[offset..offset + length].to_vec();
-
-            #[cfg(not(target_family = "wasm"))]
-            {
-                tokio::task::spawn_blocking(move || {
-                    let mut stderr = stderr_lock.blocking_lock();
-                    stderr
-                        .write_all(&data)
-                        .map_err(|error| IoException(error.to_string()))?;
-                    Ok::<_, ristretto_types::Error>(())
-                })
-                .await
-                .map_err(|error| IoException(error.to_string()))??;
-            }
-
-            #[cfg(target_family = "wasm")]
-            {
-                let mut stderr = stderr_lock.lock().await;
-                stderr
-                    .write_all(&data)
-                    .map_err(|error| IoException(error.to_string()))?;
-            }
+            let mut stderr = stderr_lock.lock().await;
+            stderr
+                .write_all(&data)
+                .map_err(|error| IoException(error.to_string()))?;
         }
         _ => {
             let file_handles = vm.file_handles();
-            let handle_identifier = file_handle_identifier(fd);
-            let mut file_handle =
-                file_handles
-                    .get_mut(&handle_identifier)
-                    .await
-                    .ok_or_else(|| {
-                        IoException(format!("File handle not found: {handle_identifier}"))
-                    })?;
+            let mut file_handle = file_handles
+                .get_mut(&fd)
+                .await
+                .ok_or_else(|| IoException(format!("File handle not found: {fd}")))?;
             let file = &mut file_handle.file;
 
             #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
             {
-                let _ = append;
                 let _ = file;
             }
 
             #[cfg(target_os = "wasi")]
             {
-                if append {
-                    file.seek(SeekFrom::End(0))?;
-                }
                 file.write_all(&bytes[offset..offset + length])
                     .map_err(|error| IoException(error.to_string()))?;
             }
 
             #[cfg(not(target_family = "wasm"))]
             {
-                if append {
-                    file.seek(SeekFrom::End(0)).await?;
-                }
                 file.write_all(&bytes[offset..offset + length])
                     .await
                     .map_err(|error| IoException(error.to_string()))?;
@@ -345,24 +258,6 @@ pub async fn write_bytes<T: ristretto_types::Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::fs::remove_file;
-
-    #[test]
-    fn test_file_handle_identifier() {
-        let handle = 12345;
-        let identifier = file_handle_identifier(handle);
-        assert_eq!(identifier, "file:12345");
-    }
-
-    #[tokio::test]
-    async fn test_raw_file_descriptor() -> Result<()> {
-        let file_name = "test_raw_file_descriptor.txt";
-        let file = File::create(file_name).await?;
-        let descriptor = raw_file_descriptor(&file)?;
-        assert!(descriptor > 0);
-        remove_file(file_name).await?;
-        Ok(())
-    }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
