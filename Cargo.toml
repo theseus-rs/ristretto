@@ -114,10 +114,8 @@ tag-name = "v{{version}}"
 [profile.release]
 codegen-units = 1
 lto = true
-opt-level = "z"
+opt-level = 3
 panic = "abort"
 
-# The profile that 'cargo dist' will build with
 [profile.dist]
 inherits = "release"
-lto = "thin"
