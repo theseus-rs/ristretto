@@ -292,7 +292,7 @@ pub struct Class {
     class_loader: Option<Weak<ClassLoader>>,
     name: String,
     source_file: Option<String>,
-    class_file: ClassFile,
+    class_file: ClassFile<'static>,
     parent: RwLock<Option<Arc<Class>>>,
     interfaces: RwLock<Vec<Arc<Class>>>,
     /// Static fields declared in this class.
@@ -331,7 +331,7 @@ impl Class {
     /// if the class file cannot be read.
     pub fn from(
         class_loader: Option<Weak<ClassLoader>>,
-        mut class_file: ClassFile,
+        mut class_file: ClassFile<'static>,
     ) -> Result<Arc<Self>> {
         let mut source_file = None;
 
@@ -442,7 +442,7 @@ impl Class {
     /// if the class file cannot be read.
     pub fn from_hidden(
         class_loader: Option<Weak<ClassLoader>>,
-        mut class_file: ClassFile,
+        mut class_file: ClassFile<'static>,
         suffix: u64,
     ) -> Result<Arc<Self>> {
         let original_name = class_file.class_name()?.to_string();
@@ -455,9 +455,10 @@ impl Class {
             class_file.constant_pool.try_get(class_file.this_class)?
         {
             let name_index = *name_index;
-            class_file
-                .constant_pool
-                .set(name_index, Constant::Utf8(hidden_name.clone()))?;
+            class_file.constant_pool.set(
+                name_index,
+                Constant::Utf8(std::borrow::Cow::Owned(hidden_name.clone())),
+            )?;
         }
 
         let mut source_file = None;
@@ -518,7 +519,7 @@ impl Class {
 
     /// Add synthetic fields for the class. Ensures no duplicates are added.
     fn add_synthetic_fields(
-        class_file: &mut ClassFile,
+        class_file: &mut ClassFile<'static>,
         field_signatures: &[(&str, &str)],
     ) -> Result<()> {
         for (name, descriptor) in field_signatures {
@@ -541,7 +542,7 @@ impl Class {
     /// Add synthetic methods for the class.  This is used to add methods that are not present in
     /// the class file, but are required for the class to function correctly.
     fn add_synthetic_methods(
-        class_file: &mut ClassFile,
+        class_file: &mut ClassFile<'static>,
         methods: &mut IndexMap<String, Arc<Method>>,
         method_signatures: &[(&str, &str)],
     ) -> Result<()> {
@@ -906,7 +907,7 @@ impl Class {
 
     /// Get the class file.
     #[must_use]
-    pub fn class_file(&self) -> &ClassFile {
+    pub fn class_file(&self) -> &ClassFile<'static> {
         &self.class_file
     }
 
@@ -970,12 +971,12 @@ impl Class {
 
     /// Get the constant pool
     #[must_use]
-    pub fn constant_pool(&self) -> &ConstantPool {
+    pub fn constant_pool(&self) -> &ConstantPool<'static> {
         &self.class_file.constant_pool
     }
 
     /// Get a mutable constant pool
-    pub fn constant_pool_mut(&mut self) -> &mut ConstantPool {
+    pub fn constant_pool_mut(&mut self) -> &mut ConstantPool<'static> {
         &mut self.class_file.constant_pool
     }
 

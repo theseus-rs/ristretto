@@ -22,7 +22,7 @@ use crate::verifiers::error::VerifyError::{
 ///
 /// # Errors
 /// Returns an error if the `PermittedSubclasses` attribute is invalid.
-pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
+pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
     let mut has_permitted_subclasses = false;
 
     for attribute in &class_file.attributes {
@@ -86,7 +86,7 @@ mod tests {
     fn create_class_file_with_permitted_subclasses(
         class_indexes: Vec<u16>,
         is_final: bool,
-    ) -> ClassFile {
+    ) -> ClassFile<'static> {
         let mut class_file = ClassFile::default();
         if is_final {
             class_file.access_flags = ClassAccessFlags::FINAL;

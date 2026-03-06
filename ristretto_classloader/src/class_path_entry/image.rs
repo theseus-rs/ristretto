@@ -5,7 +5,6 @@ use ristretto_classfile::ClassFile;
 use ristretto_jimage::Image as JImage;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
-use std::io::Cursor;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -78,7 +77,7 @@ impl Image {
     ///
     /// if the class file is not found or cannot be read.
     #[expect(clippy::unused_async)]
-    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
+    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
         let name = name.as_ref();
         let (package, _class_name) = name.rsplit_once('/').unwrap_or(("", name));
 
@@ -101,8 +100,7 @@ impl Image {
             .get_resource(&full_name)
             .map_err(|error| ArchiveError(error.to_string()))?;
 
-        let mut cursor = Cursor::new(resource.data());
-        let class_file = ClassFile::from_bytes(&mut cursor)?;
+        let class_file = ClassFile::from_bytes(resource.data())?;
         Ok(class_file)
     }
 

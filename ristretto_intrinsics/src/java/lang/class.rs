@@ -2136,7 +2136,7 @@ mod tests {
         Ok(())
     }
 
-    fn create_record_component_class_file() -> Result<ClassFile> {
+    fn create_record_component_class_file() -> Result<ClassFile<'static>> {
         let mut cp = ConstantPool::new();
         let class_name_idx = cp.add_class("java/lang/reflect/RecordComponent")?;
         let super_class_idx = cp.add_class("java/lang/Object")?;
@@ -2251,7 +2251,7 @@ mod tests {
         })
     }
 
-    fn create_mock_record_class_file() -> Result<ClassFile> {
+    fn create_mock_record_class_file() -> Result<ClassFile<'static>> {
         let class_name = "MockRecord";
         let mut constant_pool = ConstantPool::new();
         let this_class_idx = constant_pool.add_class(class_name)?;

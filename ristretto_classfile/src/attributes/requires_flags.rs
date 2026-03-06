@@ -1,8 +1,8 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
 use bitflags::bitflags;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 bitflags! {
     /// Requires flags used in Java module declarations to specify module dependency characteristics.
@@ -26,9 +26,9 @@ bitflags! {
     /// assert_eq!(bytes, vec![0x00, 0x60]);
     ///
     /// // Deserialize from bytes
-    /// use std::io::Cursor;
-    /// let mut cursor = Cursor::new(bytes);
-    /// let deserialized_flags = RequiresFlags::from_bytes(&mut cursor)?;
+    /// use ristretto_classfile::byte_reader::ByteReader;
+    /// let mut reader = ByteReader::new(&bytes);
+    /// let deserialized_flags = RequiresFlags::from_bytes(&mut reader)?;
     /// assert_eq!(flags, deserialized_flags);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
@@ -77,7 +77,7 @@ impl Default for RequiresFlags {
 impl RequiresFlags {
     /// Deserialize the `RequiresFlags` from bytes.
     ///
-    /// Reads a `u16` value in big-endian format from the byte cursor and converts it to
+    /// Reads a `u16` value in big-endian format from the byte reader and converts it to
     /// `RequiresFlags`, truncating any unknown bits.
     ///
     /// # Errors
@@ -88,22 +88,22 @@ impl RequiresFlags {
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::RequiresFlags;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
-    /// // Create a cursor with bytes representing TRANSITIVE | STATIC_PHASE flags
+    /// // Create a reader with bytes representing TRANSITIVE | STATIC_PHASE flags
     /// let bytes = vec![0x00, 0x60]; // 0x0060 = TRANSITIVE | STATIC_PHASE
-    /// let mut cursor = Cursor::new(bytes);
+    /// let mut reader = ByteReader::new(&bytes);
     ///
     /// // Deserialize the flags
-    /// let flags = RequiresFlags::from_bytes(&mut cursor).unwrap();
+    /// let flags = RequiresFlags::from_bytes(&mut reader).unwrap();
     ///
     /// // Verify flags were correctly deserialized
     /// assert!(flags.contains(RequiresFlags::TRANSITIVE));
     /// assert!(flags.contains(RequiresFlags::STATIC_PHASE));
     /// assert!(!flags.contains(RequiresFlags::SYNTHETIC));
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<RequiresFlags> {
-        let access_flags = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<RequiresFlags> {
+        let access_flags = bytes.read_u16()?;
         let access_flags = RequiresFlags::from_bits_truncate(access_flags);
         Ok(access_flags)
     }
@@ -180,7 +180,8 @@ mod test {
     #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
-        let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
+        let binding = access_flags.to_be_bytes();
+        let mut bytes = ByteReader::new(&binding);
         assert_eq!(
             Ok(RequiresFlags::TRANSITIVE
                 | RequiresFlags::STATIC_PHASE
@@ -195,7 +196,7 @@ mod test {
         let access_flags = RequiresFlags::TRANSITIVE;
         let mut bytes = Vec::new();
         access_flags.to_bytes(&mut bytes)?;
-        let mut bytes = Cursor::new(bytes);
+        let mut bytes = ByteReader::new(&bytes);
         assert_eq!(Ok(access_flags), RequiresFlags::from_bytes(&mut bytes));
         Ok(())
     }

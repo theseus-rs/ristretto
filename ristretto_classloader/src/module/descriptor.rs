@@ -208,7 +208,7 @@ impl ModuleDescriptor {
     /// # Errors
     ///
     /// Returns an error if the class file is not a valid module-info.class.
-    pub fn from_class_file(class_file: &ClassFile) -> Result<Self> {
+    pub fn from_class_file(class_file: &ClassFile<'static>) -> Result<Self> {
         // Find the Module attribute
         let mut module_attr = None;
         let mut packages_attr = None;
@@ -492,7 +492,7 @@ impl ModuleDescriptor {
     /// Returns an error if the index does not point to a UTF-8 constant.
     fn get_utf8(constant_pool: &ConstantPool, index: u16) -> Result<String> {
         match constant_pool.get(index) {
-            Some(Constant::Utf8(s)) => Ok(s.clone()),
+            Some(Constant::Utf8(s)) => Ok(s.to_string()),
             _ => Err(ModuleError::DescriptorParseError(format!(
                 "Expected UTF8 at index {index}"
             ))),

@@ -35,7 +35,7 @@ impl Directory {
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
-    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
+    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
         let name = name.as_ref();
         let parts = name.split('.').collect::<Vec<_>>();
         let path = self.path.clone();
@@ -60,8 +60,7 @@ impl Directory {
             }
         })?;
 
-        let mut cursor = io::Cursor::new(bytes);
-        let class_file = ClassFile::from_bytes(&mut cursor)?;
+        let class_file = ClassFile::from_bytes(&bytes)?;
         Ok(class_file)
     }
 

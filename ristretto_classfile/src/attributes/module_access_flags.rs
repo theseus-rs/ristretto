@@ -1,8 +1,8 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
 use bitflags::bitflags;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 bitflags! {
     /// Module access flags used in Java class files.
@@ -13,6 +13,7 @@ bitflags! {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::ModuleAccessFlags;
     ///
     /// // Create flags using individual constants
@@ -32,8 +33,8 @@ bitflags! {
     /// assert_eq!(bytes, vec![0x10, 0x20]);
     ///
     /// // Deserialize from bytes
-    /// let mut cursor = std::io::Cursor::new(bytes);
-    /// let deserialized = ModuleAccessFlags::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&bytes);
+    /// let deserialized = ModuleAccessFlags::from_bytes(&mut reader)?;
     /// assert_eq!(deserialized, flags);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
@@ -68,16 +69,16 @@ impl ModuleAccessFlags {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::ModuleAccessFlags;
-    /// use std::io::Cursor;
     ///
-    /// let mut bytes = Cursor::new(vec![0x00, 0x20]); // ACC_OPEN
+    /// let mut bytes = ByteReader::new(&[0x00, 0x20]); // ACC_OPEN
     /// let flags = ModuleAccessFlags::from_bytes(&mut bytes)?;
     /// assert_eq!(flags, ModuleAccessFlags::OPEN);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ModuleAccessFlags> {
-        let access_flags = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<ModuleAccessFlags> {
+        let access_flags = bytes.read_u16()?;
         let access_flags = ModuleAccessFlags::from_bits_truncate(access_flags);
         Ok(access_flags)
     }
@@ -152,7 +153,8 @@ mod test {
     #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
-        let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
+        let binding = access_flags.to_be_bytes();
+        let mut bytes = ByteReader::new(&binding);
         assert_eq!(
             Ok(ModuleAccessFlags::OPEN
                 | ModuleAccessFlags::SYNTHETIC
@@ -166,7 +168,7 @@ mod test {
         let access_flags = ModuleAccessFlags::OPEN;
         let mut bytes = Vec::new();
         access_flags.to_bytes(&mut bytes)?;
-        let mut bytes = Cursor::new(bytes);
+        let mut bytes = ByteReader::new(&bytes);
         assert_eq!(Ok(access_flags), ModuleAccessFlags::from_bytes(&mut bytes));
         Ok(())
     }

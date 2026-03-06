@@ -23,7 +23,7 @@ use crate::verifiers::error::VerifyError::{
 ///
 /// # Errors
 /// Returns an error if the Record attribute is invalid.
-pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
+pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
     let mut has_record = false;
 
     for attribute in &class_file.attributes {
@@ -97,7 +97,7 @@ pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
 
 /// Verify attributes of a record component.
 fn verify_component_attributes(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     attributes: &[Attribute],
     component_index: usize,
 ) -> Result<()> {
@@ -180,7 +180,11 @@ mod tests {
     use crate::ClassAccessFlags;
     use crate::attributes::Record;
 
-    fn create_record_component(class_file: &mut ClassFile, name: &str, descriptor: &str) -> Record {
+    fn create_record_component(
+        class_file: &mut ClassFile<'_>,
+        name: &str,
+        descriptor: &str,
+    ) -> Record {
         let name_index = class_file.constant_pool.add_utf8(name).unwrap();
         let descriptor_index = class_file.constant_pool.add_utf8(descriptor).unwrap();
         Record {

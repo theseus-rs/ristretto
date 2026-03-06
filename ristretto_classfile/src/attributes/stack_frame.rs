@@ -1,9 +1,9 @@
 use crate::attributes::VerificationType;
+use crate::byte_reader::ByteReader;
 use crate::error::Error::InvalidStackFrameType;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents a stack map frame in the `StackMapTable` attribute of a Java class file.
 ///
@@ -30,14 +30,14 @@ use std::io::Cursor;
 /// ```rust
 /// use ristretto_classfile::attributes::{StackFrame, VerificationType};
 /// use ristretto_classfile::Result;
-/// use std::io::Cursor;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Example: SameFrame
 /// let same_frame = StackFrame::SameFrame { frame_type: 63 };
 /// let mut bytes = Vec::new();
 /// same_frame.to_bytes(&mut bytes)?;
-/// let mut cursor = Cursor::new(bytes.clone());
-/// let deserialized_same_frame = StackFrame::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_same_frame = StackFrame::from_bytes(&mut reader)?;
 /// assert_eq!(same_frame, deserialized_same_frame);
 /// assert_eq!(same_frame.frame_type(), 63);
 /// assert_eq!(same_frame.offset_delta(), 63);
@@ -51,8 +51,8 @@ use std::io::Cursor;
 /// };
 /// bytes.clear();
 /// full_frame.to_bytes(&mut bytes)?;
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_full_frame = StackFrame::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_full_frame = StackFrame::from_bytes(&mut reader)?;
 /// assert_eq!(full_frame, deserialized_full_frame);
 /// assert_eq!(full_frame.frame_type(), 255);
 /// assert_eq!(full_frame.offset_delta(), 100);
@@ -309,21 +309,21 @@ impl StackFrame {
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::{StackFrame, VerificationType};
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::Result;
     ///
     /// // Create a byte array with a SameFrame (frame_type = 10)
     /// let bytes = vec![10];
-    /// let mut cursor = Cursor::new(bytes);
+    /// let mut reader = ByteReader::new(&bytes);
     ///
     /// // Parse the bytes into a StackFrame
-    /// let frame = StackFrame::from_bytes(&mut cursor)?;
+    /// let frame = StackFrame::from_bytes(&mut reader)?;
     ///
     /// // Verify it's the expected frame type
     /// assert!(matches!(frame, StackFrame::SameFrame { frame_type: 10 }));
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<StackFrame> {
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<StackFrame> {
         let frame_type = bytes.read_u8()?;
         let frame = match frame_type {
             0..=63 => StackFrame::SameFrame { frame_type },
@@ -333,7 +333,7 @@ impl StackFrame {
                 StackFrame::SameLocals1StackItemFrame { frame_type, stack }
             }
             247 => {
-                let offset_delta = bytes.read_u16::<BigEndian>()?;
+                let offset_delta = bytes.read_u16()?;
                 let verification_type = VerificationType::from_bytes(bytes)?;
                 let stack = vec![verification_type];
                 StackFrame::SameLocals1StackItemFrameExtended {
@@ -343,21 +343,21 @@ impl StackFrame {
                 }
             }
             248..=250 => {
-                let offset_delta = bytes.read_u16::<BigEndian>()?;
+                let offset_delta = bytes.read_u16()?;
                 StackFrame::ChopFrame {
                     frame_type,
                     offset_delta,
                 }
             }
             251 => {
-                let offset_delta = bytes.read_u16::<BigEndian>()?;
+                let offset_delta = bytes.read_u16()?;
                 StackFrame::SameFrameExtended {
                     frame_type,
                     offset_delta,
                 }
             }
             252..=254 => {
-                let offset_delta = bytes.read_u16::<BigEndian>()?;
+                let offset_delta = bytes.read_u16()?;
                 let mut locals = Vec::with_capacity((frame_type - 251) as usize);
                 for _ in 0..(frame_type - 251) {
                     let verification_type = VerificationType::from_bytes(bytes)?;
@@ -370,14 +370,14 @@ impl StackFrame {
                 }
             }
             255 => {
-                let offset_delta = bytes.read_u16::<BigEndian>()?;
-                let number_of_locals = bytes.read_u16::<BigEndian>()?;
+                let offset_delta = bytes.read_u16()?;
+                let number_of_locals = bytes.read_u16()?;
                 let mut locals = Vec::with_capacity(number_of_locals as usize);
                 for _ in 0..number_of_locals {
                     let verification_type = VerificationType::from_bytes(bytes)?;
                     locals.push(verification_type);
                 }
-                let number_of_stack_items = bytes.read_u16::<BigEndian>()?;
+                let number_of_stack_items = bytes.read_u16()?;
                 let mut stack = Vec::with_capacity(number_of_stack_items as usize);
                 for _ in 0..number_of_stack_items {
                     let verification_type = VerificationType::from_bytes(bytes)?;
@@ -607,7 +607,7 @@ mod test {
         let mut bytes = Vec::new();
         let frame_type = 128;
         bytes.write_u8(frame_type)?;
-        let mut bytes = Cursor::new(bytes);
+        let mut bytes = ByteReader::new(&bytes);
 
         assert_eq!(
             Err(InvalidStackFrameType(frame_type)),
@@ -620,7 +620,7 @@ mod test {
         let mut bytes = Vec::new();
         stack_frame.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut bytes = ByteReader::new(expected_bytes);
         assert_eq!(*stack_frame, StackFrame::from_bytes(&mut bytes)?);
         Ok(())
     }

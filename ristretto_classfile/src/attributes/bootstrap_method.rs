@@ -1,7 +1,7 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents a bootstrap method and its static arguments, as used by `invokedynamic` instructions.
 ///
@@ -15,8 +15,8 @@ use std::io::Cursor;
 /// # Examples
 ///
 /// ```rust
+/// use ristretto_classfile::byte_reader::ByteReader;
 /// use ristretto_classfile::attributes::BootstrapMethod;
-/// use std::io::Cursor;
 ///
 /// // Create a BootstrapMethod
 /// let bsm = BootstrapMethod {
@@ -29,8 +29,8 @@ use std::io::Cursor;
 /// bsm.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize from bytes
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_bsm = BootstrapMethod::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_bsm = BootstrapMethod::from_bytes(&mut reader)?;
 ///
 /// assert_eq!(bsm, deserialized_bsm);
 /// # Ok::<(), ristretto_classfile::Error>(())
@@ -44,7 +44,7 @@ pub struct BootstrapMethod {
 impl BootstrapMethod {
     /// Deserializes a `BootstrapMethod` structure from a byte stream.
     ///
-    /// The `bytes` cursor should be positioned at the start of the `bootstrap_method` structure.
+    /// The `bytes` reader should be positioned at the start of the `bootstrap_method` structure.
     ///
     /// # Errors
     ///
@@ -55,13 +55,13 @@ impl BootstrapMethod {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::BootstrapMethod;
-    /// use std::io::Cursor;
     ///
     /// let data = vec![0, 5, 0, 2, 0, 10, 0, 12];
-    /// let mut cursor = Cursor::new(data);
+    /// let mut reader = ByteReader::new(&data);
     ///
-    /// let bsm = BootstrapMethod::from_bytes(&mut cursor)?;
+    /// let bsm = BootstrapMethod::from_bytes(&mut reader)?;
     ///
     /// assert_eq!(bsm.bootstrap_method_ref, 5);
     /// assert_eq!(bsm.arguments.len(), 2);
@@ -69,12 +69,12 @@ impl BootstrapMethod {
     /// assert_eq!(bsm.arguments[1], 12);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<BootstrapMethod> {
-        let bootstrap_method_ref = bytes.read_u16::<BigEndian>()?;
-        let arguments_count = bytes.read_u16::<BigEndian>()? as usize;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<BootstrapMethod> {
+        let bootstrap_method_ref = bytes.read_u16()?;
+        let arguments_count = bytes.read_u16()? as usize;
         let mut arguments = Vec::with_capacity(arguments_count);
         for _ in 0..arguments_count {
-            arguments.push(bytes.read_u16::<BigEndian>()?);
+            arguments.push(bytes.read_u16()?);
         }
         let bootstrap_method = BootstrapMethod {
             bootstrap_method_ref,
@@ -175,7 +175,7 @@ mod test {
         bootstrap_method.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(bootstrap_method, BootstrapMethod::from_bytes(&mut bytes)?);
         Ok(())
     }

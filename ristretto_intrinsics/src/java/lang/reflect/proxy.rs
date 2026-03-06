@@ -7,7 +7,6 @@ use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError::ClassFormatError;
 use ristretto_types::JavaObject;
 use ristretto_types::{Parameters, Result};
-use std::io::Cursor;
 use std::sync::Arc;
 use tracing::error;
 use zerocopy::transmute_ref;
@@ -35,8 +34,7 @@ pub async fn define_class_0<T: ristretto_types::Thread + 'static>(
     let offset = usize::try_from(offset)?;
     let length = usize::try_from(length)?;
 
-    let mut cursor = Cursor::new(bytes[offset..offset + length].to_vec());
-    let class_file = match ClassFile::from_bytes(&mut cursor) {
+    let class_file = match ClassFile::from_bytes(&bytes[offset..offset + length]) {
         Ok(class_file) => class_file,
         Err(error) => {
             error!("ClassFormatError in Proxy.defineClass0: {error}");

@@ -33,7 +33,7 @@ use super::type_system::VerificationType;
 ///
 /// Implements verification by type checking as specified in [JVMS §4.10.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1).
 pub fn verify<C: VerificationContext>(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     method: &Method,
     context: &C,
 ) -> Result<()> {
@@ -65,7 +65,7 @@ pub fn verify<C: VerificationContext>(
 /// This struct holds the state needed for verifying a method's bytecode.
 struct BytecodeVerifier<'a, C: VerificationContext> {
     /// The class file containing the method.
-    class_file: &'a ClassFile,
+    class_file: &'a ClassFile<'a>,
     /// The method being verified.
     method: &'a Method,
     /// The verification context for type hierarchy checks.
@@ -98,7 +98,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
     /// # Errors
     ///
     /// Returns `VerifyError` if the method's code cannot be processed.
-    fn new(class_file: &'a ClassFile, method: &'a Method, context: &'a C) -> Result<Self> {
+    fn new(class_file: &'a ClassFile<'a>, method: &'a Method, context: &'a C) -> Result<Self> {
         // Extract Code attribute
         let (code, max_stack, max_locals, code_attributes, exception_table) = method
             .attributes
@@ -679,21 +679,17 @@ mod tests {
         }
     }
 
-    fn create_mock_class_file() -> ClassFile {
+    fn create_mock_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
         constant_pool
-            .add(Constant::Utf8("TestClass".to_string()))
+            .add(Constant::Utf8("TestClass".into()))
             .unwrap();
         let this_class_index = constant_pool.add(Constant::Class(1)).unwrap();
         constant_pool
-            .add(Constant::Utf8("testMethod".to_string()))
+            .add(Constant::Utf8("testMethod".into()))
             .unwrap();
-        constant_pool
-            .add(Constant::Utf8("()V".to_string()))
-            .unwrap();
-        constant_pool
-            .add(Constant::Utf8("Code".to_string()))
-            .unwrap();
+        constant_pool.add(Constant::Utf8("()V".into())).unwrap();
+        constant_pool.add(Constant::Utf8("Code".into())).unwrap();
 
         ClassFile {
             version: Version::Java8 { minor: 0 },

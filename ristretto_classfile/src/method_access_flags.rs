@@ -1,8 +1,8 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
 use bitflags::bitflags;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 bitflags! {
     /// Method access flags used in Java class files to specify the access permissions and
@@ -18,7 +18,7 @@ bitflags! {
     ///
     /// ```rust
     /// use ristretto_classfile::MethodAccessFlags;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // A public static method
     /// let flags = MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC;
@@ -38,8 +38,8 @@ bitflags! {
     /// assert_eq!(vec![0x00, 0x09], bytes); // 0x0009 = PUBLIC | STATIC
     ///
     /// // Deserialize from bytes
-    /// let mut cursor = Cursor::new(bytes);
-    /// let deserialized = MethodAccessFlags::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&bytes);
+    /// let deserialized = MethodAccessFlags::from_bytes(&mut reader)?;
     /// assert_eq!(flags, deserialized);
     ///
     /// // Display as string
@@ -99,21 +99,21 @@ impl Default for MethodAccessFlags {
 impl MethodAccessFlags {
     /// Deserialize the `MethodAccessFlags` from bytes.
     ///
-    /// This method reads a 16-bit big-endian value from the provided byte cursor and constructs a
+    /// This method reads a 16-bit big-endian value from the provided byte reader and constructs a
     /// `MethodAccessFlags` value from it.
     ///
     /// # Errors
     ///
-    /// Returns an error if reading from the byte cursor fails.
+    /// Returns an error if reading from the byte reader fails.
     ///
     /// # Examples
     ///
     /// ```rust
     /// use ristretto_classfile::MethodAccessFlags;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
-    /// // Create a cursor with bytes representing PUBLIC | STATIC (0x0009)
-    /// let mut bytes = Cursor::new(vec![0x00, 0x09]);
+    /// // Create a reader with bytes representing PUBLIC | STATIC (0x0009)
+    /// let mut bytes = ByteReader::new(&[0x00, 0x09]);
     /// let flags = MethodAccessFlags::from_bytes(&mut bytes)?;
     ///
     /// assert!(flags.contains(MethodAccessFlags::PUBLIC));
@@ -121,8 +121,8 @@ impl MethodAccessFlags {
     /// assert_eq!(flags.bits(), 0x0009);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<MethodAccessFlags> {
-        let access_flags = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<MethodAccessFlags> {
+        let access_flags = bytes.read_u16()?;
         let method_access_flags = MethodAccessFlags::from_bits_truncate(access_flags);
         Ok(method_access_flags)
     }
@@ -276,7 +276,8 @@ mod test {
     #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
-        let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
+        let binding = access_flags.to_be_bytes();
+        let mut bytes = ByteReader::new(&binding);
         assert_eq!(
             Ok(MethodAccessFlags::PUBLIC
                 | MethodAccessFlags::PRIVATE
@@ -299,7 +300,7 @@ mod test {
         let access_flags = MethodAccessFlags::PUBLIC | MethodAccessFlags::FINAL;
         let mut bytes = Vec::new();
         access_flags.to_bytes(&mut bytes)?;
-        let mut bytes = Cursor::new(bytes);
+        let mut bytes = ByteReader::new(&bytes);
         assert_eq!(Ok(access_flags), MethodAccessFlags::from_bytes(&mut bytes));
         Ok(())
     }

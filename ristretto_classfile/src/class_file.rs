@@ -1,4 +1,5 @@
 use crate::attributes::Attribute;
+use crate::byte_reader::ByteReader;
 use crate::class_access_flags::ClassAccessFlags;
 use crate::constant_pool::ConstantPool;
 use crate::display::indent_lines;
@@ -8,9 +9,8 @@ use crate::field::Field;
 use crate::method::Method;
 use crate::verifiers::verifier;
 use crate::version::Version;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// The magic number that identifies a valid Java class file.
 ///
@@ -34,13 +34,12 @@ const MAGIC: u32 = 0xCAFE_BABE;
 /// ```rust,no_run
 /// use ristretto_classfile::ClassFile;
 /// use std::fs;
-/// use std::io::Cursor;
 ///
 /// // Read the bytes of a class file
 /// let bytes = fs::read("path/to/Example.class")?;
 ///
 /// // Parse the bytes into a ClassFile
-/// let class_file = ClassFile::from_bytes(&mut Cursor::new(bytes))?;
+/// let class_file = ClassFile::from_bytes(&bytes)?;
 ///
 /// // Now you can inspect the class
 /// println!("Class name: {}", class_file.class_name()?);
@@ -52,9 +51,9 @@ const MAGIC: u32 = 0xCAFE_BABE;
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1>
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct ClassFile {
+pub struct ClassFile<'a> {
     pub version: Version,
-    pub constant_pool: ConstantPool,
+    pub constant_pool: ConstantPool<'a>,
     pub access_flags: ClassAccessFlags,
     pub this_class: u16,
     pub super_class: u16,
@@ -64,7 +63,23 @@ pub struct ClassFile {
     pub attributes: Vec<Attribute>,
 }
 
-impl ClassFile {
+impl<'a> ClassFile<'a> {
+    /// Convert this `ClassFile` into an owned version with `'static` lifetime.
+    #[must_use]
+    pub fn into_owned(self) -> ClassFile<'static> {
+        ClassFile {
+            version: self.version,
+            constant_pool: self.constant_pool.into_owned(),
+            access_flags: self.access_flags,
+            this_class: self.this_class,
+            super_class: self.super_class,
+            interfaces: self.interfaces,
+            fields: self.fields,
+            methods: self.methods,
+            attributes: self.attributes,
+        }
+    }
+
     /// Get the fully qualified class name.
     ///
     /// # Errors
@@ -75,9 +90,8 @@ impl ClassFile {
     ///
     /// ```rust,no_run
     /// # use ristretto_classfile::ClassFile;
-    /// # use std::io::Cursor;
     /// # let bytes = vec![];
-    /// # let class_file = ClassFile::from_bytes(&mut Cursor::new(bytes))?;
+    /// # let class_file = ClassFile::from_bytes(&bytes)?;
     /// let class_name = class_file.class_name().expect("Failed to get class name");
     /// println!("Class name: {class_name}"); // e.g., "java.lang.String"
     /// # Ok::<(), ristretto_classfile::Error>(())
@@ -138,59 +152,79 @@ impl ClassFile {
     /// ```rust,no_run
     /// use ristretto_classfile::ClassFile;
     /// use std::fs;
-    /// use std::io::Cursor;
     ///
     /// // Read the bytes of a class file
     /// let bytes = fs::read("path/to/Example.class")?;
     ///
     /// // Parse the bytes into a ClassFile
-    /// let class_file = ClassFile::from_bytes(&mut Cursor::new(bytes))?;
+    /// let class_file = ClassFile::from_bytes(&bytes)?;
     ///
     /// // Now you can inspect the class
     /// println!("Class name: {}", class_file.class_name()?);
     /// println!("Class version: {}", class_file.version);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]> + Clone>) -> Result<ClassFile> {
-        let magic = bytes.read_u32::<BigEndian>()?;
+    pub fn from_bytes(bytes: &[u8]) -> Result<ClassFile<'static>> {
+        let mut reader = ByteReader::new(bytes);
+        Self::parse_from_reader(&mut reader)
+    }
+
+    /// Parse a `ClassFile` directly from a byte slice, borrowing string data where possible.
+    ///
+    /// Unlike [`from_bytes`](Self::from_bytes), which returns `ClassFile<'static>` with owned
+    /// strings, this method returns `ClassFile<'a>` that borrows UTF-8 data directly from the
+    /// input slice, avoiding allocation overhead.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the bytes do not represent a valid class file.
+    pub fn from_slice(data: &'a [u8]) -> Result<ClassFile<'a>> {
+        let mut reader = ByteReader::new(data);
+        Self::from_byte_reader(&mut reader)
+    }
+
+    /// Parse from a `ByteReader` and return a `ClassFile<'static>` by converting all
+    /// borrowed strings to owned.
+    fn parse_from_reader(reader: &mut ByteReader<'_>) -> Result<ClassFile<'static>> {
+        let magic = reader.read_u32()?;
         if magic != MAGIC {
             return Err(InvalidMagicNumber(magic));
         }
 
-        let version = Version::from_bytes(bytes)?;
-        let constant_pool = ConstantPool::from_bytes(bytes)?;
-        let access_flags = ClassAccessFlags::from_bytes(bytes)?;
-        let this_class = bytes.read_u16::<BigEndian>()?;
-        let super_class = bytes.read_u16::<BigEndian>()?;
+        let version = Version::from_bytes(reader)?;
+        let constant_pool = ConstantPool::from_bytes(reader)?.into_owned();
+        let access_flags = ClassAccessFlags::from_bits_truncate(reader.read_u16()?);
+        let this_class = reader.read_u16()?;
+        let super_class = reader.read_u16()?;
 
-        let interfaces_count = bytes.read_u16::<BigEndian>()?;
-        let mut interfaces = Vec::with_capacity(interfaces_count as usize);
+        let interfaces_count = reader.read_u16()? as usize;
+        let mut interfaces = Vec::with_capacity(interfaces_count);
         for _ in 0..interfaces_count {
-            interfaces.push(bytes.read_u16::<BigEndian>()?);
+            interfaces.push(reader.read_u16()?);
         }
 
-        let field_count = bytes.read_u16::<BigEndian>()?;
-        let mut fields = Vec::with_capacity(field_count as usize);
+        let field_count = reader.read_u16()? as usize;
+        let mut fields = Vec::with_capacity(field_count);
         for _ in 0..field_count {
-            let field = Field::from_bytes(&constant_pool, bytes)?;
+            let field = Field::from_bytes(&constant_pool, reader)?;
             fields.push(field);
         }
 
-        let method_count = bytes.read_u16::<BigEndian>()?;
-        let mut methods = Vec::with_capacity(method_count as usize);
+        let method_count = reader.read_u16()? as usize;
+        let mut methods = Vec::with_capacity(method_count);
         for _ in 0..method_count {
-            let method = Method::from_bytes(&constant_pool, bytes)?;
+            let method = Method::from_bytes(&constant_pool, reader)?;
             methods.push(method);
         }
 
-        let attribute_count = bytes.read_u16::<BigEndian>()?;
-        let mut attributes = Vec::with_capacity(attribute_count as usize);
+        let attribute_count = reader.read_u16()? as usize;
+        let mut attributes = Vec::with_capacity(attribute_count);
         for _ in 0..attribute_count {
-            let attribute = Attribute::from_bytes(&constant_pool, bytes)?;
+            let attribute = Attribute::from_bytes(&constant_pool, reader)?;
             attributes.push(attribute);
         }
 
-        let class_file = ClassFile {
+        Ok(ClassFile {
             version,
             constant_pool,
             access_flags,
@@ -200,8 +234,60 @@ impl ClassFile {
             fields,
             methods,
             attributes,
-        };
-        Ok(class_file)
+        })
+    }
+
+    /// Internal fast-path parser using `ByteReader` for zero-overhead reads.
+    fn from_byte_reader(reader: &mut ByteReader<'a>) -> Result<ClassFile<'a>> {
+        let magic = reader.read_u32()?;
+        if magic != MAGIC {
+            return Err(InvalidMagicNumber(magic));
+        }
+
+        let version = Version::from_bytes(reader)?;
+        let constant_pool = ConstantPool::from_bytes(reader)?;
+        let access_flags = ClassAccessFlags::from_bits_truncate(reader.read_u16()?);
+        let this_class = reader.read_u16()?;
+        let super_class = reader.read_u16()?;
+
+        let interfaces_count = reader.read_u16()? as usize;
+        let mut interfaces = Vec::with_capacity(interfaces_count);
+        for _ in 0..interfaces_count {
+            interfaces.push(reader.read_u16()?);
+        }
+
+        let field_count = reader.read_u16()? as usize;
+        let mut fields = Vec::with_capacity(field_count);
+        for _ in 0..field_count {
+            let field = Field::from_bytes(&constant_pool, reader)?;
+            fields.push(field);
+        }
+
+        let method_count = reader.read_u16()? as usize;
+        let mut methods = Vec::with_capacity(method_count);
+        for _ in 0..method_count {
+            let method = Method::from_bytes(&constant_pool, reader)?;
+            methods.push(method);
+        }
+
+        let attribute_count = reader.read_u16()? as usize;
+        let mut attributes = Vec::with_capacity(attribute_count);
+        for _ in 0..attribute_count {
+            let attribute = Attribute::from_bytes(&constant_pool, reader)?;
+            attributes.push(attribute);
+        }
+
+        Ok(ClassFile {
+            version,
+            constant_pool,
+            access_flags,
+            this_class,
+            super_class,
+            interfaces,
+            fields,
+            methods,
+            attributes,
+        })
     }
 
     /// Serialize the `ClassFile` to bytes.
@@ -214,7 +300,7 @@ impl ClassFile {
     /// ```rust,no_run
     /// use ristretto_classfile::{ClassFile, ConstantPool, Version, ClassAccessFlags, JAVA_21};
     /// use std::fs;
-    /// use std::io::{Cursor, Write};
+    /// use std::io::Write;
     ///
     /// // Create a new class file
     /// let mut constant_pool = ConstantPool::default();
@@ -282,7 +368,7 @@ impl ClassFile {
     }
 }
 
-impl fmt::Display for ClassFile {
+impl fmt::Display for ClassFile<'_> {
     /// Implements the Display trait for `ClassFile` to provide a human-readable representation.
     ///
     /// The formatted output includes:
@@ -304,11 +390,10 @@ impl fmt::Display for ClassFile {
     /// ```rust,no_run
     /// use ristretto_classfile::ClassFile;
     /// use std::fs;
-    /// use std::io::Cursor;
     ///
     /// // Load a class file
     /// let bytes = fs::read("HelloWorld.class")?;
-    /// let class_file = ClassFile::from_bytes(&mut Cursor::new(bytes))?;
+    /// let class_file = ClassFile::from_bytes(&bytes)?;
     ///
     /// // Print the class file in a human-readable format
     /// println!("{class_file}");
@@ -398,18 +483,17 @@ mod test {
     #[test]
     fn test_invalid_magic() {
         let invalid_magic: u32 = 0x0102_0304;
-        let mut bytes = Cursor::new(invalid_magic.to_be_bytes().to_vec());
+        let bytes = invalid_magic.to_be_bytes();
         assert_eq!(
             Err(InvalidMagicNumber(invalid_magic)),
-            ClassFile::from_bytes(&mut bytes)
+            ClassFile::from_bytes(&bytes)
         );
     }
 
     #[test]
     fn test_class_name() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Minimum.class");
-        let expected_bytes = class_bytes.to_vec();
-        let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
+        let class_file = ClassFile::from_bytes(class_bytes.as_slice())?;
         assert_eq!("Minimum", class_file.class_name()?);
         Ok(())
     }
@@ -433,8 +517,7 @@ mod test {
     #[test]
     fn test_verify() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Minimum.class");
-        let expected_bytes = class_bytes.to_vec();
-        let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
+        let class_file = ClassFile::from_bytes(class_bytes.as_slice())?;
         assert!(class_file.verify().is_ok());
         Ok(())
     }
@@ -464,8 +547,7 @@ mod test {
     #[test]
     fn test_minimum_to_string() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Minimum.class");
-        let expected_bytes = class_bytes.to_vec();
-        let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
+        let class_file = ClassFile::from_bytes(class_bytes.as_slice())?;
         let expected = indoc! {r"
             public class Minimum
               minor version: 0
@@ -512,7 +594,7 @@ mod test {
     fn test_minimum_serialization() -> Result<()> {
         let class_bytes = include_bytes!("../../classes/Minimum.class");
         let expected_bytes = class_bytes.to_vec();
-        let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
+        let class_file = ClassFile::from_bytes(&expected_bytes)?;
 
         assert_eq!(JAVA_8, class_file.version);
         assert_eq!(
@@ -532,10 +614,9 @@ mod test {
         let bytes = vec![
             202, 254, 186, 190, 254, 0, 0, 48, 0, 0, 160, 93, 37, 0, 212, 186,
         ];
-        let mut cursor = Cursor::new(bytes);
         assert_eq!(
             Err(IoError("Invalid constant pool count".to_string())),
-            ClassFile::from_bytes(&mut cursor)
+            ClassFile::from_bytes(&bytes)
         );
     }
 }

@@ -1,8 +1,8 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
 use bitflags::bitflags;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 bitflags! {
     /// Class access flags.
@@ -14,7 +14,7 @@ bitflags! {
     ///
     /// ```rust
     /// use ristretto_classfile::ClassAccessFlags;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // Create flags for a public final class
     /// let flags = ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL;
@@ -33,8 +33,8 @@ bitflags! {
     /// assert_eq!(vec![0x00, 0x11], bytes); // 0x0011 = PUBLIC | FINAL
     ///
     /// // Deserialize from bytes
-    /// let mut cursor = Cursor::new(bytes);
-    /// let deserialized = ClassAccessFlags::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&bytes);
+    /// let deserialized = ClassAccessFlags::from_bytes(&mut reader)?;
     /// assert_eq!(flags, deserialized);
     ///
     /// // Display as string
@@ -90,7 +90,7 @@ impl Default for ClassAccessFlags {
 impl ClassAccessFlags {
     /// Deserialize the `ClassAccessFlags` from bytes.
     ///
-    /// Reads a u16 value from the provided byte cursor and converts it to a `ClassAccessFlags`
+    /// Reads a u16 value from the provided byte reader and converts it to a `ClassAccessFlags`
     /// bitflag set. Any unrecognized bits are silently truncated.
     ///
     /// # Errors
@@ -101,14 +101,14 @@ impl ClassAccessFlags {
     ///
     /// ```rust
     /// use ristretto_classfile::ClassAccessFlags;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
-    /// // Create a cursor with bytes representing PUBLIC | FINAL (0x0011)
+    /// // Create a reader with bytes representing PUBLIC | FINAL (0x0011)
     /// let bytes = vec![0x00, 0x11];
-    /// let mut cursor = Cursor::new(bytes);
+    /// let mut reader = ByteReader::new(&bytes);
     ///
     /// // Deserialize the bytes into ClassAccessFlags
-    /// let flags = ClassAccessFlags::from_bytes(&mut cursor)?;
+    /// let flags = ClassAccessFlags::from_bytes(&mut reader)?;
     ///
     /// // Verify the flags were properly read
     /// assert!(flags.contains(ClassAccessFlags::PUBLIC));
@@ -116,8 +116,8 @@ impl ClassAccessFlags {
     /// assert_eq!(flags.bits(), 0x0011);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ClassAccessFlags> {
-        let access_flags = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<ClassAccessFlags> {
+        let access_flags = bytes.read_u16()?;
         let access_flags = ClassAccessFlags::from_bits_truncate(access_flags);
         Ok(access_flags)
     }
@@ -281,7 +281,8 @@ mod test {
     #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
-        let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
+        let binding = access_flags.to_be_bytes();
+        let mut bytes = ByteReader::new(&binding);
         assert_eq!(
             Ok(ClassAccessFlags::PUBLIC
                 | ClassAccessFlags::FINAL
@@ -301,7 +302,7 @@ mod test {
         let access_flags = ClassAccessFlags::PUBLIC | ClassAccessFlags::FINAL;
         let mut bytes = Vec::new();
         access_flags.to_bytes(&mut bytes)?;
-        let mut bytes = Cursor::new(bytes);
+        let mut bytes = ByteReader::new(&bytes);
         assert_eq!(Ok(access_flags), ClassAccessFlags::from_bytes(&mut bytes));
         Ok(())
     }

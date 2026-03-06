@@ -57,7 +57,7 @@ impl ClassPath {
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
-    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
+    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
         let name = name.as_ref();
 
         for class_path_entry in self.iter() {

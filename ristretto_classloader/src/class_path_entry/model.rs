@@ -58,7 +58,7 @@ impl ClassPathEntry {
     /// # Errors
     ///
     /// if the class file cannot be read.
-    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
+    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
         match self {
             ClassPathEntry::Directory(directory) => directory.read_class(name).await,
             ClassPathEntry::Image(image) => image.read_class(name).await,

@@ -148,14 +148,105 @@ pub fn to_bytes(data: &str) -> Result<Vec<u8>> {
 ///
 /// # Errors
 /// Returns an error if the byte sequence is not valid Modified UTF-8.
-#[expect(clippy::cast_possible_truncation)]
 pub fn from_bytes(input: &[u8]) -> Result<String> {
-    // Fast path for ASCII
+    // if let Ok(s) = std::str::from_utf8(input) {
+    //     return Ok(s.to_owned());
+    // }
+
+    // Fast path: if all bytes are ASCII (and non-zero in MUTF-8 means regular ASCII),
+    // we can skip all decoding. ASCII bytes are always valid UTF-8.
     if input.is_ascii() {
-        return String::from_utf8(input.to_vec()).map_err(|e| FromUtf8Error(e.to_string()));
+        // SAFETY: We just verified all bytes are ASCII (0x00..=0x7F), which is valid UTF-8.
+        #[expect(unsafe_code)]
+        let s = unsafe { std::str::from_utf8_unchecked(input) };
+        return Ok(s.to_owned());
     }
 
-    // Decode directly to UTF-8 bytes to avoid Vec<u16> allocation
+    // Check if input contains no MUTF-8 special sequences (no 0xC0 0x80 null encoding,
+    // no surrogate pairs). In that case, the bytes are already valid UTF-8.
+    if !has_mutf8_special_sequences(input) {
+        return std::str::from_utf8(input)
+            .map(std::borrow::ToOwned::to_owned)
+            .map_err(|e| FromUtf8Error(e.to_string()));
+    }
+
+    // Slow path: decode MUTF-8 to UTF-8
+    decode_mutf8(input)
+}
+
+/// Zero-copy version of `from_bytes` that returns a `Cow<'a, str>`.
+///
+/// For ASCII input (the vast majority of constant pool strings), this returns a borrowed
+/// `&str` pointing directly into the input slice — no allocation at all.
+/// For non-ASCII MUTF-8, it allocates a new `String`.
+///
+/// # Errors
+/// Returns an error if the input contains invalid MUTF-8 sequences.
+pub fn from_bytes_cow(input: &[u8]) -> Result<std::borrow::Cow<'_, str>> {
+    use std::borrow::Cow;
+
+    // Fast path: if all bytes are ASCII, return a zero-copy borrowed &str.
+    if input.is_ascii() {
+        // SAFETY: We just verified all bytes are ASCII (0x00..=0x7F), which is valid UTF-8.
+        #[expect(unsafe_code)]
+        let s = unsafe { std::str::from_utf8_unchecked(input) };
+        return Ok(Cow::Borrowed(s));
+    }
+
+    // Check if input is valid standard UTF-8 without MUTF-8 special sequences.
+    if !has_mutf8_special_sequences(input) {
+        return std::str::from_utf8(input)
+            .map(Cow::Borrowed)
+            .map_err(|e| FromUtf8Error(e.to_string()));
+    }
+
+    // Slow path: decode MUTF-8 to UTF-8 (must allocate)
+    decode_mutf8(input).map(Cow::Owned)
+}
+
+/// Check if the input contains MUTF-8 special sequences that differ from standard UTF-8.
+/// This is exposed for internal fast-path use in constant pool parsing.
+#[inline]
+pub(crate) fn has_mutf8_specials(input: &[u8]) -> bool {
+    has_mutf8_special_sequences(input)
+}
+
+/// Check if the input contains MUTF-8 special sequences that differ from standard UTF-8.
+/// Returns true if the input contains null encoding (0xC0 0x80) or surrogate pairs (0xED 0xA0..0xBF).
+#[inline]
+fn has_mutf8_special_sequences(input: &[u8]) -> bool {
+    let len = input.len();
+    let mut i = 0;
+    while i < len {
+        let b = input[i];
+        if b < 0x80 {
+            i += 1;
+        } else if b < 0xC0 {
+            // Continuation byte as lead - invalid but let the decoder handle it
+            return true;
+        } else if b < 0xE0 {
+            // 2-byte sequence: check for null encoding (0xC0 0x80) or overlong (0xC1)
+            if (b == 0xC0 && i + 1 < len && input[i + 1] == 0x80) || b == 0xC1 {
+                return true;
+            }
+            i += 2;
+        } else if b < 0xF0 {
+            // 3-byte sequence: check for surrogates (0xED followed by 0xA0..0xBF)
+            if b == 0xED && i + 1 < len && input[i + 1] >= 0xA0 {
+                return true;
+            }
+            i += 3;
+        } else {
+            // 4-byte sequences not allowed in MUTF-8
+            return true;
+        }
+    }
+    false
+}
+
+/// Decode MUTF-8 bytes to a Rust String (slow path for inputs with special sequences).
+#[expect(clippy::cast_possible_truncation)]
+fn decode_mutf8(input: &[u8]) -> Result<String> {
     let mut result = Vec::with_capacity(input.len());
     let mut i = 0;
     let len = input.len();

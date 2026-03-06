@@ -43,13 +43,13 @@ impl VerificationContext for TestContext {
     }
 }
 
-fn create_test_class_file(version: Version) -> Result<ClassFile> {
+fn create_test_class_file(version: Version) -> Result<ClassFile<'static>> {
     let mut constant_pool = ConstantPool::default();
-    constant_pool.add(Constant::Utf8("TestClass".to_string()))?;
+    constant_pool.add(Constant::Utf8("TestClass".into()))?;
     let this_class_index = constant_pool.add(Constant::Class(1))?;
-    constant_pool.add(Constant::Utf8("test".to_string()))?;
-    constant_pool.add(Constant::Utf8("()V".to_string()))?;
-    constant_pool.add(Constant::Utf8("Code".to_string()))?;
+    constant_pool.add(Constant::Utf8("test".into()))?;
+    constant_pool.add(Constant::Utf8("()V".into()))?;
+    constant_pool.add(Constant::Utf8("Code".into()))?;
 
     Ok(ClassFile {
         version,
@@ -168,7 +168,7 @@ fn test_java8_with_stackmap_uses_fast_path() -> Result<()> {
     // Add constant pool entries for StackMapTable
     class_file
         .constant_pool
-        .add(Constant::Utf8("StackMapTable".to_string()))?;
+        .add(Constant::Utf8("StackMapTable".into()))?;
 
     // Simple code with a conditional branch requiring StackMapTable
     // Note: Ifeq pops the int, so at branch target we have empty stack

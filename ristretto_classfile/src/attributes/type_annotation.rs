@@ -1,8 +1,8 @@
 use crate::attributes::{AnnotationValuePair, TargetPath, TargetType};
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Implementation of a type annotation, which provides information about types in a class file,
 /// such as annotations on generic type arguments or array components.
@@ -92,7 +92,7 @@ impl TypeAnnotation {
     /// use ristretto_classfile::attributes::{
     ///     AnnotationElement, AnnotationValuePair, TargetPath, TargetType, TypeAnnotation,
     /// };
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // These bytes represent a serialized TypeAnnotation
     /// let bytes = vec![
@@ -106,8 +106,8 @@ impl TypeAnnotation {
     ///     0x00, 0x0C,       // const_value_index (12)
     /// ];
     ///
-    /// let mut cursor = Cursor::new(bytes);
-    /// let type_annotation = TypeAnnotation::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&bytes);
+    /// let type_annotation = TypeAnnotation::from_bytes(&mut reader)?;
     ///
     /// // The deserialized TypeAnnotation should match this expected value
     /// let expected = TypeAnnotation {
@@ -125,7 +125,7 @@ impl TypeAnnotation {
     /// assert_eq!(type_annotation, expected);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<TypeAnnotation> {
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<TypeAnnotation> {
         let target_type = TargetType::from_bytes(bytes)?;
 
         let type_path_count = bytes.read_u8()? as usize;
@@ -135,9 +135,9 @@ impl TypeAnnotation {
             type_path.push(target_path);
         }
 
-        let type_index = bytes.read_u16::<BigEndian>()?;
+        let type_index = bytes.read_u16()?;
 
-        let elements_count = bytes.read_u16::<BigEndian>()? as usize;
+        let elements_count = bytes.read_u16()? as usize;
         let mut elements = Vec::with_capacity(elements_count);
         for _ in 0..elements_count {
             let element = AnnotationValuePair::from_bytes(bytes)?;
@@ -312,7 +312,7 @@ mod test {
         let mut bytes = Vec::new();
         type_annotation.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut bytes = ByteReader::new(&expected_bytes);
         assert_eq!(type_annotation, TypeAnnotation::from_bytes(&mut bytes)?);
         Ok(())
     }

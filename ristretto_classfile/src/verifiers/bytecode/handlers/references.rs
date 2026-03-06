@@ -24,7 +24,7 @@ use crate::verifiers::error::{Result, VerifyError};
 /// Context for resolving constant pool entries.
 #[derive(Debug)]
 pub struct ConstantPoolResolver<'a> {
-    class_file: &'a ClassFile,
+    class_file: &'a ClassFile<'a>,
 }
 
 impl<'a> ConstantPoolResolver<'a> {
@@ -722,22 +722,22 @@ mod tests {
     use crate::verifiers::bytecode::handlers::test_utils::{MockContext, StrictMockContext};
 
     // Helper function to create a class file with a complete constant pool for testing
-    fn create_test_class_file_with_refs() -> ClassFile {
+    fn create_test_class_file_with_refs() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
 
         // Index 1: Utf8 "TestClass"
         constant_pool
-            .add(Constant::Utf8("TestClass".to_string()))
+            .add(Constant::Utf8("TestClass".into()))
             .unwrap();
         // Index 2: Class(1) - TestClass
         constant_pool.add(Constant::Class(1)).unwrap();
 
         // Index 3: Utf8 "testField"
         constant_pool
-            .add(Constant::Utf8("testField".to_string()))
+            .add(Constant::Utf8("testField".into()))
             .unwrap();
         // Index 4: Utf8 "I" (int descriptor)
-        constant_pool.add(Constant::Utf8("I".to_string())).unwrap();
+        constant_pool.add(Constant::Utf8("I".into())).unwrap();
         // Index 5: NameAndType(3, 4) - testField:I
         constant_pool
             .add(Constant::NameAndType {
@@ -755,12 +755,10 @@ mod tests {
 
         // Index 7: Utf8 "testMethod"
         constant_pool
-            .add(Constant::Utf8("testMethod".to_string()))
+            .add(Constant::Utf8("testMethod".into()))
             .unwrap();
         // Index 8: Utf8 "(I)V" (method descriptor)
-        constant_pool
-            .add(Constant::Utf8("(I)V".to_string()))
-            .unwrap();
+        constant_pool.add(Constant::Utf8("(I)V".into())).unwrap();
         // Index 9: NameAndType(7, 8) - testMethod:(I)V
         constant_pool
             .add(Constant::NameAndType {
@@ -778,7 +776,7 @@ mod tests {
 
         // Index 11: Utf8 "InterfaceClass"
         constant_pool
-            .add(Constant::Utf8("InterfaceClass".to_string()))
+            .add(Constant::Utf8("InterfaceClass".into()))
             .unwrap();
         // Index 12: Class(11) - InterfaceClass
         constant_pool.add(Constant::Class(11)).unwrap();

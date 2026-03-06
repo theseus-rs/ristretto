@@ -12,7 +12,7 @@ use crate::verifiers::{attributes, field_access_flags};
 ///
 /// # Errors
 /// Returns `VerificationError` if the fields are invalid.
-pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
+pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
     for field in &class_file.fields {
         field_access_flags::verify(class_file, field)?;
         verify_name_index(class_file, field)?;
@@ -32,7 +32,7 @@ pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
 ///
 /// Returns `InvalidConstantPoolIndex` or `InvalidConstantPoolIndexType` if the `name_index` is
 /// invalid.
-fn verify_name_index(class_file: &ClassFile, field: &Field) -> Result<()> {
+fn verify_name_index(class_file: &ClassFile<'_>, field: &Field) -> Result<()> {
     let name_index = field.name_index;
     match class_file.constant_pool.get(name_index) {
         Some(Constant::Utf8 { .. }) => {} // valid constant
@@ -48,7 +48,7 @@ fn verify_name_index(class_file: &ClassFile, field: &Field) -> Result<()> {
 ///
 /// Returns `InvalidConstantPoolIndex` or `InvalidConstantPoolIndexType` if the `descriptor_index`
 /// is invalid.
-fn verify_descriptor_index(class_file: &ClassFile, field: &Field) -> Result<()> {
+fn verify_descriptor_index(class_file: &ClassFile<'_>, field: &Field) -> Result<()> {
     let descriptor_index = field.descriptor_index;
     match class_file.constant_pool.get(descriptor_index) {
         Some(Constant::Utf8 { .. }) => {
@@ -66,11 +66,11 @@ mod test {
     use crate::field_access_flags::FieldAccessFlags;
     use crate::{BaseType, FieldType};
 
-    fn get_test_class_file_and_field() -> (ClassFile, Field) {
+    fn get_test_class_file_and_field() -> (ClassFile<'static>, Field) {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.push(Constant::Utf8("foo".to_string()));
-        constant_pool.push(Constant::Utf8("I".to_string()));
+        constant_pool.push(Constant::Utf8("foo".into()));
+        constant_pool.push(Constant::Utf8("I".into()));
         let field = Field {
             access_flags: FieldAccessFlags::PUBLIC,
             name_index: 1,

@@ -1,8 +1,8 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
 use bitflags::bitflags;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 bitflags! {
     /// Opens flags.
@@ -27,15 +27,15 @@ bitflags! {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::OpensFlags;
-    /// use std::io::Cursor;
     ///
     /// // Serialize the flags to bytes
     /// let mut bytes = vec![0x10, 0x00];
     ///
     /// // Deserialize the flags from bytes
-    /// let mut cursor = Cursor::new(bytes);
-    /// let deserialized_flags = OpensFlags::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&bytes);
+    /// let deserialized_flags = OpensFlags::from_bytes(&mut reader)?;
     /// assert_eq!(deserialized_flags, OpensFlags::SYNTHETIC);
     ///
     /// // Check individual flags
@@ -77,16 +77,16 @@ impl OpensFlags {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::OpensFlags;
-    /// use std::io::Cursor;
     ///
-    /// let mut bytes = Cursor::new(vec![0x10, 0x00]);
+    /// let mut bytes = ByteReader::new(&[0x10, 0x00]);
     /// let flags = OpensFlags::from_bytes(&mut bytes)?;
     /// assert_eq!(flags, OpensFlags::SYNTHETIC);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<OpensFlags> {
-        let access_flags = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<OpensFlags> {
+        let access_flags = bytes.read_u16()?;
         let access_flags = OpensFlags::from_bits_truncate(access_flags);
         Ok(access_flags)
     }
@@ -155,7 +155,8 @@ mod test {
     #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
-        let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
+        let binding = access_flags.to_be_bytes();
+        let mut bytes = ByteReader::new(&binding);
         assert_eq!(
             Ok(OpensFlags::SYNTHETIC | OpensFlags::MANDATED),
             OpensFlags::from_bytes(&mut bytes)
@@ -167,7 +168,7 @@ mod test {
         let access_flags = OpensFlags::MANDATED;
         let mut bytes = Vec::new();
         access_flags.to_bytes(&mut bytes)?;
-        let mut bytes = Cursor::new(bytes);
+        let mut bytes = ByteReader::new(&bytes);
         assert_eq!(Ok(access_flags), OpensFlags::from_bytes(&mut bytes));
         Ok(())
     }

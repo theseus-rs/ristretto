@@ -15,7 +15,7 @@ use crate::verifiers::{
 ///
 /// # Errors
 /// Returns `VerificationError` if the class file is invalid.
-pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
+pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
     constant_pool::verify(class_file)?;
     class_access_flags::verify(class_file)?;
     verify_this_class(class_file)?;
@@ -30,7 +30,7 @@ pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
     Ok(())
 }
 
-fn verify_this_class(class_file: &ClassFile) -> Result<()> {
+fn verify_this_class(class_file: &ClassFile<'_>) -> Result<()> {
     let this_class = class_file.this_class;
     let constant_pool = &class_file.constant_pool;
     match constant_pool.get(class_file.this_class) {
@@ -41,7 +41,7 @@ fn verify_this_class(class_file: &ClassFile) -> Result<()> {
     Ok(())
 }
 
-fn verify_super_class(class_file: &ClassFile) -> Result<()> {
+fn verify_super_class(class_file: &ClassFile<'_>) -> Result<()> {
     let super_class = class_file.super_class;
 
     if !class_file

@@ -1,6 +1,7 @@
 use crate::Error::InvalidArrayTypeCode;
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{ReadBytesExt, WriteBytesExt};
+use byteorder::WriteBytesExt;
 use std::fmt;
 use std::io::Cursor;
 
@@ -17,8 +18,9 @@ use std::io::Cursor;
 /// Basic usage and obtaining the type code:
 ///
 /// ```rust
-/// use ristretto_classfile::attributes::ArrayType;
 /// use std::io::Cursor;
+/// use ristretto_classfile::attributes::ArrayType;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// let int_array_type = ArrayType::Int;
 /// assert_eq!(int_array_type.code(), 10);
@@ -29,13 +31,13 @@ use std::io::Cursor;
 /// assert_eq!(bool_array_type.to_string(), "boolean");
 ///
 /// // Serialize to bytes
-/// let mut bytes_cursor = Cursor::new(Vec::new());
-/// int_array_type.to_bytes(&mut bytes_cursor)?;
-/// assert_eq!(bytes_cursor.into_inner(), vec![10]);
+/// let mut cursor = Cursor::new(Vec::new());
+/// int_array_type.to_bytes(&mut cursor)?;
+/// assert_eq!(cursor.into_inner(), vec![10]);
 ///
 /// // Deserialize from bytes
-/// let mut read_cursor = Cursor::new(vec![4]);
-/// let deserialized_type = ArrayType::from_bytes(&mut read_cursor)?;
+/// let mut reader = ByteReader::new(&[4]);
+/// let deserialized_type = ArrayType::from_bytes(&mut reader)?;
 /// assert_eq!(deserialized_type, ArrayType::Boolean);
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
@@ -87,11 +89,11 @@ impl ArrayType {
 
     /// Deserializes an `ArrayType` from a byte stream.
     ///
-    /// Reads a single byte from the cursor, which is expected to be a valid array type code.
+    /// Reads a single byte from the reader, which is expected to be a valid array type code.
     ///
     /// # Errors
     ///
-    /// Returns `Error::InvalidArrayTypeCode` if the byte read from the cursor does not
+    /// Returns `Error::InvalidArrayTypeCode` if the byte read from the reader does not
     /// correspond to one of the defined array type codes (4-11).
     /// Propagates I/O errors if reading the byte fails.
     ///
@@ -100,20 +102,20 @@ impl ArrayType {
     /// ```rust
     /// use ristretto_classfile::attributes::ArrayType;
     /// use ristretto_classfile::Error;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
-    /// let mut cursor = Cursor::new(vec![10]); // Code for Int
-    /// let array_type = ArrayType::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&[10]); // Code for Int
+    /// let array_type = ArrayType::from_bytes(&mut reader)?;
     /// assert_eq!(array_type, ArrayType::Int);
     ///
-    /// let mut invalid_cursor = Cursor::new(vec![0]); // Invalid code
-    /// match ArrayType::from_bytes(&mut invalid_cursor) {
+    /// let mut invalid_reader = ByteReader::new(&[0]); // Invalid code
+    /// match ArrayType::from_bytes(&mut invalid_reader) {
     ///     Err(Error::InvalidArrayTypeCode(0)) => { /* Expected error */ }
     ///     _ => panic!("Expected InvalidArrayTypeCode error"),
     /// }
     /// # Ok::<(), Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ArrayType> {
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<ArrayType> {
         let code = bytes.read_u8()?;
 
         let array_type = match code {
@@ -132,7 +134,7 @@ impl ArrayType {
 
     /// Serializes the `ArrayType` to a byte stream.
     ///
-    /// Writes the numeric code of the array type as a single byte to the cursor.
+    /// Writes the numeric code of the array type as a single byte to the writer.
     ///
     /// # Errors
     ///
@@ -143,8 +145,8 @@ impl ArrayType {
     /// # Examples
     ///
     /// ```rust
-    /// use ristretto_classfile::attributes::ArrayType;
     /// use std::io::Cursor;
+    /// use ristretto_classfile::attributes::ArrayType;
     ///
     /// let array_type = ArrayType::Float;
     /// let mut cursor = Cursor::new(Vec::new());
@@ -194,7 +196,7 @@ mod test {
 
     #[test]
     fn test_invalid_code() {
-        let mut bytes = Cursor::new(vec![0]);
+        let mut bytes = ByteReader::new(&[0]);
         assert_eq!(
             Err(InvalidArrayTypeCode(0)),
             ArrayType::from_bytes(&mut bytes)
@@ -211,7 +213,7 @@ mod test {
         buffer.set_position(0);
         buffer.read_to_end(&mut bytes)?;
         assert_eq!(expected_bytes, bytes.as_slice());
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut bytes = ByteReader::new(&expected_bytes);
         assert_eq!(*array_type, ArrayType::from_bytes(&mut bytes)?);
         Ok(())
     }

@@ -1,8 +1,8 @@
 use crate::attributes::nested_class_access_flags::NestedClassAccessFlags;
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents an entry in the `InnerClasses` attribute, describing a nested class or interface.
 ///
@@ -32,8 +32,8 @@ use std::io::Cursor;
 /// # Examples
 ///
 /// ```rust
+/// use ristretto_classfile::byte_reader::ByteReader;
 /// use ristretto_classfile::attributes::{InnerClass, NestedClassAccessFlags};
-/// use std::io::Cursor;
 ///
 /// // Example: A public static nested class "MyInner"
 /// let inner_class_entry = InnerClass {
@@ -48,8 +48,8 @@ use std::io::Cursor;
 /// inner_class_entry.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize the entry
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_entry = InnerClass::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_entry = InnerClass::from_bytes(&mut reader)?;
 ///
 /// assert_eq!(inner_class_entry, deserialized_entry);
 ///
@@ -73,7 +73,7 @@ pub struct InnerClass {
 impl InnerClass {
     /// Deserializes an `InnerClass` structure from a byte stream.
     ///
-    /// The `bytes` cursor should be positioned at the start of the `classes` entry within the
+    /// The `bytes` reader should be positioned at the start of the `classes` entry within the
     /// `InnerClasses` attribute.
     ///
     /// # Errors
@@ -84,13 +84,13 @@ impl InnerClass {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::{InnerClass, NestedClassAccessFlags};
-    /// use std::io::Cursor;
     ///
     /// let data = vec![0, 1, 0, 2, 0, 3, 0, 1];
-    /// let mut cursor = Cursor::new(data);
+    /// let mut reader = ByteReader::new(&data);
     ///
-    /// let inner_class = InnerClass::from_bytes(&mut cursor)?;
+    /// let inner_class = InnerClass::from_bytes(&mut reader)?;
     ///
     /// assert_eq!(inner_class.class_info_index, 1);
     /// assert_eq!(inner_class.outer_class_info_index, 2);
@@ -98,10 +98,10 @@ impl InnerClass {
     /// assert_eq!(inner_class.access_flags, NestedClassAccessFlags::PUBLIC);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<InnerClass> {
-        let class_info_index = bytes.read_u16::<BigEndian>()?;
-        let outer_class_info_index = bytes.read_u16::<BigEndian>()?;
-        let name_index = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<InnerClass> {
+        let class_info_index = bytes.read_u16()?;
+        let outer_class_info_index = bytes.read_u16()?;
+        let name_index = bytes.read_u16()?;
         let access_flags = NestedClassAccessFlags::from_bytes(bytes)?;
 
         let inner_class = InnerClass {
@@ -213,7 +213,7 @@ mod test {
         inner_class.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(inner_class, InnerClass::from_bytes(&mut bytes)?);
         Ok(())
     }

@@ -130,7 +130,7 @@ pub fn handle_push_int(frame: &mut Frame) -> Result<()> {
 ///
 /// - [JVMS §6.5.ldc](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc)
 /// - [JVMS§6.5.ldc_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc_w)
-pub fn handle_ldc(frame: &mut Frame, class_file: &ClassFile, index: u16) -> Result<()> {
+pub fn handle_ldc(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) -> Result<()> {
     let constant = class_file
         .constant_pool
         .get(index)
@@ -167,7 +167,7 @@ pub fn handle_ldc(frame: &mut Frame, class_file: &ClassFile, index: u16) -> Resu
 /// # References
 ///
 /// - [JVMS §6.5.ldc2_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ldc2_w)
-pub fn handle_ldc2_w(frame: &mut Frame, class_file: &ClassFile, index: u16) -> Result<()> {
+pub fn handle_ldc2_w(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) -> Result<()> {
     let constant = class_file
         .constant_pool
         .get(index)
@@ -274,7 +274,7 @@ pub fn handle_reserved(instruction: &Instruction) -> Result<()> {
 pub fn dispatch_misc(
     instruction: &Instruction,
     frame: &mut Frame,
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
 ) -> Result<bool> {
     match instruction {
         // No-op
@@ -336,12 +336,10 @@ mod tests {
     use crate::Version;
     use crate::constant_pool::ConstantPool;
 
-    fn create_test_class_file() -> ClassFile {
+    fn create_test_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
         // Index 1: Utf8 "Test"
-        constant_pool
-            .add(Constant::Utf8("Test".to_string()))
-            .unwrap();
+        constant_pool.add(Constant::Utf8("Test".into())).unwrap();
         // Index 2: Class(1)
         constant_pool.add(Constant::Class(1)).unwrap();
         // Index 3: Integer(42)
@@ -357,9 +355,7 @@ mod tests {
             .add(Constant::Double(std::f64::consts::E))
             .unwrap();
         // Index 9: Utf8 "Hello"
-        constant_pool
-            .add(Constant::Utf8("Hello".to_string()))
-            .unwrap();
+        constant_pool.add(Constant::Utf8("Hello".into())).unwrap();
         // Index 10: String(9) - references Utf8 at index 9
         constant_pool.add(Constant::String(9)).unwrap();
 

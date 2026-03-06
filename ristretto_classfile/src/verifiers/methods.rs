@@ -16,7 +16,7 @@ use crate::verifiers::{attributes, method_access_flags};
 ///
 /// # Errors
 /// Returns `VerificationError` if the methods are invalid.
-pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
+pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
     for method in &class_file.methods {
         method_access_flags::verify(class_file, method)?;
         verify_name_index(class_file, method)?;
@@ -33,7 +33,7 @@ pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
 
 /// Verify that return instructions in the method match the method's return type.
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ireturn>
-fn verify_return_instructions(class_file: &ClassFile, method: &Method) -> Result<()> {
+fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
     // Get the method descriptor
     let Some(Constant::Utf8(descriptor)) = class_file.constant_pool.get(method.descriptor_index)
     else {
@@ -153,7 +153,7 @@ fn verify_return_instructions(class_file: &ClassFile, method: &Method) -> Result
     Ok(())
 }
 
-fn verify_name_index(class_file: &ClassFile, method: &Method) -> Result<()> {
+fn verify_name_index(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
     let name_index = method.name_index;
     match class_file.constant_pool.get(name_index) {
         Some(Constant::Utf8 { .. }) => {} // valid constant
@@ -163,7 +163,7 @@ fn verify_name_index(class_file: &ClassFile, method: &Method) -> Result<()> {
     Ok(())
 }
 
-fn verify_descriptor_index(class_file: &ClassFile, method: &Method) -> Result<()> {
+fn verify_descriptor_index(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
     let descriptor_index = method.descriptor_index;
     match class_file.constant_pool.get(descriptor_index) {
         Some(Constant::Utf8 { .. }) => {} // valid constant
@@ -178,11 +178,11 @@ mod test {
     use super::*;
     use crate::method_access_flags::MethodAccessFlags;
 
-    fn get_test_class_file_and_method() -> (ClassFile, Method) {
+    fn get_test_class_file_and_method() -> (ClassFile<'static>, Method) {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.push(Constant::Utf8("foo".to_string()));
-        constant_pool.push(Constant::Utf8("V".to_string()));
+        constant_pool.push(Constant::Utf8("foo".into()));
+        constant_pool.push(Constant::Utf8("V".into()));
         let method = Method {
             access_flags: MethodAccessFlags::PUBLIC,
             name_index: 1,
@@ -192,12 +192,15 @@ mod test {
         (class_file, method)
     }
 
-    fn create_method_with_code(descriptor: &str, code: Vec<Instruction>) -> (ClassFile, Method) {
+    fn create_method_with_code(
+        descriptor: &str,
+        code: Vec<Instruction>,
+    ) -> (ClassFile<'static>, Method) {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.push(Constant::Utf8("test".to_string()));
-        constant_pool.push(Constant::Utf8(descriptor.to_string()));
-        constant_pool.push(Constant::Utf8("Code".to_string()));
+        constant_pool.push(Constant::Utf8("test".into()));
+        constant_pool.push(Constant::Utf8(descriptor.to_string().into()));
+        constant_pool.push(Constant::Utf8("Code".into()));
 
         let method = Method {
             access_flags: MethodAccessFlags::PUBLIC,

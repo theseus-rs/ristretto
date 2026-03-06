@@ -7,7 +7,7 @@ use crate::verifiers::error::VerifyError::InvalidClassAccessFlags;
 ///
 /// # Errors
 /// Returns `InvalidClassAccessFlags` if the access flags are invalid.
-pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
+pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
     let access_flags = class_file.access_flags;
 
     if access_flags.contains(ClassAccessFlags::ANNOTATION)
@@ -45,13 +45,11 @@ mod test {
     use super::*;
     use crate::class_file::ClassFile;
     use crate::constant_pool::ConstantPool;
-    use std::io::Cursor;
 
     #[test]
     fn test_verify_success() -> Result<()> {
         let class_bytes = include_bytes!("../../../classes/Simple.class");
-        let expected_bytes = class_bytes.to_vec();
-        let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
+        let class_file = ClassFile::from_bytes(class_bytes.as_slice())?;
 
         assert_eq!(Ok(()), verify(&class_file));
         Ok(())

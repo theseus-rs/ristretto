@@ -1,8 +1,8 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Error::InvalidVersion;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Constants representing the Java version 1.0.2.
 pub const JAVA_1_0_2: Version = Version::Java1_0_2 { minor: 0 };
@@ -73,7 +73,7 @@ pub const JAVA_PREVIEW_MINOR_VERSION: u16 = 65535;
 ///
 /// ```rust
 /// use ristretto_classfile::{Version, JAVA_PREVIEW_MINOR_VERSION};
-/// use std::io::Cursor;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Create a Version from major and minor version numbers
 /// let java11 = Version::from(55, 0)?;
@@ -94,8 +94,8 @@ pub const JAVA_PREVIEW_MINOR_VERSION: u16 = 65535;
 /// let mut bytes = Vec::new();
 /// java11.to_bytes(&mut bytes)?;
 ///
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized = Version::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized = Version::from_bytes(&mut reader)?;
 /// assert_eq!(deserialized, java11);
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
@@ -359,7 +359,7 @@ impl Version {
 
     /// Deserialize the major and minor version bytes.
     ///
-    /// Reads the version information from a cursor pointing to the binary data
+    /// Reads the version information from a reader pointing to the binary data
     /// representing the class file's minor and major version.
     ///
     /// ```text
@@ -373,7 +373,7 @@ impl Version {
     ///
     /// ```rust
     /// use ristretto_classfile::Version;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use byteorder::{BigEndian, WriteBytesExt};
     ///
     /// // Create a binary representation of Java 11 (major: 55, minor: 0)
@@ -381,8 +381,8 @@ impl Version {
     /// buffer.write_u16::<BigEndian>(0)?; // minor version
     /// buffer.write_u16::<BigEndian>(55)?; // major version
     ///
-    /// let mut cursor = Cursor::new(buffer);
-    /// let version = Version::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&buffer);
+    /// let version = Version::from_bytes(&mut reader)?;
     ///
     /// assert_eq!(version.major(), 55);
     /// assert_eq!(version.minor(), 0);
@@ -390,10 +390,10 @@ impl Version {
     /// ```
     ///
     /// # Errors
-    /// Returns an error if reading from the byte cursor fails or if the version is invalid.
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Version> {
-        let minor = bytes.read_u16::<BigEndian>()?;
-        let major = bytes.read_u16::<BigEndian>()?;
+    /// Returns an error if reading from the byte reader fails or if the version is invalid.
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<Version> {
+        let minor = bytes.read_u16()?;
+        let major = bytes.read_u16()?;
         Version::from(major, minor)
     }
 
@@ -416,17 +416,16 @@ impl Version {
     ///
     /// ```rust
     /// use ristretto_classfile::Version;
-    /// use std::io::Cursor;
-    /// use byteorder::{BigEndian, ReadBytesExt};
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// let version = Version::from(55, 0)?; // Java 11
     /// let mut bytes = Vec::new();
     /// version.to_bytes(&mut bytes)?;
     ///
     /// // The bytes should represent minor version (0) followed by major version (55)
-    /// let mut cursor = Cursor::new(bytes);
-    /// assert_eq!(cursor.read_u16::<BigEndian>()?, 0); // minor version
-    /// assert_eq!(cursor.read_u16::<BigEndian>()?, 55); // major version
+    /// let mut reader = ByteReader::new(&bytes);
+    /// assert_eq!(reader.read_u16()?, 0); // minor version
+    /// assert_eq!(reader.read_u16()?, 55); // major version
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn to_bytes(&self, bytes: &mut Vec<u8>) -> Result<()> {
@@ -602,7 +601,6 @@ impl VersionSpecification {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::io;
 
     const MIN_MAJOR: u16 = 45;
     const MAX_MAJOR: u16 = 69;
@@ -706,10 +704,11 @@ mod test {
         let expected_value: u32 = 4_294_901_825;
         let mut bytes = Vec::new();
         version.clone().to_bytes(&mut bytes)?;
-        let mut cursor = io::Cursor::new(bytes);
-        assert_eq!(expected_value, cursor.read_u32::<BigEndian>()?);
+        let mut reader = ByteReader::new(&bytes);
+        assert_eq!(expected_value, reader.read_u32()?);
 
-        let mut bytes = Cursor::new(expected_value.to_be_bytes().to_vec());
+        let data = expected_value.to_be_bytes().to_vec();
+        let mut bytes = ByteReader::new(&data);
         assert_eq!(Ok(version), Version::from_bytes(&mut bytes));
         Ok(())
     }

@@ -1,7 +1,7 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents an entry in the `LocalVariableTypeTable` attribute, describing a single local
 /// variable that has a generic type signature.
@@ -31,7 +31,7 @@ use std::io::Cursor;
 ///
 /// ```rust
 /// use ristretto_classfile::attributes::LocalVariableTypeTable;
-/// use std::io::Cursor;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Example: A local variable "myList" of generic type List<String>,
 /// //          in slot 2, scoped from instruction index 8 for 15 instructions.
@@ -48,8 +48,8 @@ use std::io::Cursor;
 /// lvt_entry.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize the entry
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_entry = LocalVariableTypeTable::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_entry = LocalVariableTypeTable::from_bytes(&mut reader)?;
 ///
 /// assert_eq!(lvt_entry, deserialized_entry);
 /// assert_eq!(lvt_entry.to_string(), "start_pc: 8, length: 15, name_index: 200, signature_index: 201, index: 2");
@@ -78,13 +78,13 @@ impl LocalVariableTypeTable {
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::LocalVariableTypeTable;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // Byte data for an entry: start_pc=2, len=10, name=3, sig=4, idx=1
     /// let data = vec![0, 2, 0, 10, 0, 3, 0, 4, 0, 1];
-    /// let mut cursor = Cursor::new(data);
+    /// let mut reader = ByteReader::new(&data);
     ///
-    /// let lvt_entry = LocalVariableTypeTable::from_bytes(&mut cursor)?;
+    /// let lvt_entry = LocalVariableTypeTable::from_bytes(&mut reader)?;
     ///
     /// assert_eq!(lvt_entry.start_pc, 2);
     /// assert_eq!(lvt_entry.length, 10);
@@ -93,12 +93,12 @@ impl LocalVariableTypeTable {
     /// assert_eq!(lvt_entry.index, 1);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<LocalVariableTypeTable> {
-        let start_pc = bytes.read_u16::<BigEndian>()?;
-        let length = bytes.read_u16::<BigEndian>()?;
-        let name_index = bytes.read_u16::<BigEndian>()?;
-        let signature_index = bytes.read_u16::<BigEndian>()?;
-        let index = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<LocalVariableTypeTable> {
+        let start_pc = bytes.read_u16()?;
+        let length = bytes.read_u16()?;
+        let name_index = bytes.read_u16()?;
+        let signature_index = bytes.read_u16()?;
+        let index = bytes.read_u16()?;
 
         let inner_class = LocalVariableTypeTable {
             start_pc,
@@ -217,7 +217,7 @@ mod test {
         local_variable_type_table.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(
             local_variable_type_table,
             LocalVariableTypeTable::from_bytes(&mut bytes)?

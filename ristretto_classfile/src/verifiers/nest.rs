@@ -21,7 +21,7 @@ use crate::verifiers::error::VerifyError::{
 ///
 /// # Errors
 /// Returns an error if the nest attributes are invalid or inconsistent.
-pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
+pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
     let mut has_nest_host = false;
     let mut has_nest_members = false;
 
@@ -92,7 +92,7 @@ pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
 }
 
 /// Verify that an index points to a valid `CONSTANT_Class_info` entry.
-fn verify_class_index(class_file: &ClassFile, index: u16, _context: &str) -> Result<()> {
+fn verify_class_index(class_file: &ClassFile<'_>, index: u16, _context: &str) -> Result<()> {
     match class_file.constant_pool.get(index) {
         Some(Constant::Class(_)) => Ok(()),
         Some(_) => Err(InvalidConstantPoolIndexType(index)),
@@ -104,7 +104,7 @@ fn verify_class_index(class_file: &ClassFile, index: u16, _context: &str) -> Res
 mod tests {
     use super::*;
 
-    fn create_class_file_with_attributes(attributes: Vec<Attribute>) -> ClassFile {
+    fn create_class_file_with_attributes(attributes: Vec<Attribute>) -> ClassFile<'static> {
         ClassFile {
             attributes,
             ..Default::default()

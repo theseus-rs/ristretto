@@ -23,7 +23,7 @@ use std::io::Cursor;
 /// Returns `VerificationError` if the code attribute is invalid.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn verify(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     method: &Method,
     _max_stack: u16,
     max_locals: u16,

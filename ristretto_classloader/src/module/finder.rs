@@ -6,7 +6,6 @@ use crate::module::reference::{ModuleReference, ModuleSource};
 use ristretto_classfile::ClassFile;
 use ristretto_jimage::Image as JImage;
 use std::collections::{BTreeSet, HashMap};
-use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use zip::ZipArchive;
 
@@ -148,8 +147,7 @@ impl SystemModuleFinder {
                 continue;
             }
 
-            let mut cursor = Cursor::new(resource.data());
-            let class_file = ClassFile::from_bytes(&mut cursor)
+            let class_file = ClassFile::from_bytes(resource.data())
                 .map_err(|e| ModuleError::DescriptorParseError(e.to_string()))?;
 
             let mut descriptor = ModuleDescriptor::from_class_file(&class_file)?;
@@ -298,8 +296,7 @@ impl ModulePathFinder {
             let mut data = Vec::new();
             std::io::Read::read_to_end(&mut module_info, &mut data)
                 .map_err(|e| ModuleError::IoError(e.to_string()))?;
-            let mut cursor = Cursor::new(data);
-            let class_file = ClassFile::from_bytes(&mut cursor)
+            let class_file = ClassFile::from_bytes(&data)
                 .map_err(|e| ModuleError::DescriptorParseError(e.to_string()))?;
             let mut descriptor = ModuleDescriptor::from_class_file(&class_file)?;
             // Add discovered packages
@@ -358,8 +355,7 @@ impl ModulePathFinder {
 
         let data =
             std::fs::read(&module_info_path).map_err(|e| ModuleError::IoError(e.to_string()))?;
-        let mut cursor = Cursor::new(data);
-        let class_file = ClassFile::from_bytes(&mut cursor)
+        let class_file = ClassFile::from_bytes(&data)
             .map_err(|e| ModuleError::DescriptorParseError(e.to_string()))?;
         let mut descriptor = ModuleDescriptor::from_class_file(&class_file)?;
 

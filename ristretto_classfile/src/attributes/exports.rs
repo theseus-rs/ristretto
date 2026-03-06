@@ -1,8 +1,8 @@
 use crate::attributes::ExportsFlags;
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents an `exports` directive within a `Module` attribute.
 ///
@@ -27,8 +27,8 @@ use std::io::Cursor;
 /// Basic usage:
 ///
 /// ```rust
+/// use ristretto_classfile::byte_reader::ByteReader;
 /// use ristretto_classfile::attributes::{Exports, ExportsFlags};
-/// use std::io::Cursor;
 ///
 /// // Create an unqualified export for package at constant pool index 5
 /// let unqualified_export = Exports {
@@ -49,8 +49,8 @@ use std::io::Cursor;
 /// unqualified_export.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize an export directive
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_export = Exports::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_export = Exports::from_bytes(&mut reader)?;
 ///
 /// assert_eq!(unqualified_export, deserialized_export);
 /// # Ok::<(), ristretto_classfile::Error>(())
@@ -65,7 +65,7 @@ pub struct Exports {
 impl Exports {
     /// Deserializes an `Exports` structure from a byte stream.
     ///
-    /// The `bytes` cursor should be positioned at the start of the `exports` entry.
+    /// The `bytes` reader should be positioned at the start of the `exports` entry.
     ///
     /// # Errors
     ///
@@ -75,13 +75,13 @@ impl Exports {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::{Exports, ExportsFlags};
-    /// use std::io::Cursor;
     ///
     /// let data = vec![0, 10, 0, 0, 0, 1, 0, 15];
-    /// let mut cursor = Cursor::new(data);
+    /// let mut reader = ByteReader::new(&data);
     ///
-    /// let exports_directive = Exports::from_bytes(&mut cursor)?;
+    /// let exports_directive = Exports::from_bytes(&mut reader)?;
     ///
     /// assert_eq!(exports_directive.index, 10);
     /// assert_eq!(exports_directive.flags, ExportsFlags::empty());
@@ -89,13 +89,13 @@ impl Exports {
     /// assert_eq!(exports_directive.to_index[0], 15);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Exports> {
-        let index = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<Exports> {
+        let index = bytes.read_u16()?;
         let flags = ExportsFlags::from_bytes(bytes)?;
-        let to_index_count = bytes.read_u16::<BigEndian>()?;
+        let to_index_count = bytes.read_u16()?;
         let mut to_index = Vec::with_capacity(to_index_count as usize);
         for _ in 0..to_index_count {
-            to_index.push(bytes.read_u16::<BigEndian>()?);
+            to_index.push(bytes.read_u16()?);
         }
         let requires = Exports {
             index,
@@ -202,7 +202,7 @@ mod test {
         exports.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(exports, Exports::from_bytes(&mut bytes)?);
         Ok(())
     }

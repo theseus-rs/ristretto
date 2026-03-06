@@ -1,8 +1,8 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
 use bitflags::bitflags;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 bitflags! {
     /// Field access flags used in Java class files to specify the access permissions and properties
@@ -17,7 +17,7 @@ bitflags! {
     ///
     /// ```rust
     /// use ristretto_classfile::FieldAccessFlags;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // A private final instance field
     /// let flags = FieldAccessFlags::PRIVATE | FieldAccessFlags::FINAL;
@@ -37,8 +37,8 @@ bitflags! {
     /// assert_eq!(vec![0x00, 0x12], bytes); // 0x0012 = PRIVATE | FINAL
     ///
     /// // Deserialize from bytes
-    /// let mut cursor = Cursor::new(bytes);
-    /// let deserialized = FieldAccessFlags::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&bytes);
+    /// let deserialized = FieldAccessFlags::from_bytes(&mut reader)?;
     /// assert_eq!(flags, deserialized);
     ///
     /// // Display as string
@@ -92,7 +92,7 @@ impl Default for FieldAccessFlags {
 impl FieldAccessFlags {
     /// Deserialize the `FieldAccessFlags` from bytes.
     ///
-    /// Reads a u16 value from the given cursor in big-endian order and constructs
+    /// Reads a u16 value from the given reader in big-endian order and constructs
     /// a `FieldAccessFlags` instance from it.
     ///
     /// # Errors
@@ -102,21 +102,22 @@ impl FieldAccessFlags {
     /// # Examples
     ///
     /// ```
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::FieldAccessFlags;
     ///
     /// // Create a byte buffer representing a public static field
     /// let access_flags: u16 = 0x0009; // PUBLIC | STATIC
-    /// let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
+    /// let bytes = access_flags.to_be_bytes();
+    /// let mut reader = ByteReader::new(&bytes);
     ///
     /// // Parse the access flags
-    /// let flags = FieldAccessFlags::from_bytes(&mut bytes)?;
+    /// let flags = FieldAccessFlags::from_bytes(&mut reader)?;
     /// assert!(flags.contains(FieldAccessFlags::PUBLIC));
     /// assert!(flags.contains(FieldAccessFlags::STATIC));
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<FieldAccessFlags> {
-        let access_flags = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<FieldAccessFlags> {
+        let access_flags = bytes.read_u16()?;
         let access_flags = FieldAccessFlags::from_bits_truncate(access_flags);
         Ok(access_flags)
     }
@@ -267,7 +268,8 @@ mod test {
     #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
-        let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
+        let binding = access_flags.to_be_bytes();
+        let mut bytes = ByteReader::new(&binding);
         assert_eq!(
             Ok(FieldAccessFlags::PUBLIC
                 | FieldAccessFlags::PRIVATE
@@ -287,7 +289,7 @@ mod test {
         let access_flags = FieldAccessFlags::PUBLIC | FieldAccessFlags::FINAL;
         let mut bytes = Vec::new();
         access_flags.to_bytes(&mut bytes)?;
-        let mut bytes = Cursor::new(bytes);
+        let mut bytes = ByteReader::new(&bytes);
         assert_eq!(Ok(access_flags), FieldAccessFlags::from_bytes(&mut bytes));
         Ok(())
     }
