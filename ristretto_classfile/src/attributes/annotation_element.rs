@@ -1,9 +1,9 @@
 use crate::attributes::Annotation;
+use crate::byte_reader::ByteReader;
 use crate::error::Error::InvalidAnnotationElementTag;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents the value of an element in an annotation.
 ///
@@ -16,8 +16,8 @@ use std::io::Cursor;
 /// # Examples
 ///
 /// ```rust
+/// use ristretto_classfile::byte_reader::ByteReader;
 /// use ristretto_classfile::attributes::{AnnotationElement, Annotation};
-/// use std::io::Cursor;
 ///
 /// // Integer element
 /// let int_element = AnnotationElement::Int { const_value_index: 10 };
@@ -51,8 +51,8 @@ use std::io::Cursor;
 /// let mut bytes = Vec::new();
 /// int_element.to_bytes(&mut bytes)?;
 ///
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_element = AnnotationElement::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_element = AnnotationElement::from_bytes(&mut reader)?;
 /// assert_eq!(int_element, deserialized_element);
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
@@ -154,7 +154,7 @@ impl AnnotationElement {
     /// The method first reads a tag byte to determine the type of the element, then deserializes
     /// the specific data for that element type.
     ///
-    /// The `bytes` cursor should be positioned at the start of the `element_value` structure.
+    /// The `bytes` reader should be positioned at the start of the `element_value` structure.
     ///
     /// # Errors
     ///
@@ -166,15 +166,15 @@ impl AnnotationElement {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::AnnotationElement;
-    /// use std::io::Cursor;
     ///
     /// // Byte representation of AnnotationElement::Int { const_value_index: 100 }
     /// // Tag 'I' (73), const_value_index: 0x0064
     /// let data = vec![b'I', 0, 100];
-    /// let mut cursor = Cursor::new(data);
+    /// let mut reader = ByteReader::new(&data);
     ///
-    /// let element = AnnotationElement::from_bytes(&mut cursor)?;
+    /// let element = AnnotationElement::from_bytes(&mut reader)?;
     /// match element {
     ///     AnnotationElement::Int { const_value_index } => assert_eq!(const_value_index, 100),
     ///     _ => panic!("Deserialized to incorrect type"),
@@ -182,54 +182,54 @@ impl AnnotationElement {
     ///
     /// // Example of an invalid tag
     /// let invalid_data = vec![0xFF]; // 0xFF is not a valid tag
-    /// let mut cursor = Cursor::new(invalid_data);
-    /// assert!(AnnotationElement::from_bytes(&mut cursor).is_err());
+    /// let mut reader = ByteReader::new(&invalid_data);
+    /// assert!(AnnotationElement::from_bytes(&mut reader).is_err());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<AnnotationElement> {
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<AnnotationElement> {
         let tag = bytes.read_u8()?;
 
         let element = match tag {
             b'B' => AnnotationElement::Byte {
-                const_value_index: bytes.read_u16::<BigEndian>()?,
+                const_value_index: bytes.read_u16()?,
             },
             b'C' => AnnotationElement::Char {
-                const_value_index: bytes.read_u16::<BigEndian>()?,
+                const_value_index: bytes.read_u16()?,
             },
             b'D' => AnnotationElement::Double {
-                const_value_index: bytes.read_u16::<BigEndian>()?,
+                const_value_index: bytes.read_u16()?,
             },
             b'F' => AnnotationElement::Float {
-                const_value_index: bytes.read_u16::<BigEndian>()?,
+                const_value_index: bytes.read_u16()?,
             },
             b'I' => AnnotationElement::Int {
-                const_value_index: bytes.read_u16::<BigEndian>()?,
+                const_value_index: bytes.read_u16()?,
             },
             b'J' => AnnotationElement::Long {
-                const_value_index: bytes.read_u16::<BigEndian>()?,
+                const_value_index: bytes.read_u16()?,
             },
             b'S' => AnnotationElement::Short {
-                const_value_index: bytes.read_u16::<BigEndian>()?,
+                const_value_index: bytes.read_u16()?,
             },
             b'Z' => AnnotationElement::Boolean {
-                const_value_index: bytes.read_u16::<BigEndian>()?,
+                const_value_index: bytes.read_u16()?,
             },
             b's' => AnnotationElement::String {
-                const_value_index: bytes.read_u16::<BigEndian>()?,
+                const_value_index: bytes.read_u16()?,
             },
             b'e' => AnnotationElement::Enum {
-                type_name_index: bytes.read_u16::<BigEndian>()?,
-                const_name_index: bytes.read_u16::<BigEndian>()?,
+                type_name_index: bytes.read_u16()?,
+                const_name_index: bytes.read_u16()?,
             },
             b'c' => AnnotationElement::Class {
-                class_info_index: bytes.read_u16::<BigEndian>()?,
+                class_info_index: bytes.read_u16()?,
             },
             b'@' => {
                 let annotation = Annotation::from_bytes(bytes)?;
                 AnnotationElement::Annotation { annotation }
             }
             b'[' => {
-                let values_count = bytes.read_u16::<BigEndian>()?;
+                let values_count = bytes.read_u16()?;
                 let mut values = Vec::with_capacity(values_count as usize);
                 for _ in 0..values_count {
                     let value = AnnotationElement::from_bytes(bytes)?;
@@ -388,7 +388,8 @@ mod test {
 
     #[test]
     fn test_invalid_tag() {
-        let mut bytes = Cursor::new(vec![0]);
+        let data = vec![0];
+        let mut bytes = ByteReader::new(&data);
         assert_eq!(
             Err(InvalidAnnotationElementTag(0)),
             AnnotationElement::from_bytes(&mut bytes)
@@ -401,7 +402,7 @@ mod test {
         let mut bytes = Vec::new();
         element.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut bytes = ByteReader::new(expected_bytes);
         assert_eq!(*element, AnnotationElement::from_bytes(&mut bytes)?);
         Ok(())
     }

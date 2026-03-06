@@ -34,13 +34,12 @@
 //! ```rust,no_run
 //! use ristretto_classfile::ClassFile;
 //! use std::fs;
-//! use std::io::Cursor;
 //!
 //! // Read the bytes of a class file
 //! let bytes = fs::read("path/to/Example.class")?;
 //!
 //! // Parse the bytes into a ClassFile
-//! let class_file = ClassFile::from_bytes(&mut Cursor::new(bytes))?;
+//! let class_file = ClassFile::from_bytes(&bytes)?;
 //!
 //! // Now you can inspect the class
 //! println!("Class name: {}", class_file.class_name()?);
@@ -53,7 +52,7 @@
 //! ```rust,no_run
 //! use ristretto_classfile::{ClassFile, ConstantPool, Version, ClassAccessFlags, JAVA_21};
 //! use std::fs;
-//! use std::io::{Cursor, Write};
+//! use std::io::Write;
 //!
 //! // Create a new class file
 //! let mut constant_pool = ConstantPool::default();
@@ -81,10 +80,11 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 
 pub mod attributes;
 mod base_type;
+pub mod byte_reader;
 mod class_access_flags;
 mod class_file;
 mod constant;

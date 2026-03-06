@@ -9,7 +9,7 @@ use crate::verifiers::error::VerifyError::InvalidFieldAccessFlags;
 ///
 /// # Errors
 /// Returns `InvalidFieldAccessFlags` if the access flags are invalid.
-pub(crate) fn verify(class_file: &ClassFile, field: &Field) -> Result<()> {
+pub(crate) fn verify(class_file: &ClassFile<'_>, field: &Field) -> Result<()> {
     let access_flags = field.access_flags;
     let public_set = access_flags.contains(FieldAccessFlags::PUBLIC);
     let protected_set = access_flags.contains(FieldAccessFlags::PROTECTED);

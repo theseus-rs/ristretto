@@ -84,6 +84,9 @@ pub enum Error {
     /// IO error
     #[error("IO error: {0}")]
     IoError(String),
+    /// Unexpected end of input (used by `ByteReader` for zero-allocation errors)
+    #[error("Unexpected end of input")]
+    UnexpectedEof,
     /// Error when attempting to create a UTF-8 string from bytes
     #[error("Invalid UTF-8 sequence: {0}")]
     FromUtf8Error(String),

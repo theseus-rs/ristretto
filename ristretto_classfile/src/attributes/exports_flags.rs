@@ -1,8 +1,8 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
 use bitflags::bitflags;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 bitflags! {
     /// Flags that modify an `exports` directive in a `Module` attribute.
@@ -65,23 +65,23 @@ impl ExportsFlags {
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::ExportsFlags;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // Bytes for ACC_SYNTHETIC (0x1000)
     /// let data = vec![0x10, 0x00];
-    /// let mut cursor = Cursor::new(data);
-    /// let flags = ExportsFlags::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&data);
+    /// let flags = ExportsFlags::from_bytes(&mut reader)?;
     /// assert_eq!(flags, ExportsFlags::SYNTHETIC);
     ///
     /// // Bytes for ACC_MANDATED (0x8000)
     /// let data_mandated = vec![0x80, 0x00];
-    /// let mut cursor_mandated = Cursor::new(data_mandated);
-    /// let flags_mandated = ExportsFlags::from_bytes(&mut cursor_mandated)?;
+    /// let mut reader_mandated = ByteReader::new(&data_mandated);
+    /// let flags_mandated = ExportsFlags::from_bytes(&mut reader_mandated)?;
     /// assert_eq!(flags_mandated, ExportsFlags::MANDATED);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ExportsFlags> {
-        let access_flags = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<ExportsFlags> {
+        let access_flags = bytes.read_u16()?;
         let access_flags = ExportsFlags::from_bits_truncate(access_flags);
         Ok(access_flags)
     }
@@ -166,7 +166,8 @@ mod test {
     #[test]
     fn test_all_access_flags() {
         let access_flags: u16 = u16::MAX;
-        let mut bytes = Cursor::new(access_flags.to_be_bytes().to_vec());
+        let binding = access_flags.to_be_bytes();
+        let mut bytes = ByteReader::new(&binding);
         assert_eq!(
             Ok(ExportsFlags::SYNTHETIC | ExportsFlags::MANDATED),
             ExportsFlags::from_bytes(&mut bytes)
@@ -178,7 +179,7 @@ mod test {
         let access_flags = ExportsFlags::MANDATED;
         let mut bytes = Vec::new();
         access_flags.to_bytes(&mut bytes)?;
-        let mut bytes = Cursor::new(bytes);
+        let mut bytes = ByteReader::new(&bytes);
         assert_eq!(Ok(access_flags), ExportsFlags::from_bytes(&mut bytes));
         Ok(())
     }

@@ -1,8 +1,8 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
 use crate::method_access_flags::MethodAccessFlags;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Implementation of `MethodParameter`.
 ///
@@ -55,18 +55,18 @@ impl MethodParameter {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::MethodParameter;
     /// use ristretto_classfile::MethodAccessFlags;
-    /// use std::io::Cursor;
     ///
-    /// let mut bytes = Cursor::new(vec![0x00, 0x03, 0x00, 0x01]); // name_index: 3, access_flags: ACC_PUBLIC
+    /// let mut bytes = ByteReader::new(&[0x00, 0x03, 0x00, 0x01]); // name_index: 3, access_flags: ACC_PUBLIC
     /// let method_parameter = MethodParameter::from_bytes(&mut bytes)?;
     /// assert_eq!(method_parameter.name_index, 3);
     /// assert_eq!(method_parameter.access_flags, MethodAccessFlags::PUBLIC);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<MethodParameter> {
-        let name_index = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<MethodParameter> {
+        let name_index = bytes.read_u16()?;
         let access_flags = MethodAccessFlags::from_bytes(bytes)?;
         let bootstrap_method = MethodParameter {
             name_index,
@@ -161,7 +161,7 @@ mod test {
         method_parameter.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(method_parameter, MethodParameter::from_bytes(&mut bytes)?);
         Ok(())
     }

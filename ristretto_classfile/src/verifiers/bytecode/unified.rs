@@ -109,7 +109,7 @@ impl VerificationResult {
 ///
 /// Returns an error if verification fails and fallback is not possible.
 pub fn verify_method<C: VerificationContext>(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     method: &Method,
     context: &C,
     config: &VerifierConfig,
@@ -194,7 +194,7 @@ pub fn verify_method<C: VerificationContext>(
 ///
 /// Returns an error if verification fails.
 pub fn verify_method_cached<C: VerificationContext>(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     method: &Method,
     context: &C,
     config: &VerifierConfig,
@@ -250,7 +250,7 @@ pub fn verify_method_cached<C: VerificationContext>(
 ///
 /// Returns the first verification error encountered.
 pub fn verify_class<C: VerificationContext>(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: &C,
     config: &VerifierConfig,
 ) -> Result<Vec<VerificationResult>> {
@@ -270,7 +270,7 @@ pub fn verify_class<C: VerificationContext>(
 ///
 /// Returns an error if verification of any method fails.
 pub fn verify_class_cached<C: VerificationContext>(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: &C,
     config: &VerifierConfig,
     cache: &VerificationCache,
@@ -342,21 +342,17 @@ mod tests {
         }
     }
 
-    fn create_mock_class_file() -> ClassFile {
+    fn create_mock_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
         constant_pool
-            .add(Constant::Utf8("TestClass".to_string()))
+            .add(Constant::Utf8("TestClass".into()))
             .unwrap();
         let this_class_index = constant_pool.add(Constant::Class(1)).unwrap();
         constant_pool
-            .add(Constant::Utf8("testMethod".to_string()))
+            .add(Constant::Utf8("testMethod".into()))
             .unwrap();
-        constant_pool
-            .add(Constant::Utf8("()V".to_string()))
-            .unwrap();
-        constant_pool
-            .add(Constant::Utf8("Code".to_string()))
-            .unwrap();
+        constant_pool.add(Constant::Utf8("()V".into())).unwrap();
+        constant_pool.add(Constant::Utf8("Code".into())).unwrap();
 
         ClassFile {
             version: Version::Java8 { minor: 0 },

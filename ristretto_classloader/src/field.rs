@@ -41,7 +41,7 @@ impl Field {
     ///
     /// if the field name cannot be read.
     pub fn from(
-        class_file: &ClassFile,
+        class_file: &ClassFile<'static>,
         offset: u16,
         definition: &ristretto_classfile::Field,
     ) -> Result<Self> {

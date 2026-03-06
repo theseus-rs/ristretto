@@ -1,7 +1,7 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents the `localvar_target` structure, part of a `TypeAnnotation` when the `target_type`
 /// indicates an annotation on a local variable declaration.
@@ -26,7 +26,7 @@ use std::io::Cursor;
 ///
 /// ```rust
 /// use ristretto_classfile::attributes::LocalVariableTarget;
-/// use std::io::Cursor;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Example: Targeting a local variable in slot 3,
 /// //          scoped from instruction index 20 for 5 instructions.
@@ -41,8 +41,8 @@ use std::io::Cursor;
 /// lv_target.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize the target
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_target = LocalVariableTarget::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_target = LocalVariableTarget::from_bytes(&mut reader)?;
 ///
 /// assert_eq!(lv_target, deserialized_target);
 /// assert_eq!(lv_target.to_string(), "start_pc: 20, length: 5, index: 3");
@@ -70,23 +70,23 @@ impl LocalVariableTarget {
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::LocalVariableTarget;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // Byte data for LocalVariableTarget: start_pc=5, length=10, index=2
     /// let data = vec![0, 5, 0, 10, 0, 2];
-    /// let mut cursor = Cursor::new(data);
+    /// let mut reader = ByteReader::new(&data);
     ///
-    /// let lv_target = LocalVariableTarget::from_bytes(&mut cursor)?;
+    /// let lv_target = LocalVariableTarget::from_bytes(&mut reader)?;
     ///
     /// assert_eq!(lv_target.start_pc, 5);
     /// assert_eq!(lv_target.length, 10);
     /// assert_eq!(lv_target.index, 2);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<LocalVariableTarget> {
-        let start_pc = bytes.read_u16::<BigEndian>()?;
-        let length = bytes.read_u16::<BigEndian>()?;
-        let index = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<LocalVariableTarget> {
+        let start_pc = bytes.read_u16()?;
+        let length = bytes.read_u16()?;
+        let index = bytes.read_u16()?;
 
         let local_variable_target = LocalVariableTarget {
             start_pc,
@@ -190,7 +190,7 @@ mod test {
         local_variable_target.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(
             local_variable_target,
             LocalVariableTarget::from_bytes(&mut bytes)?

@@ -29,7 +29,7 @@ pub(crate) enum AttributeContext<'a> {
 /// Returns `VerificationError` if the attributes are invalid.
 #[expect(clippy::too_many_lines)]
 pub(crate) fn verify(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     attributes: &[Attribute],
     context: AttributeContext,
 ) -> Result<()> {
@@ -155,7 +155,7 @@ pub(crate) fn verify(
 }
 
 fn verify_constant_value(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     constant_value_index: u16,
 ) -> Result<()> {
@@ -179,7 +179,7 @@ fn verify_constant_value(
 }
 
 fn verify_code(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     max_stack: u16,
     max_locals: u16,
@@ -223,7 +223,7 @@ fn verify_stack_map_table(context: AttributeContext) -> Result<()> {
 }
 
 fn verify_exceptions(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     exception_indexes: &[u16],
 ) -> Result<()> {
@@ -244,7 +244,7 @@ fn verify_exceptions(
 }
 
 fn verify_inner_classes(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     classes: &[InnerClass],
 ) -> Result<()> {
@@ -288,7 +288,7 @@ fn verify_inner_classes(
 }
 
 fn verify_enclosing_method(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     class_index: u16,
     method_index: u16,
@@ -325,7 +325,7 @@ fn verify_synthetic(context: AttributeContext) -> Result<()> {
 }
 
 fn verify_signature(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     signature_index: u16,
 ) -> Result<()> {
@@ -344,7 +344,7 @@ fn verify_signature(
 }
 
 fn verify_source_file(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     source_file_index: u16,
 ) -> Result<()> {
@@ -406,7 +406,7 @@ fn verify_line_number_table(context: AttributeContext, line_numbers: &[LineNumbe
 }
 
 fn verify_local_variable_table(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     variables: &[LocalVariableTable],
 ) -> Result<()> {
@@ -465,7 +465,7 @@ fn verify_local_variable_table(
 }
 
 fn verify_local_variable_type_table(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     variable_types: &[LocalVariableTypeTable],
 ) -> Result<()> {
@@ -528,14 +528,14 @@ fn verify_deprecated(context: AttributeContext) -> Result<()> {
     Ok(())
 }
 
-fn verify_annotations(class_file: &ClassFile, annotations: &[Annotation]) -> Result<()> {
+fn verify_annotations(class_file: &ClassFile<'_>, annotations: &[Annotation]) -> Result<()> {
     for annotation in annotations {
         verify_annotation(class_file, annotation)?;
     }
     Ok(())
 }
 
-fn verify_annotation(class_file: &ClassFile, annotation: &Annotation) -> Result<()> {
+fn verify_annotation(class_file: &ClassFile<'_>, annotation: &Annotation) -> Result<()> {
     match class_file.constant_pool.get(annotation.type_index) {
         Some(Constant::Utf8(_)) => {}
         Some(_) => return Err(InvalidConstantPoolIndexType(annotation.type_index)),
@@ -552,7 +552,10 @@ fn verify_annotation(class_file: &ClassFile, annotation: &Annotation) -> Result<
     Ok(())
 }
 
-fn verify_annotation_element(class_file: &ClassFile, element: &AnnotationElement) -> Result<()> {
+fn verify_annotation_element(
+    class_file: &ClassFile<'_>,
+    element: &AnnotationElement,
+) -> Result<()> {
     match element {
         AnnotationElement::Byte { const_value_index }
         | AnnotationElement::Char { const_value_index }
@@ -628,7 +631,7 @@ fn verify_annotation_element(class_file: &ClassFile, element: &AnnotationElement
 }
 
 fn verify_parameter_annotations(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     parameter_annotations: &[ParameterAnnotation],
 ) -> Result<()> {
@@ -645,7 +648,7 @@ fn verify_parameter_annotations(
 }
 
 fn verify_type_annotations(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     type_annotations: &[TypeAnnotation],
 ) -> Result<()> {
@@ -674,7 +677,7 @@ fn verify_type_annotations(
 }
 
 fn verify_annotation_default(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     element: &AnnotationElement,
 ) -> Result<()> {
@@ -688,7 +691,7 @@ fn verify_annotation_default(
 }
 
 fn verify_bootstrap_methods(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     methods: &[BootstrapMethod],
 ) -> Result<()> {
@@ -715,7 +718,7 @@ fn verify_bootstrap_methods(
 }
 
 fn verify_method_parameters(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     parameters: &[MethodParameter],
 ) -> Result<()> {
@@ -739,7 +742,7 @@ fn verify_method_parameters(
 
 #[expect(clippy::too_many_arguments)]
 fn verify_module(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     module_name_index: u16,
     version_index: u16,
@@ -836,7 +839,7 @@ fn verify_module(
 }
 
 fn verify_module_packages(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     package_indexes: &[u16],
 ) -> Result<()> {
@@ -857,7 +860,7 @@ fn verify_module_packages(
 }
 
 fn verify_module_main_class(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     main_class_index: u16,
 ) -> Result<()> {
@@ -876,7 +879,7 @@ fn verify_module_main_class(
 }
 
 fn verify_nest_host(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     host_class_index: u16,
 ) -> Result<()> {
@@ -895,7 +898,7 @@ fn verify_nest_host(
 }
 
 fn verify_nest_members(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     class_indexes: &[u16],
 ) -> Result<()> {
@@ -916,7 +919,7 @@ fn verify_nest_members(
 }
 
 fn verify_record(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     records: &[Record],
 ) -> Result<()> {
@@ -947,7 +950,7 @@ fn verify_record(
 }
 
 fn verify_permitted_subclasses(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     context: AttributeContext,
     class_indexes: &[u16],
 ) -> Result<()> {
@@ -982,7 +985,7 @@ mod tests {
     use crate::{BaseType, FieldAccessFlags, FieldType};
     use {Attribute, InnerClass, LineNumber, LocalVariableTable, LocalVariableTypeTable};
 
-    fn create_class_file(constants: Vec<Constant>) -> ClassFile {
+    fn create_class_file(constants: Vec<Constant<'static>>) -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
         for constant in constants {
             let _ = constant_pool.add(constant);
@@ -1040,10 +1043,7 @@ mod tests {
 
     #[test]
     fn test_verify_code() {
-        let constants = vec![
-            Constant::Utf8("()V".to_string()),
-            Constant::Utf8("Code".to_string()),
-        ];
+        let constants = vec![Constant::Utf8("()V".into()), Constant::Utf8("Code".into())];
         let class_file = create_class_file(constants);
         let method = Method {
             descriptor_index: 1,
@@ -1115,7 +1115,7 @@ mod tests {
 
     #[test]
     fn test_verify_exceptions() {
-        let constants = vec![Constant::Class(2), Constant::Utf8("Exception".to_string())];
+        let constants = vec![Constant::Class(2), Constant::Utf8("Exception".into())];
         let class_file = create_class_file(constants);
         let attribute = Attribute::Exceptions {
             name_index: 0,
@@ -1158,10 +1158,10 @@ mod tests {
     fn test_verify_inner_classes() {
         let constants = vec![
             Constant::Class(2),
-            Constant::Utf8("Inner".to_string()),
+            Constant::Utf8("Inner".into()),
             Constant::Class(4),
-            Constant::Utf8("Outer".to_string()),
-            Constant::Utf8("Name".to_string()),
+            Constant::Utf8("Outer".into()),
+            Constant::Utf8("Name".into()),
         ];
         let class_file = create_class_file(constants);
         let inner_class = InnerClass {
@@ -1234,13 +1234,13 @@ mod tests {
     fn test_verify_enclosing_method() {
         let constants = vec![
             Constant::Class(2),
-            Constant::Utf8("Class".to_string()),
+            Constant::Utf8("Class".into()),
             Constant::NameAndType {
                 name_index: 4,
                 descriptor_index: 5,
             },
-            Constant::Utf8("method".to_string()),
-            Constant::Utf8("()V".to_string()),
+            Constant::Utf8("method".into()),
+            Constant::Utf8("()V".into()),
         ];
         let class_file = create_class_file(constants);
         let attribute = Attribute::EnclosingMethod {
@@ -1309,7 +1309,7 @@ mod tests {
 
     #[test]
     fn test_verify_signature() {
-        let constants = vec![Constant::Utf8("Signature".to_string())];
+        let constants = vec![Constant::Utf8("Signature".into())];
         let class_file = create_class_file(constants);
         let attribute = Attribute::Signature {
             name_index: 0,
@@ -1341,7 +1341,7 @@ mod tests {
 
     #[test]
     fn test_verify_source_file() {
-        let constants = vec![Constant::Utf8("Source.java".to_string())];
+        let constants = vec![Constant::Utf8("Source.java".into())];
         let class_file = create_class_file(constants);
         let attribute = Attribute::SourceFile {
             name_index: 0,
@@ -1454,8 +1454,8 @@ mod tests {
     #[test]
     fn test_verify_local_variable_table() {
         let constants = vec![
-            Constant::Utf8("name".to_string()),
-            Constant::Utf8("descriptor".to_string()),
+            Constant::Utf8("name".into()),
+            Constant::Utf8("descriptor".into()),
         ];
         let class_file = create_class_file(constants);
         let attribute = Attribute::LocalVariableTable {
@@ -1542,8 +1542,8 @@ mod tests {
     #[test]
     fn test_verify_local_variable_type_table() {
         let constants = vec![
-            Constant::Utf8("name".to_string()),
-            Constant::Utf8("signature".to_string()),
+            Constant::Utf8("name".into()),
+            Constant::Utf8("signature".into()),
         ];
         let class_file = create_class_file(constants);
         let attribute = Attribute::LocalVariableTypeTable {
@@ -1665,8 +1665,8 @@ mod tests {
     #[test]
     fn test_verify_annotations() {
         let constants = vec![
-            Constant::Utf8("LAnnotation;".to_string()),
-            Constant::Utf8("name".to_string()),
+            Constant::Utf8("LAnnotation;".into()),
+            Constant::Utf8("name".into()),
             Constant::Integer(42),
         ];
         let class_file = create_class_file(constants);
@@ -1839,7 +1839,7 @@ mod tests {
 
     #[test]
     fn test_verify_method_parameters() {
-        let constants = vec![Constant::Utf8("param".to_string())];
+        let constants = vec![Constant::Utf8("param".into())];
         let class_file = create_class_file(constants);
         let attribute = Attribute::MethodParameters {
             name_index: 0,
@@ -1879,12 +1879,12 @@ mod tests {
     fn test_verify_module() {
         let constants = vec![
             Constant::Module(2),
-            Constant::Utf8("module".to_string()),
-            Constant::Utf8("1.0".to_string()),
+            Constant::Utf8("module".into()),
+            Constant::Utf8("1.0".into()),
             Constant::Package(5),
-            Constant::Utf8("package".to_string()),
+            Constant::Utf8("package".into()),
             Constant::Class(7),
-            Constant::Utf8("Class".to_string()),
+            Constant::Utf8("Class".into()),
         ];
         let class_file = create_class_file(constants);
         let attribute = Attribute::Module {
@@ -1929,7 +1929,7 @@ mod tests {
 
     #[test]
     fn test_verify_module_packages() {
-        let constants = vec![Constant::Package(2), Constant::Utf8("package".to_string())];
+        let constants = vec![Constant::Package(2), Constant::Utf8("package".into())];
         let class_file = create_class_file(constants);
         let attribute = Attribute::ModulePackages {
             name_index: 0,
@@ -1951,7 +1951,7 @@ mod tests {
 
     #[test]
     fn test_verify_module_main_class() {
-        let constants = vec![Constant::Class(2), Constant::Utf8("Main".to_string())];
+        let constants = vec![Constant::Class(2), Constant::Utf8("Main".into())];
         let class_file = create_class_file(constants);
         let attribute = Attribute::ModuleMainClass {
             name_index: 0,
@@ -1973,7 +1973,7 @@ mod tests {
 
     #[test]
     fn test_verify_nest_host() {
-        let constants = vec![Constant::Class(2), Constant::Utf8("Host".to_string())];
+        let constants = vec![Constant::Class(2), Constant::Utf8("Host".into())];
         let class_file = create_class_file(constants);
         let attribute = Attribute::NestHost {
             name_index: 0,
@@ -1995,7 +1995,7 @@ mod tests {
 
     #[test]
     fn test_verify_nest_members() {
-        let constants = vec![Constant::Class(2), Constant::Utf8("Member".to_string())];
+        let constants = vec![Constant::Class(2), Constant::Utf8("Member".into())];
         let class_file = create_class_file(constants);
         let attribute = Attribute::NestMembers {
             name_index: 0,
@@ -2018,8 +2018,8 @@ mod tests {
     #[test]
     fn test_verify_record() {
         let constants = vec![
-            Constant::Utf8("name".to_string()),
-            Constant::Utf8("descriptor".to_string()),
+            Constant::Utf8("name".into()),
+            Constant::Utf8("descriptor".into()),
         ];
         let class_file = create_class_file(constants);
         let attribute = Attribute::Record {
@@ -2046,7 +2046,7 @@ mod tests {
 
     #[test]
     fn test_verify_permitted_subclasses() {
-        let constants = vec![Constant::Class(2), Constant::Utf8("Sub".to_string())];
+        let constants = vec![Constant::Class(2), Constant::Utf8("Sub".into())];
         let class_file = create_class_file(constants);
         let attribute = Attribute::PermittedSubclasses {
             name_index: 0,

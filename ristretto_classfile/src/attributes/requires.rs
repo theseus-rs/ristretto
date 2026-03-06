@@ -1,8 +1,8 @@
 use crate::attributes::RequiresFlags;
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents a module dependency entry in the `requires` table of a Java module descriptor.
 ///
@@ -24,7 +24,7 @@ use std::io::Cursor;
 /// ```rust
 /// use ristretto_classfile::attributes::{Requires, RequiresFlags};
 /// use ristretto_classfile::Result;
-/// use std::io::Cursor;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// fn main() -> Result<()> {
 ///     let requires_entry = Requires {
@@ -38,8 +38,8 @@ use std::io::Cursor;
 ///     requires_entry.to_bytes(&mut bytes)?;
 ///
 ///     // Deserialize
-///     let mut cursor = Cursor::new(bytes);
-///     let deserialized_requires = Requires::from_bytes(&mut cursor)?;
+///     let mut reader = ByteReader::new(&bytes);
+///     let deserialized_requires = Requires::from_bytes(&mut reader)?;
 ///
 ///     assert_eq!(requires_entry, deserialized_requires);
 ///     Ok(())
@@ -76,16 +76,16 @@ impl Requires {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// # use ristretto_classfile::attributes::{Requires, RequiresFlags};
     /// # use ristretto_classfile::Result;
-    /// # use std::io::Cursor;
     /// # fn example() -> Result<()> {
     /// // Create a byte array representing a serialized Requires entry
     /// let raw_bytes = vec![0, 5, 0, 32, 0, 0]; // module_index=5, flags=STATIC_PHASE, no version
-    /// let mut cursor = Cursor::new(raw_bytes);
+    /// let mut reader = ByteReader::new(&raw_bytes);
     ///
     /// // Deserialize
-    /// let requires = Requires::from_bytes(&mut cursor)?;
+    /// let requires = Requires::from_bytes(&mut reader)?;
     ///
     /// assert_eq!(requires.index, 5);
     /// assert_eq!(requires.flags, RequiresFlags::STATIC_PHASE);
@@ -97,10 +97,10 @@ impl Requires {
     /// # Errors
     ///
     /// Returns an error if reading from the byte stream fails.
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Requires> {
-        let index = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<Requires> {
+        let index = bytes.read_u16()?;
         let flags = RequiresFlags::from_bytes(bytes)?;
-        let version_index = bytes.read_u16::<BigEndian>()?;
+        let version_index = bytes.read_u16()?;
         let require = Requires {
             index,
             flags,
@@ -212,7 +212,7 @@ mod test {
         requires.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(requires, Requires::from_bytes(&mut bytes)?);
         Ok(())
     }

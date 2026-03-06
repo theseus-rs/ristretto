@@ -6,7 +6,6 @@ use ristretto_classfile::ClassFile;
 use ristretto_classloader::ALL_LTS_VERSIONS;
 use ristretto_classloader::runtime::{default_class_loader, version_class_loader};
 use ristretto_jimage::{Image, Result};
-use std::io::Cursor;
 
 /// Loads the default Image for testing.
 async fn get_test_image() -> Result<Image> {
@@ -54,8 +53,7 @@ async fn test_get_resource_and_parse_classfile() -> Result<()> {
     let resource = image.get_resource(resource_name)?;
     assert_eq!(resource_name, resource.full_name());
 
-    let mut bytes = Cursor::new(resource.data());
-    let class_file = ClassFile::from_bytes(&mut bytes).expect("read classfile");
+    let class_file = ClassFile::from_bytes(resource.data()).expect("read classfile");
     let class_name = class_file.class_name().expect("class name");
     assert_eq!(class_name, "java/lang/Object");
     Ok(())

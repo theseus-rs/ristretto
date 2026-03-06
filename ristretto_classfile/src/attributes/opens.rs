@@ -1,8 +1,8 @@
 use crate::attributes::OpensFlags;
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Implementation of `Opens`.
 ///
@@ -19,6 +19,7 @@ use std::io::Cursor;
 /// # Examples
 ///
 /// ```rust
+/// use ristretto_classfile::byte_reader::ByteReader;
 /// use ristretto_classfile::attributes::{Opens, OpensFlags};
 ///
 /// // Create an Opens entry that opens a package with index 1 to the module with index 3
@@ -33,8 +34,8 @@ use std::io::Cursor;
 /// opens.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize the Opens entry
-/// let mut cursor = std::io::Cursor::new(bytes);
-/// let deserialized = Opens::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized = Opens::from_bytes(&mut reader)?;
 ///
 /// assert_eq!(opens, deserialized);
 /// # Ok::<(), ristretto_classfile::Error>(())
@@ -60,24 +61,24 @@ impl Opens {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::{Opens, OpensFlags};
-    /// use std::io::Cursor;
     ///
     /// // index: 1, flags: MANDATED, to_index: [3]
-    /// let mut bytes = Cursor::new(vec![0x00, 0x01, 0x80, 0x00, 0x00, 0x01, 0x00, 0x03]);
+    /// let mut bytes = ByteReader::new(&[0x00, 0x01, 0x80, 0x00, 0x00, 0x01, 0x00, 0x03]);
     /// let opens = Opens::from_bytes(&mut bytes)?;
     /// assert_eq!(opens.index, 1);
     /// assert_eq!(opens.flags, OpensFlags::MANDATED);
     /// assert_eq!(opens.to_index, vec![3]);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Opens> {
-        let index = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<Opens> {
+        let index = bytes.read_u16()?;
         let flags = OpensFlags::from_bytes(bytes)?;
-        let to_index_count = bytes.read_u16::<BigEndian>()?;
+        let to_index_count = bytes.read_u16()?;
         let mut to_index = Vec::with_capacity(to_index_count as usize);
         for _ in 0..to_index_count {
-            to_index.push(bytes.read_u16::<BigEndian>()?);
+            to_index.push(bytes.read_u16()?);
         }
         let requires = Opens {
             index,
@@ -179,7 +180,7 @@ mod test {
         opens.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(opens, Opens::from_bytes(&mut bytes)?);
         Ok(())
     }

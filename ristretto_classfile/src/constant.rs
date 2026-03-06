@@ -1,11 +1,12 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Error::InvalidConstantTag;
 use crate::error::Result;
 use crate::reference_kind::ReferenceKind;
 use crate::version::Version;
 use crate::{JAVA_7, JAVA_9, JAVA_11, mutf8};
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
+use std::borrow::Cow;
 use std::fmt;
-use std::io::{Cursor, Read};
 
 const VERSION_45_3: Version = Version::Java1_0_2 { minor: 3 };
 const VERSION_51_0: Version = JAVA_7;
@@ -25,10 +26,10 @@ const VERSION_55_0: Version = JAVA_11;
 ///
 /// ```rust
 /// use ristretto_classfile::{Constant, ReferenceKind, Version, JAVA_11, JAVA_7};
-/// use std::io::Cursor;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Create some constants
-/// let utf8_constant = Constant::Utf8("java/lang/Object".to_string());
+/// let utf8_constant = Constant::Utf8("java/lang/Object".into());
 /// let class_constant = Constant::Class(1); // Points to the UTF-8 constant
 /// let string_const = Constant::String(1);
 /// let method_reference = Constant::MethodRef {
@@ -53,8 +54,8 @@ const VERSION_55_0: Version = JAVA_11;
 /// // For example, deserializing an Integer constant:
 /// // Tag 3 (Integer) followed by a 4-byte integer value
 /// let int_bytes = vec![3, 0, 0, 0, 42];
-/// let mut cursor = Cursor::new(int_bytes);
-/// let deserialized = Constant::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&int_bytes);
+/// let deserialized = Constant::from_bytes(&mut reader)?;
 /// assert_eq!(deserialized, Constant::Integer(42));
 ///
 /// // Display constants in human-readable format
@@ -68,9 +69,9 @@ const VERSION_55_0: Version = JAVA_11;
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4>
 #[derive(Clone, Debug)]
-pub enum Constant {
+pub enum Constant<'a> {
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7>
-    Utf8(String),
+    Utf8(Cow<'a, str>),
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.4>
     Integer(i32),
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.4>
@@ -126,7 +127,7 @@ pub enum Constant {
     Package(u16), // Name index (Utf8)
 }
 
-impl PartialEq for Constant {
+impl PartialEq for Constant<'_> {
     #[expect(clippy::match_same_arms)]
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -215,9 +216,9 @@ impl PartialEq for Constant {
     }
 }
 
-impl Eq for Constant {}
+impl Eq for Constant<'_> {}
 
-impl Constant {
+impl Constant<'_> {
     /// Returns the tag value for this constant type.
     ///
     /// The tag is a single-byte identifier used to differentiate between different constant types
@@ -228,7 +229,7 @@ impl Constant {
     /// ```rust
     /// use ristretto_classfile::Constant;
     ///
-    /// let constant = Constant::Utf8("Hello, world!".to_string());
+    /// let constant = Constant::Utf8("Hello, world!".into());
     /// assert_eq!(constant.tag(), 1);
     ///
     /// let constant = Constant::Integer(42);
@@ -267,7 +268,7 @@ impl Constant {
     /// ```rust
     /// use ristretto_classfile::{Constant, ReferenceKind, Version, JAVA_6, JAVA_7};
     ///
-    /// let constant = Constant::Utf8("Hello, world!".to_string());
+    /// let constant = Constant::Utf8("Hello, world!".into());
     /// assert!(constant.valid_for_version(&JAVA_7));
     ///
     /// let constant = Constant::MethodHandle {
@@ -304,67 +305,134 @@ impl Constant {
     ///
     /// ```rust
     /// use ristretto_classfile::Constant;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // Create a buffer with a UTF-8 constant (tag 1)
     /// // Format: [tag(1), length(2 bytes), data(length bytes)]
     /// let buffer = vec![1, 0, 5, 72, 101, 108, 108, 111]; // "Hello"
-    /// let mut cursor = Cursor::new(buffer);
+    /// let mut reader = ByteReader::new(&buffer);
     ///
-    /// let constant = Constant::from_bytes(&mut cursor)?;
-    /// assert_eq!(constant, Constant::Utf8("Hello".to_string()));
+    /// let constant = Constant::from_bytes(&mut reader)?;
+    /// assert_eq!(constant, Constant::Utf8("Hello".into()));
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Constant> {
+    pub fn from_bytes<'b>(bytes: &mut ByteReader<'b>) -> Result<Constant<'b>> {
         let tag = bytes.read_u8()?;
         let constant = match tag {
             1 => {
-                let length = bytes.read_u16::<BigEndian>()? as usize;
-                let mut utf8_bytes = vec![0; length];
-                bytes.read_exact(&mut utf8_bytes)?;
-                let string = mutf8::from_bytes(utf8_bytes.as_slice())?;
-                Constant::Utf8(string)
+                let length = bytes.read_u16()? as usize;
+                let utf8_slice = bytes.read_bytes(length)?;
+                let cow = mutf8::from_bytes_cow(utf8_slice)?;
+                Constant::Utf8(cow)
             }
-            3 => Constant::Integer(bytes.read_i32::<BigEndian>()?),
-            4 => Constant::Float(bytes.read_f32::<BigEndian>()?),
-            5 => Constant::Long(bytes.read_i64::<BigEndian>()?),
-            6 => Constant::Double(bytes.read_f64::<BigEndian>()?),
-            7 => Constant::Class(bytes.read_u16::<BigEndian>()?),
-            8 => Constant::String(bytes.read_u16::<BigEndian>()?),
+            3 => Constant::Integer(bytes.read_i32()?),
+            4 => Constant::Float(bytes.read_f32()?),
+            5 => Constant::Long(bytes.read_i64()?),
+            6 => Constant::Double(bytes.read_f64()?),
+            7 => Constant::Class(bytes.read_u16()?),
+            8 => Constant::String(bytes.read_u16()?),
             9 => Constant::FieldRef {
-                class_index: bytes.read_u16::<BigEndian>()?,
-                name_and_type_index: bytes.read_u16::<BigEndian>()?,
+                class_index: bytes.read_u16()?,
+                name_and_type_index: bytes.read_u16()?,
             },
             10 => Constant::MethodRef {
-                class_index: bytes.read_u16::<BigEndian>()?,
-                name_and_type_index: bytes.read_u16::<BigEndian>()?,
+                class_index: bytes.read_u16()?,
+                name_and_type_index: bytes.read_u16()?,
             },
             11 => Constant::InterfaceMethodRef {
-                class_index: bytes.read_u16::<BigEndian>()?,
-                name_and_type_index: bytes.read_u16::<BigEndian>()?,
+                class_index: bytes.read_u16()?,
+                name_and_type_index: bytes.read_u16()?,
             },
             12 => Constant::NameAndType {
-                name_index: bytes.read_u16::<BigEndian>()?,
-                descriptor_index: bytes.read_u16::<BigEndian>()?,
+                name_index: bytes.read_u16()?,
+                descriptor_index: bytes.read_u16()?,
             },
             15 => Constant::MethodHandle {
-                reference_kind: ReferenceKind::from_bytes(bytes)?,
-                reference_index: bytes.read_u16::<BigEndian>()?,
+                reference_kind: ReferenceKind::try_from(bytes.read_u8()?)?,
+                reference_index: bytes.read_u16()?,
             },
-            16 => Constant::MethodType(bytes.read_u16::<BigEndian>()?),
+            16 => Constant::MethodType(bytes.read_u16()?),
             17 => Constant::Dynamic {
-                bootstrap_method_attr_index: bytes.read_u16::<BigEndian>()?,
-                name_and_type_index: bytes.read_u16::<BigEndian>()?,
+                bootstrap_method_attr_index: bytes.read_u16()?,
+                name_and_type_index: bytes.read_u16()?,
             },
             18 => Constant::InvokeDynamic {
-                bootstrap_method_attr_index: bytes.read_u16::<BigEndian>()?,
-                name_and_type_index: bytes.read_u16::<BigEndian>()?,
+                bootstrap_method_attr_index: bytes.read_u16()?,
+                name_and_type_index: bytes.read_u16()?,
             },
-            19 => Constant::Module(bytes.read_u16::<BigEndian>()?),
-            20 => Constant::Package(bytes.read_u16::<BigEndian>()?),
+            19 => Constant::Module(bytes.read_u16()?),
+            20 => Constant::Package(bytes.read_u16()?),
             _ => return Err(InvalidConstantTag(tag)),
         };
         Ok(constant)
+    }
+}
+
+impl Constant<'_> {
+    /// Convert this `Constant` into one with `'static` lifetime by cloning borrowed data.
+    #[must_use]
+    pub fn into_owned(self) -> Constant<'static> {
+        match self {
+            Constant::Utf8(cow) => Constant::Utf8(Cow::Owned(cow.into_owned())),
+            Constant::Integer(v) => Constant::Integer(v),
+            Constant::Float(v) => Constant::Float(v),
+            Constant::Long(v) => Constant::Long(v),
+            Constant::Double(v) => Constant::Double(v),
+            Constant::Class(v) => Constant::Class(v),
+            Constant::String(v) => Constant::String(v),
+            Constant::FieldRef {
+                class_index,
+                name_and_type_index,
+            } => Constant::FieldRef {
+                class_index,
+                name_and_type_index,
+            },
+            Constant::MethodRef {
+                class_index,
+                name_and_type_index,
+            } => Constant::MethodRef {
+                class_index,
+                name_and_type_index,
+            },
+            Constant::InterfaceMethodRef {
+                class_index,
+                name_and_type_index,
+            } => Constant::InterfaceMethodRef {
+                class_index,
+                name_and_type_index,
+            },
+            Constant::NameAndType {
+                name_index,
+                descriptor_index,
+            } => Constant::NameAndType {
+                name_index,
+                descriptor_index,
+            },
+            Constant::MethodHandle {
+                reference_kind,
+                reference_index,
+            } => Constant::MethodHandle {
+                reference_kind,
+                reference_index,
+            },
+            Constant::MethodType(v) => Constant::MethodType(v),
+            Constant::Dynamic {
+                bootstrap_method_attr_index,
+                name_and_type_index,
+            } => Constant::Dynamic {
+                bootstrap_method_attr_index,
+                name_and_type_index,
+            },
+            Constant::InvokeDynamic {
+                bootstrap_method_attr_index,
+                name_and_type_index,
+            } => Constant::InvokeDynamic {
+                bootstrap_method_attr_index,
+                name_and_type_index,
+            },
+            Constant::Module(v) => Constant::Module(v),
+            Constant::Package(v) => Constant::Package(v),
+        }
     }
 
     /// Serializes the `Constant` to bytes.
@@ -468,7 +536,7 @@ impl Constant {
     }
 }
 
-impl fmt::Display for Constant {
+impl fmt::Display for Constant<'_> {
     /// Formats the `Constant` for display purposes.
     ///
     /// # Examples
@@ -478,7 +546,7 @@ impl fmt::Display for Constant {
     /// use std::fmt::Display;
     ///
     /// // Create some constants
-    /// let utf8 = Constant::Utf8("Hello, world!".to_string());
+    /// let utf8 = Constant::Utf8("Hello, world!".into());
     /// let class = Constant::Class(5);
     /// let method_reference = Constant::MethodRef {
     ///     class_index: 3,
@@ -561,7 +629,8 @@ mod test {
 
     #[test]
     fn test_invalid_tag() {
-        let mut bytes = Cursor::new(vec![0]);
+        let data = vec![0];
+        let mut bytes = ByteReader::new(&data);
         assert_eq!(Err(InvalidConstantTag(0)), Constant::from_bytes(&mut bytes));
     }
 
@@ -578,14 +647,14 @@ mod test {
         let mut bytes = Vec::new();
         constant.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut bytes = ByteReader::new(expected_bytes);
         assert_eq!(*constant, Constant::from_bytes(&mut bytes)?);
         Ok(())
     }
 
     #[test]
     fn test_utf8() -> Result<()> {
-        let constant = Constant::Utf8("foo".to_string());
+        let constant = Constant::Utf8("foo".into());
         let expected_bytes = [1, 0, 3, 102, 111, 111];
 
         assert_eq!("Utf8 foo", constant.to_string());
@@ -759,8 +828,8 @@ mod test {
 
     #[test]
     fn test_eq_utf8_equal() {
-        let a = Constant::Utf8("hello".to_string());
-        let b = Constant::Utf8("hello".to_string());
+        let a = Constant::Utf8("hello".into());
+        let b = Constant::Utf8("hello".into());
         assert_eq!(a, b);
     }
 
@@ -948,8 +1017,8 @@ mod test {
 
     #[test]
     fn test_eq_utf8_not_equal() {
-        let a = Constant::Utf8("hello".to_string());
-        let b = Constant::Utf8("world".to_string());
+        let a = Constant::Utf8("hello".into());
+        let b = Constant::Utf8("world".into());
         assert_ne!(a, b);
     }
 
@@ -1135,7 +1204,7 @@ mod test {
 
     #[test]
     fn test_eq_different_variants_not_equal() {
-        let utf8 = Constant::Utf8("1".to_string());
+        let utf8 = Constant::Utf8("1".into());
         let integer = Constant::Integer(1);
         let float = Constant::Float(1.0);
         let long = Constant::Long(1);

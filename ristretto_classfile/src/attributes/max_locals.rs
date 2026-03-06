@@ -142,12 +142,12 @@ pub trait MaxLocals {
     /// assert_eq!(static_instructions.max_locals(&constant_pool, &static_method)?, 3);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    fn max_locals(&self, constant_pool: &ConstantPool, method: &Method) -> Result<u16>;
+    fn max_locals(&self, constant_pool: &ConstantPool<'_>, method: &Method) -> Result<u16>;
 }
 
 impl MaxLocals for [Instruction] {
     #[expect(clippy::bool_to_int_with_if)]
-    fn max_locals(&self, constant_pool: &ConstantPool, method: &Method) -> Result<u16> {
+    fn max_locals(&self, constant_pool: &ConstantPool<'_>, method: &Method) -> Result<u16> {
         let mut max_locals: u16 = if method.access_flags.contains(MethodAccessFlags::STATIC) {
             // 'this' reference is not present in static methods
             0

@@ -23,7 +23,10 @@ impl Method {
     /// # Errors
     ///
     /// if the method name cannot be read.
-    pub fn from(class_file: &ClassFile, definition: &ristretto_classfile::Method) -> Result<Self> {
+    pub fn from(
+        class_file: &ClassFile<'static>,
+        definition: &ristretto_classfile::Method,
+    ) -> Result<Self> {
         let constant_pool = &class_file.constant_pool;
         let name = constant_pool.try_get_utf8(definition.name_index)?;
         let descriptor = constant_pool.try_get_utf8(definition.descriptor_index)?;

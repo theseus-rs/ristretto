@@ -1,8 +1,8 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Error::InvalidVerificationTypeTag;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents a verification type used in the Java Virtual Machine's type checking system.
 ///
@@ -33,7 +33,7 @@ use std::io::Cursor;
 ///
 /// ```rust
 /// use ristretto_classfile::attributes::VerificationType;
-/// use std::io::Cursor;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Serialize an Object verification type
 /// let object_type = VerificationType::Object { cpool_index: 15 };
@@ -42,8 +42,8 @@ use std::io::Cursor;
 /// assert_eq!(bytes, vec![0x07, 0x00, 0x0F]); // Tag 7 + index 15 (big-endian)
 ///
 /// // Deserialize back from bytes
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized = VerificationType::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized = VerificationType::from_bytes(&mut reader)?;
 /// assert_eq!(deserialized, object_type);
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
@@ -105,15 +105,15 @@ impl VerificationType {
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::VerificationType;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// let bytes = vec![0x07, 0x00, 0x0A]; // Object type with cpool_index 10
-    /// let mut cursor = Cursor::new(bytes);
-    /// let verification_type = VerificationType::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&bytes);
+    /// let verification_type = VerificationType::from_bytes(&mut reader)?;
     /// assert_eq!(verification_type, VerificationType::Object { cpool_index: 10 });
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<VerificationType> {
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<VerificationType> {
         let tag = bytes.read_u8()?;
 
         let verification_type = match tag {
@@ -125,10 +125,10 @@ impl VerificationType {
             5 => VerificationType::Null,
             6 => VerificationType::UninitializedThis,
             7 => VerificationType::Object {
-                cpool_index: bytes.read_u16::<BigEndian>()?,
+                cpool_index: bytes.read_u16()?,
             },
             8 => VerificationType::Uninitialized {
-                offset: bytes.read_u16::<BigEndian>()?,
+                offset: bytes.read_u16()?,
             },
             _ => return Err(InvalidVerificationTypeTag(tag)),
         };
@@ -206,7 +206,7 @@ mod test {
 
         assert_eq!(
             Err(InvalidVerificationTypeTag(tag)),
-            VerificationType::from_bytes(&mut Cursor::new(bytes))
+            VerificationType::from_bytes(&mut ByteReader::new(&bytes))
         );
         Ok(())
     }
@@ -221,7 +221,7 @@ mod test {
         let mut bytes = Vec::new();
         verification_type.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut bytes = ByteReader::new(expected_bytes);
         assert_eq!(
             *verification_type,
             VerificationType::from_bytes(&mut bytes)?

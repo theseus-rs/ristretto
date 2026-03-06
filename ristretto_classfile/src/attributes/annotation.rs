@@ -1,8 +1,8 @@
 use crate::attributes::annotation_value_pair::AnnotationValuePair;
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents a single annotation in a class file.
 ///
@@ -15,8 +15,8 @@ use std::io::Cursor;
 /// # Examples
 ///
 /// ```rust
+/// use ristretto_classfile::byte_reader::ByteReader;
 /// use ristretto_classfile::attributes::{Annotation, AnnotationValuePair, AnnotationElement};
-/// use std::io::Cursor;
 ///
 /// // Create an annotation
 /// let annotation = Annotation {
@@ -34,8 +34,8 @@ use std::io::Cursor;
 /// annotation.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize the annotation from bytes
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_annotation = Annotation::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_annotation = Annotation::from_bytes(&mut reader)?;
 ///
 /// assert_eq!(annotation, deserialized_annotation);
 /// # Ok::<(), ristretto_classfile::Error>(())
@@ -55,7 +55,7 @@ pub struct Annotation {
 impl Annotation {
     /// Deserializes an `Annotation` structure from a byte stream.
     ///
-    /// The `bytes` cursor should be positioned at the start of the `annotation` structure.
+    /// The `bytes` reader should be positioned at the start of the `annotation` structure.
     ///
     /// # Errors
     ///
@@ -65,8 +65,8 @@ impl Annotation {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::{Annotation, AnnotationValuePair, AnnotationElement};
-    /// use std::io::Cursor;
     ///
     /// // Create a byte array representing an annotation
     /// let annotation_bytes = vec![
@@ -78,8 +78,8 @@ impl Annotation {
     /// ];
     ///
     /// // Deserialize the annotation from bytes
-    /// let mut cursor = Cursor::new(annotation_bytes);
-    /// let annotation = Annotation::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&annotation_bytes);
+    /// let annotation = Annotation::from_bytes(&mut reader)?;
     ///
     /// assert_eq!(annotation.type_index, 10);
     /// assert_eq!(annotation.elements.len(), 1);
@@ -93,9 +93,9 @@ impl Annotation {
     /// }
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Annotation> {
-        let type_index = bytes.read_u16::<BigEndian>()?;
-        let elements_count = bytes.read_u16::<BigEndian>()? as usize;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<Annotation> {
+        let type_index = bytes.read_u16()?;
+        let elements_count = bytes.read_u16()? as usize;
         let mut elements = Vec::with_capacity(elements_count);
         for _ in 0..elements_count {
             let annotation_element = AnnotationValuePair::from_bytes(bytes)?;
@@ -237,7 +237,7 @@ mod test {
         annotation.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(annotation, Annotation::from_bytes(&mut bytes)?);
         Ok(())
     }

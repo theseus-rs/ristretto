@@ -15,6 +15,7 @@
 use crate::Error::InvalidInstructionOffset;
 use crate::Result;
 use crate::attributes::Instruction;
+use crate::byte_reader::ByteReader;
 use ahash::AHashMap;
 use std::io::Cursor;
 
@@ -34,24 +35,53 @@ use std::io::Cursor;
 /// - returns `Error::InvalidInstructionOffset` if a jump instruction's target offset (after being
 ///   resolved to an absolute byte position) does not correspond to the start of a valid
 ///   instruction.
-/// - returns `Error::Io` if there is an issue reading from the byte cursor.
+/// - returns `Error::Io` if there is an issue reading from the byte reader.
 /// - returns `Error::TryFromIntError` if a conversion from a numeric type fails.
 pub(crate) fn instructions_from_bytes(
-    bytes: &mut Cursor<impl AsRef<[u8]>>,
+    bytes: &mut ByteReader<'_>,
 ) -> Result<(AHashMap<u16, u16>, Vec<Instruction>)> {
-    let mut instructions = Vec::new();
-    let mut byte_to_instruction_map = AHashMap::default();
-    let mut instruction_to_byte_map = AHashMap::default();
-    while bytes.position() < bytes.get_ref().as_ref().len() as u64 {
-        let byte_position = u16::try_from(bytes.position())?;
+    let (pairs, instructions) = instructions_from_byte_reader(bytes)?;
+    let mut map = AHashMap::with_capacity(pairs.len());
+    for &(byte_off, instr_idx) in &pairs {
+        map.insert(byte_off, instr_idx);
+    }
+    Ok((map, instructions))
+}
+
+/// Internal implementation using `ByteReader` for zero-overhead instruction parsing.
+/// Returns (`byte_to_instruction_pairs`, instructions) where `byte_to_instruction_pairs` is a
+/// sorted Vec of (`byte_offset`, `instruction_index`) pairs for binary search lookup.
+#[expect(clippy::type_complexity)]
+pub(crate) fn instructions_from_byte_reader(
+    reader: &mut crate::byte_reader::ByteReader<'_>,
+) -> Result<(Vec<(u16, u16)>, Vec<Instruction>)> {
+    let total_len = reader.data().len() - reader.position();
+    let base = reader.position();
+
+    // Pre-allocate with estimated capacity: average instruction is ~2 bytes
+    let estimated_count = (total_len / 2).max(4);
+    let mut instructions = Vec::with_capacity(estimated_count);
+    let mut byte_to_instruction_pairs: Vec<(u16, u16)> = Vec::with_capacity(estimated_count);
+
+    while reader.position() - base < total_len {
+        let byte_position = u16::try_from(reader.position() - base)?;
         let instruction_position = u16::try_from(instructions.len())?;
-        byte_to_instruction_map.insert(byte_position, instruction_position);
-        instruction_to_byte_map.insert(instruction_position, byte_position);
-        let instruction = Instruction::from_bytes(bytes)?;
+        byte_to_instruction_pairs.push((byte_position, instruction_position));
+        let instruction = Instruction::from_bytes(reader)?;
         instructions.push(instruction);
     }
 
+    // Helper closure: binary search lookup in the sparse sorted pairs
+    let lookup_byte = |byte_offset: u16| -> Option<u16> {
+        byte_to_instruction_pairs
+            .binary_search_by_key(&byte_offset, |&(k, _)| k)
+            .ok()
+            .map(|idx| byte_to_instruction_pairs[idx].1)
+    };
+
     for (index, instruction) in instructions.iter_mut().enumerate() {
+        // Get the byte position for this instruction from the pairs array
+        let instruction_byte_pos = byte_to_instruction_pairs[index].0;
         match instruction {
             Instruction::Ifeq(offset)
             | Instruction::Ifne(offset)
@@ -71,31 +101,22 @@ pub(crate) fn instructions_from_bytes(
             | Instruction::Jsr(offset)
             | Instruction::Ifnull(offset)
             | Instruction::Ifnonnull(offset) => {
-                *offset = *byte_to_instruction_map
-                    .get(offset)
-                    .ok_or(InvalidInstructionOffset(u32::from(*offset)))?;
+                *offset =
+                    lookup_byte(*offset).ok_or(InvalidInstructionOffset(u32::from(*offset)))?;
             }
             Instruction::Goto_w(offset) | Instruction::Jsr_w(offset) => {
-                // Note the map may need to be updated to use 32-bit offsets if/when the JVM spec
-                // is updated to support 32-bit offsets for goto_w and jsr_w.
-                // See: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w
                 let map_offset = u16::try_from(*offset)?;
                 *offset = i32::from(
-                    *byte_to_instruction_map
-                        .get(&map_offset)
+                    lookup_byte(map_offset)
                         .ok_or(InvalidInstructionOffset(u32::from(map_offset)))?,
                 );
             }
             Instruction::Tableswitch(table_switch) => {
-                let position = instruction_to_byte_map
-                    .get(&u16::try_from(index)?)
-                    .expect("instruction byte");
-                let position = u32::from(*position);
+                let position = u32::from(instruction_byte_pos);
                 let default_offset =
                     u32::try_from(i64::from(position) + i64::from(table_switch.default))?;
                 let instruction_default = i32::from(
-                    *byte_to_instruction_map
-                        .get(&u16::try_from(default_offset)?)
+                    lookup_byte(u16::try_from(default_offset)?)
                         .ok_or(InvalidInstructionOffset(default_offset))?,
                 ) - i32::try_from(index)?;
                 table_switch.default = instruction_default;
@@ -103,43 +124,36 @@ pub(crate) fn instructions_from_bytes(
                 for offset in &mut table_switch.offsets {
                     let byte_offset = u32::try_from(i64::from(position) + i64::from(*offset))?;
                     let instruction_offset = i32::from(
-                        *byte_to_instruction_map
-                            .get(&u16::try_from(byte_offset)?)
+                        lookup_byte(u16::try_from(byte_offset)?)
                             .ok_or(InvalidInstructionOffset(byte_offset))?,
                     ) - i32::try_from(index)?;
                     *offset = instruction_offset;
                 }
             }
             Instruction::Lookupswitch(lookup_switch) => {
-                let position = instruction_to_byte_map
-                    .get(&u16::try_from(index)?)
-                    .expect("instruction byte");
-                let position = u32::from(*position);
+                let position = u32::from(instruction_byte_pos);
                 let default_offset =
                     u32::try_from(i64::from(position) + i64::from(lookup_switch.default))?;
                 let instruction_default = i32::from(
-                    *byte_to_instruction_map
-                        .get(&u16::try_from(default_offset)?)
+                    lookup_byte(u16::try_from(default_offset)?)
                         .ok_or(InvalidInstructionOffset(default_offset))?,
                 ) - i32::try_from(index)?;
                 lookup_switch.default = instruction_default;
 
                 for (_match, offset) in &mut lookup_switch.pairs {
                     let byte_offset = u32::try_from(i64::from(position) + i64::from(*offset))?;
-
                     let instruction_offset = i32::from(
-                        *byte_to_instruction_map
-                            .get(&u16::try_from(byte_offset)?)
+                        lookup_byte(u16::try_from(byte_offset)?)
                             .ok_or(InvalidInstructionOffset(byte_offset))?,
                     ) - i32::try_from(index)?;
-
                     *offset = instruction_offset;
                 }
             }
             _ => {}
         }
     }
-    Ok((byte_to_instruction_map, instructions))
+
+    Ok((byte_to_instruction_pairs, instructions))
 }
 
 /// Converts a vector of `Instruction`s (with logical offsets) into a raw byte vector.
@@ -279,8 +293,8 @@ mod tests {
             Instruction::Ireturn,
         ];
         let (_instruction_to_byte_map, bytes) = instructions_to_bytes(&instructions)?;
-        let mut cursor = Cursor::new(bytes);
-        let (_byte_to_instruction_map, result) = instructions_from_bytes(&mut cursor)?;
+        let mut reader = ByteReader::new(&bytes);
+        let (_byte_to_instruction_map, result) = instructions_from_bytes(&mut reader)?;
 
         assert_eq!(instructions, result);
 
@@ -358,8 +372,8 @@ mod tests {
             .iter()
             .map(Instruction::code)
             .collect::<Vec<u8>>();
-        let mut cursor = Cursor::new(bytes);
-        let (_byte_to_instruction_map, result) = instructions_from_bytes(&mut cursor)?;
+        let mut reader = ByteReader::new(&bytes);
+        let (_byte_to_instruction_map, result) = instructions_from_bytes(&mut reader)?;
 
         assert_eq!(instructions, result);
 
@@ -369,8 +383,8 @@ mod tests {
     #[test]
     fn test_from_bytes_invalid() {
         let bytes = vec![155, 0, 42];
-        let mut cursor = Cursor::new(bytes);
-        let result = instructions_from_bytes(&mut cursor);
+        let mut reader = ByteReader::new(&bytes);
+        let result = instructions_from_bytes(&mut reader);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -379,8 +393,8 @@ mod tests {
         let bytes = vec![
             170, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4,
         ];
-        let mut cursor = Cursor::new(bytes);
-        let result = instructions_from_bytes(&mut cursor);
+        let mut reader = ByteReader::new(&bytes);
+        let result = instructions_from_bytes(&mut reader);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -389,8 +403,8 @@ mod tests {
         let bytes = vec![
             0, 170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4,
         ];
-        let mut cursor = Cursor::new(bytes);
-        let result = instructions_from_bytes(&mut cursor);
+        let mut reader = ByteReader::new(&bytes);
+        let result = instructions_from_bytes(&mut reader);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -399,16 +413,16 @@ mod tests {
         let bytes = vec![
             171, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2,
         ];
-        let mut cursor = Cursor::new(bytes);
-        let result = instructions_from_bytes(&mut cursor);
+        let mut reader = ByteReader::new(&bytes);
+        let result = instructions_from_bytes(&mut reader);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
     #[test]
     fn test_from_bytes_invalid_lookup_switch_offset() {
         let bytes = vec![0, 171, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2];
-        let mut cursor = Cursor::new(bytes);
-        let result = instructions_from_bytes(&mut cursor);
+        let mut reader = ByteReader::new(&bytes);
+        let result = instructions_from_bytes(&mut reader);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
 
@@ -420,7 +434,7 @@ mod tests {
         assert_eq!(expected_bytes, bytes.as_slice());
 
         let (_byte_to_instruction_map, instructions_from_bytes) =
-            instructions_from_bytes(&mut Cursor::new(bytes))?;
+            instructions_from_bytes(&mut ByteReader::new(&bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -525,7 +539,7 @@ mod tests {
         assert_eq!(expected_bytes, bytes.as_slice());
 
         let (_byte_to_instruction_map, instructions_from_bytes) =
-            instructions_from_bytes(&mut Cursor::new(bytes))?;
+            instructions_from_bytes(&mut ByteReader::new(&bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -540,7 +554,7 @@ mod tests {
         assert_eq!(expected_bytes, bytes.as_slice());
 
         let (_byte_to_instruction_map, instructions_from_bytes) =
-            instructions_from_bytes(&mut Cursor::new(bytes))?;
+            instructions_from_bytes(&mut ByteReader::new(&bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -593,7 +607,7 @@ mod tests {
         assert_eq!(expected_bytes, bytes.as_slice());
 
         let (_byte_to_instruction_map, instructions_from_bytes) =
-            instructions_from_bytes(&mut Cursor::new(bytes))?;
+            instructions_from_bytes(&mut ByteReader::new(&bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -634,7 +648,7 @@ mod tests {
         assert_eq!(expected_bytes, bytes.as_slice());
 
         let (_byte_to_instruction_map, instructions_from_bytes) =
-            instructions_from_bytes(&mut Cursor::new(bytes))?;
+            instructions_from_bytes(&mut ByteReader::new(&bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -675,7 +689,7 @@ mod tests {
         assert_eq!(expected_bytes, bytes.as_slice());
 
         let (_byte_to_instruction_map, instructions_from_bytes) =
-            instructions_from_bytes(&mut Cursor::new(bytes))?;
+            instructions_from_bytes(&mut ByteReader::new(&bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -722,7 +736,7 @@ mod tests {
         assert_eq!(expected_bytes, bytes.as_slice());
 
         let (_byte_to_instruction_map, instructions_from_bytes) =
-            instructions_from_bytes(&mut Cursor::new(bytes))?;
+            instructions_from_bytes(&mut ByteReader::new(&bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -753,7 +767,7 @@ mod tests {
         assert_eq!(expected_bytes, bytes.as_slice());
 
         let (_byte_to_instruction_map, instructions_from_bytes) =
-            instructions_from_bytes(&mut Cursor::new(bytes))?;
+            instructions_from_bytes(&mut ByteReader::new(&bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }
@@ -792,7 +806,7 @@ mod tests {
         assert_eq!(expected_bytes, bytes.as_slice());
 
         let (_byte_to_instruction_map, instructions_from_bytes) =
-            instructions_from_bytes(&mut Cursor::new(bytes))?;
+            instructions_from_bytes(&mut ByteReader::new(&bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
     }

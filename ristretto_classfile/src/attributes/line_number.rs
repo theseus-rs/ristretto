@@ -1,7 +1,7 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents an entry in the `LineNumberTable` attribute, mapping a bytecode instruction start PC
 /// (program counter) to a source file line number.
@@ -25,7 +25,7 @@ use std::io::Cursor;
 ///
 /// ```rust
 /// use ristretto_classfile::attributes::LineNumber;
-/// use std::io::Cursor;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Create a LineNumber entry: instruction at index 10 corresponds to source line 42
 /// let ln_entry = LineNumber {
@@ -38,8 +38,8 @@ use std::io::Cursor;
 /// ln_entry.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize the entry
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_entry = LineNumber::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_entry = LineNumber::from_bytes(&mut reader)?;
 ///
 /// assert_eq!(ln_entry, deserialized_entry);
 /// assert_eq!(ln_entry.to_string(), "10: 42");
@@ -89,22 +89,22 @@ impl LineNumber {
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::LineNumber;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // Byte data for a LineNumber entry: start_pc = 5, line_number = 20
     /// let data = vec![0, 5, 0, 20];
-    /// let mut cursor = Cursor::new(data);
+    /// let mut reader = ByteReader::new(&data);
     ///
-    /// let ln_entry = LineNumber::from_bytes(&mut cursor)?;
+    /// let ln_entry = LineNumber::from_bytes(&mut reader)?;
     ///
     /// assert_eq!(ln_entry.start_pc, 5);
     /// assert_eq!(ln_entry.line_number, 20);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<LineNumber> {
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<LineNumber> {
         let line_number = LineNumber {
-            start_pc: bytes.read_u16::<BigEndian>()?,
-            line_number: bytes.read_u16::<BigEndian>()?,
+            start_pc: bytes.read_u16()?,
+            line_number: bytes.read_u16()?,
         };
         Ok(line_number)
     }
@@ -161,7 +161,7 @@ mod test {
         line_number.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(line_number, LineNumber::from_bytes(&mut bytes)?);
         Ok(())
     }

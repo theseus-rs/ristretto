@@ -1,9 +1,10 @@
 use crate::Error::InvalidWideInstruction;
 use crate::attributes::ArrayType;
+use crate::byte_reader::ByteReader;
 use crate::error::Error::InvalidInstruction;
 use crate::error::Result;
 use crate::{ConstantPool, FieldType};
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use indexmap::IndexMap;
 use std::fmt;
 use std::io::Cursor;
@@ -1193,7 +1194,7 @@ impl Instruction {
     /// - if a method is not a valid method reference
     /// - if a data type cannot be converted
     #[expect(clippy::too_many_lines)]
-    pub fn stack_delta(&self, constant_pool: &ConstantPool) -> Result<i16> {
+    pub fn stack_delta(&self, constant_pool: &ConstantPool<'_>) -> Result<i16> {
         let delta = match self {
             Instruction::Aconst_null
             | Instruction::Iconst_m1
@@ -1469,7 +1470,7 @@ impl Instruction {
     ///
     /// Returns an error if the instruction is invalid.
     #[expect(clippy::too_many_lines)]
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Instruction> {
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<Instruction> {
         let current_position = i32::try_from(bytes.position())?;
         let code = bytes.read_u8()?;
 
@@ -1491,10 +1492,10 @@ impl Instruction {
             14 => Instruction::Dconst_0,
             15 => Instruction::Dconst_1,
             16 => Instruction::Bipush(bytes.read_i8()?),
-            17 => Instruction::Sipush(bytes.read_i16::<BigEndian>()?),
+            17 => Instruction::Sipush(bytes.read_i16()?),
             18 => Instruction::Ldc(bytes.read_u8()?),
-            19 => Instruction::Ldc_w(bytes.read_u16::<BigEndian>()?),
-            20 => Instruction::Ldc2_w(bytes.read_u16::<BigEndian>()?),
+            19 => Instruction::Ldc_w(bytes.read_u16()?),
+            20 => Instruction::Ldc2_w(bytes.read_u16()?),
             21 => Instruction::Iload(bytes.read_u8()?),
             22 => Instruction::Lload(bytes.read_u8()?),
             23 => Instruction::Fload(bytes.read_u8()?),
@@ -1650,12 +1651,12 @@ impl Instruction {
                 for _ in 0..padding {
                     bytes.read_u8()?;
                 }
-                let default = bytes.read_i32::<BigEndian>()?;
-                let low = bytes.read_i32::<BigEndian>()?;
-                let high = bytes.read_i32::<BigEndian>()?;
+                let default = bytes.read_i32()?;
+                let low = bytes.read_i32()?;
+                let high = bytes.read_i32()?;
                 let mut offsets = Vec::new();
                 for _ in low..=high {
-                    let offset = bytes.read_i32::<BigEndian>()?;
+                    let offset = bytes.read_i32()?;
                     offsets.push(offset);
                 }
                 let table_switch = TableSwitch {
@@ -1672,12 +1673,12 @@ impl Instruction {
                 for _ in 0..padding {
                     bytes.read_u8()?;
                 }
-                let default = bytes.read_i32::<BigEndian>()?;
-                let npairs = bytes.read_i32::<BigEndian>()?;
+                let default = bytes.read_i32()?;
+                let npairs = bytes.read_i32()?;
                 let mut pairs = IndexMap::new();
                 for _ in 0..npairs {
-                    let match_ = bytes.read_i32::<BigEndian>()?;
-                    let offset = bytes.read_i32::<BigEndian>()?;
+                    let match_ = bytes.read_i32()?;
+                    let offset = bytes.read_i32()?;
                     pairs.insert(match_, offset);
                 }
                 let lookup_switch = LookupSwitch { default, pairs };
@@ -1689,15 +1690,15 @@ impl Instruction {
             175 => Instruction::Dreturn,
             176 => Instruction::Areturn,
             177 => Instruction::Return,
-            178 => Instruction::Getstatic(bytes.read_u16::<BigEndian>()?),
-            179 => Instruction::Putstatic(bytes.read_u16::<BigEndian>()?),
-            180 => Instruction::Getfield(bytes.read_u16::<BigEndian>()?),
-            181 => Instruction::Putfield(bytes.read_u16::<BigEndian>()?),
-            182 => Instruction::Invokevirtual(bytes.read_u16::<BigEndian>()?),
-            183 => Instruction::Invokespecial(bytes.read_u16::<BigEndian>()?),
-            184 => Instruction::Invokestatic(bytes.read_u16::<BigEndian>()?),
+            178 => Instruction::Getstatic(bytes.read_u16()?),
+            179 => Instruction::Putstatic(bytes.read_u16()?),
+            180 => Instruction::Getfield(bytes.read_u16()?),
+            181 => Instruction::Putfield(bytes.read_u16()?),
+            182 => Instruction::Invokevirtual(bytes.read_u16()?),
+            183 => Instruction::Invokespecial(bytes.read_u16()?),
+            184 => Instruction::Invokestatic(bytes.read_u16()?),
             185 => {
-                let constant_index = bytes.read_u16::<BigEndian>()?;
+                let constant_index = bytes.read_u16()?;
                 let count = bytes.read_u8()?;
                 let null = bytes.read_u8()?;
                 if null != 0 {
@@ -1706,23 +1707,23 @@ impl Instruction {
                 Instruction::Invokeinterface(constant_index, count)
             }
             186 => {
-                let constant_index = bytes.read_u16::<BigEndian>()?;
-                let null = bytes.read_u16::<BigEndian>()?;
+                let constant_index = bytes.read_u16()?;
+                let null = bytes.read_u16()?;
                 if null != 0 {
                     return Err(InvalidInstruction(code));
                 }
                 Instruction::Invokedynamic(constant_index)
             }
-            187 => Instruction::New(bytes.read_u16::<BigEndian>()?),
+            187 => Instruction::New(bytes.read_u16()?),
             188 => {
                 let array_type = ArrayType::from_bytes(bytes)?;
                 Instruction::Newarray(array_type)
             }
-            189 => Instruction::Anewarray(bytes.read_u16::<BigEndian>()?),
+            189 => Instruction::Anewarray(bytes.read_u16()?),
             190 => Instruction::Arraylength,
             191 => Instruction::Athrow,
-            192 => Instruction::Checkcast(bytes.read_u16::<BigEndian>()?),
-            193 => Instruction::Instanceof(bytes.read_u16::<BigEndian>()?),
+            192 => Instruction::Checkcast(bytes.read_u16()?),
+            193 => Instruction::Instanceof(bytes.read_u16()?),
             194 => Instruction::Monitorenter,
             195 => Instruction::Monitorexit,
             196 => {
@@ -1730,34 +1731,31 @@ impl Instruction {
                 // Get the next byte to determine the wide instruction
                 let wide_code = bytes.read_u8()?;
                 match wide_code {
-                    21 => Instruction::Iload_w(bytes.read_u16::<BigEndian>()?),
-                    22 => Instruction::Lload_w(bytes.read_u16::<BigEndian>()?),
-                    23 => Instruction::Fload_w(bytes.read_u16::<BigEndian>()?),
-                    24 => Instruction::Dload_w(bytes.read_u16::<BigEndian>()?),
-                    25 => Instruction::Aload_w(bytes.read_u16::<BigEndian>()?),
-                    54 => Instruction::Istore_w(bytes.read_u16::<BigEndian>()?),
-                    55 => Instruction::Lstore_w(bytes.read_u16::<BigEndian>()?),
-                    56 => Instruction::Fstore_w(bytes.read_u16::<BigEndian>()?),
-                    57 => Instruction::Dstore_w(bytes.read_u16::<BigEndian>()?),
-                    58 => Instruction::Astore_w(bytes.read_u16::<BigEndian>()?),
-                    132 => Instruction::Iinc_w(
-                        bytes.read_u16::<BigEndian>()?,
-                        bytes.read_i16::<BigEndian>()?,
-                    ),
-                    169 => Instruction::Ret_w(bytes.read_u16::<BigEndian>()?),
+                    21 => Instruction::Iload_w(bytes.read_u16()?),
+                    22 => Instruction::Lload_w(bytes.read_u16()?),
+                    23 => Instruction::Fload_w(bytes.read_u16()?),
+                    24 => Instruction::Dload_w(bytes.read_u16()?),
+                    25 => Instruction::Aload_w(bytes.read_u16()?),
+                    54 => Instruction::Istore_w(bytes.read_u16()?),
+                    55 => Instruction::Lstore_w(bytes.read_u16()?),
+                    56 => Instruction::Fstore_w(bytes.read_u16()?),
+                    57 => Instruction::Dstore_w(bytes.read_u16()?),
+                    58 => Instruction::Astore_w(bytes.read_u16()?),
+                    132 => Instruction::Iinc_w(bytes.read_u16()?, bytes.read_i16()?),
+                    169 => Instruction::Ret_w(bytes.read_u16()?),
                     _ => return Err(InvalidWideInstruction(wide_code)),
                 }
             }
-            197 => Instruction::Multianewarray(bytes.read_u16::<BigEndian>()?, bytes.read_u8()?),
+            197 => Instruction::Multianewarray(bytes.read_u16()?, bytes.read_u8()?),
             198 => Instruction::Ifnull(Self::read_offset(bytes, current_position)?),
             199 => Instruction::Ifnonnull(Self::read_offset(bytes, current_position)?),
             200 => {
-                let offset = bytes.read_i32::<BigEndian>()?;
+                let offset = bytes.read_i32()?;
                 let position = current_position + offset;
                 Instruction::Goto_w(position)
             }
             201 => {
-                let offset = bytes.read_i32::<BigEndian>()?;
+                let offset = bytes.read_i32()?;
                 let position = current_position + offset;
                 Instruction::Jsr_w(position)
             }
@@ -1774,8 +1772,9 @@ impl Instruction {
     /// # Errors
     ///
     /// Returns an error if the offset is invalid.
-    fn read_offset(bytes: &mut Cursor<impl AsRef<[u8]>>, current_position: i32) -> Result<u16> {
-        let offset = bytes.read_i16::<BigEndian>()?;
+    #[inline]
+    fn read_offset(bytes: &mut ByteReader<'_>, current_position: i32) -> Result<u16> {
+        let offset = bytes.read_i16()?;
         let position = u16::try_from(current_position + i32::from(offset))?;
         Ok(position)
     }
@@ -1963,7 +1962,7 @@ impl Instruction {
     /// # Errors
     ///
     /// Returns an error if the constant pool index is invalid.
-    pub fn to_formatted_string(&self, constant_pool: &ConstantPool) -> Result<String> {
+    pub fn to_formatted_string(&self, constant_pool: &ConstantPool<'_>) -> Result<String> {
         let value = match self {
             Instruction::Ldc(index) => {
                 let index = u16::from(*index);
@@ -2258,16 +2257,14 @@ mod test {
     use std::io::Read;
 
     #[test]
-    fn test_invalid_instructions() -> Result<()> {
+    fn test_invalid_instructions() {
         for code in 203..253 {
-            let mut bytes = Vec::new();
-            bytes.write_u8(code)?;
+            let bytes = [code];
             assert_eq!(
                 Err(InvalidInstruction(code)),
-                Instruction::from_bytes(&mut Cursor::new(bytes))
+                Instruction::from_bytes(&mut ByteReader::new(&bytes))
             );
         }
-        Ok(())
     }
 
     fn test_instruction(instruction: &Instruction, expected_bytes: &[u8], code: u8) -> Result<()> {
@@ -2280,7 +2277,7 @@ mod test {
         buffer.read_to_end(&mut bytes)?;
         assert_eq!(expected_bytes, bytes);
 
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut bytes = ByteReader::new(expected_bytes);
         assert_eq!(*instruction, Instruction::from_bytes(&mut bytes)?);
         Ok(())
     }
@@ -5317,9 +5314,8 @@ mod test {
     #[test]
     fn test_invokeinterface_error() {
         let bytes: [u8; 5] = [185, 0, 42, 3, 1];
-        let mut cursor = Cursor::new(bytes.to_vec());
         assert_eq!(
-            Instruction::from_bytes(&mut cursor),
+            Instruction::from_bytes(&mut ByteReader::new(&bytes)),
             Err(InvalidInstruction(185))
         );
     }
@@ -5346,9 +5342,8 @@ mod test {
     #[test]
     fn test_invokedynamic_error_byte_3() {
         let bytes: [u8; 5] = [186, 0, 42, 1, 0];
-        let mut cursor = Cursor::new(bytes.to_vec());
         assert_eq!(
-            Instruction::from_bytes(&mut cursor),
+            Instruction::from_bytes(&mut ByteReader::new(&bytes)),
             Err(InvalidInstruction(186))
         );
     }
@@ -5356,9 +5351,8 @@ mod test {
     #[test]
     fn test_invokedynamic_error_byte_4() {
         let bytes: [u8; 5] = [186, 0, 42, 0, 1];
-        let mut cursor = Cursor::new(bytes.to_vec());
         assert_eq!(
-            Instruction::from_bytes(&mut cursor),
+            Instruction::from_bytes(&mut ByteReader::new(&bytes)),
             Err(InvalidInstruction(186))
         );
     }
@@ -5865,9 +5859,8 @@ mod test {
     #[test]
     fn test_wide_error() {
         let bytes: [u8; 4] = [196, 0, 1, 2];
-        let mut cursor = Cursor::new(bytes.to_vec());
         assert_eq!(
-            Instruction::from_bytes(&mut cursor),
+            Instruction::from_bytes(&mut ByteReader::new(&bytes)),
             Err(InvalidWideInstruction(0))
         );
     }

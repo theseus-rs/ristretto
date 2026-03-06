@@ -4,11 +4,10 @@ extern crate libfuzzer_sys;
 
 use ristretto_classfile::attributes::Record;
 use ristretto_classfile::ConstantPool;
-use std::io::Cursor;
+use ristretto_classfile::byte_reader::ByteReader;
 
 fuzz_target!(|data: &[u8]| {
-    let data = data.to_vec();
-    let mut cursor = Cursor::new(data);
+    let mut cursor = ByteReader::new(data);
     let constant_pool = ConstantPool::default();
     let _ = Record::from_bytes(&constant_pool, &mut cursor);
 });

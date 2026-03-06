@@ -1,9 +1,9 @@
 use crate::Error::InvalidTargetTypeCode;
 use crate::attributes::LocalVariableTarget;
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Implementation of `TargetType`.
 ///
@@ -151,20 +151,20 @@ impl TargetType {
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::TargetType;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // Bytes for a TypeParameter target_type = 0x00, type_parameter_index = 5
-    /// let mut bytes = Cursor::new(vec![0x00, 0x05]);
+    /// let mut bytes = ByteReader::new(&[0x00, 0x05]);
     /// let target_type = TargetType::from_bytes(&mut bytes)?;
     /// assert_eq!(target_type, TargetType::TypeParameter { target_type: 0x00, type_parameter_index: 5 });
     ///
     /// // Bytes for an Empty target_type = 0x13
-    /// let mut bytes_empty = Cursor::new(vec![0x13]);
+    /// let mut bytes_empty = ByteReader::new(&[0x13]);
     /// let target_type_empty = TargetType::from_bytes(&mut bytes_empty)?;
     /// assert_eq!(target_type_empty, TargetType::Empty { target_type: 0x13 });
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<TargetType> {
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<TargetType> {
         let target_type = bytes.read_u8()?;
 
         let array_type = match target_type {
@@ -178,7 +178,7 @@ impl TargetType {
             }
             16 => {
                 // 0x10
-                let supertype_index = bytes.read_u16::<BigEndian>()?;
+                let supertype_index = bytes.read_u16()?;
                 TargetType::SuperType {
                     target_type,
                     supertype_index,
@@ -205,7 +205,7 @@ impl TargetType {
             }
             23 => {
                 // 0x17
-                let throws_type_index = bytes.read_u16::<BigEndian>()?;
+                let throws_type_index = bytes.read_u16()?;
                 TargetType::Throws {
                     target_type,
                     throws_type_index,
@@ -213,7 +213,7 @@ impl TargetType {
             }
             64..=65 => {
                 // 0x40 | 0x41
-                let targets_count = bytes.read_u16::<BigEndian>()? as usize;
+                let targets_count = bytes.read_u16()? as usize;
                 let mut targets = Vec::with_capacity(targets_count);
                 for _ in 0..targets_count {
                     let target = LocalVariableTarget::from_bytes(bytes)?;
@@ -227,7 +227,7 @@ impl TargetType {
             }
             66 => {
                 // 0x42
-                let exception_table_index = bytes.read_u16::<BigEndian>()?;
+                let exception_table_index = bytes.read_u16()?;
                 TargetType::Catch {
                     target_type,
                     exception_table_index,
@@ -235,7 +235,7 @@ impl TargetType {
             }
             67..=70 => {
                 // 0x43 | 0x44 | 0x45 | 0x46
-                let offset = bytes.read_u16::<BigEndian>()?;
+                let offset = bytes.read_u16()?;
                 TargetType::Offset {
                     target_type,
                     offset,
@@ -243,7 +243,7 @@ impl TargetType {
             }
             71..=75 => {
                 // 0x47 | 0x48 | 0x49 | 0x4A | 0x4B
-                let offset = bytes.read_u16::<BigEndian>()?;
+                let offset = bytes.read_u16()?;
                 let type_argument_index = bytes.read_u8()?;
                 TargetType::TypeArgument {
                     target_type,
@@ -472,7 +472,8 @@ mod test {
 
     #[test]
     fn test_invalid_code() {
-        let mut bytes = Cursor::new(vec![255]);
+        let data = vec![255];
+        let mut bytes = ByteReader::new(&data);
         assert_eq!(
             Err(InvalidTargetTypeCode(255)),
             TargetType::from_bytes(&mut bytes)
@@ -484,7 +485,7 @@ mod test {
         let mut bytes = Vec::new();
         target_type.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut bytes = ByteReader::new(expected_bytes);
         assert_eq!(*target_type, TargetType::from_bytes(&mut bytes)?);
         Ok(())
     }

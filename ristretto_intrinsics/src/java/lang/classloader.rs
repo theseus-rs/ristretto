@@ -13,7 +13,6 @@ use ristretto_types::JavaError::{
 use ristretto_types::JavaObject;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
-use std::io::Cursor;
 use std::sync::Arc;
 use zerocopy::transmute_ref;
 
@@ -37,9 +36,8 @@ async fn class_object_from_bytes<T: ristretto_types::Thread + 'static>(
     }
     let offset = usize::try_from(offset)?;
     let length = usize::try_from(length)?;
-    let bytes = bytes[offset..offset + length].to_vec();
-    let mut bytes = Cursor::new(bytes);
-    let class_file = match ClassFile::from_bytes(&mut bytes) {
+    let bytes = &bytes[offset..offset + length];
+    let class_file = match ClassFile::from_bytes(bytes) {
         Ok(class_file) => class_file,
         Err(error) => {
             return Err(ClassFormatError(error.to_string()).into());

@@ -93,7 +93,7 @@ impl Jar {
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
-    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile> {
+    pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
         let name = name.as_ref();
         let mut archive = self.archive.write().await;
         let class_file = if archive.is_module().await? {
@@ -237,12 +237,11 @@ impl Archive {
     /// # Errors
     ///
     /// if the jar cannot be read or the class file cannot be loaded.
-    async fn load_class_file(&mut self, class_name: &str) -> Result<Option<ClassFile>> {
+    async fn load_class_file(&mut self, class_name: &str) -> Result<Option<ClassFile<'static>>> {
         let class_file_name = format!("{class_name}.class");
         let file = self.load_file(&class_file_name).await?;
         if let Some(bytes) = file {
-            let mut cursor = io::Cursor::new(bytes);
-            let class_file = ClassFile::from_bytes(&mut cursor)?;
+            let class_file = ClassFile::from_bytes(&bytes)?;
             class_file.verify()?;
             return Ok(Some(class_file));
         }

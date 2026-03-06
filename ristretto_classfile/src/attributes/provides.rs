@@ -1,7 +1,7 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents a service implementation declaration within a module descriptor.
 ///
@@ -23,6 +23,7 @@ use std::io::Cursor;
 /// # Examples
 ///
 /// ```rust
+/// use ristretto_classfile::byte_reader::ByteReader;
 /// use ristretto_classfile::attributes::Provides;
 ///
 /// // Create a provides entry where the service interface is at constant pool index 5
@@ -37,8 +38,8 @@ use std::io::Cursor;
 /// provides.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize from bytes
-/// let mut cursor = std::io::Cursor::new(bytes);
-/// let deserialized = Provides::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized = Provides::from_bytes(&mut reader)?;
 /// assert_eq!(provides, deserialized);
 ///
 /// // Display the provides entry
@@ -65,22 +66,22 @@ impl Provides {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::Provides;
-    /// use std::io::Cursor;
     ///
     /// // index: 1, with_index: [2]
-    /// let mut bytes = Cursor::new(vec![0x00, 0x01, 0x00, 0x01, 0x00, 0x02]);
+    /// let mut bytes = ByteReader::new(&[0x00, 0x01, 0x00, 0x01, 0x00, 0x02]);
     /// let provides = Provides::from_bytes(&mut bytes)?;
     /// assert_eq!(provides.index, 1);
     /// assert_eq!(provides.with_index, vec![2]);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<Provides> {
-        let index = bytes.read_u16::<BigEndian>()?;
-        let to_index_count = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<Provides> {
+        let index = bytes.read_u16()?;
+        let to_index_count = bytes.read_u16()?;
         let mut with_index = Vec::with_capacity(to_index_count as usize);
         for _ in 0..to_index_count {
-            with_index.push(bytes.read_u16::<BigEndian>()?);
+            with_index.push(bytes.read_u16()?);
         }
         let requires = Provides { index, with_index };
         Ok(requires)
@@ -172,7 +173,7 @@ mod test {
         provides.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(provides, Provides::from_bytes(&mut bytes)?);
         Ok(())
     }

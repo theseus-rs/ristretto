@@ -177,7 +177,7 @@ use tracing::debug;
 /// Returns an error if the constant pool entry is not a valid `InvokeDynamic` entry or if the
 /// bootstrap method attribute index or name/type index cannot be retrieved.
 fn get_bootstrap_method_attribute_name_and_type(
-    constant_pool: &ConstantPool,
+    constant_pool: &ConstantPool<'_>,
     method_index: u16,
 ) -> Result<(u16, u16)> {
     if let Constant::InvokeDynamic {
@@ -248,7 +248,7 @@ fn get_bootstrap_method_attribute(
 /// does not match the expected pattern, or if any constant pool entries are invalid.
 async fn resolve_bootstrap_method<'a>(
     thread: &Arc<Thread>,
-    constant_pool: &'a ConstantPool,
+    constant_pool: &'a ConstantPool<'a>,
     bootstrap_method_attribute: &BootstrapMethod,
 ) -> Result<(&'a ReferenceKind, Arc<Class>, &'a str, Arc<Method>)> {
     let (reference_kind, method_ref) =
@@ -438,7 +438,7 @@ async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Val
 #[expect(clippy::too_many_lines)]
 pub async fn get_method_handle(
     thread: &Arc<Thread>,
-    constant_pool: &ConstantPool,
+    constant_pool: &ConstantPool<'_>,
     reference_kind: &ReferenceKind,
     reference_index: u16,
 ) -> Result<Value> {
@@ -671,7 +671,7 @@ pub async fn get_method_handle(
 /// objects fails.
 async fn resolve_static_bootstrap_arguments(
     thread: &Arc<Thread>,
-    constant_pool: &ConstantPool,
+    constant_pool: &ConstantPool<'_>,
     bootstrap_method: &BootstrapMethod,
 ) -> Result<Vec<Value>> {
     let mut arguments = Vec::with_capacity(bootstrap_method.arguments.len());

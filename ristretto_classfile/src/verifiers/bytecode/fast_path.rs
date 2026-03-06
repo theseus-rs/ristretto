@@ -69,7 +69,7 @@ pub enum FastPathResult {
 /// trusted anchors, performing a single pass through the bytecode without iterative dataflow.
 pub struct FastPathVerifier<'a, C: VerificationContext> {
     /// The class file containing the method.
-    class_file: &'a ClassFile,
+    class_file: &'a ClassFile<'a>,
     /// The method being verified.
     method: &'a Method,
     /// The verification context for type hierarchy checks.
@@ -126,7 +126,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     ///
     /// Returns an error if the method's code cannot be processed.
     pub fn new(
-        class_file: &'a ClassFile,
+        class_file: &'a ClassFile<'a>,
         method: &'a Method,
         context: &'a C,
         config: &'a VerifierConfig,
@@ -218,7 +218,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 
     /// Extracts method information from the constant pool.
     fn extract_method_info(
-        class_file: &ClassFile,
+        class_file: &ClassFile<'_>,
         method: &Method,
     ) -> Result<(String, String, String)> {
         let current_class = class_file
@@ -243,7 +243,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     fn decode_stack_map_table(
         code_attributes: &[Attribute],
         initial_frame: &Frame,
-        class_file: &ClassFile,
+        class_file: &ClassFile<'_>,
         max_stack: u16,
     ) -> Result<DecodedStackMapTable> {
         let stack_frames = code_attributes.iter().find_map(|attr| {
@@ -296,7 +296,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
     /// Creates the initial frame for the method (static helper).
     fn create_initial_frame_static(
         method: &Method,
-        class_file: &ClassFile,
+        class_file: &ClassFile<'_>,
         current_class: &str,
         method_name: &str,
         max_locals: u16,
@@ -912,21 +912,17 @@ mod tests {
         }
     }
 
-    fn create_mock_class_file() -> ClassFile {
+    fn create_mock_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
         constant_pool
-            .add(Constant::Utf8("TestClass".to_string()))
+            .add(Constant::Utf8("TestClass".into()))
             .unwrap();
         let this_class_index = constant_pool.add(Constant::Class(1)).unwrap();
         constant_pool
-            .add(Constant::Utf8("testMethod".to_string()))
+            .add(Constant::Utf8("testMethod".into()))
             .unwrap();
-        constant_pool
-            .add(Constant::Utf8("()V".to_string()))
-            .unwrap();
-        constant_pool
-            .add(Constant::Utf8("Code".to_string()))
-            .unwrap();
+        constant_pool.add(Constant::Utf8("()V".into())).unwrap();
+        constant_pool.add(Constant::Utf8("Code".into())).unwrap();
 
         ClassFile {
             version: Version::Java8 { minor: 0 },

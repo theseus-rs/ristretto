@@ -15,7 +15,6 @@ use ristretto_types::JavaObject;
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
-use std::io::Cursor;
 use std::sync::Arc;
 use tracing::{debug, error, info};
 use zerocopy::transmute_ref;
@@ -769,8 +768,7 @@ pub async fn define_anonymous_class_0<T: ristretto_types::Thread + 'static>(
         bytes.to_vec()
     };
 
-    let mut cursor = Cursor::new(bytes);
-    let class_file = match ClassFile::from_bytes(&mut cursor) {
+    let class_file = match ClassFile::from_bytes(&bytes) {
         Ok(class_file) => class_file,
         Err(error) => {
             error!("ClassFormatError in defineAnonymousClass0: {error}");
@@ -831,8 +829,7 @@ pub async fn define_class_0<T: ristretto_types::Thread + 'static>(
     let offset = usize::try_from(offset)?;
     let length = usize::try_from(length)?;
 
-    let mut cursor = Cursor::new(bytes[offset..offset + length].to_vec());
-    let class_file = match ClassFile::from_bytes(&mut cursor) {
+    let class_file = match ClassFile::from_bytes(&bytes[offset..offset + length]) {
         Ok(class_file) => class_file,
         Err(error) => {
             error!("ClassFormatError in defineClass0: {error}");
@@ -890,9 +887,8 @@ pub async fn define_hidden_class<T: ristretto_types::Thread + 'static>(
     let offset = usize::try_from(offset)?;
     let length = usize::try_from(length)?;
 
-    let mut cursor = Cursor::new(bytes[offset..offset + length].to_vec());
-    let class_file =
-        ClassFile::from_bytes(&mut cursor).map_err(|e| ClassFormatError(e.to_string()))?;
+    let class_file = ClassFile::from_bytes(&bytes[offset..offset + length])
+        .map_err(|e| ClassFormatError(e.to_string()))?;
 
     // Generate a unique suffix for the hidden class name
     let vm = thread.vm()?;

@@ -13,14 +13,14 @@ use crate::verifiers::error::VerifyError::{
 ///
 /// # Errors
 /// Returns `VerificationError` if the constant pool is invalid.
-pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
+pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
     verify_version_constants(class_file)?;
     verify_constant_indexes(class_file)?;
     Ok(())
 }
 
 /// Verify the `ClassFile` `ConstantPool` for version specific constants.
-fn verify_version_constants(class_file: &ClassFile) -> Result<()> {
+fn verify_version_constants(class_file: &ClassFile<'_>) -> Result<()> {
     for constant in &class_file.constant_pool {
         if !constant.valid_for_version(&class_file.version) {
             let tag = constant.tag();
@@ -33,7 +33,7 @@ fn verify_version_constants(class_file: &ClassFile) -> Result<()> {
 
 /// Verify the `ClassFile` `ConstantPool` indexes.
 #[expect(clippy::too_many_lines)]
-fn verify_constant_indexes(class_file: &ClassFile) -> Result<()> {
+fn verify_constant_indexes(class_file: &ClassFile<'_>) -> Result<()> {
     let constant_pool = &class_file.constant_pool;
     let len = u16::try_from(constant_pool.len())?;
     for index in 1..=len {
@@ -184,35 +184,29 @@ mod test {
     use crate::class_file::ClassFile;
     use crate::constant::Constant;
     use crate::{JAVA_6, JAVA_10, Version};
-    use std::io::Cursor;
 
-    fn get_class_file() -> Result<ClassFile> {
+    fn get_class_file() -> Result<ClassFile<'static>> {
         let class_bytes = include_bytes!("../../../classes/Minimum.class");
-        let expected_bytes = class_bytes.to_vec();
-        Ok(ClassFile::from_bytes(&mut Cursor::new(
-            expected_bytes.clone(),
-        ))?)
+        Ok(ClassFile::from_bytes(class_bytes.as_slice())?)
     }
 
-    fn get_utf8_index(class_file: &mut ClassFile) -> Result<u16> {
-        class_file
-            .constant_pool
-            .push(Constant::Utf8("foo".to_string()));
+    fn get_utf8_index(class_file: &mut ClassFile<'_>) -> Result<u16> {
+        class_file.constant_pool.push(Constant::Utf8("foo".into()));
         Ok(u16::try_from(class_file.constant_pool.len())?)
     }
 
-    fn get_integer_index(class_file: &mut ClassFile) -> Result<u16> {
+    fn get_integer_index(class_file: &mut ClassFile<'_>) -> Result<u16> {
         class_file.constant_pool.push(Constant::Integer(42));
         Ok(u16::try_from(class_file.constant_pool.len())?)
     }
 
-    fn get_class_index(class_file: &mut ClassFile) -> Result<u16> {
+    fn get_class_index(class_file: &mut ClassFile<'_>) -> Result<u16> {
         let utf8_index = get_utf8_index(class_file)?;
         class_file.constant_pool.push(Constant::Class(utf8_index));
         Ok(u16::try_from(class_file.constant_pool.len())?)
     }
 
-    fn get_name_and_type_index(class_file: &mut ClassFile) -> Result<u16> {
+    fn get_name_and_type_index(class_file: &mut ClassFile<'_>) -> Result<u16> {
         let utf8_index = get_utf8_index(class_file)?;
         class_file.constant_pool.push(Constant::NameAndType {
             name_index: utf8_index,
@@ -221,7 +215,7 @@ mod test {
         Ok(u16::try_from(class_file.constant_pool.len())?)
     }
 
-    fn get_bootstrap_methods_index(class_file: &mut ClassFile) -> Result<u16> {
+    fn get_bootstrap_methods_index(class_file: &mut ClassFile<'_>) -> Result<u16> {
         let utf8_index = get_utf8_index(class_file)?;
         let bootstrap_method = BootstrapMethod {
             bootstrap_method_ref: 0,
@@ -237,8 +231,7 @@ mod test {
     #[test]
     fn test_verify() -> Result<()> {
         let class_bytes = include_bytes!("../../../classes/Simple.class");
-        let expected_bytes = class_bytes.to_vec();
-        let class_file = ClassFile::from_bytes(&mut Cursor::new(expected_bytes.clone()))?;
+        let class_file = ClassFile::from_bytes(class_bytes.as_slice())?;
 
         assert_eq!(Ok(()), verify(&class_file));
         Ok(())
@@ -251,7 +244,7 @@ mod test {
         Ok(())
     }
 
-    fn test_version_constants_error(version: Version, constant: Constant) -> Result<()> {
+    fn test_version_constants_error(version: Version, constant: Constant<'static>) -> Result<()> {
         let mut class_file = get_class_file()?;
         let tag = constant.tag();
 
@@ -302,7 +295,10 @@ mod test {
         test_version_constants_error(JAVA_8, Constant::Package(1))
     }
 
-    fn test_indexes_index_error(mut class_file: ClassFile, constant: Constant) -> Result<()> {
+    fn test_indexes_index_error(
+        mut class_file: ClassFile<'static>,
+        constant: Constant<'static>,
+    ) -> Result<()> {
         class_file.constant_pool.push(constant);
         let index = u16::try_from(class_file.constant_pool.len())?;
         assert_eq!(
@@ -312,7 +308,10 @@ mod test {
         Ok(())
     }
 
-    fn test_indexes_index_type_error(mut class_file: ClassFile, constant: Constant) -> Result<()> {
+    fn test_indexes_index_type_error(
+        mut class_file: ClassFile<'static>,
+        constant: Constant<'static>,
+    ) -> Result<()> {
         class_file.constant_pool.push(constant);
         let index = u16::try_from(class_file.constant_pool.len())?;
         assert_eq!(
@@ -322,13 +321,13 @@ mod test {
         Ok(())
     }
 
-    fn test_indexes_utf8_index_errors(constant: &Constant) -> Result<()> {
+    fn test_indexes_utf8_index_errors(constant: &Constant<'static>) -> Result<()> {
         let class_file = get_class_file()?;
         test_indexes_index_error(class_file.clone(), constant.clone())?;
         test_indexes_utf8_index_type_error(constant)
     }
 
-    fn test_indexes_utf8_index_type_error(constant: &Constant) -> Result<()> {
+    fn test_indexes_utf8_index_type_error(constant: &Constant<'static>) -> Result<()> {
         let class_file = &mut get_class_file()?;
         let integer_index = get_integer_index(class_file)?;
 
@@ -370,10 +369,10 @@ mod test {
     }
 
     fn get_ref_constant(
-        constant: &Constant,
+        constant: &Constant<'static>,
         class_index: u16,
         name_and_type_index: u16,
-    ) -> Constant {
+    ) -> Constant<'static> {
         match constant {
             Constant::FieldRef { .. } => Constant::FieldRef {
                 class_index,
@@ -390,7 +389,7 @@ mod test {
         }
     }
 
-    fn test_indexes_ref_errors(constant: &Constant) -> Result<()> {
+    fn test_indexes_ref_errors(constant: &Constant<'static>) -> Result<()> {
         let class_file = &mut get_class_file()?;
         let utf8_index = get_utf8_index(class_file)?;
         let class_index = get_class_index(class_file)?;
@@ -500,7 +499,7 @@ mod test {
         Ok(())
     }
 
-    fn test_indexes_no_bootstrap_methods_error(constant: Constant) -> Result<()> {
+    fn test_indexes_no_bootstrap_methods_error(constant: Constant<'static>) -> Result<()> {
         let class_file = &mut get_class_file()?;
         class_file.constant_pool.push(constant);
         assert_eq!(
@@ -511,8 +510,8 @@ mod test {
     }
 
     fn test_indexes_bootstrap_method_index_error(
-        mut class_file: ClassFile,
-        constant: Constant,
+        mut class_file: ClassFile<'static>,
+        constant: Constant<'static>,
         index: usize,
     ) {
         class_file.constant_pool.push(constant);

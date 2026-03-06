@@ -1,10 +1,11 @@
 use crate::Error::{InvalidConstantPoolIndex, InvalidConstantPoolIndexType};
 use crate::ReferenceKind;
+use crate::byte_reader::ByteReader;
 use crate::constant::Constant;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::io::Cursor;
-use std::{fmt, io};
+use byteorder::{BigEndian, WriteBytesExt};
+use std::borrow::Cow;
+use std::fmt;
 
 /// Constant pool.
 ///
@@ -27,11 +28,11 @@ use std::{fmt, io};
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4>
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ConstantPool {
-    constants: Vec<ConstantEntry>,
+pub struct ConstantPool<'a> {
+    constants: Vec<ConstantEntry<'a>>,
 }
 
-impl ConstantPool {
+impl<'a> ConstantPool<'a> {
     /// Create a new constant pool.
     ///
     /// Creates an empty constant pool with a placeholder entry at index 0.
@@ -52,6 +53,21 @@ impl ConstantPool {
         }
     }
 
+    /// Convert this `ConstantPool` into one with `'static` lifetime by cloning all borrowed data.
+    #[must_use]
+    pub fn into_owned(self) -> ConstantPool<'static> {
+        ConstantPool {
+            constants: self
+                .constants
+                .into_iter()
+                .map(|entry| match entry {
+                    ConstantEntry::Constant(c) => ConstantEntry::Constant(c.into_owned()),
+                    ConstantEntry::Placeholder => ConstantEntry::Placeholder,
+                })
+                .collect(),
+        }
+    }
+
     /// Push a constant to the pool.
     ///
     /// Adds a constant to the pool without returning its index. For Long and Double constants, an
@@ -66,7 +82,7 @@ impl ConstantPool {
     /// constant_pool.push(Constant::Integer(42));
     /// assert_eq!(1, constant_pool.len());
     /// ```
-    pub fn push(&mut self, constant: Constant) {
+    pub fn push(&mut self, constant: Constant<'a>) {
         let add_placeholder = matches!(constant, Constant::Long(_) | Constant::Double(_));
         self.constants.push(ConstantEntry::Constant(constant));
         if add_placeholder {
@@ -90,7 +106,7 @@ impl ConstantPool {
     /// assert_eq!(1, index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn add(&mut self, constant: Constant) -> Result<u16> {
+    pub fn add(&mut self, constant: Constant<'a>) -> Result<u16> {
         // Logically the index is self.len() + 1.  However, since the constant pool is one based a
         // placeholder is added as the first entry, we can just use the length of the constants
         // vector to obtain the new index value.
@@ -119,7 +135,7 @@ impl ConstantPool {
     ///
     /// - [JVMS §4.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.)
     #[must_use]
-    pub fn get(&self, index: u16) -> Option<&Constant> {
+    pub fn get(&self, index: u16) -> Option<&Constant<'a>> {
         self.try_get(index).ok()
     }
 
@@ -145,7 +161,7 @@ impl ConstantPool {
     /// # References
     ///
     /// - [JVMS §4.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.1:~:text=The%20constant_pool%20table%20is%20indexed%20from%201%20to%20constant_pool_count%20%2D%201.)
-    pub fn try_get(&self, index: u16) -> Result<&Constant> {
+    pub fn try_get(&self, index: u16) -> Result<&Constant<'a>> {
         let constant_entry = self.constants.get(index as usize);
         match constant_entry {
             Some(ConstantEntry::Constant(constant)) => Ok(constant),
@@ -168,15 +184,15 @@ impl ConstantPool {
     /// use ristretto_classfile::{Constant, ConstantPool};
     ///
     /// let mut constant_pool = ConstantPool::new();
-    /// constant_pool.push(Constant::Utf8("original".to_string()));
-    /// constant_pool.set(1, Constant::Utf8("modified".to_string()))?;
+    /// constant_pool.push(Constant::Utf8("original".into()));
+    /// constant_pool.set(1, Constant::Utf8("modified".into()))?;
     /// assert_eq!(
-    ///     &Constant::Utf8("modified".to_string()),
+    ///     &Constant::Utf8("modified".into()),
     ///     constant_pool.try_get(1)?
     /// );
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn set(&mut self, index: u16, constant: Constant) -> Result<()> {
+    pub fn set(&mut self, index: u16, constant: Constant<'a>) -> Result<()> {
         let constant_entry = self.constants.get_mut(index as usize);
         match constant_entry {
             Some(entry @ ConstantEntry::Constant(_)) => {
@@ -230,15 +246,15 @@ impl ConstantPool {
     ///
     /// let mut constant_pool = ConstantPool::new();
     /// constant_pool.push(Constant::Integer(42));
-    /// constant_pool.push(Constant::Utf8("Hello".to_string()));
+    /// constant_pool.push(Constant::Utf8("Hello".into()));
     ///
     /// let mut iterator = constant_pool.iter();
     /// assert_eq!(Some(&Constant::Integer(42)), iterator.next());
-    /// assert_eq!(Some(&Constant::Utf8("Hello".to_string())), iterator.next());
+    /// assert_eq!(Some(&Constant::Utf8("Hello".into())), iterator.next());
     /// assert_eq!(None, iterator.next());
     /// ```
     #[must_use]
-    pub fn iter(&self) -> ConstantPoolIterator<'_> {
+    pub fn iter<'b>(&'b self) -> ConstantPoolIterator<'a, 'b> {
         ConstantPoolIterator::new(self)
     }
 
@@ -252,29 +268,53 @@ impl ConstantPool {
     ///
     /// ```rust
     /// use ristretto_classfile::ConstantPool;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// let bytes = vec![0, 2, 3, 0, 0, 0, 42]; // constant_pool_count=2, Integer=42
-    /// let mut cursor = Cursor::new(bytes);
-    /// let constant_pool = ConstantPool::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&bytes);
+    /// let constant_pool = ConstantPool::from_bytes(&mut reader)?;
     /// assert_eq!(1, constant_pool.len());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ConstantPool> {
-        let mut constant_pool = ConstantPool::default();
-        let constant_pool_count =
-            bytes
-                .read_u16::<BigEndian>()?
-                .checked_sub(1)
-                .ok_or_else(|| {
-                    io::Error::new(io::ErrorKind::InvalidData, "Invalid constant pool count")
-                })?;
-        while constant_pool.len() < constant_pool_count as usize {
+    pub fn from_bytes<'b>(bytes: &mut ByteReader<'b>) -> Result<ConstantPool<'b>> {
+        let raw_count = bytes.read_u16()?;
+        if raw_count == 0 {
+            return Err(crate::Error::IoError(
+                "Invalid constant pool count".to_string(),
+            ));
+        }
+        let constant_pool_count = (raw_count - 1) as usize;
+        let mut constant_pool = ConstantPool::with_capacity(constant_pool_count);
+        while constant_pool.len() < constant_pool_count {
             let constant = Constant::from_bytes(bytes)?;
             constant_pool.push(constant);
         }
 
         Ok(constant_pool)
+    }
+
+    /// Create a new constant pool with the given capacity.
+    fn with_capacity(capacity: usize) -> Self {
+        let mut constants = Vec::with_capacity(capacity + 1);
+        constants.push(ConstantEntry::Placeholder);
+        Self { constants }
+    }
+
+    /// Fast constant pool lookup using unchecked indexing.
+    /// Only for internal use where index is known to be valid.
+    #[inline]
+    pub(crate) fn get_unchecked(&self, index: u16) -> Option<&Constant<'a>> {
+        let idx = index as usize;
+        if idx < self.constants.len() {
+            // SAFETY: We just bounds-checked idx
+            #[expect(unsafe_code)]
+            match unsafe { self.constants.get_unchecked(idx) } {
+                ConstantEntry::Constant(c) => Some(c),
+                ConstantEntry::Placeholder => None,
+            }
+        } else {
+            None
+        }
     }
 
     /// Serialize the `ConstantPool` to bytes.
@@ -329,7 +369,7 @@ impl ConstantPool {
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7>
     pub fn add_utf8<S: AsRef<str>>(&mut self, value: S) -> Result<u16> {
         let value = value.as_ref().to_string();
-        self.add(Constant::Utf8(value))
+        self.add(Constant::Utf8(Cow::Owned(value)))
     }
 
     /// Get a UTF-8 constant from the pool by index; indexes are 1-based.
@@ -340,7 +380,7 @@ impl ConstantPool {
     /// use ristretto_classfile::{Constant, ConstantPool};
     ///
     /// let mut constant_pool = ConstantPool::new();
-    /// constant_pool.push(Constant::Utf8("Hello".to_string()));
+    /// constant_pool.push(Constant::Utf8("Hello".into()));
     /// assert_eq!("Hello", constant_pool.try_get_utf8(1)?);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
@@ -354,7 +394,7 @@ impl ConstantPool {
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7>
     pub fn try_get_utf8(&self, index: u16) -> Result<&str> {
         match self.try_get(index)? {
-            Constant::Utf8(value) => Ok(value),
+            Constant::Utf8(value) => Ok(value.as_ref()),
             _ => Err(InvalidConstantPoolIndexType(index)),
         }
     }
@@ -1315,7 +1355,7 @@ impl ConstantPool {
     /// ```
     pub fn try_get_formatted_string(&self, index: u16) -> Result<String> {
         let value = match self.try_get(index)? {
-            Constant::Utf8(value) => value.clone(),
+            Constant::Utf8(value) => value.to_string(),
             Constant::Integer(integer) => format!("{integer}"),
             Constant::Float(float) => format!("{float}"),
             Constant::Long(long) => format!("{long}"),
@@ -1408,7 +1448,7 @@ impl ConstantPool {
     }
 }
 
-impl Default for ConstantPool {
+impl Default for ConstantPool<'_> {
     /// Create a new empty constant pool.
     ///
     /// This is equivalent to calling `ConstantPool::new()`.
@@ -1455,9 +1495,9 @@ impl Default for ConstantPool {
 ///
 /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.5>
 #[derive(Clone, Debug, Eq, PartialEq)]
-enum ConstantEntry {
+enum ConstantEntry<'a> {
     /// An actual constant in the pool.
-    Constant(Constant),
+    Constant(Constant<'a>),
 
     /// A placeholder entry in the constant pool.
     ///
@@ -1470,7 +1510,7 @@ enum ConstantEntry {
     Placeholder,
 }
 
-impl fmt::Display for ConstantEntry {
+impl fmt::Display for ConstantEntry<'_> {
     /// Implements the `Display` trait for `ConstantEntry` to provide a string representation.
     ///
     /// This implementation formats a `ConstantEntry` as follows:
@@ -1525,7 +1565,7 @@ impl fmt::Display for ConstantEntry {
 ///
 /// // Using the iterator directly
 /// let mut iterator = constant_pool.iter();
-/// assert_eq!(Some(&Constant::Utf8("foo".to_string())), iterator.next());
+/// assert_eq!(Some(&Constant::Utf8("foo".into())), iterator.next());
 /// assert_eq!(Some(&Constant::Long(42)), iterator.next());
 /// assert_eq!(Some(&Constant::Integer(3)), iterator.next());
 /// assert_eq!(None, iterator.next());
@@ -1542,12 +1582,12 @@ impl fmt::Display for ConstantEntry {
 /// The iterator automatically skips the placeholder entry at index 0 and any placeholder
 /// entries following long and double constants.
 #[derive(Debug)]
-pub struct ConstantPoolIterator<'a> {
-    constant_pool: &'a ConstantPool,
+pub struct ConstantPoolIterator<'a, 'b> {
+    constant_pool: &'b ConstantPool<'a>,
     index: usize,
 }
 
-impl<'a> ConstantPoolIterator<'a> {
+impl<'a, 'b> ConstantPoolIterator<'a, 'b> {
     /// Creates a new iterator over constants in a constant pool.
     ///
     /// This constructor creates an iterator that automatically skips placeholder entries in the
@@ -1568,7 +1608,7 @@ impl<'a> ConstantPoolIterator<'a> {
     /// let mut itererator = constant_pool.iter();
     ///
     /// // The iterator will automatically skip placeholder entries
-    /// assert_eq!(Some(&Constant::Utf8("foo".to_string())), itererator.next());
+    /// assert_eq!(Some(&Constant::Utf8("foo".into())), itererator.next());
     /// assert_eq!(Some(&Constant::Long(42)), itererator.next());
     /// assert_eq!(Some(&Constant::Integer(3)), itererator.next());
     /// assert_eq!(None, itererator.next());
@@ -1579,7 +1619,7 @@ impl<'a> ConstantPoolIterator<'a> {
     ///
     /// The iterator begins at index 1 rather than 0, as the constant pool uses 1-based indexing
     /// with a placeholder at index 0.
-    pub fn new(constant_pool: &'a ConstantPool) -> Self {
+    pub fn new(constant_pool: &'b ConstantPool<'a>) -> Self {
         // index is 1-based; skip the first entry, which is a placeholder
         Self {
             constant_pool,
@@ -1588,8 +1628,8 @@ impl<'a> ConstantPoolIterator<'a> {
     }
 }
 
-impl<'a> Iterator for ConstantPoolIterator<'a> {
-    type Item = &'a Constant;
+impl<'a, 'b> Iterator for ConstantPoolIterator<'a, 'b> {
+    type Item = &'b Constant<'a>;
 
     /// Returns the next constant in the iteration.
     ///
@@ -1610,7 +1650,7 @@ impl<'a> Iterator for ConstantPoolIterator<'a> {
     /// let mut iterator = constant_pool.iter();
     ///
     /// // The first constant is the UTF-8 "Hello"
-    /// assert_eq!(Some(&Constant::Utf8("foo".to_string())), iterator.next());
+    /// assert_eq!(Some(&Constant::Utf8("foo".into())), iterator.next());
     ///
     /// // The second constant is the Long value (the placeholder is skipped)
     /// assert_eq!(Some(&Constant::Long(42)), iterator.next());
@@ -1644,16 +1684,16 @@ impl<'a> Iterator for ConstantPoolIterator<'a> {
     }
 }
 
-impl<'a> IntoIterator for &'a ConstantPool {
-    type Item = &'a Constant;
-    type IntoIter = ConstantPoolIterator<'a>;
+impl<'a, 'b> IntoIterator for &'b ConstantPool<'a> {
+    type Item = &'b Constant<'a>;
+    type IntoIter = ConstantPoolIterator<'a, 'b>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl fmt::Display for ConstantPool {
+impl fmt::Display for ConstantPool<'_> {
     /// Formats the `ConstantPool` for display.
     ///
     /// Produces a human-readable string representation of the constant pool, displaying each
@@ -1727,7 +1767,7 @@ mod test {
     fn test_get() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.get(1).is_none());
-        constant_pool.push(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("foo".into()));
         assert!(constant_pool.get(1).is_some());
     }
 
@@ -1741,31 +1781,25 @@ mod test {
     fn test_try_get() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.try_get(1).is_err());
-        constant_pool.push(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("foo".into()));
         assert!(constant_pool.try_get(1).is_ok());
     }
 
     #[test]
     fn test_set() {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".to_string()));
-        assert_eq!(
-            Some(&Constant::Utf8("foo".to_string())),
-            constant_pool.get(1)
-        );
+        constant_pool.push(Constant::Utf8("foo".into()));
+        assert_eq!(Some(&Constant::Utf8("foo".into())), constant_pool.get(1));
         constant_pool
-            .set(1, Constant::Utf8("baz".to_string()))
+            .set(1, Constant::Utf8("baz".into()))
             .expect("Failed to set constant");
-        assert_eq!(
-            Some(&Constant::Utf8("baz".to_string())),
-            constant_pool.get(1)
-        );
+        assert_eq!(Some(&Constant::Utf8("baz".into())), constant_pool.get(1));
     }
 
     #[test]
     fn test_utf8() {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("foo".into()));
         assert!(constant_pool.get(1).is_some());
         assert_eq!(1, constant_pool.len());
     }
@@ -1806,11 +1840,11 @@ mod test {
     #[test]
     fn test_iter() {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("foo".into()));
         constant_pool.push(Constant::Integer(42));
         constant_pool.push(Constant::Long(1_234_567_890));
         let mut iter = constant_pool.iter();
-        assert_eq!(Some(&Constant::Utf8("foo".to_string())), iter.next());
+        assert_eq!(Some(&Constant::Utf8("foo".into())), iter.next());
         assert_eq!(Some(&Constant::Integer(42)), iter.next());
         assert_eq!(Some(&Constant::Long(1_234_567_890)), iter.next());
         assert_eq!(None, iter.next());
@@ -1819,9 +1853,9 @@ mod test {
     #[test]
     fn test_into_iter() {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("foo".into()));
         for constant in &constant_pool {
-            assert_eq!(Constant::Utf8("foo".to_string()), *constant);
+            assert_eq!(Constant::Utf8("foo".into()), *constant);
         }
     }
 
@@ -1837,7 +1871,7 @@ mod test {
     #[test]
     fn test_to_string() {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("foo".into()));
         constant_pool.push(Constant::Integer(42));
         constant_pool.push(Constant::Long(1_234_567_890));
         let expected = "   #1 = Utf8               foo\n   #2 = Integer            42\n   #3 = Long               1234567890\n";
@@ -1857,20 +1891,22 @@ mod test {
         let mut bytes = Vec::new();
         constant_pool.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut bytes = ByteReader::new(&expected_bytes);
         assert_eq!(constant_pool, ConstantPool::from_bytes(&mut bytes)?);
         Ok(())
     }
 
-    fn test_try_get_constant<T>(f: fn(&ConstantPool, u16) -> Result<&T>, constant: Constant)
-    where
+    fn test_try_get_constant<T>(
+        f: for<'a> fn(&'a ConstantPool<'static>, u16) -> Result<&'a T>,
+        constant: Constant<'static>,
+    ) where
         T: Debug + PartialEq + ?Sized,
     {
         let mut constant_pool = ConstantPool::default();
         if matches!(constant, Constant::Utf8(_)) {
             constant_pool.push(Constant::Integer(42));
         } else {
-            constant_pool.push(Constant::Utf8("foo".to_string()));
+            constant_pool.push(Constant::Utf8("foo".into()));
         }
         constant_pool.push(constant);
         assert_eq!(Err(InvalidConstantPoolIndex(0)), f(&constant_pool, 0));
@@ -1879,14 +1915,14 @@ mod test {
     }
 
     fn test_try_get_constant_tuple<A, B>(
-        f: fn(&ConstantPool, u16) -> Result<(&A, &B)>,
-        constant: Constant,
+        f: for<'a> fn(&'a ConstantPool<'static>, u16) -> Result<(&'a A, &'a B)>,
+        constant: Constant<'static>,
     ) where
         A: Debug + PartialEq,
         B: Debug + PartialEq,
     {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".to_string()));
+        constant_pool.push(Constant::Utf8("foo".into()));
         constant_pool.push(constant);
         assert_eq!(Err(InvalidConstantPoolIndex(0)), f(&constant_pool, 0));
         assert_eq!(Err(InvalidConstantPoolIndexType(1)), f(&constant_pool, 1));
@@ -1899,7 +1935,7 @@ mod test {
         let index = constant_pool.add_utf8("foo")?;
         assert_eq!(1, index);
         assert_eq!(
-            Some(&Constant::Utf8("foo".to_string())),
+            Some(&Constant::Utf8("foo".into())),
             constant_pool.get(index)
         );
         Ok(())
@@ -1907,10 +1943,7 @@ mod test {
 
     #[test]
     fn test_try_get_utf8() {
-        test_try_get_constant(
-            ConstantPool::try_get_utf8,
-            Constant::Utf8("foo".to_string()),
-        );
+        test_try_get_constant(ConstantPool::try_get_utf8, Constant::Utf8("foo".into()));
     }
 
     #[test]
@@ -2052,7 +2085,7 @@ mod test {
     #[test]
     fn test_try_get_class_name() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("java/lang/Object".to_string()));
+        constant_pool.push(Constant::Utf8("java/lang/Object".into()));
         constant_pool.push(Constant::Class(1));
         let class_name = constant_pool.try_get_class(2)?;
         assert_eq!("java/lang/Object", class_name);
@@ -2408,7 +2441,8 @@ mod test {
 
     #[test]
     fn test_from_bytes_invalid_tag() {
-        let mut bytes = Cursor::new(vec![0, 0, 10]);
+        let data = vec![0, 0, 10];
+        let mut bytes = ByteReader::new(&data);
         assert_eq!(
             Err(IoError("Invalid constant pool count".to_string())),
             ConstantPool::from_bytes(&mut bytes)

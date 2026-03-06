@@ -1,9 +1,9 @@
 use crate::attributes::Attribute;
+use crate::byte_reader::ByteReader;
 use crate::constant_pool::ConstantPool;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Implementation of `Record`.
 ///
@@ -12,7 +12,7 @@ use std::io::Cursor;
 /// ```rust
 /// use ristretto_classfile::attributes::{Attribute, Record};
 /// use ristretto_classfile::{ConstantPool, Result};
-/// use std::io::Cursor;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// let attribute = Attribute::ConstantValue {
 ///     name_index: 1, // Index in constant pool for "ConstantValue"
@@ -35,8 +35,8 @@ use std::io::Cursor;
 /// record.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_record = Record::from_bytes(&constant_pool, &mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_record = Record::from_bytes(&constant_pool, &mut reader)?;
 ///
 /// assert_eq!(record, deserialized_record);
 /// # Ok::<(), ristretto_classfile::Error>(())
@@ -67,7 +67,7 @@ impl Record {
     /// ```rust
     /// use ristretto_classfile::attributes::Record;
     /// use ristretto_classfile::ConstantPool;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// let mut constant_pool = ConstantPool::default();
     /// // Create a byte array representing a serialized Record
@@ -76,10 +76,10 @@ impl Record {
     ///     0, 10,            // descriptor_index (10)
     ///     0, 0              // attributes_count (0)
     /// ];
-    /// let mut cursor = Cursor::new(bytes);
+    /// let mut reader = ByteReader::new(&bytes);
     ///
     /// // Deserialize the Record
-    /// let record = Record::from_bytes(&constant_pool, &mut cursor)?;
+    /// let record = Record::from_bytes(&constant_pool, &mut reader)?;
     ///
     /// assert_eq!(record.name_index, 5);
     /// assert_eq!(record.descriptor_index, 10);
@@ -87,12 +87,12 @@ impl Record {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn from_bytes(
-        constant_pool: &ConstantPool,
-        bytes: &mut Cursor<impl AsRef<[u8]> + Clone>,
+        constant_pool: &ConstantPool<'_>,
+        bytes: &mut ByteReader<'_>,
     ) -> Result<Record> {
-        let name_index = bytes.read_u16::<BigEndian>()?;
-        let descriptor_index = bytes.read_u16::<BigEndian>()?;
-        let attributes_count = bytes.read_u16::<BigEndian>()? as usize;
+        let name_index = bytes.read_u16()?;
+        let descriptor_index = bytes.read_u16()?;
+        let attributes_count = bytes.read_u16()? as usize;
         let mut attributes = Vec::with_capacity(attributes_count);
         for _ in 0..attributes_count {
             let attribute = Attribute::from_bytes(constant_pool, bytes)?;
@@ -225,7 +225,7 @@ mod test {
         record.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(record, Record::from_bytes(&constant_pool, &mut bytes)?);
         Ok(())
     }

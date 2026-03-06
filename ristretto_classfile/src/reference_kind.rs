@@ -1,9 +1,9 @@
 use crate::Error;
+use crate::byte_reader::ByteReader;
 use crate::error::Error::InvalidReferenceKind;
 use crate::error::Result;
-use byteorder::{ReadBytesExt, WriteBytesExt};
+use byteorder::WriteBytesExt;
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents the behavior of a dynamic call site in the Java Virtual Machine.
 ///
@@ -19,7 +19,7 @@ use std::io::Cursor;
 ///
 /// ```rust
 /// use ristretto_classfile::ReferenceKind;
-/// use std::io::Cursor;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Create a reference kind
 /// let reference_kind = ReferenceKind::InvokeVirtual;
@@ -30,8 +30,8 @@ use std::io::Cursor;
 /// assert_eq!(bytes, vec![5]); // InvokeVirtual has value 5
 ///
 /// // Deserialize from bytes
-/// let mut cursor = Cursor::new(vec![6]);
-/// let deserialized = ReferenceKind::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&[6]);
+/// let deserialized = ReferenceKind::from_bytes(&mut reader)?;
 /// assert_eq!(deserialized, ReferenceKind::InvokeStatic);
 ///
 /// // Get all reference kinds
@@ -85,20 +85,20 @@ impl ReferenceKind {
     ///
     /// ```rust
     /// use ristretto_classfile::ReferenceKind;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // Deserialize a valid reference kind
-    /// let mut cursor = Cursor::new(vec![5]);
-    /// let reference_kind = ReferenceKind::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&[5]);
+    /// let reference_kind = ReferenceKind::from_bytes(&mut reader)?;
     /// assert_eq!(reference_kind, ReferenceKind::InvokeVirtual);
     ///
     /// // Attempting to deserialize an invalid reference kind
-    /// let mut cursor = Cursor::new(vec![10]);
-    /// let result = ReferenceKind::from_bytes(&mut cursor);
+    /// let mut reader = ByteReader::new(&[10]);
+    /// let result = ReferenceKind::from_bytes(&mut reader);
     /// assert!(result.is_err());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ReferenceKind> {
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<ReferenceKind> {
         let byte = bytes.read_u8()?;
         ReferenceKind::try_from(byte)
     }
@@ -298,10 +298,11 @@ mod test {
 
         let mut bytes = Vec::new();
         reference_kind.clone().to_bytes(&mut bytes)?;
-        let mut bytes = Cursor::new(bytes);
+        let mut bytes = ByteReader::new(&bytes);
         assert_eq!(expected_kind, bytes.read_u8()?);
 
-        let mut bytes = Cursor::new(expected_kind.to_be_bytes().to_vec());
+        let binding = expected_kind.to_be_bytes();
+        let mut bytes = ByteReader::new(&binding);
         assert_eq!(*reference_kind, ReferenceKind::from_bytes(&mut bytes)?);
         Ok(())
     }
@@ -380,7 +381,8 @@ mod test {
 
     #[test]
     fn test_from_bytes_invalid_reference_kind() {
-        let mut bytes = Cursor::new(vec![0]);
+        let data = vec![0];
+        let mut bytes = ByteReader::new(&data);
         assert_eq!(
             Err(InvalidReferenceKind(0)),
             ReferenceKind::from_bytes(&mut bytes)

@@ -2,7 +2,6 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use ristretto_classfile::ClassFile;
 use ristretto_classloader::runtime::default_class_loader;
 use ristretto_jimage::{Image, Result};
-use std::io::Cursor;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
 
@@ -34,8 +33,7 @@ async fn get_image() -> Result<Image> {
 
 fn load_class(image: &Image, class_name: &str) -> Result<()> {
     let resource = image.get_resource(class_name)?;
-    let mut bytes = Cursor::new(resource.data());
-    let _class_file = ClassFile::from_bytes(&mut bytes).expect("read classfile");
+    let _class_file = ClassFile::from_bytes(resource.data()).expect("read classfile");
     Ok(())
 }
 

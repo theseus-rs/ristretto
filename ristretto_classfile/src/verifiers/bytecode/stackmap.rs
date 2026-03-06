@@ -99,7 +99,7 @@ impl DecodedStackMapTable {
     pub fn decode(
         stack_frames: &[StackFrame],
         initial_frame: &Frame,
-        class_file: &ClassFile,
+        class_file: &ClassFile<'_>,
         max_stack: u16,
     ) -> Result<Self> {
         if stack_frames.is_empty() {
@@ -231,7 +231,7 @@ fn decode_frame(
     offset: u16,
     stack_frame: &StackFrame,
     current_locals: &[VerificationType],
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     _max_stack: u16,
 ) -> Result<(DecodedFrame, Vec<VerificationType>)> {
     let (frame_type, locals, stack) = match stack_frame {
@@ -301,7 +301,7 @@ fn decode_frame(
 /// but in the actual frame they occupy two slots.
 fn expand_locals(
     locals: &[ClassFileVerificationType],
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
 ) -> Vec<VerificationType> {
     let mut result = Vec::with_capacity(locals.len() * 2);
 
@@ -321,7 +321,7 @@ fn expand_locals(
 /// Converts a slice of class file verification types to internal types.
 fn convert_verification_types(
     types: &[ClassFileVerificationType],
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
 ) -> Vec<VerificationType> {
     types
         .iter()
@@ -332,7 +332,7 @@ fn convert_verification_types(
 /// Converts a single class file verification type to internal type.
 fn convert_single_type(
     v_type: &ClassFileVerificationType,
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
 ) -> VerificationType {
     match v_type {
         ClassFileVerificationType::Top => VerificationType::Top,
@@ -375,10 +375,10 @@ mod tests {
     use crate::Version;
     use crate::constant::Constant;
 
-    fn create_test_class_file() -> ClassFile {
+    fn create_test_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
         constant_pool
-            .add(Constant::Utf8("TestClass".to_string()))
+            .add(Constant::Utf8("TestClass".into()))
             .unwrap();
         constant_pool.add(Constant::Class(1)).unwrap();
 

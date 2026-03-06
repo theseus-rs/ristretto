@@ -1,7 +1,7 @@
 use crate::Error::{InvalidFieldTypeCode, InvalidFieldTypeDescriptor, InvalidMethodDescriptor};
 use crate::base_type::BaseType;
 use crate::error::Result;
-use std::{fmt, io};
+use std::fmt;
 
 /// Represents a Java field type descriptor as defined in the JVM specification.
 ///
@@ -231,28 +231,26 @@ impl FieldType {
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn parse(descriptor: &str) -> Result<FieldType> {
-        let mut chars = descriptor.chars();
-        let code = chars.next().unwrap_or_default();
+        let bytes = descriptor.as_bytes();
+        let code = bytes.first().copied().unwrap_or_default();
         let field_type = match code {
-            'L' => {
-                let take_chars = descriptor.len().checked_sub(2).ok_or_else(|| {
-                    io::Error::new(io::ErrorKind::InvalidData, "Invalid descriptor length")
-                })?;
-                let class_name: String = chars.take(take_chars).collect();
-                if !class_name.is_empty() && descriptor.ends_with(';') {
-                    FieldType::Object(class_name)
+            b'L' => {
+                let len = bytes.len();
+                if len >= 3 && bytes[len - 1] == b';' {
+                    // SAFETY: descriptor is valid UTF-8 and we're slicing at ASCII byte boundaries
+                    let class_name = &descriptor[1..len - 1];
+                    FieldType::Object(class_name.to_owned())
                 } else {
                     return Err(InvalidFieldTypeDescriptor(descriptor.to_string()));
                 }
             }
-            '[' => {
-                let characters: String = chars.collect();
-                let component_type = Self::parse(&characters)?;
+            b'[' => {
+                let component_type = Self::parse(&descriptor[1..])?;
                 FieldType::Array(component_type.into())
             }
             _ => {
-                let Ok(base_type) = BaseType::parse(code) else {
-                    return Err(InvalidFieldTypeCode(code));
+                let Ok(base_type) = BaseType::parse(code as char) else {
+                    return Err(InvalidFieldTypeCode(code as char));
                 };
                 FieldType::Base(base_type)
             }
@@ -396,7 +394,6 @@ impl fmt::Display for FieldType {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::Error::IoError;
 
     #[test]
     fn test_invalid_code() {
@@ -521,7 +518,7 @@ mod test {
     fn test_parse_invalid() {
         let descriptor = "L".to_string();
         assert_eq!(
-            Err(IoError("Invalid descriptor length".to_string())),
+            Err(InvalidFieldTypeDescriptor("L".to_string())),
             FieldType::parse(&descriptor)
         );
     }

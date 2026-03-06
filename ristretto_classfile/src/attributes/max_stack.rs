@@ -64,11 +64,11 @@ pub trait MaxStack {
     /// assert_eq!(max_size, 2); // Maximum depth was 2 (after Iconst_1)
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    fn max_stack(&self, constant_pool: &ConstantPool) -> Result<u16>;
+    fn max_stack(&self, constant_pool: &ConstantPool<'_>) -> Result<u16>;
 }
 
 impl MaxStack for [Instruction] {
-    fn max_stack(&self, constant_pool: &ConstantPool) -> Result<u16> {
+    fn max_stack(&self, constant_pool: &ConstantPool<'_>) -> Result<u16> {
         let mut max_stack_size = 0;
         let mut stack: i32 = 0;
         for instruction in self {

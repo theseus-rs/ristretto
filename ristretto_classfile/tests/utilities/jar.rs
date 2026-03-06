@@ -21,9 +21,8 @@ pub fn verify(jar_bytes: Vec<u8>) -> Result<()> {
 
         let mut out = Vec::new();
         std::io::copy(&mut file, &mut out).expect("Failed to copy file");
-        let mut bytes = Cursor::new(out);
 
-        let class_file = ClassFile::from_bytes(&mut bytes)?;
+        let class_file = ClassFile::from_bytes(&out)?;
         class_file.verify()?;
     }
 

@@ -9,7 +9,7 @@ use crate::verifiers::error::VerifyError::{
 ///
 /// # Errors
 /// Returns `VerificationError` if the interfaces are invalid.
-pub(crate) fn verify(class_file: &ClassFile) -> Result<()> {
+pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
     for interface in &class_file.interfaces {
         let constant_pool = &class_file.constant_pool;
         match constant_pool.get(*interface) {

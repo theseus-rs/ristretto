@@ -92,6 +92,10 @@ name = "array_type_from_bytes"
 path = "fuzz_targets/classfile/attributes/array_type_from_bytes.rs"
 
 [[bin]]
+name = "attribute_from_bytes"
+path = "fuzz_targets/classfile/attributes/attribute_from_bytes.rs"
+
+[[bin]]
 name = "bootstrap_method_from_bytes"
 path = "fuzz_targets/classfile/attributes/bootstrap_method_from_bytes.rs"
 

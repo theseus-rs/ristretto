@@ -9,6 +9,7 @@ use crate::attributes::{
     LocalVariableTypeTable, MethodParameter, ModuleAccessFlags, Opens, Provides, Record, Requires,
     StackFrame, TypeAnnotation,
 };
+use crate::byte_reader::ByteReader;
 use crate::constant::Constant;
 use crate::constant_pool::ConstantPool;
 use crate::display::indent_lines;
@@ -17,9 +18,8 @@ use crate::error::Result;
 use crate::version::Version;
 use crate::{JAVA_5, JAVA_6, JAVA_7, JAVA_8, JAVA_9, JAVA_11, JAVA_16, JAVA_17, mutf8};
 use ahash::AHashMap;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::{Cursor, Read};
 
 const VERSION_45_3: Version = Version::Java1_0_2 { minor: 3 };
 const VERSION_49_0: Version = JAVA_5;
@@ -640,7 +640,7 @@ impl Attribute {
 
     /// Deserializes an Attribute from bytes.
     ///
-    /// This method reads an attribute from the provided bytes cursor, using the constant pool to
+    /// This method reads an attribute from the provided byte reader, using the constant pool to
     /// resolve attribute names.
     ///
     /// # Examples
@@ -648,7 +648,7 @@ impl Attribute {
     /// ```rust
     /// use ristretto_classfile::attributes::Attribute;
     /// use ristretto_classfile::ConstantPool;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use byteorder::{BigEndian, WriteBytesExt};
     ///
     /// // Create a constant pool with the necessary entries
@@ -663,8 +663,8 @@ impl Attribute {
     /// bytes.write_u16::<BigEndian>(source_file_index)?; // source_file_index
     ///
     /// // Deserialize the attribute
-    /// let mut cursor = Cursor::new(bytes);
-    /// let attribute = Attribute::from_bytes(&constant_pool, &mut cursor)?;
+    /// let mut reader = ByteReader::new(&bytes);
+    /// let attribute = Attribute::from_bytes(&constant_pool, &mut reader)?;
     ///
     /// // Verify the deserialized attribute
     /// if let Attribute::SourceFile { name_index: attr_name_idx, source_file_index: attr_source_idx } = attribute {
@@ -683,24 +683,24 @@ impl Attribute {
     /// - Returns other errors if deserialization of specific attribute types fails.
     #[expect(clippy::too_many_lines)]
     pub fn from_bytes(
-        constant_pool: &ConstantPool,
-        bytes: &mut Cursor<impl AsRef<[u8]> + Clone>,
+        constant_pool: &ConstantPool<'_>,
+        bytes: &mut ByteReader<'_>,
     ) -> Result<Attribute> {
-        let name_index = bytes.read_u16::<BigEndian>()?;
+        let name_index = bytes.read_u16()?;
         let Some(Constant::Utf8(attribute_name)) = constant_pool.get(name_index) else {
             return Err(InvalidAttributeNameIndex(name_index));
         };
 
-        let info_length = bytes.read_u32::<BigEndian>()?;
+        let info_length = bytes.read_u32()?;
 
-        let attribute = match attribute_name.as_str() {
+        let attribute = match &**attribute_name {
             "ConstantValue" => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
                 }
                 Attribute::ConstantValue {
                     name_index,
-                    constant_value_index: bytes.read_u16::<BigEndian>()?,
+                    constant_value_index: bytes.read_u16()?,
                 }
             }
             "Code" => {
@@ -709,16 +709,15 @@ impl Attribute {
                 // the instruction offset can be used directly and calculating the next instruction
                 // byte offset is unnecessary. This separates the physical storage of the
                 // instructions from the logical representation.
-                let max_stack = bytes.read_u16::<BigEndian>()?;
-                let max_locals = bytes.read_u16::<BigEndian>()?;
+                let max_stack = bytes.read_u16()?;
+                let max_locals = bytes.read_u16()?;
 
-                let code_length = bytes.read_u32::<BigEndian>()?;
-                let mut code = vec![0; code_length as usize];
-                bytes.read_exact(&mut code)?;
+                let code_length = bytes.read_u32()?;
+                let code_slice = bytes.read_bytes(code_length as usize)?;
                 let (byte_to_instruction_map, instructions) =
-                    offset_utils::instructions_from_bytes(&mut Cursor::new(code))?;
+                    offset_utils::instructions_from_bytes(&mut ByteReader::new(code_slice))?;
 
-                let exception_length = bytes.read_u16::<BigEndian>()?;
+                let exception_length = bytes.read_u16()?;
                 let mut exception_table = Vec::with_capacity(exception_length as usize);
                 for _ in 0..exception_length {
                     let mut exception = ExceptionTableEntry::from_bytes(bytes)?;
@@ -753,9 +752,7 @@ impl Attribute {
                 }
             }
             "StackMapTable" => {
-                let mut info = vec![0; info_length as usize];
-                bytes.clone().read_exact(&mut info)?;
-                let frames_count = bytes.read_u16::<BigEndian>()?;
+                let frames_count = bytes.read_u16()?;
                 let mut frames = Vec::with_capacity(frames_count as usize);
                 for _ in 0..frames_count {
                     let stack_frame = StackFrame::from_bytes(bytes)?;
@@ -764,10 +761,10 @@ impl Attribute {
                 Attribute::StackMapTable { name_index, frames }
             }
             "Exceptions" => {
-                let exception_indexes_count = bytes.read_u16::<BigEndian>()?;
+                let exception_indexes_count = bytes.read_u16()?;
                 let mut exception_indexes = Vec::with_capacity(exception_indexes_count as usize);
                 for _ in 0..exception_indexes_count {
-                    exception_indexes.push(bytes.read_u16::<BigEndian>()?);
+                    exception_indexes.push(bytes.read_u16()?);
                 }
                 Attribute::Exceptions {
                     name_index,
@@ -775,7 +772,7 @@ impl Attribute {
                 }
             }
             "InnerClasses" => {
-                let classes_count = bytes.read_u16::<BigEndian>()?;
+                let classes_count = bytes.read_u16()?;
                 let mut classes = Vec::with_capacity(classes_count as usize);
                 for _ in 0..classes_count {
                     let inner_class = InnerClass::from_bytes(bytes)?;
@@ -792,8 +789,8 @@ impl Attribute {
                 }
                 Attribute::EnclosingMethod {
                     name_index,
-                    class_index: bytes.read_u16::<BigEndian>()?,
-                    method_index: bytes.read_u16::<BigEndian>()?,
+                    class_index: bytes.read_u16()?,
+                    method_index: bytes.read_u16()?,
                 }
             }
             "Synthetic" => {
@@ -808,7 +805,7 @@ impl Attribute {
                 }
                 Attribute::Signature {
                     name_index,
-                    signature_index: bytes.read_u16::<BigEndian>()?,
+                    signature_index: bytes.read_u16()?,
                 }
             }
             "SourceFile" => {
@@ -817,20 +814,19 @@ impl Attribute {
                 }
                 Attribute::SourceFile {
                     name_index,
-                    source_file_index: bytes.read_u16::<BigEndian>()?,
+                    source_file_index: bytes.read_u16()?,
                 }
             }
             "SourceDebugExtension" => {
-                let mut debug_extension_bytes = vec![0; info_length as usize];
-                bytes.read_exact(&mut debug_extension_bytes)?;
-                let debug_extension = mutf8::from_bytes(debug_extension_bytes.as_slice())?;
+                let debug_extension_bytes = bytes.read_bytes(info_length as usize)?;
+                let debug_extension = mutf8::from_bytes(debug_extension_bytes)?;
                 Attribute::SourceDebugExtension {
                     name_index,
                     debug_extension,
                 }
             }
             "LineNumberTable" => {
-                let line_number_table_count = bytes.read_u16::<BigEndian>()?;
+                let line_number_table_count = bytes.read_u16()?;
                 let mut line_numbers = Vec::with_capacity(line_number_table_count as usize);
                 for _ in 0..line_number_table_count {
                     line_numbers.push(LineNumber::from_bytes(bytes)?);
@@ -841,7 +837,7 @@ impl Attribute {
                 }
             }
             "LocalVariableTable" => {
-                let variables_count = bytes.read_u16::<BigEndian>()?;
+                let variables_count = bytes.read_u16()?;
                 let mut variables = Vec::with_capacity(variables_count as usize);
                 for _ in 0..variables_count {
                     variables.push(LocalVariableTable::from_bytes(bytes)?);
@@ -852,7 +848,7 @@ impl Attribute {
                 }
             }
             "LocalVariableTypeTable" => {
-                let variable_types_count = bytes.read_u16::<BigEndian>()?;
+                let variable_types_count = bytes.read_u16()?;
                 let mut variable_types = Vec::with_capacity(variable_types_count as usize);
                 for _ in 0..variable_types_count {
                     variable_types.push(LocalVariableTypeTable::from_bytes(bytes)?);
@@ -869,7 +865,7 @@ impl Attribute {
                 Attribute::Deprecated { name_index }
             }
             "RuntimeVisibleAnnotations" => {
-                let annotations_count = bytes.read_u16::<BigEndian>()?;
+                let annotations_count = bytes.read_u16()?;
                 let mut annotations = Vec::with_capacity(annotations_count as usize);
                 for _ in 0..annotations_count {
                     let annotation = Annotation::from_bytes(bytes)?;
@@ -881,7 +877,7 @@ impl Attribute {
                 }
             }
             "RuntimeInvisibleAnnotations" => {
-                let annotations_count = bytes.read_u16::<BigEndian>()?;
+                let annotations_count = bytes.read_u16()?;
                 let mut annotations = Vec::with_capacity(annotations_count as usize);
                 for _ in 0..annotations_count {
                     let annotation = Annotation::from_bytes(bytes)?;
@@ -919,7 +915,7 @@ impl Attribute {
                 }
             }
             "RuntimeVisibleTypeAnnotations" => {
-                let type_annotations_count = bytes.read_u16::<BigEndian>()?;
+                let type_annotations_count = bytes.read_u16()?;
                 let mut type_annotations = Vec::with_capacity(type_annotations_count as usize);
                 for _ in 0..type_annotations_count {
                     let type_annotation = TypeAnnotation::from_bytes(bytes)?;
@@ -931,7 +927,7 @@ impl Attribute {
                 }
             }
             "RuntimeInvisibleTypeAnnotations" => {
-                let type_annotations_count = bytes.read_u16::<BigEndian>()?;
+                let type_annotations_count = bytes.read_u16()?;
                 let mut type_annotations = Vec::with_capacity(type_annotations_count as usize);
                 for _ in 0..type_annotations_count {
                     let type_annotation = TypeAnnotation::from_bytes(bytes)?;
@@ -950,7 +946,7 @@ impl Attribute {
                 }
             }
             "BootstrapMethods" => {
-                let bootstrap_methods_count = bytes.read_u16::<BigEndian>()?;
+                let bootstrap_methods_count = bytes.read_u16()?;
                 let mut methods = Vec::with_capacity(bootstrap_methods_count as usize);
                 for _ in 0..bootstrap_methods_count {
                     let bootstrap_method = BootstrapMethod::from_bytes(bytes)?;
@@ -974,33 +970,33 @@ impl Attribute {
                 }
             }
             "Module" => {
-                let module_name_index = bytes.read_u16::<BigEndian>()?;
+                let module_name_index = bytes.read_u16()?;
                 let flags = ModuleAccessFlags::from_bytes(bytes)?;
-                let version_index = bytes.read_u16::<BigEndian>()?;
-                let requires_count = bytes.read_u16::<BigEndian>()?;
+                let version_index = bytes.read_u16()?;
+                let requires_count = bytes.read_u16()?;
                 let mut requires = Vec::with_capacity(requires_count as usize);
                 for _ in 0..requires_count {
                     let require = Requires::from_bytes(bytes)?;
                     requires.push(require);
                 }
-                let exports_count = bytes.read_u16::<BigEndian>()?;
+                let exports_count = bytes.read_u16()?;
                 let mut exports = Vec::with_capacity(exports_count as usize);
                 for _ in 0..exports_count {
                     let export = Exports::from_bytes(bytes)?;
                     exports.push(export);
                 }
-                let opens_count = bytes.read_u16::<BigEndian>()?;
+                let opens_count = bytes.read_u16()?;
                 let mut opens = Vec::with_capacity(opens_count as usize);
                 for _ in 0..opens_count {
                     let open = Opens::from_bytes(bytes)?;
                     opens.push(open);
                 }
-                let uses_count = bytes.read_u16::<BigEndian>()?;
+                let uses_count = bytes.read_u16()?;
                 let mut uses = Vec::with_capacity(uses_count as usize);
                 for _ in 0..uses_count {
-                    uses.push(bytes.read_u16::<BigEndian>()?);
+                    uses.push(bytes.read_u16()?);
                 }
-                let provides_count = bytes.read_u16::<BigEndian>()?;
+                let provides_count = bytes.read_u16()?;
                 let mut provides = Vec::with_capacity(provides_count as usize);
                 for _ in 0..provides_count {
                     let provide = Provides::from_bytes(bytes)?;
@@ -1019,10 +1015,10 @@ impl Attribute {
                 }
             }
             "ModulePackages" => {
-                let package_indexes_count = bytes.read_u16::<BigEndian>()?;
+                let package_indexes_count = bytes.read_u16()?;
                 let mut package_indexes = Vec::with_capacity(package_indexes_count as usize);
                 for _ in 0..package_indexes_count {
-                    package_indexes.push(bytes.read_u16::<BigEndian>()?);
+                    package_indexes.push(bytes.read_u16()?);
                 }
                 Attribute::ModulePackages {
                     name_index,
@@ -1035,7 +1031,7 @@ impl Attribute {
                 }
                 Attribute::ModuleMainClass {
                     name_index,
-                    main_class_index: bytes.read_u16::<BigEndian>()?,
+                    main_class_index: bytes.read_u16()?,
                 }
             }
             "NestHost" => {
@@ -1044,14 +1040,14 @@ impl Attribute {
                 }
                 Attribute::NestHost {
                     name_index,
-                    host_class_index: bytes.read_u16::<BigEndian>()?,
+                    host_class_index: bytes.read_u16()?,
                 }
             }
             "NestMembers" => {
-                let class_indexes_count = bytes.read_u16::<BigEndian>()?;
+                let class_indexes_count = bytes.read_u16()?;
                 let mut class_indexes = Vec::with_capacity(class_indexes_count as usize);
                 for _ in 0..class_indexes_count {
-                    class_indexes.push(bytes.read_u16::<BigEndian>()?);
+                    class_indexes.push(bytes.read_u16()?);
                 }
                 Attribute::NestMembers {
                     name_index,
@@ -1059,7 +1055,7 @@ impl Attribute {
                 }
             }
             "Record" => {
-                let record_count = bytes.read_u16::<BigEndian>()?;
+                let record_count = bytes.read_u16()?;
                 let mut records = Vec::with_capacity(record_count as usize);
                 for _ in 0..record_count {
                     let record = Record::from_bytes(constant_pool, bytes)?;
@@ -1071,10 +1067,10 @@ impl Attribute {
                 }
             }
             "PermittedSubclasses" => {
-                let class_indexes_count = bytes.read_u16::<BigEndian>()?;
+                let class_indexes_count = bytes.read_u16()?;
                 let mut class_indexes = Vec::with_capacity(class_indexes_count as usize);
                 for _ in 0..class_indexes_count {
-                    class_indexes.push(bytes.read_u16::<BigEndian>()?);
+                    class_indexes.push(bytes.read_u16()?);
                 }
                 Attribute::PermittedSubclasses {
                     name_index,
@@ -1082,8 +1078,7 @@ impl Attribute {
                 }
             }
             _ => {
-                let mut info = vec![0; info_length as usize];
-                bytes.read_exact(&mut info)?;
+                let info = bytes.read_bytes(info_length as usize)?.to_vec();
                 Attribute::Unknown { name_index, info }
             }
         };
@@ -1091,11 +1086,11 @@ impl Attribute {
     }
 
     fn from_bytes_code_attributes(
-        constant_pool: &ConstantPool,
-        bytes: &mut Cursor<impl AsRef<[u8]> + Clone>,
+        constant_pool: &ConstantPool<'_>,
+        bytes: &mut ByteReader<'_>,
         byte_to_instruction_map: &AHashMap<u16, u16>,
     ) -> Result<Vec<Attribute>> {
-        let attributes_count = bytes.read_u16::<BigEndian>()?;
+        let attributes_count = bytes.read_u16()?;
         let mut attributes = Vec::with_capacity(attributes_count as usize);
         for _ in 0..attributes_count {
             let attribute = Attribute::from_bytes(constant_pool, bytes)?;
@@ -1779,12 +1774,12 @@ impl fmt::Display for Attribute {
 
                 let (instruction_to_byte_map, code_bytes) =
                     offset_utils::instructions_to_bytes(code).map_err(|_| fmt::Error)?;
-                let code_length = u64::try_from(code_bytes.len()).map_err(|_| fmt::Error)?;
-                let mut cursor = Cursor::new(code_bytes.clone());
-                while cursor.position() < code_length {
-                    let index = cursor.position();
+                let code_length = code_bytes.len();
+                let mut reader = ByteReader::new(&code_bytes);
+                while reader.position() < code_length {
+                    let index = reader.position();
                     let mut instruction =
-                        Instruction::from_bytes(&mut cursor).map_err(|_| fmt::Error)?;
+                        Instruction::from_bytes(&mut reader).map_err(|_| fmt::Error)?;
                     match instruction {
                         Instruction::Tableswitch(ref mut table_switch) => {
                             let position = i32::try_from(index).map_err(|_| fmt::Error)?;
@@ -1879,7 +1874,7 @@ mod test {
             Err(InvalidAttributeNameIndex(1)),
             Attribute::from_bytes(
                 &ConstantPool::default(),
-                &mut Cursor::new(expected_bytes.to_vec())
+                &mut ByteReader::new(&expected_bytes)
             )
         );
     }
@@ -1891,7 +1886,7 @@ mod test {
 
         assert_eq!(
             Err(InvalidAttributeLength(64)),
-            Attribute::from_bytes(&constant_pool, &mut Cursor::new(expected_bytes.to_vec()))
+            Attribute::from_bytes(&constant_pool, &mut ByteReader::new(&expected_bytes))
         );
         Ok(())
     }
@@ -1911,10 +1906,10 @@ mod test {
         let mut bytes = Vec::new();
         attribute.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut reader = ByteReader::new(expected_bytes);
         assert_eq!(
             *attribute,
-            Attribute::from_bytes(&constant_pool, &mut bytes)?
+            Attribute::from_bytes(&constant_pool, &mut reader)?
         );
         Ok(())
     }
@@ -2067,7 +2062,7 @@ mod test {
         let mut bytes = Vec::new();
         attribute.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut reader = ByteReader::new(&expected_bytes);
 
         // Adjust the frame_type offest before comparing
         if let Attribute::Code { attributes, .. } = &mut attribute
@@ -2077,7 +2072,7 @@ mod test {
         {
             *frame_type = 66; // Update to match the expected frame type
         }
-        let code_attribute = Attribute::from_bytes(&constant_pool, &mut bytes)?;
+        let code_attribute = Attribute::from_bytes(&constant_pool, &mut reader)?;
         assert_eq!(attribute, code_attribute);
         Ok(())
     }
@@ -2667,10 +2662,10 @@ mod test {
         let mut bytes = Vec::new();
         attribute.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut reader = ByteReader::new(&expected_bytes);
         assert_eq!(
             attribute,
-            Attribute::from_bytes(&constant_pool, &mut bytes)?
+            Attribute::from_bytes(&constant_pool, &mut reader)?
         );
         Ok(())
     }

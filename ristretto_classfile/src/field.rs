@@ -1,12 +1,12 @@
 use crate::FieldType;
 use crate::attributes::Attribute;
+use crate::byte_reader::ByteReader;
 use crate::constant_pool::ConstantPool;
 use crate::display::indent_lines;
 use crate::error::Result;
 use crate::field_access_flags::FieldAccessFlags;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Represents a field in a Java class file.
 ///
@@ -49,7 +49,7 @@ pub struct Field {
 impl Field {
     /// Deserialize a `Field` from bytes in a Java class file.
     ///
-    /// This function reads a `field_info` structure from the provided byte cursor and constructs a
+    /// This function reads a `field_info` structure from the provided byte reader and constructs a
     /// `Field` struct. It reads access flags, name and descriptor indices, parses the field type,
     /// and reads all attributes associated with the field.
     ///
@@ -61,7 +61,7 @@ impl Field {
     ///
     /// ```rust
     /// use ristretto_classfile::{Field, ConstantPool};
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // Prepare a constant pool with necessary entries
     /// let mut constant_pool = ConstantPool::default();
@@ -78,38 +78,43 @@ impl Field {
     /// ];
     ///
     /// // Parse the field from bytes
-    /// let mut cursor = Cursor::new(field_bytes);
-    /// let field = Field::from_bytes(&constant_pool, &mut cursor)?;
+    /// let mut reader = ByteReader::new(&field_bytes);
+    /// let field = Field::from_bytes(&constant_pool, &mut reader)?;
     ///
     /// assert_eq!(field.name_index, name_index);
     /// assert_eq!(field.descriptor_index, descriptor_index);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn from_bytes(
-        constant_pool: &ConstantPool,
-        bytes: &mut Cursor<impl AsRef<[u8]> + Clone>,
+        constant_pool: &ConstantPool<'_>,
+        bytes: &mut ByteReader<'_>,
     ) -> Result<Field> {
-        let access_flags = FieldAccessFlags::from_bytes(bytes)?;
-        let name_index = bytes.read_u16::<BigEndian>()?;
-        let descriptor_index = bytes.read_u16::<BigEndian>()?;
-        let field_type_descriptor = constant_pool.try_get_utf8(descriptor_index)?;
-        let field_type = FieldType::parse(field_type_descriptor)?;
+        let access_flags = FieldAccessFlags::from_bits_truncate(bytes.read_u16()?);
+        let name_index = bytes.read_u16()?;
+        let descriptor_index = bytes.read_u16()?;
+        let field_type = if let Some(crate::constant::Constant::Utf8(desc)) =
+            constant_pool.get_unchecked(descriptor_index)
+        {
+            FieldType::parse(desc)?
+        } else {
+            let desc = constant_pool.try_get_utf8(descriptor_index)?;
+            FieldType::parse(desc)?
+        };
 
-        let attribute_count = bytes.read_u16::<BigEndian>()?;
-        let mut attributes = Vec::with_capacity(attribute_count as usize);
+        let attribute_count = bytes.read_u16()? as usize;
+        let mut attributes = Vec::with_capacity(attribute_count);
         for _ in 0..attribute_count {
             let attribute = Attribute::from_bytes(constant_pool, bytes)?;
             attributes.push(attribute);
         }
 
-        let field = Field {
+        Ok(Field {
             access_flags,
             name_index,
             descriptor_index,
             field_type,
             attributes,
-        };
-        Ok(field)
+        })
     }
 
     /// Serialize the `Field` to bytes for inclusion in a class file.
@@ -171,7 +176,7 @@ impl fmt::Display for Field {
     ///
     /// ```rust
     /// use ristretto_classfile::{BaseType, ConstantPool, Field, FieldAccessFlags, FieldType};
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // Set up a simple field with one attribute
     /// let mut constant_pool = ConstantPool::default();
@@ -220,7 +225,8 @@ mod test {
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8("ConstantValue")?;
         constant_pool.add_utf8("I")?;
-        let mut attribute_bytes = Cursor::new([0, 1, 0, 0, 0, 2, 4, 2].to_vec());
+        let attribute_data = [0, 1, 0, 0, 0, 2, 4, 2].to_vec();
+        let mut attribute_bytes = ByteReader::new(&attribute_data);
         let attribute = Attribute::from_bytes(&constant_pool, &mut attribute_bytes)?;
         let field = Field {
             access_flags: FieldAccessFlags::PUBLIC,
@@ -247,7 +253,8 @@ mod test {
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8("ConstantValue")?;
         constant_pool.add_utf8("I")?;
-        let mut attribute_bytes = Cursor::new([0, 1, 0, 0, 0, 2, 4, 2].to_vec());
+        let attribute_data = [0, 1, 0, 0, 0, 2, 4, 2].to_vec();
+        let mut attribute_bytes = ByteReader::new(&attribute_data);
         let attribute = Attribute::from_bytes(&constant_pool, &mut attribute_bytes)?;
         let field = Field {
             access_flags: FieldAccessFlags::PUBLIC,
@@ -260,7 +267,7 @@ mod test {
         let mut bytes = Vec::new();
         field.to_bytes(&mut bytes)?;
 
-        let mut bytes = Cursor::new(bytes);
+        let mut bytes = ByteReader::new(&bytes);
         let result = Field::from_bytes(&constant_pool, &mut bytes)?;
         assert_eq!(result, field);
         Ok(())

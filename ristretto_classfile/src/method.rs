@@ -1,11 +1,11 @@
 use crate::attributes::Attribute;
+use crate::byte_reader::ByteReader;
 use crate::constant_pool::ConstantPool;
 use crate::display::indent_lines;
 use crate::error::Result;
 use crate::method_access_flags::MethodAccessFlags;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Method.
 ///
@@ -18,7 +18,7 @@ use std::io::Cursor;
 ///
 /// ```rust
 /// use ristretto_classfile::{Method, MethodAccessFlags, attributes::Attribute};
-/// use std::io::Cursor;
+/// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// let mut constant_pool = ristretto_classfile::ConstantPool::default();
 /// let class_index = constant_pool.add_class("MyClass")?;
@@ -38,8 +38,8 @@ use std::io::Cursor;
 /// method.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize the method from bytes
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_method = Method::from_bytes(&constant_pool, &mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_method = Method::from_bytes(&constant_pool, &mut reader)?;
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
 ///
@@ -57,7 +57,7 @@ pub struct Method {
 impl Method {
     /// Deserialize the `Method` from bytes.
     ///
-    /// Reads a `Method` structure from the provided bytes cursor according to the Java Virtual
+    /// Reads a `Method` structure from the provided byte reader according to the Java Virtual
     /// Machine Specification.
     ///
     /// # Errors
@@ -68,7 +68,7 @@ impl Method {
     ///
     /// ```rust
     /// use ristretto_classfile::{ConstantPool, Method};
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// // Create a constant pool for reference resolution
     /// let constant_pool = ConstantPool::default();
@@ -81,35 +81,34 @@ impl Method {
     ///     0x00, 0x00,             // attributes_count: 0
     /// ];
     ///
-    /// let mut cursor = Cursor::new(method_bytes);
-    /// let method = Method::from_bytes(&constant_pool, &mut cursor)?;
+    /// let mut reader = ByteReader::new(&method_bytes);
+    /// let method = Method::from_bytes(&constant_pool, &mut reader)?;
     ///
     /// assert_eq!(method.name_index, 5);
     /// assert_eq!(method.descriptor_index, 6);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn from_bytes(
-        constant_pool: &ConstantPool,
-        bytes: &mut Cursor<impl AsRef<[u8]> + Clone>,
+        constant_pool: &ConstantPool<'_>,
+        bytes: &mut ByteReader<'_>,
     ) -> Result<Method> {
-        let access_flags = MethodAccessFlags::from_bytes(bytes)?;
-        let name_index = bytes.read_u16::<BigEndian>()?;
-        let descriptor_index = bytes.read_u16::<BigEndian>()?;
+        let access_flags = MethodAccessFlags::from_bits_truncate(bytes.read_u16()?);
+        let name_index = bytes.read_u16()?;
+        let descriptor_index = bytes.read_u16()?;
 
-        let attribute_count = bytes.read_u16::<BigEndian>()?;
-        let mut attributes = Vec::with_capacity(attribute_count as usize);
+        let attribute_count = bytes.read_u16()? as usize;
+        let mut attributes = Vec::with_capacity(attribute_count);
         for _ in 0..attribute_count {
             let attribute = Attribute::from_bytes(constant_pool, bytes)?;
             attributes.push(attribute);
         }
 
-        let method = Method {
+        Ok(Method {
             access_flags,
             name_index,
             descriptor_index,
             attributes,
-        };
-        Ok(method)
+        })
     }
 
     /// Serialize the `Method` to bytes.
@@ -237,7 +236,8 @@ mod test {
     fn test_serialization() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
         constant_pool.add_utf8("ConstantValue")?;
-        let mut attribute_bytes = Cursor::new([0, 1, 0, 0, 0, 2, 4, 2].to_vec());
+        let attribute_data = [0, 1, 0, 0, 0, 2, 4, 2].to_vec();
+        let mut attribute_bytes = ByteReader::new(&attribute_data);
         let attribute = Attribute::from_bytes(&constant_pool, &mut attribute_bytes)?;
         let method = Method {
             access_flags: MethodAccessFlags::PUBLIC,
@@ -249,7 +249,7 @@ mod test {
         let mut bytes = Vec::new();
         method.to_bytes(&mut bytes)?;
 
-        let mut bytes = Cursor::new(bytes);
+        let mut bytes = ByteReader::new(&bytes);
         let result = Method::from_bytes(&constant_pool, &mut bytes)?;
         assert_eq!(result, method);
         Ok(())

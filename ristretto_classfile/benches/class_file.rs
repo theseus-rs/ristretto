@@ -1,6 +1,5 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use ristretto_classfile::{ClassFile, Result};
-use std::io::Cursor;
 
 const CLASS_BYTES: &[u8] = include_bytes!("../../classes/Simple.class");
 
@@ -9,7 +8,7 @@ fn benchmarks(criterion: &mut Criterion) {
 }
 
 fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
-    let class_file = ClassFile::from_bytes(&mut Cursor::new(CLASS_BYTES.to_vec()))?;
+    let class_file = ClassFile::from_slice(CLASS_BYTES)?;
     criterion.bench_function("from_bytes", |bencher| {
         bencher.iter(|| {
             from_bytes().ok();
@@ -35,8 +34,7 @@ fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
 }
 
 fn from_bytes() -> Result<()> {
-    let mut original_bytes = Cursor::new(CLASS_BYTES.to_vec());
-    let _class_file = ClassFile::from_bytes(&mut original_bytes)?;
+    let _class_file = ClassFile::from_slice(CLASS_BYTES)?;
     Ok(())
 }
 

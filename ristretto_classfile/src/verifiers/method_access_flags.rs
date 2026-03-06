@@ -9,7 +9,7 @@ use crate::verifiers::error::VerifyError::InvalidMethodAccessFlags;
 ///
 /// # Errors
 /// Returns `InvalidMethodAccessFlags` if the access flags are invalid.
-pub(crate) fn verify(class_file: &ClassFile, method: &Method) -> Result<()> {
+pub(crate) fn verify(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
     let access_flags = method.access_flags;
     let public_set = access_flags.contains(MethodAccessFlags::PUBLIC);
     let protected_set = access_flags.contains(MethodAccessFlags::PROTECTED);

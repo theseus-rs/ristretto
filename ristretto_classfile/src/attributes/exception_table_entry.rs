@@ -1,7 +1,7 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 use std::ops::Range;
 
 /// Represents an entry in the exception table of a `Code` attribute.
@@ -22,8 +22,8 @@ use std::ops::Range;
 /// # Examples
 ///
 /// ```rust
+/// use ristretto_classfile::byte_reader::ByteReader;
 /// use ristretto_classfile::attributes::ExceptionTableEntry;
-/// use std::io::Cursor;
 ///
 /// // Create an ExceptionTableEntry
 /// // This handler covers instructions from index 5 up to (but not including) index 10.
@@ -40,8 +40,8 @@ use std::ops::Range;
 /// entry.to_bytes(&mut bytes)?;
 ///
 /// // Deserialize from bytes
-/// let mut cursor = Cursor::new(bytes);
-/// let deserialized_entry = ExceptionTableEntry::from_bytes(&mut cursor)?;
+/// let mut reader = ByteReader::new(&bytes);
+/// let deserialized_entry = ExceptionTableEntry::from_bytes(&mut reader)?;
 ///
 /// assert_eq!(entry, deserialized_entry);
 ///
@@ -73,15 +73,15 @@ impl ExceptionTableEntry {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::ExceptionTableEntry;
-    /// use std::io::Cursor;
     ///
     /// // Byte data for an exception table entry:
     /// // start_pc = 1, end_pc = 5, handler_pc = 10, catch_type = 2
     /// let data = vec![0, 1, 0, 5, 0, 10, 0, 2];
-    /// let mut cursor = Cursor::new(data);
+    /// let mut reader = ByteReader::new(&data);
     ///
-    /// let entry = ExceptionTableEntry::from_bytes(&mut cursor)?;
+    /// let entry = ExceptionTableEntry::from_bytes(&mut reader)?;
     ///
     /// assert_eq!(entry.range_pc.start, 1);
     /// assert_eq!(entry.range_pc.end, 5);
@@ -89,12 +89,12 @@ impl ExceptionTableEntry {
     /// assert_eq!(entry.catch_type, 2);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ExceptionTableEntry> {
-        let start_pc = bytes.read_u16::<BigEndian>()?;
-        let end_pc = bytes.read_u16::<BigEndian>()?;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<ExceptionTableEntry> {
+        let start_pc = bytes.read_u16()?;
+        let end_pc = bytes.read_u16()?;
         let range_pc = start_pc..end_pc;
-        let handler_pc = bytes.read_u16::<BigEndian>()?;
-        let catch_type = bytes.read_u16::<BigEndian>()?;
+        let handler_pc = bytes.read_u16()?;
+        let catch_type = bytes.read_u16()?;
         let exception_table_entry = ExceptionTableEntry {
             range_pc,
             handler_pc,
@@ -200,7 +200,7 @@ mod test {
         exception_table_entry.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(
             exception_table_entry,
             ExceptionTableEntry::from_bytes(&mut bytes)?

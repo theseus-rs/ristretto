@@ -15,7 +15,7 @@ use std::io::Cursor;
 /// # Errors
 /// Returns `VerifyError` if the method's bytecode is invalid.
 pub fn verify<C: VerificationContext>(
-    class_file: &ClassFile,
+    class_file: &ClassFile<'_>,
     method: &Method,
     context: &C,
 ) -> Result<()> {
@@ -44,7 +44,7 @@ pub fn verify<C: VerificationContext>(
 
 /// Bytecode verifier for a single method.
 struct BytecodeVerifier<'a, C: VerificationContext> {
-    class_file: &'a ClassFile,
+    class_file: &'a ClassFile<'a>,
     method: &'a Method,
     context: &'a C,
     code: &'a Vec<Instruction>,
@@ -63,7 +63,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
     /// # Errors
     ///
     /// Returns `VerifyError` if the method's code cannot be processed.
-    fn new(class_file: &'a ClassFile, method: &'a Method, context: &'a C) -> Result<Self> {
+    fn new(class_file: &'a ClassFile<'a>, method: &'a Method, context: &'a C) -> Result<Self> {
         let (code, max_stack, max_locals, code_attributes, exception_table) = method
             .attributes
             .iter()
@@ -1264,26 +1264,22 @@ mod tests {
         }
     }
 
-    fn create_mock_class_file() -> ClassFile {
+    fn create_mock_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
         // Index 1: Utf8 "TestClass"
         constant_pool
-            .add(Constant::Utf8("TestClass".to_string()))
+            .add(Constant::Utf8("TestClass".into()))
             .unwrap();
         // Index 2: Class "TestClass"
         let this_class_index = constant_pool.add(Constant::Class(1)).unwrap();
         // Index 3: Utf8 "testMethod"
         constant_pool
-            .add(Constant::Utf8("testMethod".to_string()))
+            .add(Constant::Utf8("testMethod".into()))
             .unwrap();
         // Index 4: Utf8 "()V"
-        constant_pool
-            .add(Constant::Utf8("()V".to_string()))
-            .unwrap();
+        constant_pool.add(Constant::Utf8("()V".into())).unwrap();
         // Index 5: Utf8 "Code"
-        constant_pool
-            .add(Constant::Utf8("Code".to_string()))
-            .unwrap();
+        constant_pool.add(Constant::Utf8("Code".into())).unwrap();
 
         ClassFile {
             version: Version::Java8 { minor: 0 },
@@ -1694,7 +1690,7 @@ mod tests {
         let mut class_file = create_mock_class_file();
         class_file
             .constant_pool
-            .add(Constant::Utf8("(IDJ)V".to_string()))
+            .add(Constant::Utf8("(IDJ)V".into()))
             .unwrap();
 
         let code = vec![Instruction::Return];

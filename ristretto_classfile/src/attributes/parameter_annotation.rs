@@ -1,8 +1,8 @@
 use crate::attributes::Annotation;
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt};
 use std::fmt;
-use std::io::Cursor;
 
 /// Implementation of a parameter annotation.
 ///
@@ -68,11 +68,11 @@ impl ParameterAnnotation {
     /// # Examples
     ///
     /// ```rust
+    /// use ristretto_classfile::byte_reader::ByteReader;
     /// use ristretto_classfile::attributes::{Annotation, AnnotationElement, AnnotationValuePair, ParameterAnnotation};
-    /// use std::io::Cursor;
     ///
     /// // annotations: [Annotation { type_index: 3, elements: [AnnotationValuePair { name_index: 1, value: Byte { const_value_index: 42 } }] }]
-    /// let mut bytes = Cursor::new(vec![0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x42, 0x00, 0x2A]);
+    /// let mut bytes = ByteReader::new(&[0x00, 0x01, 0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x42, 0x00, 0x2A]);
     /// let parameter_annotation = ParameterAnnotation::from_bytes(&mut bytes)?;
     /// assert_eq!(parameter_annotation.annotations.len(), 1);
     /// let annotation = &parameter_annotation.annotations[0];
@@ -83,8 +83,8 @@ impl ParameterAnnotation {
     /// assert_eq!(element.value, AnnotationElement::Byte { const_value_index: 42 });
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<ParameterAnnotation> {
-        let annotations_count = bytes.read_u16::<BigEndian>()? as usize;
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<ParameterAnnotation> {
+        let annotations_count = bytes.read_u16()? as usize;
         let mut annotations = Vec::with_capacity(annotations_count);
         for _ in 0..annotations_count {
             let annotation = Annotation::from_bytes(bytes)?;
@@ -213,7 +213,7 @@ mod test {
         let mut bytes = Vec::new();
         parameter_annotation.to_bytes(&mut bytes)?;
         assert_eq!(expected_bytes, &bytes[..]);
-        let mut bytes = Cursor::new(expected_bytes.to_vec());
+        let mut bytes = ByteReader::new(&expected_bytes);
         assert_eq!(
             parameter_annotation,
             ParameterAnnotation::from_bytes(&mut bytes)?

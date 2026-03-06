@@ -1,7 +1,7 @@
+use crate::byte_reader::ByteReader;
 use crate::error::Result;
-use byteorder::{ReadBytesExt, WriteBytesExt};
+use byteorder::WriteBytesExt;
 use std::fmt;
-use std::io::Cursor;
 
 /// Implementation of `TargetPath`.
 ///
@@ -48,17 +48,17 @@ impl TargetPath {
     ///
     /// ```rust
     /// use ristretto_classfile::attributes::TargetPath;
-    /// use std::io::Cursor;
+    /// use ristretto_classfile::byte_reader::ByteReader;
     ///
     /// let bytes_data = vec![0x01, 0x00];
-    /// let mut cursor = Cursor::new(bytes_data);
-    /// let target_path = TargetPath::from_bytes(&mut cursor)?;
+    /// let mut reader = ByteReader::new(&bytes_data);
+    /// let target_path = TargetPath::from_bytes(&mut reader)?;
     ///
     /// assert_eq!(target_path.type_path_kind, 1);
     /// assert_eq!(target_path.type_argument_index, 0);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn from_bytes(bytes: &mut Cursor<impl AsRef<[u8]>>) -> Result<TargetPath> {
+    pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<TargetPath> {
         let type_path_kind = bytes.read_u8()?;
         let type_argument_index = bytes.read_u8()?;
 
@@ -147,7 +147,7 @@ mod test {
         target_path.clone().to_bytes(&mut bytes)?;
         assert_eq!(expected_value, &bytes[..]);
 
-        let mut bytes = Cursor::new(expected_value.to_vec());
+        let mut bytes = ByteReader::new(&expected_value);
         assert_eq!(target_path, TargetPath::from_bytes(&mut bytes)?);
         Ok(())
     }

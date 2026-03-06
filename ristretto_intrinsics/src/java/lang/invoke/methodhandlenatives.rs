@@ -161,8 +161,8 @@ pub async fn copy_out_bootstrap_arguments<T: ristretto_types::Thread + 'static>(
 /// representations for use with bootstrap method arguments.
 async fn resolve_constant_to_value<T: Thread + 'static>(
     thread: &T,
-    constant_pool: &ConstantPool,
-    constant: &Constant,
+    constant_pool: &ConstantPool<'_>,
+    constant: &Constant<'_>,
 ) -> Result<Value> {
     match constant {
         Constant::Integer(value) => Ok(Value::from(*value)),
@@ -252,7 +252,7 @@ async fn resolve_method_type<T: Thread + 'static>(thread: &T, descriptor: &str) 
 #[expect(clippy::too_many_lines)]
 async fn resolve_method_handle<T: Thread + 'static>(
     thread: &T,
-    constant_pool: &ConstantPool,
+    constant_pool: &ConstantPool<'_>,
     reference_kind: &ReferenceKind,
     reference_index: u16,
 ) -> Result<Value> {
