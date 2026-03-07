@@ -48,10 +48,11 @@ pub(crate) async fn anewarray(
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let array_class_name = if class_name.starts_with('[') {
-        format!("[{class_name}")
+    let class_name_str = class_name.to_str_lossy();
+    let array_class_name = if class_name_str.starts_with('[') {
+        format!("[{class_name_str}")
     } else {
-        format!("[L{class_name};")
+        format!("[L{class_name_str};")
     };
 
     let class = thread.class(array_class_name.as_str()).await?;
@@ -105,7 +106,7 @@ pub(crate) async fn multianewarray(
     let thread = frame.thread()?;
     let constant_pool = frame.class().constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = thread.class(class_name).await?;
+    let class = thread.class_java_str(class_name).await?;
 
     // Pop dimension sizes from stack (in reverse order)
     let mut dimension_sizes = Vec::new();

@@ -1,6 +1,7 @@
 use crate::Error::{InvalidFieldTypeCode, InvalidFieldTypeDescriptor, InvalidMethodDescriptor};
 use crate::base_type::BaseType;
 use crate::error::Result;
+use crate::java_string::{JavaStr, JavaString};
 use std::fmt;
 
 /// Represents a Java field type descriptor as defined in the JVM specification.
@@ -18,7 +19,7 @@ use std::fmt;
 /// Creating different types of field descriptors:
 ///
 /// ```rust
-/// use ristretto_classfile::{BaseType, FieldType};
+/// use ristretto_classfile::{BaseType, FieldType, JavaString};
 ///
 /// // Create a primitive type (int)
 /// let int_type = FieldType::Base(BaseType::Int);
@@ -26,7 +27,7 @@ use std::fmt;
 /// assert_eq!(int_type.to_string(), "int");
 ///
 /// // Create an object type (String)
-/// let string_type = FieldType::Object("java/lang/String".to_string());
+/// let string_type = FieldType::Object(JavaString::from("java/lang/String"));
 /// assert_eq!(string_type.descriptor(), "Ljava/lang/String;");
 /// assert_eq!(string_type.to_string(), "java/lang/String");
 ///
@@ -38,7 +39,7 @@ use std::fmt;
 /// // Create a multidimensional array (String[][])
 /// let string_2d_array = FieldType::Array(Box::new(
 ///     FieldType::Array(Box::new(
-///         FieldType::Object("java/lang/String".to_string())
+///         FieldType::Object(JavaString::from("java/lang/String"))
 ///     ))
 /// ));
 /// assert_eq!(string_2d_array.descriptor(), "[[Ljava/lang/String;");
@@ -48,11 +49,11 @@ use std::fmt;
 /// Parsing a field type from a descriptor:
 ///
 /// ```rust
-/// use ristretto_classfile::{BaseType, FieldType};
+/// use ristretto_classfile::{BaseType, FieldType, JavaString};
 ///
 /// // Parse a field descriptor
 /// let field_type = FieldType::parse(&"Ljava/lang/Object;".to_string())?;
-/// assert_eq!(field_type, FieldType::Object("java/lang/Object".to_string()));
+/// assert_eq!(field_type, FieldType::Object(JavaString::from("java/lang/Object")));
 ///
 /// // Parse an array descriptor
 /// let array_type = FieldType::parse(&"[[Z".to_string())?;
@@ -68,20 +69,20 @@ use std::fmt;
 /// Parsing a method descriptor:
 ///
 /// ```rust
-/// use ristretto_classfile::{BaseType, FieldType};
+/// use ristretto_classfile::{BaseType, FieldType, JavaStr, JavaString};
 ///
 /// // Parse a method descriptor: String toString()
-/// let (params, ret) = FieldType::parse_method_descriptor("()Ljava/lang/String;")?;
+/// let descriptor = JavaStr::try_from_str("()Ljava/lang/String;")?;
+/// let (params, ret) = FieldType::parse_method_descriptor(descriptor)?;
 /// assert!(params.is_empty());
-/// assert_eq!(ret, Some(FieldType::Object("java/lang/String".to_string())));
+/// assert_eq!(ret, Some(FieldType::Object(JavaString::from("java/lang/String"))));
 ///
 /// // Parse a more complex method: static int compare(Object o1, Object o2)
-/// let (params, ret) = FieldType::parse_method_descriptor(
-///     "(Ljava/lang/Object;Ljava/lang/Object;)I"
-/// )?;
+/// let descriptor = JavaStr::try_from_str("(Ljava/lang/Object;Ljava/lang/Object;)I")?;
+/// let (params, ret) = FieldType::parse_method_descriptor(descriptor)?;
 /// assert_eq!(params.len(), 2);
-/// assert_eq!(params[0], FieldType::Object("java/lang/Object".to_string()));
-/// assert_eq!(params[1], FieldType::Object("java/lang/Object".to_string()));
+/// assert_eq!(params[0], FieldType::Object(JavaString::from("java/lang/Object")));
+/// assert_eq!(params[1], FieldType::Object(JavaString::from("java/lang/Object")));
 /// assert_eq!(ret, Some(FieldType::Base(BaseType::Int)));
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
@@ -92,7 +93,7 @@ use std::fmt;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FieldType {
     Base(BaseType),
-    Object(String),
+    Object(JavaString),
     Array(Box<FieldType>),
 }
 
@@ -107,12 +108,12 @@ impl FieldType {
     /// # Examples
     ///
     /// ```rust
-    /// use ristretto_classfile::{BaseType, FieldType};
+    /// use ristretto_classfile::{BaseType, FieldType, JavaString};
     ///
     /// let int_type = FieldType::Base(BaseType::Int);
     /// assert_eq!(int_type.code(), 'I');
     ///
-    /// let object_type = FieldType::Object("java/lang/String".to_string());
+    /// let object_type = FieldType::Object(JavaString::from("java/lang/String"));
     /// assert_eq!(object_type.code(), 'L');
     ///
     /// let array_type = FieldType::Array(Box::new(FieldType::Base(BaseType::Int)));
@@ -132,25 +133,25 @@ impl FieldType {
     /// # Examples
     ///
     /// ```rust
-    /// use ristretto_classfile::{BaseType, FieldType};
+    /// use ristretto_classfile::{BaseType, FieldType, JavaString};
     ///
     /// let int_type = FieldType::Base(BaseType::Int);
     /// assert_eq!(int_type.class_name(), "int");
     ///
-    /// let object_type = FieldType::Object("java/lang/String".to_string());
+    /// let object_type = FieldType::Object(JavaString::from("java/lang/String"));
     /// assert_eq!(object_type.class_name(), "java/lang/String");
     ///
     /// let array_type = FieldType::Array(Box::new(FieldType::Base(BaseType::Int)));
     /// assert_eq!(array_type.class_name(), "[I");
     ///
-    /// let object_array_type = FieldType::Array(Box::new(FieldType::Object("java/lang/String".to_string())));
+    /// let object_array_type = FieldType::Array(Box::new(FieldType::Object(JavaString::from("java/lang/String"))));
     /// assert_eq!(object_array_type.class_name(), "[Ljava/lang/String;");
     /// ```
     #[must_use]
     pub fn class_name(&self) -> String {
         match self {
             FieldType::Base(base_type) => base_type.class_name().to_string(),
-            FieldType::Object(class_name) => class_name.clone(),
+            FieldType::Object(class_name) => class_name.to_rust_string(),
             FieldType::Array(component_type) => match &**component_type {
                 FieldType::Base(base_type) => format!("[{}", base_type.code()),
                 FieldType::Object(class_name) => format!("[L{class_name};"),
@@ -169,12 +170,12 @@ impl FieldType {
     /// # Examples
     ///
     /// ```rust
-    /// use ristretto_classfile::{BaseType, FieldType};
+    /// use ristretto_classfile::{BaseType, FieldType, JavaString};
     ///
     /// let int_type = FieldType::Base(BaseType::Int);
     /// assert_eq!(int_type.descriptor(), "I");
     ///
-    /// let object_type = FieldType::Object("java/lang/String".to_string());
+    /// let object_type = FieldType::Object(JavaString::from("java/lang/String"));
     /// assert_eq!(object_type.descriptor(), "Ljava/lang/String;");
     ///
     /// let array_type = FieldType::Array(Box::new(FieldType::Base(BaseType::Int)));
@@ -206,7 +207,7 @@ impl FieldType {
     /// # Examples
     ///
     /// ```rust
-    /// use ristretto_classfile::{BaseType, FieldType};
+    /// use ristretto_classfile::{BaseType, FieldType, JavaString};
     ///
     /// // Parse a base type
     /// let int_type = FieldType::parse(&"I".to_string())?;
@@ -214,7 +215,7 @@ impl FieldType {
     ///
     /// // Parse an object type
     /// let object_type = FieldType::parse(&"Ljava/lang/String;".to_string())?;
-    /// assert_eq!(object_type, FieldType::Object("java/lang/String".to_string()));
+    /// assert_eq!(object_type, FieldType::Object(JavaString::from("java/lang/String")));
     ///
     /// // Parse an array type
     /// let array_type = FieldType::parse(&"[I".to_string())?;
@@ -225,38 +226,56 @@ impl FieldType {
     /// assert_eq!(
     ///     multi_array,
     ///     FieldType::Array(Box::new(
-    ///         FieldType::Array(Box::new(FieldType::Object("java/lang/Object".to_string())))
+    ///         FieldType::Array(Box::new(FieldType::Object(JavaString::from("java/lang/Object"))))
     ///     ))
     /// );
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     pub fn parse(descriptor: &str) -> Result<FieldType> {
-        let bytes = descriptor.as_bytes();
+        Self::parse_bytes(descriptor.as_bytes(), descriptor)
+    }
+
+    /// Parse a field type descriptor from a `&JavaStr` (MUTF-8 bytes).
+    ///
+    /// This avoids the overhead of converting MUTF-8 to UTF-8 before parsing,
+    /// since field type descriptors only use ASCII characters for type codes
+    /// and delimiters (`L`, `[`, `;`, `B`, `C`, etc.).
+    ///
+    /// # Errors
+    /// Returns an error if the descriptor is invalid.
+    pub fn parse_java_str(descriptor: &JavaStr) -> Result<FieldType> {
+        Self::parse_bytes(descriptor.as_bytes(), descriptor)
+    }
+
+    /// Internal byte-level field type parser shared by `parse` and `parse_java_str`.
+    fn parse_bytes(bytes: &[u8], display_desc: impl fmt::Display) -> Result<FieldType> {
         let code = bytes.first().copied().unwrap_or_default();
-        let field_type = match code {
+        match code {
             b'L' => {
                 let len = bytes.len();
                 if len >= 3 && bytes[len - 1] == b';' {
-                    // SAFETY: descriptor is valid UTF-8 and we're slicing at ASCII byte boundaries
-                    let class_name = &descriptor[1..len - 1];
-                    FieldType::Object(class_name.to_owned())
+                    let class_bytes = &bytes[1..len - 1];
+                    // Store as JavaString (MUTF-8) to avoid lossy UTF-8 conversion
+                    let class_name = match JavaStr::from_mutf8(class_bytes) {
+                        Ok(java_str) => java_str.to_java_string(),
+                        Err(_) => JavaString::from(String::from_utf8_lossy(class_bytes).as_ref()),
+                    };
+                    Ok(FieldType::Object(class_name))
                 } else {
-                    return Err(InvalidFieldTypeDescriptor(descriptor.to_string()));
+                    Err(InvalidFieldTypeDescriptor(display_desc.to_string()))
                 }
             }
             b'[' => {
-                let component_type = Self::parse(&descriptor[1..])?;
-                FieldType::Array(component_type.into())
+                let component_type = Self::parse_bytes(&bytes[1..], display_desc)?;
+                Ok(FieldType::Array(component_type.into()))
             }
             _ => {
                 let Ok(base_type) = BaseType::parse(code as char) else {
                     return Err(InvalidFieldTypeCode(code as char));
                 };
-                FieldType::Base(base_type)
+                Ok(FieldType::Base(base_type))
             }
-        };
-
-        Ok(field_type)
+        }
     }
 
     /// Parse the method descriptor. The descriptor is a string representing the method signature.
@@ -281,102 +300,118 @@ impl FieldType {
     /// # Examples
     ///
     /// ```rust
-    /// use ristretto_classfile::{BaseType, FieldType};
+    /// use ristretto_classfile::{BaseType, FieldType, JavaStr, JavaString};
     ///
     /// // Parse a method with no parameters that returns void: void methodName()
-    /// let (params, ret) = FieldType::parse_method_descriptor("()V")?;
+    /// let descriptor = JavaStr::try_from_str("()V")?;
+    /// let (params, ret) = FieldType::parse_method_descriptor(descriptor)?;
     /// assert!(params.is_empty());
     /// assert_eq!(ret, None);
     ///
     /// // Parse a method with an int parameter that returns boolean: boolean methodName(int)
-    /// let (params, ret) = FieldType::parse_method_descriptor("(I)Z")?;
+    /// let descriptor = JavaStr::try_from_str("(I)Z")?;
+    /// let (params, ret) = FieldType::parse_method_descriptor(descriptor)?;
     /// assert_eq!(params.len(), 1);
     /// assert_eq!(params[0], FieldType::Base(BaseType::Int));
     /// assert_eq!(ret, Some(FieldType::Base(BaseType::Boolean)));
     ///
     /// // Parse a method with String and int parameters that returns String: String methodName(String, int)
-    /// let (params, ret) = FieldType::parse_method_descriptor("(Ljava/lang/String;I)Ljava/lang/String;")?;
+    /// let descriptor = JavaStr::try_from_str("(Ljava/lang/String;I)Ljava/lang/String;")?;
+    /// let (params, ret) = FieldType::parse_method_descriptor(descriptor)?;
     /// assert_eq!(params.len(), 2);
-    /// assert_eq!(params[0], FieldType::Object("java/lang/String".to_string()));
+    /// assert_eq!(params[0], FieldType::Object(JavaString::from("java/lang/String")));
     /// assert_eq!(params[1], FieldType::Base(BaseType::Int));
-    /// assert_eq!(ret, Some(FieldType::Object("java/lang/String".to_string())));
+    /// assert_eq!(ret, Some(FieldType::Object(JavaString::from("java/lang/String"))));
     ///
     /// // Parse a method with array parameter and return type: int[] methodName(boolean[])
-    /// let (params, ret) = FieldType::parse_method_descriptor("([Z)[I")?;
+    /// let descriptor = JavaStr::try_from_str("([Z)[I")?;
+    /// let (params, ret) = FieldType::parse_method_descriptor(descriptor)?;
     /// assert_eq!(params.len(), 1);
     /// assert_eq!(params[0], FieldType::Array(Box::new(FieldType::Base(BaseType::Boolean))));
     /// assert_eq!(ret, Some(FieldType::Array(Box::new(FieldType::Base(BaseType::Int)))));
-    /// # Ok::<(), ristretto_classfile::Error>(())
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     ///
     /// # Errors
     /// - Returns `InvalidMethodDescriptor` if the descriptor format is invalid
     /// - Returns other errors if field types cannot be parsed
     pub fn parse_method_descriptor(
-        descriptor: &str,
+        descriptor: &JavaStr,
     ) -> Result<(Vec<FieldType>, Option<FieldType>)> {
-        let mut chars = descriptor.chars().peekable();
+        Self::parse_method_descriptor_bytes(descriptor.as_bytes(), descriptor)
+    }
+
+    /// Internal byte-level method descriptor parser.
+    fn parse_method_descriptor_bytes(
+        bytes: &[u8],
+        display_desc: impl fmt::Display + Copy,
+    ) -> Result<(Vec<FieldType>, Option<FieldType>)> {
         let mut parameters = Vec::new();
         let mut return_type = None;
+        let mut pos = 0;
 
-        if chars.next() != Some('(') {
-            return Err(InvalidMethodDescriptor(descriptor.to_string()));
+        if bytes.first().copied() != Some(b'(') {
+            return Err(InvalidMethodDescriptor(display_desc.to_string()));
         }
+        pos += 1;
 
-        while let Some(&ch) = chars.peek() {
-            if ch == ')' {
-                chars.next();
+        while pos < bytes.len() {
+            if bytes[pos] == b')' {
+                pos += 1;
                 break;
             }
-            parameters.push(Self::parse_field_type(descriptor, &mut chars)?);
+            let (ft, consumed) = Self::parse_field_type_bytes(&bytes[pos..], display_desc)?;
+            parameters.push(ft);
+            pos += consumed;
         }
 
-        match chars.next() {
-            Some('V') => {}
-            Some(ch) => {
-                return_type = Some(Self::parse_field_type(
-                    descriptor,
-                    &mut std::iter::once(ch).chain(chars),
-                )?);
+        match bytes.get(pos).copied() {
+            Some(b'V') => {}
+            Some(_) => {
+                let (ft, _) = Self::parse_field_type_bytes(&bytes[pos..], display_desc)?;
+                return_type = Some(ft);
             }
-            None => return Err(InvalidMethodDescriptor(descriptor.to_string())),
+            None => return Err(InvalidMethodDescriptor(display_desc.to_string())),
         }
 
         Ok((parameters, return_type))
     }
 
-    /// Parse a field type from a character iterator.
-    ///
-    /// This is a helper method used internally by `parse_method_descriptor` to parse individual
-    /// field types from a method descriptor string.
-    ///
-    /// # Errors
-    ///
-    /// if the field type cannot be parsed
-    fn parse_field_type<I>(descriptor: &str, chars: &mut I) -> Result<FieldType>
-    where
-        I: Iterator<Item = char>,
-    {
-        match chars.next() {
-            Some('L') => {
-                let mut class_name = String::new();
-                for ch in chars.by_ref() {
-                    if ch == ';' {
+    /// Parse a single field type from a byte slice, returning the type and bytes consumed.
+    fn parse_field_type_bytes(
+        bytes: &[u8],
+        display_desc: impl fmt::Display,
+    ) -> Result<(FieldType, usize)> {
+        match bytes.first().copied() {
+            Some(b'L') => {
+                let mut end = 1;
+                while end < bytes.len() {
+                    if bytes[end] == b';' {
                         break;
                     }
-                    class_name.push(ch);
+                    end += 1;
                 }
-                Ok(FieldType::Object(class_name))
+                if end == bytes.len() {
+                    return Err(InvalidFieldTypeDescriptor(display_desc.to_string()));
+                }
+                let class_bytes = &bytes[1..end];
+                // Store as JavaString (MUTF-8) to avoid lossy UTF-8 conversion
+                let class_name = match JavaStr::from_mutf8(class_bytes) {
+                    Ok(java_str) => java_str.to_java_string(),
+                    Err(_) => JavaString::from(String::from_utf8_lossy(class_bytes).as_ref()),
+                };
+                Ok((FieldType::Object(class_name), end + 1)) // +1 for ';'
             }
-            Some('[') => {
-                let component_type = Self::parse_field_type(descriptor, chars)?;
-                Ok(FieldType::Array(Box::new(component_type)))
+            Some(b'[') => {
+                let (component_type, consumed) =
+                    Self::parse_field_type_bytes(&bytes[1..], display_desc)?;
+                Ok((FieldType::Array(Box::new(component_type)), 1 + consumed))
             }
-            Some(value) => {
-                let base_type = BaseType::parse(value)?;
-                Ok(FieldType::Base(base_type))
+            Some(code) => {
+                let base_type = BaseType::parse(code as char)?;
+                Ok((FieldType::Base(base_type), 1))
             }
-            None => Err(InvalidMethodDescriptor(descriptor.to_string())),
+            None => Err(InvalidMethodDescriptor(display_desc.to_string())),
         }
     }
 }
@@ -481,7 +516,7 @@ mod test {
 
     #[test]
     fn test_object() -> Result<()> {
-        let field_type = FieldType::Object("Foo".to_string());
+        let field_type = FieldType::Object(JavaString::from("Foo"));
 
         assert_eq!("Foo", field_type.to_string());
         test_field_type(&field_type, "LFoo;", 'L', "Foo")
@@ -535,7 +570,7 @@ mod test {
 
     #[test]
     fn test_class_name_object() {
-        let field_type = FieldType::Object("java/lang/Object".to_string());
+        let field_type = FieldType::Object(JavaString::from("java/lang/Object"));
         assert_eq!("java/lang/Object", field_type.class_name());
         let field_type_array = FieldType::Array(Box::new(field_type.clone()));
         assert_eq!("[Ljava/lang/Object;", field_type_array.class_name());
@@ -545,43 +580,46 @@ mod test {
 
     #[test]
     fn test_parse_method_descriptor() -> Result<()> {
-        let (parameters, return_type) = FieldType::parse_method_descriptor("()V")?;
+        let (parameters, return_type) =
+            FieldType::parse_method_descriptor(JavaStr::try_from_str("()V")?)?;
         assert!(parameters.is_empty());
         assert_eq!(return_type, None);
 
-        let (parameters, return_type) = FieldType::parse_method_descriptor("()I")?;
+        let (parameters, return_type) =
+            FieldType::parse_method_descriptor(JavaStr::try_from_str("()I")?)?;
         assert!(parameters.is_empty());
         assert_eq!(return_type, Some(FieldType::Base(BaseType::Int)));
 
-        let (parameters, return_type) = FieldType::parse_method_descriptor("(I)V")?;
+        let (parameters, return_type) =
+            FieldType::parse_method_descriptor(JavaStr::try_from_str("(I)V")?)?;
         assert_eq!(parameters, vec![FieldType::Base(BaseType::Int)]);
         assert_eq!(return_type, None);
 
         let (parameters, return_type) =
-            FieldType::parse_method_descriptor("(Ljava.lang.String;)V")?;
+            FieldType::parse_method_descriptor(JavaStr::try_from_str("(Ljava.lang.String;)V")?)?;
         assert_eq!(
             parameters,
-            vec![FieldType::Object("java.lang.String".to_string())]
+            vec![FieldType::Object(JavaString::from("java.lang.String"))]
         );
         assert_eq!(return_type, None);
 
         let (parameters, return_type) =
-            FieldType::parse_method_descriptor("(Ljava.lang.String;I)V")?;
+            FieldType::parse_method_descriptor(JavaStr::try_from_str("(Ljava.lang.String;I)V")?)?;
         assert_eq!(
             parameters,
             vec![
-                FieldType::Object("java.lang.String".to_string()),
+                FieldType::Object(JavaString::from("java.lang.String")),
                 FieldType::Base(BaseType::Int)
             ]
         );
         assert_eq!(return_type, None);
 
         let (parameters, return_type) =
-            FieldType::parse_method_descriptor("(Ljava.lang.String;I)I")?;
+            FieldType::parse_method_descriptor(JavaStr::try_from_str("(Ljava.lang.String;I)I")?)?;
         assert_eq!(
             parameters,
             vec![
-                FieldType::Object("java.lang.String".to_string()),
+                FieldType::Object(JavaString::from("java.lang.String")),
                 FieldType::Base(BaseType::Int)
             ]
         );
@@ -594,51 +632,54 @@ mod test {
     fn test_parse_method_descriptor_invalid() {
         let descriptor = String::new();
         assert!(matches!(
-            FieldType::parse_method_descriptor(&descriptor),
+            FieldType::parse_method_descriptor(JavaStr::try_from_str(&descriptor).unwrap()),
             Err(InvalidMethodDescriptor(_))
         ));
 
-        let descriptor = "()";
         assert!(matches!(
-            FieldType::parse_method_descriptor(descriptor),
+            FieldType::parse_method_descriptor(JavaStr::try_from_str("()").unwrap()),
             Err(InvalidMethodDescriptor(_))
         ));
     }
 
     #[test]
-    fn test_parse_field_type() -> Result<()> {
+    fn test_parse_field_type_bytes() -> Result<()> {
+        let (ft, consumed) = FieldType::parse_field_type_bytes(b"I", "")?;
+        assert_eq!(ft, FieldType::Base(BaseType::Int));
+        assert_eq!(consumed, 1);
+
+        let (ft, consumed) = FieldType::parse_field_type_bytes(b"J", "")?;
+        assert_eq!(ft, FieldType::Base(BaseType::Long));
+        assert_eq!(consumed, 1);
+
+        let (ft, consumed) = FieldType::parse_field_type_bytes(b"S", "")?;
+        assert_eq!(ft, FieldType::Base(BaseType::Short));
+        assert_eq!(consumed, 1);
+
+        let (ft, consumed) = FieldType::parse_field_type_bytes(b"Z", "")?;
+        assert_eq!(ft, FieldType::Base(BaseType::Boolean));
+        assert_eq!(consumed, 1);
+
+        let (ft, consumed) = FieldType::parse_field_type_bytes(b"Ljava.lang.String;", "")?;
+        assert_eq!(ft, FieldType::Object(JavaString::from("java.lang.String")));
+        assert_eq!(consumed, 18);
+
+        let (ft, consumed) = FieldType::parse_field_type_bytes(b"[Ljava.lang.String;", "")?;
         assert_eq!(
-            FieldType::parse_field_type("", &mut "I".chars())?,
-            FieldType::Base(BaseType::Int)
+            ft,
+            FieldType::Array(Box::new(FieldType::Object(JavaString::from(
+                "java.lang.String"
+            ))))
         );
-        assert_eq!(
-            FieldType::parse_field_type("", &mut "J".chars())?,
-            FieldType::Base(BaseType::Long)
-        );
-        assert_eq!(
-            FieldType::parse_field_type("", &mut "S".chars())?,
-            FieldType::Base(BaseType::Short)
-        );
-        assert_eq!(
-            FieldType::parse_field_type("", &mut "Z".chars())?,
-            FieldType::Base(BaseType::Boolean)
-        );
-        assert_eq!(
-            FieldType::parse_field_type("", &mut "Ljava.lang.String;".chars())?,
-            FieldType::Object("java.lang.String".to_string())
-        );
-        assert_eq!(
-            FieldType::parse_field_type("", &mut "[Ljava.lang.String;".chars())?,
-            FieldType::Array(Box::new(FieldType::Object("java.lang.String".to_string())))
-        );
+        assert_eq!(consumed, 19);
+
         Ok(())
     }
 
     #[test]
-    fn test_parse_field_type_invalid() {
-        let descriptor = String::new();
+    fn test_parse_field_type_bytes_invalid() {
         assert!(matches!(
-            FieldType::parse_field_type(&descriptor, &mut descriptor.chars()),
+            FieldType::parse_field_type_bytes(b"", ""),
             Err(InvalidMethodDescriptor(_))
         ));
     }

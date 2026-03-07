@@ -17,6 +17,7 @@ workspace = true
 ahash = { workspace = true }
 bitflags = { workspace = true }
 byteorder = { workspace = true }
+hashbrown = { workspace = true }
 indexmap = { workspace = true }
 thiserror = { workspace = true }
 

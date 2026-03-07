@@ -1,3 +1,4 @@
+use crate::JavaString;
 use std::fmt::Display;
 
 /// Represents the verification types used in the JVM bytecode verification process. These types
@@ -20,7 +21,7 @@ pub(crate) enum VerificationType {
     /// Uninitialized "this" type
     UninitializedThis,
     /// Object type with class name
-    Object(String),
+    Object(JavaString),
     /// Uninitialized type with offset of the new instruction
     // Long and Double take two slots, represented by Top in the second slot in some implementations,
     // or handled by logic. JVMS suggests using "Long" and "Double" as single types that consume 2 entries in locals/stack calculations.
@@ -65,7 +66,7 @@ mod tests {
             "uninitialized_this"
         );
         assert_eq!(
-            VerificationType::Object("java/lang/Object".to_string()).to_string(),
+            VerificationType::Object(JavaString::from("java/lang/Object")).to_string(),
             "class java/lang/Object"
         );
         assert_eq!(

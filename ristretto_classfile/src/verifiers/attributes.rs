@@ -1021,7 +1021,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_invalid_index = Attribute::ConstantValue {
@@ -1030,20 +1030,20 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_index], context),
-            Err(VerifyError::InvalidConstantPoolIndex(2))
+            Err(InvalidConstantPoolIndex(2))
         ));
 
         let constants_invalid = vec![Constant::Class(1)];
         let class_file_invalid = create_class_file(constants_invalid);
         assert!(matches!(
             verify(&class_file_invalid, &[attribute], context),
-            Err(VerifyError::InvalidConstantPoolIndexType(1))
+            Err(InvalidConstantPoolIndexType(1))
         ));
     }
 
     #[test]
     fn test_verify_code() {
-        let constants = vec![Constant::Utf8("()V".into()), Constant::Utf8("Code".into())];
+        let constants = vec![Constant::utf8("()V"), Constant::utf8("Code")];
         let class_file = create_class_file(constants);
         let method = Method {
             descriptor_index: 1,
@@ -1067,7 +1067,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let line_number_table = Attribute::LineNumberTable {
@@ -1109,13 +1109,13 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&method)
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
     #[test]
     fn test_verify_exceptions() {
-        let constants = vec![Constant::Class(2), Constant::Utf8("Exception".into())];
+        let constants = vec![Constant::Class(2), Constant::utf8("Exception")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::Exceptions {
             name_index: 0,
@@ -1132,7 +1132,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_invalid_index = Attribute::Exceptions {
@@ -1141,7 +1141,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_index], context),
-            Err(VerifyError::InvalidConstantPoolIndex(3))
+            Err(InvalidConstantPoolIndex(3))
         ));
 
         let attribute_invalid_type = Attribute::Exceptions {
@@ -1150,7 +1150,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_type], context),
-            Err(VerifyError::InvalidConstantPoolIndexType(2))
+            Err(InvalidConstantPoolIndexType(2))
         ));
     }
 
@@ -1158,10 +1158,10 @@ mod tests {
     fn test_verify_inner_classes() {
         let constants = vec![
             Constant::Class(2),
-            Constant::Utf8("Inner".into()),
+            Constant::utf8("Inner"),
             Constant::Class(4),
-            Constant::Utf8("Outer".into()),
-            Constant::Utf8("Name".into()),
+            Constant::utf8("Outer"),
+            Constant::utf8("Name"),
         ];
         let class_file = create_class_file(constants);
         let inner_class = InnerClass {
@@ -1198,7 +1198,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_class], context),
-            Err(VerifyError::InvalidConstantPoolIndexType(5))
+            Err(InvalidConstantPoolIndexType(5))
         ));
 
         // Invalid outer_class_info_index
@@ -1212,7 +1212,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_outer], context),
-            Err(VerifyError::InvalidConstantPoolIndexType(5))
+            Err(InvalidConstantPoolIndexType(5))
         ));
 
         // Invalid name_index
@@ -1234,13 +1234,13 @@ mod tests {
     fn test_verify_enclosing_method() {
         let constants = vec![
             Constant::Class(2),
-            Constant::Utf8("Class".into()),
+            Constant::utf8("Class"),
             Constant::NameAndType {
                 name_index: 4,
                 descriptor_index: 5,
             },
-            Constant::Utf8("method".into()),
-            Constant::Utf8("()V".into()),
+            Constant::utf8("method"),
+            Constant::utf8("()V"),
         ];
         let class_file = create_class_file(constants);
         let attribute = Attribute::EnclosingMethod {
@@ -1258,7 +1258,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_invalid_class = Attribute::EnclosingMethod {
@@ -1268,7 +1268,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_class], context),
-            Err(VerifyError::InvalidConstantPoolIndexType(3))
+            Err(InvalidConstantPoolIndexType(3))
         ));
 
         let attribute_invalid_method = Attribute::EnclosingMethod {
@@ -1278,7 +1278,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_method], context),
-            Err(VerifyError::InvalidConstantPoolIndexType(1))
+            Err(InvalidConstantPoolIndexType(1))
         ));
     }
 
@@ -1303,13 +1303,13 @@ mod tests {
                 &[attribute],
                 AttributeContext::Code(&method, 0)
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
     #[test]
     fn test_verify_signature() {
-        let constants = vec![Constant::Utf8("Signature".into())];
+        let constants = vec![Constant::utf8("Signature")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::Signature {
             name_index: 0,
@@ -1326,7 +1326,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Code(&method, 0)
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_invalid = Attribute::Signature {
@@ -1335,13 +1335,13 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid], context),
-            Err(VerifyError::InvalidConstantPoolIndex(2))
+            Err(InvalidConstantPoolIndex(2))
         ));
     }
 
     #[test]
     fn test_verify_source_file() {
-        let constants = vec![Constant::Utf8("Source.java".into())];
+        let constants = vec![Constant::utf8("Source.java")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::SourceFile {
             name_index: 0,
@@ -1357,7 +1357,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_invalid = Attribute::SourceFile {
@@ -1366,7 +1366,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid], context),
-            Err(VerifyError::InvalidConstantPoolIndex(2))
+            Err(InvalidConstantPoolIndex(2))
         ));
     }
 
@@ -1393,7 +1393,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
@@ -1435,7 +1435,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_invalid = Attribute::LineNumberTable {
@@ -1447,16 +1447,13 @@ mod tests {
         };
         assert!(matches!(
             verify(&ClassFile::default(), &[attribute_invalid], context),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
     #[test]
     fn test_verify_local_variable_table() {
-        let constants = vec![
-            Constant::Utf8("name".into()),
-            Constant::Utf8("descriptor".into()),
-        ];
+        let constants = vec![Constant::utf8("name"), Constant::utf8("descriptor")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::LocalVariableTable {
             name_index: 0,
@@ -1490,7 +1487,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_range = Attribute::LocalVariableTable {
@@ -1505,7 +1502,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_range], context),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_name = Attribute::LocalVariableTable {
@@ -1520,7 +1517,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_name], context),
-            Err(VerifyError::InvalidConstantPoolIndex(3))
+            Err(InvalidConstantPoolIndex(3))
         ));
 
         let attribute_desc = Attribute::LocalVariableTable {
@@ -1535,16 +1532,13 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_desc], context),
-            Err(VerifyError::InvalidConstantPoolIndex(3))
+            Err(InvalidConstantPoolIndex(3))
         ));
     }
 
     #[test]
     fn test_verify_local_variable_type_table() {
-        let constants = vec![
-            Constant::Utf8("name".into()),
-            Constant::Utf8("signature".into()),
-        ];
+        let constants = vec![Constant::utf8("name"), Constant::utf8("signature")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::LocalVariableTypeTable {
             name_index: 0,
@@ -1578,7 +1572,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_range = Attribute::LocalVariableTypeTable {
@@ -1593,7 +1587,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_range], context),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_name = Attribute::LocalVariableTypeTable {
@@ -1608,7 +1602,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_name], context),
-            Err(VerifyError::InvalidConstantPoolIndex(3))
+            Err(InvalidConstantPoolIndex(3))
         ));
 
         let attribute_sig = Attribute::LocalVariableTypeTable {
@@ -1623,7 +1617,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_sig], context),
-            Err(VerifyError::InvalidConstantPoolIndex(3))
+            Err(InvalidConstantPoolIndex(3))
         ));
     }
 
@@ -1648,7 +1642,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Code(&method, 0)
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
@@ -1665,8 +1659,8 @@ mod tests {
     #[test]
     fn test_verify_annotations() {
         let constants = vec![
-            Constant::Utf8("LAnnotation;".into()),
-            Constant::Utf8("name".into()),
+            Constant::utf8("LAnnotation;"),
+            Constant::utf8("name"),
             Constant::Integer(42),
         ];
         let class_file = create_class_file(constants);
@@ -1697,7 +1691,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_type], context),
-            Err(VerifyError::InvalidConstantPoolIndexType(3))
+            Err(InvalidConstantPoolIndexType(3))
         ));
 
         let annotation_invalid_name = Annotation {
@@ -1715,7 +1709,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_name], context),
-            Err(VerifyError::InvalidConstantPoolIndexType(3))
+            Err(InvalidConstantPoolIndexType(3))
         ));
 
         let annotation_invalid_value = Annotation {
@@ -1733,7 +1727,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_value], context),
-            Err(VerifyError::InvalidConstantPoolIndexType(1))
+            Err(InvalidConstantPoolIndexType(1))
         ));
     }
 
@@ -1757,7 +1751,7 @@ mod tests {
 
         assert!(matches!(
             verify(&ClassFile::default(), &[attribute], AttributeContext::Class),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
@@ -1778,7 +1772,7 @@ mod tests {
 
         assert!(matches!(
             verify(&class_file, &[attribute], AttributeContext::Class),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
@@ -1809,7 +1803,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_invalid_ref = Attribute::BootstrapMethods {
@@ -1821,7 +1815,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_ref], context),
-            Err(VerifyError::InvalidConstantPoolIndexType(2))
+            Err(InvalidConstantPoolIndexType(2))
         ));
 
         let attribute_invalid_arg = Attribute::BootstrapMethods {
@@ -1833,13 +1827,13 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_arg], context),
-            Err(VerifyError::InvalidConstantPoolIndex(3))
+            Err(InvalidConstantPoolIndex(3))
         ));
     }
 
     #[test]
     fn test_verify_method_parameters() {
-        let constants = vec![Constant::Utf8("param".into())];
+        let constants = vec![Constant::utf8("param")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::MethodParameters {
             name_index: 0,
@@ -1859,7 +1853,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Class
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         let attribute_invalid = Attribute::MethodParameters {
@@ -1871,7 +1865,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid], context),
-            Err(VerifyError::InvalidConstantPoolIndex(2))
+            Err(InvalidConstantPoolIndex(2))
         ));
     }
 
@@ -1879,12 +1873,12 @@ mod tests {
     fn test_verify_module() {
         let constants = vec![
             Constant::Module(2),
-            Constant::Utf8("module".into()),
-            Constant::Utf8("1.0".into()),
+            Constant::utf8("module"),
+            Constant::utf8("1.0"),
             Constant::Package(5),
-            Constant::Utf8("package".into()),
+            Constant::utf8("package"),
             Constant::Class(7),
-            Constant::Utf8("Class".into()),
+            Constant::utf8("Class"),
         ];
         let class_file = create_class_file(constants);
         let attribute = Attribute::Module {
@@ -1923,13 +1917,13 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
     #[test]
     fn test_verify_module_packages() {
-        let constants = vec![Constant::Package(2), Constant::Utf8("package".into())];
+        let constants = vec![Constant::Package(2), Constant::utf8("package")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::ModulePackages {
             name_index: 0,
@@ -1945,13 +1939,13 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
     #[test]
     fn test_verify_module_main_class() {
-        let constants = vec![Constant::Class(2), Constant::Utf8("Main".into())];
+        let constants = vec![Constant::Class(2), Constant::utf8("Main")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::ModuleMainClass {
             name_index: 0,
@@ -1973,7 +1967,7 @@ mod tests {
 
     #[test]
     fn test_verify_nest_host() {
-        let constants = vec![Constant::Class(2), Constant::Utf8("Host".into())];
+        let constants = vec![Constant::Class(2), Constant::utf8("Host")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::NestHost {
             name_index: 0,
@@ -1989,13 +1983,13 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
     #[test]
     fn test_verify_nest_members() {
-        let constants = vec![Constant::Class(2), Constant::Utf8("Member".into())];
+        let constants = vec![Constant::Class(2), Constant::utf8("Member")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::NestMembers {
             name_index: 0,
@@ -2017,10 +2011,7 @@ mod tests {
 
     #[test]
     fn test_verify_record() {
-        let constants = vec![
-            Constant::Utf8("name".into()),
-            Constant::Utf8("descriptor".into()),
-        ];
+        let constants = vec![Constant::utf8("name"), Constant::utf8("descriptor")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::Record {
             name_index: 0,
@@ -2040,13 +2031,13 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
     #[test]
     fn test_verify_permitted_subclasses() {
-        let constants = vec![Constant::Class(2), Constant::Utf8("Sub".into())];
+        let constants = vec![Constant::Class(2), Constant::utf8("Sub")];
         let class_file = create_class_file(constants);
         let attribute = Attribute::PermittedSubclasses {
             name_index: 0,
@@ -2062,7 +2053,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 }

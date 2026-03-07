@@ -11,15 +11,14 @@
 //!
 //! - [JVMS §6.5 - Instructions](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5)
 
-use std::sync::Arc;
-
-use crate::FieldType;
+use crate::JavaStr;
 use crate::attributes::ArrayType;
 use crate::class_file::ClassFile;
 use crate::verifiers::bytecode::frame::Frame;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
+use crate::{FieldType, JavaString};
 
 /// Context for resolving constant pool entries.
 #[derive(Debug)]
@@ -175,7 +174,7 @@ impl<'a> ConstantPoolResolver<'a> {
 
 /// Handles `new` - create new object.
 ///
-/// Stack: ... → ..., objectref
+/// Stack: ... -> ..., objectref
 ///
 /// # Errors
 ///
@@ -191,7 +190,7 @@ pub fn handle_new(frame: &mut Frame, offset: u16, _class_name: &str) -> Result<(
 
 /// Handles `newarray` - create new primitive array.
 ///
-/// Stack: ..., count → ..., arrayref
+/// Stack: ..., count -> ..., arrayref
 ///
 /// # Errors
 ///
@@ -226,7 +225,7 @@ pub fn handle_newarray(frame: &mut Frame, atype: &ArrayType) -> Result<()> {
 
 /// Handles `anewarray` - create new reference array.
 ///
-/// Stack: ..., count → ..., arrayref
+/// Stack: ..., count -> ..., arrayref
 ///
 /// # Errors
 ///
@@ -248,7 +247,7 @@ pub fn handle_anewarray(frame: &mut Frame, class_name: &str) -> Result<()> {
         // Creating an array of arrays
         parse_type_descriptor(class_name)?
     } else {
-        VerificationType::Object(Arc::from(class_name))
+        VerificationType::Object(JavaString::from(class_name))
     };
 
     frame.push(VerificationType::Array(Box::new(component)))
@@ -256,7 +255,7 @@ pub fn handle_anewarray(frame: &mut Frame, class_name: &str) -> Result<()> {
 
 /// Handles `multianewarray` - create new multidimensional array.
 ///
-/// Stack: ..., count1, [count2, ...] → ..., arrayref
+/// Stack: ..., count1, [count2, ...] -> ..., arrayref
 ///
 /// # Errors
 ///
@@ -283,7 +282,7 @@ pub fn handle_multianewarray(frame: &mut Frame, class_name: &str, dimensions: u8
 
 /// Handles `getfield` - get instance field.
 ///
-/// Stack: ..., objectref → ..., value
+/// Stack: ..., objectref -> ..., value
 ///
 /// # Errors
 ///
@@ -302,7 +301,7 @@ pub fn handle_getfield<C: VerificationContext>(
 
     // Verify objectref is assignable to the field's class
     if !objectref.is_null() {
-        let expected = VerificationType::Object(Arc::from(class_name));
+        let expected = VerificationType::Object(JavaString::from(class_name));
         if !objectref.is_assignable_to(&expected, context)? {
             return Err(VerifyError::VerifyError(format!(
                 "getfield: {objectref} is not assignable to {class_name}"
@@ -322,7 +321,7 @@ pub fn handle_getfield<C: VerificationContext>(
 
 /// Handles `putfield` - set instance field.
 ///
-/// Stack: ..., objectref, value → ...
+/// Stack: ..., objectref, value -> ...
 ///
 /// # Errors
 ///
@@ -363,7 +362,7 @@ pub fn handle_putfield<C: VerificationContext>(
         VerificationType::UninitializedThis | VerificationType::Uninitialized(_)
     ) && !objectref.is_null()
     {
-        let expected = VerificationType::Object(Arc::from(class_name));
+        let expected = VerificationType::Object(JavaString::from(class_name));
         if !objectref.is_assignable_to(&expected, context)? {
             return Err(VerifyError::VerifyError(format!(
                 "putfield: {objectref} is not assignable to {class_name}"
@@ -376,7 +375,7 @@ pub fn handle_putfield<C: VerificationContext>(
 
 /// Handles `getstatic` - get static field.
 ///
-/// Stack: ... → ..., value
+/// Stack: ... -> ..., value
 ///
 /// # Errors
 ///
@@ -397,7 +396,7 @@ pub fn handle_getstatic(frame: &mut Frame, field_descriptor: &str) -> Result<()>
 
 /// Handles `putstatic` - set static field.
 ///
-/// Stack: ..., value → ...
+/// Stack: ..., value -> ...
 ///
 /// # Errors
 ///
@@ -443,7 +442,8 @@ pub fn handle_invoke<C: VerificationContext>(
     is_static: bool,
     context: &C,
 ) -> Result<Option<VerificationType>> {
-    let (params, return_type) = FieldType::parse_method_descriptor(descriptor)
+    let descriptor = JavaStr::cow_from_str(descriptor);
+    let (params, return_type) = FieldType::parse_method_descriptor(&descriptor)
         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
     // Pop arguments in reverse order
@@ -468,7 +468,7 @@ pub fn handle_invoke<C: VerificationContext>(
 
         if method_name != "<init>" {
             // Regular method call
-            let expected = VerificationType::Object(Arc::from(class_name));
+            let expected = VerificationType::Object(JavaString::from(class_name));
             if !objectref.is_null() && !objectref.is_assignable_to(&expected, context)? {
                 return Err(VerifyError::VerifyError(format!(
                     "invoke: {objectref} is not assignable to {class_name}"
@@ -505,7 +505,8 @@ pub fn handle_invokespecial<C: VerificationContext>(
     descriptor: &str,
     context: &C,
 ) -> Result<()> {
-    let (params, return_type) = FieldType::parse_method_descriptor(descriptor)
+    let descriptor = JavaStr::cow_from_str(descriptor);
+    let (params, return_type) = FieldType::parse_method_descriptor(&descriptor)
         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
     // Pop arguments in reverse order
@@ -531,11 +532,11 @@ pub fn handle_invokespecial<C: VerificationContext>(
         // Constructor call - initialize the object
         match &objectref {
             VerificationType::Uninitialized(offset) => {
-                let initialized = VerificationType::Object(Arc::from(class_name));
+                let initialized = VerificationType::Object(JavaString::from(class_name));
                 frame.initialize_object(&VerificationType::Uninitialized(*offset), &initialized);
             }
             VerificationType::UninitializedThis => {
-                let initialized = VerificationType::Object(Arc::from(class_name));
+                let initialized = VerificationType::Object(JavaString::from(class_name));
                 frame.initialize_object(&VerificationType::UninitializedThis, &initialized);
             }
             _ => {
@@ -546,7 +547,7 @@ pub fn handle_invokespecial<C: VerificationContext>(
         }
     } else {
         // Non-constructor special method
-        let expected = VerificationType::Object(Arc::from(class_name));
+        let expected = VerificationType::Object(JavaString::from(class_name));
         if !objectref.is_null() && !objectref.is_assignable_to(&expected, context)? {
             return Err(VerifyError::VerifyError(format!(
                 "invokespecial: {objectref} is not assignable to {class_name}"
@@ -582,7 +583,8 @@ pub fn handle_invokedynamic<C: VerificationContext>(
     descriptor: &str,
     context: &C,
 ) -> Result<()> {
-    let (params, return_type) = FieldType::parse_method_descriptor(descriptor)
+    let descriptor = JavaStr::cow_from_str(descriptor);
+    let (params, return_type) = FieldType::parse_method_descriptor(&descriptor)
         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
     // Pop arguments in reverse order
@@ -617,7 +619,7 @@ pub fn handle_invokedynamic<C: VerificationContext>(
 
 /// Handles `checkcast` - check object type.
 ///
-/// Stack: ..., objectref → ..., objectref
+/// Stack: ..., objectref -> ..., objectref
 ///
 /// # Errors
 ///
@@ -640,7 +642,7 @@ pub fn handle_checkcast(frame: &mut Frame, class_name: &str) -> Result<()> {
     let cast_type = if class_name.starts_with('[') {
         parse_type_descriptor(class_name)?
     } else {
-        VerificationType::Object(Arc::from(class_name))
+        VerificationType::Object(JavaString::from(class_name))
     };
 
     frame.push(cast_type)
@@ -648,7 +650,7 @@ pub fn handle_checkcast(frame: &mut Frame, class_name: &str) -> Result<()> {
 
 /// Handles `instanceof` - check object type.
 ///
-/// Stack: ..., objectref → ..., result (int)
+/// Stack: ..., objectref -> ..., result (int)
 ///
 /// # Errors
 ///
@@ -672,7 +674,7 @@ pub fn handle_instanceof(frame: &mut Frame) -> Result<()> {
 
 /// Handles `arraylength` - get array length.
 ///
-/// Stack: ..., arrayref → ..., length (int)
+/// Stack: ..., arrayref -> ..., length (int)
 ///
 /// # Errors
 ///
@@ -691,7 +693,7 @@ pub fn handle_arraylength(frame: &mut Frame) -> Result<()> {
     ) {
         // Also accept Object that looks like an array (legacy representation)
         if let VerificationType::Object(name) = &arrayref {
-            if !name.starts_with('[') {
+            if name.as_bytes().first() != Some(&b'[') {
                 return Err(VerifyError::VerifyError(format!(
                     "arraylength: expected array, got {arrayref}"
                 )));
@@ -726,18 +728,14 @@ mod tests {
         let mut constant_pool = ConstantPool::default();
 
         // Index 1: Utf8 "TestClass"
-        constant_pool
-            .add(Constant::Utf8("TestClass".into()))
-            .unwrap();
+        constant_pool.add(Constant::utf8("TestClass")).unwrap();
         // Index 2: Class(1) - TestClass
         constant_pool.add(Constant::Class(1)).unwrap();
 
         // Index 3: Utf8 "testField"
-        constant_pool
-            .add(Constant::Utf8("testField".into()))
-            .unwrap();
+        constant_pool.add(Constant::utf8("testField")).unwrap();
         // Index 4: Utf8 "I" (int descriptor)
-        constant_pool.add(Constant::Utf8("I".into())).unwrap();
+        constant_pool.add(Constant::utf8("I")).unwrap();
         // Index 5: NameAndType(3, 4) - testField:I
         constant_pool
             .add(Constant::NameAndType {
@@ -754,11 +752,9 @@ mod tests {
             .unwrap();
 
         // Index 7: Utf8 "testMethod"
-        constant_pool
-            .add(Constant::Utf8("testMethod".into()))
-            .unwrap();
+        constant_pool.add(Constant::utf8("testMethod")).unwrap();
         // Index 8: Utf8 "(I)V" (method descriptor)
-        constant_pool.add(Constant::Utf8("(I)V".into())).unwrap();
+        constant_pool.add(Constant::utf8("(I)V")).unwrap();
         // Index 9: NameAndType(7, 8) - testMethod:(I)V
         constant_pool
             .add(Constant::NameAndType {
@@ -775,9 +771,7 @@ mod tests {
             .unwrap();
 
         // Index 11: Utf8 "InterfaceClass"
-        constant_pool
-            .add(Constant::Utf8("InterfaceClass".into()))
-            .unwrap();
+        constant_pool.add(Constant::utf8("InterfaceClass")).unwrap();
         // Index 12: Class(11) - InterfaceClass
         constant_pool.add(Constant::Class(11)).unwrap();
         // Index 13: InterfaceMethodref(12, 9) - InterfaceClass.testMethod:(I)V
@@ -1025,7 +1019,7 @@ mod tests {
             VerificationType::Array(component) => {
                 assert_eq!(
                     **component,
-                    VerificationType::Object(Arc::from("java/lang/String"))
+                    VerificationType::Object(JavaString::from("java/lang/String"))
                 );
             }
             _ => panic!("Expected array type"),
@@ -1098,7 +1092,7 @@ mod tests {
         handle_getstatic(&mut frame, "Ljava/lang/String;").unwrap();
         assert_eq!(
             *frame.peek().unwrap(),
-            VerificationType::Object(Arc::from("java/lang/String"))
+            VerificationType::Object(JavaString::from("java/lang/String"))
         );
     }
 
@@ -1148,7 +1142,7 @@ mod tests {
         let ctx = StrictMockContext;
         let mut frame = Frame::new(5, 10);
         frame
-            .push(VerificationType::Object(Arc::from("some/Other")))
+            .push(VerificationType::Object(JavaString::from("some/Other")))
             .unwrap();
 
         let result = handle_getfield(&mut frame, "java/lang/String", "I", &ctx);
@@ -1188,7 +1182,7 @@ mod tests {
 
         assert_eq!(
             *frame.peek().unwrap(),
-            VerificationType::Object(Arc::from("java/lang/String"))
+            VerificationType::Object(JavaString::from("java/lang/String"))
         );
     }
 
@@ -1202,7 +1196,7 @@ mod tests {
         // After checkcast, the type is known to be the cast type
         assert_eq!(
             *frame.peek().unwrap(),
-            VerificationType::Object(Arc::from("java/lang/String"))
+            VerificationType::Object(JavaString::from("java/lang/String"))
         );
     }
 
@@ -1318,7 +1312,7 @@ mod tests {
     fn test_parse_type_descriptor_object() {
         assert_eq!(
             parse_type_descriptor("Ljava/lang/String;").unwrap(),
-            VerificationType::Object(Arc::from("java/lang/String"))
+            VerificationType::Object(JavaString::from("java/lang/String"))
         );
     }
 
@@ -1405,7 +1399,7 @@ mod tests {
         let ctx = StrictMockContext;
         let mut frame = Frame::new(5, 10);
         frame
-            .push(VerificationType::Object(Arc::from("other/Class")))
+            .push(VerificationType::Object(JavaString::from("other/Class")))
             .unwrap();
 
         let result = handle_invoke(
@@ -1526,7 +1520,7 @@ mod tests {
         let ctx = StrictMockContext;
         let mut frame = Frame::new(5, 10);
         frame
-            .push(VerificationType::Object(Arc::from("other/Class")))
+            .push(VerificationType::Object(JavaString::from("other/Class")))
             .unwrap();
 
         let result =
@@ -1676,7 +1670,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         // Legacy representation: Object with name starting with '['
         frame
-            .push(VerificationType::Object(Arc::from("[I")))
+            .push(VerificationType::Object(JavaString::from("[I")))
             .unwrap();
 
         handle_arraylength(&mut frame).unwrap();

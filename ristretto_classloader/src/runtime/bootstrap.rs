@@ -296,10 +296,12 @@ async fn extract_archive(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classfile::JavaStr;
 
     /// Load a class using the default class loader.
     async fn load_class(class_name: &str) -> Result<Arc<Class>> {
         let (_path, _version, class_loader) = default_class_loader().await?;
+        let class_name = JavaStr::try_from_str(class_name)?;
         let (class, _loaded_previously) = class_loader.load_with_status(class_name).await?;
         Ok(class)
     }

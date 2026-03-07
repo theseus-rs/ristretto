@@ -11,7 +11,7 @@
 //!
 //! - [JVMS §6.5 - Instructions](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5)
 
-use std::sync::Arc;
+use crate::JavaString;
 
 use crate::attributes::Instruction;
 use crate::class_file::ClassFile;
@@ -37,7 +37,7 @@ pub fn handle_nop() -> Result<()> {
 
 /// Handles `aconst_null` - push null reference.
 ///
-/// Stack: ... → ..., null
+/// Stack: ... -> ..., null
 ///
 /// # Errors
 ///
@@ -52,7 +52,7 @@ pub fn handle_aconst_null(frame: &mut Frame) -> Result<()> {
 
 /// Handles `iconst_*` instructions - push int constant.
 ///
-/// Stack: ... → ..., value
+/// Stack: ... -> ..., value
 ///
 /// # Errors
 ///
@@ -67,7 +67,7 @@ pub fn handle_iconst(frame: &mut Frame) -> Result<()> {
 
 /// Handles `lconst_*` instructions - push long constant.
 ///
-/// Stack: ... → ..., value
+/// Stack: ... -> ..., value
 ///
 /// # Errors
 ///
@@ -141,10 +141,10 @@ pub fn handle_ldc(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) -> 
         Constant::Float(_) => frame.push(VerificationType::Float),
         Constant::String(_) => frame.push(VerificationType::java_lang_string()),
         Constant::Class(_) => frame.push(VerificationType::java_lang_class()),
-        Constant::MethodHandle { .. } => frame.push(VerificationType::Object(Arc::from(
+        Constant::MethodHandle { .. } => frame.push(VerificationType::Object(JavaString::from(
             "java/lang/invoke/MethodHandle",
         ))),
-        Constant::MethodType { .. } => frame.push(VerificationType::Object(Arc::from(
+        Constant::MethodType { .. } => frame.push(VerificationType::Object(JavaString::from(
             "java/lang/invoke/MethodType",
         ))),
         Constant::Dynamic { .. } => {
@@ -184,7 +184,7 @@ pub fn handle_ldc2_w(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) 
 
 /// Handles `monitorenter` - enter monitor.
 ///
-/// Stack: ..., objectref → ...
+/// Stack: ..., objectref -> ...
 ///
 /// # Errors
 ///
@@ -205,7 +205,7 @@ pub fn handle_monitorenter(frame: &mut Frame) -> Result<()> {
 
 /// Handles `monitorexit` - exit monitor.
 ///
-/// Stack: ..., objectref → ...
+/// Stack: ..., objectref -> ...
 ///
 /// # Errors
 ///
@@ -339,7 +339,7 @@ mod tests {
     fn create_test_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
         // Index 1: Utf8 "Test"
-        constant_pool.add(Constant::Utf8("Test".into())).unwrap();
+        constant_pool.add(Constant::utf8("Test")).unwrap();
         // Index 2: Class(1)
         constant_pool.add(Constant::Class(1)).unwrap();
         // Index 3: Integer(42)
@@ -355,7 +355,7 @@ mod tests {
             .add(Constant::Double(std::f64::consts::E))
             .unwrap();
         // Index 9: Utf8 "Hello"
-        constant_pool.add(Constant::Utf8("Hello".into())).unwrap();
+        constant_pool.add(Constant::utf8("Hello")).unwrap();
         // Index 10: String(9) - references Utf8 at index 9
         constant_pool.add(Constant::String(9)).unwrap();
 

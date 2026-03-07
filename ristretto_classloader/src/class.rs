@@ -5,7 +5,8 @@ use ahash::AHashMap;
 use indexmap::IndexMap;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
-    ClassAccessFlags, ClassFile, Constant, ConstantPool, FieldAccessFlags, MethodAccessFlags,
+    ClassAccessFlags, ClassFile, Constant, ConstantPool, FieldAccessFlags, JavaStr, JavaString,
+    MethodAccessFlags,
 };
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
@@ -290,7 +291,9 @@ pub enum InitializationAction {
 #[derive(Debug)]
 pub struct Class {
     class_loader: Option<Weak<ClassLoader>>,
-    name: String,
+    name: JavaString,
+    /// Cached lossy UTF-8 conversion of the class name for APIs requiring `&str`.
+    name_str: String,
     source_file: Option<String>,
     class_file: ClassFile<'static>,
     parent: RwLock<Option<Arc<Class>>>,
@@ -342,13 +345,13 @@ impl Class {
             {
                 let constant_pool = &class_file.constant_pool;
                 let source_file_name = constant_pool.try_get_utf8(*source_file_index)?;
-                source_file = Some(source_file_name.to_string());
+                source_file = Some(source_file_name.to_rust_string());
                 break;
             }
         }
 
         #[expect(clippy::single_match)]
-        match class_file.class_name()? {
+        match class_file.class_name()?.to_str_lossy().as_ref() {
             "java/lang/invoke/MemberName" => {
                 Self::add_synthetic_fields(&mut class_file, &[("vmindex", "Ljava/lang/Object;")])?;
             }
@@ -378,7 +381,7 @@ impl Class {
             methods.insert(signature, Arc::new(method));
         }
 
-        match class_file.class_name()? {
+        match class_file.class_name()?.to_str_lossy().as_ref() {
             "java/lang/invoke/DelegatingMethodHandle$Holder" => {
                 Self::add_synthetic_methods(
                     &mut class_file,
@@ -412,9 +415,12 @@ impl Class {
             _ => {}
         }
 
+        let name = JavaString::from(class_file.class_name()?);
+        let name_str = name.to_str_lossy().into_owned();
         let class = Arc::new(Self {
             class_loader,
-            name: class_file.class_name()?.to_string(),
+            name,
+            name_str,
             source_file,
             class_file,
             parent: RwLock::new(None),
@@ -445,7 +451,7 @@ impl Class {
         mut class_file: ClassFile<'static>,
         suffix: u64,
     ) -> Result<Arc<Self>> {
-        let original_name = class_file.class_name()?.to_string();
+        let original_name = class_file.class_name()?.to_rust_string();
         let hidden_name = format!("{original_name}+0x{suffix:016x}");
 
         // Patch the constant pool to replace the original class name with the hidden name. This
@@ -455,10 +461,9 @@ impl Class {
             class_file.constant_pool.try_get(class_file.this_class)?
         {
             let name_index = *name_index;
-            class_file.constant_pool.set(
-                name_index,
-                Constant::Utf8(std::borrow::Cow::Owned(hidden_name.clone())),
-            )?;
+            class_file
+                .constant_pool
+                .set(name_index, Constant::utf8(hidden_name.as_str()))?;
         }
 
         let mut source_file = None;
@@ -470,7 +475,7 @@ impl Class {
             {
                 let constant_pool = &class_file.constant_pool;
                 let source_file_name = constant_pool.try_get_utf8(*source_file_index)?;
-                source_file = Some(source_file_name.to_string());
+                source_file = Some(source_file_name.to_rust_string());
                 break;
             }
         }
@@ -498,9 +503,12 @@ impl Class {
             methods.insert(signature, Arc::new(method));
         }
 
+        let name = JavaString::from(hidden_name);
+        let name_str = name.to_str_lossy().into_owned();
         let class = Arc::new(Self {
             class_loader,
-            name: hidden_name,
+            name,
+            name_str,
             source_file,
             class_file,
             parent: RwLock::new(None),
@@ -587,17 +595,31 @@ impl Class {
         Ok(Some(class_loader))
     }
 
-    /// Get the class name.
+    /// Get the class name as a string slice.
+    ///
+    /// Returns a cached lossy UTF-8 conversion of the class name.
+    /// Supplementary Unicode characters (e.g. emoji) encoded as MUTF-8 surrogate
+    /// pairs are replaced with U+FFFD rather than causing a panic.
     #[must_use]
     pub fn name(&self) -> &str {
+        &self.name_str
+    }
+
+    /// Get the class name as a `&JavaStr` reference.
+    ///
+    /// This provides zero-allocation access to the class name in MUTF-8 form,
+    /// suitable for lookups and comparisons without UTF-8 conversion.
+    #[must_use]
+    pub fn java_name(&self) -> &JavaStr {
         &self.name
     }
 
     /// Get the package.
     #[must_use]
     pub fn package(&self) -> &str {
-        let index = self.name.rfind('/').unwrap_or(self.name.len());
-        &self.name[..index]
+        let name = self.name();
+        let index = name.rfind('/').unwrap_or(name.len());
+        &name[..index]
     }
 
     /// Get the module name this class belongs to.
@@ -902,7 +924,7 @@ impl Class {
     /// typically used for dynamically generated code like lambda expressions.
     #[must_use]
     pub fn is_hidden(&self) -> bool {
-        self.name.contains("+0x")
+        self.name().contains("+0x")
     }
 
     /// Get the class file.
@@ -1288,7 +1310,7 @@ impl Class {
         }
 
         // Use the cached class name instead of parsing from class_file
-        if let Some(polymorphic_descriptor) = POLYMORPHIC_METHODS.get(&(self.name.as_str(), name)) {
+        if let Some(polymorphic_descriptor) = POLYMORPHIC_METHODS.get(&(self.name(), name)) {
             // If the class name and method name match a polymorphic method, we can return it
             // regardless of the descriptor.
             let signature = format!("{name}{polymorphic_descriptor}");
@@ -1413,7 +1435,7 @@ mod tests {
 
     async fn load_class(class: &str) -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        class_loader.load(class).await
+        class_loader.load(JavaStr::try_from_str(class)?).await
     }
 
     async fn object_class() -> Result<Arc<Class>> {
@@ -1422,7 +1444,9 @@ mod tests {
 
     async fn string_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        let string_class = class_loader.load("java.lang.String").await?;
+        let string_class = class_loader
+            .load(JavaStr::try_from_str("java.lang.String")?)
+            .await?;
 
         let object_class = object_class().await?;
         string_class.set_parent(Some(object_class))?;
@@ -1481,7 +1505,9 @@ mod tests {
 
     async fn serializable_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        class_loader.load("java.io.Serializable").await
+        class_loader
+            .load(JavaStr::try_from_str("java.io.Serializable")?)
+            .await
     }
 
     async fn simple_class() -> Result<Arc<Class>> {
@@ -1490,7 +1516,7 @@ mod tests {
         let class_path = ClassPath::from(&[classes_directory]);
         let class_loader = ClassLoader::new("test", class_path);
         let class_name = "Simple";
-        class_loader.load(class_name).await
+        class_loader.load(JavaStr::try_from_str(class_name)?).await
     }
 
     #[tokio::test]
@@ -1961,9 +1987,12 @@ mod tests {
     #[tokio::test]
     async fn test_all_object_fields() -> Result<()> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        let abstract_string_builder_class =
-            class_loader.load("java.lang.AbstractStringBuilder").await?;
-        let class = class_loader.load("java.lang.StringBuilder").await?;
+        let abstract_string_builder_class = class_loader
+            .load(JavaStr::try_from_str("java.lang.AbstractStringBuilder")?)
+            .await?;
+        let class = class_loader
+            .load(JavaStr::try_from_str("java.lang.StringBuilder")?)
+            .await?;
         class.set_parent(Some(abstract_string_builder_class))?;
         let fields = class.all_object_fields()?;
         let expected_names = ["value", "coder", "maybeLatin1", "count"];
@@ -2065,7 +2094,9 @@ mod tests {
     #[tokio::test]
     async fn test_method_polymorphic() -> Result<()> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        let class = class_loader.load("java.lang.invoke.MethodHandle").await?;
+        let class = class_loader
+            .load(JavaStr::try_from_str("java.lang.invoke.MethodHandle")?)
+            .await?;
         let name = "linkToStatic";
         let descriptor = "(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;";
         let method = class.method(name, descriptor).expect("method");
@@ -2148,7 +2179,9 @@ mod tests {
     #[tokio::test]
     async fn test_is_annotation() -> Result<()> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        let class = class_loader.load("java.lang.Override").await?;
+        let class = class_loader
+            .load(JavaStr::try_from_str("java.lang.Override")?)
+            .await?;
         assert!(class.is_annotation());
         Ok(())
     }
@@ -2163,7 +2196,9 @@ mod tests {
     #[tokio::test]
     async fn test_from_hidden_creates_hidden_class() -> Result<()> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        let class = class_loader.load("java.lang.String").await?;
+        let class = class_loader
+            .load(JavaStr::try_from_str("java.lang.String")?)
+            .await?;
 
         // Get the class file to create a hidden class from it
         let class_file = class.class_file().clone();
@@ -2182,7 +2217,9 @@ mod tests {
     #[tokio::test]
     async fn test_from_hidden_unique_names() -> Result<()> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        let class = class_loader.load("java.lang.String").await?;
+        let class = class_loader
+            .load(JavaStr::try_from_str("java.lang.String")?)
+            .await?;
 
         // Create two hidden classes with different suffixes
         let class_file1 = class.class_file().clone();

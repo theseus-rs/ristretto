@@ -20,11 +20,10 @@
 //! - [JVMS §4.10.1.2 - Verification Type System](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1.2)
 
 use std::fmt::Display;
-use std::sync::Arc;
 
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
-use crate::{BaseType, FieldType};
+use crate::{BaseType, FieldType, JavaString};
 
 /// Represents the verification types used in the JVM bytecode verification process.
 ///
@@ -98,7 +97,7 @@ pub enum VerificationType {
     ///
     /// Contains the internal class name (e.g., "java/lang/String").
     /// For arrays represented as Object, the name is the array descriptor.
-    Object(Arc<str>),
+    Object(JavaString),
 
     /// Array reference type with explicit component type.
     ///
@@ -114,42 +113,42 @@ impl VerificationType {
     #[inline]
     #[must_use]
     pub fn java_lang_object() -> Self {
-        Self::Object(Arc::from("java/lang/Object"))
+        Self::Object(JavaString::from("java/lang/Object"))
     }
 
     /// Creates the `java/lang/String` type.
     #[inline]
     #[must_use]
     pub fn java_lang_string() -> Self {
-        Self::Object(Arc::from("java/lang/String"))
+        Self::Object(JavaString::from("java/lang/String"))
     }
 
     /// Creates the `java/lang/Class` type.
     #[inline]
     #[must_use]
     pub fn java_lang_class() -> Self {
-        Self::Object(Arc::from("java/lang/Class"))
+        Self::Object(JavaString::from("java/lang/Class"))
     }
 
     /// Creates the `java/lang/Throwable` type.
     #[inline]
     #[must_use]
     pub fn java_lang_throwable() -> Self {
-        Self::Object(Arc::from("java/lang/Throwable"))
+        Self::Object(JavaString::from("java/lang/Throwable"))
     }
 
     /// Creates the `java/lang/Cloneable` type.
     #[inline]
     #[must_use]
     pub fn java_lang_cloneable() -> Self {
-        Self::Object(Arc::from("java/lang/Cloneable"))
+        Self::Object(JavaString::from("java/lang/Cloneable"))
     }
 
     /// Creates the `java/io/Serializable` type.
     #[inline]
     #[must_use]
     pub fn java_io_serializable() -> Self {
-        Self::Object(Arc::from("java/io/Serializable"))
+        Self::Object(JavaString::from("java/io/Serializable"))
     }
 
     /// Returns `true` if this is a category 1 type (takes one slot).
@@ -286,7 +285,7 @@ impl VerificationType {
                 BaseType::Long => Self::Long,
                 BaseType::Double => Self::Double,
             },
-            FieldType::Object(class_name) => Self::Object(Arc::from(class_name.as_str())),
+            FieldType::Object(class_name) => Self::Object(class_name.clone()),
             FieldType::Array(component) => Self::Array(Box::new(Self::from_field_type(component))),
         }
     }
@@ -376,15 +375,17 @@ impl VerificationType {
 
             // Object-to-Object assignability
             (VerificationType::Object(source), VerificationType::Object(target)) => {
-                context.is_assignable(target.as_ref(), source.as_ref())
+                let target_str = target.to_str_lossy();
+                let source_str = source.to_str_lossy();
+                context.is_assignable(&target_str, &source_str)
             }
 
             // Array-to-Object assignability
             (VerificationType::Array(_), VerificationType::Object(target)) => {
                 // Arrays are assignable to Object, Cloneable, and Serializable
-                Ok(target.as_ref() == "java/lang/Object"
-                    || target.as_ref() == "java/lang/Cloneable"
-                    || target.as_ref() == "java/io/Serializable")
+                Ok(*target == "java/lang/Object"
+                    || *target == "java/lang/Cloneable"
+                    || *target == "java/io/Serializable")
             }
 
             // Array-to-Array assignability (covariance for reference arrays)
@@ -457,8 +458,10 @@ impl VerificationType {
 
             // Object-to-Object merge: find common superclass
             (VerificationType::Object(c1), VerificationType::Object(c2)) => {
-                let common = context.common_superclass(c1.as_ref(), c2.as_ref())?;
-                Ok(VerificationType::Object(Arc::from(common)))
+                let c1_str = c1.to_str_lossy();
+                let c2_str = c2.to_str_lossy();
+                let common = context.common_superclass(&c1_str, &c2_str)?;
+                Ok(VerificationType::Object(JavaString::from(common)))
             }
 
             // Array-to-Object merge
@@ -466,7 +469,7 @@ impl VerificationType {
             | (VerificationType::Object(obj), VerificationType::Array(_)) => {
                 // The common type of an array and an object is Object
                 // (unless the object is Cloneable or Serializable)
-                if obj.as_ref() == "java/lang/Cloneable" || obj.as_ref() == "java/io/Serializable" {
+                if *obj == "java/lang/Cloneable" || *obj == "java/io/Serializable" {
                     Ok(VerificationType::Object(obj.clone()))
                 } else {
                     Ok(VerificationType::java_lang_object())
@@ -528,6 +531,7 @@ impl Display for VerificationType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::JavaString;
 
     struct MockContext;
 
@@ -608,8 +612,10 @@ mod tests {
             VerificationType::Long
         );
         assert_eq!(
-            VerificationType::from_field_type(&FieldType::Object("java/lang/String".to_string())),
-            VerificationType::Object(Arc::from("java/lang/String"))
+            VerificationType::from_field_type(&FieldType::Object(JavaString::from(
+                "java/lang/String"
+            ))),
+            VerificationType::Object(JavaString::from("java/lang/String"))
         );
     }
 
@@ -734,7 +740,7 @@ mod tests {
         assert_eq!(VerificationType::Long.to_string(), "long");
         assert_eq!(VerificationType::Null.to_string(), "null");
         assert_eq!(
-            VerificationType::Object(Arc::from("java/lang/String")).to_string(),
+            VerificationType::Object(JavaString::from("java/lang/String")).to_string(),
             "java/lang/String"
         );
         assert_eq!(

@@ -139,10 +139,11 @@ pub async fn resolve_method_ref(
 
     // Get class name and load the class
     let class_name = constant_pool.try_get_class(class_index)?;
-    let target_class = thread.class(class_name).await?;
+    let target_class = thread.class_java_str(class_name).await?;
+    let class_name = class_name.to_str_lossy();
 
     // Validate class vs interface for the invoke kind
-    validate_class_kind(&target_class, invoke_kind, is_interface_method, class_name)?;
+    validate_class_kind(&target_class, invoke_kind, is_interface_method, &class_name)?;
 
     // Perform JPMS access check (the key security gate)
     check_jpms_access(frame, &target_class)?;
@@ -151,31 +152,33 @@ pub async fn resolve_method_ref(
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(name_and_type_index)?;
     let method_name = constant_pool.try_get_utf8(*name_index)?;
+    let method_name = method_name.to_str_lossy();
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
+    let method_descriptor = method_descriptor.to_str_lossy();
 
     // Look up the method in the class hierarchy
     // For interface methods, we allow abstract methods since dispatch happens on the receiver
     let (resolved_class, method) = if invoke_kind == InvokeKind::Interface {
-        lookup_interface_method(&target_class, method_name, method_descriptor)?
+        lookup_interface_method(&target_class, &method_name, &method_descriptor)?
     } else {
         // First try normal method lookup
-        match lookup_method(&target_class, method_name, method_descriptor) {
+        match lookup_method(&target_class, &method_name, &method_descriptor) {
             Ok(result) => result,
             Err(e) => {
                 // If lookup failed, check if this is a holder class with an intrinsic method
                 // Holder classes have dynamically generated methods provided by the JVM
-                if is_holder_class_for_resolution(class_name) {
+                if is_holder_class_for_resolution(&class_name) {
                     let vm = thread.vm()?;
                     let registry = vm.method_registry();
                     if registry
-                        .method(class_name, method_name, method_descriptor)
+                        .method(&class_name, &method_name, &method_descriptor)
                         .is_some()
                     {
                         // Create a synthetic native method for the intrinsic
                         let synthetic_method = create_synthetic_intrinsic_method(
-                            class_name,
-                            method_name,
-                            method_descriptor,
+                            &class_name,
+                            &method_name,
+                            &method_descriptor,
                         )?;
                         (target_class.clone(), synthetic_method)
                     } else {
@@ -189,7 +192,7 @@ pub async fn resolve_method_ref(
     };
 
     // Validate method properties for the invoke kind
-    validate_method_for_invoke(&method, method_name, method_descriptor, invoke_kind)?;
+    validate_method_for_invoke(&method, &method_name, &method_descriptor, invoke_kind)?;
 
     // Cache the successful resolution
     // For polymorphic methods, we must use the call site descriptor from the constant pool, not the
@@ -593,8 +596,9 @@ fn create_synthetic_intrinsic_method(
     };
 
     // Parse the method descriptor
+    let method_descriptor = ristretto_classfile::JavaStr::cow_from_str(method_descriptor);
     let (parameters, return_type) =
-        ristretto_classfile::FieldType::parse_method_descriptor(method_descriptor)?;
+        ristretto_classfile::FieldType::parse_method_descriptor(&method_descriptor)?;
 
     // Create the method directly
     let method = Method::new_synthetic(

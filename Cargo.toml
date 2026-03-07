@@ -70,6 +70,7 @@ dirs = "6.0.0"
 filetime = "0.2.27"
 flate2 = "1.1.9"
 getrandom = "0.3.4"
+hashbrown = { version = "0.16.1", features = ["equivalent"] }
 indoc = "2.0.7"
 indexmap = "2.13.0"
 jiff = "0.2.23"

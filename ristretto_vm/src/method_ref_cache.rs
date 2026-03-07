@@ -22,7 +22,7 @@ use crate::Error::InternalError;
 use crate::JavaError::IllegalAccessError;
 use crate::Result;
 use dashmap::DashMap;
-use ristretto_classfile::FieldType;
+use ristretto_classfile::{FieldType, JavaStr};
 use ristretto_classloader::{Class, Method, POLYMORPHIC_METHODS};
 use std::sync::Arc;
 
@@ -116,10 +116,11 @@ impl ResolvedMethodRef {
         // Compute param_count and has_return_type once during resolution
         let (param_count, has_return_type) = if is_polymorphic {
             // For polymorphic methods, parse the call site descriptor
-            match FieldType::parse_method_descriptor(&method_descriptor) {
-                Ok((params, return_type)) => (params.len(), return_type.is_some()),
+            let d = JavaStr::cow_from_str(&method_descriptor);
+            match FieldType::parse_method_descriptor(&d).ok() {
+                Some((params, return_type)) => (params.len(), return_type.is_some()),
                 // Fallback to method's declared parameters if parsing fails
-                Err(_) => (method.parameters().len(), method.return_type().is_some()),
+                None => (method.parameters().len(), method.return_type().is_some()),
             }
         } else {
             (method.parameters().len(), method.return_type().is_some())

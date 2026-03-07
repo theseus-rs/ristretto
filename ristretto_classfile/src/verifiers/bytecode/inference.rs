@@ -26,10 +26,6 @@
 //!
 //! - [JVMS §4.10.2 - Verification by Type Inference](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.2)
 
-use std::io::Cursor;
-use std::sync::Arc;
-
-use crate::FieldType;
 use crate::attributes::{Attribute, ExceptionTableEntry, Instruction};
 use crate::class_file::ClassFile;
 use crate::method::Method;
@@ -45,6 +41,8 @@ use crate::verifiers::bytecode::handlers::references::ConstantPoolResolver;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
+use crate::{FieldType, JavaString};
+use std::io::Cursor;
 
 /// Type inference verifier using iterative dataflow analysis.
 ///
@@ -274,7 +272,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
             } else {
                 frame.set_local(
                     local_index,
-                    VerificationType::Object(Arc::from(self.current_class.as_str())),
+                    VerificationType::Object(JavaString::from(self.current_class.as_str())),
                 )?;
             }
             local_index += 1;
@@ -498,7 +496,7 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                         .constant_pool
                         .try_get_class(handler.catch_type)
                         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
-                    VerificationType::Object(Arc::from(class_name))
+                    VerificationType::Object(JavaString::from(class_name))
                 };
                 handler_frame.push(exception_type)?;
 
@@ -555,15 +553,11 @@ mod tests {
 
     fn create_mock_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool
-            .add(Constant::Utf8("TestClass".into()))
-            .unwrap();
+        constant_pool.add(Constant::utf8("TestClass")).unwrap();
         let this_class_index = constant_pool.add(Constant::Class(1)).unwrap();
-        constant_pool
-            .add(Constant::Utf8("testMethod".into()))
-            .unwrap();
-        constant_pool.add(Constant::Utf8("()V".into())).unwrap();
-        constant_pool.add(Constant::Utf8("Code".into())).unwrap();
+        constant_pool.add(Constant::utf8("testMethod")).unwrap();
+        constant_pool.add(Constant::utf8("()V")).unwrap();
+        constant_pool.add(Constant::utf8("Code")).unwrap();
 
         ClassFile {
             version: Version::Java5 { minor: 0 }, // Pre-Java 6 for inference testing

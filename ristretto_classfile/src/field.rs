@@ -95,10 +95,10 @@ impl Field {
         let field_type = if let Some(crate::constant::Constant::Utf8(desc)) =
             constant_pool.get_unchecked(descriptor_index)
         {
-            FieldType::parse(desc)?
+            FieldType::parse_java_str(desc)?
         } else {
             let desc = constant_pool.try_get_utf8(descriptor_index)?;
-            FieldType::parse(desc)?
+            FieldType::parse_java_str(desc)?
         };
 
         let attribute_count = bytes.read_u16()? as usize;

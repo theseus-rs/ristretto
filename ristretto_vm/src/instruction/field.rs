@@ -23,7 +23,7 @@ pub(crate) async fn getfield(
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let field_class_name = constant_pool.try_get_class(*class_index)?;
-    let field_class = thread.class(field_class_name).await?;
+    let field_class = thread.class_java_str(field_class_name).await?;
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
@@ -55,7 +55,7 @@ pub(crate) async fn putfield(
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let field_class_name = constant_pool.try_get_class(*class_index)?;
-    let field_class = thread.class(field_class_name).await?;
+    let field_class = thread.class_java_str(field_class_name).await?;
 
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;

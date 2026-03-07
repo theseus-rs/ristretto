@@ -470,7 +470,7 @@ pub(crate) fn simulate(
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
             let field_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
 
-            let field_type = FieldType::parse(field_descriptor)?;
+            let field_type = FieldType::parse_java_str(field_descriptor)?;
             push_field_type(stack, &field_type)?;
         }
         Instruction::Putstatic(index) => {
@@ -479,7 +479,7 @@ pub(crate) fn simulate(
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
             let field_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
 
-            let field_type = FieldType::parse(field_descriptor)?;
+            let field_type = FieldType::parse_java_str(field_descriptor)?;
             let _ = pop_field_type(stack, &field_type)?;
         }
         Instruction::Getfield(index) => {
@@ -489,7 +489,7 @@ pub(crate) fn simulate(
             let field_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
 
             let _ = stack.pop_object()?;
-            let field_type = FieldType::parse(field_descriptor)?;
+            let field_type = FieldType::parse_java_str(field_descriptor)?;
             push_field_type(stack, &field_type)?;
         }
         Instruction::Putfield(index) => {
@@ -498,7 +498,7 @@ pub(crate) fn simulate(
                 constant_pool.try_get_name_and_type(*name_and_type_index)?;
             let field_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
 
-            let field_type = FieldType::parse(field_descriptor)?;
+            let field_type = FieldType::parse_java_str(field_descriptor)?;
             let _ = pop_field_type(stack, &field_type)?;
             let _ = stack.pop_object()?;
         }
@@ -621,7 +621,6 @@ fn invoke(
     let (_name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(name_and_type_index)?;
     let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-
     let (parameters, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
     for parameter in parameters.iter().rev() {
         pop_field_type(stack, parameter)?;
@@ -672,6 +671,7 @@ fn pop_field_type(stack: &mut TypeStack, field_type: &FieldType) -> Result<Type>
 mod tests {
     use super::*;
     use indexmap::IndexMap;
+    use ristretto_classfile::JavaString;
     use ristretto_classfile::attributes::{ArrayType, LookupSwitch, TableSwitch};
 
     #[test]
@@ -790,7 +790,7 @@ mod tests {
     #[test]
     fn test_push_field_type_object() -> Result<()> {
         let field_types = vec![
-            FieldType::Object("java/lang/String".to_string()),
+            FieldType::Object(JavaString::from("java/lang/String")),
             FieldType::Array(Box::new(FieldType::Base(BaseType::Int))),
         ];
         for field_type in field_types {
@@ -852,7 +852,7 @@ mod tests {
     #[test]
     fn test_pop_field_type_object() -> Result<()> {
         let field_types = vec![
-            FieldType::Object("java/lang/String".to_string()),
+            FieldType::Object(JavaString::from("java/lang/String")),
             FieldType::Array(Box::new(FieldType::Base(BaseType::Int))),
         ];
         for field_type in field_types {

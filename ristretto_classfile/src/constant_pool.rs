@@ -3,6 +3,7 @@ use crate::ReferenceKind;
 use crate::byte_reader::ByteReader;
 use crate::constant::Constant;
 use crate::error::Result;
+use crate::java_string::{JavaStr, JavaString};
 use byteorder::{BigEndian, WriteBytesExt};
 use std::borrow::Cow;
 use std::fmt;
@@ -184,10 +185,10 @@ impl<'a> ConstantPool<'a> {
     /// use ristretto_classfile::{Constant, ConstantPool};
     ///
     /// let mut constant_pool = ConstantPool::new();
-    /// constant_pool.push(Constant::Utf8("original".into()));
-    /// constant_pool.set(1, Constant::Utf8("modified".into()))?;
+    /// constant_pool.push(Constant::utf8("original"));
+    /// constant_pool.set(1, Constant::utf8("modified"))?;
     /// assert_eq!(
-    ///     &Constant::Utf8("modified".into()),
+    ///     &Constant::utf8("modified"),
     ///     constant_pool.try_get(1)?
     /// );
     /// # Ok::<(), ristretto_classfile::Error>(())
@@ -246,11 +247,11 @@ impl<'a> ConstantPool<'a> {
     ///
     /// let mut constant_pool = ConstantPool::new();
     /// constant_pool.push(Constant::Integer(42));
-    /// constant_pool.push(Constant::Utf8("Hello".into()));
+    /// constant_pool.push(Constant::utf8("Hello"));
     ///
     /// let mut iterator = constant_pool.iter();
     /// assert_eq!(Some(&Constant::Integer(42)), iterator.next());
-    /// assert_eq!(Some(&Constant::Utf8("Hello".into())), iterator.next());
+    /// assert_eq!(Some(&Constant::utf8("Hello")), iterator.next());
     /// assert_eq!(None, iterator.next());
     /// ```
     #[must_use]
@@ -276,6 +277,7 @@ impl<'a> ConstantPool<'a> {
     /// assert_eq!(1, constant_pool.len());
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
+    #[inline]
     pub fn from_bytes<'b>(bytes: &mut ByteReader<'b>) -> Result<ConstantPool<'b>> {
         let raw_count = bytes.read_u16()?;
         if raw_count == 0 {
@@ -283,14 +285,20 @@ impl<'a> ConstantPool<'a> {
                 "Invalid constant pool count".to_string(),
             ));
         }
-        let constant_pool_count = (raw_count - 1) as usize;
-        let mut constant_pool = ConstantPool::with_capacity(constant_pool_count);
-        while constant_pool.len() < constant_pool_count {
+        let target_len = raw_count as usize;
+        let mut constants = Vec::with_capacity(target_len);
+        constants.push(ConstantEntry::Placeholder);
+
+        while constants.len() < target_len {
             let constant = Constant::from_bytes(bytes)?;
-            constant_pool.push(constant);
+            let add_placeholder = matches!(constant, Constant::Long(_) | Constant::Double(_));
+            constants.push(ConstantEntry::Constant(constant));
+            if add_placeholder {
+                constants.push(ConstantEntry::Placeholder);
+            }
         }
 
-        Ok(constant_pool)
+        Ok(ConstantPool { constants })
     }
 
     /// Create a new constant pool with the given capacity.
@@ -368,8 +376,8 @@ impl<'a> ConstantPool<'a> {
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7>
     pub fn add_utf8<S: AsRef<str>>(&mut self, value: S) -> Result<u16> {
-        let value = value.as_ref().to_string();
-        self.add(Constant::Utf8(Cow::Owned(value)))
+        let java_string = JavaString::from(value.as_ref());
+        self.add(Constant::Utf8(Cow::Owned(java_string)))
     }
 
     /// Get a UTF-8 constant from the pool by index; indexes are 1-based.
@@ -380,7 +388,7 @@ impl<'a> ConstantPool<'a> {
     /// use ristretto_classfile::{Constant, ConstantPool};
     ///
     /// let mut constant_pool = ConstantPool::new();
-    /// constant_pool.push(Constant::Utf8("Hello".into()));
+    /// constant_pool.push(Constant::utf8("Hello"));
     /// assert_eq!("Hello", constant_pool.try_get_utf8(1)?);
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
@@ -392,7 +400,7 @@ impl<'a> ConstantPool<'a> {
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7>
-    pub fn try_get_utf8(&self, index: u16) -> Result<&str> {
+    pub fn try_get_utf8(&self, index: u16) -> Result<&JavaStr> {
         match self.try_get(index)? {
             Constant::Utf8(value) => Ok(value.as_ref()),
             _ => Err(InvalidConstantPoolIndexType(index)),
@@ -654,7 +662,7 @@ impl<'a> ConstantPool<'a> {
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.1>
-    pub fn try_get_class(&self, index: u16) -> Result<&str> {
+    pub fn try_get_class(&self, index: u16) -> Result<&JavaStr> {
         match self.try_get(index)? {
             Constant::Class(utf8_index) => self.try_get_utf8(*utf8_index),
             _ => Err(InvalidConstantPoolIndexType(index)),
@@ -706,7 +714,7 @@ impl<'a> ConstantPool<'a> {
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.3>
-    pub fn try_get_string(&self, index: u16) -> Result<&str> {
+    pub fn try_get_string(&self, index: u16) -> Result<&JavaStr> {
         match self.try_get(index)? {
             Constant::String(value) => self.try_get_utf8(*value),
             _ => Err(InvalidConstantPoolIndexType(index)),
@@ -1273,7 +1281,7 @@ impl<'a> ConstantPool<'a> {
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.11>
-    pub fn try_get_module(&self, index: u16) -> Result<&str> {
+    pub fn try_get_module(&self, index: u16) -> Result<&JavaStr> {
         match self.try_get(index)? {
             Constant::Module(name_index) => self.try_get_utf8(*name_index),
             _ => Err(InvalidConstantPoolIndexType(index)),
@@ -1326,7 +1334,7 @@ impl<'a> ConstantPool<'a> {
     /// # References
     ///
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.12>
-    pub fn try_get_package(&self, index: u16) -> Result<&str> {
+    pub fn try_get_package(&self, index: u16) -> Result<&JavaStr> {
         match self.try_get(index)? {
             Constant::Package(name_index) => self.try_get_utf8(*name_index),
             _ => Err(InvalidConstantPoolIndexType(index)),
@@ -1565,7 +1573,7 @@ impl fmt::Display for ConstantEntry<'_> {
 ///
 /// // Using the iterator directly
 /// let mut iterator = constant_pool.iter();
-/// assert_eq!(Some(&Constant::Utf8("foo".into())), iterator.next());
+/// assert_eq!(Some(&Constant::utf8("foo")), iterator.next());
 /// assert_eq!(Some(&Constant::Long(42)), iterator.next());
 /// assert_eq!(Some(&Constant::Integer(3)), iterator.next());
 /// assert_eq!(None, iterator.next());
@@ -1608,7 +1616,7 @@ impl<'a, 'b> ConstantPoolIterator<'a, 'b> {
     /// let mut itererator = constant_pool.iter();
     ///
     /// // The iterator will automatically skip placeholder entries
-    /// assert_eq!(Some(&Constant::Utf8("foo".into())), itererator.next());
+    /// assert_eq!(Some(&Constant::utf8("foo")), itererator.next());
     /// assert_eq!(Some(&Constant::Long(42)), itererator.next());
     /// assert_eq!(Some(&Constant::Integer(3)), itererator.next());
     /// assert_eq!(None, itererator.next());
@@ -1650,7 +1658,7 @@ impl<'a, 'b> Iterator for ConstantPoolIterator<'a, 'b> {
     /// let mut iterator = constant_pool.iter();
     ///
     /// // The first constant is the UTF-8 "Hello"
-    /// assert_eq!(Some(&Constant::Utf8("foo".into())), iterator.next());
+    /// assert_eq!(Some(&Constant::utf8("foo")), iterator.next());
     ///
     /// // The second constant is the Long value (the placeholder is skipped)
     /// assert_eq!(Some(&Constant::Long(42)), iterator.next());
@@ -1767,7 +1775,7 @@ mod test {
     fn test_get() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.get(1).is_none());
-        constant_pool.push(Constant::Utf8("foo".into()));
+        constant_pool.push(Constant::utf8("foo"));
         assert!(constant_pool.get(1).is_some());
     }
 
@@ -1781,25 +1789,25 @@ mod test {
     fn test_try_get() {
         let mut constant_pool = ConstantPool::default();
         assert!(constant_pool.try_get(1).is_err());
-        constant_pool.push(Constant::Utf8("foo".into()));
+        constant_pool.push(Constant::utf8("foo"));
         assert!(constant_pool.try_get(1).is_ok());
     }
 
     #[test]
     fn test_set() {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".into()));
-        assert_eq!(Some(&Constant::Utf8("foo".into())), constant_pool.get(1));
+        constant_pool.push(Constant::utf8("foo"));
+        assert_eq!(Some(&Constant::utf8("foo")), constant_pool.get(1));
         constant_pool
-            .set(1, Constant::Utf8("baz".into()))
+            .set(1, Constant::utf8("baz"))
             .expect("Failed to set constant");
-        assert_eq!(Some(&Constant::Utf8("baz".into())), constant_pool.get(1));
+        assert_eq!(Some(&Constant::utf8("baz")), constant_pool.get(1));
     }
 
     #[test]
     fn test_utf8() {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".into()));
+        constant_pool.push(Constant::utf8("foo"));
         assert!(constant_pool.get(1).is_some());
         assert_eq!(1, constant_pool.len());
     }
@@ -1840,11 +1848,11 @@ mod test {
     #[test]
     fn test_iter() {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".into()));
+        constant_pool.push(Constant::utf8("foo"));
         constant_pool.push(Constant::Integer(42));
         constant_pool.push(Constant::Long(1_234_567_890));
         let mut iter = constant_pool.iter();
-        assert_eq!(Some(&Constant::Utf8("foo".into())), iter.next());
+        assert_eq!(Some(&Constant::utf8("foo")), iter.next());
         assert_eq!(Some(&Constant::Integer(42)), iter.next());
         assert_eq!(Some(&Constant::Long(1_234_567_890)), iter.next());
         assert_eq!(None, iter.next());
@@ -1853,9 +1861,9 @@ mod test {
     #[test]
     fn test_into_iter() {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".into()));
+        constant_pool.push(Constant::utf8("foo"));
         for constant in &constant_pool {
-            assert_eq!(Constant::Utf8("foo".into()), *constant);
+            assert_eq!(Constant::utf8("foo"), *constant);
         }
     }
 
@@ -1871,7 +1879,7 @@ mod test {
     #[test]
     fn test_to_string() {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".into()));
+        constant_pool.push(Constant::utf8("foo"));
         constant_pool.push(Constant::Integer(42));
         constant_pool.push(Constant::Long(1_234_567_890));
         let expected = "   #1 = Utf8               foo\n   #2 = Integer            42\n   #3 = Long               1234567890\n";
@@ -1906,7 +1914,7 @@ mod test {
         if matches!(constant, Constant::Utf8(_)) {
             constant_pool.push(Constant::Integer(42));
         } else {
-            constant_pool.push(Constant::Utf8("foo".into()));
+            constant_pool.push(Constant::utf8("foo"));
         }
         constant_pool.push(constant);
         assert_eq!(Err(InvalidConstantPoolIndex(0)), f(&constant_pool, 0));
@@ -1922,7 +1930,7 @@ mod test {
         B: Debug + PartialEq,
     {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("foo".into()));
+        constant_pool.push(Constant::utf8("foo"));
         constant_pool.push(constant);
         assert_eq!(Err(InvalidConstantPoolIndex(0)), f(&constant_pool, 0));
         assert_eq!(Err(InvalidConstantPoolIndexType(1)), f(&constant_pool, 1));
@@ -1934,16 +1942,13 @@ mod test {
         let mut constant_pool = ConstantPool::default();
         let index = constant_pool.add_utf8("foo")?;
         assert_eq!(1, index);
-        assert_eq!(
-            Some(&Constant::Utf8("foo".into())),
-            constant_pool.get(index)
-        );
+        assert_eq!(Some(&Constant::utf8("foo")), constant_pool.get(index));
         Ok(())
     }
 
     #[test]
     fn test_try_get_utf8() {
-        test_try_get_constant(ConstantPool::try_get_utf8, Constant::Utf8("foo".into()));
+        test_try_get_constant(ConstantPool::try_get_utf8, Constant::utf8("foo"));
     }
 
     #[test]
@@ -2085,7 +2090,7 @@ mod test {
     #[test]
     fn test_try_get_class_name() -> Result<()> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool.push(Constant::Utf8("java/lang/Object".into()));
+        constant_pool.push(Constant::utf8("java/lang/Object"));
         constant_pool.push(Constant::Class(1));
         let class_name = constant_pool.try_get_class(2)?;
         assert_eq!("java/lang/Object", class_name);

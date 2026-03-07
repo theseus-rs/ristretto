@@ -9,7 +9,7 @@
 //!
 //! - [JVMS §6.5 - Instructions](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5)
 
-use std::sync::Arc;
+use crate::JavaString;
 
 use crate::attributes::Instruction;
 use crate::verifiers::bytecode::frame::Frame;
@@ -345,9 +345,9 @@ pub fn handle_aaload<C: VerificationContext>(frame: &mut Frame, _context: &C) ->
             }
             frame.push(component.as_ref().clone())
         }
-        VerificationType::Object(name) if name.starts_with('[') => {
+        VerificationType::Object(name) if name.as_bytes().first() == Some(&b'[') => {
             // Legacy array representation - parse component type
-            let component = parse_array_component(name.as_ref())?;
+            let component = parse_array_component(&name.to_str_lossy())?;
             frame.push(component)
         }
         _ => Err(VerifyError::VerifyError(format!(
@@ -585,7 +585,7 @@ pub fn handle_aastore<C: VerificationContext>(frame: &mut Frame, context: &C) ->
             }
             Ok(())
         }
-        VerificationType::Object(name) if name.starts_with('[') => {
+        VerificationType::Object(name) if name.as_bytes().first() == Some(&b'[') => {
             // Legacy representation
             Ok(())
         }
@@ -749,7 +749,7 @@ fn parse_array_component(descriptor: &str) -> Result<VerificationType> {
             // Object type - extract class name
             if let Some(end) = component_desc.find(';') {
                 let class_name = &component_desc[1..end];
-                Ok(VerificationType::Object(Arc::from(class_name)))
+                Ok(VerificationType::Object(JavaString::from(class_name)))
             } else {
                 Err(VerifyError::VerifyError(format!(
                     "Invalid object descriptor: {component_desc}"
@@ -2204,7 +2204,9 @@ mod tests {
 
         // Legacy representation: Object with name starting with '['
         frame
-            .push(VerificationType::Object(Arc::from("[Ljava/lang/String;")))
+            .push(VerificationType::Object(JavaString::from(
+                "[Ljava/lang/String;",
+            )))
             .unwrap();
         frame.push(VerificationType::Integer).unwrap();
 

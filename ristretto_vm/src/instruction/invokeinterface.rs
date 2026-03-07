@@ -9,7 +9,7 @@ use crate::frame::{ExecutionResult, Frame};
 use crate::instruction::{lookup_method, resolve_method_ref};
 use crate::method_ref_cache::InvokeKind;
 use crate::operand_stack::OperandStack;
-use ristretto_classfile::FieldType;
+use ristretto_classfile::{FieldType, JavaStr};
 use ristretto_classloader::Value;
 
 /// Invokeinterface instruction implementation.
@@ -29,8 +29,9 @@ pub(crate) async fn invokeinterface(
     // Resolve the interface method with JPMS checks and caching
     let resolution = resolve_method_ref(frame, method_index, InvokeKind::Interface).await?;
 
+    let method_descriptor = JavaStr::cow_from_str(&resolution.method_descriptor);
     let (method_parameters, _method_return_type) =
-        FieldType::parse_method_descriptor(&resolution.method_descriptor)?;
+        FieldType::parse_method_descriptor(&method_descriptor)?;
     let parameters = stack.drain_last(method_parameters.len() + 1);
 
     let object_class = match parameters.first() {

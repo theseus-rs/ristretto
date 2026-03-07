@@ -1,4 +1,5 @@
 use criterion::{Criterion, criterion_group, criterion_main};
+use ristretto_classfile::JavaStr;
 use ristretto_classloader::{ClassLoader, Result, runtime};
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -18,21 +19,30 @@ fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
                 let class_loader = default_class_loader()
                     .await
                     .expect("Failed to create class loader");
-                let _class = class_loader.load("java.lang.Object").await.ok();
+                let _class = class_loader
+                    .load(JavaStr::try_from_str("java.lang.Object").expect("valid class name"))
+                    .await
+                    .ok();
             });
         });
     });
     criterion.bench_function("load_hash_map", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                let _ = class_loader.load("java.util.HashMap").await.ok();
+                let _ = class_loader
+                    .load(JavaStr::try_from_str("java.util.HashMap").expect("valid class name"))
+                    .await
+                    .ok();
             });
         });
     });
     criterion.bench_function("load_invalid_class", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                let _ = class_loader.load("foo").await.err();
+                let _ = class_loader
+                    .load(JavaStr::try_from_str("foo").expect("valid class name"))
+                    .await
+                    .err();
             });
         });
     });

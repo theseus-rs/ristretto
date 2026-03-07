@@ -19,7 +19,7 @@ use crate::verifiers::error::{Result, VerifyError};
 
 /// Handles `return` - return void from method.
 ///
-/// Stack: ... → \[empty\]
+/// Stack: ... -> \[empty\]
 ///
 /// # Errors
 ///
@@ -36,7 +36,7 @@ pub fn handle_return() -> Result<()> {
 
 /// Handles `ireturn` - return int from method.
 ///
-/// Stack: ..., value → \[empty\]
+/// Stack: ..., value -> \[empty\]
 ///
 /// # Errors
 ///
@@ -188,7 +188,7 @@ pub fn handle_areturn<C: VerificationContext>(
 
 /// Handles `tableswitch` - switch on int with table.
 ///
-/// Stack: ..., index → ...
+/// Stack: ..., index -> ...
 ///
 /// # Errors
 ///
@@ -209,7 +209,7 @@ pub fn handle_tableswitch(frame: &mut Frame) -> Result<()> {
 
 /// Handles `lookupswitch` - switch on int with lookup.
 ///
-/// Stack: ..., key → ...
+/// Stack: ..., key -> ...
 ///
 /// # Errors
 ///
@@ -322,6 +322,7 @@ pub fn dispatch_control<C: VerificationContext>(
 mod tests {
     use super::*;
     use crate::BaseType;
+    use crate::JavaString;
     use crate::attributes::{LookupSwitch, TableSwitch};
     use crate::verifiers::bytecode::handlers::test_utils::{MockContext, StrictMockContext};
     use indexmap::IndexMap;
@@ -508,7 +509,7 @@ mod tests {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
-        let ret_type = FieldType::Object("java/lang/Object".to_string());
+        let ret_type = FieldType::Object(JavaString::from("java/lang/Object"));
         handle_areturn(&mut frame, Some(&ret_type), &ctx).unwrap();
     }
 
@@ -536,7 +537,7 @@ mod tests {
             .push(VerificationType::Object("some/Other".into()))
             .unwrap();
 
-        let ret_type = FieldType::Object("java/lang/String".to_string());
+        let ret_type = FieldType::Object(JavaString::from("java/lang/String"));
         let result = handle_areturn(&mut frame, Some(&ret_type), &ctx);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));

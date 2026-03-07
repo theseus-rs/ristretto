@@ -159,9 +159,10 @@ use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use crate::{JavaObject, Result};
 use ristretto_classfile::attributes::{Attribute, BootstrapMethod};
-use ristretto_classfile::{Constant, ConstantPool, FieldType, ReferenceKind};
+use ristretto_classfile::{Constant, ConstantPool, FieldType, JavaStr, ReferenceKind};
 use ristretto_classloader::{Class, Method, Reference, Value};
 use ristretto_intrinsics::call_method_handle_target;
+use std::borrow::Cow;
 use std::sync::Arc;
 use tracing::debug;
 
@@ -250,12 +251,12 @@ async fn resolve_bootstrap_method<'a>(
     thread: &Arc<Thread>,
     constant_pool: &'a ConstantPool<'a>,
     bootstrap_method_attribute: &BootstrapMethod,
-) -> Result<(&'a ReferenceKind, Arc<Class>, &'a str, Arc<Method>)> {
+) -> Result<(&'a ReferenceKind, Arc<Class>, Cow<'a, str>, Arc<Method>)> {
     let (reference_kind, method_ref) =
         constant_pool.try_get_method_handle(bootstrap_method_attribute.bootstrap_method_ref)?;
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(*method_ref)?;
     let bootstrap_class_name = constant_pool.try_get_class(*class_index)?;
-    let bootstrap_class = thread.class(bootstrap_class_name).await?;
+    let bootstrap_class = thread.class_java_str(bootstrap_class_name).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
 
@@ -265,8 +266,10 @@ async fn resolve_bootstrap_method<'a>(
     let bootstrap_method_name = constant_pool.try_get_utf8(*name_index)?;
 
     let bootstrap_method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
+    let bootstrap_method_name = bootstrap_method_name.to_str_lossy();
+    let bootstrap_method_descriptor = bootstrap_method_descriptor.to_str_lossy();
     let bootstrap_method =
-        bootstrap_class.try_get_method(bootstrap_method_name, bootstrap_method_descriptor)?;
+        bootstrap_class.try_get_method(&bootstrap_method_name, &bootstrap_method_descriptor)?;
 
     // 2.4 Validate bootstrap method signature matches required pattern:
     //     (MethodHandles.Lookup, String, MethodType|TypeDescriptor, ...additionalArgs) -> CallSite|Object
@@ -390,7 +393,8 @@ async fn get_field_type_class(thread: &Thread, field_type: Option<FieldType>) ->
 /// Returns an error if the method descriptor is invalid or if any of the field types cannot be
 /// resolved.
 async fn get_method_type(thread: &Thread, method_descriptor: &str) -> Result<Value> {
-    let (argument_types, return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
+    let method_descriptor = JavaStr::cow_from_str(method_descriptor);
+    let (argument_types, return_type) = FieldType::parse_method_descriptor(&method_descriptor)?;
     let return_class = get_field_type_class(thread, return_type).await?;
 
     let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
@@ -495,7 +499,7 @@ pub async fn get_method_handle(
     };
 
     // 3. Get the class and lookup object
-    let class = thread.class(class_name).await?;
+    let class = thread.class_java_str(class_name).await?;
     let class_object = class.to_object(thread).await?;
     let lookup_class = thread
         .class("java.lang.invoke.MethodHandles$Lookup")
@@ -526,7 +530,7 @@ pub async fn get_method_handle(
     // 4. Build the Java String and MethodType for the member
     let name_value = member_name.to_object(thread).await?;
     let method_type = if is_method {
-        get_method_type(thread, member_descriptor).await?
+        get_method_type(thread, &member_descriptor.to_str_lossy()).await?
     } else {
         // not used for fields
         Value::Object(None)
@@ -603,7 +607,7 @@ pub async fn get_method_handle(
                 "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
             )?;
             // field type from descriptor
-            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_type = FieldType::parse_java_str(member_descriptor)?.class_name();
             let field_class = thread.class(field_type).await?;
             let field_class_object = field_class.to_object(thread).await?;
             thread
@@ -624,7 +628,7 @@ pub async fn get_method_handle(
                 method_name,
                 "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
             )?;
-            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_type = FieldType::parse_java_str(member_descriptor)?.class_name();
             let field_class = thread.class(field_type).await?;
             let field_class_object = field_class.to_object(thread).await?;
             thread
@@ -697,13 +701,14 @@ async fn resolve_static_bootstrap_arguments(
             }
             Constant::Class(class_index) => {
                 let class_name = constant_pool.try_get_utf8(*class_index)?;
-                let class = thread.class(class_name).await?;
+                let class = thread.class_java_str(class_name).await?;
                 let class_object = class.to_object(thread).await?;
                 arguments.push(class_object);
             }
             Constant::MethodType(descriptor_index) => {
                 let descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-                let method_type = get_method_type(thread, descriptor).await?;
+                let s = descriptor.to_str_lossy();
+                let method_type = get_method_type(thread, &s).await?;
                 arguments.push(method_type);
             }
             Constant::MethodHandle {
@@ -756,7 +761,8 @@ async fn adjust_varargs_static_arguments(
     );
 
     // Parse the bootstrap method descriptor to get parameter types
-    let (param_types, _) = FieldType::parse_method_descriptor(bootstrap_method_descriptor)?;
+    let bootstrap_method_descriptor = JavaStr::cow_from_str(bootstrap_method_descriptor);
+    let (param_types, _) = FieldType::parse_method_descriptor(&bootstrap_method_descriptor)?;
 
     // The first 3 params are always: Lookup, String, MethodType/TypeDescriptor
     // The remaining params come from static_arguments
@@ -893,6 +899,7 @@ async fn resolve_call_site_uncached(frame: &Frame, method_index: u16) -> Result<
         constant_pool.try_get_utf8(*bootstrap_method_attr_name_index)?;
     let bootstrap_method_attr_descriptor =
         constant_pool.try_get_utf8(*bootstrap_method_attr_descriptor_index)?;
+    let bootstrap_method_attr_descriptor = bootstrap_method_attr_descriptor.to_str_lossy();
 
     // Get the bootstrap method
     let bootstrap_method_attribute =
@@ -929,7 +936,7 @@ async fn resolve_call_site_uncached(frame: &Frame, method_index: u16) -> Result<
 
     // 3.2 Prepare method name and method type for the invokedynamic call site
     let method_name = bootstrap_method_attr_name.to_object(&thread).await?;
-    let method_type = get_method_type(&thread, bootstrap_method_attr_descriptor).await?;
+    let method_type = get_method_type(&thread, &bootstrap_method_attr_descriptor).await?;
 
     // 3.4 Resolve static arguments
     let static_arguments =
@@ -954,7 +961,12 @@ async fn resolve_call_site_uncached(frame: &Frame, method_index: u16) -> Result<
         .ok_or_else(|| BootstrapMethodError("Bootstrap method returned null".to_string()))?;
 
     // 4.3 Validate returned CallSite:
-    validate_call_site(&thread, bootstrap_method_attr_descriptor, &call_site_result).await?;
+    validate_call_site(
+        &thread,
+        &bootstrap_method_attr_descriptor,
+        &call_site_result,
+    )
+    .await?;
 
     Ok(call_site_result)
 }

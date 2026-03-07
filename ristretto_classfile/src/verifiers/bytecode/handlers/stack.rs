@@ -37,8 +37,8 @@ pub fn handle_pop(frame: &mut Frame) -> Result<()> {
 
 /// Handles `pop2` - discard top one or two stack values.
 ///
-/// Form 1: value2, value1 → (where value1 and value2 are both category 1)
-/// Form 2: value → (where value is category 2)
+/// Form 1: value2, value1 -> (where value1 and value2 are both category 1)
+/// Form 2: value -> (where value is category 2)
 ///
 /// # Errors
 ///
@@ -79,7 +79,7 @@ pub fn handle_pop2(frame: &mut Frame) -> Result<()> {
 
 /// Handles `dup` - duplicate top stack value.
 ///
-/// Stack: ..., value → ..., value, value
+/// Stack: ..., value -> ..., value, value
 ///
 /// # Errors
 ///
@@ -102,7 +102,7 @@ pub fn handle_dup(frame: &mut Frame) -> Result<()> {
 
 /// Handles `dup_x1` - duplicate and insert below second value.
 ///
-/// Stack: ..., value2, value1 → ..., value1, value2, value1
+/// Stack: ..., value2, value1 -> ..., value1, value2, value1
 ///
 /// Both values must be category 1.
 ///
@@ -135,10 +135,10 @@ pub fn handle_dup_x1(frame: &mut Frame) -> Result<()> {
 
 /// Handles `dup_x2` - duplicate and insert below second or third value.
 ///
-/// Form 1: ..., value3, value2, value1 → ..., value1, value3, value2, value1
+/// Form 1: ..., value3, value2, value1 -> ..., value1, value3, value2, value1
 ///         (where value1, value2, and value3 are all category 1)
 ///
-/// Form 2: ..., value2, value1 → ..., value1, value2, value1
+/// Form 2: ..., value2, value1 -> ..., value1, value2, value1
 ///         (where value1 is category 1 and value2 is category 2)
 ///
 /// # Errors
@@ -193,10 +193,10 @@ pub fn handle_dup_x2(frame: &mut Frame) -> Result<()> {
 
 /// Handles `dup2` - duplicate top one or two values.
 ///
-/// Form 1: ..., value2, value1 → ..., value2, value1, value2, value1
+/// Form 1: ..., value2, value1 -> ..., value2, value1, value2, value1
 ///         (where value1 and value2 are both category 1)
 ///
-/// Form 2: ..., value → ..., value, value
+/// Form 2: ..., value -> ..., value, value
 ///         (where value is category 2)
 ///
 /// # Errors
@@ -244,10 +244,10 @@ pub fn handle_dup2(frame: &mut Frame) -> Result<()> {
 
 /// Handles `dup2_x1` - duplicate one or two values and insert below.
 ///
-/// Form 1: ..., value3, value2, value1 → ..., value2, value1, value3, value2, value1
+/// Form 1: ..., value3, value2, value1 -> ..., value2, value1, value3, value2, value1
 ///         (where value1, value2, and value3 are all category 1)
 ///
-/// Form 2: ..., value2, value1 → ..., value1, value2, value1
+/// Form 2: ..., value2, value1 -> ..., value1, value2, value1
 ///         (where value1 is category 2 and value2 is category 1)
 ///
 /// # Errors
@@ -311,16 +311,16 @@ pub fn handle_dup2_x1(frame: &mut Frame) -> Result<()> {
 
 /// Handles `dup2_x2` - duplicate one or two values and insert two or three below.
 ///
-/// Form 1: ..., value4, value3, value2, value1 → ..., value2, value1, value4, value3, value2, value1
+/// Form 1: ..., value4, value3, value2, value1 -> ..., value2, value1, value4, value3, value2, value1
 ///         (where all values are category 1)
 ///
-/// Form 2: ..., value3, value2, value1 → ..., value1, value3, value2, value1
+/// Form 2: ..., value3, value2, value1 -> ..., value1, value3, value2, value1
 ///         (where value1 is category 2, value2 and value3 are category 1)
 ///
-/// Form 3: ..., value3, value2, value1 → ..., value2, value1, value3, value2, value1
+/// Form 3: ..., value3, value2, value1 -> ..., value2, value1, value3, value2, value1
 ///         (where value1 and value2 are category 1, value3 is category 2)
 ///
-/// Form 4: ..., value2, value1 → ..., value1, value2, value1
+/// Form 4: ..., value2, value1 -> ..., value1, value2, value1
 ///         (where both values are category 2)
 ///
 /// # Errors
@@ -434,7 +434,7 @@ pub fn handle_dup2_x2(frame: &mut Frame) -> Result<()> {
 
 /// Handles `swap` - swap top two stack values.
 ///
-/// Stack: ..., value2, value1 → ..., value1, value2
+/// Stack: ..., value2, value1 -> ..., value1, value2
 ///
 /// Both values must be category 1.
 ///

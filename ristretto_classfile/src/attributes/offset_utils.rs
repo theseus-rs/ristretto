@@ -37,15 +37,31 @@ use std::io::Cursor;
 ///   instruction.
 /// - returns `Error::Io` if there is an issue reading from the byte reader.
 /// - returns `Error::TryFromIntError` if a conversion from a numeric type fails.
+#[expect(clippy::type_complexity)]
 pub(crate) fn instructions_from_bytes(
     bytes: &mut ByteReader<'_>,
-) -> Result<(AHashMap<u16, u16>, Vec<Instruction>)> {
-    let (pairs, instructions) = instructions_from_byte_reader(bytes)?;
-    let mut map = AHashMap::with_capacity(pairs.len());
-    for &(byte_off, instr_idx) in &pairs {
-        map.insert(byte_off, instr_idx);
+) -> Result<(Vec<(u16, u16)>, Vec<Instruction>)> {
+    instructions_from_byte_reader(bytes)
+}
+
+/// Look up an exact byte offset in the sorted pairs, returning the instruction index.
+#[inline]
+pub(crate) fn lookup_byte_offset(pairs: &[(u16, u16)], byte_offset: u16) -> Option<u16> {
+    pairs
+        .binary_search_by_key(&byte_offset, |&(k, _)| k)
+        .ok()
+        .map(|idx| pairs[idx].1)
+}
+
+/// Look up the largest byte offset <= `byte_offset` in the sorted pairs.
+#[inline]
+pub(crate) fn lookup_byte_offset_le(pairs: &[(u16, u16)], byte_offset: u16) -> Option<u16> {
+    let idx = pairs.partition_point(|&(k, _)| k <= byte_offset);
+    if idx > 0 {
+        Some(pairs[idx - 1].1)
+    } else {
+        None
     }
-    Ok((map, instructions))
 }
 
 /// Internal implementation using `ByteReader` for zero-overhead instruction parsing.

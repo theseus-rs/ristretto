@@ -19,9 +19,13 @@
 //! - [JVMS §4.10 - Verification of class Files](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10)
 
 use ahash::AHashMap;
+use hashbrown::Equivalent;
+use std::borrow::Cow;
+use std::hash::{Hash, Hasher};
 use std::sync::RwLock;
 
 use crate::FieldType;
+use crate::java_string::{JavaStr, JavaString};
 
 /// Cached verification result for a method.
 #[derive(Debug, Clone)]
@@ -33,27 +37,77 @@ pub enum CachedResult {
 }
 
 /// Key for identifying a method in the cache.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct MethodKey {
+///
+/// Uses `Cow<'a, JavaStr>` fields so that lookups can borrow directly from
+/// the constant pool (`MethodKey<'borrowed>`) while the cache stores
+/// fully owned keys (`MethodKey<'static>`).
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct MethodKey<'a> {
     /// Class name.
-    pub class_name: String,
+    pub class_name: Cow<'a, JavaStr>,
     /// Method name.
-    pub method_name: String,
+    pub method_name: Cow<'a, JavaStr>,
     /// Method descriptor.
-    pub descriptor: String,
+    pub descriptor: Cow<'a, JavaStr>,
 }
 
-impl MethodKey {
-    /// Creates a new method key.
+/// Wrapper type for zero-allocation cache lookups.
+///
+/// Uses a separate type to avoid coherence conflicts with the blanket
+/// `impl<Q, K> Equivalent<K> for Q where Q: Eq, K: Borrow<Q>` impl
+/// in the `equivalent` crate.
+struct MethodKeyLookup<'a, 'b>(&'a MethodKey<'b>);
+
+impl Hash for MethodKeyLookup<'_, '_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
+impl Equivalent<MethodKey<'static>> for MethodKeyLookup<'_, '_> {
+    fn equivalent(&self, key: &MethodKey<'static>) -> bool {
+        self.0.class_name == key.class_name
+            && self.0.method_name == key.method_name
+            && self.0.descriptor == key.descriptor
+    }
+}
+
+impl MethodKey<'static> {
+    /// Creates a new owned method key (allocates three `JavaString`s).
     pub fn new(
-        class_name: impl Into<String>,
-        method_name: impl Into<String>,
-        descriptor: impl Into<String>,
+        class_name: impl Into<JavaString>,
+        method_name: impl Into<JavaString>,
+        descriptor: impl Into<JavaString>,
     ) -> Self {
         Self {
-            class_name: class_name.into(),
-            method_name: method_name.into(),
-            descriptor: descriptor.into(),
+            class_name: Cow::Owned(class_name.into()),
+            method_name: Cow::Owned(method_name.into()),
+            descriptor: Cow::Owned(descriptor.into()),
+        }
+    }
+}
+
+impl<'a> MethodKey<'a> {
+    /// Creates a method key by borrowing from `&JavaStr` references.
+    pub fn borrowed(
+        class_name: &'a JavaStr,
+        method_name: &'a JavaStr,
+        descriptor: &'a JavaStr,
+    ) -> Self {
+        Self {
+            class_name: Cow::Borrowed(class_name),
+            method_name: Cow::Borrowed(method_name),
+            descriptor: Cow::Borrowed(descriptor),
+        }
+    }
+
+    /// Converts this key into an owned `MethodKey<'static>` suitable for cache storage.
+    /// Only allocates when the `Cow` fields are borrowed; owned fields are moved.
+    pub fn into_owned(self) -> MethodKey<'static> {
+        MethodKey {
+            class_name: Cow::Owned(self.class_name.into_owned()),
+            method_name: Cow::Owned(self.method_name.into_owned()),
+            descriptor: Cow::Owned(self.descriptor.into_owned()),
         }
     }
 }
@@ -77,8 +131,11 @@ pub struct VerificationCache {
     /// Whether caching is enabled.
     enabled: bool,
 
-    /// Cached verification results.
-    results: RwLock<AHashMap<MethodKey, CachedResult>>,
+    /// Cached verification results keyed by `MethodKey<'static>`.
+    ///
+    /// Uses `hashbrown::HashMap` with `Equivalent` trait to allow
+    /// zero-allocation lookups using a borrowed `MethodKey<'_>`.
+    results: RwLock<hashbrown::HashMap<MethodKey<'static>, CachedResult, ahash::RandomState>>,
 
     /// Cached parsed descriptors.
     descriptors: RwLock<AHashMap<String, ParsedDescriptor>>,
@@ -106,7 +163,9 @@ impl VerificationCache {
     pub fn new(enabled: bool) -> Self {
         Self {
             enabled,
-            results: RwLock::new(AHashMap::default()),
+            results: RwLock::new(hashbrown::HashMap::with_hasher(
+                ahash::RandomState::default(),
+            )),
             descriptors: RwLock::new(AHashMap::default()),
             stats: RwLock::new(CacheStats::default()),
         }
@@ -125,14 +184,17 @@ impl VerificationCache {
     }
 
     /// Gets a cached verification result.
+    ///
+    /// Uses the `Equivalent` trait to look up a `MethodKey<'static>` in the cache
+    /// using a borrowed `MethodKey<'_>`, achieving zero-allocation lookups.
     #[must_use]
-    pub fn get_result(&self, key: &MethodKey) -> Option<CachedResult> {
+    pub fn get_result(&self, key: &MethodKey<'_>) -> Option<CachedResult> {
         if !self.enabled {
             return None;
         }
 
         let guard = self.results.read().ok()?;
-        let result = guard.get(key).cloned();
+        let result = guard.get(&MethodKeyLookup(key)).cloned();
 
         drop(guard);
 
@@ -149,13 +211,17 @@ impl VerificationCache {
     }
 
     /// Stores a verification result in the cache.
-    pub fn put_result(&self, key: MethodKey, result: CachedResult) {
+    ///
+    /// Converts the key to an owned `MethodKey<'static>` for storage.
+    /// This allocation only occurs on cache misses.
+    pub fn put_result(&self, key: &MethodKey<'_>, result: CachedResult) {
         if !self.enabled {
             return;
         }
 
+        let owned_key = key.clone().into_owned();
         if let Ok(mut guard) = self.results.write() {
-            guard.insert(key, result);
+            guard.insert(owned_key, result);
         }
     }
 
@@ -191,7 +257,9 @@ impl VerificationCache {
         }
 
         // Parse the descriptor
-        let (parameters, return_type) = FieldType::parse_method_descriptor(descriptor).ok()?;
+        let java_descriptor = JavaStr::cow_from_str(descriptor);
+        let (parameters, return_type) =
+            FieldType::parse_method_descriptor(&java_descriptor).ok()?;
 
         let parsed = ParsedDescriptor {
             parameters,
@@ -340,7 +408,7 @@ mod tests {
         assert!(!cache.is_enabled());
 
         let key = MethodKey::new("Test", "foo", "()V");
-        cache.put_result(key.clone(), CachedResult::Success);
+        cache.put_result(&key, CachedResult::Success);
 
         // Should not cache when disabled
         assert!(cache.get_result(&key).is_none());
@@ -352,7 +420,7 @@ mod tests {
         assert!(cache.is_enabled());
 
         let key = MethodKey::new("Test", "foo", "()V");
-        cache.put_result(key.clone(), CachedResult::Success);
+        cache.put_result(&key, CachedResult::Success);
 
         let result = cache.get_result(&key);
         assert!(matches!(result, Some(CachedResult::Success)));
@@ -383,7 +451,7 @@ mod tests {
         let cache = VerificationCache::new(true);
 
         let key = MethodKey::new("Test", "foo", "()V");
-        cache.put_result(key.clone(), CachedResult::Success);
+        cache.put_result(&key, CachedResult::Success);
         cache.parse_descriptor("(II)V");
 
         assert_eq!(cache.result_count(), 1);

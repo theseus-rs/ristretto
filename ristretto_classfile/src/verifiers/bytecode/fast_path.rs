@@ -21,11 +21,9 @@
 //!
 //! - [JVMS §4.10.1 - Verification by Type Checking](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10.1)
 
-use ahash::AHashSet;
-use std::io::Cursor;
-use std::sync::Arc;
-
 use crate::FieldType;
+use crate::JavaStr;
+use crate::JavaString;
 use crate::attributes::{Attribute, ExceptionTableEntry, Instruction};
 use crate::class_file::ClassFile;
 use crate::method::Method;
@@ -42,6 +40,8 @@ use crate::verifiers::bytecode::stackmap::DecodedStackMapTable;
 use crate::verifiers::bytecode::type_system::VerificationType;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
+use ahash::AHashSet;
+use std::io::Cursor;
 
 /// Extracted components from a Code attribute.
 type CodeAttributeParts<'a> = (
@@ -137,7 +137,8 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         let code_info = Self::build_code_info(code)?;
         let (current_class, method_name, method_descriptor) =
             Self::extract_method_info(class_file, method)?;
-        let (_, return_type) = FieldType::parse_method_descriptor(&method_descriptor)
+        let method_descriptor_js = JavaStr::cow_from_str(&method_descriptor);
+        let (_, return_type) = FieldType::parse_method_descriptor(&method_descriptor_js)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
         let major_version = class_file.version.major();
 
@@ -312,7 +313,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
             } else {
                 frame.set_local(
                     local_index,
-                    VerificationType::Object(Arc::from(current_class)),
+                    VerificationType::Object(JavaString::from(current_class)),
                 )?;
             }
             local_index += 1;
@@ -830,7 +831,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                         .constant_pool
                         .try_get_class(handler.catch_type)
                         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
-                    VerificationType::Object(Arc::from(class_name))
+                    VerificationType::Object(JavaString::from(class_name))
                 };
 
                 // Create handler frame: same locals, stack = [exception_type]
@@ -914,15 +915,11 @@ mod tests {
 
     fn create_mock_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool
-            .add(Constant::Utf8("TestClass".into()))
-            .unwrap();
+        constant_pool.add(Constant::utf8("TestClass")).unwrap();
         let this_class_index = constant_pool.add(Constant::Class(1)).unwrap();
-        constant_pool
-            .add(Constant::Utf8("testMethod".into()))
-            .unwrap();
-        constant_pool.add(Constant::Utf8("()V".into())).unwrap();
-        constant_pool.add(Constant::Utf8("Code".into())).unwrap();
+        constant_pool.add(Constant::utf8("testMethod")).unwrap();
+        constant_pool.add(Constant::utf8("()V")).unwrap();
+        constant_pool.add(Constant::utf8("Code")).unwrap();
 
         ClassFile {
             version: Version::Java8 { minor: 0 },

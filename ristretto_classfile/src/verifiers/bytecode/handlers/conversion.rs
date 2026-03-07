@@ -16,7 +16,7 @@ use crate::verifiers::error::{Result, VerifyError};
 
 /// Handles `i2l` - convert int to long.
 ///
-/// Stack: ..., value → ..., result
+/// Stack: ..., value -> ..., result
 ///
 /// # Errors
 ///

@@ -1,9 +1,11 @@
+use rayon::ThreadPoolBuilder;
 use rayon::prelude::*;
 use regex::Regex;
 use ristretto_classloader::{DEFAULT_JAVA_VERSION, runtime};
 use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
 use ristretto_vm::Error::InternalError;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
+use std::num::NonZero;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, LazyLock};
@@ -55,58 +57,71 @@ fn compatibility_tests() -> Result<()> {
     let passed = AtomicUsize::new(0);
     let failed = AtomicUsize::new(0);
 
-    test_dirs.par_iter().for_each(|test_dir| {
-        let test_name = test_dir.to_string_lossy().to_string();
-        let test_dir = tests_root_dir.join(test_dir);
+    let num_threads = (std::thread::available_parallelism()
+        .map(NonZero::get)
+        .unwrap_or(1)
+        / 3)
+    .max(1);
+    info!("Running compatibility tests with {num_threads} threads");
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build()
+        .map_err(|error| InternalError(error.to_string()))?;
 
-        if !TEST_FILTER.is_match(&test_name) {
-            return;
-        }
+    pool.install(|| {
+        test_dirs.par_iter().for_each(|test_dir| {
+            let test_name = test_dir.to_string_lossy().to_string();
+            let test_dir = tests_root_dir.join(test_dir);
 
-        // Determine if the test should be ignored
-        let ignore_file = test_dir.join(IGNORE_FILE);
-        if ignore_file.exists() {
-            debug!("Ignoring test {test_name}");
-            return;
-        }
-
-        info!("Running test {test_name}");
-
-        if let Ok((expected_duration, expected_output)) =
-            expected_output(&java_home, &tests_root_dir, &test_dir)
-        {
-            if test_vm(
-                &java_version,
-                &test_name,
-                &test_dir,
-                true,
-                &expected_duration,
-                &expected_output,
-            )
-            .is_ok()
-            {
-                passed.fetch_add(1, Ordering::Relaxed);
-            } else {
-                failed.fetch_add(1, Ordering::Relaxed);
+            if !TEST_FILTER.is_match(&test_name) {
+                return;
             }
-            if test_vm(
-                &java_version,
-                &test_name,
-                &test_dir,
-                false,
-                &expected_duration,
-                &expected_output,
-            )
-            .is_ok()
-            {
-                passed.fetch_add(1, Ordering::Relaxed);
-            } else {
-                failed.fetch_add(1, Ordering::Relaxed);
+
+            // Determine if the test should be ignored
+            let ignore_file = test_dir.join(IGNORE_FILE);
+            if ignore_file.exists() {
+                debug!("Ignoring test {test_name}");
+                return;
             }
-        } else {
-            // If we can't get expected output, count both tests as failed
-            failed.fetch_add(2, Ordering::Relaxed);
-        }
+
+            info!("Running test {test_name}");
+
+            if let Ok((expected_duration, expected_output)) =
+                expected_output(&java_home, &tests_root_dir, &test_dir)
+            {
+                if test_vm(
+                    &java_version,
+                    &test_name,
+                    &test_dir,
+                    true,
+                    &expected_duration,
+                    &expected_output,
+                )
+                .is_ok()
+                {
+                    passed.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    failed.fetch_add(1, Ordering::Relaxed);
+                }
+                if test_vm(
+                    &java_version,
+                    &test_name,
+                    &test_dir,
+                    false,
+                    &expected_duration,
+                    &expected_output,
+                )
+                .is_ok()
+                {
+                    passed.fetch_add(1, Ordering::Relaxed);
+                } else {
+                    failed.fetch_add(1, Ordering::Relaxed);
+                }
+            } else {
+                // If we can't get expected output, count both tests as failed
+                failed.fetch_add(2, Ordering::Relaxed);
+            }
+        });
     });
 
     let passed_count = passed.load(Ordering::Relaxed);

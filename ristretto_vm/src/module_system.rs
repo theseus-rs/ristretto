@@ -841,9 +841,9 @@ impl ModuleSystem {
     ///
     /// # Examples
     ///
-    /// - `java/lang/String` → `java/lang`
-    /// - `com/example/MyClass` → `com/example`
-    /// - `MyClass` → empty string (default package)
+    /// - `java/lang/String` -> `java/lang`
+    /// - `com/example/MyClass` -> `com/example`
+    /// - `MyClass` -> empty string (default package)
     #[must_use]
     pub fn package_from_class_name(class_name: &str) -> &str {
         if let Some(last_slash) = class_name.rfind('/') {

@@ -165,7 +165,7 @@ impl MethodRegistry {
 mod tests {
     use super::*;
     use crate::vm;
-    use ristretto_classfile::JAVA_21;
+    use ristretto_classfile::{JAVA_21, JavaStr};
     use ristretto_classloader::runtime;
     use ristretto_classloader::{
         JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION, JAVA_21_VERSION, JAVA_25_VERSION,
@@ -201,7 +201,9 @@ mod tests {
                 continue;
             }
 
-            let class = class_loader.load(&class_name).await?;
+            let class = class_loader
+                .load(JavaStr::try_from_str(&class_name)?)
+                .await?;
             for method in class.methods() {
                 if method.is_native() {
                     let method_name = method.name();

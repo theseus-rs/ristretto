@@ -20,7 +20,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use ristretto_classloader::{runtime, ClassLoader, Result};
+//! use ristretto_classloader::{runtime, ClassLoader, JavaStr, Result};
 //! use std::sync::Arc;
 //!
 //! #[tokio::main]
@@ -28,7 +28,7 @@
 //!     let (_java_home, java_version, class_loader) = runtime::version_class_loader("21").await?;
 //!     let class_name = "java.util.HashMap";
 //!     println!("Loading {class_name} from Java version {java_version}");
-//!     let class = class_loader.load(class_name).await?;
+//!     let class = class_loader.load(JavaStr::try_from_str(class_name)?).await?;
 //!     println!("{class:?}");
 //!     Ok(())
 //! }
@@ -42,7 +42,7 @@
 //! |-----------|--------------------------------|----------|
 //! | `url`     | Enables url class path entries | No       |
 
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 
 mod class;
 mod class_loader;
@@ -66,7 +66,7 @@ pub use field::Field;
 pub use method::Method;
 pub use object::Object;
 pub use reference::{ObjectArray, Reference};
-pub use ristretto_classfile::{BaseType, FieldAccessFlags, FieldType, MethodAccessFlags};
+pub use ristretto_classfile::{BaseType, FieldAccessFlags, FieldType, JavaStr, MethodAccessFlags};
 pub use runtime::{
     ALL_LTS_VERSIONS, DEFAULT_JAVA_VERSION, JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION,
     JAVA_21_VERSION, JAVA_25_VERSION,

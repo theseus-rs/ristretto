@@ -181,8 +181,8 @@ mod test {
     fn get_test_class_file_and_method() -> (ClassFile<'static>, Method) {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.push(Constant::Utf8("foo".into()));
-        constant_pool.push(Constant::Utf8("V".into()));
+        constant_pool.push(Constant::utf8("foo"));
+        constant_pool.push(Constant::utf8("V"));
         let method = Method {
             access_flags: MethodAccessFlags::PUBLIC,
             name_index: 1,
@@ -198,9 +198,9 @@ mod test {
     ) -> (ClassFile<'static>, Method) {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.push(Constant::Utf8("test".into()));
-        constant_pool.push(Constant::Utf8(descriptor.to_string().into()));
-        constant_pool.push(Constant::Utf8("Code".into()));
+        constant_pool.push(Constant::utf8("test"));
+        constant_pool.push(Constant::utf8(descriptor));
+        constant_pool.push(Constant::utf8("Code"));
 
         let method = Method {
             access_flags: MethodAccessFlags::PUBLIC,

@@ -57,7 +57,7 @@ pub(crate) async fn process_throwable(
         } else {
             let exception_class_name =
                 constant_pool.try_get_class(exception_table_entry.catch_type)?;
-            let exception_class = thread.class(exception_class_name).await?;
+            let exception_class = thread.class_java_str(exception_class_name).await?;
             exception_class
                 .is_assignable_from(&thread, &throwable_class)
                 .await?

@@ -774,6 +774,7 @@ mod tests {
     use super::*;
     use crate::Reference;
     use crate::{Class, Object, runtime};
+    use ristretto_classfile::JavaStr;
     use ristretto_gc::GarbageCollector;
     use std::hash::DefaultHasher;
     use std::sync::Arc;
@@ -792,7 +793,7 @@ mod tests {
 
     async fn load_class(class: &str) -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        class_loader.load(class).await
+        class_loader.load(JavaStr::try_from_str(class)?).await
     }
 
     #[test]
@@ -877,7 +878,9 @@ mod tests {
     #[tokio::test]
     async fn test_string_format() -> Result<()> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        let class = class_loader.load("java.lang.String").await?;
+        let class = class_loader
+            .load(JavaStr::try_from_str("java.lang.String")?)
+            .await?;
         let mut object = Object::new(class)?;
         let bytes = "foo".as_bytes();
         let string_bytes: &[i8] = zerocopy::transmute_ref!(bytes);

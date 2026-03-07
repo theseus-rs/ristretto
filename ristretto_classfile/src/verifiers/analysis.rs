@@ -1,4 +1,3 @@
-use crate::Method;
 use crate::attributes::{Attribute, ExceptionTableEntry, Instruction, StackFrame};
 use crate::class_file::ClassFile;
 use crate::field_type::FieldType;
@@ -7,6 +6,7 @@ use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
 use crate::verifiers::frame::Frame;
 use crate::verifiers::types::VerificationType;
+use crate::{JavaStr, JavaString, Method};
 use std::collections::{HashMap, VecDeque};
 use std::io::Cursor;
 
@@ -208,14 +208,14 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
                     handler_frame.stack.clear();
 
                     let exception_type = if handler.catch_type == 0 {
-                        VerificationType::Object("java/lang/Throwable".to_string())
+                        VerificationType::Object(JavaString::from("java/lang/Throwable"))
                     } else {
                         let class_name = self
                             .class_file
                             .constant_pool
                             .try_get_class(handler.catch_type)
                             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
-                        VerificationType::Object(class_name.to_string())
+                        VerificationType::Object(class_name.to_java_string())
                     };
                     handler_frame.push(exception_type)?;
 
@@ -267,7 +267,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             if method_name == "<init>" {
                 frame.locals[local_index] = VerificationType::UninitializedThis;
             } else {
-                frame.locals[local_index] = VerificationType::Object(class_name.to_string());
+                frame.locals[local_index] = VerificationType::Object(class_name.to_java_string());
             }
             local_index += 1;
         }
@@ -294,7 +294,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
                 FieldType::Object(name) => VerificationType::Object(name.clone()),
                 FieldType::Array(_component) => {
                     // Primitive arrays are Objects in verification
-                    VerificationType::Object(format!("[{param}")) // Rough approximation
+                    VerificationType::Object(JavaString::from(format!("[{param}"))) // Rough approximation
                 }
             };
 
@@ -743,7 +743,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             Instruction::Invokespecial(index) => {
                 let (class_name, method_name, descriptor) = self.resolve_method_ref(*index)?;
 
-                let (params, _) = FieldType::parse_method_descriptor(&descriptor)
+                let (params, _) = FieldType::parse_method_descriptor(descriptor)
                     .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
                 for param in params.iter().rev() {
@@ -756,7 +756,8 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
                 if method_name == "<init>" {
                     match objectref {
                         VerificationType::Uninitialized(new_offset) => {
-                            let initialized_type = VerificationType::Object(class_name);
+                            let initialized_type =
+                                VerificationType::Object(class_name.to_java_string());
                             Self::initialize_object(
                                 &mut next_frame,
                                 &VerificationType::Uninitialized(new_offset),
@@ -764,7 +765,8 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
                             );
                         }
                         VerificationType::UninitializedThis => {
-                            let initialized_type = VerificationType::Object(class_name);
+                            let initialized_type =
+                                VerificationType::Object(class_name.to_java_string());
                             Self::initialize_object(
                                 &mut next_frame,
                                 &VerificationType::UninitializedThis,
@@ -778,7 +780,10 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
                         }
                     }
                 } else {
-                    self.verify_assignable(&objectref, &VerificationType::Object(class_name))?;
+                    self.verify_assignable(
+                        &objectref,
+                        &VerificationType::Object(class_name.to_java_string()),
+                    )?;
                 }
             }
 
@@ -787,7 +792,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             | Instruction::Invokeinterface(index, _) => {
                 let (class_name, _method_name, descriptor) = self.resolve_method_ref(*index)?;
 
-                let (params, return_type) = FieldType::parse_method_descriptor(&descriptor)
+                let (params, return_type) = FieldType::parse_method_descriptor(descriptor)
                     .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
                 for param in params.iter().rev() {
@@ -797,7 +802,10 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
 
                 if !matches!(instruction, Instruction::Invokestatic(_)) {
                     let objectref = next_frame.pop()?;
-                    self.verify_assignable(&objectref, &VerificationType::Object(class_name))?;
+                    self.verify_assignable(
+                        &objectref,
+                        &VerificationType::Object(JavaString::from(class_name)),
+                    )?;
                 }
 
                 if let Some(ret) = return_type {
@@ -848,10 +856,14 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
                 frame.push(VerificationType::Top)?;
             }
             crate::Constant::String(_) => {
-                frame.push(VerificationType::Object("java/lang/String".to_string()))?;
+                frame.push(VerificationType::Object(JavaString::from(
+                    "java/lang/String",
+                )))?;
             }
             crate::Constant::Class(_) => {
-                frame.push(VerificationType::Object("java/lang/Class".to_string()))?;
+                frame.push(VerificationType::Object(JavaString::from(
+                    "java/lang/Class",
+                )))?;
             }
             _ => {
                 return Err(VerifyError::VerifyError(
@@ -982,7 +994,10 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             | (_, VerificationType::Top)
             | (VerificationType::Null, VerificationType::Object(_)) => Ok(()),
             (VerificationType::Object(s), VerificationType::Object(t)) => {
-                if self.context.is_assignable(t, s)? {
+                if self
+                    .context
+                    .is_assignable(&t.to_str_lossy(), &s.to_str_lossy())?
+                {
                     Ok(())
                 } else {
                     Err(VerifyError::VerifyError(format!(
@@ -1027,11 +1042,11 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
                 crate::BaseType::Double => VerificationType::Double,
             },
             FieldType::Object(s) => VerificationType::Object(s.clone()),
-            FieldType::Array(_) => VerificationType::Object("java/lang/Object".to_string()), // Simplified
+            FieldType::Array(_) => VerificationType::Object(JavaString::from("java/lang/Object")), // Simplified
         }
     }
 
-    fn resolve_method_ref(&self, index: u16) -> Result<(String, String, String)> {
+    fn resolve_method_ref(&self, index: u16) -> Result<(&JavaStr, &JavaStr, &JavaStr)> {
         let (class_index, name_and_type_index) = self
             .class_file
             .constant_pool
@@ -1067,11 +1082,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             .try_get_utf8(*descriptor_index)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
-        Ok((
-            class_name.to_string(),
-            name.to_string(),
-            descriptor.to_string(),
-        ))
+        Ok((class_name, name, descriptor))
     }
 
     /// Merges two `Frame`s, updating the target frame.
@@ -1144,8 +1155,10 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             }
             (VerificationType::Object(c1), VerificationType::Object(c2)) => {
                 // Find common superclass
-                let common = self.context.common_superclass(c1, c2)?;
-                Ok(VerificationType::Object(common))
+                let common = self
+                    .context
+                    .common_superclass(&c1.to_str_lossy(), &c2.to_str_lossy())?;
+                Ok(VerificationType::Object(JavaString::from(common)))
             }
             // Handle array merging logic here if VerificationType::Object supports arrays in a way we can detect,
             // or if we add specific Array variant.
@@ -1230,7 +1243,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             }
             crate::attributes::VerificationType::Object { cpool_index } => {
                 if let Ok(name) = self.class_file.constant_pool.try_get_class(*cpool_index) {
-                    VerificationType::Object(name.to_string())
+                    VerificationType::Object(name.to_java_string())
                 } else {
                     VerificationType::Top
                 }
@@ -1267,19 +1280,15 @@ mod tests {
     fn create_mock_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
         // Index 1: Utf8 "TestClass"
-        constant_pool
-            .add(Constant::Utf8("TestClass".into()))
-            .unwrap();
+        constant_pool.add(Constant::utf8("TestClass")).unwrap();
         // Index 2: Class "TestClass"
         let this_class_index = constant_pool.add(Constant::Class(1)).unwrap();
         // Index 3: Utf8 "testMethod"
-        constant_pool
-            .add(Constant::Utf8("testMethod".into()))
-            .unwrap();
+        constant_pool.add(Constant::utf8("testMethod")).unwrap();
         // Index 4: Utf8 "()V"
-        constant_pool.add(Constant::Utf8("()V".into())).unwrap();
+        constant_pool.add(Constant::utf8("()V")).unwrap();
         // Index 5: Utf8 "Code"
-        constant_pool.add(Constant::Utf8("Code".into())).unwrap();
+        constant_pool.add(Constant::utf8("Code")).unwrap();
 
         ClassFile {
             version: Version::Java8 { minor: 0 },
@@ -1690,7 +1699,7 @@ mod tests {
         let mut class_file = create_mock_class_file();
         class_file
             .constant_pool
-            .add(Constant::Utf8("(IDJ)V".into()))
+            .add(Constant::utf8("(IDJ)V"))
             .unwrap();
 
         let code = vec![Instruction::Return];

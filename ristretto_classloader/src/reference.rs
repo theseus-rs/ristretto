@@ -846,6 +846,7 @@ mod tests {
     use super::*;
 
     use crate::{Class, Result, Value, runtime};
+    use ristretto_classfile::JavaStr;
     use ristretto_gc::GarbageCollector;
     use std::hash::{DefaultHasher, Hasher};
     use std::sync::Arc;
@@ -856,7 +857,7 @@ mod tests {
 
     async fn load_class(class: &str) -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        class_loader.load(class).await
+        class_loader.load(JavaStr::try_from_str(class)?).await
     }
 
     #[test]

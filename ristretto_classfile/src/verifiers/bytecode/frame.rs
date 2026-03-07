@@ -455,7 +455,7 @@ impl Frame {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
+    use crate::JavaString;
 
     struct MockContext;
 
@@ -574,19 +574,25 @@ mod tests {
         let ctx = MockContext;
         let mut frame1 = Frame::new(5, 10);
         frame1
-            .set_local(0, VerificationType::Object(Arc::from("java/lang/String")))
+            .set_local(
+                0,
+                VerificationType::Object(JavaString::from("java/lang/String")),
+            )
             .unwrap();
 
         let mut frame2 = Frame::new(5, 10);
         frame2
-            .set_local(0, VerificationType::Object(Arc::from("java/lang/Integer")))
+            .set_local(
+                0,
+                VerificationType::Object(JavaString::from("java/lang/Integer")),
+            )
             .unwrap();
 
         let changed = frame1.merge(&frame2, &ctx).unwrap();
         assert!(changed);
         assert_eq!(
             *frame1.get_local(0).unwrap(),
-            VerificationType::Object(Arc::from("java/lang/Object"))
+            VerificationType::Object(JavaString::from("java/lang/Object"))
         );
     }
 
@@ -606,7 +612,7 @@ mod tests {
     fn test_initialize_object() {
         let mut frame = Frame::new(5, 10);
         let uninit = VerificationType::Uninitialized(0);
-        let init = VerificationType::Object(Arc::from("java/lang/Object"));
+        let init = VerificationType::Object(JavaString::from("java/lang/Object"));
 
         frame.set_local(0, uninit.clone()).unwrap();
         frame.push(uninit.clone()).unwrap();

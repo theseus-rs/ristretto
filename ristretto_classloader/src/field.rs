@@ -1,5 +1,6 @@
 use crate::Error::IllegalAccessError;
 use crate::{Result, Value};
+use ristretto_classfile::JavaStr;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{BaseType, ClassFile, ConstantPool, FieldAccessFlags, FieldType};
 use std::fmt::{Debug, Display};
@@ -313,11 +314,30 @@ impl FieldKey for &str {
     }
 }
 
+/// Implementation of `FieldKey` for `&JavaStr`.
+///
+/// Uses the optimized `PartialEq<str>` implementation on `JavaStr`, which provides a fast
+/// path for ASCII and gracefully handles MUTF-8 supplementary characters via character-by-
+/// character comparison.
+impl FieldKey for &JavaStr {
+    fn matches_field(&self, field: &Field) -> bool {
+        *self == field.name.as_str()
+    }
+
+    fn get_field<'a>(&self, fields: &'a [Arc<Field>]) -> Option<(usize, &'a Arc<Field>)> {
+        fields
+            .iter()
+            .enumerate()
+            .find(|(_, field)| self.matches_field(field))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::Reference;
     use ristretto_classfile::FieldAccessFlags;
+    use ristretto_classfile::JavaString;
     use ristretto_gc::GarbageCollector;
 
     #[test]
@@ -432,7 +452,7 @@ mod tests {
         let field = Field::new(
             0,
             FieldAccessFlags::PUBLIC,
-            FieldType::Object("java/lang/Object".to_string()),
+            FieldType::Object(JavaString::from("java/lang/Object")),
             "test".to_string(),
             vec![],
         );
