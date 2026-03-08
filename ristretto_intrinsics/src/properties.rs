@@ -4,6 +4,7 @@ use ristretto_types::Error::InternalError;
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
 use ristretto_types::{Result, VM};
+use std::borrow::Cow;
 use std::env;
 use std::env::consts::{ARCH, OS};
 use std::path::MAIN_SEPARATOR_STR;
@@ -25,9 +26,10 @@ use std::sync::Arc;
 pub async fn system<T: Thread + 'static>(thread: &Arc<T>) -> Result<AHashMap<&'static str, Value>> {
     let vm = thread.vm()?;
     let system_properties = system_properties(&vm)?;
-    let mut properties = AHashMap::default();
+    let mut properties = AHashMap::with_capacity(system_properties.len());
     for (key, value) in system_properties {
-        let value = value.to_object(thread).await?;
+        let value_str: &str = &value;
+        let value = value_str.to_object(thread).await?;
         properties.insert(key, value);
     }
     Ok(properties)
@@ -49,8 +51,8 @@ pub async fn system<T: Thread + 'static>(thread: &Arc<T>) -> Result<AHashMap<&'s
 /// This function is used internally during JVM initialization or when properties need to be exposed
 /// to Java code via `System.getProperties()`.
 #[expect(clippy::too_many_lines)]
-fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, String>> {
-    let mut properties = AHashMap::default();
+fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static, str>>> {
+    let mut properties = AHashMap::with_capacity(64);
     let java_home = vm.java_home().to_string_lossy().to_string();
     let class_file_version = vm.java_class_file_version();
     let major_java_version = class_file_version.java();
@@ -58,154 +60,162 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, String>> {
     let minor_class_version = class_file_version.minor();
     let locale = sys_locale::get_locale().unwrap_or_else(|| String::from("en-US"));
     let locale_parts = locale.split('-').collect::<Vec<&str>>();
-    let language = *locale_parts.first().unwrap_or(&"en");
-    let country = *locale_parts.get(1).unwrap_or(&"");
+    let language = locale_parts.first().copied().unwrap_or("en");
+    let country = locale_parts.get(1).copied().unwrap_or("");
+    let language_owned = language.to_string();
+    let country_owned = country.to_string();
 
-    properties.insert("file.encoding", "UTF-8".to_string());
-    properties.insert("file.separator", MAIN_SEPARATOR_STR.to_string());
+    properties.insert("file.encoding", "UTF-8".into());
+    properties.insert("file.separator", MAIN_SEPARATOR_STR.into());
 
-    properties.insert("format.country", country.to_string());
-    properties.insert("format.language", language.to_string());
+    properties.insert("format.country", Cow::Owned(country_owned.clone()));
+    properties.insert("format.language", Cow::Owned(language_owned.clone()));
     // TODO: implement format.script
-    properties.insert("format.script", String::new());
+    properties.insert("format.script", Cow::Borrowed(""));
     // TODO: implement format.variant
-    properties.insert("format.variant", String::new());
+    properties.insert("format.variant", Cow::Borrowed(""));
 
     // TODO: implement ftp.nonProxyHosts
-    properties.insert("ftp.nonProxyHosts", String::new());
+    properties.insert("ftp.nonProxyHosts", Cow::Borrowed(""));
     // TODO: implement ftp.proxyHost
-    properties.insert("ftp.proxyHost", String::new());
+    properties.insert("ftp.proxyHost", Cow::Borrowed(""));
     // TODO: implement ftp.proxyPort
-    properties.insert("ftp.proxyPort", String::new());
+    properties.insert("ftp.proxyPort", Cow::Borrowed(""));
 
     // TODO: implement http.nonProxyHosts
-    properties.insert("http.nonProxyHosts", String::new());
+    properties.insert("http.nonProxyHosts", Cow::Borrowed(""));
     // TODO: implement http.proxyHost
-    properties.insert("http.proxyHost", String::new());
+    properties.insert("http.proxyHost", Cow::Borrowed(""));
     // TODO: implement http.proxyPort
-    properties.insert("http.proxyPort", String::new());
+    properties.insert("http.proxyPort", Cow::Borrowed(""));
     // TODO: implement https.proxyHost
-    properties.insert("https.proxyHost", String::new());
+    properties.insert("https.proxyHost", Cow::Borrowed(""));
     // TODO: implement https.proxyPort
-    properties.insert("https.proxyPort", String::new());
+    properties.insert("https.proxyPort", Cow::Borrowed(""));
 
     let class_path = vm.class_path().to_string();
-    properties.insert("java.class.path", class_path);
+    properties.insert("java.class.path", class_path.into());
     properties.insert(
         "java.class.version",
-        format!("{major_class_version}.{minor_class_version}"),
+        format!("{major_class_version}.{minor_class_version}").into(),
     );
-    properties.insert("java.compiler", "no JIT".to_string());
+    properties.insert("java.compiler", "no JIT".into());
     // TODO: implement java.ext.dirs
-    properties.insert("java.ext.dirs", String::new());
-    properties.insert("java.home", java_home);
+    properties.insert("java.ext.dirs", Cow::Borrowed(""));
+    properties.insert("java.home", java_home.into());
 
     let tmp_dir = env::temp_dir();
-    properties.insert("java.io.tmpdir", format!("{}", tmp_dir.to_string_lossy()));
+    properties.insert(
+        "java.io.tmpdir",
+        tmp_dir.to_string_lossy().into_owned().into(),
+    );
 
     // TODO: implement java.library.path
-    properties.insert("java.library.path", String::new());
+    properties.insert("java.library.path", Cow::Borrowed(""));
     properties.insert(
         "java.specification.name",
-        "Java Platform API Specification".to_string(),
+        "Java Platform API Specification".into(),
     );
-    properties.insert(
-        "java.specification.vendor",
-        "Oracle Corporation".to_string(),
-    );
+    properties.insert("java.specification.vendor", "Oracle Corporation".into());
     // TODO: implement java.specification.maintenance.version
-    properties.insert("java.specification.maintenance.version", String::new());
-    properties.insert("java.vendor", "ristretto".to_string());
+    properties.insert("java.specification.maintenance.version", Cow::Borrowed(""));
+    properties.insert("java.vendor", "ristretto".into());
     properties.insert(
         "java.vendor.url",
-        "https://github.com/theseus-rs/ristretto".to_string(),
+        "https://github.com/theseus-rs/ristretto".into(),
     );
     let vm_version = env!("CARGO_PKG_VERSION");
-    properties.insert("java.vendor.version", vm_version.to_string());
+    properties.insert("java.vendor.version", vm_version.into());
     let java_version = vm.java_version();
-    properties.insert("java.version", java_version.to_string());
+    properties.insert("java.version", java_version.to_string().into());
     let architecture_bits = usize::BITS;
     let vm_name =
         format!("ristretto {vm_version} (Java {java_version}) {architecture_bits}-bit VM");
-    properties.insert("java.vm.name", vm_name);
+    properties.insert("java.vm.name", vm_name.into());
     properties.insert(
         "java.vm.specification.name",
-        "Java Virtual Machine Specification".to_string(),
+        "Java Virtual Machine Specification".into(),
     );
     properties.insert(
         "java.vm.specification.vendor",
-        "Oracle and Ristretto".to_string(),
+        "Oracle and Ristretto".into(),
     );
     properties.insert(
         "java.vm.specification.version",
-        format!("{major_java_version}"),
+        Cow::Owned(major_java_version.to_string()),
     );
-    properties.insert("java.vm.vendor", "ristretto".to_string());
-    properties.insert("java.vm.version", vm_version.to_string());
+    properties.insert("java.vm.vendor", "ristretto".into());
+    properties.insert("java.vm.version", vm_version.into());
 
     #[cfg(not(target_os = "windows"))]
-    properties.insert("line.separator", "\n".to_string());
+    properties.insert("line.separator", "\n".into());
     #[cfg(target_os = "windows")]
-    properties.insert("line.separator", "\r\n".to_string());
+    properties.insert("line.separator", "\r\n".into());
 
-    properties.insert("native.encoding", "UTF8".to_string());
+    properties.insert("native.encoding", "UTF8".into());
 
-    properties.insert("os.arch", ARCH.to_string());
+    properties.insert("os.arch", ARCH.into());
     let os = match OS {
         "linux" => "Linux",
         "macos" => "Mac OS X",
         "windows" => "Windows",
         _ => OS,
     };
-    properties.insert("os.name", os.to_string());
+    properties.insert("os.name", os.into());
 
     let os_information = os_info::get();
-    let os_version = format!("{}", os_information.version());
-    properties.insert("os.version", os_version);
+    let os_version = os_information.version().to_string();
+    properties.insert("os.version", os_version.into());
 
     #[cfg(not(target_os = "windows"))]
-    properties.insert("path.separator", ":".to_string());
+    properties.insert("path.separator", ":".into());
     #[cfg(target_os = "windows")]
-    properties.insert("path.separator", ";".to_string());
+    properties.insert("path.separator", ";".into());
 
     // TODO: implement socksNonProxyHosts
-    properties.insert("socksNonProxyHosts", String::new());
+    properties.insert("socksNonProxyHosts", Cow::Borrowed(""));
     // TODO: implement socksProxyHost
-    properties.insert("socksProxyHost", String::new());
+    properties.insert("socksProxyHost", Cow::Borrowed(""));
     // TODO: implement socksProxyPort
-    properties.insert("socksProxyPort", String::new());
+    properties.insert("socksProxyPort", Cow::Borrowed(""));
 
-    properties.insert("stderr.encoding", "UTF-8".to_string());
-    properties.insert("stdin.encoding", "UTF-8".to_string());
-    properties.insert("stdout.encoding", "UTF-8".to_string());
+    properties.insert("stderr.encoding", "UTF-8".into());
+    properties.insert("stdin.encoding", "UTF-8".into());
+    properties.insert("stdout.encoding", "UTF-8".into());
 
     // TODO: implement sun.arch.abi
-    properties.insert("sun.arch.abi", String::new());
-    properties.insert("sun.arch.data.model", format!("{architecture_bits}"));
+    properties.insert("sun.arch.abi", Cow::Borrowed(""));
+    properties.insert(
+        "sun.arch.data.model",
+        Cow::Owned(architecture_bits.to_string()),
+    );
     #[cfg(target_endian = "little")]
-    properties.insert("sun.cpu.endian", "little".to_string());
+    properties.insert("sun.cpu.endian", "little".into());
     #[cfg(target_endian = "big")]
-    properties.insert("sun.cpu.endian", "big".to_string());
+    properties.insert("sun.cpu.endian", "big".into());
     // TODO: implement sun.cpu.isalist
-    properties.insert("sun.cpu.isalist", String::new());
-    properties.insert("sun.io.unicode.encoding", "UnicodeBig".to_string());
-    properties.insert("sun.jnu.encoding", "UTF-8".to_string());
+    properties.insert("sun.cpu.isalist", Cow::Borrowed(""));
+    properties.insert("sun.io.unicode.encoding", "UnicodeBig".into());
+    properties.insert("sun.jnu.encoding", "UTF-8".into());
     // TODO: implement sun.os.patch.level
-    properties.insert("sun.os.patch.level", String::new());
-    properties.insert("sun.stderr.encoding", "UTF-8".to_string());
-    properties.insert("sun.stdout.encoding", "UTF-8".to_string());
+    properties.insert("sun.os.patch.level", Cow::Borrowed(""));
+    properties.insert("sun.stderr.encoding", "UTF-8".into());
+    properties.insert("sun.stdout.encoding", "UTF-8".into());
 
-    properties.insert("user.country", country.to_string());
+    properties.insert("user.country", Cow::Owned(country_owned));
     let current_dir = env::current_dir().map_err(|error| InternalError(error.to_string()))?;
-    properties.insert("user.dir", format!("{}", current_dir.to_string_lossy()));
+    properties.insert(
+        "user.dir",
+        current_dir.to_string_lossy().into_owned().into(),
+    );
     let home_dir = dirs::home_dir().unwrap_or_default();
-    properties.insert("user.home", format!("{}", home_dir.to_string_lossy()));
-    properties.insert("user.language", language.to_string());
+    properties.insert("user.home", home_dir.to_string_lossy().into_owned().into());
+    properties.insert("user.language", Cow::Owned(language_owned));
     let username = whoami::username().map_err(|error| InternalError(error.to_string()))?;
-    properties.insert("user.name", username);
+    properties.insert("user.name", username.into());
     // TODO: implement user.script
-    properties.insert("user.script", String::new());
+    properties.insert("user.script", Cow::Borrowed(""));
     // TODO: implement user.variant
-    properties.insert("user.variant", String::new());
+    properties.insert("user.variant", Cow::Borrowed(""));
     Ok(properties)
 }

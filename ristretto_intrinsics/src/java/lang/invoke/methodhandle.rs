@@ -1406,6 +1406,7 @@ mod tests {
     use super::*;
     use ristretto_classfile::{
         ClassAccessFlags, ClassFile, ConstantPool, Field, FieldAccessFlags, FieldType, JAVA_17,
+        JavaString,
     };
     use ristretto_classloader::Object;
     use ristretto_classloader::Reference;
@@ -1485,7 +1486,7 @@ mod tests {
             access_flags: FieldAccessFlags::PUBLIC,
             name_index: member_name_index,
             descriptor_index: member_descriptor_index,
-            field_type: FieldType::Object("java/lang/invoke/MemberName".to_string()),
+            field_type: FieldType::Object(JavaString::from("java/lang/invoke/MemberName")),
             attributes: vec![],
         };
 

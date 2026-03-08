@@ -216,7 +216,8 @@ pub fn verify_method_cached<C: VerificationContext>(
         .try_get_utf8(method.descriptor_index)
         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
 
-    let key = MethodKey::new(class_name, method_name, descriptor);
+    // Zero-allocation lookup: borrow directly from the constant pool's JavaStr references
+    let key = MethodKey::borrowed(class_name, method_name, descriptor);
 
     // Check cache
     if let Some(cached) = cache.get_result(&key) {
@@ -231,8 +232,8 @@ pub fn verify_method_cached<C: VerificationContext>(
 
     // Cache result
     match &result {
-        Ok(_) => cache.put_result(key, CachedResult::Success),
-        Err(e) => cache.put_result(key, CachedResult::Failed(e.to_string())),
+        Ok(_) => cache.put_result(&key, CachedResult::Success),
+        Err(e) => cache.put_result(&key, CachedResult::Failed(e.to_string())),
     }
 
     result
@@ -344,15 +345,11 @@ mod tests {
 
     fn create_mock_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool
-            .add(Constant::Utf8("TestClass".into()))
-            .unwrap();
+        constant_pool.add(Constant::utf8("TestClass")).unwrap();
         let this_class_index = constant_pool.add(Constant::Class(1)).unwrap();
-        constant_pool
-            .add(Constant::Utf8("testMethod".into()))
-            .unwrap();
-        constant_pool.add(Constant::Utf8("()V".into())).unwrap();
-        constant_pool.add(Constant::Utf8("Code".into())).unwrap();
+        constant_pool.add(Constant::utf8("testMethod")).unwrap();
+        constant_pool.add(Constant::utf8("()V")).unwrap();
+        constant_pool.add(Constant::utf8("Code")).unwrap();
 
         ClassFile {
             version: Version::Java8 { minor: 0 },

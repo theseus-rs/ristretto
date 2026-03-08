@@ -2,7 +2,7 @@ use crate::Error::InvalidInstructionOffset;
 use crate::attributes::bootstrap_method::BootstrapMethod;
 use crate::attributes::inner_class::InnerClass;
 use crate::attributes::line_number::LineNumber;
-use crate::attributes::offset_utils;
+use crate::attributes::offset_utils::{self, lookup_byte_offset, lookup_byte_offset_le};
 use crate::attributes::parameter_annotation::ParameterAnnotation;
 use crate::attributes::{
     Annotation, AnnotationElement, ExceptionTableEntry, Exports, Instruction, LocalVariableTable,
@@ -687,14 +687,13 @@ impl Attribute {
         bytes: &mut ByteReader<'_>,
     ) -> Result<Attribute> {
         let name_index = bytes.read_u16()?;
-        let Some(Constant::Utf8(attribute_name)) = constant_pool.get(name_index) else {
+        let Some(Constant::Utf8(attribute_name)) = constant_pool.get_unchecked(name_index) else {
             return Err(InvalidAttributeNameIndex(name_index));
         };
 
         let info_length = bytes.read_u32()?;
-
-        let attribute = match &**attribute_name {
-            "ConstantValue" => {
+        let attribute = match attribute_name.as_bytes() {
+            b"ConstantValue" => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -703,7 +702,7 @@ impl Attribute {
                     constant_value_index: bytes.read_u16()?,
                 }
             }
-            "Code" => {
+            b"Code" => {
                 // Instruction pointers are converted from byte offsets to instruction offsets to
                 // facilitate faster / easier instruction manipulation at runtime.  During runtime,
                 // the instruction offset can be used directly and calculating the next instruction
@@ -714,33 +713,30 @@ impl Attribute {
 
                 let code_length = bytes.read_u32()?;
                 let code_slice = bytes.read_bytes(code_length as usize)?;
-                let (byte_to_instruction_map, instructions) =
+                let (byte_to_instruction_pairs, instructions) =
                     offset_utils::instructions_from_bytes(&mut ByteReader::new(code_slice))?;
 
                 let exception_length = bytes.read_u16()?;
                 let mut exception_table = Vec::with_capacity(exception_length as usize);
                 for _ in 0..exception_length {
                     let mut exception = ExceptionTableEntry::from_bytes(bytes)?;
-                    exception.range_pc.start = *byte_to_instruction_map
-                        .get(&exception.range_pc.start)
-                        .ok_or(InvalidInstructionOffset(u32::from(
-                            exception.range_pc.start,
-                        )))?;
-                    exception.range_pc.end = byte_to_instruction_map
-                        .iter()
-                        .filter(|&(&k, _)| k <= exception.range_pc.end)
-                        .max_by_key(|&(&k, _)| k)
-                        .map(|(_, &v)| v)
-                        .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
-                    exception.handler_pc = *byte_to_instruction_map
-                        .get(&exception.handler_pc)
-                        .ok_or(InvalidInstructionOffset(u32::from(exception.handler_pc)))?;
+                    exception.range_pc.start =
+                        lookup_byte_offset(&byte_to_instruction_pairs, exception.range_pc.start)
+                            .ok_or(InvalidInstructionOffset(u32::from(
+                                exception.range_pc.start,
+                            )))?;
+                    exception.range_pc.end =
+                        lookup_byte_offset_le(&byte_to_instruction_pairs, exception.range_pc.end)
+                            .ok_or(InvalidInstructionOffset(u32::from(exception.range_pc.end)))?;
+                    exception.handler_pc =
+                        lookup_byte_offset(&byte_to_instruction_pairs, exception.handler_pc)
+                            .ok_or(InvalidInstructionOffset(u32::from(exception.handler_pc)))?;
                     exception_table.push(exception);
                 }
                 let attributes = Self::from_bytes_code_attributes(
                     constant_pool,
                     bytes,
-                    &byte_to_instruction_map,
+                    &byte_to_instruction_pairs,
                 )?;
                 Attribute::Code {
                     name_index,
@@ -751,7 +747,7 @@ impl Attribute {
                     attributes,
                 }
             }
-            "StackMapTable" => {
+            b"StackMapTable" => {
                 let frames_count = bytes.read_u16()?;
                 let mut frames = Vec::with_capacity(frames_count as usize);
                 for _ in 0..frames_count {
@@ -760,7 +756,7 @@ impl Attribute {
                 }
                 Attribute::StackMapTable { name_index, frames }
             }
-            "Exceptions" => {
+            b"Exceptions" => {
                 let exception_indexes_count = bytes.read_u16()?;
                 let mut exception_indexes = Vec::with_capacity(exception_indexes_count as usize);
                 for _ in 0..exception_indexes_count {
@@ -771,7 +767,7 @@ impl Attribute {
                     exception_indexes,
                 }
             }
-            "InnerClasses" => {
+            b"InnerClasses" => {
                 let classes_count = bytes.read_u16()?;
                 let mut classes = Vec::with_capacity(classes_count as usize);
                 for _ in 0..classes_count {
@@ -783,7 +779,7 @@ impl Attribute {
                     classes,
                 }
             }
-            "EnclosingMethod" => {
+            b"EnclosingMethod" => {
                 if info_length != 4 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -793,13 +789,13 @@ impl Attribute {
                     method_index: bytes.read_u16()?,
                 }
             }
-            "Synthetic" => {
+            b"Synthetic" => {
                 if info_length != 0 {
                     return Err(InvalidAttributeLength(info_length));
                 }
                 Attribute::Synthetic { name_index }
             }
-            "Signature" => {
+            b"Signature" => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -808,7 +804,7 @@ impl Attribute {
                     signature_index: bytes.read_u16()?,
                 }
             }
-            "SourceFile" => {
+            b"SourceFile" => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -817,7 +813,7 @@ impl Attribute {
                     source_file_index: bytes.read_u16()?,
                 }
             }
-            "SourceDebugExtension" => {
+            b"SourceDebugExtension" => {
                 let debug_extension_bytes = bytes.read_bytes(info_length as usize)?;
                 let debug_extension = mutf8::from_bytes(debug_extension_bytes)?;
                 Attribute::SourceDebugExtension {
@@ -825,7 +821,7 @@ impl Attribute {
                     debug_extension,
                 }
             }
-            "LineNumberTable" => {
+            b"LineNumberTable" => {
                 let line_number_table_count = bytes.read_u16()?;
                 let mut line_numbers = Vec::with_capacity(line_number_table_count as usize);
                 for _ in 0..line_number_table_count {
@@ -836,7 +832,7 @@ impl Attribute {
                     line_numbers,
                 }
             }
-            "LocalVariableTable" => {
+            b"LocalVariableTable" => {
                 let variables_count = bytes.read_u16()?;
                 let mut variables = Vec::with_capacity(variables_count as usize);
                 for _ in 0..variables_count {
@@ -847,7 +843,7 @@ impl Attribute {
                     variables,
                 }
             }
-            "LocalVariableTypeTable" => {
+            b"LocalVariableTypeTable" => {
                 let variable_types_count = bytes.read_u16()?;
                 let mut variable_types = Vec::with_capacity(variable_types_count as usize);
                 for _ in 0..variable_types_count {
@@ -858,13 +854,13 @@ impl Attribute {
                     variable_types,
                 }
             }
-            "Deprecated" => {
+            b"Deprecated" => {
                 if info_length != 0 {
                     return Err(InvalidAttributeLength(info_length));
                 }
                 Attribute::Deprecated { name_index }
             }
-            "RuntimeVisibleAnnotations" => {
+            b"RuntimeVisibleAnnotations" => {
                 let annotations_count = bytes.read_u16()?;
                 let mut annotations = Vec::with_capacity(annotations_count as usize);
                 for _ in 0..annotations_count {
@@ -876,7 +872,7 @@ impl Attribute {
                     annotations,
                 }
             }
-            "RuntimeInvisibleAnnotations" => {
+            b"RuntimeInvisibleAnnotations" => {
                 let annotations_count = bytes.read_u16()?;
                 let mut annotations = Vec::with_capacity(annotations_count as usize);
                 for _ in 0..annotations_count {
@@ -888,7 +884,7 @@ impl Attribute {
                     annotations,
                 }
             }
-            "RuntimeVisibleParameterAnnotations" => {
+            b"RuntimeVisibleParameterAnnotations" => {
                 let parameter_annotations_count = bytes.read_u8()?;
                 let mut parameter_annotations =
                     Vec::with_capacity(parameter_annotations_count as usize);
@@ -901,7 +897,7 @@ impl Attribute {
                     parameter_annotations,
                 }
             }
-            "RuntimeInvisibleParameterAnnotations" => {
+            b"RuntimeInvisibleParameterAnnotations" => {
                 let parameter_annotations_count = bytes.read_u8()?;
                 let mut parameter_annotations =
                     Vec::with_capacity(parameter_annotations_count as usize);
@@ -914,7 +910,7 @@ impl Attribute {
                     parameter_annotations,
                 }
             }
-            "RuntimeVisibleTypeAnnotations" => {
+            b"RuntimeVisibleTypeAnnotations" => {
                 let type_annotations_count = bytes.read_u16()?;
                 let mut type_annotations = Vec::with_capacity(type_annotations_count as usize);
                 for _ in 0..type_annotations_count {
@@ -926,7 +922,7 @@ impl Attribute {
                     type_annotations,
                 }
             }
-            "RuntimeInvisibleTypeAnnotations" => {
+            b"RuntimeInvisibleTypeAnnotations" => {
                 let type_annotations_count = bytes.read_u16()?;
                 let mut type_annotations = Vec::with_capacity(type_annotations_count as usize);
                 for _ in 0..type_annotations_count {
@@ -938,14 +934,14 @@ impl Attribute {
                     type_annotations,
                 }
             }
-            "AnnotationDefault" => {
+            b"AnnotationDefault" => {
                 let element = AnnotationElement::from_bytes(bytes)?;
                 Attribute::AnnotationDefault {
                     name_index,
                     element,
                 }
             }
-            "BootstrapMethods" => {
+            b"BootstrapMethods" => {
                 let bootstrap_methods_count = bytes.read_u16()?;
                 let mut methods = Vec::with_capacity(bootstrap_methods_count as usize);
                 for _ in 0..bootstrap_methods_count {
@@ -957,7 +953,7 @@ impl Attribute {
                     methods,
                 }
             }
-            "MethodParameters" => {
+            b"MethodParameters" => {
                 let parameters_count = bytes.read_u8()?;
                 let mut parameters = Vec::with_capacity(parameters_count as usize);
                 for _ in 0..parameters_count {
@@ -969,7 +965,7 @@ impl Attribute {
                     parameters,
                 }
             }
-            "Module" => {
+            b"Module" => {
                 let module_name_index = bytes.read_u16()?;
                 let flags = ModuleAccessFlags::from_bytes(bytes)?;
                 let version_index = bytes.read_u16()?;
@@ -1014,7 +1010,7 @@ impl Attribute {
                     provides,
                 }
             }
-            "ModulePackages" => {
+            b"ModulePackages" => {
                 let package_indexes_count = bytes.read_u16()?;
                 let mut package_indexes = Vec::with_capacity(package_indexes_count as usize);
                 for _ in 0..package_indexes_count {
@@ -1025,7 +1021,7 @@ impl Attribute {
                     package_indexes,
                 }
             }
-            "ModuleMainClass" => {
+            b"ModuleMainClass" => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -1034,7 +1030,7 @@ impl Attribute {
                     main_class_index: bytes.read_u16()?,
                 }
             }
-            "NestHost" => {
+            b"NestHost" => {
                 if info_length != 2 {
                     return Err(InvalidAttributeLength(info_length));
                 }
@@ -1043,7 +1039,7 @@ impl Attribute {
                     host_class_index: bytes.read_u16()?,
                 }
             }
-            "NestMembers" => {
+            b"NestMembers" => {
                 let class_indexes_count = bytes.read_u16()?;
                 let mut class_indexes = Vec::with_capacity(class_indexes_count as usize);
                 for _ in 0..class_indexes_count {
@@ -1054,7 +1050,7 @@ impl Attribute {
                     class_indexes,
                 }
             }
-            "Record" => {
+            b"Record" => {
                 let record_count = bytes.read_u16()?;
                 let mut records = Vec::with_capacity(record_count as usize);
                 for _ in 0..record_count {
@@ -1066,7 +1062,7 @@ impl Attribute {
                     records,
                 }
             }
-            "PermittedSubclasses" => {
+            b"PermittedSubclasses" => {
                 let class_indexes_count = bytes.read_u16()?;
                 let mut class_indexes = Vec::with_capacity(class_indexes_count as usize);
                 for _ in 0..class_indexes_count {
@@ -1088,7 +1084,7 @@ impl Attribute {
     fn from_bytes_code_attributes(
         constant_pool: &ConstantPool<'_>,
         bytes: &mut ByteReader<'_>,
-        byte_to_instruction_map: &AHashMap<u16, u16>,
+        byte_to_instruction_pairs: &[(u16, u16)],
     ) -> Result<Vec<Attribute>> {
         let attributes_count = bytes.read_u16()?;
         let mut attributes = Vec::with_capacity(attributes_count as usize);
@@ -1100,9 +1096,9 @@ impl Attribute {
                     mut line_numbers,
                 } => {
                     for line_number in &mut line_numbers {
-                        line_number.start_pc = *byte_to_instruction_map
-                            .get(&line_number.start_pc)
-                            .ok_or(InvalidInstructionOffset(u32::from(line_number.start_pc)))?;
+                        line_number.start_pc =
+                            lookup_byte_offset(byte_to_instruction_pairs, line_number.start_pc)
+                                .ok_or(InvalidInstructionOffset(u32::from(line_number.start_pc)))?;
                     }
                     let attribute = Attribute::LineNumberTable {
                         name_index,
@@ -1127,9 +1123,9 @@ impl Attribute {
                                 .saturating_add(1)
                         };
 
-                        let instruction_offset = *byte_to_instruction_map
-                            .get(&byte_offset)
-                            .ok_or(InvalidInstructionOffset(u32::from(byte_offset)))?;
+                        let instruction_offset =
+                            lookup_byte_offset(byte_to_instruction_pairs, byte_offset)
+                                .ok_or(InvalidInstructionOffset(u32::from(byte_offset)))?;
                         // Calculate the instruction delta offset from the last instruction offset
                         // subtracting 1 to account for the current instruction.
                         let instruction_delta_offset = if first_frame {

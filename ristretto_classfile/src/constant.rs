@@ -1,9 +1,10 @@
 use crate::byte_reader::ByteReader;
 use crate::error::Error::InvalidConstantTag;
 use crate::error::Result;
+use crate::java_string::{JavaStr, JavaString};
 use crate::reference_kind::ReferenceKind;
 use crate::version::Version;
-use crate::{JAVA_7, JAVA_9, JAVA_11, mutf8};
+use crate::{JAVA_7, JAVA_9, JAVA_11};
 use byteorder::{BigEndian, WriteBytesExt};
 use std::borrow::Cow;
 use std::fmt;
@@ -29,7 +30,7 @@ const VERSION_55_0: Version = JAVA_11;
 /// use ristretto_classfile::byte_reader::ByteReader;
 ///
 /// // Create some constants
-/// let utf8_constant = Constant::Utf8("java/lang/Object".into());
+/// let utf8_constant = Constant::utf8("java/lang/Object");
 /// let class_constant = Constant::Class(1); // Points to the UTF-8 constant
 /// let string_const = Constant::String(1);
 /// let method_reference = Constant::MethodRef {
@@ -71,7 +72,7 @@ const VERSION_55_0: Version = JAVA_11;
 #[derive(Clone, Debug)]
 pub enum Constant<'a> {
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.7>
-    Utf8(Cow<'a, str>),
+    Utf8(Cow<'a, JavaStr>),
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.4>
     Integer(i32),
     /// See: <https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.4.4>
@@ -218,6 +219,26 @@ impl PartialEq for Constant<'_> {
 
 impl Eq for Constant<'_> {}
 
+impl Constant<'static> {
+    /// Creates a `Constant::Utf8` from any type convertible to `JavaString`.
+    ///
+    /// This is a convenience constructor that avoids the verbose
+    /// `Constant::Utf8(JavaString::from("...").into())` pattern.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::Constant;
+    ///
+    /// let constant = Constant::utf8("(IDJ)V");
+    /// assert_eq!(constant.tag(), 1);
+    /// ```
+    #[must_use]
+    pub fn utf8(s: impl Into<JavaString>) -> Self {
+        Constant::Utf8(Cow::Owned(s.into()))
+    }
+}
+
 impl Constant<'_> {
     /// Returns the tag value for this constant type.
     ///
@@ -229,7 +250,7 @@ impl Constant<'_> {
     /// ```rust
     /// use ristretto_classfile::Constant;
     ///
-    /// let constant = Constant::Utf8("Hello, world!".into());
+    /// let constant = Constant::utf8("Hello, world!");
     /// assert_eq!(constant.tag(), 1);
     ///
     /// let constant = Constant::Integer(42);
@@ -268,7 +289,7 @@ impl Constant<'_> {
     /// ```rust
     /// use ristretto_classfile::{Constant, ReferenceKind, Version, JAVA_6, JAVA_7};
     ///
-    /// let constant = Constant::Utf8("Hello, world!".into());
+    /// let constant = Constant::utf8("Hello, world!");
     /// assert!(constant.valid_for_version(&JAVA_7));
     ///
     /// let constant = Constant::MethodHandle {
@@ -313,17 +334,18 @@ impl Constant<'_> {
     /// let mut reader = ByteReader::new(&buffer);
     ///
     /// let constant = Constant::from_bytes(&mut reader)?;
-    /// assert_eq!(constant, Constant::Utf8("Hello".into()));
+    /// assert_eq!(constant, Constant::utf8("Hello"));
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
+    #[inline]
     pub fn from_bytes<'b>(bytes: &mut ByteReader<'b>) -> Result<Constant<'b>> {
         let tag = bytes.read_u8()?;
         let constant = match tag {
             1 => {
                 let length = bytes.read_u16()? as usize;
                 let utf8_slice = bytes.read_bytes(length)?;
-                let cow = mutf8::from_bytes_cow(utf8_slice)?;
-                Constant::Utf8(cow)
+                let java_str = JavaStr::from_mutf8(utf8_slice)?;
+                Constant::Utf8(Cow::Borrowed(java_str))
             }
             3 => Constant::Integer(bytes.read_i32()?),
             4 => Constant::Float(bytes.read_f32()?),
@@ -465,10 +487,10 @@ impl Constant<'_> {
 
         match self {
             Constant::Utf8(value) => {
-                let utf8_value = mutf8::to_bytes(value)?;
-                let length = u16::try_from(utf8_value.len())?;
+                let raw_bytes = value.as_bytes();
+                let length = u16::try_from(raw_bytes.len())?;
                 bytes.write_u16::<BigEndian>(length)?;
-                bytes.extend_from_slice(utf8_value.as_ref());
+                bytes.extend_from_slice(raw_bytes);
             }
             Constant::Integer(value) => bytes.write_i32::<BigEndian>(*value)?,
             Constant::Float(value) => bytes.write_f32::<BigEndian>(*value)?,
@@ -543,10 +565,9 @@ impl fmt::Display for Constant<'_> {
     ///
     /// ```rust
     /// use ristretto_classfile::Constant;
-    /// use std::fmt::Display;
     ///
     /// // Create some constants
-    /// let utf8 = Constant::Utf8("Hello, world!".into());
+    /// let utf8 = Constant::utf8("Hello, world!");
     /// let class = Constant::Class(5);
     /// let method_reference = Constant::MethodRef {
     ///     class_index: 3,
@@ -624,7 +645,6 @@ impl fmt::Display for Constant<'_> {
 mod test {
     use super::*;
     use crate::JAVA_1_0_2;
-
     const VERSION_45_0: Version = JAVA_1_0_2;
 
     #[test]
@@ -654,7 +674,7 @@ mod test {
 
     #[test]
     fn test_utf8() -> Result<()> {
-        let constant = Constant::Utf8("foo".into());
+        let constant = Constant::utf8("foo");
         let expected_bytes = [1, 0, 3, 102, 111, 111];
 
         assert_eq!("Utf8 foo", constant.to_string());
@@ -828,8 +848,8 @@ mod test {
 
     #[test]
     fn test_eq_utf8_equal() {
-        let a = Constant::Utf8("hello".into());
-        let b = Constant::Utf8("hello".into());
+        let a = Constant::utf8("hello");
+        let b = Constant::utf8("hello");
         assert_eq!(a, b);
     }
 
@@ -1017,8 +1037,8 @@ mod test {
 
     #[test]
     fn test_eq_utf8_not_equal() {
-        let a = Constant::Utf8("hello".into());
-        let b = Constant::Utf8("world".into());
+        let a = Constant::utf8("hello");
+        let b = Constant::utf8("world");
         assert_ne!(a, b);
     }
 
@@ -1204,7 +1224,7 @@ mod test {
 
     #[test]
     fn test_eq_different_variants_not_equal() {
-        let utf8 = Constant::Utf8("1".into());
+        let utf8 = Constant::utf8("1");
         let integer = Constant::Integer(1);
         let float = Constant::Float(1.0);
         let long = Constant::Long(1);

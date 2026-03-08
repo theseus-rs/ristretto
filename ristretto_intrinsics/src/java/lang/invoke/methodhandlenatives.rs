@@ -7,7 +7,7 @@ use ristretto_classfile::VersionSpecification::{
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
     Constant, ConstantPool, FieldAccessFlags, FieldType, JAVA_8, JAVA_11, JAVA_17, JAVA_21,
-    MethodAccessFlags, ReferenceKind,
+    JavaStr, MethodAccessFlags, ReferenceKind,
 };
 use ristretto_classloader::Error::IllegalAccessError;
 use ristretto_classloader::{Class, Method, Reference, Value};
@@ -175,7 +175,7 @@ async fn resolve_constant_to_value<T: Thread + 'static>(
         }
         Constant::Class(name_index) => {
             let class_name = constant_pool.try_get_utf8(*name_index)?;
-            let class = thread.class(class_name).await?;
+            let class = thread.class_java_str(class_name).await?;
             class.to_object(thread).await
         }
         Constant::MethodType(descriptor_index) => {
@@ -202,8 +202,11 @@ async fn resolve_constant_to_value<T: Thread + 'static>(
     }
 }
 
-/// Resolves a `MethodType` from a method descriptor string.
-async fn resolve_method_type<T: Thread + 'static>(thread: &T, descriptor: &str) -> Result<Value> {
+/// Resolves a `MethodType` from a method descriptor.
+async fn resolve_method_type<T: Thread + 'static>(
+    thread: &T,
+    descriptor: &JavaStr,
+) -> Result<Value> {
     let (params, ret) = FieldType::parse_method_descriptor(descriptor)?;
     let method_type_class = thread.class("java.lang.invoke.MethodType").await?;
 
@@ -306,7 +309,7 @@ async fn resolve_method_handle<T: Thread + 'static>(
     };
 
     // Get the class and lookup object
-    let class = thread.class(class_name).await?;
+    let class = thread.class_java_str(class_name).await?;
     let class_object = class.to_object(thread).await?;
     let lookup_class = thread
         .class("java.lang.invoke.MethodHandles$Lookup")
@@ -395,7 +398,7 @@ async fn resolve_method_handle<T: Thread + 'static>(
                 "findGetter",
                 "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
             )?;
-            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_type = FieldType::parse_java_str(member_descriptor)?.class_name();
             let field_class = thread.class(&field_type).await?;
             let field_class_object = field_class.to_object(thread).await?;
             thread
@@ -411,7 +414,7 @@ async fn resolve_method_handle<T: Thread + 'static>(
                 "findStaticGetter",
                 "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
             )?;
-            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_type = FieldType::parse_java_str(member_descriptor)?.class_name();
             let field_class = thread.class(&field_type).await?;
             let field_class_object = field_class.to_object(thread).await?;
             thread
@@ -427,7 +430,7 @@ async fn resolve_method_handle<T: Thread + 'static>(
                 "findSetter",
                 "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
             )?;
-            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_type = FieldType::parse_java_str(member_descriptor)?.class_name();
             let field_class = thread.class(&field_type).await?;
             let field_class_object = field_class.to_object(thread).await?;
             thread
@@ -443,7 +446,7 @@ async fn resolve_method_handle<T: Thread + 'static>(
                 "findStaticSetter",
                 "(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;)Ljava/lang/invoke/MethodHandle;",
             )?;
-            let field_type = FieldType::parse(member_descriptor)?.class_name();
+            let field_type = FieldType::parse_java_str(member_descriptor)?.class_name();
             let field_class = thread.class(&field_type).await?;
             let field_class_object = field_class.to_object(thread).await?;
             thread
@@ -1010,7 +1013,7 @@ fn resolve_holder_methods(
 
     // For holder classes, create a synthetic method for intrinsics
     if is_holder {
-        use ristretto_classfile::{FieldType, MethodAccessFlags};
+        use ristretto_classfile::{FieldType, JavaStr, MethodAccessFlags};
 
         let definition = ristretto_classfile::Method {
             access_flags: MethodAccessFlags::PUBLIC
@@ -1021,8 +1024,8 @@ fn resolve_holder_methods(
             attributes: Vec::new(),
         };
 
-        let descriptor_to_use = polymorphic_descriptor;
-        let (parameters, return_type) = FieldType::parse_method_descriptor(descriptor_to_use)?;
+        let descriptor_to_use = JavaStr::cow_from_str(polymorphic_descriptor);
+        let (parameters, return_type) = FieldType::parse_method_descriptor(&descriptor_to_use)?;
 
         let method = ristretto_classloader::Method::new_synthetic(
             definition,
@@ -1409,7 +1412,8 @@ async fn resolve_method<T: Thread + 'static>(
             (parameter_descriptors, return_descriptor)
         } else if class_name == "java/lang/String" {
             let descriptor = method_type.as_string()?;
-            let (params, ret) = FieldType::parse_method_descriptor(&descriptor)?;
+            let descriptor_js = JavaStr::cow_from_str(&descriptor);
+            let (params, ret) = FieldType::parse_method_descriptor(&descriptor_js)?;
             let parameter_descriptors: Vec<String> =
                 params.iter().map(FieldType::descriptor).collect();
             let return_descriptor = ret.map_or_else(|| "V".to_string(), |r| r.descriptor());

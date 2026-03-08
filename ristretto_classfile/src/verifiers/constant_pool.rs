@@ -191,7 +191,7 @@ mod test {
     }
 
     fn get_utf8_index(class_file: &mut ClassFile<'_>) -> Result<u16> {
-        class_file.constant_pool.push(Constant::Utf8("foo".into()));
+        class_file.constant_pool.push(Constant::utf8("foo"));
         Ok(u16::try_from(class_file.constant_pool.len())?)
     }
 

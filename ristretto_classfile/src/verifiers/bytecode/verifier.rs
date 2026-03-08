@@ -1,13 +1,12 @@
 use std::io::Cursor;
-use std::sync::Arc;
 
-use crate::FieldType;
 use crate::attributes::{Attribute, Instruction, StackFrame};
 use crate::class_file::ClassFile;
 use crate::method::Method;
 use crate::method_access_flags::MethodAccessFlags;
 use crate::verifiers::context::VerificationContext;
 use crate::verifiers::error::{Result, VerifyError};
+use crate::{FieldType, JavaString};
 
 use super::control_flow::{CodeInfo, Worklist, compute_successors, validate_exception_table};
 use super::frame::Frame;
@@ -258,7 +257,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             } else {
                 frame.set_local(
                     local_index,
-                    VerificationType::Object(Arc::from(self.current_class.as_str())),
+                    VerificationType::Object(JavaString::from(self.current_class.as_str())),
                 )?;
             }
             local_index += 1;
@@ -541,7 +540,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
                         .constant_pool
                         .try_get_class(handler.catch_type)
                         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
-                    VerificationType::Object(Arc::from(class_name))
+                    VerificationType::Object(JavaString::from(class_name))
                 };
                 handler_frame.push(exception_type)?;
 
@@ -633,7 +632,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             }
             crate::attributes::VerificationType::Object { cpool_index } => {
                 if let Ok(name) = self.class_file.constant_pool.try_get_class(*cpool_index) {
-                    VerificationType::Object(Arc::from(name))
+                    VerificationType::Object(JavaString::from(name))
                 } else {
                     VerificationType::Top
                 }
@@ -681,15 +680,11 @@ mod tests {
 
     fn create_mock_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool
-            .add(Constant::Utf8("TestClass".into()))
-            .unwrap();
+        constant_pool.add(Constant::utf8("TestClass")).unwrap();
         let this_class_index = constant_pool.add(Constant::Class(1)).unwrap();
-        constant_pool
-            .add(Constant::Utf8("testMethod".into()))
-            .unwrap();
-        constant_pool.add(Constant::Utf8("()V".into())).unwrap();
-        constant_pool.add(Constant::Utf8("Code".into())).unwrap();
+        constant_pool.add(Constant::utf8("testMethod")).unwrap();
+        constant_pool.add(Constant::utf8("()V")).unwrap();
+        constant_pool.add(Constant::utf8("Code")).unwrap();
 
         ClassFile {
             version: Version::Java8 { minor: 0 },

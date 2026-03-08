@@ -67,8 +67,8 @@ impl Method {
         let (parameters, return_type) = FieldType::parse_method_descriptor(descriptor)?;
         Ok(Self {
             definition: definition.clone(),
-            name: name.to_string(),
-            descriptor: descriptor.to_string(),
+            name: name.to_rust_string(),
+            descriptor: descriptor.to_rust_string(),
             parameters,
             return_type,
             max_stack,

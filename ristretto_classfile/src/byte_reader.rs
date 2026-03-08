@@ -58,10 +58,11 @@ impl<'a> ByteReader<'a> {
         if end > self.data.len() {
             return Err(EOF_ERR);
         }
-        let slice = &self.data[self.pos..end];
+        // SAFETY: We just verified that pos..end is within bounds and the slice has exactly N bytes
+        #[expect(unsafe_code)]
+        let array = unsafe { &*self.data.as_ptr().add(self.pos).cast::<[u8; N]>() };
         self.pos = end;
-        // This will not panic because `slice` is exactly `N` bytes
-        Ok(slice.try_into().expect("slice length mismatch"))
+        Ok(array)
     }
 
     /// Read a single byte (u8).
@@ -73,9 +74,11 @@ impl<'a> ByteReader<'a> {
         if self.pos >= self.data.len() {
             return Err(EOF_ERR);
         }
-        let val = self.data[self.pos];
+        // SAFETY: We just verified pos < data.len()
+        #[expect(unsafe_code)]
+        let value = unsafe { *self.data.get_unchecked(self.pos) };
         self.pos += 1;
-        Ok(val)
+        Ok(value)
     }
 
     /// Read a single signed byte (i8).
@@ -161,7 +164,9 @@ impl<'a> ByteReader<'a> {
         if end > self.data.len() {
             return Err(EOF_ERR);
         }
-        let slice = &self.data[self.pos..end];
+        // SAFETY: We just verified end <= data.len()
+        #[expect(unsafe_code)]
+        let slice = unsafe { self.data.get_unchecked(self.pos..end) };
         self.pos = end;
         Ok(slice)
     }

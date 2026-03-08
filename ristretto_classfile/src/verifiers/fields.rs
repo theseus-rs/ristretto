@@ -69,8 +69,8 @@ mod test {
     fn get_test_class_file_and_field() -> (ClassFile<'static>, Field) {
         let mut class_file = ClassFile::default();
         let constant_pool = &mut class_file.constant_pool;
-        constant_pool.push(Constant::Utf8("foo".into()));
-        constant_pool.push(Constant::Utf8("I".into()));
+        constant_pool.push(Constant::utf8("foo"));
+        constant_pool.push(Constant::utf8("I"));
         let field = Field {
             access_flags: FieldAccessFlags::PUBLIC,
             name_index: 1,

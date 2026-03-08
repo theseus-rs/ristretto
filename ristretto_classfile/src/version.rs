@@ -391,6 +391,7 @@ impl Version {
     ///
     /// # Errors
     /// Returns an error if reading from the byte reader fails or if the version is invalid.
+    #[inline]
     pub fn from_bytes(bytes: &mut ByteReader<'_>) -> Result<Version> {
         let minor = bytes.read_u16()?;
         let major = bytes.read_u16()?;

@@ -1,3 +1,4 @@
+use ristretto_classfile::JavaStr;
 use ristretto_types::Assignable;
 use ristretto_types::JavaError::{ClassNotFoundException, NullPointerException};
 use ristretto_types::JavaObject;
@@ -62,12 +63,13 @@ pub async fn get_class_no_init<T: Thread + 'static>(
         let object = object.as_object_ref()?;
         object.value("name")?.as_string()?
     };
-    thread.load_and_link_class(class_name.as_str()).await
+    let class_name = JavaStr::cow_from_str(class_name.as_str());
+    thread.load_and_link_class(&class_name).await
 }
 
 #[intrinsic_method("java/lang/Class.desiredAssertionStatus0(Ljava/lang/Class;)Z", Any)]
 #[async_method]
-pub async fn desired_assertion_status_0<T: ristretto_types::Thread + 'static>(
+pub async fn desired_assertion_status_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -79,7 +81,7 @@ pub async fn desired_assertion_status_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn for_name_0<T: ristretto_types::Thread + 'static>(
+pub async fn for_name_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -107,7 +109,7 @@ pub async fn for_name_0<T: ristretto_types::Thread + 'static>(
         let vm = thread.vm()?;
         let class_loader_lock = vm.class_loader();
         let class_loader = class_loader_lock.read().await;
-        match class_loader.load(&class_name).await {
+        match class_loader.load(JavaStr::try_from_str(&class_name)?).await {
             Ok(class) => class,
             Err(_error) => {
                 return Err(ClassNotFoundException(class_name).into());
@@ -128,7 +130,7 @@ pub async fn for_name_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn get_class_access_flags_raw_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_class_access_flags_raw_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -143,7 +145,7 @@ pub async fn get_class_access_flags_raw_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getClassFileVersion0()I", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn get_class_file_version_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_class_file_version_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -164,7 +166,7 @@ pub async fn get_class_file_version_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_component_type<T: ristretto_types::Thread + 'static>(
+pub async fn get_component_type<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -207,7 +209,7 @@ pub async fn get_component_type<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_constant_pool_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_constant_pool_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -226,7 +228,7 @@ pub async fn get_constant_pool_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn get_constant_pool_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_constant_pool_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -242,7 +244,7 @@ pub async fn get_constant_pool_1<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getDeclaredClasses0()[Ljava/lang/Class;", Any)]
 #[async_method]
-pub async fn get_declared_classes_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_declared_classes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -279,7 +281,7 @@ pub async fn get_declared_classes_0<T: ristretto_types::Thread + 'static>(
             continue;
         }
         let inner_class_name = constant_pool.try_get_class(inner_class.class_info_index)?;
-        let class = thread.class(inner_class_name).await?;
+        let class = thread.class_java_str(inner_class_name).await?;
         let class = class.to_object(&thread).await?;
         declared_classes.push(class);
     }
@@ -298,7 +300,7 @@ pub async fn get_declared_classes_0<T: ristretto_types::Thread + 'static>(
 )]
 #[expect(clippy::too_many_lines)]
 #[async_method]
-pub async fn get_declared_constructors_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_declared_constructors_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -412,7 +414,7 @@ pub async fn get_declared_constructors_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getDeclaredFields0(Z)[Ljava/lang/reflect/Field;", Any)]
 #[async_method]
-pub async fn get_declared_fields_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_declared_fields_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -520,7 +522,7 @@ pub async fn get_declared_fields_0<T: ristretto_types::Thread + 'static>(
 )]
 #[expect(clippy::too_many_lines)]
 #[async_method]
-pub async fn get_declared_methods_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_declared_methods_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -658,7 +660,7 @@ pub async fn get_declared_methods_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getDeclaringClass0()Ljava/lang/Class;", Any)]
 #[async_method]
-pub async fn get_declaring_class_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_declaring_class_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -696,7 +698,7 @@ pub async fn get_declaring_class_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getEnclosingMethod0()[Ljava/lang/Object;", Any)]
 #[async_method]
-pub async fn get_enclosing_method_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_enclosing_method_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -712,7 +714,7 @@ pub async fn get_enclosing_method_0<T: ristretto_types::Thread + 'static>(
         {
             let constant_pool = &class_file.constant_pool;
             let class_name = constant_pool.try_get_class(*class_index)?;
-            let class = thread.class(class_name).await?;
+            let class = thread.class_java_str(class_name).await?;
             let class = class.to_object(&thread).await?;
             let (method_name, method_descriptor) = if *method_index == 0 {
                 (Value::Object(None), Value::Object(None))
@@ -721,7 +723,8 @@ pub async fn get_enclosing_method_0<T: ristretto_types::Thread + 'static>(
                     constant_pool.try_get_name_and_type(*method_index)?;
                 let method_name = constant_pool.try_get_utf8(*name_index)?;
                 // Intern method name for correct reference equality in JDK code
-                let method_name = { thread.intern_string(method_name).await? };
+                let s = method_name.to_str_lossy();
+                let method_name = { thread.intern_string(&s).await? };
                 let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
                 let method_descriptor = method_descriptor.to_object(&thread).await?;
                 (method_name, method_descriptor)
@@ -743,7 +746,7 @@ pub async fn get_enclosing_method_0<T: ristretto_types::Thread + 'static>(
 ///
 /// # Errors
 /// Returns an error if the exception classes cannot be loaded.
-pub async fn get_exceptions<T: ristretto_types::Thread + 'static>(
+pub async fn get_exceptions<T: Thread + 'static>(
     thread: &Arc<T>,
     class: &Arc<Class>,
     method: &Arc<Method>,
@@ -758,7 +761,7 @@ pub async fn get_exceptions<T: ristretto_types::Thread + 'static>(
         {
             for exception_index in exception_indexes {
                 let class_name = constant_pool.try_get_class(*exception_index)?;
-                let exception = thread.class(class_name).await?;
+                let exception = thread.class_java_str(class_name).await?;
                 let exception = exception.to_object(thread).await?;
                 exceptions.push(exception);
             }
@@ -774,7 +777,7 @@ pub async fn get_exceptions<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getGenericSignature0()Ljava/lang/String;", Any)]
 #[async_method]
-pub async fn get_generic_signature_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_generic_signature_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -799,7 +802,7 @@ pub async fn get_generic_signature_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getInterfaces0()[Ljava/lang/Class;", Any)]
 #[async_method]
-pub async fn get_interfaces_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_interfaces_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -824,7 +827,7 @@ pub async fn get_interfaces_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getModifiers()I", Any)]
 #[async_method]
-pub async fn get_modifiers<T: ristretto_types::Thread + 'static>(
+pub async fn get_modifiers<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -872,7 +875,7 @@ pub async fn get_modifiers<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_name_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_name_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -885,7 +888,7 @@ pub async fn get_name_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getNestHost0()Ljava/lang/Class;", GreaterThan(JAVA_8))]
 #[async_method]
-pub async fn get_nest_host_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_nest_host_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -899,7 +902,7 @@ pub async fn get_nest_host_0<T: ristretto_types::Thread + 'static>(
         {
             let constant_pool = &class_file.constant_pool;
             let host_class_name = constant_pool.try_get_class(*host_class_index)?;
-            let host_class = thread.class(host_class_name).await?;
+            let host_class = thread.class_java_str(host_class_name).await?;
             let host_class_object = host_class.to_object(&thread).await?;
             return Ok(Some(host_class_object));
         }
@@ -912,7 +915,7 @@ pub async fn get_nest_host_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn get_nest_members_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_nest_members_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -927,7 +930,7 @@ pub async fn get_nest_members_0<T: ristretto_types::Thread + 'static>(
             let constant_pool = &class_file.constant_pool;
             for class_index in class_indexes {
                 let class_name = constant_pool.try_get_class(*class_index)?;
-                let member_class = thread.class(class_name).await?;
+                let member_class = thread.class_java_str(class_name).await?;
                 let member_object = member_class.to_object(&thread).await?;
                 members.push(member_object);
             }
@@ -945,7 +948,7 @@ pub async fn get_nest_members_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_permitted_subclasses_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_permitted_subclasses_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -960,7 +963,7 @@ pub async fn get_permitted_subclasses_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_primitive_class<T: ristretto_types::Thread + 'static>(
+pub async fn get_primitive_class<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -976,7 +979,7 @@ pub async fn get_primitive_class<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_protection_domain_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_protection_domain_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -986,7 +989,7 @@ pub async fn get_protection_domain_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getRawAnnotations()[B", Any)]
 #[async_method]
-pub async fn get_raw_annotations<T: ristretto_types::Thread + 'static>(
+pub async fn get_raw_annotations<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1020,7 +1023,7 @@ pub async fn get_raw_annotations<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getRawTypeAnnotations()[B", Any)]
 #[async_method]
-pub async fn get_raw_type_annotations<T: ristretto_types::Thread + 'static>(
+pub async fn get_raw_type_annotations<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1060,7 +1063,7 @@ pub async fn get_raw_type_annotations<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_record_components_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_record_components_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1081,7 +1084,7 @@ pub async fn get_record_components_0<T: ristretto_types::Thread + 'static>(
                 let name_object = name.to_object(&thread).await?;
 
                 // Resolve type from descriptor
-                let type_class_name = FieldType::parse(descriptor)?.class_name();
+                let type_class_name = FieldType::parse_java_str(descriptor)?.class_name();
                 let type_class = thread.class(&type_class_name).await?;
                 let type_object = type_class.to_object(&thread).await?;
 
@@ -1137,9 +1140,16 @@ pub async fn get_record_components_0<T: ristretto_types::Thread + 'static>(
 
                 // Create accessor Method object for the record component. The accessor method has
                 // the same name as the component and returns the component type
-                let accessor_method =
-                    create_accessor_method(&thread, &class, &class_object, name, descriptor)
-                        .await?;
+                let name_lossy = name.to_str_lossy();
+                let descriptor_lossy = descriptor.to_str_lossy();
+                let accessor_method = create_accessor_method(
+                    &thread,
+                    &class,
+                    &class_object,
+                    &name_lossy,
+                    &descriptor_lossy,
+                )
+                .await?;
 
                 // Create RecordComponent by setting fields directly (no public constructor)
                 let record_component_class =
@@ -1169,7 +1179,7 @@ pub async fn get_record_components_0<T: ristretto_types::Thread + 'static>(
 
 /// Create a Method object for a record component accessor
 #[expect(clippy::too_many_lines)]
-async fn create_accessor_method<T: ristretto_types::Thread + 'static>(
+async fn create_accessor_method<T: Thread + 'static>(
     thread: &Arc<T>,
     class: &Arc<Class>,
     class_object: &Value,
@@ -1305,7 +1315,7 @@ async fn create_accessor_method<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn get_signers<T: ristretto_types::Thread + 'static>(
+pub async fn get_signers<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1318,7 +1328,7 @@ pub async fn get_signers<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn get_simple_binary_name_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_simple_binary_name_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1376,7 +1386,7 @@ pub async fn get_simple_binary_name_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.getSuperclass()Ljava/lang/Class;", Any)]
 #[async_method]
-pub async fn get_superclass<T: ristretto_types::Thread + 'static>(
+pub async fn get_superclass<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1400,7 +1410,7 @@ pub async fn get_superclass<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn init_class_name<T: ristretto_types::Thread + 'static>(
+pub async fn init_class_name<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1414,7 +1424,7 @@ pub async fn init_class_name<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.isArray()Z", LessThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn is_array<T: ristretto_types::Thread + 'static>(
+pub async fn is_array<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1429,7 +1439,7 @@ pub async fn is_array<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.isAssignableFrom(Ljava/lang/Class;)Z", Any)]
 #[async_method]
-pub async fn is_assignable_from<T: ristretto_types::Thread + 'static>(
+pub async fn is_assignable_from<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1449,7 +1459,7 @@ pub async fn is_assignable_from<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.isHidden()Z", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn is_hidden<T: ristretto_types::Thread + 'static>(
+pub async fn is_hidden<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1460,7 +1470,7 @@ pub async fn is_hidden<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.isInstance(Ljava/lang/Object;)Z", Any)]
 #[async_method]
-pub async fn is_instance<T: ristretto_types::Thread + 'static>(
+pub async fn is_instance<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1487,7 +1497,7 @@ pub async fn is_instance<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.isInterface()Z", LessThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn is_interface<T: ristretto_types::Thread + 'static>(
+pub async fn is_interface<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1502,7 +1512,7 @@ pub async fn is_interface<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.isPrimitive()Z", LessThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn is_primitive<T: ristretto_types::Thread + 'static>(
+pub async fn is_primitive<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1517,7 +1527,7 @@ pub async fn is_primitive<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.isRecord0()Z", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn is_record_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_record_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1533,7 +1543,7 @@ pub async fn is_record_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Class.registerNatives()V", Any)]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1545,7 +1555,7 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn set_signers<T: ristretto_types::Thread + 'static>(
+pub async fn set_signers<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1760,29 +1770,6 @@ mod tests {
         let (class, values) = value.as_class_vec_ref()?;
         assert_eq!(class.name(), "[Ljava/lang/reflect/Constructor;");
         assert_eq!(2, values.len());
-        // TODO: Enable test assertions when invokedynamic is implemented
-        // let mut signatures = Vec::new();
-        // for reference in values.into_iter().flatten() {
-        //     let constructor = Value::from(reference);
-        //     let result = vm
-        //         .invoke(
-        //             "java.lang.reflect.Constructor",
-        //             "toString",
-        //             "()Ljava/lang/String;",
-        //             vec![constructor],
-        //         )
-        //         .await?;
-        //     let signature = result.expect("string").as_string()?;
-        //     signatures.push(signature);
-        // }
-        // signatures.sort()
-        // assert_eq!(
-        //     signatures,
-        //     vec![
-        //         "public java.lang.Integer(int)",
-        //         "public java.lang.Integer(java.lang.String) throws java.lang.NumberFormatException",
-        //     ],
-        // );
         Ok(())
     }
 
@@ -1878,43 +1865,6 @@ mod tests {
                 "valueOf",
             ]
         );
-        // TODO: Enable test assertions when invokedynamic is implemented
-        // let mut signatures = Vec::new();
-        // for reference in values.into_iter().flatten() {
-        //     let result = vm
-        //         .invoke(
-        //             "java.lang.reflect.Method",
-        //             "toString",
-        //             "()Ljava/lang/String;",
-        //             vec![Value::from(reference.clone())],
-        //         )
-        //         .await?;
-        //     let signature = result.expect("string").as_string()?;
-        //     signatures.push(signature);
-        // }
-        // signatures.sort();
-        // assert_eq!(
-        //     signatures,
-        //     vec![
-        //         "public boolean java.lang.Boolean.booleanValue()",
-        //         "public boolean java.lang.Boolean.equals(java.lang.Object)",
-        //         "public int java.lang.Boolean.compareTo(java.lang.Boolean)",
-        //         "public int java.lang.Boolean.compareTo(java.lang.Object)",
-        //         "public int java.lang.Boolean.hashCode()",
-        //         "public java.lang.String java.lang.Boolean.toString()",
-        //         "public java.util.Optional java.lang.Boolean.describeConstable()",
-        //         "public static boolean java.lang.Boolean.getBoolean(java.lang.String)",
-        //         "public static boolean java.lang.Boolean.logicalAnd(boolean,boolean)",
-        //         "public static boolean java.lang.Boolean.logicalOr(boolean,boolean)",
-        //         "public static boolean java.lang.Boolean.logicalXor(boolean,boolean)",
-        //         "public static boolean java.lang.Boolean.parseBoolean(java.lang.String)",
-        //         "public static int java.lang.Boolean.compare(boolean,boolean)",
-        //         "public static int java.lang.Boolean.hashCode(boolean)",
-        //         "public static java.lang.Boolean java.lang.Boolean.valueOf(boolean)",
-        //         "public static java.lang.Boolean java.lang.Boolean.valueOf(java.lang.String)",
-        //         "public static java.lang.String java.lang.Boolean.toString(boolean)",
-        //     ]
-        // );
         Ok(())
     }
 

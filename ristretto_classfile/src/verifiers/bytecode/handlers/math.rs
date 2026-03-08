@@ -17,7 +17,7 @@ use crate::verifiers::error::{Result, VerifyError};
 
 /// Handles integer binary operations (iadd, isub, imul, idiv, irem).
 ///
-/// Stack: ..., value1, value2 → ..., result
+/// Stack: ..., value1, value2 -> ..., result
 ///
 /// # Errors
 ///
@@ -46,7 +46,7 @@ pub fn handle_int_binary(frame: &mut Frame) -> Result<()> {
 
 /// Handles integer unary operations (ineg).
 ///
-/// Stack: ..., value → ..., result
+/// Stack: ..., value -> ..., result
 ///
 /// # Errors
 ///
@@ -68,7 +68,7 @@ pub fn handle_int_unary(frame: &mut Frame) -> Result<()> {
 
 /// Handles long binary operations (ladd, lsub, lmul, ldiv, lrem, land, lor, lxor).
 ///
-/// Stack: ..., value1, value2 → ..., result
+/// Stack: ..., value1, value2 -> ..., result
 ///
 /// # Errors
 ///
@@ -97,7 +97,7 @@ pub fn handle_long_binary(frame: &mut Frame) -> Result<()> {
 
 /// Handles long shift operations (lshl, lshr, lushr).
 ///
-/// Stack: ..., value1 (long), value2 (int) → ..., result (long)
+/// Stack: ..., value1 (long), value2 (int) -> ..., result (long)
 ///
 /// # Errors
 ///

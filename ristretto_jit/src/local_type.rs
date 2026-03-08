@@ -1,9 +1,9 @@
 use crate::Result;
 use ristretto_classfile::attributes::Instruction;
-use ristretto_classfile::{BaseType, FieldType};
+use ristretto_classfile::{BaseType, FieldType, JavaString};
 
 /// Represents an Object type local.
-const OBJECT_TYPE: FieldType = FieldType::Object(String::new());
+const OBJECT_TYPE: FieldType = FieldType::Object(JavaString::new());
 
 /// Trait to determine if an instruction corresponds to a local variable, and if so, to return its
 /// type and index.

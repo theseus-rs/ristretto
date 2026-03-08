@@ -15,7 +15,7 @@ use crate::verifiers::error::{Result, VerifyError};
 
 /// Handles `athrow` - throw exception.
 ///
-/// Stack: ..., objectref → \[empty\] (control transfer)
+/// Stack: ..., objectref -> \[empty\] (control transfer)
 ///
 /// The objectref must be of type Throwable (or a subclass).
 ///
@@ -80,15 +80,15 @@ pub fn dispatch_exceptions<C: VerificationContext>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::JavaString;
     use crate::verifiers::bytecode::handlers::test_utils::{MockContext, StrictMockContext};
-    use std::sync::Arc;
 
     #[test]
     fn test_athrow_object_success() {
         let ctx = MockContext;
         let mut frame = Frame::new(5, 10);
         frame
-            .push(VerificationType::Object(Arc::from(
+            .push(VerificationType::Object(JavaString::from(
                 "java/lang/RuntimeException",
             )))
             .unwrap();
@@ -191,7 +191,9 @@ mod tests {
         let ctx = StrictMockContext;
         let mut frame = Frame::new(5, 10);
         frame
-            .push(VerificationType::Object(Arc::from("some/CustomClass")))
+            .push(VerificationType::Object(JavaString::from(
+                "some/CustomClass",
+            )))
             .unwrap();
 
         // Should succeed because we assume Object types are valid

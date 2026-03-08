@@ -1,5 +1,6 @@
 use crate::Result;
 use crate::frame::Frame;
+use ristretto_classfile::JavaStr;
 use ristretto_classloader::{Class, Method, Value};
 use std::sync::Arc;
 use std::time::Duration;
@@ -64,13 +65,25 @@ pub trait Thread: Send + Sync {
     /// Returns an error if the class cannot be loaded.
     fn class<'a>(&'a self, class_name: &'a str) -> crate::BoxFuture<'a, Result<Arc<Class>>>;
 
+    /// Load, link, and initialize a class by name from a `JavaStr` reference.
+    ///
+    /// This avoids the need for callers to manually convert `&JavaStr` to `&str` via
+    /// `to_str_lossy()`. The conversion is handled internally.
+    ///
+    /// # Errors
+    /// Returns an error if the class cannot be loaded.
+    fn class_java_str<'a>(
+        &'a self,
+        class_name: &'a JavaStr,
+    ) -> crate::BoxFuture<'a, Result<Arc<Class>>>;
+
     /// Load and link a class by name without initializing it.
     ///
     /// # Errors
     /// Returns an error if the class cannot be loaded.
     fn load_and_link_class<'a>(
         &'a self,
-        class_name: &'a str,
+        class_name: &'a JavaStr,
     ) -> crate::BoxFuture<'a, Result<Arc<Class>>>;
 
     /// Register a class with the class loader.
@@ -198,9 +211,16 @@ impl<T: Thread> Thread for Arc<T> {
         (**self).class(class_name)
     }
 
+    fn class_java_str<'a>(
+        &'a self,
+        class_name: &'a JavaStr,
+    ) -> crate::BoxFuture<'a, Result<Arc<Class>>> {
+        (**self).class_java_str(class_name)
+    }
+
     fn load_and_link_class<'a>(
         &'a self,
-        class_name: &'a str,
+        class_name: &'a JavaStr,
     ) -> crate::BoxFuture<'a, Result<Arc<Class>>> {
         (**self).load_and_link_class(class_name)
     }

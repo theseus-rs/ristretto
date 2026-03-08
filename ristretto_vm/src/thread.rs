@@ -7,7 +7,7 @@ use crate::rust_value::process_values;
 use crate::{Frame, Result, VM, jit};
 use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::Attribute;
-use ristretto_classfile::{FieldAccessFlags, FieldType, MethodAccessFlags};
+use ristretto_classfile::{FieldAccessFlags, FieldType, JavaStr, MethodAccessFlags};
 use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
 use ristretto_intrinsics::get_monitor_id;
@@ -294,7 +294,21 @@ impl Thread {
     #[async_method]
     pub async fn class<S: AsRef<str> + Send>(&self, class_name: S) -> Result<Arc<Class>> {
         let class_name = class_name.as_ref();
+        let java_str = JavaStr::cow_from_str(class_name);
+        self.class_java_str(&java_str).await
+    }
 
+    /// Load, link, and initialize a class from a `JavaStr` reference.
+    ///
+    /// This is the primary class loading entry point. It accepts `&JavaStr` directly
+    /// (e.g., from the constant pool) and pushes it through the entire loading chain,
+    /// avoiding unnecessary string conversions.
+    ///
+    /// # Errors
+    ///
+    /// if the class cannot be loaded or initialized
+    #[async_method]
+    pub async fn class_java_str(&self, class_name: &JavaStr) -> Result<Arc<Class>> {
         // Load the class; the class tracks its own initialization state
         let class = self.load_and_link_class(class_name).await?;
 
@@ -313,7 +327,7 @@ impl Thread {
     ///
     /// if the class cannot be loaded or linked
     #[async_method]
-    pub(crate) async fn load_and_link_class(&self, class_name: &str) -> Result<Arc<Class>> {
+    pub(crate) async fn load_and_link_class(&self, class_name: &JavaStr) -> Result<Arc<Class>> {
         let vm = self.vm()?;
         let class = {
             let class_loader_lock = vm.class_loader();
@@ -360,19 +374,13 @@ impl Thread {
         let interfaces_not_linked = class.interfaces()?.is_empty();
 
         if has_declared_interfaces && interfaces_not_linked {
-            let interface_names: Vec<String> = {
-                let mut names = Vec::new();
-                for interface_index in &class.class_file().interfaces {
-                    let interface_name = class.constant_pool().try_get_class(*interface_index)?;
-                    names.push(interface_name.to_string());
-                }
-                names
-            };
-
-            let mut interfaces = Vec::new();
-            for interface_name in interface_names {
-                // Recursively link each interface (this ensures interface inheritance is linked)
-                let interface_class = self.load_and_link_class(&interface_name).await?;
+            // Clone the interface indices to avoid holding a borrow across await points
+            let interface_indices: Vec<u16> = class.class_file().interfaces.clone();
+            let mut interfaces = Vec::with_capacity(interface_indices.len());
+            for interface_index in interface_indices {
+                let interface_name = class.constant_pool().try_get_class(interface_index)?;
+                // Pass &JavaStr directly from constant pool — no String allocation
+                let interface_class = self.load_and_link_class(interface_name).await?;
                 interfaces.push(interface_class);
             }
             class.set_interfaces(interfaces)?;
@@ -381,21 +389,18 @@ impl Thread {
         // Link: resolve superclass and recursively link the entire superclass chain
         // This ensures that all parent classes have their own parents resolved
         if class.parent()?.is_none() && class.name() != "java/lang/Object" {
-            let super_class_name = {
-                let super_class_index = class.class_file().super_class;
-                if super_class_index == 0 {
-                    "java/lang/Object".to_string()
-                } else {
-                    class
-                        .constant_pool()
-                        .try_get_class(super_class_index)?
-                        .to_string()
-                }
-            };
-
-            // Recursively link the superclass (this ensures the entire chain is linked)
-            let super_class = self.load_and_link_class(&super_class_name).await?;
-            class.set_parent(Some(super_class))?;
+            let super_class_index = class.class_file().super_class;
+            if super_class_index == 0 {
+                // Default to java/lang/Object — zero-copy via try_from_str on static ASCII
+                let object_name = JavaStr::try_from_str("java/lang/Object").expect("valid ASCII");
+                let super_class = self.load_and_link_class(object_name).await?;
+                class.set_parent(Some(super_class))?;
+            } else {
+                let super_class_name = class.constant_pool().try_get_class(super_class_index)?;
+                // Pass &JavaStr directly from constant pool — no String allocation
+                let super_class = self.load_and_link_class(super_class_name).await?;
+                class.set_parent(Some(super_class))?;
+            }
         }
 
         Ok(class)
@@ -577,7 +582,7 @@ impl Thread {
 
             // Create a Java String object using the string pool for interning
             let vm = self.vm()?;
-            let string_object = vm.string_pool().intern(self, string_value).await?;
+            let string_object = vm.string_pool().intern_java_str(self, string_value).await?;
 
             // Set the static field value
             class.set_static_value_unchecked(field.name(), string_object)?;
@@ -988,9 +993,16 @@ impl ristretto_types::Thread for Thread {
         Box::pin(async move { Thread::class(self, class_name).await })
     }
 
+    fn class_java_str<'a>(
+        &'a self,
+        class_name: &'a JavaStr,
+    ) -> ristretto_types::BoxFuture<'a, Result<Arc<Class>>> {
+        Box::pin(async move { Thread::class_java_str(self, class_name).await })
+    }
+
     fn load_and_link_class<'a>(
         &'a self,
-        class_name: &'a str,
+        class_name: &'a JavaStr,
     ) -> ristretto_types::BoxFuture<'a, Result<Arc<Class>>> {
         Box::pin(async move { Thread::load_and_link_class(self, class_name).await })
     }

@@ -67,7 +67,8 @@ pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
                 };
 
                 // Validate the descriptor is a valid field descriptor
-                if !is_valid_field_descriptor(&descriptor) {
+                let descriptor_str = descriptor.to_str_lossy();
+                if !is_valid_field_descriptor(&descriptor_str) {
                     return Err(VerificationError {
                         context: "Record".to_string(),
                         message: format!(

@@ -715,6 +715,7 @@ mod tests {
     use super::*;
     use crate::Reference;
     use crate::runtime;
+    use ristretto_classfile::JavaStr;
     use ristretto_gc::GarbageCollector;
     use std::hash::DefaultHasher;
 
@@ -725,12 +726,14 @@ mod tests {
     async fn java8_string_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) =
             runtime::version_class_loader("8.472.08.1").await?;
-        class_loader.load("java.lang.String").await
+        class_loader
+            .load(JavaStr::try_from_str("java.lang.String")?)
+            .await
     }
 
     async fn load_class(class: &str) -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
-        class_loader.load(class).await
+        class_loader.load(JavaStr::try_from_str(class)?).await
     }
 
     async fn string_class() -> Result<Arc<Class>> {

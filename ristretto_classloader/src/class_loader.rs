@@ -2,7 +2,9 @@ use crate::Error::ClassNotFound;
 use crate::module::ResolvedConfiguration;
 use crate::{Class, ClassPath, Result, Value};
 use ahash::AHashMap;
-use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2};
+use ristretto_classfile::{
+    ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2, JavaStr, JavaString,
+};
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::sync::{Arc, Weak};
@@ -19,7 +21,7 @@ pub struct ClassLoader {
     name: String,
     class_path: ClassPath,
     parent: Arc<RwLock<Option<Arc<ClassLoader>>>>,
-    classes: Arc<RwLock<AHashMap<String, Arc<Class>>>>,
+    classes: Arc<RwLock<AHashMap<JavaString, Arc<Class>>>>,
     object: Arc<RwLock<Option<Value>>>,
     /// Module configuration for JPMS support.
     /// When set, the class loader will determine module names from packages during class loading.
@@ -72,7 +74,7 @@ impl ClassLoader {
     /// # Errors
     ///
     /// if the class file cannot be read.
-    pub async fn load(&self, name: &str) -> Result<Arc<Class>> {
+    pub async fn load(&self, name: &JavaStr) -> Result<Arc<Class>> {
         self.load_with_status(name).await.map(|(class, _)| class)
     }
 
@@ -81,16 +83,29 @@ impl ClassLoader {
     /// # Errors
     ///
     /// if the class file cannot be read.
-    pub async fn load_with_status(&self, class_name: &str) -> Result<(Arc<Class>, bool)> {
-        let class_name_internal = match memchr::memchr(b'.', class_name.as_bytes()) {
-            None => Cow::Borrowed(class_name),
-            Some(_) => Cow::Owned(class_name.replace('.', "/")),
-        };
+    pub async fn load_with_status(&self, class_name: &JavaStr) -> Result<(Arc<Class>, bool)> {
+        let class_name_internal: Cow<'_, JavaStr> =
+            if memchr::memchr(b'.', class_name.as_bytes()).is_none() {
+                Cow::Borrowed(class_name)
+            } else {
+                // '.' and '/' are both single-byte ASCII; replacing one with
+                // the other preserves MUTF-8 validity.
+                let mut bytes = class_name.as_bytes().to_vec();
+                for b in &mut bytes {
+                    if *b == b'.' {
+                        *b = b'/';
+                    }
+                }
+                // SAFETY: class_name is already valid MUTF-8 and replacing ASCII '.'
+                // with ASCII '/' preserves MUTF-8 validity.
+                #[expect(unsafe_code)]
+                Cow::Owned(unsafe { JavaString::from_mutf8_unchecked(bytes) })
+            };
 
         // Check if the class is already loaded in this class loader.
         {
             let classes = self.classes.read().await;
-            if let Some(class) = classes.get::<str>(class_name_internal.as_ref()) {
+            if let Some(class) = classes.get(&*class_name_internal) {
                 return Ok((Arc::clone(class), true));
             }
         }
@@ -102,21 +117,25 @@ impl ClassLoader {
             return Ok((class, loaded));
         }
 
-        if class_name_internal.starts_with('[') {
-            if let Ok(class) = self.create_array_class(&class_name_internal) {
-                return Ok(self.cache_class(&class_name_internal, class).await);
+        let class_name_str = class_name_internal.to_str_lossy();
+        if class_name_str.starts_with('[') {
+            if let Ok(class) = self.create_array_class(&class_name_str) {
+                return Ok(self
+                    .cache_class(class_name_internal.into_owned(), class)
+                    .await);
             }
         } else {
             let class_path = self.class_path();
-            if let Ok(class_file) = class_path.read_class(&class_name_internal).await {
+            if let Ok(class_file) = class_path.read_class(class_name_str.as_ref()).await {
                 let class = Class::from(Some(self.this.clone()), class_file)?;
-                self.set_class_module_name(&class, &class_name_internal)
-                    .await?;
-                return Ok(self.cache_class(&class_name_internal, class).await);
+                self.set_class_module_name(&class, &class_name_str).await?;
+                return Ok(self
+                    .cache_class(class_name_internal.into_owned(), class)
+                    .await);
             }
         }
 
-        Err(ClassNotFound(class_name_internal.into()))
+        Err(ClassNotFound(class_name_internal.to_rust_string()))
     }
 
     /// Determines and sets the module name for a class based on its package.
@@ -139,9 +158,9 @@ impl ClassLoader {
     ///
     /// # Examples
     ///
-    /// - `java/lang/String` → `java/lang`
-    /// - `com/example/MyClass` → `com/example`
-    /// - `MyClass` → empty string (default package)
+    /// - `java/lang/String` -> `java/lang`
+    /// - `com/example/MyClass` -> `com/example`
+    /// - `MyClass` -> empty string (default package)
     #[must_use]
     pub fn package_from_class_name(class_name: &str) -> &str {
         if let Some(last_slash) = class_name.rfind('/') {
@@ -153,13 +172,13 @@ impl ClassLoader {
     }
 
     /// Cache a class in the class loader.
-    async fn cache_class(&self, class_name: &str, class: Arc<Class>) -> (Arc<Class>, bool) {
+    async fn cache_class(&self, class_name: JavaString, class: Arc<Class>) -> (Arc<Class>, bool) {
         let mut classes = self.classes.write().await;
         // Check if the class was loaded while waiting for the lock.
-        if let Some(class) = classes.get(class_name) {
+        if let Some(class) = classes.get(&*class_name) {
             return (class.clone(), true);
         }
-        classes.insert(class_name.to_string(), class.clone());
+        classes.insert(class_name, class.clone());
         (class, false)
     }
 
@@ -222,7 +241,7 @@ impl ClassLoader {
     /// if the class cannot be registered.
     pub async fn register(&self, class: Arc<Class>) -> Result<()> {
         let mut classes = self.classes.write().await;
-        let class_name = class.name().to_string();
+        let class_name = JavaString::from(class.java_name());
         classes.insert(class_name, class);
         Ok(())
     }
@@ -238,7 +257,7 @@ impl ClassLoader {
     {
         let mut classes = self.classes.write().await;
         for class in class {
-            let class_name = class.name().to_string();
+            let class_name = JavaString::from(class.java_name());
             classes.entry(class_name).or_insert_with(|| class);
         }
         Ok(())
@@ -371,11 +390,15 @@ mod tests {
         let class_path = ClassPath::from(&[classes_directory]);
         let class_loader = ClassLoader::new("test", class_path);
         let class_name = "HelloWorld";
-        let class = class_loader.load(class_name).await?;
+        let class = class_loader
+            .load(JavaStr::try_from_str(class_name)?)
+            .await?;
         assert_eq!(class_name, class.name());
 
         // Load the same class again to test caching
-        let class = class_loader.load(class_name).await?;
+        let class = class_loader
+            .load(JavaStr::try_from_str(class_name)?)
+            .await?;
         assert_eq!(class_name, class.name());
         Ok(())
     }
@@ -390,11 +413,15 @@ mod tests {
 
         // Set a static value on the class to test class caching
         let expected_value = Value::Int(21);
-        let class = &mut class_loader.load(class_name).await?;
+        let class = &mut class_loader
+            .load(JavaStr::try_from_str(class_name)?)
+            .await?;
         class.set_static_value("ANSWER", expected_value.clone())?;
 
         // Load the same class again and verify that the static value is still set
-        let class = class_loader.load(class_name).await?;
+        let class = class_loader
+            .load(JavaStr::try_from_str(class_name)?)
+            .await?;
         let value = class.static_value("ANSWER")?;
         assert_eq!(expected_value, value);
         Ok(())
@@ -410,7 +437,9 @@ mod tests {
         let class_loader = ClassLoader::new("test", foo_class_path);
         class_loader.set_parent(Some(boot_class_loader)).await;
 
-        let class = class_loader.load("HelloWorld").await?;
+        let class = class_loader
+            .load(JavaStr::try_from_str("HelloWorld")?)
+            .await?;
         assert_eq!("HelloWorld", class.name());
         Ok(())
     }
@@ -425,7 +454,9 @@ mod tests {
         child_loader.set_parent(Some(parent_loader.clone())).await;
 
         // Load the class in the parent loader
-        let parent_class = parent_loader.load("HelloWorld").await?;
+        let parent_class = parent_loader
+            .load(JavaStr::try_from_str("HelloWorld")?)
+            .await?;
 
         // Register a fake array class in the child loader with a distinct name
         // (using proper array notation to satisfy validation)
@@ -435,7 +466,9 @@ mod tests {
 
         // Load the class from the child loader - should delegate to parent for HelloWorld
         // but return the registered class for [LHelloWorld;
-        let loaded_class = child_loader.load("[LHelloWorld;").await?;
+        let loaded_class = child_loader
+            .load(JavaStr::try_from_str("[LHelloWorld;")?)
+            .await?;
 
         // Verify that the loaded class is the one from the child loader, not the parent
         assert_eq!(fake_class, loaded_class);
@@ -447,7 +480,9 @@ mod tests {
     async fn test_load_class_not_found() {
         let class_path = ClassPath::from(&["."]);
         let class_loader = ClassLoader::new("test", class_path);
-        let result = class_loader.load("Foo").await;
+        let result = class_loader
+            .load(JavaStr::try_from_str("Foo").expect("valid class name"))
+            .await;
         assert!(matches!(result, Err(ClassNotFound(_))));
     }
 
@@ -479,7 +514,9 @@ mod tests {
         let class_path = ClassPath::from(&[classes_jar]);
         let class_loader = ClassLoader::new("test", class_path);
         let class_name = "HelloWorld";
-        let _class = class_loader.load(class_name).await?;
+        let _class = class_loader
+            .load(JavaStr::try_from_str(class_name)?)
+            .await?;
         let clone = class_loader.clone();
         assert_eq!(class_loader, clone);
         assert_eq!(class_loader.class_path(), clone.class_path());

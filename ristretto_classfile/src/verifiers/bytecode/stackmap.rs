@@ -13,8 +13,8 @@
 //! - [JVMS §4.7.4 - The StackMapTable Attribute](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.7.4)
 
 use ahash::{AHashMap, RandomState};
-use std::sync::Arc;
 
+use crate::JavaString;
 use crate::attributes::{StackFrame, VerificationType as ClassFileVerificationType};
 use crate::class_file::ClassFile;
 use crate::verifiers::bytecode::frame::Frame;
@@ -344,7 +344,7 @@ fn convert_single_type(
         ClassFileVerificationType::UninitializedThis => VerificationType::UninitializedThis,
         ClassFileVerificationType::Object { cpool_index } => {
             if let Ok(name) = class_file.constant_pool.try_get_class(*cpool_index) {
-                VerificationType::Object(Arc::from(name))
+                VerificationType::Object(JavaString::from(name))
             } else {
                 VerificationType::Top
             }
@@ -377,9 +377,7 @@ mod tests {
 
     fn create_test_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
-        constant_pool
-            .add(Constant::Utf8("TestClass".into()))
-            .unwrap();
+        constant_pool.add(Constant::utf8("TestClass")).unwrap();
         constant_pool.add(Constant::Class(1)).unwrap();
 
         ClassFile {

@@ -1,6 +1,7 @@
 use ristretto_classfile::Constant;
 use ristretto_classfile::FieldType;
 use ristretto_classfile::JAVA_17;
+use ristretto_classfile::JavaStr;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::attributes::Instruction;
 use ristretto_classloader::Value;
@@ -16,11 +17,8 @@ fn field_type_to_name(field_type: &FieldType) -> String {
         FieldType::Base(base_type) => base_type.class_name().to_string(),
         FieldType::Object(class_name) => {
             // Get just the simple class name (after the last '/')
-            class_name
-                .rsplit('/')
-                .next()
-                .unwrap_or(class_name)
-                .to_string()
+            let name = class_name.to_rust_string();
+            name.rsplit('/').next().unwrap_or(&name).to_string()
         }
         FieldType::Array(component) => {
             format!("{} array", field_type_to_name(component))
@@ -751,12 +749,10 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
 
         let field_name = constant_pool
             .try_get_utf8(name_index)
-            .unwrap_or("?")
-            .to_string();
+            .map_or_else(|_| "?".to_string(), JavaStr::to_rust_string);
         let descriptor = constant_pool
             .try_get_utf8(descriptor_index)
-            .unwrap_or("?")
-            .to_string();
+            .map_or_else(|_| "?".to_string(), JavaStr::to_rust_string);
 
         let class_name_index = match constant_pool.get(class_index) {
             Some(Constant::Class(name_index)) => *name_index,
@@ -764,8 +760,7 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
         };
         let class_name = constant_pool
             .try_get_utf8(class_name_index)
-            .unwrap_or("?")
-            .to_string();
+            .map_or_else(|_| "?".to_string(), JavaStr::to_rust_string);
 
         (class_name, field_name, descriptor)
     }
@@ -795,12 +790,10 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
 
         let method_name = constant_pool
             .try_get_utf8(name_index)
-            .unwrap_or("?")
-            .to_string();
+            .map_or_else(|_| "?".to_string(), JavaStr::to_rust_string);
         let descriptor = constant_pool
             .try_get_utf8(descriptor_index)
-            .unwrap_or("?")
-            .to_string();
+            .map_or_else(|_| "?".to_string(), JavaStr::to_rust_string);
 
         let class_name_index = match constant_pool.get(class_index) {
             Some(Constant::Class(name_index)) => *name_index,
@@ -808,8 +801,7 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
         };
         let class_name = constant_pool
             .try_get_utf8(class_name_index)
-            .unwrap_or("?")
-            .to_string();
+            .map_or_else(|_| "?".to_string(), JavaStr::to_rust_string);
 
         (class_name, method_name, descriptor)
     }

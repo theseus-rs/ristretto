@@ -54,7 +54,7 @@ async fn get_nest_host<T: ristretto_types::Thread + 'static>(
 
         let constant_pool = &class_file.constant_pool;
         let host_class = constant_pool.try_get_class(*host_class_index)?;
-        let host_class = thread.class(host_class).await?;
+        let host_class = thread.class_java_str(host_class).await?;
         return Ok(host_class);
     }
     Ok(class)

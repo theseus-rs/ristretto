@@ -2,7 +2,7 @@ use crate::java::lang::class::get_class;
 use crate::java::lang::thread::{ThreadState, set_thread_status};
 use ristretto_classfile::ClassFile;
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan, GreaterThanOrEqual};
-use ristretto_classfile::{BaseType, JAVA_11, JAVA_17};
+use ristretto_classfile::{BaseType, JAVA_11, JAVA_17, JavaStr};
 use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_gc::Gc;
 use ristretto_macros::async_method;
@@ -2046,7 +2046,9 @@ pub async fn should_be_initialized_0<T: ristretto_types::Thread + 'static>(
     let vm = thread.vm()?;
     let class_loader_lock = vm.class_loader();
     let class_loader = class_loader_lock.read().await;
-    let class = class_loader.load(&class_name).await?;
+    let class = class_loader
+        .load(JavaStr::try_from_str(&class_name)?)
+        .await?;
 
     // Returns true if the class has NOT been initialized yet
     let is_initialized = class.is_initialized()?;

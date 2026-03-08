@@ -18,7 +18,7 @@ use crate::verifiers::error::{Result, VerifyError};
 
 /// Handles `lcmp` - compare two long values.
 ///
-/// Stack: ..., value1, value2 → ..., result
+/// Stack: ..., value1, value2 -> ..., result
 ///
 /// # Errors
 ///
@@ -48,7 +48,7 @@ pub fn handle_lcmp(frame: &mut Frame) -> Result<()> {
 
 /// Handles `fcmpl` and `fcmpg` - compare two float values.
 ///
-/// Stack: ..., value1, value2 → ..., result
+/// Stack: ..., value1, value2 -> ..., result
 ///
 /// # Errors
 ///
@@ -78,7 +78,7 @@ pub fn handle_fcmp(frame: &mut Frame) -> Result<()> {
 
 /// Handles `dcmpl` and `dcmpg` - compare two double values.
 ///
-/// Stack: ..., value1, value2 → ..., result
+/// Stack: ..., value1, value2 -> ..., result
 ///
 /// # Errors
 ///
@@ -110,7 +110,7 @@ pub fn handle_dcmp(frame: &mut Frame) -> Result<()> {
 ///
 /// `ifeq`, `ifne`, `iflt`, `ifge`, `ifgt`, `ifle`
 ///
-/// Stack: ..., value → ...
+/// Stack: ..., value -> ...
 ///
 /// # Errors
 ///
@@ -133,7 +133,7 @@ pub fn handle_if_int(frame: &mut Frame) -> Result<()> {
 ///
 /// `if_icmpeq`, `if_icmpne`, `if_icmplt`, `if_icmpge`, `if_icmpgt`, `if_icmple`
 ///
-/// Stack: ..., value1, value2 → ...
+/// Stack: ..., value1, value2 -> ...
 ///
 /// # Errors
 ///
@@ -164,7 +164,7 @@ pub fn handle_if_icmp(frame: &mut Frame) -> Result<()> {
 ///
 /// `if_acmpeq`, `if_acmpne`
 ///
-/// Stack: ..., value1, value2 → ...
+/// Stack: ..., value1, value2 -> ...
 ///
 /// # Errors
 ///
@@ -195,7 +195,7 @@ pub fn handle_if_acmp(frame: &mut Frame) -> Result<()> {
 ///
 /// `ifnull`, `ifnonnull`
 ///
-/// Stack: ..., value → ...
+/// Stack: ..., value -> ...
 ///
 /// # Errors
 ///

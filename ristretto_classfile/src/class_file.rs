@@ -6,6 +6,7 @@ use crate::display::indent_lines;
 use crate::error::Error::InvalidMagicNumber;
 use crate::error::Result;
 use crate::field::Field;
+use crate::java_string::JavaStr;
 use crate::method::Method;
 use crate::verifiers::verifier;
 use crate::version::Version;
@@ -96,7 +97,7 @@ impl<'a> ClassFile<'a> {
     /// println!("Class name: {class_name}"); // e.g., "java.lang.String"
     /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
-    pub fn class_name(&self) -> Result<&str> {
+    pub fn class_name(&self) -> Result<&JavaStr> {
         self.constant_pool.try_get_class(self.this_class)
     }
 

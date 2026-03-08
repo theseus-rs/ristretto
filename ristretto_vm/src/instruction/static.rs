@@ -34,7 +34,7 @@ pub(crate) async fn getstatic(
     // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5
     // This ensures parent classes are initialized first, which is required for inherited static
     // fields to be properly set up.
-    let class = thread.class(class_name).await?;
+    let class = thread.class_java_str(class_name).await?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
 
     // Verify the field exists; searches class hierarchy per:
@@ -78,7 +78,7 @@ pub(crate) async fn putstatic(
     // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5
     // This ensures parent classes are initialized first, which is required for inherited static
     // fields to be properly set up.
-    let class = thread.class(class_name).await?;
+    let class = thread.class_java_str(class_name).await?;
     let field_name = constant_pool.try_get_utf8(*name_index)?;
 
     // Verify the field exists; searches class hierarchy per:

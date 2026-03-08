@@ -3,7 +3,7 @@ use crate::Result;
 use crate::Thread;
 use crate::VM;
 use crate::module_access::ModuleAccess;
-use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25};
+use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25, JavaStr};
 use ristretto_classloader::{Class, ClassLoader, Object, Reference, Value};
 use std::sync::Arc;
 
@@ -169,8 +169,8 @@ impl<T: Thread> JavaObject<T> for f64 {
 
 impl<T: Thread> JavaObject<T> for &str {
     fn to_object<'a>(&'a self, thread: &'a T) -> crate::BoxFuture<'a, Result<Value>> {
-        let s = self.to_string();
         Box::pin(async move {
+            let s: &str = self;
             let class = thread.class("java.lang.String").await?;
             let mut object = Object::new(class)?;
 
@@ -210,8 +210,63 @@ impl<T: Thread> JavaObject<T> for &str {
 
 impl<T: Thread> JavaObject<T> for String {
     fn to_object<'a>(&'a self, thread: &'a T) -> crate::BoxFuture<'a, Result<Value>> {
-        let s = self.clone();
-        Box::pin(async move { s.as_str().to_object(thread).await })
+        Box::pin(async move { self.as_str().to_object(thread).await })
+    }
+}
+
+impl<T: Thread> JavaObject<T> for &JavaStr {
+    fn to_object<'a>(&'a self, thread: &'a T) -> crate::BoxFuture<'a, Result<Value>> {
+        // Fast path: if the MUTF-8 bytes are also valid UTF-8, delegate to &str (zero-copy)
+        if let Some(s) = self.as_str() {
+            return Box::pin(async move { s.to_object(thread).await });
+        }
+
+        // Slow path: decode MUTF-8 -> UTF-16 directly, preserving lone surrogates
+        let utf16 = match self.to_utf16() {
+            Ok(v) => v,
+            Err(e) => {
+                return Box::pin(async move {
+                    Err(InternalError(format!(
+                        "Failed to decode MUTF-8 to UTF-16: {e}"
+                    )))
+                });
+            }
+        };
+
+        Box::pin(async move {
+            let class = thread.class("java.lang.String").await?;
+            let mut object = Object::new(class)?;
+
+            let vm = thread.vm()?;
+            let collector = vm.garbage_collector();
+            let java_class_file_version = vm.java_class_file_version();
+            let array = if java_class_file_version <= &JAVA_8 {
+                Value::new_object(collector, Reference::CharArray(utf16.into()))
+            } else {
+                if java_class_file_version >= &JAVA_17 {
+                    object.set_value("hashIsZero", Value::Int(0))?;
+                }
+
+                let use_latin1 = utf16.iter().all(|&c| c <= 0xFF);
+                #[expect(clippy::cast_possible_truncation)]
+                let (coder, bytes): (i32, Vec<i8>) = if use_latin1 {
+                    (0, utf16.iter().map(|&c| c as i8).collect())
+                } else {
+                    let utf16_bytes: Vec<u8> = utf16.iter().flat_map(|c| c.to_ne_bytes()).collect();
+                    let signed_bytes: &[i8] = zerocopy::transmute_ref!(utf16_bytes.as_slice());
+                    (1, signed_bytes.to_vec())
+                };
+
+                object.set_value("coder", Value::Int(coder))?;
+                Value::new_object(collector, Reference::from(bytes))
+            };
+
+            object.set_value("value", array)?;
+            object.set_value("hash", Value::Int(0))?;
+
+            let value = Value::from_object(collector, object);
+            Ok(value)
+        })
     }
 }
 

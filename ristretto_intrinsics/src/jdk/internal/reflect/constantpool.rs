@@ -25,7 +25,7 @@ pub async fn get_class_at_0<T: ristretto_types::Thread + 'static>(
     let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = thread.class(class_name).await?;
+    let class = thread.class_java_str(class_name).await?;
     let result = class.to_object(&thread).await?;
     Ok(Some(result))
 }
@@ -44,7 +44,7 @@ pub async fn get_class_at_if_loaded_0<T: ristretto_types::Thread + 'static>(
     let class = class::get_class(&thread, &object).await?;
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(index)?;
-    let class = thread.class(class_name).await?;
+    let class = thread.class_java_str(class_name).await?;
     let result = class.to_object(&thread).await?;
     Ok(Some(result))
 }
@@ -108,7 +108,7 @@ pub async fn get_field_at_0<T: ristretto_types::Thread + 'static>(
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = thread.class(class_name).await?;
+    let class = thread.class_java_str(class_name).await?;
     let class_object = class.to_object(&thread).await?;
     let (name_index, _descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;
@@ -249,7 +249,7 @@ pub async fn get_method_at_0<T: ristretto_types::Thread + 'static>(
     let constant_pool = class.constant_pool();
     let (class_index, name_and_type_index) = constant_pool.try_get_method_ref(index)?;
     let class_name = constant_pool.try_get_class(*class_index)?;
-    let class = thread.class(class_name).await?;
+    let class = thread.class_java_str(class_name).await?;
     let class_object = class.to_object(&thread).await?;
     let (name_index, descriptor_index) =
         constant_pool.try_get_name_and_type(*name_and_type_index)?;

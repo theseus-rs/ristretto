@@ -34,7 +34,7 @@ use cranelift::module::{Linkage, Module, default_libcall_names};
 use cranelift::prelude::*;
 use ristretto_classfile::attributes::{Attribute, Instruction};
 use ristretto_classfile::{
-    BaseType, ClassFile, ConstantPool, FieldType, Method, MethodAccessFlags,
+    BaseType, ClassFile, ConstantPool, FieldType, JavaStr, Method, MethodAccessFlags,
 };
 use std::fmt::Debug;
 use std::mem;
@@ -114,7 +114,9 @@ impl Compiler {
             return Err(InternalError("No Code attribute found".to_string()));
         };
 
-        let function_name = Self::function_name(class_name, method_name);
+        let class_name_str = class_name.to_str_lossy();
+        let method_name_str = method_name.to_str_lossy();
+        let function_name = Self::function_name(&class_name_str, &method_name_str);
         let signature = Self::signature(&jit_module);
         let function =
             jit_module.declare_function(function_name.as_str(), Linkage::Local, &signature)?;
@@ -281,7 +283,7 @@ impl Compiler {
     /// If the locals array cannot be created
     fn locals(
         function_builder: &mut FunctionBuilder,
-        descriptor: &str,
+        descriptor: &JavaStr,
         instructions: &[Instruction],
         arguments_pointer: Value,
     ) -> Result<LocalVariables> {
@@ -701,6 +703,7 @@ impl Compiler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classfile::JavaString;
 
     #[test]
     fn test_compiler_new() {
@@ -762,7 +765,7 @@ mod tests {
 
     #[test]
     fn test_native_type_object() {
-        let class_name = "java/lang/Object".to_string();
+        let class_name = JavaString::from("java/lang/Object");
         let result = Compiler::native_type(&FieldType::Object(class_name));
         assert!(matches!(result, Err(UnsupportedType(_))));
     }
@@ -805,7 +808,7 @@ mod tests {
 
     #[test]
     fn test_native_type_array_object() {
-        let class_name = "java/lang/Object".to_string();
+        let class_name = JavaString::from("java/lang/Object");
         let field_type = FieldType::Object(class_name);
         let result = Compiler::native_type(&FieldType::Array(Box::new(field_type)));
         assert!(matches!(result, Err(UnsupportedType(_))));

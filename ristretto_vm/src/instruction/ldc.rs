@@ -82,7 +82,7 @@ async fn load_constant_async(
             let thread = frame.thread()?;
             let vm = thread.vm()?;
             let string_pool = vm.string_pool();
-            string_pool.intern(&thread, utf8_value).await?
+            string_pool.intern_java_str(&thread, utf8_value).await?
         }
         Constant::Class(class_index) => {
             let class_name = constant_pool.try_get_utf8(*class_index)?;
