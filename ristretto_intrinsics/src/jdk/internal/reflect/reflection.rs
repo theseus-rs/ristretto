@@ -75,7 +75,7 @@ pub async fn get_caller_class<T: ristretto_types::Thread + 'static>(
     // - Frame 1: The immediate caller (typically Reflection.getCallerClass bytecode frame)
     // - Any additional reflection/method-handle infrastructure frames that shouldn't be visible
     //
-    // The key is to find the "real" caller - the first class that is not part of the
+    // The key is to find the "real" caller; the first class that is not part of the
     // reflection or method handle implementation machinery.
     //
     // We skip:

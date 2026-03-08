@@ -11,7 +11,7 @@ pub async fn get_lower_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.net.PortConfig.getLower0()I")
+    Ok(Some(Value::Int(49152)))
 }
 
 #[intrinsic_method("sun/net/PortConfig.getUpper0()I", Any)]
@@ -20,7 +20,7 @@ pub async fn get_upper_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.net.PortConfig.getUpper0()I")
+    Ok(Some(Value::Int(65535)))
 }
 
 #[cfg(test)]
@@ -28,16 +28,18 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.net.PortConfig.getLower0()I")]
-    async fn test_get_lower_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_lower_0(thread, Parameters::default()).await;
+    async fn test_get_lower_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_lower_0(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(49152)));
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.net.PortConfig.getUpper0()I")]
-    async fn test_get_upper_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_upper_0(thread, Parameters::default()).await;
+    async fn test_get_upper_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_upper_0(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(65535)));
+        Ok(())
     }
 }

@@ -51,7 +51,7 @@ pub fn set_thread_status(thread_object: &Value, status: ThreadState) -> Result<(
 
 /// Get the thread from the thread ID in the `eetop` field of the thread object.
 /// Returns an error if the thread is not found (which can happen if the thread has terminated).
-async fn get_thread<T: ristretto_types::Thread + 'static>(
+async fn get_thread<T: Thread + 'static>(
     thread: &Arc<T>,
     thread_object: &Value,
 ) -> Result<Arc<<<T as Thread>::Vm as VM>::ThreadType>> {
@@ -76,7 +76,7 @@ async fn get_thread<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.clearInterruptEvent()V", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn clear_interrupt_event<T: ristretto_types::Thread + 'static>(
+pub async fn clear_interrupt_event<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -88,7 +88,7 @@ pub async fn clear_interrupt_event<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.countStackFrames()I", LessThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn count_stack_frames<T: ristretto_types::Thread + 'static>(
+pub async fn count_stack_frames<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,7 +102,7 @@ pub async fn count_stack_frames<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn current_carrier_thread<T: ristretto_types::Thread + 'static>(
+pub async fn current_carrier_thread<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -112,7 +112,7 @@ pub async fn current_carrier_thread<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.currentThread()Ljava/lang/Thread;", Any)]
 #[async_method]
-pub async fn current_thread<T: ristretto_types::Thread + 'static>(
+pub async fn current_thread<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -125,7 +125,7 @@ pub async fn current_thread<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn dump_threads<T: ristretto_types::Thread + 'static>(
+pub async fn dump_threads<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -137,7 +137,7 @@ pub async fn dump_threads<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ensure_materialized_for_stack_walk<T: ristretto_types::Thread + 'static>(
+pub async fn ensure_materialized_for_stack_walk<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -149,7 +149,7 @@ pub async fn ensure_materialized_for_stack_walk<T: ristretto_types::Thread + 'st
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn find_scoped_value_bindings<T: ristretto_types::Thread + 'static>(
+pub async fn find_scoped_value_bindings<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -161,7 +161,7 @@ pub async fn find_scoped_value_bindings<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn get_next_thread_id_offset<T: ristretto_types::Thread + 'static>(
+pub async fn get_next_thread_id_offset<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -176,7 +176,7 @@ pub async fn get_next_thread_id_offset<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn get_stack_trace_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_stack_trace_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -185,7 +185,7 @@ pub async fn get_stack_trace_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.getThreads()[Ljava/lang/Thread;", Any)]
 #[async_method]
-pub async fn get_threads<T: ristretto_types::Thread + 'static>(
+pub async fn get_threads<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -207,16 +207,25 @@ pub async fn get_threads<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.holdsLock(Ljava/lang/Object;)Z", Any)]
 #[async_method]
-pub async fn holds_lock<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+pub async fn holds_lock<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.holdsLock(Ljava/lang/Object;)Z")
+    let Some(reference) = parameters.pop_reference()? else {
+        return Err(NullPointerException(None).into());
+    };
+    let monitor_id = crate::get_monitor_id(&reference.read());
+    if let Some(id) = monitor_id {
+        let vm = thread.vm()?;
+        let monitor = vm.monitor_registry().monitor(id);
+        return Ok(Some(Value::from(monitor.is_owned_by(thread.id()))));
+    }
+    Ok(Some(Value::from(false)))
 }
 
 #[intrinsic_method("java/lang/Thread.interrupt0()V", Any)]
 #[async_method]
-pub async fn interrupt_0<T: ristretto_types::Thread + 'static>(
+pub async fn interrupt_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -229,7 +238,7 @@ pub async fn interrupt_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.isAlive()Z", LessThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn is_alive<T: ristretto_types::Thread + 'static>(
+pub async fn is_alive<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -240,7 +249,7 @@ pub async fn is_alive<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.isInterrupted(Z)Z", LessThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn is_interrupted<T: ristretto_types::Thread + 'static>(
+pub async fn is_interrupted<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -257,7 +266,7 @@ pub async fn is_interrupted<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.registerNatives()V", Any)]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -266,7 +275,7 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.resume0()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn resume_0<T: ristretto_types::Thread + 'static>(
+pub async fn resume_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -281,7 +290,7 @@ pub async fn resume_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn scoped_value_cache<T: ristretto_types::Thread + 'static>(
+pub async fn scoped_value_cache<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -293,7 +302,7 @@ pub async fn scoped_value_cache<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn set_current_thread<T: ristretto_types::Thread + 'static>(
+pub async fn set_current_thread<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -302,7 +311,7 @@ pub async fn set_current_thread<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.setNativeName(Ljava/lang/String;)V", Any)]
 #[async_method]
-pub async fn set_native_name<T: ristretto_types::Thread + 'static>(
+pub async fn set_native_name<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -317,7 +326,7 @@ pub async fn set_native_name<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.setPriority0(I)V", Any)]
 #[async_method]
-pub async fn set_priority_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_priority_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -366,8 +375,10 @@ pub async fn set_priority_0<T: ristretto_types::Thread + 'static>(
             }
             _ => ThreadPriority::Max,
         };
-        set_current_thread_priority(priority)
-            .map_err(|error| RuntimeException(format!("Unable to set thread priority: {error}")))?;
+        // Silently ignore permission errors when setting thread priority; on Linux,
+        // this requires elevated privileges (CAP_SYS_NICE) which are typically not
+        // available, matching the behavior of the standard JVM.
+        let _ = set_current_thread_priority(priority);
     }
 
     Ok(None)
@@ -378,7 +389,7 @@ pub async fn set_priority_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn set_scoped_value_cache<T: ristretto_types::Thread + 'static>(
+pub async fn set_scoped_value_cache<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -387,7 +398,7 @@ pub async fn set_scoped_value_cache<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.sleep(J)V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn sleep<T: ristretto_types::Thread + 'static>(
+pub async fn sleep<T: Thread + 'static>(
     #[cfg_attr(target_family = "wasm", allow(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -420,7 +431,7 @@ pub async fn sleep<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.sleep0(J)V", Equal(JAVA_21))]
 #[async_method]
-pub async fn sleep_0<T: ristretto_types::Thread + 'static>(
+pub async fn sleep_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -429,7 +440,7 @@ pub async fn sleep_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.sleepNanos0(J)V", GreaterThanOrEqual(JAVA_25))]
 #[async_method]
-pub async fn sleep_nanos_0<T: ristretto_types::Thread + 'static>(
+pub async fn sleep_nanos_0<T: Thread + 'static>(
     #[cfg_attr(target_family = "wasm", allow(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -460,7 +471,7 @@ pub async fn sleep_nanos_0<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("java/lang/Thread.start0()V", Any)]
 #[expect(clippy::too_many_lines)]
 #[async_method]
-pub async fn start_0<T: ristretto_types::Thread + 'static>(
+pub async fn start_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -664,7 +675,7 @@ pub async fn start_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn stop_0<T: ristretto_types::Thread + 'static>(
+pub async fn stop_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -676,7 +687,7 @@ pub async fn stop_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.suspend0()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn suspend_0<T: ristretto_types::Thread + 'static>(
+pub async fn suspend_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -688,7 +699,7 @@ pub async fn suspend_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.yield()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn r#yield<T: ristretto_types::Thread + 'static>(
+pub async fn r#yield<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -707,7 +718,7 @@ pub async fn r#yield<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.yield0()V", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn yield_0<T: ristretto_types::Thread + 'static>(
+pub async fn yield_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -830,12 +841,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Thread.holdsLock(Ljava/lang/Object;)Z"
-    )]
-    async fn test_holds_lock() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = holds_lock(thread, Parameters::default()).await;
+    async fn test_holds_lock() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = holds_lock(thread, Parameters::default()).await;
+        assert!(result.is_err());
+        Ok(())
     }
 
     #[tokio::test]

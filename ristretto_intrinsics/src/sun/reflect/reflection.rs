@@ -42,7 +42,7 @@ pub async fn get_caller_class_2<T: ristretto_types::Thread + 'static>(
     if frames.len() <= depth {
         return Ok(Some(Value::Object(None)));
     }
-    // The frame at index (frames.len() - 1 - depth) is the target
+    // The frame at index (frames.len() - 1; depth) is the target
     // current frame = len - 1, caller = len - 2, etc.
     let frame = &frames[frames.len() - 1 - depth];
     let class = frame.class();

@@ -1,10 +1,68 @@
+use crate::java::io::socketfiledescriptor::get_fd;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::{Parameters, Result};
+use ristretto_types::Error::InternalError;
+use ristretto_types::native_memory::NativeMemory;
+use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
+
+/// Parses an array of `IOVec` entries from native memory.
+/// Each entry matches the native `iovec` layout: a pointer-sized base address
+/// followed by a pointer-sized length (e.g. 16 bytes on 64-bit, 8 bytes on 32-bit).
+fn parse_iovecs(memory: &NativeMemory, address: i64, count: i32) -> Result<Vec<(i64, usize)>> {
+    let ptr_size = std::mem::size_of::<usize>();
+    let entry_size = ptr_size * 2;
+    let entry_size_i64 = i64::try_from(entry_size).map_err(|e| InternalError(e.to_string()))?;
+    let ptr_size_i64 = i64::try_from(ptr_size).map_err(|e| InternalError(e.to_string()))?;
+    let mut entries = Vec::new();
+    for i in 0..count {
+        let entry_addr = address + i64::from(i) * entry_size_i64;
+        let base_bytes = memory.read_bytes(entry_addr, ptr_size);
+        let len_bytes = memory.read_bytes(entry_addr + ptr_size_i64, ptr_size);
+        let base = match ptr_size {
+            8 => i64::from_ne_bytes(
+                base_bytes
+                    .try_into()
+                    .map_err(|_| InternalError("iov base".into()))?,
+            ),
+            4 => i64::from(u32::from_ne_bytes(
+                base_bytes
+                    .try_into()
+                    .map_err(|_| InternalError("iov base".into()))?,
+            )),
+            _ => {
+                return Err(InternalError(format!(
+                    "unsupported pointer size: {ptr_size}"
+                )));
+            }
+        };
+        let len_usize = match ptr_size {
+            8 => {
+                let len = i64::from_ne_bytes(
+                    len_bytes
+                        .try_into()
+                        .map_err(|_| InternalError("iov len".into()))?,
+                );
+                usize::try_from(len).map_err(|e| InternalError(e.to_string()))?
+            }
+            4 => u32::from_ne_bytes(
+                len_bytes
+                    .try_into()
+                    .map_err(|_| InternalError("iov len".into()))?,
+            ) as usize,
+            _ => {
+                return Err(InternalError(format!(
+                    "unsupported pointer size: {ptr_size}"
+                )));
+            }
+        };
+        entries.push((base, len_usize));
+    }
+    Ok(entries)
+}
 
 #[intrinsic_method(
     "sun/nio/ch/SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I",
@@ -12,10 +70,96 @@ use std::sync::Arc;
 )]
 #[async_method]
 pub async fn read_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I")
+    let count = parameters.pop_int()?;
+    let address = parameters.pop_long()?;
+    let fd_value = parameters.pop()?;
+    let fd = get_fd(&fd_value)?;
+    let count = usize::try_from(count).map_err(|e| InternalError(e.to_string()))?;
+
+    let vm = thread.vm()?;
+    let is_nonblocking = vm
+        .socket_handles()
+        .get(&fd)
+        .await
+        .is_some_and(|guard| guard.non_blocking);
+
+    // For TcpStream: loop with try_read, dropping guard between retries to avoid deadlock
+    loop {
+        let handle = vm
+            .socket_handles()
+            .get(&fd)
+            .await
+            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+
+        if let Some(stream) = handle.socket_type.as_tcp_stream() {
+            let mut buf = vec![0u8; count];
+            match stream.try_read(&mut buf) {
+                Ok(0) => return Ok(Some(Value::Int(-1))),
+                Ok(n) => {
+                    vm.native_memory().write_bytes(address, &buf[..n]);
+                    let n = i32::try_from(n).unwrap_or(i32::MAX);
+                    return Ok(Some(Value::Int(n)));
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    if is_nonblocking {
+                        return Ok(Some(Value::Int(-2))); // IOS_UNAVAILABLE
+                    }
+                    // Clone Arc and drop guard before awaiting to avoid deadlock
+                    let stream = stream.clone();
+                    drop(handle);
+                    let _ = stream.readable().await;
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::ConnectionReset => {
+                    return Ok(Some(Value::Int(-1)));
+                }
+                Err(e) => {
+                    return Err(InternalError(format!("SocketDispatcher.read0: {e}")));
+                }
+            }
+        } else if let Some(socket) = handle.socket_type.as_raw() {
+            // Fallback: spawn_blocking for raw sockets
+            let cloned = socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("read: clone: {e}")))?;
+            drop(handle);
+
+            let result = tokio::task::spawn_blocking(move || {
+                let mut buf = vec![0u8; count];
+                match std::io::Read::read(&mut &cloned, &mut buf) {
+                    Ok(0) => Ok((-1i32, Vec::new())),
+                    Ok(n) => {
+                        buf.truncate(n);
+                        let n = i32::try_from(n).unwrap_or(i32::MAX);
+                        Ok((n, buf))
+                    }
+                    Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        Ok((-2, Vec::new()))
+                    }
+                    Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => Ok((-2, Vec::new())),
+                    Err(ref e) if e.kind() == std::io::ErrorKind::ConnectionReset => {
+                        Ok((-1, Vec::new()))
+                    }
+                    Err(e) => Err(e),
+                }
+            })
+            .await
+            .map_err(|e| InternalError(format!("read: spawn: {e}")))?
+            .map_err(|e| InternalError(format!("SocketDispatcher.read0: {e}")))?;
+
+            let (n, data) = result;
+            if n > 0 {
+                vm.native_memory().write_bytes(address, &data);
+            }
+            return Ok(Some(Value::Int(n)));
+        } else {
+            return Err(InternalError(
+                "expected TcpStream or Raw socket for read".to_string(),
+            ));
+        }
+    }
 }
 
 #[intrinsic_method(
@@ -23,11 +167,119 @@ pub async fn read_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
+#[expect(clippy::too_many_lines)]
 pub async fn readv_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J")
+    let iov_count = parameters.pop_int()?;
+    let iov_address = parameters.pop_long()?;
+    let fd_value = parameters.pop()?;
+    let fd = get_fd(&fd_value)?;
+
+    let vm = thread.vm()?;
+    let is_nonblocking = vm
+        .socket_handles()
+        .get(&fd)
+        .await
+        .is_some_and(|guard| guard.non_blocking);
+    let iov_entries = parse_iovecs(vm.native_memory(), iov_address, iov_count)?;
+    let total_len: usize = iov_entries.iter().map(|(_, len)| len).sum();
+
+    // Loop with try_read, dropping guard between retries to avoid deadlock
+    loop {
+        let handle = vm
+            .socket_handles()
+            .get(&fd)
+            .await
+            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+
+        if let Some(stream) = handle.socket_type.as_tcp_stream() {
+            let mut buf = vec![0u8; total_len];
+            match stream.try_read(&mut buf) {
+                Ok(0) => return Ok(Some(Value::Long(-1))),
+                #[expect(clippy::cast_possible_wrap)]
+                Ok(n) => {
+                    let mut offset = 0usize;
+                    for (base, len) in &iov_entries {
+                        let to_copy = (*len).min(n.saturating_sub(offset));
+                        if to_copy > 0 {
+                            vm.native_memory()
+                                .write_bytes(*base, &buf[offset..offset + to_copy]);
+                            offset += to_copy;
+                        }
+                        if offset >= n {
+                            break;
+                        }
+                    }
+                    return Ok(Some(Value::Long(n as i64)));
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    if is_nonblocking {
+                        return Ok(Some(Value::Long(-2))); // IOS_UNAVAILABLE
+                    }
+                    let stream = stream.clone();
+                    drop(handle);
+                    let _ = stream.readable().await;
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::ConnectionReset => {
+                    return Ok(Some(Value::Long(-1)));
+                }
+                Err(e) => {
+                    return Err(InternalError(format!("SocketDispatcher.readv0: {e}")));
+                }
+            }
+        } else if let Some(socket) = handle.socket_type.as_raw() {
+            let cloned = socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("readv: clone: {e}")))?;
+            drop(handle);
+
+            let result = tokio::task::spawn_blocking(move || {
+                let mut buf = vec![0u8; total_len];
+                match std::io::Read::read(&mut &cloned, &mut buf) {
+                    Ok(0) => Ok((-1i64, Vec::new())),
+                    #[expect(clippy::cast_possible_wrap)]
+                    Ok(n) => {
+                        buf.truncate(n);
+                        Ok((n as i64, buf))
+                    }
+                    Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        Ok((-2, Vec::new()))
+                    }
+                    Err(ref e) if e.kind() == std::io::ErrorKind::ConnectionReset => {
+                        Ok((-1, Vec::new()))
+                    }
+                    Err(e) => Err(e),
+                }
+            })
+            .await
+            .map_err(|e| InternalError(format!("readv: spawn: {e}")))?
+            .map_err(|e| InternalError(format!("SocketDispatcher.readv0: {e}")))?;
+
+            let (n, data) = result;
+            if n > 0 {
+                let mut offset = 0usize;
+                let data_len = data.len();
+                for (base, len) in &iov_entries {
+                    let to_copy = (*len).min(data_len.saturating_sub(offset));
+                    if to_copy > 0 {
+                        vm.native_memory()
+                            .write_bytes(*base, &data[offset..offset + to_copy]);
+                        offset += to_copy;
+                    }
+                    if offset >= data_len {
+                        break;
+                    }
+                }
+            }
+            return Ok(Some(Value::Long(n)));
+        } else {
+            return Err(InternalError(
+                "expected TcpStream or Raw socket for readv".to_string(),
+            ));
+        }
+    }
 }
 
 #[intrinsic_method(
@@ -36,10 +288,67 @@ pub async fn readv_0<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn write_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I")
+    let count = parameters.pop_int()?;
+    let address = parameters.pop_long()?;
+    let fd_value = parameters.pop()?;
+    let fd = get_fd(&fd_value)?;
+    let count = usize::try_from(count).map_err(|e| InternalError(e.to_string()))?;
+
+    let vm = thread.vm()?;
+    let is_nonblocking = vm
+        .socket_handles()
+        .get(&fd)
+        .await
+        .is_some_and(|guard| guard.non_blocking);
+    let data = vm.native_memory().read_bytes(address, count);
+
+    // Loop with try_write, dropping guard between retries to avoid deadlock
+    loop {
+        let handle = vm
+            .socket_handles()
+            .get(&fd)
+            .await
+            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+
+        if let Some(stream) = handle.socket_type.as_tcp_stream() {
+            match stream.try_write(&data) {
+                Ok(n) => {
+                    let n = i32::try_from(n).map_err(|e| InternalError(e.to_string()))?;
+                    return Ok(Some(Value::Int(n)));
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    if is_nonblocking {
+                        return Ok(Some(Value::Int(-2))); // IOS_UNAVAILABLE
+                    }
+                    let stream = stream.clone();
+                    drop(handle);
+                    let _ = stream.writable().await;
+                }
+                Err(e) => {
+                    return Err(InternalError(format!("SocketDispatcher.write0: {e}")));
+                }
+            }
+        } else if let Some(socket) = handle.socket_type.as_raw() {
+            let cloned = socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("write: clone: {e}")))?;
+            drop(handle);
+
+            let n = tokio::task::spawn_blocking(move || std::io::Write::write(&mut &cloned, &data))
+                .await
+                .map_err(|e| InternalError(format!("write: spawn: {e}")))?
+                .map_err(|e| InternalError(format!("SocketDispatcher.write0: {e}")))?;
+            let n = i32::try_from(n).map_err(|e| InternalError(e.to_string()))?;
+            return Ok(Some(Value::Int(n)));
+        } else {
+            return Err(InternalError(
+                "expected TcpStream or Raw socket for write".to_string(),
+            ));
+        }
+    }
 }
 
 #[intrinsic_method(
@@ -48,10 +357,69 @@ pub async fn write_0<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn writev_0<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J")
+    let iov_count = parameters.pop_int()?;
+    let iov_address = parameters.pop_long()?;
+    let fd_value = parameters.pop()?;
+    let fd = get_fd(&fd_value)?;
+
+    let vm = thread.vm()?;
+    let is_nonblocking = vm
+        .socket_handles()
+        .get(&fd)
+        .await
+        .is_some_and(|guard| guard.non_blocking);
+    let iov_entries = parse_iovecs(vm.native_memory(), iov_address, iov_count)?;
+    let mut data = Vec::new();
+    for (base, len) in &iov_entries {
+        let chunk = vm.native_memory().read_bytes(*base, *len);
+        data.extend_from_slice(&chunk);
+    }
+
+    // Loop with try_write, dropping guard between retries to avoid deadlock
+    loop {
+        let handle = vm
+            .socket_handles()
+            .get(&fd)
+            .await
+            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+
+        if let Some(stream) = handle.socket_type.as_tcp_stream() {
+            match stream.try_write(&data) {
+                #[expect(clippy::cast_possible_wrap)]
+                Ok(n) => return Ok(Some(Value::Long(n as i64))),
+                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    if is_nonblocking {
+                        return Ok(Some(Value::Long(-2))); // IOS_UNAVAILABLE
+                    }
+                    let stream = stream.clone();
+                    drop(handle);
+                    let _ = stream.writable().await;
+                }
+                Err(e) => {
+                    return Err(InternalError(format!("SocketDispatcher.writev0: {e}")));
+                }
+            }
+        } else if let Some(socket) = handle.socket_type.as_raw() {
+            let cloned = socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("writev: clone: {e}")))?;
+            drop(handle);
+
+            let n = tokio::task::spawn_blocking(move || std::io::Write::write(&mut &cloned, &data))
+                .await
+                .map_err(|e| InternalError(format!("writev: spawn: {e}")))?
+                .map_err(|e| InternalError(format!("SocketDispatcher.writev0: {e}")))?;
+            #[expect(clippy::cast_possible_wrap)]
+            return Ok(Some(Value::Long(n as i64)));
+        } else {
+            return Err(InternalError(
+                "expected TcpStream or Raw socket for writev".to_string(),
+            ));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -59,38 +427,30 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I"
-    )]
     async fn test_read_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = read_0(thread, Parameters::default()).await;
+        let result = read_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J"
-    )]
     async fn test_readv_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = readv_0(thread, Parameters::default()).await;
+        let result = readv_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I"
-    )]
     async fn test_write_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = write_0(thread, Parameters::default()).await;
+        let result = write_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J"
-    )]
     async fn test_writev_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = writev_0(thread, Parameters::default()).await;
+        let result = writev_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

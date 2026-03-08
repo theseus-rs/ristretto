@@ -1,7 +1,8 @@
+use crate::java::io::socketfiledescriptor::get_fd;
 use crate::sun::nio::fs::managed_files;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_21, JAVA_25};
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
@@ -9,16 +10,6 @@ use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::io::SeekFrom;
 use std::sync::Arc;
-
-/// Extract the integer fd from a `FileDescriptor` Java object value.
-fn extract_fd(fd_value: &Value) -> Result<i64> {
-    let guard = fd_value.as_reference()?;
-    let Reference::Object(object) = &*guard else {
-        return Err(InternalError("FileDescriptor: not an object".to_string()));
-    };
-    let fd = object.value("fd")?.as_i32()?;
-    Ok(i64::from(fd))
-}
 
 #[intrinsic_method(
     "sun/nio/ch/UnixFileDispatcherImpl.allocationGranularity0()J",
@@ -42,7 +33,7 @@ pub async fn available_0<T: ristretto_types::Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let size = managed_files::metadata(file_handles, fd)
@@ -70,6 +61,8 @@ pub async fn close_int_fd<T: ristretto_types::Thread + 'static>(
     let fd = parameters.pop_int()?;
     let vm = thread.vm()?;
     managed_files::close(vm.file_handles(), i64::from(fd)).await;
+    #[cfg(not(target_family = "wasm"))]
+    vm.socket_handles().remove(&fd).await;
     Ok(None)
 }
 
@@ -84,7 +77,7 @@ pub async fn force_0<T: ristretto_types::Thread + 'static>(
 ) -> Result<Option<Value>> {
     let metadata_only = parameters.pop_int()? != 0;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     if metadata_only {
@@ -109,7 +102,7 @@ pub async fn is_other_0<T: ristretto_types::Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
     let vm = thread.vm()?;
     let metadata = managed_files::metadata(vm.file_handles(), fd)
         .await
@@ -132,7 +125,7 @@ pub async fn lock_0<T: ristretto_types::Thread + 'static>(
     let _pos = parameters.pop_long()?;
     let blocking = parameters.pop_int()? != 0;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
 
     let value = managed_files::lock(thread.vm()?.file_handles(), fd, shared, blocking)
         .await
@@ -155,7 +148,7 @@ pub async fn map_0<T: ristretto_types::Thread + 'static>(
     let position = parameters.pop_long()?;
     let _prot = parameters.pop_int()?;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
     let vm = thread.vm()?;
     let length =
         u64::try_from(length).map_err(|_| InternalError("map0: negative length".to_string()))?;
@@ -191,7 +184,7 @@ pub async fn pread_0<T: ristretto_types::Thread + 'static>(
     let count = parameters.pop_int()?;
     let address = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
 
     let count = usize::try_from(count)?;
     let vm = thread.vm()?;
@@ -230,7 +223,7 @@ pub async fn pwrite_0<T: ristretto_types::Thread + 'static>(
     let count = parameters.pop_int()?;
     let address = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
 
     let count = usize::try_from(count)?;
     let vm = thread.vm()?;
@@ -259,7 +252,7 @@ pub async fn read_0<T: ristretto_types::Thread + 'static>(
     let count = parameters.pop_int()?;
     let address = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
 
     let count = usize::try_from(count)?;
     let mut buf = vec![0u8; count];
@@ -299,7 +292,7 @@ pub async fn readv_0<T: ristretto_types::Thread + 'static>(
     let count = parameters.pop_int()?;
     let address = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
 
     let vm = thread.vm()?;
     let native_memory = vm.native_memory();
@@ -360,7 +353,7 @@ pub async fn release_0<T: ristretto_types::Thread + 'static>(
     let _size = parameters.pop_long()?;
     let _pos = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
 
     managed_files::unlock(thread.vm()?.file_handles(), fd)
         .await
@@ -380,7 +373,7 @@ pub async fn seek_0<T: ristretto_types::Thread + 'static>(
 ) -> Result<Option<Value>> {
     let pos = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
 
     let vm = thread.vm()?;
     let result = if pos == -1 {
@@ -421,7 +414,7 @@ pub async fn size_0<T: ristretto_types::Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
     let vm = thread.vm()?;
     let size = managed_files::metadata(vm.file_handles(), fd)
         .await
@@ -441,7 +434,7 @@ pub async fn truncate_0<T: ristretto_types::Thread + 'static>(
 ) -> Result<Option<Value>> {
     let size = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
     let vm = thread.vm()?;
     let size =
         u64::try_from(size).map_err(|_| InternalError("truncate0: negative size".to_string()))?;
@@ -479,7 +472,7 @@ pub async fn write_0<T: ristretto_types::Thread + 'static>(
     let count = parameters.pop_int()?;
     let address = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
 
     let count = usize::try_from(count)?;
     let vm = thread.vm()?;
@@ -508,7 +501,7 @@ pub async fn writev_0<T: ristretto_types::Thread + 'static>(
     let count = parameters.pop_int()?;
     let address = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
-    let fd = extract_fd(&fd_value)?;
+    let fd = i64::from(get_fd(&fd_value)?);
 
     let vm = thread.vm()?;
     let native_memory = vm.native_memory();

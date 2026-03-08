@@ -1,7 +1,7 @@
 use ahash::AHashMap;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
+use quote::{ToTokens, quote};
 use ristretto_classfile::{
     JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25, Version, VersionSpecification,
 };
@@ -81,8 +81,16 @@ pub(crate) fn process(input: TokenStream) -> TokenStream {
 
     let mut version_maps = Vec::new();
     for (version_name, version) in JAVA_VERSIONS {
-        let map = generate_intrinsic_method_map(version_name, version, &intrinsic_methods);
-        version_maps.push(map);
+        let map = generate_intrinsic_method_map(version_name, version, &intrinsic_methods, false);
+        let wasm_map =
+            generate_intrinsic_method_map(version_name, version, &intrinsic_methods, true);
+        version_maps.push(quote! {
+            #[cfg(not(target_family = "wasm"))]
+            #map
+
+            #[cfg(target_family = "wasm")]
+            #wasm_map
+        });
     }
 
     let output = quote! {
@@ -95,24 +103,91 @@ pub(crate) fn process(input: TokenStream) -> TokenStream {
 }
 
 /// Retrieves intrinsic methods from the source path.
+/// Returns methods along with their wasm compatibility status.
+#[expect(clippy::type_complexity)]
 fn get_intrinsic_methods(
     source_path: &PathBuf,
-) -> Result<AHashMap<String, (String, VersionSpecification)>, Box<dyn std::error::Error>> {
+) -> Result<AHashMap<String, (String, VersionSpecification, bool)>, Box<dyn std::error::Error>> {
+    // First pass: collect wasm-gated module paths from mod.rs files
+    let mut wasm_gated_modules = std::collections::HashSet::new();
+    for entry in WalkDir::new(source_path.clone())
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        let file_name = entry.file_name().to_string_lossy();
+        if file_name == "mod.rs" {
+            collect_wasm_gated_modules(source_path, &entry, &mut wasm_gated_modules)?;
+        }
+    }
+
+    // Second pass: collect intrinsic methods with wasm compatibility
     let mut intrinsic_methods = AHashMap::default();
     for entry in WalkDir::new(source_path.clone())
         .into_iter()
         .filter_map(Result::ok)
     {
-        process_file_entry(source_path, &entry, &mut intrinsic_methods)?;
+        process_file_entry(
+            source_path,
+            &entry,
+            &wasm_gated_modules,
+            &mut intrinsic_methods,
+        )?;
     }
     Ok(intrinsic_methods)
+}
+
+/// Collects module names that are gated with `#[cfg(not(target_family = "wasm"))]` from mod.rs files.
+fn collect_wasm_gated_modules(
+    source_path: &PathBuf,
+    entry: &walkdir::DirEntry,
+    gated_modules: &mut std::collections::HashSet<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut file_content = String::new();
+    let mut file = File::open(entry.path())?;
+    file.read_to_string(&mut file_content)?;
+
+    let relative_dir = entry
+        .path()
+        .parent()
+        .unwrap_or(entry.path())
+        .strip_prefix(source_path)
+        .unwrap_or(entry.path().parent().unwrap_or(entry.path()));
+    let dir_module = relative_dir.to_string_lossy().replace(['/', '\\'], "::");
+
+    if let Ok(syn_file) = syn::parse_file(&file_content) {
+        for item in &syn_file.items {
+            if let Item::Mod(item_mod) = item {
+                let has_wasm_gate = item_mod.attrs.iter().any(|attr| {
+                    if attr.path().is_ident("cfg") {
+                        let tokens = attr.meta.to_token_stream().to_string();
+                        tokens.contains("target_family")
+                            && tokens.contains("wasm")
+                            && tokens.contains("not")
+                    } else {
+                        false
+                    }
+                });
+                if has_wasm_gate {
+                    let mod_name = item_mod.ident.to_string();
+                    let full_path = if dir_module.is_empty() {
+                        mod_name.clone()
+                    } else {
+                        format!("{dir_module}::{mod_name}")
+                    };
+                    gated_modules.insert(full_path);
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Processes a single directory entry.
 fn process_file_entry(
     source_path: &PathBuf,
     entry: &walkdir::DirEntry,
-    intrinsic_methods: &mut AHashMap<String, (String, VersionSpecification)>,
+    wasm_gated_modules: &std::collections::HashSet<String>,
+    intrinsic_methods: &mut AHashMap<String, (String, VersionSpecification, bool)>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let file_name = entry.file_name().to_string_lossy();
     if !file_name.ends_with(".rs") {
@@ -143,8 +218,16 @@ fn process_file_entry(
     file.read_to_string(&mut file_content)?;
 
     if let Ok(syn_file) = syn::parse_file(&file_content) {
+        // Check if this file's module path matches any wasm-gated module
+        let relative_module = module
+            .strip_prefix("ristretto_intrinsics::")
+            .unwrap_or(&module);
+        let is_wasm_gated = wasm_gated_modules.iter().any(|gated| {
+            relative_module == gated || relative_module.starts_with(&format!("{gated}::"))
+        });
+        let wasm_compatible = !is_wasm_gated;
         for item in syn_file.items {
-            process_item(&module, &item, intrinsic_methods);
+            process_item(&module, &item, wasm_compatible, intrinsic_methods);
         }
     }
     Ok(())
@@ -154,7 +237,8 @@ fn process_file_entry(
 fn process_item(
     module: &str,
     item: &Item,
-    intrinsic_methods: &mut AHashMap<String, (String, VersionSpecification)>,
+    wasm_compatible: bool,
+    intrinsic_methods: &mut AHashMap<String, (String, VersionSpecification, bool)>,
 ) {
     if let Item::Fn(function) = item {
         let attribute = function
@@ -167,7 +251,10 @@ fn process_item(
             let function_name = format!("{module}::{}", function.sig.ident);
             let signature = arguments.signature.value();
             let version_specification = version_specification(&arguments.version_specification);
-            intrinsic_methods.insert(signature, (function_name, version_specification));
+            intrinsic_methods.insert(
+                signature,
+                (function_name, version_specification, wasm_compatible),
+            );
         }
     }
 }
@@ -257,15 +344,20 @@ fn java_version(expression: Option<&Expr>) -> Version {
 }
 
 /// Generates a PHF map for a specific Java version as a token stream.
+/// When `wasm_only` is true, only includes wasm-compatible intrinsic methods.
 fn generate_intrinsic_method_map(
     version_name: &str,
     version: &Version,
-    intrinsic_methods: &AHashMap<String, (String, VersionSpecification)>,
+    intrinsic_methods: &AHashMap<String, (String, VersionSpecification, bool)>,
+    wasm_only: bool,
 ) -> TokenStream2 {
     let mut map_builder = phf_codegen::Map::<&str>::new();
 
-    for (signature, (function, version_specification)) in intrinsic_methods {
+    for (signature, (function, version_specification, wasm_compatible)) in intrinsic_methods {
         if !version_specification.matches(version) {
+            continue;
+        }
+        if wasm_only && !wasm_compatible {
             continue;
         }
         let function = format!("{function}::<crate::thread::Thread> as IntrinsicMethod");

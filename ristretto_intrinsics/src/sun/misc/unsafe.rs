@@ -1321,7 +1321,7 @@ mod tests {
     #[tokio::test]
     async fn test_should_be_initialized() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        // Create a Class object for testing - the class is already initialized
+        // Create a Class object for testing; the class is already initialized
         let string_class = thread.class("java/lang/String").await?;
         let class_object = string_class.to_object(&thread).await?;
         let mut parameters = Parameters::default();

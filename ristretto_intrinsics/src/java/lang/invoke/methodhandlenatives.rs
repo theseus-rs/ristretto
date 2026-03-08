@@ -714,7 +714,7 @@ pub async fn get_named_con<T: ristretto_types::Thread + 'static>(
     let box_array = parameters.pop()?;
     let which = parameters.pop_int()?;
 
-    // Named constants - these are internal VM constants that can be queried by index
+    // Named constants; these are internal VM constants that can be queried by index
     // The name is stored in box_array[0] if found
     // Returns the constant value, or -1 if not found
 
@@ -1625,7 +1625,7 @@ fn get_nest_host(class: &Arc<Class>) -> Arc<Class> {
         {
             // Try to get the host class name from constant pool
             if let Ok(host_class_name) = class_file.constant_pool.try_get_class(*host_class_index) {
-                // For now, just check the name - proper implementation would load the class. If the
+                // For now, just check the name; proper implementation would load the class. If the
                 // name matches, return the class itself as a simplification
                 if host_class_name == class.name() {
                     return Arc::clone(class);

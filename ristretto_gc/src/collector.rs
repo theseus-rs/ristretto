@@ -6,12 +6,16 @@ use crate::metadata::ObjectMetadata;
 use crate::pointers::{SafePtr, TracePtr};
 use crate::root_guard::GcRootGuard;
 use dashmap::DashMap;
+#[cfg(not(target_family = "wasm"))]
 use rayon::prelude::*;
+#[cfg(not(target_family = "wasm"))]
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex, RwLock, Weak};
+#[cfg(not(target_family = "wasm"))]
 use std::thread;
+#[cfg(not(target_family = "wasm"))]
 use sysinfo::System;
 use tracing::{debug, error, info, trace, warn};
 
@@ -48,6 +52,7 @@ enum GcPhase {
 pub struct GarbageCollector {
     this: Weak<Self>,
     configuration: Configuration,
+    #[cfg(not(target_family = "wasm"))]
     thread_pool: ThreadPool,
     statistics: Arc<RwLock<Statistics>>,
     roots: Arc<DashMap<usize, TracePtr>>,
@@ -65,6 +70,7 @@ pub struct GarbageCollector {
     bytes_allocated: Arc<AtomicUsize>,
 
     // Background thread coordination
+    #[cfg(not(target_family = "wasm"))]
     collector_thread: Arc<RwLock<Option<thread::JoinHandle<()>>>>,
     shutdown: Arc<AtomicBool>,
     collection_trigger: Arc<(Mutex<bool>, Condvar)>,
@@ -84,6 +90,7 @@ impl GarbageCollector {
     /// Panics if the thread pool cannot be created.
     #[must_use]
     pub fn with_config(configuration: Configuration) -> Arc<Self> {
+        #[cfg(not(target_family = "wasm"))]
         let threads = if configuration.threads == 0 {
             let cpus = System::physical_core_count().unwrap_or(1);
             // Default to 50% of available CPU cores, but at least 1 thread
@@ -91,7 +98,14 @@ impl GarbageCollector {
         } else {
             configuration.threads
         };
+        #[cfg(target_family = "wasm")]
+        let threads = if configuration.threads == 0 {
+            1
+        } else {
+            configuration.threads
+        };
         info!("garbage collector configured with {threads} threads");
+        #[cfg(not(target_family = "wasm"))]
         let thread_pool = match ThreadPoolBuilder::new()
             .num_threads(threads)
             .thread_name(|thread_index| format!("gc-{thread_index}"))
@@ -106,6 +120,7 @@ impl GarbageCollector {
         Arc::new_cyclic(|this| Self {
             this: this.clone(),
             configuration,
+            #[cfg(not(target_family = "wasm"))]
             thread_pool,
             statistics: Arc::new(RwLock::new(Statistics::default())),
             roots: Arc::new(DashMap::new()),
@@ -115,6 +130,7 @@ impl GarbageCollector {
             collection_active: Arc::new(AtomicBool::new(false)),
             mark_queue: Arc::new(Mutex::new(VecDeque::new())),
             bytes_allocated: Arc::new(AtomicUsize::new(0)),
+            #[cfg(not(target_family = "wasm"))]
             collector_thread: Arc::new(RwLock::new(None)),
             shutdown: Arc::new(AtomicBool::new(false)),
             collection_trigger: Arc::new((Mutex::new(false), Condvar::new())),
@@ -153,6 +169,7 @@ impl GarbageCollector {
     }
 
     /// Starts the background collector thread.
+    #[cfg(not(target_family = "wasm"))]
     pub fn start(&self) {
         let Ok(mut collector_thread) = self.collector_thread.write() else {
             return;
@@ -195,11 +212,16 @@ impl GarbageCollector {
         debug!("collector started");
     }
 
+    /// Starts the background collector thread (no-op on wasm).
+    #[cfg(target_family = "wasm")]
+    pub fn start(&self) {}
+
     /// Stops the background collector thread.
     ///
     /// # Errors
     ///
     /// Returns an error if the thread fails to join or if the shutdown signal fails.
+    #[cfg(not(target_family = "wasm"))]
     pub fn stop(&self) -> Result<()> {
         let Ok(mut collector_thread) = self.collector_thread.write() else {
             return Ok(());
@@ -225,6 +247,12 @@ impl GarbageCollector {
             .join()
             .map_err(|_| Error::SyncError("Failed to join collector thread".to_string()))?;
         debug!("collector stopped");
+        Ok(())
+    }
+
+    /// Stops the background collector thread (no-op on wasm).
+    #[cfg(target_family = "wasm")]
+    pub fn stop(&self) -> Result<()> {
         Ok(())
     }
 
@@ -397,6 +425,7 @@ impl GarbageCollector {
     }
 
     /// Main loop for the background collector thread.
+    #[cfg(not(target_family = "wasm"))]
     #[expect(clippy::too_many_arguments)]
     fn collector_thread_main(
         collector: &GarbageCollector,
@@ -533,6 +562,8 @@ impl GarbageCollector {
         mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
         objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
     ) {
+        #[cfg(target_family = "wasm")]
+        let _ = &collector;
         if let Ok(mut phase_guard) = phase.write() {
             *phase_guard = GcPhase::InitialMark;
         }
@@ -546,15 +577,25 @@ impl GarbageCollector {
         // Unmark all objects first
         let number_of_objects = objects.len();
 
-        let configuration = &collector.configuration;
-        if number_of_objects > configuration.parallel_threshold {
-            debug!("unmarking {number_of_objects} objects (parallel)");
-            collector.thread_pool.install(|| {
-                objects.par_iter().for_each(|entry| {
-                    entry.value().unmark();
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let configuration = &collector.configuration;
+            if number_of_objects > configuration.parallel_threshold {
+                debug!("unmarking {number_of_objects} objects (parallel)");
+                collector.thread_pool.install(|| {
+                    objects.par_iter().for_each(|entry| {
+                        entry.value().unmark();
+                    });
                 });
-            });
-        } else if number_of_objects > 0 {
+            } else if number_of_objects > 0 {
+                debug!("unmarking {number_of_objects} objects (sequential)");
+                for entry in objects.iter() {
+                    entry.value().unmark();
+                }
+            }
+        }
+        #[cfg(target_family = "wasm")]
+        if number_of_objects > 0 {
             debug!("unmarking {number_of_objects} objects (sequential)");
             for entry in objects.iter() {
                 entry.value().unmark();
@@ -684,6 +725,8 @@ impl GarbageCollector {
         objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
         bytes_allocated: &Arc<AtomicUsize>,
     ) -> (usize, usize) {
+        #[cfg(target_family = "wasm")]
+        let _ = &collector;
         // Set phase to concurrent sweep
         if let Ok(mut phase_guard) = phase.write() {
             *phase_guard = GcPhase::ConcurrentSweep;
@@ -691,18 +734,40 @@ impl GarbageCollector {
 
         trace!("Concurrent sweep phase started");
 
-        let configuration = &collector.configuration;
         let mut bytes_freed = 0;
         let mut objects_freed = 0;
 
         // Collect unmarked objects for removal
         let to_remove: Vec<(SafePtr, ObjectMetadata)> = {
             let number_of_objects = objects.len();
-            if number_of_objects > configuration.parallel_threshold {
-                debug!("sweeping {number_of_objects} objects (parallel)");
-                collector.thread_pool.install(|| {
+            #[cfg(not(target_family = "wasm"))]
+            {
+                let configuration = &collector.configuration;
+                if number_of_objects > configuration.parallel_threshold {
+                    debug!("sweeping {number_of_objects} objects (parallel)");
+                    collector.thread_pool.install(|| {
+                        objects
+                            .par_iter()
+                            .filter_map(|entry| {
+                                let metadata = entry.value();
+                                if metadata.is_marked() {
+                                    None // Keep marked objects
+                                } else {
+                                    Some((
+                                        *entry.key(),
+                                        ObjectMetadata::new_for_gc::<u8>(
+                                            *entry.key(),
+                                            metadata.size(),
+                                        ),
+                                    ))
+                                }
+                            })
+                            .collect()
+                    })
+                } else {
+                    debug!("sweeping {number_of_objects} objects (sequential)");
                     objects
-                        .par_iter()
+                        .iter()
                         .filter_map(|entry| {
                             let metadata = entry.value();
                             if metadata.is_marked() {
@@ -715,8 +780,10 @@ impl GarbageCollector {
                             }
                         })
                         .collect()
-                })
-            } else {
+                }
+            }
+            #[cfg(target_family = "wasm")]
+            {
                 debug!("sweeping {number_of_objects} objects (sequential)");
                 objects
                     .iter()

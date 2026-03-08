@@ -988,6 +988,32 @@ async fn get_reference_type<T: ristretto_types::Thread + 'static>(
             ))
             .into());
         };
+        // Null base object: try to read from native memory first.
+        // Fall back to returning a default zero value if address is not in
+        // any managed allocation.
+        let vm = thread.vm()?;
+        let native_mem = vm.native_memory();
+        let value = match base_type {
+            BaseType::Boolean | BaseType::Byte => native_mem
+                .read_i8(offset_long)
+                .map(|v| Value::Int(i32::from(v))),
+            BaseType::Char => native_mem.read_i16(offset_long).map(|v| {
+                #[expect(clippy::cast_sign_loss)]
+                Value::Int(i32::from(v as u16))
+            }),
+            BaseType::Short => native_mem
+                .read_i16(offset_long)
+                .map(|v| Value::Int(i32::from(v))),
+            BaseType::Int => native_mem.read_i32(offset_long).map(Value::Int),
+            BaseType::Long => native_mem.read_i64(offset_long).map(Value::Long),
+            BaseType::Float => native_mem.read_f32(offset_long).map(Value::Float),
+            BaseType::Double => native_mem.read_f64(offset_long).map(Value::Double),
+        };
+        if let Some(value) = value {
+            return Ok(Some(value));
+        }
+        // Address not in native memory; return the offset as value
+        // (backward-compatible behavior for JDK internal calls)
         let value = match base_type {
             BaseType::Boolean
             | BaseType::Byte
@@ -995,11 +1021,8 @@ async fn get_reference_type<T: ristretto_types::Thread + 'static>(
             | BaseType::Int
             | BaseType::Short => Value::Int(i32::try_from(offset_long)?),
             BaseType::Long => Value::Long(offset_long),
-            BaseType::Double | BaseType::Float => {
-                return Err(InternalError(
-                    "getReferenceType: Invalid offset".to_string(),
-                ));
-            }
+            BaseType::Float => Value::Float(0.0),
+            BaseType::Double => Value::Double(0.0),
         };
         return Ok(Some(value));
     };
@@ -1187,25 +1210,25 @@ async fn put_reference_type<T: ristretto_types::Thread + 'static>(
         // Null base object indicates native memory operation
         let vm = thread.vm()?;
         let native_mem = vm.native_memory();
-        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        #[expect(clippy::cast_possible_truncation)]
         match (base_type, &value) {
             (Some(BaseType::Byte | BaseType::Boolean), Value::Int(v)) => {
-                native_mem.write_bytes(offset_long, &[*v as u8]);
+                native_mem.write_i8(offset_long, *v as i8);
             }
             (Some(BaseType::Short | BaseType::Char), Value::Int(v)) => {
-                native_mem.write_bytes(offset_long, &(*v as i16).to_ne_bytes());
+                native_mem.write_i16(offset_long, *v as i16);
             }
             (Some(BaseType::Int), Value::Int(v)) => {
-                native_mem.write_bytes(offset_long, &v.to_ne_bytes());
+                native_mem.write_i32(offset_long, *v);
             }
             (Some(BaseType::Long), Value::Long(v)) => {
-                native_mem.write_bytes(offset_long, &v.to_ne_bytes());
+                native_mem.write_i64(offset_long, *v);
             }
             (Some(BaseType::Float), Value::Float(v)) => {
-                native_mem.write_bytes(offset_long, &v.to_ne_bytes());
+                native_mem.write_f32(offset_long, *v);
             }
             (Some(BaseType::Double), Value::Double(v)) => {
-                native_mem.write_bytes(offset_long, &v.to_ne_bytes());
+                native_mem.write_f64(offset_long, *v);
             }
             _ => {}
         }
@@ -1465,8 +1488,13 @@ pub async fn get_load_average_0<T: ristretto_types::Thread + 'static>(
         return Ok(Some(Value::Int(-1)));
     };
 
-    let load_avg = sysinfo::System::load_average();
-    let averages = [load_avg.one, load_avg.five, load_avg.fifteen];
+    #[cfg(not(target_family = "wasm"))]
+    let averages = {
+        let load_avg = sysinfo::System::load_average();
+        [load_avg.one, load_avg.five, load_avg.fifteen]
+    };
+    #[cfg(target_family = "wasm")]
+    let averages: [f64; 3] = [0.0, 0.0, 0.0];
 
     let mut guard = reference.write();
     let Reference::DoubleArray(array) = &mut *guard else {
@@ -2644,7 +2672,7 @@ mod tests {
     #[tokio::test]
     async fn test_should_be_initialized_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        // Create a Class object for testing - the class is already initialized
+        // Create a Class object for testing; the class is already initialized
         let string_class = thread.class("java/lang/String").await?;
         let class_object = string_class.to_object(&thread).await?;
         let mut parameters = Parameters::default();

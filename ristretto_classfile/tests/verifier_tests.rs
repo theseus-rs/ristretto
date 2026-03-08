@@ -112,7 +112,7 @@ fn test_straight_line_code_no_stackmap_required() -> Result<()> {
 #[test]
 fn test_verify_mode_none_skips_verification() -> Result<()> {
     let class_file = create_test_class_file(Version::Java8 { minor: 0 })?;
-    // Invalid bytecode - would fail verification
+    // Invalid bytecode; would fail verification
     let method = create_static_void_method(
         vec![
             Instruction::Pop, // Stack underflow!

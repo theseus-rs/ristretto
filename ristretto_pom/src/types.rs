@@ -17,18 +17,18 @@ use crate::{Error, Result};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum DependencyScope {
-    /// Compile scope (default) - available in all classpaths.
+    /// Compile scope (default); available in all classpaths.
     #[default]
     Compile,
-    /// Provided scope - expected to be provided by the JDK or container at runtime.
+    /// Provided scope; expected to be provided by the JDK or container at runtime.
     Provided,
-    /// Runtime scope - not needed for compilation, but needed for execution.
+    /// Runtime scope; not needed for compilation, but needed for execution.
     Runtime,
-    /// Test scope - only available for test compilation and execution.
+    /// Test scope; only available for test compilation and execution.
     Test,
-    /// System scope - similar to provided, but you must specify the JAR path explicitly.
+    /// System scope; similar to provided, but you must specify the JAR path explicitly.
     System,
-    /// Import scope - only used on dependencies of type pom in dependencyManagement.
+    /// Import scope; only used on dependencies of type pom in dependencyManagement.
     Import,
 }
 

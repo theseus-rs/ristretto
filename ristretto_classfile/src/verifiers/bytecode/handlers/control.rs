@@ -30,7 +30,7 @@ use crate::verifiers::error::{Result, VerifyError};
 /// - [JVMS §6.5.return](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.return)
 #[expect(clippy::unnecessary_wraps)]
 pub fn handle_return() -> Result<()> {
-    // Nothing to verify - just returns void
+    // Nothing to verify; just returns void
     Ok(())
 }
 
@@ -274,7 +274,7 @@ pub fn reject_ret(major_version: u16) -> Result<()> {
 
 /// Dispatches control flow instructions.
 ///
-/// Note: This doesn't handle successors - that's done separately.
+/// Note: This doesn't handle successors; that's done separately.
 /// This just verifies the stack effects.
 ///
 /// # Errors
@@ -626,7 +626,7 @@ mod tests {
 
     #[test]
     fn test_reject_jsr_version_50_fails() {
-        // Older version - still rejected in our implementation
+        // Older version; still rejected in our implementation
         let result = reject_jsr(50);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not supported"));

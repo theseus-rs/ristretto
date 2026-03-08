@@ -1,7 +1,9 @@
 use crate::Error::{InternalError, JitError};
 use crate::Result;
 use dashmap::DashMap;
+#[cfg(not(target_family = "wasm"))]
 use rayon::ThreadPoolBuilder;
+#[cfg(not(target_family = "wasm"))]
 use rayon::prelude::*;
 use ristretto_classfile::MethodAccessFlags;
 use ristretto_classloader::{Class, Method, Value};
@@ -10,9 +12,12 @@ use ristretto_jit::Error::{
 };
 use ristretto_jit::Function;
 use std::sync::Arc;
+#[cfg(not(target_family = "wasm"))]
 use std::time::Duration;
+#[cfg(not(target_family = "wasm"))]
 use sysinfo::System;
 use tokio::sync::{Mutex, mpsc, oneshot};
+#[cfg(not(target_family = "wasm"))]
 use tokio::time::sleep;
 use tracing::{debug, error, info};
 
@@ -182,38 +187,49 @@ impl Compiler {
             return self.compile_method_sync(class, method, &fully_qualified_method_name, false);
         }
 
-        // If the method is already being compiled, return None to indicate it's not ready yet
-        if self
-            .pending_compilations
-            .contains_key(&fully_qualified_method_name)
+        // Batch compilation is not supported on wasm
+        #[cfg(target_family = "wasm")]
         {
-            debug!("Method {fully_qualified_method_name} is already being compiled in background");
-            return Ok(None);
+            return self.compile_method_sync(class, method, &fully_qualified_method_name, false);
         }
 
-        // Initialize the batch compiler if not already done
-        self.initialize_batch_compiler().await;
+        #[cfg(not(target_family = "wasm"))]
+        {
+            // If the method is already being compiled, return None to indicate it's not ready yet
+            if self
+                .pending_compilations
+                .contains_key(&fully_qualified_method_name)
+            {
+                debug!(
+                    "Method {fully_qualified_method_name} is already being compiled in background"
+                );
+                return Ok(None);
+            }
 
-        // Mark this method as pending compilation
-        self.pending_compilations
-            .insert(fully_qualified_method_name.clone(), Vec::new());
+            // Initialize the batch compiler if not already done
+            self.initialize_batch_compiler().await;
 
-        // Send the compilation request to the background compiler
-        let (response_sender, _response_receiver) = oneshot::channel();
-        let request = CompilationRequest {
-            class: class.clone(),
-            method: method.clone(),
-            response_sender,
-        };
+            // Mark this method as pending compilation
+            self.pending_compilations
+                .insert(fully_qualified_method_name.clone(), Vec::new());
 
-        if let Some(queue) = self.compilation_queue.lock().await.as_ref() {
-            let _ = queue.send(request);
+            // Send the compilation request to the background compiler
+            let (response_sender, _response_receiver) = oneshot::channel();
+            let request = CompilationRequest {
+                class: class.clone(),
+                method: method.clone(),
+                response_sender,
+            };
+
+            if let Some(queue) = self.compilation_queue.lock().await.as_ref() {
+                let _ = queue.send(request);
+            }
+
+            debug!("Queued method {fully_qualified_method_name} for background compilation");
+
+            // Return None immediately to indicate the function is not ready yet
+            Ok(None)
         }
-
-        debug!("Queued method {fully_qualified_method_name} for background compilation");
-
-        // Return None immediately to indicate the function is not ready yet
-        Ok(None)
     }
 
     /// Compiles a method synchronously.
@@ -293,6 +309,7 @@ impl Compiler {
     }
 
     /// Initialize the background batch compilation system for this compiler instance.
+    #[cfg(not(target_family = "wasm"))]
     async fn initialize_batch_compiler(&self) {
         let mut queue = self.compilation_queue.lock().await;
         if queue.is_some() {
@@ -356,6 +373,7 @@ impl Compiler {
 }
 
 /// Process a batch of compilation requests
+#[cfg(not(target_family = "wasm"))]
 fn process_compilation_batch(
     compiler_threads: usize,
     batch: &mut Vec<CompilationRequest>,
@@ -645,7 +663,7 @@ mod tests {
         // Insert a None (failed compilation)
         compiler.insert_cached("test_method".to_string(), None);
         assert!(compiler.contains_cached("test_method"));
-        // Check that we get Some(None) - meaning the method was cached but couldn't be compiled
+        // Check that we get Some(None); meaning the method was cached but couldn't be compiled
         let cached = compiler.get_cached("test_method");
         assert!(cached.is_some());
         assert!(cached.unwrap().is_none());

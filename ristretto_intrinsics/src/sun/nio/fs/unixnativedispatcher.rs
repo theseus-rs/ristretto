@@ -870,7 +870,7 @@ pub async fn stat_0_1<T: ristretto_types::Thread + 'static>(
 
     set_unix_metadata_fields(object, &metadata)?;
 
-    // Birth time - macOS supports it, Linux may not
+    // Birth time; macOS supports it, Linux may not
     #[cfg(target_os = "macos")]
     {
         use std::os::macos::fs::MetadataExt as MacMetadataExt;

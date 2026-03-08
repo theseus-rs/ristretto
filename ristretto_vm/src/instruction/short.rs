@@ -65,7 +65,10 @@ pub(crate) fn sastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
         length,
     })?;
     if let Some(element) = array.get_mut(index) {
-        *element = i16::try_from(value)?;
+        #[expect(clippy::cast_possible_truncation)]
+        {
+            *element = value as i16;
+        }
     } else {
         return Err(ArrayIndexOutOfBoundsException {
             index: original_index,

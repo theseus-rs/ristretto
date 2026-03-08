@@ -1,3 +1,4 @@
+#[cfg(not(target_family = "wasm"))]
 use console::Term;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classfile::{JAVA_17, JAVA_21};
@@ -37,9 +38,16 @@ pub async fn istty<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let terminal = Term::stdout();
-    let is_terminal = terminal.is_term();
-    Ok(Some(Value::from(is_terminal)))
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let terminal = Term::stdout();
+        let is_terminal = terminal.is_term();
+        Ok(Some(Value::from(is_terminal)))
+    }
+    #[cfg(target_family = "wasm")]
+    {
+        Ok(Some(Value::from(false)))
+    }
 }
 
 #[cfg(test)]

@@ -1107,7 +1107,7 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
 
         for (t_local, s_local) in target.locals.iter_mut().zip(&source.locals) {
             if t_local != s_local && *t_local != VerificationType::Top {
-                // Merge logic (LUB - Least Upper Bound)
+                // Merge logic (LUB; Least Upper Bound)
                 // Implement JVMS 4.10.1.2 merging rules
                 let merged_type = self.merge_types(t_local, s_local)?;
                 if *t_local != merged_type {

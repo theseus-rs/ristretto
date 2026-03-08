@@ -44,7 +44,7 @@ impl Assignable for Arc<Class> {
                     return Ok(false);
                 }
 
-                // Both are object arrays - check component type compatibility recursively
+                // Both are object arrays; check component type compatibility recursively
                 let (Some(self_component), Some(other_component)) =
                     (self.component_type(), other.component_type())
                 else {

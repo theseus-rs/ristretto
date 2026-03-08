@@ -28,6 +28,8 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
     };
     let vm = thread.vm()?;
     managed_files::close(vm.file_handles(), i64::from(fd)).await;
+    #[cfg(not(target_family = "wasm"))]
+    vm.socket_handles().remove(&fd).await;
     Ok(None)
 }
 

@@ -19,6 +19,8 @@ use ristretto_classloader::{
 use ristretto_gc::{GarbageCollector, Statistics};
 use ristretto_types::NativeMemory;
 use ristretto_types::ResourceManager;
+#[cfg(not(target_family = "wasm"))]
+use ristretto_types::handles::SocketHandle;
 use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle};
 
 type ThreadHandle = ristretto_types::handles::ThreadHandle<Thread>;
@@ -26,7 +28,7 @@ use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 use tokio::sync::{Mutex, RwLock};
 use tracing::debug;
@@ -71,10 +73,15 @@ pub struct VM {
     resource_manager: ResourceManager,
     /// The next thread ID
     next_thread_id: AtomicU64,
+    /// The next NIO file descriptor
+    next_nio_fd: AtomicI32,
     /// The VM thread handles
     thread_handles: HandleManager<u64, ThreadHandle>,
     /// The VM file handles
     file_handles: HandleManager<i64, FileHandle>,
+    /// Socket handles for TCP/UDP sockets.
+    #[cfg(not(target_family = "wasm"))]
+    socket_handles: HandleManager<i32, SocketHandle>,
     /// The VM member handles used for dynamic invocation
     member_handles: HandleManager<String, MemberHandle>,
     /// The string pool for interned strings
@@ -153,10 +160,13 @@ impl VM {
             compiler,
             hidden_class_counter: AtomicU64::new(1),
             next_thread_id: AtomicU64::new(1),
+            next_nio_fd: AtomicI32::new(1),
             native_memory: NativeMemory::new(),
             resource_manager: ResourceManager::new(),
             thread_handles: HandleManager::new(),
             file_handles: HandleManager::new(),
+            #[cfg(not(target_family = "wasm"))]
+            socket_handles: HandleManager::new(),
             member_handles: HandleManager::new(),
             string_pool: StringPool::new(),
             call_site_cache: CallSiteCache::new(),
@@ -175,9 +185,19 @@ impl VM {
         configuration: &Configuration,
     ) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
         if let Some(java_version) = configuration.java_version() {
-            let (java_home, java_version, bootstrap_class_loader) =
-                runtime::version_class_loader(java_version).await?;
-            Ok((java_home, java_version, bootstrap_class_loader))
+            #[cfg(not(target_family = "wasm"))]
+            {
+                let (java_home, java_version, bootstrap_class_loader) =
+                    runtime::version_class_loader(java_version).await?;
+                Ok((java_home, java_version, bootstrap_class_loader))
+            }
+            #[cfg(target_family = "wasm")]
+            {
+                let _ = java_version;
+                Err(InternalError(
+                    "version_class_loader is not supported on wasm".to_string(),
+                ))
+            }
         } else if let Some(java_home) = configuration.java_home() {
             let (java_home, java_version, bootstrap_class_loader) =
                 runtime::home_class_loader(java_home).await?;
@@ -382,6 +402,12 @@ impl VM {
             return Err(InternalError("Thread identifier overflow".to_string()));
         }
         Ok(id)
+    }
+
+    /// Get the next NIO file descriptor.
+    #[must_use]
+    pub(crate) fn next_nio_fd(&self) -> i32 {
+        self.next_nio_fd.fetch_add(1, Ordering::SeqCst)
     }
 
     /// Get the VM thread handles
@@ -749,7 +775,7 @@ impl VM {
             }
         }
 
-        // Abort all remaining daemon threads - they shouldn't prevent VM exit
+        // Abort all remaining daemon threads; they shouldn't prevent VM exit
         let mut daemon_handles = Vec::new();
         {
             let mut handles = self.thread_handles.write().await;
@@ -770,7 +796,7 @@ impl VM {
         Ok(())
     }
 
-    /// Wait for all non-daemon threads to complete (WASM version - no-op).
+    /// Wait for all non-daemon threads to complete (WASM version; no-op).
     #[cfg(target_family = "wasm")]
     pub async fn wait_for_non_daemon_threads(&self) -> Result<()> {
         // WASM uses spawn_local which doesn't support joining
@@ -812,6 +838,10 @@ impl ristretto_types::VM for VM {
 
     fn next_hidden_class_suffix(&self) -> Result<u64> {
         VM::next_hidden_class_suffix(self)
+    }
+
+    fn next_nio_fd(&self) -> i32 {
+        VM::next_nio_fd(self)
     }
 
     fn class<'a>(
@@ -876,6 +906,11 @@ impl ristretto_types::VM for VM {
 
     fn resource_manager(&self) -> &ResourceManager {
         &self.resource_manager
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn socket_handles(&self) -> &HandleManager<i32, SocketHandle> {
+        &self.socket_handles
     }
 
     fn class_loader(&self) -> Arc<RwLock<Arc<ClassLoader>>> {

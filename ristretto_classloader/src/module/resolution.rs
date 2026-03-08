@@ -187,7 +187,7 @@ impl Resolver {
                 // Enqueue if not visited (unless static and not present)
                 if !visited.contains(&req.name) {
                     if req.is_static() {
-                        // Static requires are optional - only add if the module exists
+                        // Static requires are optional; only add if the module exists
                         if finder.find(&req.name).is_some() {
                             queue.push_back(req.name.clone());
                             visited.insert(req.name.clone());
@@ -229,7 +229,7 @@ impl Resolver {
             }
         }
 
-        // Handle automatic modules - they read all resolved named modules
+        // Handle automatic modules; they read all resolved named modules
         let all_module_names: Vec<String> = resolved.keys().cloned().collect();
         for (name, module) in &mut resolved {
             if module.reference.is_automatic() {

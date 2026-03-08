@@ -49,13 +49,13 @@ impl MethodRefKey {
 /// The kind of method invocation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InvokeKind {
-    /// invokestatic - static method call
+    /// invokestatic; static method call
     Static,
-    /// invokespecial - constructor, private, or super call
+    /// invokespecial; constructor, private, or super call
     Special,
-    /// invokevirtual - virtual method dispatch
+    /// invokevirtual; virtual method dispatch
     Virtual,
-    /// invokeinterface - interface method dispatch
+    /// invokeinterface; interface method dispatch
     Interface,
 }
 

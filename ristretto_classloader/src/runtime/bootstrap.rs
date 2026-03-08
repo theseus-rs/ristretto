@@ -1,12 +1,18 @@
+#[cfg(not(target_family = "wasm"))]
+use crate::Error;
 use crate::runtime::util;
-use crate::{Class, ClassLoader, ClassPath, Error, Result};
+use crate::{Class, ClassLoader, ClassPath, Result};
+#[cfg(not(target_family = "wasm"))]
 use flate2::bufread::GzDecoder;
 use ristretto_classfile::Error::IoError;
 use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
+#[cfg(not(target_family = "wasm"))]
 use std::{env, io};
+#[cfg(not(target_family = "wasm"))]
 use tar::Archive;
+#[cfg(not(target_family = "wasm"))]
 use tracing::{debug, warn};
 
 /// The default Java version used by the class loader. This is the version that will be used if no
@@ -51,6 +57,7 @@ const PRIMITIVE_CLASS_ACCESS_FLAGS: ClassAccessFlags = ClassAccessFlags::from_bi
 /// # Errors
 ///
 /// An error will be returned if the class loader cannot be created.
+#[cfg(not(target_family = "wasm"))]
 pub async fn default_class_loader() -> Result<(PathBuf, String, Arc<ClassLoader>)> {
     version_class_loader(DEFAULT_JAVA_VERSION).await
 }
@@ -108,6 +115,7 @@ pub async fn home_class_loader(java_home: &Path) -> Result<(PathBuf, String, Arc
 /// # Errors
 ///
 /// An error will be returned if the class loader cannot be created.
+#[cfg(not(target_family = "wasm"))]
 pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
     let mut version = version.to_string();
     #[cfg(target_family = "wasm")]
@@ -204,6 +212,7 @@ fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
 /// # Errors
 ///
 /// An error will be returned if the archive cannot be extracted.
+#[cfg(not(target_family = "wasm"))]
 async fn extract_archive(
     version: &str,
     file_name: &str,

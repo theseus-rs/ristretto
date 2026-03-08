@@ -52,7 +52,7 @@ pub enum VerificationType {
     #[default]
     Top,
 
-    /// Integer type - represents all JVM integer types that use a single stack slot:
+    /// Integer type; represents all JVM integer types that use a single stack slot:
     /// - `int`
     /// - `boolean`
     /// - `byte`
@@ -63,7 +63,7 @@ pub enum VerificationType {
     /// All these types are treated as `int` for verification purposes.
     Integer,
 
-    /// Float type - single precision floating point.
+    /// Float type; single precision floating point.
     Float,
 
     /// Long type - 64-bit integer (category 2).
@@ -71,23 +71,23 @@ pub enum VerificationType {
     /// Takes two slots in locals/stack; the second slot must be `Top`.
     Long,
 
-    /// Double type - double precision floating point (category 2).
+    /// Double type; double precision floating point (category 2).
     ///
     /// Takes two slots in locals/stack; the second slot must be `Top`.
     Double,
 
-    /// Null type - the type of the null reference.
+    /// Null type; the type of the null reference.
     ///
     /// Assignable to any reference type (Object or Array).
     Null,
 
-    /// Uninitialized "this" type - used in constructors.
+    /// Uninitialized "this" type; used in constructors.
     ///
     /// Represents `this` before the superclass constructor has been invoked.
     /// After constructor invocation, becomes `Object(class_name)`.
     UninitializedThis,
 
-    /// Uninitialized type - represents a newly created but uninitialized object.
+    /// Uninitialized type; represents a newly created but uninitialized object.
     ///
     /// The `u16` is the bytecode offset of the `new` instruction that created this object.
     /// This allows tracking which uninitialized reference becomes which initialized type.

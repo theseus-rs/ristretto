@@ -50,7 +50,7 @@ pub fn handle_aconst_null(frame: &mut Frame) -> Result<()> {
     frame.push(VerificationType::Null)
 }
 
-/// Handles `iconst_*` instructions - push int constant.
+/// Handles `iconst_*` instructions; push int constant.
 ///
 /// Stack: ... -> ..., value
 ///
@@ -65,7 +65,7 @@ pub fn handle_iconst(frame: &mut Frame) -> Result<()> {
     frame.push(VerificationType::Integer)
 }
 
-/// Handles `lconst_*` instructions - push long constant.
+/// Handles `lconst_*` instructions; push long constant.
 ///
 /// Stack: ... -> ..., value
 ///
@@ -80,7 +80,7 @@ pub fn handle_lconst(frame: &mut Frame) -> Result<()> {
     frame.push_category2(VerificationType::Long)
 }
 
-/// Handles `fconst_*` instructions - push float constant.
+/// Handles `fconst_*` instructions; push float constant.
 ///
 /// # Errors
 ///
@@ -93,7 +93,7 @@ pub fn handle_fconst(frame: &mut Frame) -> Result<()> {
     frame.push(VerificationType::Float)
 }
 
-/// Handles `dconst_*` instructions - push double constant.
+/// Handles `dconst_*` instructions; push double constant.
 ///
 /// # Errors
 ///
@@ -148,7 +148,7 @@ pub fn handle_ldc(frame: &mut Frame, class_file: &ClassFile<'_>, index: u16) -> 
             "java/lang/invoke/MethodType",
         ))),
         Constant::Dynamic { .. } => {
-            // Dynamic constant - would need to resolve to determine type
+            // Dynamic constant; would need to resolve to determine type
             // For now, push Object
             frame.push(VerificationType::java_lang_object())
         }
@@ -253,11 +253,11 @@ pub fn handle_wide() -> Result<()> {
 pub fn handle_reserved(instruction: &Instruction) -> Result<()> {
     match instruction {
         Instruction::Breakpoint => {
-            // Breakpoint is for debuggers - typically a no-op for verification
+            // Breakpoint is for debuggers; typically a no-op for verification
             Ok(())
         }
         Instruction::Impdep1 | Instruction::Impdep2 => {
-            // Implementation-dependent - reject
+            // Implementation-dependent; reject
             Err(VerifyError::VerifyError(
                 "Implementation-dependent instructions are not allowed".to_string(),
             ))
@@ -348,15 +348,15 @@ mod tests {
         constant_pool
             .add(Constant::Float(std::f32::consts::PI))
             .unwrap();
-        // Index 5-6: Long(100) - takes 2 slots
+        // Index 5-6: Long(100); takes 2 slots
         constant_pool.add(Constant::Long(100)).unwrap();
-        // Index 7-8: Double(2.718) - takes 2 slots
+        // Index 7-8: Double(2.718); takes 2 slots
         constant_pool
             .add(Constant::Double(std::f64::consts::E))
             .unwrap();
         // Index 9: Utf8 "Hello"
         constant_pool.add(Constant::utf8("Hello")).unwrap();
-        // Index 10: String(9) - references Utf8 at index 9
+        // Index 10: String(9); references Utf8 at index 9
         constant_pool.add(Constant::String(9)).unwrap();
 
         ClassFile {
@@ -469,7 +469,7 @@ mod tests {
         let class_file = create_test_class_file();
         let mut frame = Frame::new(5, 10);
 
-        // Long at index 5 - should fail for ldc (use ldc2_w instead)
+        // Long at index 5; should fail for ldc (use ldc2_w instead)
         let result = handle_ldc(&mut frame, &class_file, 5);
         assert!(result.is_err());
         assert!(
@@ -514,7 +514,7 @@ mod tests {
         let class_file = create_test_class_file();
         let mut frame = Frame::new(5, 10);
 
-        // Integer at index 3 - should fail for ldc2_w (use ldc instead)
+        // Integer at index 3; should fail for ldc2_w (use ldc instead)
         let result = handle_ldc2_w(&mut frame, &class_file, 3);
         assert!(result.is_err());
         assert!(

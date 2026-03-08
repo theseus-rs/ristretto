@@ -573,7 +573,7 @@ mod tests {
         let source = Gc::new(&GarbageCollector::new(), RwLock::new(vec![1, 2, 3]));
         let destination = Gc::new(&GarbageCollector::new(), RwLock::new(vec![0, 0, 0]));
 
-        // Copy exactly to the boundary - should work
+        // Copy exactly to the boundary; should work
         arraycopy_vec(&source, 0, &destination, 0, 3)?;
         let destination = destination.read();
 

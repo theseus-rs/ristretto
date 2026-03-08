@@ -608,7 +608,7 @@ mod tests {
         let code = vec![
             Instruction::Iconst_0, // 0
             Instruction::Istore_0, // 1
-            Instruction::Iload_0,  // 2 - loop target
+            Instruction::Iload_0,  // 2; loop target
             Instruction::Iconst_1, // 3
             Instruction::Iadd,     // 4
             Instruction::Pop,      // 5

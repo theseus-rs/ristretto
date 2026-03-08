@@ -33,7 +33,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
-// Re-export AccessCheckResult from classloader - this is the canonical location
+// Re-export AccessCheckResult from classloader; this is the canonical location
 pub use ristretto_classloader::module::AccessCheckResult;
 
 // Re-export DefinedModule from ristretto_types for shared access
@@ -45,7 +45,7 @@ pub const ALL_UNNAMED: &str = "ALL-UNNAMED";
 /// Special constant for exporting/opening to all modules.
 pub const ALL_MODULES: &str = "ALL";
 
-/// The `java.base` module name - implicitly readable by all modules.
+/// The `java.base` module name; implicitly readable by all modules.
 pub const JAVA_BASE_MODULE: &str = "java.base";
 
 /// Complete module system combining static configuration and dynamic runtime state.
@@ -54,7 +54,7 @@ pub const JAVA_BASE_MODULE: &str = "java.base";
 /// - **Static configuration** (`ResolvedConfiguration`): Module graph resolved at startup
 /// - **Dynamic state**: Runtime modifications via `Module.addExports0()`, etc.
 ///
-/// Access checking combines both sources - static configuration is checked first,
+/// Access checking combines both sources; static configuration is checked first,
 /// then dynamic modifications are checked if the static check fails.
 #[derive(Debug)]
 pub struct ModuleSystem {
@@ -375,7 +375,7 @@ impl ModuleSystem {
             } else if module == "ALL-MODULE-PATH" || module == "ALL-DEFAULT" {
                 // ALL-MODULE-PATH: Add all modules from module path (resolved as needed)
                 // ALL-DEFAULT: Add default modules (those that export at least one package)
-                // These are simplifications - OpenJDK has more complex rules
+                // These are simplifications; OpenJDK has more complex rules
             } else if !root_modules.contains(module) {
                 root_modules.push(module.clone());
             }
@@ -1643,7 +1643,7 @@ mod tests {
     #[test]
     fn test_require_access_not_readable_failure() {
         let module_system = ModuleSystem::empty();
-        // Module doesn't read the other module - should fail
+        // Module doesn't read the other module; should fail
         let result = module_system.require_access(
             Some("my.module"),
             Some("other.module"),
@@ -1659,7 +1659,7 @@ mod tests {
     fn test_require_access_not_exported_failure() {
         let module_system = ModuleSystem::empty();
         module_system.add_read("my.module", "other.module");
-        // Package is not exported - should fail
+        // Package is not exported; should fail
         let result = module_system.require_access(
             Some("my.module"),
             Some("other.module"),
@@ -1693,7 +1693,7 @@ mod tests {
     #[test]
     fn test_require_access_both_unnamed_success() {
         let module_system = ModuleSystem::empty();
-        // Both modules are unnamed - should always succeed
+        // Both modules are unnamed; should always succeed
         let result = module_system.require_access(None, None, "com/example/MyClass");
         assert!(result.is_ok());
     }
@@ -1841,7 +1841,7 @@ mod tests {
         // Open package to all unnamed
         module_system.add_opens_to_all_unnamed("java.base", "java/lang/internal");
 
-        // Unnamed module accessing opened package - this works because
+        // Unnamed module accessing opened package; this works because
         // check_unnamed_module_access checks both exports AND opens
         let result =
             module_system.require_access(None, Some("java.base"), "java/lang/internal/Unsafe");

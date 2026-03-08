@@ -14,12 +14,15 @@ version.workspace = true
 workspace = true
 
 [dependencies]
-dashmap = { workspace = true, features = ["rayon"] }
-rayon = { workspace = true }
+dashmap = { workspace = true }
 parking_lot = { workspace = true }
-sysinfo = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+dashmap = { workspace = true, features = ["rayon"] }
+rayon = { workspace = true }
+sysinfo = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

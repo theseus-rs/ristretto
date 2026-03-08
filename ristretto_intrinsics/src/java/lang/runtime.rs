@@ -5,8 +5,10 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
+#[cfg(not(target_family = "wasm"))]
 use std::cmp::min;
 use std::sync::Arc;
+#[cfg(not(target_family = "wasm"))]
 use sysinfo::System;
 
 #[intrinsic_method("java/lang/Runtime.availableProcessors()I", Any)]
@@ -15,9 +17,16 @@ pub async fn available_processors<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let cpus = System::physical_core_count().unwrap_or(1);
-    let cpus = i32::try_from(cpus)?;
-    Ok(Some(Value::Int(cpus)))
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let cpus = System::physical_core_count().unwrap_or(1);
+        let cpus = i32::try_from(cpus)?;
+        Ok(Some(Value::Int(cpus)))
+    }
+    #[cfg(target_family = "wasm")]
+    {
+        Ok(Some(Value::Int(1)))
+    }
 }
 
 #[intrinsic_method("java/lang/Runtime.freeMemory()J", Any)]
@@ -26,14 +35,21 @@ pub async fn free_memory<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let sys = System::new_all();
-    let free_memory = sys.total_memory() - sys.used_memory();
-    let free_memory = if free_memory > u64::try_from(i64::MAX)? {
-        i64::MAX
-    } else {
-        i64::try_from(free_memory)?
-    };
-    Ok(Some(Value::Long(free_memory)))
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let sys = System::new_all();
+        let free_memory = sys.total_memory() - sys.used_memory();
+        let free_memory = if free_memory > u64::try_from(i64::MAX)? {
+            i64::MAX
+        } else {
+            i64::try_from(free_memory)?
+        };
+        Ok(Some(Value::Long(free_memory)))
+    }
+    #[cfg(target_family = "wasm")]
+    {
+        Ok(Some(Value::Long(0)))
+    }
 }
 
 #[intrinsic_method("java/lang/Runtime.gc()V", Any)]
@@ -52,10 +68,17 @@ pub async fn max_memory<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let sys = System::new_all();
-    let total_memory = min(sys.total_memory(), u64::try_from(i64::MAX)?);
-    let total_memory = i64::try_from(total_memory)?;
-    Ok(Some(Value::Long(total_memory)))
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let sys = System::new_all();
+        let total_memory = min(sys.total_memory(), u64::try_from(i64::MAX)?);
+        let total_memory = i64::try_from(total_memory)?;
+        Ok(Some(Value::Long(total_memory)))
+    }
+    #[cfg(target_family = "wasm")]
+    {
+        Ok(Some(Value::Long(i64::MAX)))
+    }
 }
 
 #[intrinsic_method("java/lang/Runtime.runFinalization0()V", LessThanOrEqual(JAVA_8))]
@@ -91,15 +114,22 @@ pub async fn total_memory<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // TODO: This is not the correct implementation; should be the total memory of the JVM
-    let sys = System::new_all();
-    let used_memory = sys.used_memory();
-    let free_memory = if used_memory > u64::try_from(i64::MAX)? {
-        i64::MAX
-    } else {
-        i64::try_from(used_memory)?
-    };
-    Ok(Some(Value::Long(free_memory)))
+    #[cfg(not(target_family = "wasm"))]
+    {
+        // TODO: This is not the correct implementation; should be the total memory of the JVM
+        let sys = System::new_all();
+        let used_memory = sys.used_memory();
+        let free_memory = if used_memory > u64::try_from(i64::MAX)? {
+            i64::MAX
+        } else {
+            i64::try_from(used_memory)?
+        };
+        Ok(Some(Value::Long(free_memory)))
+    }
+    #[cfg(target_family = "wasm")]
+    {
+        Ok(Some(Value::Long(0)))
+    }
 }
 
 #[cfg(test)]

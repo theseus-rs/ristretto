@@ -18,24 +18,25 @@ use tokio::io::AsyncWriteExt;
 /// the Java version. For Java 11 and later, it uses the `handle` field for windows, while for
 /// earlier versions, or on non-windows platforms, it uses the `fd` field.
 pub(crate) fn file_descriptor_from_java_object<V: VM>(
-    vm: &Arc<V>,
+    #[cfg_attr(not(target_os = "windows"), expect(unused_variables))] vm: &Arc<V>,
     file_descriptor: &Value,
 ) -> Result<i64> {
     let file_descriptor = file_descriptor.as_object_ref()?;
+
+    #[cfg(not(target_os = "windows"))]
+    let fd = {
+        let fd = file_descriptor.value("fd")?.as_i32()?;
+        i64::from(fd)
+    };
+
+    #[cfg(target_os = "windows")]
     let fd = if vm.java_class_file_version() >= &JAVA_11 {
-        #[cfg(not(target_os = "windows"))]
-        {
-            let fd = file_descriptor.value("fd")?.as_i32()?;
-            i64::from(fd)
-        }
-        #[cfg(target_os = "windows")]
-        {
-            file_descriptor.value("handle")?.as_i64()?
-        }
+        file_descriptor.value("handle")?.as_i64()?
     } else {
         let fd = file_descriptor.value("fd")?.as_i32()?;
         i64::from(fd)
     };
+
     Ok(fd)
 }
 
@@ -76,6 +77,7 @@ pub(crate) fn raw_file_descriptor(file: &tokio::fs::File) -> Result<i64> {
     let file_descriptor = i64::try_from(fd)?;
     Ok(file_descriptor)
 }
+
 /// Converts a `File` into its corresponding file descriptor, which is an integer value that
 /// represents the file handle in the operating system.
 #[cfg(not(any(target_family = "wasm", target_os = "windows", target_os = "wasi")))]

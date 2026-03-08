@@ -244,7 +244,7 @@ mod tests {
         // Parse Java major version to conditionally include methods
         let version_major: u16 = version.split_once('.').unwrap_or_default().0.parse()?;
 
-        // Required methods for ristretto - some are version-specific
+        // Required methods for ristretto; some are version-specific
         let mut required_methods = vec![
             "java/lang/System.allowSecurityManager()Z".to_string(),
             "java/lang/System.getSecurityManager()Ljava/lang/SecurityManager;".to_string(),

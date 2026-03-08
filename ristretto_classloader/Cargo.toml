@@ -20,26 +20,26 @@ flate2 = { workspace = true }
 indexmap = { workspace = true }
 memchr = { workspace = true }
 parking_lot = { workspace = true }
-reqwest = { workspace = true, features = ["json", "query"] }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.29.0" }
 ristretto_gc = { path = "../ristretto_gc", version = "0.29.0" }
 ristretto_jimage = { path = "../ristretto_jimage", version = "0.29.0" }
 serde = { workspace = true, features = ["derive"] }
 serde_plain = { workspace = true }
-tar = { workspace = true }
-tempfile = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
-walkdir = { workspace = true }
 zerocopy = { workspace = true }
 zip = { workspace = true, features = ["deflate"] }
 
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+reqwest = { workspace = true, features = ["json", "query"] }
+tar = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
+walkdir = { workspace = true }
+
 [target.'cfg(target_family = "wasm")'.dependencies]
 tokio = { workspace = true }
-
-[target.'cfg(not(target_family = "wasm"))'.dependencies]
-tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
 criterion = { workspace = true }

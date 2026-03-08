@@ -464,7 +464,7 @@ mod tests {
         let fake_class = child_loader.create_array_class(fake_class_name)?;
         child_loader.register(fake_class.clone()).await?;
 
-        // Load the class from the child loader - should delegate to parent for HelloWorld
+        // Load the class from the child loader; should delegate to parent for HelloWorld
         // but return the registered class for [LHelloWorld;
         let loaded_class = child_loader
             .load(JavaStr::try_from_str("[LHelloWorld;")?)

@@ -89,7 +89,7 @@ pub async fn get_parameters_0<T: ristretto_types::Thread + 'static>(
         }
     }
 
-    // No MethodParameters attribute - return null (JVM behavior)
+    // No MethodParameters attribute; return null (JVM behavior)
     Ok(Some(Value::Object(None)))
 }
 
