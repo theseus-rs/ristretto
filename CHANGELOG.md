@@ -7,6 +7,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_pom` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.30.0) - 2026-03-08
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_cli` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/v0.29.0...v0.30.0) - 2026-03-08
+
+### Added
+- implement java/lang/invoke/VarHandle
+- implement threading
+
+### Fixed
+- unify file java.io and java.nio file handles
+- update nio to use async file io
+
+### Other
+- update Cargo.toml dependencies
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+- optimize native memory access
+
+## `ristretto_vm` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.29.0...ristretto_vm-v0.30.0) - 2026-03-08
+
+### Added
+- implement threading
+
+### Fixed
+- unify file java.io and java.nio file handles
+- update nio to use async file io
+
+### Other
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+
+## `ristretto_intrinsics` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.29.0...ristretto_intrinsics-v0.30.0) - 2026-03-08
+
+### Added
+- implement java/lang/invoke/VarHandle
+- implement threading
+
+### Fixed
+- unify file java.io and java.nio file handles
+- update nio to use async file io
+
+### Other
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+
+## `ristretto_types` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.29.0...ristretto_types-v0.30.0) - 2026-03-08
+
+### Added
+- implement threading
+
+### Fixed
+- unify file java.io and java.nio file handles
+- update nio to use async file io
+
+### Other
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- optimize native memory access
+
+## `ristretto_jit` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.29.0...ristretto_jit-v0.30.0) - 2026-03-08
+
+### Other
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+
+## `ristretto_macros` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.29.0...ristretto_macros-v0.30.0) - 2026-03-08
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classloader` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.29.0...ristretto_classloader-v0.30.0) - 2026-03-08
+
+### Other
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+
+## `ristretto_jimage` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.29.0...ristretto_jimage-v0.30.0) - 2026-03-08
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_gc` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.29.0...ristretto_gc-v0.30.0) - 2026-03-08
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classfile` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.29.0...ristretto_classfile-v0.30.0) - 2026-03-08
+
+### Other
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+
 ## `ristretto_pom` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.28.0...ristretto_pom-v0.29.0) - 2026-02-08
 
 ### Added
