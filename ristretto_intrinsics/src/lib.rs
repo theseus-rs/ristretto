@@ -7,7 +7,6 @@
 //!
 //! This crate provides intrinsics methods for the Ristretto VM.
 
-#![forbid(unsafe_code)]
 // The async_recursion macro adds Send bounds that overlap with the generic parameter bounds.
 #![expect(clippy::multiple_bound_locations)]
 

@@ -366,10 +366,13 @@ pub(crate) async fn read_at(
             }
             #[cfg(target_family = "windows")]
             {
+                use std::io::{Seek, SeekFrom};
                 use std::os::windows::fs::FileExt;
-                std_file
-                    .seek_read(&mut buf_clone, offset)
-                    .map(|n| (n, buf_clone))
+                let mut std_file = std_file;
+                let saved_pos = std_file.stream_position()?;
+                let n = std_file.seek_read(&mut buf_clone, offset)?;
+                std_file.seek(SeekFrom::Start(saved_pos))?;
+                Ok::<_, std::io::Error>((n, buf_clone))
             }
         })
         .await
@@ -425,8 +428,13 @@ pub(crate) async fn write_at(
             }
             #[cfg(target_family = "windows")]
             {
+                use std::io::{Seek, SeekFrom};
                 use std::os::windows::fs::FileExt;
-                std_file.seek_write(&buf_clone, offset)
+                let mut std_file = std_file;
+                let saved_pos = std_file.stream_position()?;
+                let n = std_file.seek_write(&buf_clone, offset)?;
+                std_file.seek(SeekFrom::Start(saved_pos))?;
+                Ok(n)
             }
         })
         .await

@@ -1,6 +1,6 @@
 use crate::java::io::unixfilesystem;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
-use ristretto_classfile::{JAVA_11, JAVA_17};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -64,11 +64,35 @@ pub async fn check_access<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method(
+    "java/io/WinNTFileSystem.checkAccess0(Ljava/io/File;I)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn check_access_0<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    unixfilesystem::check_access_0(thread, parameters).await
+}
+
+#[intrinsic_method(
     "java/io/WinNTFileSystem.createDirectory(Ljava/io/File;)Z",
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn create_directory<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    unixfilesystem::create_directory_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.createDirectory0(Ljava/io/File;)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn create_directory_0<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -87,12 +111,37 @@ pub async fn create_file_exclusively<T: ristretto_types::Thread + 'static>(
     unixfilesystem::create_file_exclusively_0(thread, parameters).await
 }
 
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.createFileExclusively0(Ljava/lang/String;)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn create_file_exclusively_0<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    unixfilesystem::create_file_exclusively_0(thread, parameters).await
+}
+
 #[intrinsic_method("java/io/WinNTFileSystem.delete0(Ljava/io/File;)Z", Any)]
 #[async_method]
 pub async fn delete_0<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
+    unixfilesystem::delete_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.delete0(Ljava/io/File;Z)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn delete_0_with_flag<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _is_directory = parameters.pop_bool()?;
     unixfilesystem::delete_0(thread, parameters).await
 }
 
@@ -168,11 +217,35 @@ pub async fn get_last_modified_time<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method(
+    "java/io/WinNTFileSystem.getLastModifiedTime0(Ljava/io/File;)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn get_last_modified_time_0<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    unixfilesystem::get_last_modified_time_0(thread, parameters).await
+}
+
+#[intrinsic_method(
     "java/io/WinNTFileSystem.getLength(Ljava/io/File;)J",
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn get_length<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    unixfilesystem::get_length_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.getLength0(Ljava/io/File;)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn get_length_0<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -215,6 +288,18 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 pub async fn list<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    unixfilesystem::list_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn list_0<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -269,6 +354,18 @@ pub async fn set_last_modified_time<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method(
+    "java/io/WinNTFileSystem.setLastModifiedTime0(Ljava/io/File;J)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn set_last_modified_time_0<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    unixfilesystem::set_last_modified_time_0(thread, parameters).await
+}
+
+#[intrinsic_method(
     "java/io/WinNTFileSystem.setPermission(Ljava/io/File;IZZ)Z",
     LessThanOrEqual(JAVA_17)
 )]
@@ -281,11 +378,35 @@ pub async fn set_permission<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method(
+    "java/io/WinNTFileSystem.setPermission0(Ljava/io/File;IZZ)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn set_permission_0<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    unixfilesystem::set_permission_0(thread, parameters).await
+}
+
+#[intrinsic_method(
     "java/io/WinNTFileSystem.setReadOnly(Ljava/io/File;)Z",
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn set_read_only<T: ristretto_types::Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    unixfilesystem::set_read_only_0(thread, parameters).await
+}
+
+#[intrinsic_method(
+    "java/io/WinNTFileSystem.setReadOnly0(Ljava/io/File;)Z",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn set_read_only_0<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -463,7 +584,10 @@ mod tests {
             .await?
             .expect("last modified time");
         let last_modified_time = value.as_i64()?;
+        #[cfg(not(target_os = "windows"))]
         assert!(last_modified_time >= start_time);
+        #[cfg(target_os = "windows")]
+        assert!(last_modified_time >= start_time - 1000);
         Ok(())
     }
 

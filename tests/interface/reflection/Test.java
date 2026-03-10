@@ -62,6 +62,7 @@ public class Test {
 
         // Test interface methods
         Method[] methods = targetInterface.getMethods();
+        java.util.Arrays.sort(methods, java.util.Comparator.comparing(Method::getName));
         System.out.println("\nReflectionTarget methods:");
         for (Method method : methods) {
             System.out.println("  " + method.getName() +

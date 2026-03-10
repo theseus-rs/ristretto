@@ -244,6 +244,8 @@ fn expected_output(
 
     let start_time = Instant::now();
     let arguments = vec![
+        "-Dstdout.encoding=UTF-8",
+        "-Dstderr.encoding=UTF-8",
         "-cp",
         test_dir.to_str().unwrap_or_default(),
         TEST_CLASS_NAME,
