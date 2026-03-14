@@ -54,15 +54,15 @@ result_large_err = "allow"
 
 [workspace.dependencies]
 ahash = "0.8.12"
-anstyle = "1.0.13"
+anstyle = "1.0.14"
 anyhow = "1.0.102"
 async-recursion = "1.1.1"
 bitflags = "2.11.0"
 bytemuck = "1.25.0"
 byteorder = "1.5.0"
 byte-unit = "5.2.0"
-clap = "4.5.60"
-console = "0.16.2"
+clap = "4.6.0"
+console = "0.16.3"
 cranelift = "0.129.1"
 criterion = { version = "0.8.2", default-features = false }
 dashmap = "6.1.0"
@@ -100,10 +100,10 @@ thiserror = "2.0.18"
 thread-priority = "3.0.0"
 tokio = { version = "1.50.0", default-features = false, features = ["macros", "rt", "sync"] }
 tracing = "0.1.44"
-tracing-subscriber = "0.3.22"
+tracing-subscriber = "0.3.23"
 walkdir = "2.5.0"
 wasm-bindgen-futures = "0.4.64"
-whoami = "2.1.0"
+whoami = "2.1.1"
 zerocopy = "0.8.42"
 zip = { version = "8.2.0", default-features = false }
 
