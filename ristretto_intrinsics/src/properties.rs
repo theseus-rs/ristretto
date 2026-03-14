@@ -152,7 +152,7 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     #[cfg(target_os = "windows")]
     properties.insert("line.separator", "\r\n".into());
 
-    properties.insert("native.encoding", "UTF8".into());
+    properties.insert("native.encoding", native_encoding());
 
     properties.insert("os.arch", ARCH.into());
     let os = match OS {
@@ -179,9 +179,9 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     // TODO: implement socksProxyPort
     properties.insert("socksProxyPort", Cow::Borrowed(""));
 
-    properties.insert("stderr.encoding", "UTF-8".into());
-    properties.insert("stdin.encoding", "UTF-8".into());
-    properties.insert("stdout.encoding", "UTF-8".into());
+    properties.insert("stderr.encoding", Cow::Borrowed("UTF-8"));
+    properties.insert("stdin.encoding", console_input_encoding());
+    properties.insert("stdout.encoding", Cow::Borrowed("UTF-8"));
 
     // TODO: implement sun.arch.abi
     properties.insert("sun.arch.abi", Cow::Borrowed(""));
@@ -195,12 +195,15 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     properties.insert("sun.cpu.endian", "big".into());
     // TODO: implement sun.cpu.isalist
     properties.insert("sun.cpu.isalist", Cow::Borrowed(""));
+    #[cfg(target_endian = "little")]
+    properties.insert("sun.io.unicode.encoding", "UnicodeLittle".into());
+    #[cfg(target_endian = "big")]
     properties.insert("sun.io.unicode.encoding", "UnicodeBig".into());
-    properties.insert("sun.jnu.encoding", "UTF-8".into());
+    properties.insert("sun.jnu.encoding", native_encoding());
     // TODO: implement sun.os.patch.level
     properties.insert("sun.os.patch.level", Cow::Borrowed(""));
-    properties.insert("sun.stderr.encoding", "UTF-8".into());
-    properties.insert("sun.stdout.encoding", "UTF-8".into());
+    properties.insert("sun.stderr.encoding", Cow::Borrowed("UTF-8"));
+    properties.insert("sun.stdout.encoding", Cow::Borrowed("UTF-8"));
 
     properties.insert("user.country", Cow::Owned(country_owned));
     let current_dir = env::current_dir().map_err(|error| InternalError(error.to_string()))?;
@@ -218,4 +221,64 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     // TODO: implement user.variant
     properties.insert("user.variant", Cow::Borrowed(""));
     Ok(properties)
+}
+
+/// Returns the Java charset name for the native (ANSI) code page.
+#[cfg_attr(target_os = "windows", expect(unsafe_code))]
+fn native_encoding() -> Cow<'static, str> {
+    #[cfg(target_os = "windows")]
+    {
+        unsafe extern "system" {
+            fn GetACP() -> u32;
+        }
+        let cp = unsafe { GetACP() };
+        code_page_to_charset(cp)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Cow::Borrowed("UTF-8")
+    }
+}
+
+/// Returns the Java charset name for the console output code page.
+#[cfg_attr(target_os = "windows", expect(unsafe_code))]
+fn console_output_encoding() -> Cow<'static, str> {
+    #[cfg(target_os = "windows")]
+    {
+        unsafe extern "system" {
+            fn GetConsoleOutputCP() -> u32;
+        }
+        let cp = unsafe { GetConsoleOutputCP() };
+        code_page_to_charset(cp)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Cow::Borrowed("UTF-8")
+    }
+}
+
+/// Returns the Java charset name for the console input code page.
+#[cfg_attr(target_os = "windows", expect(unsafe_code))]
+fn console_input_encoding() -> Cow<'static, str> {
+    #[cfg(target_os = "windows")]
+    {
+        unsafe extern "system" {
+            fn GetConsoleCP() -> u32;
+        }
+        let cp = unsafe { GetConsoleCP() };
+        code_page_to_charset(cp)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Cow::Borrowed("UTF-8")
+    }
+}
+
+/// Converts a Windows code page number to a Java charset name.
+#[cfg(target_os = "windows")]
+fn code_page_to_charset(code_page: u32) -> Cow<'static, str> {
+    match code_page {
+        65001 => Cow::Borrowed("UTF-8"),
+        _ => Cow::Owned(format!("Cp{code_page}")),
+    }
 }

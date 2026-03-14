@@ -6,3 +6,4 @@ pub mod unixcopyfile;
 pub mod unixfilesystem;
 pub mod unixnativedispatcher;
 pub mod utifiletypedetector;
+pub mod windowsnativedispatcher;

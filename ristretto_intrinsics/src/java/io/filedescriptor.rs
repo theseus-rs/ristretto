@@ -69,23 +69,21 @@ pub(crate) fn raw_file_descriptor(file: &std::fs::File) -> Result<i64> {
 
 /// Converts a `File` into its corresponding file descriptor, which is an integer value that
 /// represents the file handle in the operating system.
-#[cfg(not(target_family = "wasm"))]
+#[cfg(target_os = "windows")]
+pub(crate) fn raw_file_descriptor(file: &tokio::fs::File) -> Result<i64> {
+    use std::os::windows::io::AsRawHandle;
+    let fd = file.as_raw_handle() as usize;
+    let file_descriptor = i64::try_from(fd)?;
+    Ok(file_descriptor)
+}
+/// Converts a `File` into its corresponding file descriptor, which is an integer value that
+/// represents the file handle in the operating system.
+#[cfg(not(any(target_family = "wasm", target_os = "windows", target_os = "wasi")))]
 #[expect(clippy::unnecessary_wraps)]
 pub(crate) fn raw_file_descriptor(file: &tokio::fs::File) -> Result<i64> {
-    #[cfg(target_os = "windows")]
-    let file_descriptor = {
-        use std::os::windows::io::AsRawHandle;
-        let fd = file.as_raw_handle() as usize;
-        i64::try_from(fd)?
-    };
-
-    #[cfg(not(target_os = "windows"))]
-    let file_descriptor = {
-        use std::os::unix::io::AsRawFd;
-        let fd = file.as_raw_fd();
-        i64::from(fd)
-    };
-
+    use std::os::unix::io::AsRawFd;
+    let fd = file.as_raw_fd();
+    let file_descriptor = i64::from(fd);
     Ok(file_descriptor)
 }
 
