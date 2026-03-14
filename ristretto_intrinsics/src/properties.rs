@@ -163,9 +163,14 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     };
     properties.insert("os.name", os.into());
 
-    let os_information = os_info::get();
-    let os_version = os_information.version().to_string();
-    properties.insert("os.version", os_version.into());
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let os_information = os_info::get();
+        let os_version = os_information.version().to_string();
+        properties.insert("os.version", os_version.into());
+    }
+    #[cfg(target_family = "wasm")]
+    properties.insert("os.version", String::new().into());
 
     #[cfg(not(target_os = "windows"))]
     properties.insert("path.separator", ":".into());
@@ -211,8 +216,13 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
         "user.dir",
         current_dir.to_string_lossy().into_owned().into(),
     );
-    let home_dir = dirs::home_dir().unwrap_or_default();
-    properties.insert("user.home", home_dir.to_string_lossy().into_owned().into());
+    #[cfg(not(target_family = "wasm"))]
+    {
+        let home_dir = dirs::home_dir().unwrap_or_default();
+        properties.insert("user.home", home_dir.to_string_lossy().into_owned().into());
+    }
+    #[cfg(target_family = "wasm")]
+    properties.insert("user.home", Cow::Borrowed(""));
     properties.insert("user.language", Cow::Owned(language_owned));
     let username = whoami::username().map_err(|error| InternalError(error.to_string()))?;
     properties.insert("user.name", username.into());

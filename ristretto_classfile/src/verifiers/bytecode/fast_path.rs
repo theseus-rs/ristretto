@@ -854,7 +854,7 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                         self.stack_map_table
                             .to_frame(decoded, self.max_locals, self.max_stack);
                     // Validate handler frame compatibility
-                    // Note: We're lenient here - just check stack has exception type
+                    // Note: We're lenient here; just check stack has exception type
                     if expected.stack.len() != 1 {
                         return Err(VerifyError::VerifyError(format!(
                             "Exception handler at {} should have exactly one stack item",

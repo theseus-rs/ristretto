@@ -8,8 +8,12 @@ pub mod inet6addressimpl;
 pub mod inetaddress;
 pub mod inetaddressimplfactory;
 pub mod networkinterface;
+#[cfg(not(target_family = "wasm"))]
 pub mod plaindatagramsocketimpl;
+#[cfg(not(target_family = "wasm"))]
 pub mod plainsocketimpl;
 pub mod socketcleanable;
+#[cfg(not(target_family = "wasm"))]
 pub mod socketinputstream;
+#[cfg(not(target_family = "wasm"))]
 pub mod socketoutputstream;

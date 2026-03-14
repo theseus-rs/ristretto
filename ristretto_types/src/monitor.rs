@@ -257,6 +257,13 @@ impl Monitor {
         Ok(())
     }
 
+    /// Check if the monitor is owned by the given thread.
+    #[must_use]
+    pub fn is_owned_by(&self, thread_id: u64) -> bool {
+        let owner = self.owner.lock();
+        *owner == Some(thread_id)
+    }
+
     /// Notify one waiting thread.
     ///
     /// # Errors

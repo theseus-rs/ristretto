@@ -413,7 +413,7 @@ fn has_mutf8_special_sequences(input: &[u8]) -> bool {
             // ASCII byte
             i += 1;
         } else if b < 0xC0 {
-            // Continuation byte as lead - invalid but let the decoder handle it
+            // Continuation byte as lead; invalid but let the decoder handle it
             return true;
         } else if b < 0xE0 {
             // 2-byte sequence: check for null encoding (0xC0 0x80) or overlong (0xC1)
@@ -459,10 +459,10 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
                 }
                 let byte2 = input[i + 1];
                 if byte1 == 0xC0 && byte2 == 0x80 {
-                    // Null character - encode as standard UTF-8 null
+                    // Null character; encode as standard UTF-8 null
                     result.push(0);
                 } else {
-                    // Standard 2-byte sequence - copy directly (valid UTF-8)
+                    // Standard 2-byte sequence; copy directly (valid UTF-8)
                     result.push(byte1);
                     result.push(byte2);
                 }
@@ -481,7 +481,7 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
 
                 // Check if this is a surrogate (needs special handling)
                 if (0xD800..=0xDFFF).contains(&ch) {
-                    // High surrogate - look for low surrogate
+                    // High surrogate; look for low surrogate
                     if (0xD800..=0xDBFF).contains(&ch) && i + 5 < len {
                         let next1 = input[i + 3];
                         if next1 & 0xF0 == 0xE0 {
@@ -491,7 +491,7 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
                                 | u32::from(next2 & 0x3F) << 6
                                 | u32::from(next3 & 0x3F);
                             if (0xDC00..=0xDFFF).contains(&low) {
-                                // Valid surrogate pair - decode to code point
+                                // Valid surrogate pair; decode to code point
                                 let code = 0x1_0000 + ((ch - 0xD800) << 10) + (low - 0xDC00);
                                 // Encode as 4-byte UTF-8
                                 result.push(0xF0 | ((code >> 18) as u8));
@@ -503,10 +503,10 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
                             }
                         }
                     }
-                    // Lone surrogate - use replacement character
+                    // Lone surrogate; use replacement character
                     result.extend_from_slice(&[0xEF, 0xBF, 0xBD]);
                 } else {
-                    // Regular 3-byte sequence - copy directly
+                    // Regular 3-byte sequence; copy directly
                     result.push(byte1);
                     result.push(byte2);
                     result.push(byte3);

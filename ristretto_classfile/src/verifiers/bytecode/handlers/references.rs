@@ -529,7 +529,7 @@ pub fn handle_invokespecial<C: VerificationContext>(
     let objectref = frame.pop()?;
 
     if method_name == "<init>" {
-        // Constructor call - initialize the object
+        // Constructor call; initialize the object
         match &objectref {
             VerificationType::Uninitialized(offset) => {
                 let initialized = VerificationType::Object(JavaString::from(class_name));
@@ -729,21 +729,21 @@ mod tests {
 
         // Index 1: Utf8 "TestClass"
         constant_pool.add(Constant::utf8("TestClass")).unwrap();
-        // Index 2: Class(1) - TestClass
+        // Index 2: Class(1); TestClass
         constant_pool.add(Constant::Class(1)).unwrap();
 
         // Index 3: Utf8 "testField"
         constant_pool.add(Constant::utf8("testField")).unwrap();
         // Index 4: Utf8 "I" (int descriptor)
         constant_pool.add(Constant::utf8("I")).unwrap();
-        // Index 5: NameAndType(3, 4) - testField:I
+        // Index 5: NameAndType(3, 4); testField:I
         constant_pool
             .add(Constant::NameAndType {
                 name_index: 3,
                 descriptor_index: 4,
             })
             .unwrap();
-        // Index 6: Fieldref(2, 5) - TestClass.testField:I
+        // Index 6: Fieldref(2, 5); TestClass.testField:I
         constant_pool
             .add(Constant::FieldRef {
                 class_index: 2,
@@ -755,14 +755,14 @@ mod tests {
         constant_pool.add(Constant::utf8("testMethod")).unwrap();
         // Index 8: Utf8 "(I)V" (method descriptor)
         constant_pool.add(Constant::utf8("(I)V")).unwrap();
-        // Index 9: NameAndType(7, 8) - testMethod:(I)V
+        // Index 9: NameAndType(7, 8); testMethod:(I)V
         constant_pool
             .add(Constant::NameAndType {
                 name_index: 7,
                 descriptor_index: 8,
             })
             .unwrap();
-        // Index 10: Methodref(2, 9) - TestClass.testMethod:(I)V
+        // Index 10: Methodref(2, 9); TestClass.testMethod:(I)V
         constant_pool
             .add(Constant::MethodRef {
                 class_index: 2,
@@ -772,9 +772,9 @@ mod tests {
 
         // Index 11: Utf8 "InterfaceClass"
         constant_pool.add(Constant::utf8("InterfaceClass")).unwrap();
-        // Index 12: Class(11) - InterfaceClass
+        // Index 12: Class(11); InterfaceClass
         constant_pool.add(Constant::Class(11)).unwrap();
-        // Index 13: InterfaceMethodref(12, 9) - InterfaceClass.testMethod:(I)V
+        // Index 13: InterfaceMethodref(12, 9); InterfaceClass.testMethod:(I)V
         constant_pool
             .add(Constant::InterfaceMethodRef {
                 class_index: 12,
@@ -782,7 +782,7 @@ mod tests {
             })
             .unwrap();
 
-        // Index 14: InvokeDynamic(0, 9) - bootstrap method 0, testMethod:(I)V
+        // Index 14: InvokeDynamic(0, 9); bootstrap method 0, testMethod:(I)V
         constant_pool
             .add(Constant::InvokeDynamic {
                 bootstrap_method_attr_index: 0,

@@ -7,5 +7,6 @@ pub mod objectinputstream;
 pub mod objectoutputstream;
 pub mod objectstreamclass;
 pub mod randomaccessfile;
+pub mod socketfiledescriptor;
 pub mod unixfilesystem;
 pub mod winntfilesystem;

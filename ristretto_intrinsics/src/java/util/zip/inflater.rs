@@ -226,7 +226,7 @@ pub async fn inflate_bytes_bytes<T: ristretto_types::Thread + 'static>(
         if input_len == 0 {
             Vec::new()
         } else if input_off >= bytes.len() || input_off + input_len > bytes.len() {
-            // Invalid bounds - this shouldn't happen with correct usage
+            // Invalid bounds; this shouldn't happen with correct usage
             // Return an error to avoid infinite loop
             return Err(ristretto_types::JavaError::IndexOutOfBoundsException {
                 index: input_off as i32,

@@ -116,7 +116,7 @@ pub async fn resolve_method_ref(
         });
     }
 
-    // Cache miss - perform resolution
+    // Cache miss; perform resolution
     let constant_pool = caller_class.constant_pool();
     let constant = constant_pool.try_get(method_index)?;
 
@@ -565,7 +565,10 @@ fn is_holder_class_for_resolution(class_name: &str) -> bool {
     // Class names may be in either format: java.lang.invoke.X or java/lang/invoke/X
     let normalized = class_name.replace('.', "/");
 
-    // Exact matches for holder classes
+    // Exact matches for holder classes whose methods are dynamically generated
+    // by the JDK at runtime and don't exist in class files. These class names
+    // are part of the JDK's internal bootstrap machinery and are the standard
+    // way to identify them (consistent with HotSpot's approach).
     matches!(
         normalized.as_str(),
         "java/lang/invoke/DirectMethodHandle$Holder"
@@ -619,11 +622,11 @@ mod tests {
 
     #[test]
     fn test_should_enforce_jpms_access_unnamed() {
-        // Both unnamed - don't enforce
+        // Both unnamed; don't enforce
         assert!(!should_enforce_jpms_access(None, None));
-        // Caller unnamed - don't enforce
+        // Caller unnamed; don't enforce
         assert!(!should_enforce_jpms_access(None, Some("app.module")));
-        // Target unnamed - don't enforce
+        // Target unnamed; don't enforce
         assert!(!should_enforce_jpms_access(Some("app.module"), None));
     }
 
@@ -758,14 +761,14 @@ mod tests {
         let vm = VM::default().await?;
         let class = vm.class("java.lang.Integer").await?;
 
-        // intValue is not static - good for virtual
+        // intValue is not static; good for virtual
         if let Some(method) = class.method("intValue", "()I") {
             let result =
                 validate_method_for_invoke(&method, "intValue", "()I", InvokeKind::Virtual);
             assert!(result.is_ok());
         }
 
-        // valueOf is static - bad for virtual
+        // valueOf is static; bad for virtual
         if let Some(method) = class.method("valueOf", "(I)Ljava/lang/Integer;") {
             let result = validate_method_for_invoke(
                 &method,

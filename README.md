@@ -33,15 +33,17 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 
 ### Features
 
-- Runtime classes based on LTS versions of [AWS Corretto](https://github.com/corretto)
-- Load classes from directories, jars, modules
-- Url class loading from jars and modules
-- Reading, writing, and verifying classes
-- A low-pause, concurrent, parallel mark-and-sweep garbage collector
-- Fully asynchronous execution using Rust's async/await
+- Standard runtime classes backed by LTS versions of [AWS Corretto](https://github.com/corretto).
+- Flexible class loading from directories, JARs, JMODs, JImage files, and URLs.
+- Built-in support for reading, writing, and strictly verifying Java bytecode.
+- Fully asynchronous, non-blocking execution using Rust async/await for:
     - java.lang.Thread
-    - java.io and java.nio
-- Parallel Just-In-Time (JIT) compilation for x86-64, aarch64, s390x and riscv64
+    - java.io & java.nio
+    - java.net
+- A low-pause, concurrent, and parallel mark-and-sweep garbage collector.
+- Parallel Just-In-Time (JIT) compilation for x86-64, aarch64, s390x, and riscv64 architectures.
+- WebAssembly (WASM) compilation support for single-threaded edge and browser deployments.
+- Native Maven POM (Project Object Model) parsing.
 
 ### Limitations
 

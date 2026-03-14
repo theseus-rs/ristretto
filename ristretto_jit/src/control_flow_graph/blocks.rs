@@ -108,7 +108,7 @@ pub(crate) fn get_blocks(
             stack = new_stack.clone();
             in_dead_code = false;
         } else if in_dead_code {
-            // Skip simulating this instruction - we don't have a valid stack state
+            // Skip simulating this instruction; we don't have a valid stack state
             continue;
         }
 

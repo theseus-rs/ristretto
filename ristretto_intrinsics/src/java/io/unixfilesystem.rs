@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+#[cfg(not(target_family = "wasm"))]
 use filetime::{FileTime, set_file_mtime};
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
@@ -18,7 +18,7 @@ use ristretto_types::{JavaObject, Result};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+#[cfg(not(target_family = "wasm"))]
 use sysinfo::Disks;
 
 bitflags! {
@@ -452,14 +452,14 @@ pub async fn get_space_0<T: ristretto_types::Thread + 'static>(
     let path = PathBuf::from(path);
     let result: i64;
 
-    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
+    #[cfg(target_family = "wasm")]
     {
         let _ = space_type;
         let _ = path;
         result = 0;
     }
 
-    #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+    #[cfg(not(target_family = "wasm"))]
     {
         let disks = Disks::new_with_refreshed_list();
         let disk = disks
@@ -637,14 +637,14 @@ pub async fn set_last_modified_time_0<T: ristretto_types::Thread + 'static>(
     let path = PathBuf::from(path);
     let modified: bool;
 
-    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
+    #[cfg(target_family = "wasm")]
     {
         let _ = time;
         let _ = path;
         modified = false;
     }
 
-    #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+    #[cfg(not(target_family = "wasm"))]
     {
         let seconds = time.saturating_div(1000);
         let nanoseconds = u32::try_from(time % 1000)?.saturating_mul(1_000_000);

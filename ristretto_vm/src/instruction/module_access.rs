@@ -398,11 +398,11 @@ mod tests {
 
     #[test]
     fn test_should_enforce_access_unnamed_modules() {
-        // Both unnamed - don't enforce
+        // Both unnamed; don't enforce
         assert!(!should_enforce_access(None, None));
-        // Source unnamed - don't enforce
+        // Source unnamed; don't enforce
         assert!(!should_enforce_access(None, Some("app.module")));
-        // Target unnamed - don't enforce
+        // Target unnamed; don't enforce
         assert!(!should_enforce_access(Some("app.module"), None));
     }
 

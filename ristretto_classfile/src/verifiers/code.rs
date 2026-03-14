@@ -161,7 +161,7 @@ pub(crate) fn verify(
         }
     }
 
-    // Exception table handlers - already instruction indices after parsing
+    // Exception table handlers; already instruction indices after parsing
     for entry in exception_table {
         if entry.handler_pc >= num_inst_u16 {
             return Err(InvalidInstructionOffset(u32::from(entry.handler_pc)));
@@ -247,7 +247,7 @@ mod test {
             Instruction::Nop,     // Index 0
             Instruction::Goto(3), // Index 1, jumps to instruction 3
             Instruction::Return,  // Index 2
-            Instruction::Return,  // Index 3 - target
+            Instruction::Return,  // Index 3; target
         ];
 
         // StackMapTable frame at instruction index 3
@@ -269,7 +269,7 @@ mod test {
         let class_file = ClassFile::default();
         let method = get_dummy_method();
         let code = vec![
-            Instruction::Goto(10), // Jump to instruction index 10 (invalid - only 1 instruction)
+            Instruction::Goto(10), // Jump to instruction index 10 (invalid; only 1 instruction)
         ];
 
         assert_eq!(
@@ -289,7 +289,7 @@ mod test {
             Instruction::Nop,     // Index 0
             Instruction::Goto(3), // Index 1, jumps to instruction 3
             Instruction::Return,  // Index 2
-            Instruction::Return,  // Index 3 - target
+            Instruction::Return,  // Index 3; target
         ];
         // Missing StackMapTable
 
@@ -313,7 +313,7 @@ mod test {
             Instruction::Nop,     // Index 0
             Instruction::Goto(3), // Index 1, jumps to instruction 3
             Instruction::Return,  // Index 2
-            Instruction::Return,  // Index 3 - target
+            Instruction::Return,  // Index 3; target
         ];
 
         // StackMapTable has frame at instruction index 2, but we jump to instruction 3
@@ -376,10 +376,10 @@ mod test {
                 high: 2,
                 offsets: vec![1, 2, 3], // Relative: 0+1=1, 0+2=2, 0+3=3
             }), // Index 0
-            Instruction::Nop,    // Index 1 - target
-            Instruction::Nop,    // Index 2 - target
-            Instruction::Nop,    // Index 3 - target
-            Instruction::Return, // Index 4 - default target
+            Instruction::Nop,    // Index 1; target
+            Instruction::Nop,    // Index 2; target
+            Instruction::Nop,    // Index 3; target
+            Instruction::Return, // Index 4; default target
         ];
 
         let result = verify(&class_file, &method, 0, 10, &code, &[], &[]);
@@ -440,9 +440,9 @@ mod test {
                 default: 3, // Relative: 0 + 3 = 3
                 pairs,
             }), // Index 0
-            Instruction::Nop,    // Index 1 - target for match 1
-            Instruction::Nop,    // Index 2 - target for match 2
-            Instruction::Return, // Index 3 - default target
+            Instruction::Nop,    // Index 1; target for match 1
+            Instruction::Nop,    // Index 2; target for match 2
+            Instruction::Return, // Index 3; default target
         ];
 
         let result = verify(&class_file, &method, 0, 10, &code, &[], &[]);

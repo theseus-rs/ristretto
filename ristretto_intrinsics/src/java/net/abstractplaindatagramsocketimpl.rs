@@ -15,7 +15,7 @@ pub async fn is_reuse_port_available_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.net.AbstractPlainDatagramSocketImpl.isReusePortAvailable0()Z")
+    Ok(Some(Value::from(false)))
 }
 
 #[cfg(test)]
@@ -23,11 +23,10 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.net.AbstractPlainDatagramSocketImpl.isReusePortAvailable0()Z"
-    )]
-    async fn test_is_reuse_port_available_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_reuse_port_available_0(thread, Parameters::default()).await;
+    async fn test_is_reuse_port_available_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = is_reuse_port_available_0(thread, Parameters::default()).await?;
+        assert_eq!(Some(Value::from(false)), result);
+        Ok(())
     }
 }

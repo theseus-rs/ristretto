@@ -2,14 +2,14 @@
 //!
 //! This module provides all configuration-related types for the VM, including:
 //!
-//! - [`Configuration`] - The main configuration struct
-//! - [`ConfigurationBuilder`] - Builder for creating configurations
+//! - [`Configuration`]; The main configuration struct
+//! - [`ConfigurationBuilder`]; Builder for creating configurations
 //! - JPMS module configuration types:
-//!   - [`MainModule`] - Main module specification (--module or -m)
-//!   - [`ModuleRead`] - Read edge between modules (--add-reads)
-//!   - [`ModuleExport`] - Export directive (--add-exports)
-//!   - [`ModuleOpens`] - Opens directive for reflection (--add-opens)
-//!   - [`ModulePatch`] - Module patch (--patch-module)
+//!   - [`MainModule`]; Main module specification (--module or -m)
+//!   - [`ModuleRead`]; Read edge between modules (--add-reads)
+//!   - [`ModuleExport`]; Export directive (--add-exports)
+//!   - [`ModuleOpens`]; Opens directive for reflection (--add-opens)
+//!   - [`ModulePatch`]; Module patch (--patch-module)
 //!
 //! # Example
 //!

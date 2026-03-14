@@ -64,7 +64,9 @@ pub static POLYMORPHIC_METHODS: LazyLock<AHashMap<(&'static str, &'static str), 
             ("java/lang/invoke/MethodHandle", "linkToVirtual"),
             "([Ljava/lang/Object;)Ljava/lang/Object;",
         );
-        // VarHandle polymorphic methods
+        // VarHandle signature-polymorphic methods as defined by JVMS §5.4.3.5.
+        // These method names are part of the public java.lang.invoke.VarHandle API
+        // and are stable across Java versions.
         map.insert(
             ("java/lang/invoke/VarHandle", "get"),
             "([Ljava/lang/Object;)Ljava/lang/Object;",
@@ -2301,7 +2303,7 @@ mod tests {
         let action = class.begin_initialization(thread_id)?;
         assert_eq!(action, InitializationAction::ShouldInitialize);
 
-        // Same thread tries again (reentrancy) - should return AlreadyInitializing
+        // Same thread tries again (reentrancy); should return AlreadyInitializing
         let action = class.begin_initialization(thread_id)?;
         assert_eq!(action, InitializationAction::AlreadyInitializing);
 
@@ -2318,7 +2320,7 @@ mod tests {
         let action = class.begin_initialization(thread_id_1)?;
         assert_eq!(action, InitializationAction::ShouldInitialize);
 
-        // Thread 2 tries to initialize - should return WaitForInitialization
+        // Thread 2 tries to initialize; should return WaitForInitialization
         let action = class.begin_initialization(thread_id_2)?;
         assert_eq!(action, InitializationAction::WaitForInitialization);
 

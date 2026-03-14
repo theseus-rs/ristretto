@@ -851,7 +851,7 @@ pub async fn get_modifiers<T: Thread + 'static>(
                         .try_get_class(inner_class.class_info_index)
                         .is_ok_and(|inner_class_name| inner_class_name == class_name)
                     {
-                        // Found our class - return the access flags from the inner class entry
+                        // Found our class; return the access flags from the inner class entry
                         let modifiers = i32::from(inner_class.access_flags.bits());
                         return Ok(Some(Value::Int(modifiers)));
                     }
@@ -1367,19 +1367,19 @@ pub async fn get_simple_binary_name_0<T: Thread + 'static>(
         let non_digit_start = binary_name.find(|c: char| !c.is_ascii_digit());
         match non_digit_start {
             Some(pos) => {
-                // Local class - return the part after the digits
+                // Local class; return the part after the digits
                 let local_name = &binary_name[pos..];
                 let value: Value = local_name.to_string().to_object(&thread).await?;
                 return Ok(Some(value));
             }
             None => {
-                // Anonymous class - purely numeric, return null
+                // Anonymous class; purely numeric, return null
                 return Ok(Some(Value::Object(None)));
             }
         }
     }
 
-    // Named inner class - return the full name after $
+    // Named inner class; return the full name after $
     let value: Value = binary_name.to_string().to_object(&thread).await?;
     Ok(Some(value))
 }

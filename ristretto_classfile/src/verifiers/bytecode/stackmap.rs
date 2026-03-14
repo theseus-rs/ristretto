@@ -195,7 +195,7 @@ impl DecodedStackMapTable {
 
         // Copy stack
         for ty in &decoded.stack {
-            // Ignore potential overflow - should have been validated during decode
+            // Ignore potential overflow; should have been validated during decode
             let _ = frame.push(ty.clone());
         }
 

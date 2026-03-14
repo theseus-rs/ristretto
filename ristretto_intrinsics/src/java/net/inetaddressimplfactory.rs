@@ -15,7 +15,7 @@ pub async fn is_ipv_6_supported<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.net.InetAddressImplFactory.isIPv6Supported()Z")
+    Ok(Some(Value::from(false)))
 }
 
 #[cfg(test)]
@@ -23,11 +23,10 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.net.InetAddressImplFactory.isIPv6Supported()Z"
-    )]
-    async fn test_is_ipv_6_supported() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_ipv_6_supported(thread, Parameters::default()).await;
+    async fn test_is_ipv_6_supported() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = is_ipv_6_supported(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
     }
 }

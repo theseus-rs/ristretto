@@ -38,6 +38,15 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
     managed_files::close(vm.file_handles(), fd).await;
+    // NIO SocketChannel/ServerSocketChannel route their close through
+    // FileDispatcherImpl, so also clean up any socket-related state to
+    // prevent leaking SocketHandle, SocketMode, SocketTimeout, and
+    // SocketDomain entries.
+    #[cfg(not(target_family = "wasm"))]
+    {
+        #[expect(clippy::cast_possible_truncation)]
+        vm.socket_handles().remove(&(fd as i32)).await;
+    }
     Ok(None)
 }
 
@@ -53,6 +62,8 @@ pub async fn close_int_fd<T: ristretto_types::Thread + 'static>(
     let fd = parameters.pop_int()?;
     let vm = thread.vm()?;
     managed_files::close(vm.file_handles(), i64::from(fd)).await;
+    #[cfg(not(target_family = "wasm"))]
+    vm.socket_handles().remove(&fd).await;
     Ok(None)
 }
 
@@ -116,6 +127,15 @@ pub async fn force_0<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("sun/nio/ch/FileDispatcherImpl.init()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn init<T: ristretto_types::Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(None)
+}
+
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.init0()V", GreaterThanOrEqual(JAVA_21))]
+#[async_method]
+pub async fn init_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -553,6 +573,14 @@ mod tests {
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = init(thread, Parameters::default()).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_0() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = init_0(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }

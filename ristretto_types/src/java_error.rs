@@ -25,6 +25,12 @@ pub enum JavaError {
     /// - [ArrayIndexOutOfBoundsException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/ArrayIndexOutOfBoundsException.html)
     #[error("Index {index} out of bounds for length {length}")]
     ArrayIndexOutOfBoundsException { index: i32, length: usize },
+    /// `BindException`
+    ///
+    /// # References
+    /// - [BindException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/BindException.html)
+    #[error("{0}")]
+    BindException(String),
     /// `BootstrapMethodError`
     ///
     /// # References
@@ -64,6 +70,12 @@ pub enum JavaError {
     /// - [CloneNotSupportedException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/CloneNotSupportedException.html)
     #[error("{0}")]
     CloneNotSupportedException(String),
+    /// `ConnectException`
+    ///
+    /// # References
+    /// - [ConnectException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/ConnectException.html)
+    #[error("{0}")]
+    ConnectException(String),
     /// `ExceptionInInitializerError`
     ///
     /// # References
@@ -175,6 +187,18 @@ pub enum JavaError {
     /// - [RuntimeException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/RuntimeException.html)
     #[error("{0}")]
     RuntimeException(String),
+    /// `SocketException`
+    ///
+    /// # References
+    /// - [SocketException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/SocketException.html)
+    #[error("{0}")]
+    SocketException(String),
+    /// `SocketTimeoutException`
+    ///
+    /// # References
+    /// - [SocketTimeoutException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/SocketTimeoutException.html)
+    #[error("{0}")]
+    SocketTimeoutException(String),
     /// `StackOverflowError`
     ///
     /// # References
@@ -204,12 +228,14 @@ impl JavaError {
                 "java.lang.ArrayIndexOutOfBoundsException"
             }
             JavaError::ArithmeticException(_) => "java.lang.ArithmeticException",
+            JavaError::BindException(_) => "java.net.BindException",
             JavaError::BootstrapMethodError(_) => "java.lang.BootstrapMethodError",
             JavaError::ClassCastException { .. } => "java.lang.ClassCastException",
             JavaError::ClassCircularityError(_) => "java.lang.ClassCircularityError",
             JavaError::ClassFormatError(_) => "java.lang.ClassFormatError",
             JavaError::ClassNotFoundException(_) => "java.lang.ClassNotFoundException",
             JavaError::CloneNotSupportedException(_) => "java.lang.CloneNotSupportedException",
+            JavaError::ConnectException(_) => "java.net.ConnectException",
             JavaError::ExceptionInInitializerError(_) => "java.lang.ExceptionInInitializerError",
             JavaError::FileNotFoundException(_) => "java.io.FileNotFoundException",
             JavaError::IllegalAccessError(_) => "java.lang.IllegalAccessError",
@@ -229,6 +255,8 @@ impl JavaError {
             JavaError::NegativeArraySizeException(_) => "java.lang.NegativeArraySizeException",
             JavaError::NullPointerException(_) => "java.lang.NullPointerException",
             JavaError::RuntimeException(_) => "java.lang.RuntimeException",
+            JavaError::SocketException(_) => "java.net.SocketException",
+            JavaError::SocketTimeoutException(_) => "java.net.SocketTimeoutException",
             JavaError::StackOverflowError(_) => "java.lang.StackOverflowError",
             JavaError::UnsupportedOperationException(_) => {
                 "java.lang.UnsupportedOperationException"
@@ -283,6 +311,13 @@ mod tests {
     }
 
     #[test]
+    fn test_bind_exception() {
+        let error = JavaError::BindException("Address already in use".to_string());
+        assert_eq!(error.class_name(), "java.net.BindException");
+        assert_eq!(error.message(), "Address already in use");
+    }
+
+    #[test]
     fn test_bootstrap_method_error() {
         let error = JavaError::BootstrapMethodError("foo".to_string());
         assert_eq!(error.class_name(), "java.lang.BootstrapMethodError");
@@ -328,6 +363,13 @@ mod tests {
         let error = JavaError::CloneNotSupportedException("foo".to_string());
         assert_eq!(error.class_name(), "java.lang.CloneNotSupportedException");
         assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
+    fn test_connect_exception() {
+        let error = JavaError::ConnectException("Connection refused".to_string());
+        assert_eq!(error.class_name(), "java.net.ConnectException");
+        assert_eq!(error.message(), "Connection refused");
     }
 
     #[test]
@@ -457,6 +499,20 @@ mod tests {
         let error = JavaError::RuntimeException("foo".to_string());
         assert_eq!(error.class_name(), "java.lang.RuntimeException");
         assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
+    fn test_socket_exception() {
+        let error = JavaError::SocketException("Connection reset".to_string());
+        assert_eq!(error.class_name(), "java.net.SocketException");
+        assert_eq!(error.message(), "Connection reset");
+    }
+
+    #[test]
+    fn test_socket_timeout_exception() {
+        let error = JavaError::SocketTimeoutException("Read timed out".to_string());
+        assert_eq!(error.class_name(), "java.net.SocketTimeoutException");
+        assert_eq!(error.message(), "Read timed out");
     }
 
     #[test]

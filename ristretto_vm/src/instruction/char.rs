@@ -65,7 +65,10 @@ pub(crate) fn castore(stack: &mut OperandStack) -> Result<ExecutionResult> {
         length,
     })?;
     if let Some(element) = array.get_mut(index) {
-        *element = u16::try_from(value)?;
+        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+        {
+            *element = value as u32 as u16;
+        }
     } else {
         return Err(ArrayIndexOutOfBoundsException {
             index: original_index,

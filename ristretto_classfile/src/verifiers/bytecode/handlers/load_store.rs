@@ -346,7 +346,7 @@ pub fn handle_aaload<C: VerificationContext>(frame: &mut Frame, _context: &C) ->
             frame.push(component.as_ref().clone())
         }
         VerificationType::Object(name) if name.as_bytes().first() == Some(&b'[') => {
-            // Legacy array representation - parse component type
+            // Legacy array representation; parse component type
             let component = parse_array_component(&name.to_str_lossy())?;
             frame.push(component)
         }
@@ -746,7 +746,7 @@ fn parse_array_component(descriptor: &str) -> Result<VerificationType> {
             Ok(VerificationType::Array(Box::new(inner)))
         }
         Some('L') => {
-            // Object type - extract class name
+            // Object type; extract class name
             if let Some(end) = component_desc.find(';') {
                 let class_name = &component_desc[1..end];
                 Ok(VerificationType::Object(JavaString::from(class_name)))

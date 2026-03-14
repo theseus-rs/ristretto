@@ -65,7 +65,7 @@ pub fn handle_pop2(frame: &mut Frame) -> Result<()> {
             "pop2: unexpected category 2 value (should be Top on top)".to_string(),
         ));
     } else {
-        // Category 1 value - need to pop another category 1
+        // Category 1 value; need to pop another category 1
         let value2 = frame.pop()?;
         if value2.is_category2() || value2 == VerificationType::Top {
             return Err(VerifyError::VerifyError(

@@ -1174,7 +1174,7 @@ pub(crate) async fn invokedynamic(
         .is_assignable_from(&thread, &object_class)
         .await?
     {
-        // It's a CallSite - extract the target MethodHandle
+        // It's a CallSite; extract the target MethodHandle
         // Use the actual runtime class (e.g., ConstantCallSite) not the abstract CallSite class
         let get_target_method =
             object_class.try_get_method("getTarget", "()Ljava/lang/invoke/MethodHandle;")?;
@@ -1260,7 +1260,7 @@ pub(crate) async fn invokedynamic(
 
     // Step 6: Handle the return value based on the method descriptor
     if let Some(_return_type) = return_type {
-        // Method has a return value - push it onto the operand stack
+        // Method has a return value; push it onto the operand stack
         stack.push(result)?;
     }
 

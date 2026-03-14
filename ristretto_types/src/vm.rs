@@ -1,4 +1,6 @@
 use crate::Result;
+#[cfg(not(target_family = "wasm"))]
+use crate::handles::SocketHandle;
 use crate::handles::{FileHandle, HandleManager, ThreadHandle};
 use crate::module_access::ModuleAccess;
 use crate::monitor::MonitorRegistry;
@@ -51,6 +53,9 @@ pub trait VM: Send + Sync {
     /// Returns an error if the suffix cannot be generated.
     fn next_hidden_class_suffix(&self) -> Result<u64>;
 
+    /// Get the next NIO file descriptor.
+    fn next_nio_fd(&self) -> i32;
+
     /// Load a class by name.
     ///
     /// # Errors
@@ -95,6 +100,10 @@ pub trait VM: Send + Sync {
 
     /// Get the file handles manager.
     fn file_handles(&self) -> &HandleManager<i64, FileHandle>;
+
+    /// Get the socket handles manager.
+    #[cfg(not(target_family = "wasm"))]
+    fn socket_handles(&self) -> &HandleManager<i32, SocketHandle>;
 
     /// Get the thread handles manager.
     fn thread_handles(&self) -> &HandleManager<u64, ThreadHandle<Self::ThreadType>>;
@@ -170,6 +179,10 @@ impl<V: VM> VM for Arc<V> {
         (**self).next_hidden_class_suffix()
     }
 
+    fn next_nio_fd(&self) -> i32 {
+        (**self).next_nio_fd()
+    }
+
     fn class<'a>(&'a self, class_name: &'a str) -> crate::BoxFuture<'a, Result<Arc<Class>>> {
         (**self).class(class_name)
     }
@@ -223,6 +236,11 @@ impl<V: VM> VM for Arc<V> {
 
     fn file_handles(&self) -> &HandleManager<i64, FileHandle> {
         (**self).file_handles()
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn socket_handles(&self) -> &HandleManager<i32, SocketHandle> {
+        (**self).socket_handles()
     }
 
     fn monitor_registry(&self) -> &MonitorRegistry {

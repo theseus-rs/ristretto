@@ -186,8 +186,8 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_int(1); // adler
         parameters.push_reference(wrapped_object);
-        parameters.push_int(1); // offset - skip 'x'
-        parameters.push_int(3); // length - just 'a', 'b', 'c'
+        parameters.push_int(1); // offset; skip 'x'
+        parameters.push_int(3); // length; just 'a', 'b', 'c'
 
         let result = update_bytes(thread, parameters).await?;
         let adler = result.expect("adler value").as_i32()?;
@@ -242,7 +242,7 @@ mod tests {
     async fn test_update_byte_buffer() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        // Test with zero length - should return unchanged adler
+        // Test with zero length; should return unchanged adler
         let mut parameters = Parameters::default();
         parameters.push_int(1); // adler
         parameters.push_long(0); // addr (dummy)

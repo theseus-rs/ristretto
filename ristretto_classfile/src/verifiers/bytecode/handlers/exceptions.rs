@@ -43,7 +43,7 @@ pub fn handle_athrow<C: VerificationContext>(frame: &mut Frame, context: &C) -> 
             // We can't always verify this statically without class hierarchy info
             // So we just check it's a reference type
             if let VerificationType::Object(_) = &objectref {
-                // Assume valid - will be checked at runtime
+                // Assume valid; will be checked at runtime
             } else if let VerificationType::Array(_) = &objectref {
                 return Err(VerifyError::VerifyError(
                     "athrow: arrays are not throwable".to_string(),
@@ -52,7 +52,7 @@ pub fn handle_athrow<C: VerificationContext>(frame: &mut Frame, context: &C) -> 
         }
     }
 
-    // athrow clears the stack - but this is handled by control flow
+    // athrow clears the stack; but this is handled by control flow
     // The frame after athrow is not used (control transfers to handler)
 
     Ok(())

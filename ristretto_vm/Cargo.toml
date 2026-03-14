@@ -23,17 +23,12 @@ async-recursion = { workspace = true }
 bitflags = { workspace = true }
 byte-unit = { workspace = true }
 byteorder = { workspace = true }
-console = { workspace = true }
 dashmap = { workspace = true }
-dirs = { workspace = true }
-filetime = { workspace = true }
 flate2 = { workspace = true }
 indexmap = { workspace = true }
 jiff = { workspace = true }
-os_info = { workspace = true }
 parking_lot = { workspace = true }
 phf = { workspace = true }
-rayon = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.29.0" }
 ristretto_classloader = { path = "../ristretto_classloader", version = "0.29.0" }
 ristretto_gc = { path = "../ristretto_gc", version = "0.29.0" }
@@ -41,8 +36,6 @@ ristretto_intrinsics = { path = "../ristretto_intrinsics", version = "0.29.0" }
 ristretto_jit = { path = "../ristretto_jit", version = "0.29.0" }
 ristretto_macros = { path = "../ristretto_macros", version = "0.29.0" }
 ristretto_types = { path = "../ristretto_types", version = "0.29.0" }
-stacker = { workspace = true }
-sysinfo = { workspace = true }
 sys-locale = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
@@ -50,12 +43,19 @@ whoami = { workspace = true }
 zerocopy = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-getrandom = { workspace = true, features = ["wasm_js"] }
+getrandom = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
 wasm-bindgen-futures = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
+console = { workspace = true }
+dirs = { workspace = true }
+filetime = { workspace = true }
 getrandom = { workspace = true }
+os_info = { workspace = true }
+rayon = { workspace = true }
+stacker = { workspace = true }
+sysinfo = { workspace = true }
 thread-priority = { workspace = true }
 tokio = { workspace = true, features = ["fs", "time"] }
 

@@ -29,6 +29,10 @@ thiserror = { workspace = true }
 tokio = { workspace = true }
 zerocopy = { workspace = true }
 
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+socket2 = { workspace = true }
+tokio = { workspace = true, features = ["net"] }
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt", "macros", "fs"] }
 tempfile = { workspace = true }

@@ -13,9 +13,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn cleanup_close_0<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.net.SocketCleanable.cleanupClose0(I)V")
+    let _fd = parameters.pop_int()?;
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -23,9 +24,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.net.SocketCleanable.cleanupClose0(I)V")]
     async fn test_cleanup_close_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = cleanup_close_0(thread, Parameters::default()).await;
+        let result = cleanup_close_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

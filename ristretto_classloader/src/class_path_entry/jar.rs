@@ -1,6 +1,7 @@
 use crate::Error::{ArchiveError, ClassNotFound, FileNotFound, ParseError};
 use crate::Result;
 use crate::class_path_entry::manifest::Manifest;
+#[cfg(not(target_family = "wasm"))]
 use reqwest::Client;
 use ristretto_classfile::ClassFile;
 use std::ffi::{OsStr, OsString};
@@ -212,11 +213,18 @@ impl Archive {
             let archive = ZipArchive::new(cursor)?;
             self.zip_archive = Some(archive);
         } else if let Some(url) = &self.url {
-            let client = Client::new();
-            let bytes = client.get(url).send().await?.bytes().await?.to_vec();
-            let cursor = io::Cursor::new(bytes);
-            let archive = ZipArchive::new(cursor)?;
-            self.zip_archive = Some(archive);
+            #[cfg(not(target_family = "wasm"))]
+            {
+                let client = Client::new();
+                let bytes = client.get(url).send().await?.bytes().await?.to_vec();
+                let cursor = io::Cursor::new(bytes);
+                let archive = ZipArchive::new(cursor)?;
+                self.zip_archive = Some(archive);
+            }
+            #[cfg(target_family = "wasm")]
+            return Err(ArchiveError(format!(
+                "URL based archives are not supported on wasm: {url}"
+            )));
         } else if let Some(bytes) = &self.bytes {
             let bytes = bytes.to_vec();
             let cursor = io::Cursor::new(bytes);

@@ -189,7 +189,7 @@ impl Compiler {
                 // We've switched to a new block, so it's not terminated yet
                 block_is_terminated = false;
             } else if block_is_terminated {
-                // Skip this instruction - it's unreachable dead code after a control flow change
+                // Skip this instruction; it's unreachable dead code after a control flow change
                 // and not a target of any jump
                 continue;
             }

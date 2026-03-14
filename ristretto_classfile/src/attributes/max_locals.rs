@@ -66,8 +66,8 @@ use crate::{BaseType, ConstantPool, FieldType, Method, MethodAccessFlags, Result
 /// // Slot 0: this
 /// // Slot 1: p1 (int)
 /// // Slots 2, 3: p2 (long)
-/// // Slot 4: istore(4) - int
-/// // Slots 5, 6: lstore(5) - long
+/// // Slot 4: istore(4); int
+/// // Slots 5, 6: lstore(5); long
 /// // Highest index used is 6. So, max_locals should be 7 (0-6).
 /// let max_locals_val = instructions.max_locals(&constant_pool, &method)?;
 /// assert_eq!(max_locals_val, 7);

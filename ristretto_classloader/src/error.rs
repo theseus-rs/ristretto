@@ -60,6 +60,7 @@ pub enum Error {
     #[error("Poisoned lock: {0}")]
     PoisonedLock(String),
     /// An error occurred while performing a request
+    #[cfg(not(target_family = "wasm"))]
     #[error(transparent)]
     RequestError(#[from] reqwest::Error),
     /// Error serializing or deserializing data

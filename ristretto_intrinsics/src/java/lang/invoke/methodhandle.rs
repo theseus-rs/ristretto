@@ -153,7 +153,7 @@ async fn interpret_name<T: ristretto_types::Thread + 'static>(
         (args_elements, function, type_val_opt)
     };
 
-    // Resolve each argument - if it's a Name, look it up in values
+    // Resolve each argument; if it's a Name, look it up in values
     let mut resolved_args: Vec<Value> = Vec::with_capacity(args_elements.len());
     for arg_val in args_elements {
         let resolved = resolve_lambda_form_argument(&arg_val, values)?;
@@ -185,14 +185,14 @@ async fn interpret_name<T: ristretto_types::Thread + 'static>(
     if let Some(ordinal) = intrinsic_ordinal {
         match ordinal {
             1 => {
-                // IDENTITY - just return the first argument
+                // IDENTITY; just return the first argument
                 if let Some(arg) = resolved_args.first() {
                     return Ok(arg.clone());
                 }
                 return Ok(Value::Object(None));
             }
             2 => {
-                // ZERO - return zero/null value
+                // ZERO; return zero/null value
                 if let Some(ref type_val) = type_val_opt
                     && !type_val.is_null()
                 {
@@ -200,12 +200,12 @@ async fn interpret_name<T: ristretto_types::Thread + 'static>(
                 }
                 return Ok(Value::Object(None));
             }
-            // NONE (0) and other intrinsics - fall through to regular dispatch
+            // NONE (0) and other intrinsics; fall through to regular dispatch
             _ => {}
         }
     }
 
-    // If member is null, this is an error - we can't invoke without a target
+    // If member is null, this is an error; we can't invoke without a target
     if member.is_null() {
         return Err(InternalError(
             "NamedFunction.member is null - cannot invoke".to_string(),
@@ -234,7 +234,7 @@ fn get_object_array_elements(value: &Value) -> Result<Vec<Value>> {
     Ok(elements.to_vec())
 }
 
-/// Resolve a `LambdaForm` argument - if it's a `Name`, look up its value
+/// Resolve a `LambdaForm` argument; if it's a `Name`, look up its value
 fn resolve_lambda_form_argument(arg_val: &Value, values: &[Value]) -> Result<Value> {
     if arg_val.is_null() {
         return Ok(arg_val.clone());
@@ -245,7 +245,7 @@ fn resolve_lambda_form_argument(arg_val: &Value, values: &[Value]) -> Result<Val
 
     if let Some(name) = class_name {
         if name == "java/lang/invoke/LambdaForm$Name" {
-            // It's a Name - get its index and look up the value
+            // It's a Name; get its index and look up the value
             let arg_ref = arg_val.as_object_ref()?;
             let index = usize::try_from(arg_ref.value("index")?.as_i32()?)?;
             if index < values.len() {
@@ -256,7 +256,7 @@ fn resolve_lambda_form_argument(arg_val: &Value, values: &[Value]) -> Result<Val
                 values.len()
             )));
         }
-        // It's a constant value - unbox if needed
+        // It's a constant value; unbox if needed
         return unbox_if_wrapper(arg_val);
     }
 
@@ -669,7 +669,7 @@ pub async fn call_method_handle_target<T: ristretto_types::Thread + 'static>(
         target_class_object.value("name")?.as_string()?
     };
 
-    // Handle Holder classes and LambdaForm classes specially - these are synthetic entry points
+    // Handle Holder classes and LambdaForm classes specially; these are synthetic entry points
     // that may have dynamically generated methods not present in the pre-compiled class files.
     // We use the LambdaForm interpreter to dispatch these methods.
     if is_holder_class(&target_class_name) {
@@ -713,7 +713,7 @@ pub async fn call_method_handle_target<T: ristretto_types::Thread + 'static>(
 
         if let Some(class_name) = type_class {
             if class_name == "java/lang/invoke/MethodType" {
-                // It's a method - get the descriptor string
+                // It's a method; get the descriptor string
                 let method_descriptor = thread
                     .invoke(
                         "java.lang.invoke.MethodType",
@@ -726,14 +726,14 @@ pub async fn call_method_handle_target<T: ristretto_types::Thread + 'static>(
                     _ => return Err(InternalError("Invalid MethodType".to_string())),
                 }
             } else if class_name == "java/lang/Class" {
-                // It's a field - get the class name and convert to descriptor
+                // It's a field; get the class name and convert to descriptor
                 let type_ref = type_val.as_object_ref()?;
                 let field_type_name = type_ref.value("name")?.as_string()?;
                 // For field access, we just need the field name, not the type descriptor
                 // The type is used to verify the field but we don't need it for GetField
                 format!("L{};", field_type_name.replace('.', "/"))
             } else {
-                // Unknown type - try to use descriptor field
+                // Unknown type; try to use descriptor field
                 if let Ok(descriptor) = member_descriptor.and_then(|value| value.as_string()) {
                     descriptor
                 } else {
@@ -914,7 +914,7 @@ async fn invoke_special<T: ristretto_types::Thread + 'static>(
             .await?;
         Ok(instance)
     } else if method_name == "<init>" {
-        // InvokeSpecial with <init> and a receiver - complete initialization of existing object
+        // InvokeSpecial with <init> and a receiver; complete initialization of existing object
         let receiver = arguments.remove(0);
         let method = target_class.try_get_method(method_name, method_descriptor)?;
         let mut call_arguments = vec![receiver.clone()];
@@ -1025,7 +1025,7 @@ async fn dispatch_holder_method_internal<T: ristretto_types::Thread + 'static>(
             return Ok(value);
         }
 
-        // Fallback - just return the first argument
+        // Fallback; just return the first argument
         return Ok(method_handle);
     }
 
@@ -1072,7 +1072,7 @@ async fn dispatch_holder_method_internal<T: ristretto_types::Thread + 'static>(
             if is_holder_class(class_name) {
                 debug!("newInvokeSpecial: member points to holder class, skipping");
             } else {
-                // The member points to a real constructor - use it
+                // The member points to a real constructor; use it
                 return call_method_handle_target(thread, &member, arguments).await;
             }
         }
@@ -1084,7 +1084,7 @@ async fn dispatch_holder_method_internal<T: ristretto_types::Thread + 'static>(
             input_args.push(method_handle.clone());
             input_args.extend(arguments.clone());
 
-            // Try LambdaForm interpretation - this should handle newInvokeSpecial correctly
+            // Try LambdaForm interpretation; this should handle newInvokeSpecial correctly
             match interpret_lambda_form(thread.clone(), &form, input_args).await {
                 Ok(result) => return Ok(result),
                 Err(e) => {
@@ -1103,7 +1103,7 @@ async fn dispatch_holder_method_internal<T: ristretto_types::Thread + 'static>(
     // This can happen with dynamically generated holder methods
     let is_object = method_handle.as_object_ref().is_ok();
     if !is_object {
-        // Not an object - might be a primitive value or null
+        // Not an object; might be a primitive value or null
         debug!(
             "dispatch_holder_method: first arg is not an object for {}",
             method_name
@@ -1195,7 +1195,7 @@ fn extract_target_and_bound_args(
         // Collect bound arguments from this level
         let mut bound_args = Vec::new();
 
-        // Try to get argL0 - this is often the inner MethodHandle
+        // Try to get argL0; this is often the inner MethodHandle
         if let Ok(arg_l0) = mh_ref.value("argL0")
             && !arg_l0.is_null()
         {
@@ -1203,7 +1203,7 @@ fn extract_target_and_bound_args(
             let arg_l0_class = arg_l0.as_object_ref()?.class().name().to_string();
 
             if arg_l0_class.contains("MethodHandle") {
-                // argL0 is the inner MethodHandle - recurse into it
+                // argL0 is the inner MethodHandle; recurse into it
                 let (inner_target, mut inner_bound) =
                     extract_target_and_bound_args(&arg_l0, depth + 1, max_depth)?;
 

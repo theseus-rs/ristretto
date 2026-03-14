@@ -1,10 +1,13 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
-use crate::JavaError::{RuntimeException, StackOverflowError, VerifyError};
+#[cfg(not(target_family = "wasm"))]
+use crate::JavaError::StackOverflowError;
+use crate::JavaError::{RuntimeException, VerifyError};
 use crate::Parameters;
 use crate::RustValue;
 use crate::configuration::VerifyMode;
 use crate::rust_value::process_values;
 use crate::{Frame, Result, VM, jit};
+#[cfg(not(target_family = "wasm"))]
 use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{FieldAccessFlags, FieldType, JavaStr, MethodAccessFlags};
@@ -15,6 +18,7 @@ use ristretto_macros::async_method;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
+#[cfg(not(target_family = "wasm"))]
 use sysinfo::{Pid, ProcessRefreshKind, RefreshKind, System};
 use tokio::sync::{Notify, RwLock};
 use tokio::time::{Instant, timeout_at};
@@ -153,7 +157,7 @@ impl Thread {
         }
     }
 
-    /// Sleep the thread for the specified duration.  The sleep is interruptible - if another
+    /// Sleep the thread for the specified duration.  The sleep is interruptible; if another
     /// thread calls `interrupt()`, this method will return `true` to indicate the thread was
     /// interrupted, clearing the interrupt flag.
     ///
@@ -165,7 +169,7 @@ impl Thread {
     ///
     /// Returns `true` if the sleep was interrupted, `false` if it completed normally.
     pub async fn sleep(&self, duration: Duration) -> bool {
-        // Check if already interrupted - return immediately if so
+        // Check if already interrupted; return immediately if so
         if self.is_interrupted(true) {
             return true;
         }
@@ -185,7 +189,7 @@ impl Thread {
                 false
             }
             () = notified => {
-                // We were notified - check if it was an interrupt
+                // We were notified; check if it was an interrupt
                 self.is_interrupted(true)
             }
         }
@@ -459,7 +463,7 @@ impl Thread {
 
             match action {
                 // Step 1 & 3: Already initialized or being initialized by current thread
-                // Per JLS §12.4.2, circularity by same thread is allowed - return immediately
+                // Per JLS §12.4.2, circularity by same thread is allowed; return immediately
                 InitializationAction::AlreadyInitialized
                 | InitializationAction::AlreadyInitializing => {
                     return Ok(());
@@ -757,6 +761,7 @@ impl Thread {
             .into());
         } else {
             // Check for native stack overflow before creating a new frame
+            #[cfg(not(target_family = "wasm"))]
             if let Some(remaining) = stacker::remaining_stack()
                 && remaining < 512 * 1024
             {
@@ -832,18 +837,22 @@ impl Thread {
             "int"
         };
         let access_flags = method.access_flags();
-        let system = System::new_with_specifics(
-            RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
-        );
-
-        let pid = std::process::id() as usize;
-        let memory = if let Some(process) = system.process(Pid::from(pid)) {
-            let memory = process.memory();
-            let memory = Byte::from_u64(memory).get_appropriate_unit(UnitType::Decimal);
-            format!(" ({execution_type}; {memory:#.3})")
-        } else {
-            format!("({execution_type})")
+        #[cfg(not(target_family = "wasm"))]
+        let memory = {
+            let system = System::new_with_specifics(
+                RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
+            );
+            let pid = std::process::id() as usize;
+            if let Some(process) = system.process(Pid::from(pid)) {
+                let memory = process.memory();
+                let memory = Byte::from_u64(memory).get_appropriate_unit(UnitType::Decimal);
+                format!(" ({execution_type}; {memory:#.3})")
+            } else {
+                format!("({execution_type})")
+            }
         };
+        #[cfg(target_family = "wasm")]
+        let memory = format!("({execution_type})");
         debug!("execute{memory}: {class_name}.{method_name}{method_descriptor} {access_flags}");
     }
 

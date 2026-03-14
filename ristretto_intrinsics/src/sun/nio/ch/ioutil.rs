@@ -1,4 +1,3 @@
-use crate::sun::nio::fs::managed_files;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::{Reference, Value};
@@ -13,9 +12,34 @@ use std::sync::Arc;
 #[intrinsic_method("sun/nio/ch/IOUtil.configureBlocking(Ljava/io/FileDescriptor;Z)V", Any)]
 #[async_method]
 pub async fn configure_blocking<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let blocking = parameters.pop_bool()?;
+    let fd_value = parameters.pop()?;
+    let fd = {
+        let guard = fd_value.as_reference()?;
+        let Reference::Object(object) = &*guard else {
+            return Err(InternalError(
+                "configureBlocking: not an object".to_string(),
+            ));
+        };
+        object.value("fd")?.as_i32()?
+    };
+    let vm = thread.vm()?;
+    // For tokio types, non-blocking is always set; track mode but don't error
+    if let Some(guard) = vm.socket_handles().get(&fd).await {
+        if let Some(socket) = guard.socket_type.as_raw() {
+            socket
+                .set_nonblocking(!blocking)
+                .map_err(|e| InternalError(e.to_string()))?;
+        }
+        // For TcpStream/TcpListener/UdpSocket, tokio manages blocking mode
+        drop(guard);
+        if let Some(mut guard) = vm.socket_handles().get_mut(&fd).await {
+            guard.non_blocking = !blocking;
+        }
+    }
     Ok(None)
 }
 
@@ -23,20 +47,88 @@ pub async fn configure_blocking<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("sun/nio/ch/IOUtil.drain(I)Z", Any)]
 #[async_method]
 pub async fn drain<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+    let fd = parameters.pop_int()?;
+    let vm = thread.vm()?;
+
+    let Some(guard) = vm.socket_handles().get(&fd).await else {
+        return Ok(Some(Value::from(false)));
+    };
+
+    if let Some(stream) = guard.socket_type.as_tcp_stream() {
+        // Drain from TcpStream
+        let mut buf = [0u8; 128];
+        let mut any = false;
+        loop {
+            match stream.try_read(&mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => any = true,
+            }
+        }
+        return Ok(Some(Value::from(any)));
+    }
+
+    let Some(socket) = guard.socket_type.as_raw() else {
+        return Ok(Some(Value::from(false)));
+    };
+    let cloned = socket
+        .try_clone()
+        .map_err(|e| InternalError(format!("drain: clone: {e}")))?;
+    drop(guard);
+
+    let drained = tokio::task::spawn_blocking(move || {
+        let mut buf = [0u8; 128];
+        let mut any = false;
+        loop {
+            match std::io::Read::read(&mut &cloned, &mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => any = true,
+            }
+        }
+        any
+    })
+    .await
+    .map_err(|e| InternalError(format!("drain: spawn: {e}")))?;
+
+    Ok(Some(Value::from(drained)))
 }
 
 /// Drain a single byte from fd. Returns 0 (nothing drained).
 #[intrinsic_method("sun/nio/ch/IOUtil.drain1(I)I", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
 pub async fn drain_1<T: ristretto_types::Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+    let fd = parameters.pop_int()?;
+    let vm = thread.vm()?;
+
+    let Some(guard) = vm.socket_handles().get(&fd).await else {
+        return Ok(Some(Value::Int(-1)));
+    };
+    let Some(socket) = guard.socket_type.as_raw() else {
+        return Err(InternalError("expected raw socket".to_string()));
+    };
+    let cloned = socket
+        .try_clone()
+        .map_err(|e| InternalError(format!("drain1: clone: {e}")))?;
+    drop(guard);
+
+    let result = tokio::task::spawn_blocking(move || {
+        let mut buf = [0u8; 1];
+        match std::io::Read::read(&mut &cloned, &mut buf) {
+            Ok(0) => -1,
+            Ok(_) => i32::from(buf[0]),
+            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => -2,
+            Err(_) => -1,
+        }
+    })
+    .await
+    .map_err(|e| InternalError(format!("drain1: spawn: {e}")))?;
+
+    Ok(Some(Value::Int(result)))
 }
 
 /// Return the maximum number of file descriptors.
@@ -46,6 +138,19 @@ pub async fn fd_limit<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
+    #[cfg(unix)]
+    {
+        let limit = std::process::Command::new("sh")
+            .arg("-c")
+            .arg("ulimit -n")
+            .output()
+            .ok()
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .and_then(|s| s.trim().parse::<i32>().ok());
+        if let Some(n) = limit {
+            return Ok(Some(Value::Int(n)));
+        }
+    }
     Ok(Some(Value::Int(1024)))
 }
 
@@ -170,24 +275,27 @@ pub async fn random_bytes<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let array_value = parameters.pop()?;
-    let mut guard = array_value.as_reference_mut()?;
-    let Reference::ByteArray(bytes) = &mut *guard else {
-        return Err(InternalError("randomBytes: not a byte array".to_string()));
+    let buf = parameters.pop_reference()?;
+    let Some(buf) = buf else {
+        return Err(InternalError("randomBytes: null array".to_string()));
     };
-
-    let mut buf = vec![0u8; bytes.len()];
-    getrandom::fill(&mut buf)
-        .map_err(|e| InternalError(format!("randomBytes: failed to generate random bytes: {e}")))?;
-
-    for (i, &b) in buf.iter().enumerate() {
-        #[expect(clippy::cast_possible_wrap)]
+    let mut guard = buf.write();
+    let bytes = guard.as_byte_vec_mut()?;
+    #[expect(clippy::cast_possible_truncation)]
+    let mut seed: u64 = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos() as u64)
+        .unwrap_or(42);
+    for b in bytes.iter_mut() {
+        seed = seed
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        #[expect(clippy::cast_possible_truncation)]
         {
-            bytes[i] = b as i8;
+            *b = (seed >> 33) as i8;
         }
     }
-
-    Ok(Some(Value::Int(1)))
+    Ok(Some(Value::from(true)))
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.setfdVal(Ljava/io/FileDescriptor;I)V", Any)]
@@ -216,16 +324,29 @@ pub async fn write_1<T: ristretto_types::Thread + 'static>(
     let byte_val = parameters.pop_int()?;
     let fd = parameters.pop_int()?;
     let vm = thread.vm()?;
-    let file_handles = vm.file_handles();
-    let data = [u8::try_from(byte_val & 0xFF).unwrap_or(0)];
-    let n = managed_files::write(file_handles, i64::from(fd), &data)
+
+    let guard = vm
+        .socket_handles()
+        .get(&fd)
         .await
-        .map_err(|e| {
-            ristretto_types::Error::JavaError(ristretto_types::JavaError::IoException(
-                e.to_string(),
-            ))
-        })?;
-    Ok(Some(Value::Int(i32::try_from(n).unwrap_or(i32::MAX))))
+        .ok_or_else(|| InternalError(format!("write1: socket not found for fd {fd}")))?;
+    let Some(socket) = guard.socket_type.as_raw() else {
+        return Err(InternalError("expected raw socket".to_string()));
+    };
+    let cloned = socket
+        .try_clone()
+        .map_err(|e| InternalError(format!("write1: clone: {e}")))?;
+    drop(guard);
+
+    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    let buf = [byte_val as u8];
+    let result = tokio::task::spawn_blocking(move || std::io::Write::write(&mut &cloned, &buf))
+        .await
+        .map_err(|e| InternalError(format!("write1: spawn: {e}")))?
+        .map_err(|e| InternalError(format!("write1: {e}")))?;
+
+    let n = i32::try_from(result).map_err(|e| InternalError(e.to_string()))?;
+    Ok(Some(Value::Int(n)))
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.writevMax()J", GreaterThanOrEqual(JAVA_21))]
@@ -250,26 +371,27 @@ mod tests {
     use std::env::consts::OS;
 
     #[tokio::test]
-    async fn test_configure_blocking() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        let result = configure_blocking(thread, Parameters::default()).await?;
-        assert_eq!(result, None);
-        Ok(())
+    async fn test_configure_blocking() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = configure_blocking(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    async fn test_drain() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        let result = drain(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Int(0)));
-        Ok(())
+    async fn test_drain() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = drain(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_fd_limit() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = fd_limit(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Int(1024)));
+        let Some(Value::Int(limit)) = result else {
+            panic!("expected Int value");
+        };
+        assert!(limit > 0, "fd limit should be positive, got {limit}");
         Ok(())
     }
 
@@ -330,11 +452,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_drain_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        let result = drain_1(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Int(0)));
-        Ok(())
+    async fn test_drain_1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = drain_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

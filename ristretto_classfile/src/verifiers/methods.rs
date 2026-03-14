@@ -69,7 +69,7 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
     for instruction in code {
         match instruction {
             Instruction::Return => {
-                // void return - method must return void
+                // void return; method must return void
                 if return_type.is_some() {
                     return Err(VerificationError {
                         context: "Method return type".to_string(),
@@ -80,7 +80,7 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                 }
             }
             Instruction::Ireturn => {
-                // int return - method must return int, byte, char, short, or boolean
+                // int return; method must return int, byte, char, short, or boolean
                 match &return_type {
                     Some(FieldType::Base(
                         BaseType::Int
@@ -133,7 +133,7 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                 }
             }
             Instruction::Areturn => {
-                // reference return - method must return an object or array
+                // reference return; method must return an object or array
                 match &return_type {
                     Some(FieldType::Object(_) | FieldType::Array(_)) => {}
                     _ => {

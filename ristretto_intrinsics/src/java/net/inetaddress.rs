@@ -21,7 +21,7 @@ pub async fn is_ipv_4_available<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.net.InetAddress.isIPv4Available()Z")
+    Ok(Some(Value::Int(1)))
 }
 
 #[intrinsic_method("java/net/InetAddress.isIPv6Supported()Z", GreaterThanOrEqual(JAVA_21))]
@@ -30,7 +30,7 @@ pub async fn is_ipv_6_supported<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.net.InetAddress.isIPv6Supported()Z")
+    Ok(Some(Value::Int(0)))
 }
 
 #[cfg(test)]
@@ -46,16 +46,18 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.net.InetAddress.isIPv4Available()Z")]
-    async fn test_is_ipv_4_available() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_ipv_4_available(thread, Parameters::default()).await;
+    async fn test_is_ipv_4_available() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = is_ipv_4_available(thread, Parameters::default()).await?;
+        assert_eq!(Some(Value::Int(1)), result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.net.InetAddress.isIPv6Supported()Z")]
-    async fn test_is_ipv_6_supported() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_ipv_6_supported(thread, Parameters::default()).await;
+    async fn test_is_ipv_6_supported() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = is_ipv_6_supported(thread, Parameters::default()).await?;
+        assert_eq!(Some(Value::Int(0)), result);
+        Ok(())
     }
 }

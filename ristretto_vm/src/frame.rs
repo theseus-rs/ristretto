@@ -352,7 +352,10 @@ impl Frame {
         };
         let constant_pool = self.class.constant_pool();
         let instruction = instruction.to_formatted_string(constant_pool)?;
+        #[cfg(not(target_family = "wasm"))]
         let stack_size = u64::try_from(stacker::remaining_stack().unwrap_or(0))?;
+        #[cfg(target_family = "wasm")]
+        let stack_size = 0u64;
         let stack_size = Byte::from_u64(stack_size).get_appropriate_unit(UnitType::Decimal);
         debug!("  frame: {class_name}.{method_name}{method_descriptor}{source}");
         debug!("    locals: {locals}");

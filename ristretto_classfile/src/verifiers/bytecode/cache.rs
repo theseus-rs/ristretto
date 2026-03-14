@@ -478,7 +478,7 @@ mod tests {
         pool.return_locals(locals);
         pool.return_stack(stack);
 
-        // Acquire again - should reuse
+        // Acquire again; should reuse
         let locals2 = pool.acquire_locals(5);
         assert!(locals2.capacity() >= 10); // Still has old capacity
     }
@@ -587,7 +587,7 @@ mod tests {
         let locals = pool.acquire_locals(5);
         pool.return_locals(locals);
 
-        // Acquire a larger buffer - should reuse and resize
+        // Acquire a larger buffer; should reuse and resize
         let locals = pool.acquire_locals(10);
         assert!(locals.capacity() >= 10);
 

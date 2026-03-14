@@ -65,7 +65,10 @@ pub(crate) fn bastore(stack: &mut OperandStack) -> Result<ExecutionResult> {
         length,
     })?;
     if let Some(element) = array.get_mut(index) {
-        *element = i8::try_from(value)?;
+        #[expect(clippy::cast_possible_truncation)]
+        {
+            *element = value as i8;
+        }
     } else {
         return Err(ArrayIndexOutOfBoundsException {
             index: original_index,
