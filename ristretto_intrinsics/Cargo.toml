@@ -45,7 +45,7 @@ os_info = { workspace = true }
 socket2 = { workspace = true }
 sysinfo = { workspace = true }
 thread-priority = { workspace = true }
-tokio = { workspace = true, features = ["fs", "net", "time"] }
+tokio = { workspace = true, features = ["fs", "net", "process", "time"] }
 
 [target.'cfg(target_family = "windows")'.dependencies]
 os_pipe = { workspace = true }

@@ -30,5 +30,6 @@ pub mod stringutf16;
 pub mod system;
 pub mod thread;
 pub mod throwable;
+#[cfg(not(target_family = "wasm"))]
 pub mod unixprocess;
 pub mod virtualthread;
