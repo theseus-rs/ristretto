@@ -652,8 +652,26 @@ impl<'a, C: VerificationContext> BytecodeVerifier<'a, C> {
             Instruction::Areturn => {
                 let ret = next_frame.pop()?;
                 if !matches!(ret, VerificationType::Object(_) | VerificationType::Null) {
-                    // TODO: Array check, method signature check
+                    return Err(VerifyError::VerifyError(
+                        "Areturn expected reference type".to_string(),
+                    ));
                 }
+
+                let descriptor = self
+                    .class_file
+                    .constant_pool
+                    .try_get_utf8(self.method.descriptor_index)
+                    .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
+                let (_, return_type) = FieldType::parse_method_descriptor(descriptor)
+                    .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
+
+                let expected_ret = return_type.ok_or_else(|| {
+                    VerifyError::VerifyError("Areturn from void method".to_string())
+                })?;
+
+                let expected_v_type = Self::field_type_to_verification_type(&expected_ret);
+                self.verify_assignable(&ret, &expected_v_type)?;
+
                 does_fallthrough = false;
             }
 
@@ -1325,6 +1343,83 @@ mod tests {
 
         let result = verify(&class_file, &method, &MockContext);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_areturn_valid() -> Result<()> {
+        let mut class_file = create_mock_class_file();
+        let desc_index = class_file
+            .constant_pool
+            .add_utf8("()Ljava/lang/Object;")
+            .unwrap();
+        let code = vec![Instruction::Aconst_null, Instruction::Areturn];
+        let code_attribute = Attribute::Code {
+            name_index: 5,
+            max_stack: 1,
+            max_locals: 1,
+            code,
+            exception_table: vec![],
+            attributes: vec![],
+        };
+        let method = Method {
+            access_flags: MethodAccessFlags::PUBLIC,
+            name_index: 3,
+            descriptor_index: desc_index,
+            attributes: vec![code_attribute],
+        };
+
+        verify(&class_file, &method, &MockContext)
+    }
+
+    #[test]
+    fn test_verify_areturn_invalid_type() {
+        let mut class_file = create_mock_class_file();
+        let desc_index = class_file.constant_pool.add_utf8("()I").unwrap();
+        let code = vec![Instruction::Aconst_null, Instruction::Areturn];
+        let code_attribute = Attribute::Code {
+            name_index: 5,
+            max_stack: 1,
+            max_locals: 1,
+            code,
+            exception_table: vec![],
+            attributes: vec![],
+        };
+        let method = Method {
+            access_flags: MethodAccessFlags::PUBLIC,
+            name_index: 3,
+            descriptor_index: desc_index,
+            attributes: vec![code_attribute],
+        };
+
+        let result = verify(&class_file, &method, &MockContext);
+        assert!(matches!(result, Err(VerifyError::VerifyError(_))));
+    }
+
+    #[test]
+    fn test_verify_areturn_not_reference() {
+        let mut class_file = create_mock_class_file();
+        let desc_index = class_file
+            .constant_pool
+            .add_utf8("()Ljava/lang/Object;")
+            .unwrap();
+        let code = vec![Instruction::Iconst_0, Instruction::Areturn];
+        let code_attribute = Attribute::Code {
+            name_index: 5,
+            max_stack: 1,
+            max_locals: 1,
+            code,
+            exception_table: vec![],
+            attributes: vec![],
+        };
+        let method = Method {
+            access_flags: MethodAccessFlags::PUBLIC,
+            name_index: 3,
+            descriptor_index: desc_index,
+            attributes: vec![code_attribute],
+        };
+
+        let result = verify(&class_file, &method, &MockContext);
+        assert!(matches!(result, Err(VerifyError::VerifyError(_))));
     }
 
     #[test]
