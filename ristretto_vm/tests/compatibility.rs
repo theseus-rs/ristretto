@@ -281,12 +281,14 @@ fn test_vm(
     let java_version = java_version.to_string();
     let test_dir = test_dir.to_path_buf();
     let test_timeout = Duration::from_secs(60);
+    let stack_size = 8 * 1024 * 1024; // 8 MB stack
     let result = std::thread::Builder::new()
-        .stack_size(8 * 1024 * 1024) // 8 MB stack
+        .stack_size(stack_size)
         .spawn(move || {
             std::panic::catch_unwind(|| {
                 let runtime = tokio::runtime::Builder::new_multi_thread()
                     .enable_all()
+                    .thread_stack_size(stack_size)
                     .build()
                     .map_err(|error| InternalError(error.to_string()))?;
                 runtime.block_on(async {
