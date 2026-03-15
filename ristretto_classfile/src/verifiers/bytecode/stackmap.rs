@@ -390,6 +390,7 @@ mod tests {
             fields: vec![],
             methods: vec![],
             attributes: vec![],
+            code_source_url: None,
         }
     }
 
