@@ -36,6 +36,7 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - Standard runtime classes backed by LTS versions of [AWS Corretto](https://github.com/corretto).
 - Flexible class loading from directories, JARs, JMODs, JImage files, and URLs.
 - Built-in support for reading, writing, and strictly verifying Java bytecode.
+- Interpreter support for all Java byte codes including invokedynamic.
 - Fully asynchronous, non-blocking execution using Rust async/await for:
     - java.lang.Thread
     - java.io & java.nio
@@ -46,13 +47,6 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - Native Maven POM (Project Object Model) parsing.
 
 ### Limitations
-
-#### String Encoding
-
-Ristretto uses Rust's `String` type to represent Java strings. This means that Ristretto does not support unpaired
-surrogates from Java's UTF-16 encoding. Any unpaired surrogates will be replaced with the replacement character `�`
-(U+FFFD) when decoding Java strings. For additional details on how Java and Rust handle strings, see
-[encodings](docs/encoding/index.md).
 
 #### Just-In-Time (JIT) Compilation
 
