@@ -3,7 +3,7 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::{Parameters, Result};
+use ristretto_types::{Parameters, Result, Thread};
 use std::sync::Arc;
 
 #[intrinsic_method(
@@ -11,11 +11,11 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn command<T: ristretto_types::Thread + 'static>(
+pub async fn command<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Compiler.command(Ljava/lang/Object;)Ljava/lang/Object;")
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method(
@@ -23,11 +23,11 @@ pub async fn command<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn compile_class<T: ristretto_types::Thread + 'static>(
+pub async fn compile_class<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Compiler.compileClass(Ljava/lang/Class;)Z")
+    Ok(Some(Value::from(false)))
 }
 
 #[intrinsic_method(
@@ -35,34 +35,34 @@ pub async fn compile_class<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn compile_classes<T: ristretto_types::Thread + 'static>(
+pub async fn compile_classes<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Compiler.compileClasses(Ljava/lang/String;)Z")
+    Ok(Some(Value::from(false)))
 }
 
 #[intrinsic_method("java/lang/Compiler.disable()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn disable<T: ristretto_types::Thread + 'static>(
+pub async fn disable<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Compiler.disable()V")
+    Ok(None)
 }
 
 #[intrinsic_method("java/lang/Compiler.enable()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn enable<T: ristretto_types::Thread + 'static>(
+pub async fn enable<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Compiler.enable()V")
+    Ok(None)
 }
 
 #[intrinsic_method("java/lang/Compiler.initialize()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn initialize<T: ristretto_types::Thread + 'static>(
+pub async fn initialize<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -71,7 +71,7 @@ pub async fn initialize<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Compiler.registerNatives()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -83,44 +83,43 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Compiler.command(Ljava/lang/Object;)Ljava/lang/Object;"
-    )]
-    async fn test_command() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = command(thread, Parameters::default()).await;
+    async fn test_command() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = command(thread, Parameters::default()).await?;
+        assert_eq!(Some(Value::Object(None)), result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Compiler.compileClass(Ljava/lang/Class;)Z"
-    )]
-    async fn test_compile_class() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compile_class(thread, Parameters::default()).await;
+    async fn test_compile_class() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = compile_class(thread, Parameters::default()).await?;
+        assert_eq!(Some(Value::from(false)), result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Compiler.compileClasses(Ljava/lang/String;)Z"
-    )]
-    async fn test_compile_classes() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = compile_classes(thread, Parameters::default()).await;
+    async fn test_compile_classes() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = compile_classes(thread, Parameters::default()).await?;
+        assert_eq!(Some(Value::from(false)), result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Compiler.disable()V")]
-    async fn test_disable() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = disable(thread, Parameters::default()).await;
+    async fn test_disable() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = disable(thread, Parameters::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Compiler.enable()V")]
-    async fn test_enable() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = enable(thread, Parameters::default()).await;
+    async fn test_enable() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = enable(thread, Parameters::default()).await?;
+        assert_eq!(None, result);
+        Ok(())
     }
 
     #[tokio::test]
