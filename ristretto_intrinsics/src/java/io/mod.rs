@@ -9,4 +9,5 @@ pub mod objectstreamclass;
 pub mod randomaccessfile;
 pub mod socketfiledescriptor;
 pub mod unixfilesystem;
+#[cfg(target_os = "windows")]
 pub mod winntfilesystem;

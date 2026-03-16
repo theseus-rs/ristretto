@@ -31,10 +31,10 @@ use std::time::Duration;
 /// Represents the underlying socket type managed by the VM.
 ///
 /// Sockets start as `Raw` during creation and transition to specific async types:
-/// - After `listen()` → `TcpListener`
-/// - After `connect()` → `TcpStream`
-/// - After `bind()` (UDP) → `UdpSocket`
-/// - After `accept()` on a listener → new `TcpStream`
+/// - After `listen()` -> `TcpListener`
+/// - After `connect()` -> `TcpStream`
+/// - After `bind()` (UDP) -> `UdpSocket`
+/// - After `accept()` on a listener -> new `TcpStream`
 #[cfg(not(target_family = "wasm"))]
 #[derive(Debug)]
 pub enum SocketType {

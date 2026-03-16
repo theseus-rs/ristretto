@@ -13,21 +13,15 @@
 //! implementations during class loading and method resolution.
 
 /// Methods from the Apple-specific packages
+#[cfg(target_os = "macos")]
 mod apple;
 /// Methods from the COM-related packages
 mod com;
-/// Mapping of intrinsic method names to their implementations
-mod intrinsics;
 /// Core Java standard library methods
 pub mod java;
 /// JDK-specific internal methods
 mod jdk;
 /// Methods for handling Java properties
 mod properties;
-/// Registry for storing and retrieving intrinsic method implementations
-mod registry;
 /// Methods from Sun packages
 mod sun;
-
-/// Re-export the `MethodRegistry` for use by other modules in the VM
-pub(crate) use registry::{IntrinsicMethod, MethodRegistry};
