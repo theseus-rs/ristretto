@@ -85,9 +85,8 @@ pub async fn for_name_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // TODO: Add support for class_loader parameter
     let _caller = parameters.pop_reference()?;
-    let _class_loader = parameters.pop_reference()?;
+    let class_loader = parameters.pop_reference()?;
     let initialize = parameters.pop_bool()?;
     let object = parameters.pop()?;
     if object.is_null() {
@@ -96,7 +95,31 @@ pub async fn for_name_0<T: Thread + 'static>(
 
     let class_name = object.as_string()?;
 
-    // If initialize is false, only load the class without initializing it
+    // When a custom ClassLoader is provided and the class is not an array type,
+    // delegate to ClassLoader.loadClass(). Array classes are created by the VM
+    // directly and are not loaded through ClassLoader.loadClass() per the JVM
+    // specification (JVMS §5.3.2).
+    if let Some(cl_ref) = class_loader
+        && !class_name.starts_with('[')
+    {
+        let class_loader_value = Value::Object(Some(cl_ref));
+        let cl_class = thread.class("java.lang.ClassLoader").await?;
+        let load_class_method =
+            cl_class.try_get_method("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;")?;
+        let class_name_value = class_name.to_object(&thread).await?;
+        match thread
+            .execute(
+                &cl_class,
+                &load_class_method,
+                &[class_loader_value, class_name_value],
+            )
+            .await
+        {
+            Ok(Some(value)) if !value.is_null() => return Ok(Some(value)),
+            Ok(_) => return Err(ClassNotFoundException(class_name).into()),
+            Err(e) => return Err(e),
+        }
+    }
     let class = if initialize {
         match thread.class(&class_name).await {
             Ok(class) => class,
