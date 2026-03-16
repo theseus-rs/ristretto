@@ -2,52 +2,69 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("com/sun/media/sound/MidiOutDevice.nClose(J)V", Any)]
 #[async_method]
-pub async fn n_close<T: ristretto_types::Thread + 'static>(
+pub async fn n_close<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.media.sound.MidiOutDevice.nClose(J)V")
+    Err(
+        JavaError::UnsatisfiedLinkError("com.sun.media.sound.MidiOutDevice.nClose(J)V".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiOutDevice.nGetTimeStamp(J)J", Any)]
 #[async_method]
-pub async fn n_get_time_stamp<T: ristretto_types::Thread + 'static>(
+pub async fn n_get_time_stamp<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.media.sound.MidiOutDevice.nGetTimeStamp(J)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.media.sound.MidiOutDevice.nGetTimeStamp(J)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiOutDevice.nOpen(I)J", Any)]
 #[async_method]
-pub async fn n_open<T: ristretto_types::Thread + 'static>(
+pub async fn n_open<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.media.sound.MidiOutDevice.nOpen(I)J")
+    Err(
+        JavaError::UnsatisfiedLinkError("com.sun.media.sound.MidiOutDevice.nOpen(I)J".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiOutDevice.nSendLongMessage(J[BIJ)V", Any)]
 #[async_method]
-pub async fn n_send_long_message<T: ristretto_types::Thread + 'static>(
+pub async fn n_send_long_message<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.media.sound.MidiOutDevice.nSendLongMessage(J[BIJ)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.media.sound.MidiOutDevice.nSendLongMessage(J[BIJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiOutDevice.nSendShortMessage(JIJ)V", Any)]
 #[async_method]
-pub async fn n_send_short_message<T: ristretto_types::Thread + 'static>(
+pub async fn n_send_short_message<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.media.sound.MidiOutDevice.nSendShortMessage(JIJ)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.media.sound.MidiOutDevice.nSendShortMessage(JIJ)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -55,43 +72,37 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: com.sun.media.sound.MidiOutDevice.nClose(J)V")]
     async fn test_n_close() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_close(thread, Parameters::default()).await;
+        let result = n_close(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.media.sound.MidiOutDevice.nGetTimeStamp(J)J"
-    )]
     async fn test_n_get_time_stamp() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_get_time_stamp(thread, Parameters::default()).await;
+        let result = n_get_time_stamp(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: com.sun.media.sound.MidiOutDevice.nOpen(I)J")]
     async fn test_n_open() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_open(thread, Parameters::default()).await;
+        let result = n_open(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.media.sound.MidiOutDevice.nSendLongMessage(J[BIJ)V"
-    )]
     async fn test_n_send_long_message() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_send_long_message(thread, Parameters::default()).await;
+        let result = n_send_long_message(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.media.sound.MidiOutDevice.nSendShortMessage(JIJ)V"
-    )]
     async fn test_n_send_short_message() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = n_send_short_message(thread, Parameters::default()).await;
+        let result = n_send_short_message(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

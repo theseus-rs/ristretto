@@ -14,6 +14,7 @@ use ristretto_types::JavaError::RuntimeException;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_types::JavaError::{AccessControlException, IllegalArgumentException};
 use ristretto_types::JavaError::{FileNotFoundException, IoException};
+use ristretto_types::Thread;
 use ristretto_types::VM;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_types::handles::FileHandle;
@@ -33,7 +34,7 @@ use zerocopy::transmute_ref;
 
 #[intrinsic_method("java/io/FileOutputStream.close0()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn close_0<T: ristretto_types::Thread + 'static>(
+pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -42,7 +43,7 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileOutputStream.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -51,7 +52,7 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileOutputStream.open0(Ljava/lang/String;Z)V", Any)]
 #[async_method]
-pub async fn open_0<T: ristretto_types::Thread + 'static>(
+pub async fn open_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -165,7 +166,7 @@ pub async fn open_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileOutputStream.write(IZ)V", Any)]
 #[async_method]
-pub async fn write<T: ristretto_types::Thread + 'static>(
+pub async fn write<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -187,7 +188,7 @@ pub async fn write<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileOutputStream.writeBytes([BIIZ)V", Any)]
 #[async_method]
-pub async fn write_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn write_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

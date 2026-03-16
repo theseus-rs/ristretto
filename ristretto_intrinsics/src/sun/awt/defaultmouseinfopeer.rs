@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn fill_point_with_coords<T: ristretto_types::Thread + 'static>(
+pub async fn fill_point_with_coords<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.DefaultMouseInfoPeer.fillPointWithCoords(Ljava/awt/Point;)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.DefaultMouseInfoPeer.fillPointWithCoords(Ljava/awt/Point;)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn fill_point_with_coords<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn is_window_under_mouse<T: ristretto_types::Thread + 'static>(
+pub async fn is_window_under_mouse<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -35,20 +43,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.DefaultMouseInfoPeer.fillPointWithCoords(Ljava/awt/Point;)I"
-    )]
     async fn test_fill_point_with_coords() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fill_point_with_coords(thread, Parameters::default()).await;
+        let result = fill_point_with_coords(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z"
-    )]
     async fn test_is_window_under_mouse() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_window_under_mouse(thread, Parameters::default()).await;
+        let result = is_window_under_mouse(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

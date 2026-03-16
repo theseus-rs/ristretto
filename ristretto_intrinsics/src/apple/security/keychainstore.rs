@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqua
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,38 +13,50 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn add_item_to_keychain<T: ristretto_types::Thread + 'static>(
+pub async fn add_item_to_keychain<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("apple.security.KeychainStore._addItemToKeychain(Ljava/lang/String;Z[B[C)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "apple.security.KeychainStore._addItemToKeychain(Ljava/lang/String;Z[B[C)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("apple/security/KeychainStore._getEncodedKeyData(J[C)[B", Any)]
 #[async_method]
-pub async fn get_encoded_key_data<T: ristretto_types::Thread + 'static>(
+pub async fn get_encoded_key_data<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("apple.security.KeychainStore._getEncodedKeyData(J[C)[B")
+    Err(JavaError::UnsatisfiedLinkError(
+        "apple.security.KeychainStore._getEncodedKeyData(J[C)[B".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("apple/security/KeychainStore._releaseKeychainItemRef(J)V", Any)]
 #[async_method]
-pub async fn release_keychain_item_ref<T: ristretto_types::Thread + 'static>(
+pub async fn release_keychain_item_ref<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("apple.security.KeychainStore._releaseKeychainItemRef(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "apple.security.KeychainStore._releaseKeychainItemRef(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("apple/security/KeychainStore._removeItemFromKeychain(J)I", Any)]
 #[async_method]
-pub async fn remove_item_from_keychain<T: ristretto_types::Thread + 'static>(
+pub async fn remove_item_from_keychain<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("apple.security.KeychainStore._removeItemFromKeychain(J)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "apple.security.KeychainStore._removeItemFromKeychain(J)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -50,11 +64,14 @@ pub async fn remove_item_from_keychain<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn scan_keychain_0<T: ristretto_types::Thread + 'static>(
+pub async fn scan_keychain_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("apple.security.KeychainStore._scanKeychain()V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "apple.security.KeychainStore._scanKeychain()V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -62,11 +79,14 @@ pub async fn scan_keychain_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_21)
 )]
 #[async_method]
-pub async fn scan_keychain_1<T: ristretto_types::Thread + 'static>(
+pub async fn scan_keychain_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("apple.security.KeychainStore._scanKeychain(Ljava/lang/String;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "apple.security.KeychainStore._scanKeychain(Ljava/lang/String;)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -74,54 +94,44 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: apple.security.KeychainStore._addItemToKeychain(Ljava/lang/String;Z[B[C)J"
-    )]
     async fn test_add_item_to_keychain() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = add_item_to_keychain(thread, Parameters::default()).await;
+        let result = add_item_to_keychain(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: apple.security.KeychainStore._getEncodedKeyData(J[C)[B"
-    )]
     async fn test_get_encoded_key_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_encoded_key_data(thread, Parameters::default()).await;
+        let result = get_encoded_key_data(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: apple.security.KeychainStore._releaseKeychainItemRef(J)V"
-    )]
     async fn test_release_keychain_item_ref() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = release_keychain_item_ref(thread, Parameters::default()).await;
+        let result = release_keychain_item_ref(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: apple.security.KeychainStore._removeItemFromKeychain(J)I"
-    )]
     async fn test_remove_item_from_keychain() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = remove_item_from_keychain(thread, Parameters::default()).await;
+        let result = remove_item_from_keychain(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: apple.security.KeychainStore._scanKeychain()V")]
     async fn test_scan_keychain_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = scan_keychain_0(thread, Parameters::default()).await;
+        let result = scan_keychain_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: apple.security.KeychainStore._scanKeychain(Ljava/lang/String;)V"
-    )]
     async fn test_scan_keychain_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = scan_keychain_1(thread, Parameters::default()).await;
+        let result = scan_keychain_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

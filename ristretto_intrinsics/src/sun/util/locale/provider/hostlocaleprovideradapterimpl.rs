@@ -4,6 +4,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaObject;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -12,7 +13,7 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn get_am_pm_strings<T: ristretto_types::Thread + 'static>(
+pub async fn get_am_pm_strings<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,7 +27,7 @@ pub async fn get_am_pm_strings<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_calendar_display_strings<T: ristretto_types::Thread + 'static>(
+pub async fn get_calendar_display_strings<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,7 +39,7 @@ pub async fn get_calendar_display_strings<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_calendar_id<T: ristretto_types::Thread + 'static>(
+pub async fn get_calendar_id<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,7 +51,7 @@ pub async fn get_calendar_id<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_calendar_int<T: ristretto_types::Thread + 'static>(
+pub async fn get_calendar_int<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -62,7 +63,7 @@ pub async fn get_calendar_int<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_currency_symbol<T: ristretto_types::Thread + 'static>(
+pub async fn get_currency_symbol<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -75,7 +76,7 @@ pub async fn get_currency_symbol<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_date_time_pattern_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_date_time_pattern_native<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -90,7 +91,7 @@ pub async fn get_date_time_pattern_native<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_decimal_separator<T: ristretto_types::Thread + 'static>(
+pub async fn get_decimal_separator<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -103,7 +104,7 @@ pub async fn get_decimal_separator<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_default_locale<T: ristretto_types::Thread + 'static>(
+pub async fn get_default_locale<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -119,7 +120,7 @@ pub async fn get_default_locale<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_display_string<T: ristretto_types::Thread + 'static>(
+pub async fn get_display_string<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -132,7 +133,7 @@ pub async fn get_display_string<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_eras<T: ristretto_types::Thread + 'static>(
+pub async fn get_eras<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -145,7 +146,7 @@ pub async fn get_eras<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_exponent_separator<T: ristretto_types::Thread + 'static>(
+pub async fn get_exponent_separator<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -158,7 +159,7 @@ pub async fn get_exponent_separator<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_grouping_separator<T: ristretto_types::Thread + 'static>(
+pub async fn get_grouping_separator<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -171,7 +172,7 @@ pub async fn get_grouping_separator<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_infinity<T: ristretto_types::Thread + 'static>(
+pub async fn get_infinity<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -184,7 +185,7 @@ pub async fn get_infinity<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_international_currency_symbol<T: ristretto_types::Thread + 'static>(
+pub async fn get_international_currency_symbol<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -197,7 +198,7 @@ pub async fn get_international_currency_symbol<T: ristretto_types::Thread + 'sta
     Any
 )]
 #[async_method]
-pub async fn get_minus_sign<T: ristretto_types::Thread + 'static>(
+pub async fn get_minus_sign<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -210,7 +211,7 @@ pub async fn get_minus_sign<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_monetary_decimal_separator<T: ristretto_types::Thread + 'static>(
+pub async fn get_monetary_decimal_separator<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -223,7 +224,7 @@ pub async fn get_monetary_decimal_separator<T: ristretto_types::Thread + 'static
     Any
 )]
 #[async_method]
-pub async fn get_months<T: ristretto_types::Thread + 'static>(
+pub async fn get_months<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -236,7 +237,7 @@ pub async fn get_months<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_nan<T: ristretto_types::Thread + 'static>(
+pub async fn get_nan<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -249,7 +250,7 @@ pub async fn get_nan<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_number_pattern_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_number_pattern_native<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -269,7 +270,7 @@ pub async fn get_number_pattern_native<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_per_mill<T: ristretto_types::Thread + 'static>(
+pub async fn get_per_mill<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -282,7 +283,7 @@ pub async fn get_per_mill<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_percent<T: ristretto_types::Thread + 'static>(
+pub async fn get_percent<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -295,7 +296,7 @@ pub async fn get_percent<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_short_months<T: ristretto_types::Thread + 'static>(
+pub async fn get_short_months<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -308,7 +309,7 @@ pub async fn get_short_months<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_short_weekdays<T: ristretto_types::Thread + 'static>(
+pub async fn get_short_weekdays<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -321,7 +322,7 @@ pub async fn get_short_weekdays<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_time_zone_display_string<T: ristretto_types::Thread + 'static>(
+pub async fn get_time_zone_display_string<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -334,7 +335,7 @@ pub async fn get_time_zone_display_string<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_weekdays<T: ristretto_types::Thread + 'static>(
+pub async fn get_weekdays<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -347,7 +348,7 @@ pub async fn get_weekdays<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_zero_digit<T: ristretto_types::Thread + 'static>(
+pub async fn get_zero_digit<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

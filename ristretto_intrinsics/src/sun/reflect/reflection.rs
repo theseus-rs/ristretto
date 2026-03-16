@@ -5,6 +5,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Frame;
 use ristretto_types::JavaObject;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -13,7 +14,7 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_caller_class_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_caller_class_1<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -33,7 +34,7 @@ pub async fn get_caller_class_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_caller_class_2<T: ristretto_types::Thread + 'static>(
+pub async fn get_caller_class_2<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,7 +56,7 @@ pub async fn get_caller_class_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_class_access_flags<T: ristretto_types::Thread + 'static>(
+pub async fn get_class_access_flags<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

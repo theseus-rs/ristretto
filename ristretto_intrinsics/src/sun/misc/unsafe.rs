@@ -4,12 +4,13 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/misc/Unsafe.addressSize()I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn address_size<T: ristretto_types::Thread + 'static>(
+pub async fn address_size<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,7 +22,7 @@ pub async fn address_size<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn allocate_instance<T: ristretto_types::Thread + 'static>(
+pub async fn allocate_instance<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,7 +31,7 @@ pub async fn allocate_instance<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.allocateMemory(J)J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn allocate_memory<T: ristretto_types::Thread + 'static>(
+pub async fn allocate_memory<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -42,7 +43,7 @@ pub async fn allocate_memory<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn array_base_offset<T: ristretto_types::Thread + 'static>(
+pub async fn array_base_offset<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,7 +55,7 @@ pub async fn array_base_offset<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn array_index_scale<T: ristretto_types::Thread + 'static>(
+pub async fn array_index_scale<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,7 +67,7 @@ pub async fn array_index_scale<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn compare_and_swap_int<T: ristretto_types::Thread + 'static>(
+pub async fn compare_and_swap_int<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -78,7 +79,7 @@ pub async fn compare_and_swap_int<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn compare_and_swap_long<T: ristretto_types::Thread + 'static>(
+pub async fn compare_and_swap_long<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -90,7 +91,7 @@ pub async fn compare_and_swap_long<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn compare_and_swap_object<T: ristretto_types::Thread + 'static>(
+pub async fn compare_and_swap_object<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,7 +103,7 @@ pub async fn compare_and_swap_object<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn copy_memory<T: ristretto_types::Thread + 'static>(
+pub async fn copy_memory<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -114,7 +115,7 @@ pub async fn copy_memory<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn define_anonymous_class<T: ristretto_types::Thread + 'static>(
+pub async fn define_anonymous_class<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -126,7 +127,7 @@ pub async fn define_anonymous_class<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn define_class<T: ristretto_types::Thread + 'static>(
+pub async fn define_class<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -138,7 +139,7 @@ pub async fn define_class<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn ensure_class_initialized<T: ristretto_types::Thread + 'static>(
+pub async fn ensure_class_initialized<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -147,7 +148,7 @@ pub async fn ensure_class_initialized<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.freeMemory(J)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn free_memory<T: ristretto_types::Thread + 'static>(
+pub async fn free_memory<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -156,7 +157,7 @@ pub async fn free_memory<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.fullFence()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn full_fence<T: ristretto_types::Thread + 'static>(
+pub async fn full_fence<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -165,7 +166,7 @@ pub async fn full_fence<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.getAddress(J)J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_address<T: ristretto_types::Thread + 'static>(
+pub async fn get_address<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -177,7 +178,7 @@ pub async fn get_address<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_boolean<T: ristretto_types::Thread + 'static>(
+pub async fn get_boolean<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -189,7 +190,7 @@ pub async fn get_boolean<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_boolean_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn get_boolean_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -198,7 +199,7 @@ pub async fn get_boolean_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.getByte(J)B", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_byte_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_byte_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -210,7 +211,7 @@ pub async fn get_byte_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_byte_2<T: ristretto_types::Thread + 'static>(
+pub async fn get_byte_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -222,7 +223,7 @@ pub async fn get_byte_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_byte_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn get_byte_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -231,7 +232,7 @@ pub async fn get_byte_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.getChar(J)C", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_char_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_char_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -243,7 +244,7 @@ pub async fn get_char_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_char_2<T: ristretto_types::Thread + 'static>(
+pub async fn get_char_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -255,7 +256,7 @@ pub async fn get_char_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_char_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn get_char_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -264,7 +265,7 @@ pub async fn get_char_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.getDouble(J)D", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_double_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_double_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -276,7 +277,7 @@ pub async fn get_double_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_double_2<T: ristretto_types::Thread + 'static>(
+pub async fn get_double_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -288,7 +289,7 @@ pub async fn get_double_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_double_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn get_double_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -297,7 +298,7 @@ pub async fn get_double_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.getFloat(J)F", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_float_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_float_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -309,7 +310,7 @@ pub async fn get_float_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_float_2<T: ristretto_types::Thread + 'static>(
+pub async fn get_float_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -321,7 +322,7 @@ pub async fn get_float_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_float_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn get_float_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -330,7 +331,7 @@ pub async fn get_float_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.getInt(J)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_int_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_int_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -342,7 +343,7 @@ pub async fn get_int_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_int_2<T: ristretto_types::Thread + 'static>(
+pub async fn get_int_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -354,7 +355,7 @@ pub async fn get_int_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_int_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn get_int_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -363,7 +364,7 @@ pub async fn get_int_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.getLoadAverage([DI)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_load_average<T: ristretto_types::Thread + 'static>(
+pub async fn get_load_average<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -372,7 +373,7 @@ pub async fn get_load_average<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.getLong(J)J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_long_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_long_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -384,7 +385,7 @@ pub async fn get_long_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_long_2<T: ristretto_types::Thread + 'static>(
+pub async fn get_long_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -396,7 +397,7 @@ pub async fn get_long_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_long_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn get_long_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -408,7 +409,7 @@ pub async fn get_long_volatile<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_object<T: ristretto_types::Thread + 'static>(
+pub async fn get_object<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -420,7 +421,7 @@ pub async fn get_object<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_object_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn get_object_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -429,7 +430,7 @@ pub async fn get_object_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.getShort(J)S", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_short_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_short_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -441,7 +442,7 @@ pub async fn get_short_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_short_2<T: ristretto_types::Thread + 'static>(
+pub async fn get_short_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -453,7 +454,7 @@ pub async fn get_short_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_short_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn get_short_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -462,7 +463,7 @@ pub async fn get_short_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.loadFence()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn load_fence<T: ristretto_types::Thread + 'static>(
+pub async fn load_fence<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -474,11 +475,14 @@ pub async fn load_fence<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn monitor_enter<T: ristretto_types::Thread + 'static>(
+pub async fn monitor_enter<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.monitorEnter(Ljava/lang/Object;)V")
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.misc.Unsafe.monitorEnter(Ljava/lang/Object;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -486,11 +490,14 @@ pub async fn monitor_enter<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn monitor_exit<T: ristretto_types::Thread + 'static>(
+pub async fn monitor_exit<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.monitorExit(Ljava/lang/Object;)V")
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.misc.Unsafe.monitorExit(Ljava/lang/Object;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -498,7 +505,7 @@ pub async fn monitor_exit<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn object_field_offset<T: ristretto_types::Thread + 'static>(
+pub async fn object_field_offset<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -507,7 +514,7 @@ pub async fn object_field_offset<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.pageSize()I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn page_size<T: ristretto_types::Thread + 'static>(
+pub async fn page_size<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -516,7 +523,7 @@ pub async fn page_size<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.park(ZJ)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn park<T: ristretto_types::Thread + 'static>(
+pub async fn park<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -525,7 +532,7 @@ pub async fn park<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.putAddress(JJ)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn put_address<T: ristretto_types::Thread + 'static>(
+pub async fn put_address<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -537,7 +544,7 @@ pub async fn put_address<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_boolean<T: ristretto_types::Thread + 'static>(
+pub async fn put_boolean<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -549,7 +556,7 @@ pub async fn put_boolean<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_boolean_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn put_boolean_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -558,7 +565,7 @@ pub async fn put_boolean_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.putByte(JB)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn put_byte_1<T: ristretto_types::Thread + 'static>(
+pub async fn put_byte_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -570,7 +577,7 @@ pub async fn put_byte_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_byte_2<T: ristretto_types::Thread + 'static>(
+pub async fn put_byte_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -582,7 +589,7 @@ pub async fn put_byte_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_byte_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn put_byte_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -591,7 +598,7 @@ pub async fn put_byte_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.putChar(JC)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn put_char_1<T: ristretto_types::Thread + 'static>(
+pub async fn put_char_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -603,7 +610,7 @@ pub async fn put_char_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_char_2<T: ristretto_types::Thread + 'static>(
+pub async fn put_char_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -615,7 +622,7 @@ pub async fn put_char_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_char_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn put_char_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -624,7 +631,7 @@ pub async fn put_char_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.putDouble(JD)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn put_double_1<T: ristretto_types::Thread + 'static>(
+pub async fn put_double_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -636,7 +643,7 @@ pub async fn put_double_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_double_2<T: ristretto_types::Thread + 'static>(
+pub async fn put_double_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -648,7 +655,7 @@ pub async fn put_double_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_double_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn put_double_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -657,7 +664,7 @@ pub async fn put_double_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.putFloat(JF)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn put_float_1<T: ristretto_types::Thread + 'static>(
+pub async fn put_float_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -669,7 +676,7 @@ pub async fn put_float_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_float_2<T: ristretto_types::Thread + 'static>(
+pub async fn put_float_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -681,7 +688,7 @@ pub async fn put_float_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_float_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn put_float_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -690,7 +697,7 @@ pub async fn put_float_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.putInt(JI)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn put_int_1<T: ristretto_types::Thread + 'static>(
+pub async fn put_int_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -702,7 +709,7 @@ pub async fn put_int_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_int_2<T: ristretto_types::Thread + 'static>(
+pub async fn put_int_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -714,7 +721,7 @@ pub async fn put_int_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_int_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn put_int_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -723,7 +730,7 @@ pub async fn put_int_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.putLong(JJ)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn put_long_1<T: ristretto_types::Thread + 'static>(
+pub async fn put_long_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -735,7 +742,7 @@ pub async fn put_long_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_long_2<T: ristretto_types::Thread + 'static>(
+pub async fn put_long_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -747,7 +754,7 @@ pub async fn put_long_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_long_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn put_long_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -759,7 +766,7 @@ pub async fn put_long_volatile<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_object<T: ristretto_types::Thread + 'static>(
+pub async fn put_object<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -771,7 +778,7 @@ pub async fn put_object<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_object_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn put_object_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -783,11 +790,14 @@ pub async fn put_object_volatile<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_ordered_int<T: ristretto_types::Thread + 'static>(
+pub async fn put_ordered_int<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putOrderedInt(Ljava/lang/Object;JI)V")
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.misc.Unsafe.putOrderedInt(Ljava/lang/Object;JI)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -795,11 +805,14 @@ pub async fn put_ordered_int<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_ordered_long<T: ristretto_types::Thread + 'static>(
+pub async fn put_ordered_long<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putOrderedLong(Ljava/lang/Object;JJ)V")
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.misc.Unsafe.putOrderedLong(Ljava/lang/Object;JJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -807,16 +820,19 @@ pub async fn put_ordered_long<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_ordered_object<T: ristretto_types::Thread + 'static>(
+pub async fn put_ordered_object<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.putOrderedObject(Ljava/lang/Object;JLjava/lang/Object;)V")
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.misc.Unsafe.putOrderedObject(Ljava/lang/Object;JLjava/lang/Object;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/misc/Unsafe.putShort(JS)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn put_short_1<T: ristretto_types::Thread + 'static>(
+pub async fn put_short_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -828,7 +844,7 @@ pub async fn put_short_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_short_2<T: ristretto_types::Thread + 'static>(
+pub async fn put_short_2<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -840,7 +856,7 @@ pub async fn put_short_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn put_short_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn put_short_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -849,7 +865,7 @@ pub async fn put_short_volatile<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.reallocateMemory(JJ)J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn reallocate_memory<T: ristretto_types::Thread + 'static>(
+pub async fn reallocate_memory<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -858,7 +874,7 @@ pub async fn reallocate_memory<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.registerNatives()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -870,7 +886,7 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn set_memory<T: ristretto_types::Thread + 'static>(
+pub async fn set_memory<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -882,7 +898,7 @@ pub async fn set_memory<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn should_be_initialized<T: ristretto_types::Thread + 'static>(
+pub async fn should_be_initialized<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -894,7 +910,7 @@ pub async fn should_be_initialized<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn static_field_base<T: ristretto_types::Thread + 'static>(
+pub async fn static_field_base<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -906,7 +922,7 @@ pub async fn static_field_base<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn static_field_offset<T: ristretto_types::Thread + 'static>(
+pub async fn static_field_offset<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -915,7 +931,7 @@ pub async fn static_field_offset<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/misc/Unsafe.storeFence()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn store_fence<T: ristretto_types::Thread + 'static>(
+pub async fn store_fence<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -927,7 +943,7 @@ pub async fn store_fence<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn throw_exception<T: ristretto_types::Thread + 'static>(
+pub async fn throw_exception<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -939,16 +955,19 @@ pub async fn throw_exception<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn try_monitor_enter<T: ristretto_types::Thread + 'static>(
+pub async fn try_monitor_enter<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Unsafe.tryMonitorEnter(Ljava/lang/Object;)Z")
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.misc.Unsafe.tryMonitorEnter(Ljava/lang/Object;)Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/misc/Unsafe.unpark(Ljava/lang/Object;)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn unpark<T: ristretto_types::Thread + 'static>(
+pub async fn unpark<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -963,7 +982,6 @@ mod tests {
         REFERENCE_SIZE, SHORT_SIZE, STATIC_FIELD_OFFSET_MASK,
     };
     use ristretto_types::JavaObject;
-    use ristretto_types::Thread;
 
     /// Creates a java.lang.reflect.Field for testing purposes.
     async fn create_field<T: Thread + 'static>(thread: &T) -> Result<Value> {
@@ -1165,21 +1183,17 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Unsafe.monitorEnter(Ljava/lang/Object;)V"
-    )]
     async fn test_monitor_enter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = monitor_enter(thread, Parameters::default()).await;
+        let result = monitor_enter(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Unsafe.monitorExit(Ljava/lang/Object;)V"
-    )]
     async fn test_monitor_exit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = monitor_exit(thread, Parameters::default()).await;
+        let result = monitor_exit(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1276,30 +1290,24 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Unsafe.putOrderedInt(Ljava/lang/Object;JI)V"
-    )]
     async fn test_put_ordered_int() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_ordered_int(thread, Parameters::default()).await;
+        let result = put_ordered_int(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Unsafe.putOrderedLong(Ljava/lang/Object;JJ)V"
-    )]
     async fn test_put_ordered_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_ordered_long(thread, Parameters::default()).await;
+        let result = put_ordered_long(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Unsafe.putOrderedObject(Ljava/lang/Object;JLjava/lang/Object;)V"
-    )]
     async fn test_put_ordered_object() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = put_ordered_object(thread, Parameters::default()).await;
+        let result = put_ordered_object(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1373,11 +1381,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Unsafe.tryMonitorEnter(Ljava/lang/Object;)Z"
-    )]
     async fn test_try_monitor_enter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = try_monitor_enter(thread, Parameters::default()).await;
+        let result = try_monitor_enter(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

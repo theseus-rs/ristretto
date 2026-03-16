@@ -16,7 +16,7 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_class_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_class_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -35,7 +35,7 @@ pub async fn get_class_at_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_class_at_if_loaded_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_class_at_if_loaded_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,7 +54,7 @@ pub async fn get_class_at_if_loaded_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_class_ref_index_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_class_ref_index_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -81,7 +81,7 @@ pub async fn get_class_ref_index_at_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_double_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_double_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -98,7 +98,7 @@ pub async fn get_double_at_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_field_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_field_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -130,7 +130,7 @@ pub async fn get_field_at_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_field_at_if_loaded_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_field_at_if_loaded_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -142,7 +142,7 @@ pub async fn get_field_at_if_loaded_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_float_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_float_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -159,7 +159,7 @@ pub async fn get_float_at_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_int_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_int_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -176,7 +176,7 @@ pub async fn get_int_at_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_long_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_long_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -193,7 +193,7 @@ pub async fn get_long_at_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_member_ref_info_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_member_ref_info_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -239,7 +239,7 @@ pub async fn get_member_ref_info_at_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_method_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_method_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -295,7 +295,7 @@ pub async fn get_method_at_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_method_at_if_loaded_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_method_at_if_loaded_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -307,7 +307,7 @@ pub async fn get_method_at_if_loaded_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_name_and_type_ref_index_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_name_and_type_ref_index_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -351,7 +351,7 @@ pub async fn get_name_and_type_ref_index_at_0<T: ristretto_types::Thread + 'stat
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_name_and_type_ref_info_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_name_and_type_ref_info_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -403,7 +403,7 @@ pub async fn get_name_and_type_ref_info_at_0<T: ristretto_types::Thread + 'stati
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_size_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_size_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -419,7 +419,7 @@ pub async fn get_size_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_string_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_string_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -437,7 +437,7 @@ pub async fn get_string_at_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_tag_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_tag_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -460,7 +460,7 @@ pub async fn get_tag_at_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_utf_8_at_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_utf_8_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

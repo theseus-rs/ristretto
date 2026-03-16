@@ -4,6 +4,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ use std::sync::Arc;
 /// support non-blocking mode, so this is a safe no-op.
 #[intrinsic_method("sun/nio/ch/IOUtil.configureBlocking(Ljava/io/FileDescriptor;Z)V", Any)]
 #[async_method]
-pub async fn configure_blocking<T: ristretto_types::Thread + 'static>(
+pub async fn configure_blocking<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -46,7 +47,7 @@ pub async fn configure_blocking<T: ristretto_types::Thread + 'static>(
 /// Drain bytes from fd. Returns false (nothing to drain for managed files).
 #[intrinsic_method("sun/nio/ch/IOUtil.drain(I)Z", Any)]
 #[async_method]
-pub async fn drain<T: ristretto_types::Thread + 'static>(
+pub async fn drain<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -98,7 +99,7 @@ pub async fn drain<T: ristretto_types::Thread + 'static>(
 /// Drain a single byte from fd. Returns 0 (nothing drained).
 #[intrinsic_method("sun/nio/ch/IOUtil.drain1(I)I", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn drain_1<T: ristretto_types::Thread + 'static>(
+pub async fn drain_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -134,7 +135,7 @@ pub async fn drain_1<T: ristretto_types::Thread + 'static>(
 /// Return the maximum number of file descriptors.
 #[intrinsic_method("sun/nio/ch/IOUtil.fdLimit()I", Any)]
 #[async_method]
-pub async fn fd_limit<T: ristretto_types::Thread + 'static>(
+pub async fn fd_limit<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -156,7 +157,7 @@ pub async fn fd_limit<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/IOUtil.fdVal(Ljava/io/FileDescriptor;)I", Any)]
 #[async_method]
-pub async fn fd_val<T: ristretto_types::Thread + 'static>(
+pub async fn fd_val<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -173,7 +174,7 @@ pub async fn fd_val<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/IOUtil.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -182,7 +183,7 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/IOUtil.iovMax()I", Any)]
 #[async_method]
-pub async fn iov_max<T: ristretto_types::Thread + 'static>(
+pub async fn iov_max<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -192,7 +193,7 @@ pub async fn iov_max<T: ristretto_types::Thread + 'static>(
 /// Create a pipe. Returns a long encoding two fds: `(read_fd << 32) | write_fd`.
 #[intrinsic_method("sun/nio/ch/IOUtil.makePipe(Z)J", Any)]
 #[async_method]
-pub async fn make_pipe<T: ristretto_types::Thread + 'static>(
+pub async fn make_pipe<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -271,7 +272,7 @@ pub async fn make_pipe<T: ristretto_types::Thread + 'static>(
 /// Fill the provided byte array with random bytes.
 #[intrinsic_method("sun/nio/ch/IOUtil.randomBytes([B)Z", Any)]
 #[async_method]
-pub async fn random_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn random_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -300,7 +301,7 @@ pub async fn random_bytes<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/IOUtil.setfdVal(Ljava/io/FileDescriptor;I)V", Any)]
 #[async_method]
-pub async fn setfd_val<T: ristretto_types::Thread + 'static>(
+pub async fn setfd_val<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -317,7 +318,7 @@ pub async fn setfd_val<T: ristretto_types::Thread + 'static>(
 /// Write a single byte to a file descriptor.
 #[intrinsic_method("sun/nio/ch/IOUtil.write1(IB)I", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn write_1<T: ristretto_types::Thread + 'static>(
+pub async fn write_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -351,7 +352,7 @@ pub async fn write_1<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/IOUtil.writevMax()J", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn writev_max<T: ristretto_types::Thread + 'static>(
+pub async fn writev_max<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

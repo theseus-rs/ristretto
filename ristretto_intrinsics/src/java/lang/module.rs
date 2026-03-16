@@ -5,6 +5,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::ModuleAccess;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{ALL_UNNAMED, DefinedModule};
 use ristretto_types::{Parameters, Result};
@@ -34,7 +35,7 @@ fn get_module_name(module_value: &Value) -> Result<Option<String>> {
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn add_exports_0<T: ristretto_types::Thread + 'static>(
+pub async fn add_exports_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,7 +73,7 @@ pub async fn add_exports_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn add_exports_to_all_0<T: ristretto_types::Thread + 'static>(
+pub async fn add_exports_to_all_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -106,7 +107,7 @@ pub async fn add_exports_to_all_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn add_exports_to_all_unnamed_0<T: ristretto_types::Thread + 'static>(
+pub async fn add_exports_to_all_unnamed_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -139,7 +140,7 @@ pub async fn add_exports_to_all_unnamed_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn add_reads_0<T: ristretto_types::Thread + 'static>(
+pub async fn add_reads_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -189,7 +190,7 @@ fn extract_packages(packages_value: &Value) -> Result<AHashSet<String>> {
     Equal(JAVA_11)
 )]
 #[async_method]
-pub async fn define_module_0_0<T: ristretto_types::Thread + 'static>(
+pub async fn define_module_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -239,7 +240,7 @@ pub async fn define_module_0_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_11)
 )]
 #[async_method]
-pub async fn define_module_0_1<T: ristretto_types::Thread + 'static>(
+pub async fn define_module_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

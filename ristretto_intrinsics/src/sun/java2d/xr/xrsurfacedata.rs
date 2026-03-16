@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn xr_init_surface<T: ristretto_types::Thread + 'static>(
+pub async fn xr_init_surface<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.xr.XRSurfaceData.XRInitSurface(IIIJI)V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.xr.XRSurfaceData.XRInitSurface(IIIJI)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,16 +28,19 @@ pub async fn xr_init_surface<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn free_xsdo_picture<T: ristretto_types::Thread + 'static>(
+pub async fn free_xsdo_picture<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.xr.XRSurfaceData.freeXSDOPicture(J)V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.xr.XRSurfaceData.freeXSDOPicture(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/java2d/xr/XRSurfaceData.initIDs()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,11 +52,14 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn init_xr_picture<T: ristretto_types::Thread + 'static>(
+pub async fn init_xr_picture<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.xr.XRSurfaceData.initXRPicture(JI)V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.xr.XRSurfaceData.initXRPicture(JI)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -56,21 +67,17 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.xr.XRSurfaceData.XRInitSurface(IIIJI)V"
-    )]
     async fn test_xr_init_surface() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = xr_init_surface(thread, Parameters::default()).await;
+        let result = xr_init_surface(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.xr.XRSurfaceData.freeXSDOPicture(J)V"
-    )]
     async fn test_free_xsdo_picture() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = free_xsdo_picture(thread, Parameters::default()).await;
+        let result = free_xsdo_picture(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -82,11 +89,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.xr.XRSurfaceData.initXRPicture(JI)V"
-    )]
     async fn test_init_xr_picture() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_xr_picture(thread, Parameters::default()).await;
+        let result = init_xr_picture(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

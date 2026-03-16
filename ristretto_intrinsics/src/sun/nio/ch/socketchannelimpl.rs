@@ -4,6 +4,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
 
@@ -20,7 +21,7 @@ fn get_fd(fd_value: &Value) -> Result<i32> {
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn check_connect_0<T: ristretto_types::Thread + 'static>(
+pub async fn check_connect_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,7 +50,7 @@ pub async fn check_connect_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn check_connect_1<T: ristretto_types::Thread + 'static>(
+pub async fn check_connect_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -76,7 +77,7 @@ pub async fn check_connect_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn send_out_of_band_data<T: ristretto_types::Thread + 'static>(
+pub async fn send_out_of_band_data<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,13 +13,11 @@ use std::sync::Arc;
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn allocate_optimized_upcall_stub<T: ristretto_types::Thread + 'static>(
+pub async fn allocate_optimized_upcall_stub<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateOptimizedUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateOptimizedUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -25,13 +25,11 @@ pub async fn allocate_optimized_upcall_stub<T: ristretto_types::Thread + 'static
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn allocate_upcall_stub<T: ristretto_types::Thread + 'static>(
+pub async fn allocate_upcall_stub<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -39,7 +37,7 @@ pub async fn allocate_upcall_stub<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -51,11 +49,15 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn supports_optimized_upcalls<T: ristretto_types::Thread + 'static>(
+pub async fn supports_optimized_upcalls<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.ProgrammableUpcallHandler.supportsOptimizedUpcalls()Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.ProgrammableUpcallHandler.supportsOptimizedUpcalls()Z"
+            .to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -63,30 +65,24 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateOptimizedUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/ProgrammableUpcallHandler$CallRegs;)J"
-    )]
     async fn test_allocate_optimized_upcall_stub() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = allocate_optimized_upcall_stub(thread, Parameters::default()).await;
+        let result = allocate_optimized_upcall_stub(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.ProgrammableUpcallHandler.allocateUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
-    )]
     async fn test_allocate_upcall_stub() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = allocate_upcall_stub(thread, Parameters::default()).await;
+        let result = allocate_upcall_stub(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.ProgrammableUpcallHandler.supportsOptimizedUpcalls()Z"
-    )]
     async fn test_supports_optimized_upcalls() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = supports_optimized_upcalls(thread, Parameters::default()).await;
+        let result = supports_optimized_upcalls(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

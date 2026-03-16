@@ -4,14 +4,9 @@ use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-#[cfg(not(target_family = "wasm"))]
-use ristretto_types::JavaError::InterruptedException;
-use ristretto_types::JavaError::{
-    IllegalArgumentException, NullPointerException, RuntimeException, UnsupportedOperationException,
-};
-use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::handles::ThreadHandle;
+use ristretto_types::{JavaError, Thread};
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 use std::time::Duration;
@@ -62,14 +57,19 @@ async fn get_thread<T: Thread + 'static>(
 
     // eetop of 0 means the thread has terminated or not started
     if thread_id == 0 {
-        return Err(RuntimeException("Thread has terminated or not started".to_string()).into());
+        return Err(JavaError::RuntimeException(
+            "Thread has terminated or not started".to_string(),
+        )
+        .into());
     }
 
     let thread_id = u64::try_from(thread_id)?;
     let vm = thread.vm()?;
     let thread_handles = vm.thread_handles();
     let Some(thread_handle) = thread_handles.get(&thread_id).await else {
-        return Err(RuntimeException(format!("Thread not found for id {thread_id}")).into());
+        return Err(
+            JavaError::RuntimeException(format!("Thread not found for id {thread_id}")).into(),
+        );
     };
     Ok(thread_handle.thread.clone())
 }
@@ -129,7 +129,11 @@ pub async fn dump_threads<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "java.lang.Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -153,7 +157,10 @@ pub async fn find_scoped_value_bindings<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.findScopedValueBindings()Ljava/lang/Object;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "java.lang.Thread.findScopedValueBindings()Ljava/lang/Object;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -180,7 +187,10 @@ pub async fn get_stack_trace_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.getStackTrace0()Ljava/lang/Object;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "java.lang.Thread.getStackTrace0()Ljava/lang/Object;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("java/lang/Thread.getThreads()[Ljava/lang/Thread;", Any)]
@@ -212,7 +222,7 @@ pub async fn holds_lock<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let Some(reference) = parameters.pop_reference()? else {
-        return Err(NullPointerException(None).into());
+        return Err(JavaError::NullPointerException(None).into());
     };
     let monitor_id = crate::get_monitor_id(&reference.read());
     if let Some(id) = monitor_id {
@@ -279,10 +289,10 @@ pub async fn resume_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(
-        UnsupportedOperationException("java/lang/Thread.resume0()V is not supported".to_string())
-            .into(),
+    Err(JavaError::UnsupportedOperationException(
+        "java/lang/Thread.resume0()V is not supported".to_string(),
     )
+    .into())
 }
 
 #[intrinsic_method(
@@ -294,7 +304,10 @@ pub async fn scoped_value_cache<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.scopedValueCache()[Ljava/lang/Object;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "java.lang.Thread.scopedValueCache()[Ljava/lang/Object;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -306,7 +319,10 @@ pub async fn set_current_thread<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.setCurrentThread(Ljava/lang/Thread;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "java.lang.Thread.setCurrentThread(Ljava/lang/Thread;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("java/lang/Thread.setNativeName(Ljava/lang/String;)V", Any)]
@@ -317,7 +333,9 @@ pub async fn set_native_name<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let name = parameters.pop()?;
     if name.is_null() {
-        return Err(NullPointerException(Some("name cannot be null".to_string())).into());
+        return Err(
+            JavaError::NullPointerException(Some("name cannot be null".to_string())).into(),
+        );
     }
     let name = name.as_string()?;
     thread.set_name(&name).await;
@@ -369,7 +387,9 @@ pub async fn set_priority_0<T: Thread + 'static>(
                 }
 
                 let priority_value: ThreadPriorityValue = priority.try_into().map_err(|error| {
-                    RuntimeException(format!("Unable to determine thread priority: {error}"))
+                    JavaError::RuntimeException(format!(
+                        "Unable to determine thread priority: {error}"
+                    ))
                 })?;
                 ThreadPriority::Crossplatform(priority_value)
             }
@@ -393,7 +413,10 @@ pub async fn set_scoped_value_cache<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Thread.setScopedValueCache([Ljava/lang/Object;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "java.lang.Thread.setScopedValueCache([Ljava/lang/Object;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("java/lang/Thread.sleep(J)V", LessThanOrEqual(JAVA_17))]
@@ -402,7 +425,6 @@ pub async fn sleep<T: Thread + 'static>(
     #[cfg_attr(target_family = "wasm", allow(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    use ristretto_types::JavaError;
     let millis = parameters.pop_long()?;
     if millis < 0 {
         return Err(
@@ -446,7 +468,9 @@ pub async fn sleep_nanos_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let nanos = parameters.pop_long()?;
     if nanos < 0 {
-        return Err(IllegalArgumentException("timeout value is negative".to_string()).into());
+        return Err(
+            JavaError::IllegalArgumentException("timeout value is negative".to_string()).into(),
+        );
     }
     let nanos = u64::try_from(nanos)?;
     let duration = Duration::from_nanos(nanos);
@@ -461,7 +485,7 @@ pub async fn sleep_nanos_0<T: Thread + 'static>(
         let interrupted = thread.sleep(duration).await;
         let _ = set_thread_status(&thread_object, ThreadState::RUNNABLE);
         if interrupted {
-            return Err(InterruptedException("sleep interrupted".to_string()).into());
+            return Err(JavaError::InterruptedException("sleep interrupted".to_string()).into());
         }
     }
 
@@ -679,7 +703,7 @@ pub async fn stop_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(UnsupportedOperationException(
+    Err(JavaError::UnsupportedOperationException(
         "java/lang/Thread.stop0(Ljava/lang/Object;)V is not supported".to_string(),
     )
     .into())
@@ -691,10 +715,10 @@ pub async fn suspend_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(
-        UnsupportedOperationException("java/lang/Thread.suspend0()V is not supported".to_string())
-            .into(),
+    Err(JavaError::UnsupportedOperationException(
+        "java/lang/Thread.suspend0()V is not supported".to_string(),
     )
+    .into())
 }
 
 #[intrinsic_method("java/lang/Thread.yield()V", LessThanOrEqual(JAVA_17))]
@@ -782,12 +806,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;"
-    )]
     async fn test_dump_threads() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dump_threads(thread, Parameters::default()).await;
+        let result = dump_threads(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -802,12 +824,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Thread.findScopedValueBindings()Ljava/lang/Object;"
-    )]
     async fn test_find_scoped_value_bindings() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = find_scoped_value_bindings(thread, Parameters::default()).await;
+        let result = find_scoped_value_bindings(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -820,12 +840,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Thread.getStackTrace0()Ljava/lang/Object;"
-    )]
     async fn test_get_stack_trace_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_stack_trace_0(thread, Parameters::default()).await;
+        let result = get_stack_trace_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -904,21 +922,17 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Thread.scopedValueCache()[Ljava/lang/Object;"
-    )]
     async fn test_scoped_value_cache() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = scoped_value_cache(thread, Parameters::default()).await;
+        let result = scoped_value_cache(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Thread.setCurrentThread(Ljava/lang/Thread;)V"
-    )]
     async fn test_set_current_thread() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_current_thread(thread, Parameters::default()).await;
+        let result = set_current_thread(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -934,12 +948,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.Thread.setScopedValueCache([Ljava/lang/Object;)V"
-    )]
     async fn test_set_scoped_value_cache() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_scoped_value_cache(thread, Parameters::default()).await;
+        let result = set_scoped_value_cache(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

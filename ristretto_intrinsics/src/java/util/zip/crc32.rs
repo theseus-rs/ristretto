@@ -7,6 +7,7 @@ use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqua
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 use std::sync::LazyLock;
@@ -31,7 +32,7 @@ static CRC32_TABLE: LazyLock<[u32; 256]> = LazyLock::new(|| {
 /// Update CRC-32 checksum with a single byte.
 #[intrinsic_method("java/util/zip/CRC32.update(II)I", Any)]
 #[async_method]
-pub async fn update<T: ristretto_types::Thread + 'static>(
+pub async fn update<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,7 +50,7 @@ pub async fn update<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/CRC32.updateByteBuffer(IJII)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn update_byte_buffer<T: ristretto_types::Thread + 'static>(
+pub async fn update_byte_buffer<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,7 +60,7 @@ pub async fn update_byte_buffer<T: ristretto_types::Thread + 'static>(
 /// Update CRC-32 checksum from a direct byte buffer.
 #[intrinsic_method("java/util/zip/CRC32.updateByteBuffer0(IJII)I", GreaterThan(JAVA_8))]
 #[async_method]
-pub async fn update_byte_buffer_0<T: ristretto_types::Thread + 'static>(
+pub async fn update_byte_buffer_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -73,7 +74,7 @@ pub async fn update_byte_buffer_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/CRC32.updateBytes(I[BII)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn update_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn update_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -83,7 +84,7 @@ pub async fn update_bytes<T: ristretto_types::Thread + 'static>(
 /// Update CRC-32 checksum from a byte array.
 #[intrinsic_method("java/util/zip/CRC32.updateBytes0(I[BII)I", GreaterThan(JAVA_8))]
 #[async_method]
-pub async fn update_bytes_0<T: ristretto_types::Thread + 'static>(
+pub async fn update_bytes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

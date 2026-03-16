@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn x_set_copy_mode<T: ristretto_types::Thread + 'static>(
+pub async fn x_set_copy_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.x11.X11SurfaceData.XSetCopyMode(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.x11.X11SurfaceData.XSetCopyMode(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn x_set_copy_mode<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn x_set_foreground<T: ristretto_types::Thread + 'static>(
+pub async fn x_set_foreground<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.x11.X11SurfaceData.XSetForeground(JI)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.x11.X11SurfaceData.XSetForeground(JI)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -35,11 +43,14 @@ pub async fn x_set_foreground<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn x_set_xor_mode<T: ristretto_types::Thread + 'static>(
+pub async fn x_set_xor_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.x11.X11SurfaceData.XSetXorMode(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.x11.X11SurfaceData.XSetXorMode(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -47,7 +58,7 @@ pub async fn x_set_xor_mode<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,11 +70,14 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn init_surface<T: ristretto_types::Thread + 'static>(
+pub async fn init_surface<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.x11.X11SurfaceData.initSurface(IIIJ)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.x11.X11SurfaceData.initSurface(IIIJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -71,11 +85,14 @@ pub async fn init_surface<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn is_dga_available<T: ristretto_types::Thread + 'static>(
+pub async fn is_dga_available<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.x11.X11SurfaceData.isDgaAvailable()Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.x11.X11SurfaceData.isDgaAvailable()Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -83,11 +100,14 @@ pub async fn is_dga_available<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn is_shm_pm_available<T: ristretto_types::Thread + 'static>(
+pub async fn is_shm_pm_available<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.x11.X11SurfaceData.isShmPMAvailable()Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.x11.X11SurfaceData.isShmPMAvailable()Z".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -95,28 +115,24 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.x11.X11SurfaceData.XSetCopyMode(J)V"
-    )]
     async fn test_x_set_copy_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_set_copy_mode(thread, Parameters::default()).await;
+        let result = x_set_copy_mode(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.x11.X11SurfaceData.XSetForeground(JI)V"
-    )]
     async fn test_x_set_foreground() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_set_foreground(thread, Parameters::default()).await;
+        let result = x_set_foreground(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.java2d.x11.X11SurfaceData.XSetXorMode(J)V")]
     async fn test_x_set_xor_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = x_set_xor_mode(thread, Parameters::default()).await;
+        let result = x_set_xor_mode(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -128,29 +144,23 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.x11.X11SurfaceData.initSurface(IIIJ)V"
-    )]
     async fn test_init_surface() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_surface(thread, Parameters::default()).await;
+        let result = init_surface(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.x11.X11SurfaceData.isDgaAvailable()Z"
-    )]
     async fn test_is_dga_available() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_dga_available(thread, Parameters::default()).await;
+        let result = is_dga_available(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.x11.X11SurfaceData.isShmPMAvailable()Z"
-    )]
     async fn test_is_shm_pm_available() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_shm_pm_available(thread, Parameters::default()).await;
+        let result = is_shm_pm_available(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

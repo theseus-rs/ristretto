@@ -4,6 +4,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 use tracing::debug;
@@ -125,7 +126,7 @@ fn write_field_by_offset(target: &Value, offset: usize, value: Value) -> Result<
 /// structurally and performing field access without going through the JDK's
 /// `MethodHandle`/`LambdaForm` chain.
 #[async_method]
-async fn invoke_var_handle_access_mode<T: ristretto_types::Thread + 'static>(
+async fn invoke_var_handle_access_mode<T: Thread + 'static>(
     thread: &Arc<T>,
     parameters: Parameters,
     access_mode: AccessMode,
@@ -346,7 +347,7 @@ fn dispatch_field_instance(
 /// Dispatch a `VarHandle` access mode on a static field.
 #[async_method]
 #[expect(clippy::too_many_lines)]
-async fn dispatch_field_static<T: ristretto_types::Thread + 'static>(
+async fn dispatch_field_static<T: Thread + 'static>(
     thread: &Arc<T>,
     access_mode: AccessMode,
     offset: usize,
@@ -801,7 +802,7 @@ fn values_equal(a: &Value, b: &Value) -> bool {
 
 /// Fallback: invoke via `toMethodHandle()` for unrecognized `VarHandle` subclasses.
 #[async_method]
-async fn invoke_via_method_handle<T: ristretto_types::Thread + 'static>(
+async fn invoke_via_method_handle<T: Thread + 'static>(
     thread: &Arc<T>,
     all_params: Vec<Value>,
     access_mode: AccessMode,
@@ -864,7 +865,7 @@ async fn invoke_via_method_handle<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn compare_and_exchange<T: ristretto_types::Thread + 'static>(
+pub async fn compare_and_exchange<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -876,7 +877,7 @@ pub async fn compare_and_exchange<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn compare_and_exchange_acquire<T: ristretto_types::Thread + 'static>(
+pub async fn compare_and_exchange_acquire<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -888,7 +889,7 @@ pub async fn compare_and_exchange_acquire<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn compare_and_exchange_release<T: ristretto_types::Thread + 'static>(
+pub async fn compare_and_exchange_release<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -900,7 +901,7 @@ pub async fn compare_and_exchange_release<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn compare_and_set<T: ristretto_types::Thread + 'static>(
+pub async fn compare_and_set<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -912,7 +913,7 @@ pub async fn compare_and_set<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get<T: ristretto_types::Thread + 'static>(
+pub async fn get<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -924,7 +925,7 @@ pub async fn get<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_acquire<T: ristretto_types::Thread + 'static>(
+pub async fn get_acquire<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -936,7 +937,7 @@ pub async fn get_acquire<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_add<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_add<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -948,7 +949,7 @@ pub async fn get_and_add<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_add_acquire<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_add_acquire<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -960,7 +961,7 @@ pub async fn get_and_add_acquire<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_add_release<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_add_release<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -972,7 +973,7 @@ pub async fn get_and_add_release<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_bitwise_and<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_bitwise_and<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -984,7 +985,7 @@ pub async fn get_and_bitwise_and<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_bitwise_and_acquire<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_bitwise_and_acquire<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -996,7 +997,7 @@ pub async fn get_and_bitwise_and_acquire<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_bitwise_and_release<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_bitwise_and_release<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1008,7 +1009,7 @@ pub async fn get_and_bitwise_and_release<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_bitwise_or<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_bitwise_or<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1020,7 +1021,7 @@ pub async fn get_and_bitwise_or<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_bitwise_or_acquire<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_bitwise_or_acquire<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1032,7 +1033,7 @@ pub async fn get_and_bitwise_or_acquire<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_bitwise_or_release<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_bitwise_or_release<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1044,7 +1045,7 @@ pub async fn get_and_bitwise_or_release<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_bitwise_xor<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_bitwise_xor<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1056,7 +1057,7 @@ pub async fn get_and_bitwise_xor<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_bitwise_xor_acquire<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_bitwise_xor_acquire<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1068,7 +1069,7 @@ pub async fn get_and_bitwise_xor_acquire<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_bitwise_xor_release<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_bitwise_xor_release<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1080,7 +1081,7 @@ pub async fn get_and_bitwise_xor_release<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_set<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_set<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1092,7 +1093,7 @@ pub async fn get_and_set<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_set_acquire<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_set_acquire<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1104,7 +1105,7 @@ pub async fn get_and_set_acquire<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_set_release<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_set_release<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1116,7 +1117,7 @@ pub async fn get_and_set_release<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_opaque<T: ristretto_types::Thread + 'static>(
+pub async fn get_opaque<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1128,7 +1129,7 @@ pub async fn get_opaque<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn get_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1140,7 +1141,7 @@ pub async fn get_volatile<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set<T: ristretto_types::Thread + 'static>(
+pub async fn set<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1152,7 +1153,7 @@ pub async fn set<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_opaque<T: ristretto_types::Thread + 'static>(
+pub async fn set_opaque<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1164,7 +1165,7 @@ pub async fn set_opaque<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_release<T: ristretto_types::Thread + 'static>(
+pub async fn set_release<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1176,7 +1177,7 @@ pub async fn set_release<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn set_volatile<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1188,7 +1189,7 @@ pub async fn set_volatile<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn weak_compare_and_set<T: ristretto_types::Thread + 'static>(
+pub async fn weak_compare_and_set<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1200,7 +1201,7 @@ pub async fn weak_compare_and_set<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn weak_compare_and_set_acquire<T: ristretto_types::Thread + 'static>(
+pub async fn weak_compare_and_set_acquire<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1212,7 +1213,7 @@ pub async fn weak_compare_and_set_acquire<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn weak_compare_and_set_plain<T: ristretto_types::Thread + 'static>(
+pub async fn weak_compare_and_set_plain<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1224,7 +1225,7 @@ pub async fn weak_compare_and_set_plain<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn weak_compare_and_set_release<T: ristretto_types::Thread + 'static>(
+pub async fn weak_compare_and_set_release<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {

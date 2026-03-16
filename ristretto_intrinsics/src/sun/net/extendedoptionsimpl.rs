@@ -3,6 +3,7 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn flow_supported<T: ristretto_types::Thread + 'static>(
+pub async fn flow_supported<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,7 +24,7 @@ pub async fn flow_supported<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_flow_option<T: ristretto_types::Thread + 'static>(
+pub async fn get_flow_option<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -36,7 +37,7 @@ pub async fn get_flow_option<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_tcp_keep_alive_intvl<T: ristretto_types::Thread + 'static>(
+pub async fn get_tcp_keep_alive_intvl<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,7 +50,7 @@ pub async fn get_tcp_keep_alive_intvl<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_tcp_keep_alive_probes<T: ristretto_types::Thread + 'static>(
+pub async fn get_tcp_keep_alive_probes<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -62,7 +63,7 @@ pub async fn get_tcp_keep_alive_probes<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_tcp_keep_alive_time<T: ristretto_types::Thread + 'static>(
+pub async fn get_tcp_keep_alive_time<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,7 +73,7 @@ pub async fn get_tcp_keep_alive_time<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/net/ExtendedOptionsImpl.init()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -84,7 +85,7 @@ pub async fn init<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn keep_alive_options_supported<T: ristretto_types::Thread + 'static>(
+pub async fn keep_alive_options_supported<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -96,7 +97,7 @@ pub async fn keep_alive_options_supported<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn set_flow_option<T: ristretto_types::Thread + 'static>(
+pub async fn set_flow_option<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -109,7 +110,7 @@ pub async fn set_flow_option<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn set_tcp_keep_alive_intvl<T: ristretto_types::Thread + 'static>(
+pub async fn set_tcp_keep_alive_intvl<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -121,7 +122,7 @@ pub async fn set_tcp_keep_alive_intvl<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn set_tcp_keep_alive_probes<T: ristretto_types::Thread + 'static>(
+pub async fn set_tcp_keep_alive_probes<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -133,7 +134,7 @@ pub async fn set_tcp_keep_alive_probes<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn set_tcp_keep_alive_time<T: ristretto_types::Thread + 'static>(
+pub async fn set_tcp_keep_alive_time<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

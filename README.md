@@ -55,10 +55,9 @@ functions that use object byte code or call other functions.
 
 #### Runtime Native Methods
 
-The Java runtime requires hundreds of native methods. This project aims to provide Rust equivalents for these methods
-on an as needed basis. Currently, only a small subset of these are implemented. If a native method is called that is not
-implemented, the program will panic. Please submit a pull request, or open an issue if you need a specific native
-method implemented.
+The Java runtime requires hundreds of native methods. This project aims to provide Rust equivalents for these methods.
+If a native method is called that is not implemented, the program throw a `java.lang.UnsatisfiedLinkError`. Please
+submit a pull request, or open an issue if you need a specific native method implemented.
 
 #### Java Native Interface (JNI)
 

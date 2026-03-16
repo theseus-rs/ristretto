@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn fallback_domain_0<T: ristretto_types::Thread + 'static>(
+pub async fn fallback_domain_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.net.dns.ResolverConfigurationImpl.fallbackDomain0()Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.net.dns.ResolverConfigurationImpl.fallbackDomain0()Ljava/lang/String;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn fallback_domain_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn local_domain_0<T: ristretto_types::Thread + 'static>(
+pub async fn local_domain_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.net.dns.ResolverConfigurationImpl.localDomain0()Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.net.dns.ResolverConfigurationImpl.localDomain0()Ljava/lang/String;".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -35,20 +43,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.net.dns.ResolverConfigurationImpl.fallbackDomain0()Ljava/lang/String;"
-    )]
     async fn test_fallback_domain_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fallback_domain_0(thread, Parameters::default()).await;
+        let result = fallback_domain_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.net.dns.ResolverConfigurationImpl.localDomain0()Ljava/lang/String;"
-    )]
     async fn test_local_domain_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = local_domain_0(thread, Parameters::default()).await;
+        let result = local_domain_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

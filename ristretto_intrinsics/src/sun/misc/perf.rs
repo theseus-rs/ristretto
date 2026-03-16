@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn attach<T: ristretto_types::Thread + 'static>(
+pub async fn attach<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.misc.Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn attach<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn create_byte_array<T: ristretto_types::Thread + 'static>(
+pub async fn create_byte_array<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.misc.Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -35,11 +43,14 @@ pub async fn create_byte_array<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn create_long<T: ristretto_types::Thread + 'static>(
+pub async fn create_long<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.misc.Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -47,34 +58,37 @@ pub async fn create_long<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn detach<T: ristretto_types::Thread + 'static>(
+pub async fn detach<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Perf.detach(Ljava/nio/ByteBuffer;)V")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.misc.Perf.detach(Ljava/nio/ByteBuffer;)V".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("sun/misc/Perf.highResCounter()J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn high_res_counter<T: ristretto_types::Thread + 'static>(
+pub async fn high_res_counter<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Perf.highResCounter()J")
+    Err(JavaError::UnsatisfiedLinkError("sun.misc.Perf.highResCounter()J".to_string()).into())
 }
 
 #[intrinsic_method("sun/misc/Perf.highResFrequency()J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn high_res_frequency<T: ristretto_types::Thread + 'static>(
+pub async fn high_res_frequency<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Perf.highResFrequency()J")
+    Err(JavaError::UnsatisfiedLinkError("sun.misc.Perf.highResFrequency()J".to_string()).into())
 }
 
 #[intrinsic_method("sun/misc/Perf.registerNatives()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -86,51 +100,45 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;"
-    )]
     async fn test_attach() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = attach(thread, Parameters::default()).await;
+        let result = attach(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;"
-    )]
     async fn test_create_byte_array() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_byte_array(thread, Parameters::default()).await;
+        let result = create_byte_array(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;"
-    )]
     async fn test_create_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_long(thread, Parameters::default()).await;
+        let result = create_long(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Perf.detach(Ljava/nio/ByteBuffer;)V")]
     async fn test_detach() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = detach(thread, Parameters::default()).await;
+        let result = detach(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Perf.highResCounter()J")]
     async fn test_high_res_counter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = high_res_counter(thread, Parameters::default()).await;
+        let result = high_res_counter(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Perf.highResFrequency()J")]
     async fn test_high_res_frequency() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = high_res_frequency(thread, Parameters::default()).await;
+        let result = high_res_frequency(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

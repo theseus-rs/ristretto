@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_vm_temporary_directory<T: ristretto_types::Thread + 'static>(
+pub async fn get_vm_temporary_directory<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.VMSupport.getVMTemporaryDirectory()Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.misc.VMSupport.getVMTemporaryDirectory()Ljava/lang/String;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,15 @@ pub async fn get_vm_temporary_directory<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn init_agent_properties<T: ristretto_types::Thread + 'static>(
+pub async fn init_agent_properties<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.misc.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;"
+            .to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -35,20 +44,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.VMSupport.getVMTemporaryDirectory()Ljava/lang/String;"
-    )]
     async fn test_get_vm_temporary_directory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_vm_temporary_directory(thread, Parameters::default()).await;
+        let result = get_vm_temporary_directory(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;"
-    )]
     async fn test_init_agent_properties() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_agent_properties(thread, Parameters::default()).await;
+        let result = init_agent_properties(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

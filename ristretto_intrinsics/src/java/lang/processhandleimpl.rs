@@ -3,6 +3,7 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::process;
 use std::sync::Arc;
@@ -14,7 +15,7 @@ use sysinfo::{Pid, ProcessesToUpdate, Signal, System};
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn destroy_0<T: ristretto_types::Thread + 'static>(
+pub async fn destroy_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -41,7 +42,7 @@ pub async fn destroy_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_current_pid_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_current_pid_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,7 +56,7 @@ pub async fn get_current_pid_0<T: ristretto_types::Thread + 'static>(
 )]
 #[expect(clippy::similar_names)]
 #[async_method]
-pub async fn get_process_pids_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_process_pids_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -139,7 +140,7 @@ pub async fn get_process_pids_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn init_native<T: ristretto_types::Thread + 'static>(
+pub async fn init_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -151,7 +152,7 @@ pub async fn init_native<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn is_alive_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_alive_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -177,7 +178,7 @@ pub async fn is_alive_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn parent_0<T: ristretto_types::Thread + 'static>(
+pub async fn parent_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -205,7 +206,7 @@ pub async fn parent_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn wait_for_process_exit_0<T: ristretto_types::Thread + 'static>(
+pub async fn wait_for_process_exit_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

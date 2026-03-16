@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn to_stderr<T: ristretto_types::Thread + 'static>(
+pub async fn to_stderr<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.MessageUtils.toStderr(Ljava/lang/String;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.misc.MessageUtils.toStderr(Ljava/lang/String;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn to_stderr<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn to_stdout<T: ristretto_types::Thread + 'static>(
+pub async fn to_stdout<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.MessageUtils.toStdout(Ljava/lang/String;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.misc.MessageUtils.toStdout(Ljava/lang/String;)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -35,20 +43,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.MessageUtils.toStderr(Ljava/lang/String;)V"
-    )]
     async fn test_to_stderr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = to_stderr(thread, Parameters::default()).await;
+        let result = to_stderr(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.MessageUtils.toStdout(Ljava/lang/String;)V"
-    )]
     async fn test_to_stdout() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = to_stdout(thread, Parameters::default()).await;
+        let result = to_stdout(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

@@ -123,9 +123,7 @@ pub async fn for_name_0<T: Thread + 'static>(
     let class = if initialize {
         match thread.class(&class_name).await {
             Ok(class) => class,
-            Err(_error) => {
-                return Err(ClassNotFoundException(class_name).into());
-            }
+            Err(_error) => return Err(ClassNotFoundException(class_name).into()),
         }
     } else {
         // Load class without initialization
@@ -134,9 +132,7 @@ pub async fn for_name_0<T: Thread + 'static>(
         let class_loader = class_loader_lock.read().await;
         match class_loader.load(JavaStr::try_from_str(&class_name)?).await {
             Ok(class) => class,
-            Err(_error) => {
-                return Err(ClassNotFoundException(class_name).into());
-            }
+            Err(_error) => return Err(ClassNotFoundException(class_name).into()),
         }
     };
 

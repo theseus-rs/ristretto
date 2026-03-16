@@ -2,6 +2,8 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -10,22 +12,23 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.loops.GraphicsPrimitiveMgr.initIDs(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.GraphicsPrimitiveMgr.initIDs(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V".to_string()).into())
 }
 
 #[intrinsic_method("sun/java2d/loops/GraphicsPrimitiveMgr.registerNativeLoops()V", Any)]
 #[async_method]
-pub async fn register_native_loops<T: ristretto_types::Thread + 'static>(
+pub async fn register_native_loops<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.loops.GraphicsPrimitiveMgr.registerNativeLoops()V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.loops.GraphicsPrimitiveMgr.registerNativeLoops()V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -33,20 +36,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.loops.GraphicsPrimitiveMgr.initIDs(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V"
-    )]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.loops.GraphicsPrimitiveMgr.registerNativeLoops()V"
-    )]
     async fn test_register_native_loops() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = register_native_loops(thread, Parameters::default()).await;
+        let result = register_native_loops(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

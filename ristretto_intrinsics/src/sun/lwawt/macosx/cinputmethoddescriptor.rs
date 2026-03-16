@@ -2,6 +2,8 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -10,20 +12,27 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn native_get_available_locales<T: ristretto_types::Thread + 'static>(
+pub async fn native_get_available_locales<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CInputMethodDescriptor.nativeGetAvailableLocales()Ljava/util/List;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CInputMethodDescriptor.nativeGetAvailableLocales()Ljava/util/List;"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CInputMethodDescriptor.nativeInit()V", Any)]
 #[async_method]
-pub async fn native_init<T: ristretto_types::Thread + 'static>(
+pub async fn native_init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CInputMethodDescriptor.nativeInit()V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CInputMethodDescriptor.nativeInit()V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -31,20 +40,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CInputMethodDescriptor.nativeGetAvailableLocales()Ljava/util/List;"
-    )]
     async fn test_native_get_available_locales() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_available_locales(thread, Parameters::default()).await;
+        let result = native_get_available_locales(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CInputMethodDescriptor.nativeInit()V"
-    )]
     async fn test_native_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_init(thread, Parameters::default()).await;
+        let result = native_init(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn create_null_scaler_context<T: ristretto_types::Thread + 'static>(
+pub async fn create_null_scaler_context<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.NativeStrike.createNullScalerContext()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.NativeStrike.createNullScalerContext()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,20 +28,23 @@ pub async fn create_null_scaler_context<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn create_scaler_context<T: ristretto_types::Thread + 'static>(
+pub async fn create_scaler_context<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.NativeStrike.createScalerContext([BID)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.NativeStrike.createScalerContext([BID)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/font/NativeStrike.getMaxGlyph(J)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_max_glyph<T: ristretto_types::Thread + 'static>(
+pub async fn get_max_glyph<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.NativeStrike.getMaxGlyph(J)I")
+    Err(JavaError::UnsatisfiedLinkError("sun.font.NativeStrike.getMaxGlyph(J)I".to_string()).into())
 }
 
 #[cfg(test)]
@@ -44,27 +52,23 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.NativeStrike.createNullScalerContext()J"
-    )]
     async fn test_create_null_scaler_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_null_scaler_context(thread, Parameters::default()).await;
+        let result = create_null_scaler_context(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.NativeStrike.createScalerContext([BID)J"
-    )]
     async fn test_create_scaler_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_scaler_context(thread, Parameters::default()).await;
+        let result = create_scaler_context(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.font.NativeStrike.getMaxGlyph(J)I")]
     async fn test_get_max_glyph() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_max_glyph(thread, Parameters::default()).await;
+        let result = get_max_glyph(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

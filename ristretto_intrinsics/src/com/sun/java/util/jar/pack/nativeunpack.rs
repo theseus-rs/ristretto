@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn finish<T: ristretto_types::Thread + 'static>(
+pub async fn finish<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.java.util.jar.pack.NativeUnpack.finish()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.java.util.jar.pack.NativeUnpack.finish()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn finish<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_next_file<T: ristretto_types::Thread + 'static>(
+pub async fn get_next_file<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.java.util.jar.pack.NativeUnpack.getNextFile([Ljava/lang/Object;)Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.java.util.jar.pack.NativeUnpack.getNextFile([Ljava/lang/Object;)Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -35,11 +43,15 @@ pub async fn get_next_file<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_option<T: ristretto_types::Thread + 'static>(
+pub async fn get_option<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.java.util.jar.pack.NativeUnpack.getOption(Ljava/lang/String;)Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.java.util.jar.pack.NativeUnpack.getOption(Ljava/lang/String;)Ljava/lang/String;"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -47,11 +59,14 @@ pub async fn get_option<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_unused_input<T: ristretto_types::Thread + 'static>(
+pub async fn get_unused_input<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.java.util.jar.pack.NativeUnpack.getUnusedInput()Ljava/nio/ByteBuffer;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.java.util.jar.pack.NativeUnpack.getUnusedInput()Ljava/nio/ByteBuffer;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -59,7 +74,7 @@ pub async fn get_unused_input<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -71,13 +86,15 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_option<T: ristretto_types::Thread + 'static>(
+pub async fn set_option<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
+    Err(JavaError::UnsatisfiedLinkError(
         "com.sun.java.util.jar.pack.NativeUnpack.setOption(Ljava/lang/String;Ljava/lang/String;)Z"
+            .to_string(),
     )
+    .into())
 }
 
 #[intrinsic_method(
@@ -85,11 +102,14 @@ pub async fn set_option<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn start<T: ristretto_types::Thread + 'static>(
+pub async fn start<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.java.util.jar.pack.NativeUnpack.start(Ljava/nio/ByteBuffer;J)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.java.util.jar.pack.NativeUnpack.start(Ljava/nio/ByteBuffer;J)J".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -97,39 +117,31 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.finish()J"
-    )]
     async fn test_finish() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = finish(thread, Parameters::default()).await;
+        let result = finish(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.getNextFile([Ljava/lang/Object;)Z"
-    )]
     async fn test_get_next_file() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_next_file(thread, Parameters::default()).await;
+        let result = get_next_file(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.getOption(Ljava/lang/String;)Ljava/lang/String;"
-    )]
     async fn test_get_option() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_option(thread, Parameters::default()).await;
+        let result = get_option(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.getUnusedInput()Ljava/nio/ByteBuffer;"
-    )]
     async fn test_get_unused_input() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_unused_input(thread, Parameters::default()).await;
+        let result = get_unused_input(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -141,20 +153,16 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.setOption(Ljava/lang/String;Ljava/lang/String;)Z"
-    )]
     async fn test_set_option() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_option(thread, Parameters::default()).await;
+        let result = set_option(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.java.util.jar.pack.NativeUnpack.start(Ljava/nio/ByteBuffer;J)J"
-    )]
     async fn test_start() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = start(thread, Parameters::default()).await;
+        let result = start(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

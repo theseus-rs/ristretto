@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn direct_copy_0<T: ristretto_types::Thread + 'static>(
+pub async fn direct_copy_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.BsdFileSystem.directCopy0(IJJ)I");
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.nio.fs.BsdFileSystem.directCopy0(IJJ)I".to_string())
+            .into(),
+    )
 }
 
 #[cfg(test)]
@@ -23,9 +28,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.BsdFileSystem.directCopy0(IJJ)I")]
     async fn test_direct_copy_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = direct_copy_0(thread, Parameters::default()).await;
+        let result = direct_copy_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

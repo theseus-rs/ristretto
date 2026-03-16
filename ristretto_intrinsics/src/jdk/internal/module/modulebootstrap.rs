@@ -2,6 +2,7 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -29,7 +30,7 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn boot<T: ristretto_types::Thread + 'static>(
+pub async fn boot<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

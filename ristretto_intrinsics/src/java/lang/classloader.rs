@@ -11,6 +11,7 @@ use ristretto_types::JavaError::{
     ClassFormatError, IndexOutOfBoundsException, NoClassDefFoundError,
 };
 use ristretto_types::JavaObject;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -19,7 +20,7 @@ use zerocopy::transmute_ref;
 /// Create a `java.lang.Class` object from a byte array.
 /// This method is used by the `defineClass0`, `defineClass1`, and `defineClass2` native methods.
 /// The `defineClass0` method is used by Java 8 and earlier versions.
-async fn class_object_from_bytes<T: ristretto_types::Thread + 'static>(
+async fn class_object_from_bytes<T: Thread + 'static>(
     thread: &Arc<T>,
     source_file: Option<Gc<RwLock<Reference>>>,
     bytes: &[u8],
@@ -39,9 +40,7 @@ async fn class_object_from_bytes<T: ristretto_types::Thread + 'static>(
     let bytes = &bytes[offset..offset + length];
     let class_file = match ClassFile::from_bytes(bytes) {
         Ok(class_file) => class_file,
-        Err(error) => {
-            return Err(ClassFormatError(error.to_string()).into());
-        }
+        Err(error) => return Err(ClassFormatError(error.to_string()).into()),
     };
 
     // Verify class file according to the configured verify mode
@@ -87,7 +86,7 @@ async fn class_object_from_bytes<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn define_class_0_0<T: ristretto_types::Thread + 'static>(
+pub async fn define_class_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -117,7 +116,7 @@ pub async fn define_class_0_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn define_class_1_0<T: ristretto_types::Thread + 'static>(
+pub async fn define_class_1_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -148,7 +147,7 @@ pub async fn define_class_1_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn define_class_2_0<T: ristretto_types::Thread + 'static>(
+pub async fn define_class_2_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -187,7 +186,7 @@ pub async fn define_class_2_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_11)
 )]
 #[async_method]
-pub async fn define_class_0_1<T: ristretto_types::Thread + 'static>(
+pub async fn define_class_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -224,7 +223,7 @@ pub async fn define_class_0_1<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn define_class_1_1<T: ristretto_types::Thread + 'static>(
+pub async fn define_class_1_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -253,7 +252,7 @@ pub async fn define_class_1_1<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn define_class_2_1<T: ristretto_types::Thread + 'static>(
+pub async fn define_class_2_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -289,7 +288,7 @@ pub async fn define_class_2_1<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn find_bootstrap_class<T: ristretto_types::Thread + 'static>(
+pub async fn find_bootstrap_class<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -306,7 +305,7 @@ pub async fn find_bootstrap_class<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn find_builtin_lib<T: ristretto_types::Thread + 'static>(
+pub async fn find_builtin_lib<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -323,7 +322,7 @@ pub async fn find_builtin_lib<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn find_loaded_class_0<T: ristretto_types::Thread + 'static>(
+pub async fn find_loaded_class_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -340,7 +339,7 @@ pub async fn find_loaded_class_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn init_system_class_loader<T: ristretto_types::Thread + 'static>(
+pub async fn init_system_class_loader<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -362,7 +361,7 @@ pub async fn init_system_class_loader<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/ClassLoader.registerNatives()V", Any)]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -374,7 +373,7 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn resolve_class_0<T: ristretto_types::Thread + 'static>(
+pub async fn resolve_class_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -387,7 +386,7 @@ pub async fn resolve_class_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn retrieve_directives<T: ristretto_types::Thread + 'static>(
+pub async fn retrieve_directives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

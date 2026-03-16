@@ -6,14 +6,13 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::ModuleAccess;
 use ristretto_types::Parameters;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{JavaObject, Result};
 use std::sync::Arc;
 
 /// Get the boot class loader for the current thread.
-async fn boot_class_loader<T: ristretto_types::Thread + 'static>(
-    thread: &Arc<T>,
-) -> Result<Arc<ClassLoader>> {
+async fn boot_class_loader<T: Thread + 'static>(thread: &Arc<T>) -> Result<Arc<ClassLoader>> {
     let vm = thread.vm()?;
     let class_loader = vm.class_loader().read().await.clone();
     let mut current_class_loader = class_loader;
@@ -28,7 +27,7 @@ async fn boot_class_loader<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_system_package_location<T: ristretto_types::Thread + 'static>(
+pub async fn get_system_package_location<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -60,7 +59,7 @@ pub async fn get_system_package_location<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_system_package_names<T: ristretto_types::Thread + 'static>(
+pub async fn get_system_package_names<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -100,7 +99,7 @@ pub async fn get_system_package_names<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_boot_loader_unnamed_module_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_boot_loader_unnamed_module_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

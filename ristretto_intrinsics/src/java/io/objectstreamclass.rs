@@ -3,6 +3,7 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn has_static_initializer<T: ristretto_types::Thread + 'static>(
+pub async fn has_static_initializer<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,7 +24,7 @@ pub async fn has_static_initializer<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/ObjectStreamClass.initNative()V", Any)]
 #[async_method]
-pub async fn init_native<T: ristretto_types::Thread + 'static>(
+pub async fn init_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

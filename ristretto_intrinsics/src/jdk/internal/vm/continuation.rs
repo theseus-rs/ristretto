@@ -3,16 +3,21 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("jdk/internal/vm/Continuation.doYield()I", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn do_yield<T: ristretto_types::Thread + 'static>(
+pub async fn do_yield<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.vm.Continuation.doYield()I")
+    Err(
+        JavaError::UnsatisfiedLinkError("jdk.internal.vm.Continuation.doYield()I".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method(
@@ -20,11 +25,14 @@ pub async fn do_yield<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn enter_special<T: ristretto_types::Thread + 'static>(
+pub async fn enter_special<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.vm.Continuation.enterSpecial(Ljdk/internal/vm/Continuation;ZZ)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.vm.Continuation.enterSpecial(Ljdk/internal/vm/Continuation;ZZ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -32,20 +40,23 @@ pub async fn enter_special<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn is_pinned_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_pinned_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.vm.Continuation.isPinned0(Ljdk/internal/vm/ContinuationScope;)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.vm.Continuation.isPinned0(Ljdk/internal/vm/ContinuationScope;)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("jdk/internal/vm/Continuation.pin()V", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn pin<T: ristretto_types::Thread + 'static>(
+pub async fn pin<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.vm.Continuation.pin()V")
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.vm.Continuation.pin()V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -53,7 +64,7 @@ pub async fn pin<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -62,11 +73,11 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("jdk/internal/vm/Continuation.unpin()V", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn unpin<T: ristretto_types::Thread + 'static>(
+pub async fn unpin<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.vm.Continuation.unpin()V")
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.vm.Continuation.unpin()V".to_string()).into())
 }
 
 #[cfg(test)]
@@ -74,35 +85,31 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.internal.vm.Continuation.doYield()I")]
     async fn test_do_yield() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = do_yield(thread, Parameters::default()).await;
+        let result = do_yield(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.vm.Continuation.enterSpecial(Ljdk/internal/vm/Continuation;ZZ)V"
-    )]
     async fn test_enter_special() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = enter_special(thread, Parameters::default()).await;
+        let result = enter_special(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.vm.Continuation.isPinned0(Ljdk/internal/vm/ContinuationScope;)I"
-    )]
     async fn test_is_pinned_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_pinned_0(thread, Parameters::default()).await;
+        let result = is_pinned_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.internal.vm.Continuation.pin()V")]
     async fn test_pin() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pin(thread, Parameters::default()).await;
+        let result = pin(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -114,9 +121,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.internal.vm.Continuation.unpin()V")]
     async fn test_unpin() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unpin(thread, Parameters::default()).await;
+        let result = unpin(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

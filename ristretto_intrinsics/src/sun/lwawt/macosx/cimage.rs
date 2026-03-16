@@ -2,43 +2,57 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCopyNSImageIntoArray(J[IIIII)V", Any)]
 #[async_method]
-pub async fn native_copy_ns_image_into_array<T: ristretto_types::Thread + 'static>(
+pub async fn native_copy_ns_image_into_array<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CImage.nativeCopyNSImageIntoArray(J[IIIII)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CImage.nativeCopyNSImageIntoArray(J[IIIII)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromArray([III)J", Any)]
 #[async_method]
-pub async fn native_create_ns_image_from_array<T: ristretto_types::Thread + 'static>(
+pub async fn native_create_ns_image_from_array<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromArray([III)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CImage.nativeCreateNSImageFromArray([III)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromArrays([[I[I[I)J", Any)]
 #[async_method]
-pub async fn native_create_ns_image_from_arrays<T: ristretto_types::Thread + 'static>(
+pub async fn native_create_ns_image_from_arrays<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromArrays([[I[I[I)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CImage.nativeCreateNSImageFromArrays([[I[I[I)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromBytes([B)J", Any)]
 #[async_method]
-pub async fn native_create_ns_image_from_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn native_create_ns_image_from_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromBytes([B)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CImage.nativeCreateNSImageFromBytes([B)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -46,20 +60,27 @@ pub async fn native_create_ns_image_from_bytes<T: ristretto_types::Thread + 'sta
     Any
 )]
 #[async_method]
-pub async fn native_create_ns_image_from_file_contents<T: ristretto_types::Thread + 'static>(
+pub async fn native_create_ns_image_from_file_contents<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromFileContents(Ljava/lang/String;)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CImage.nativeCreateNSImageFromFileContents(Ljava/lang/String;)J"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromIconSelector(I)J", Any)]
 #[async_method]
-pub async fn native_create_ns_image_from_icon_selector<T: ristretto_types::Thread + 'static>(
+pub async fn native_create_ns_image_from_icon_selector<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromIconSelector(I)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CImage.nativeCreateNSImageFromIconSelector(I)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -67,11 +88,14 @@ pub async fn native_create_ns_image_from_icon_selector<T: ristretto_types::Threa
     Any
 )]
 #[async_method]
-pub async fn native_create_ns_image_from_image_name<T: ristretto_types::Thread + 'static>(
+pub async fn native_create_ns_image_from_image_name<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CImage.nativeCreateNSImageFromImageName(Ljava/lang/String;)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CImage.nativeCreateNSImageFromImageName(Ljava/lang/String;)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -85,9 +109,11 @@ pub async fn native_create_ns_image_of_file_from_launch_services<
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
+    Err(JavaError::UnsatisfiedLinkError(
         "sun.lwawt.macosx.CImage.nativeCreateNSImageOfFileFromLaunchServices(Ljava/lang/String;)J"
+            .to_string(),
     )
+    .into())
 }
 
 #[intrinsic_method(
@@ -95,13 +121,11 @@ pub async fn native_create_ns_image_of_file_from_launch_services<
     Any
 )]
 #[async_method]
-pub async fn native_get_ns_image_representation_sizes<T: ristretto_types::Thread + 'static>(
+pub async fn native_get_ns_image_representation_sizes<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.lwawt.macosx.CImage.nativeGetNSImageRepresentationSizes(JDD)[Ljava/awt/geom/Dimension2D;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CImage.nativeGetNSImageRepresentationSizes(JDD)[Ljava/awt/geom/Dimension2D;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -109,20 +133,26 @@ pub async fn native_get_ns_image_representation_sizes<T: ristretto_types::Thread
     Any
 )]
 #[async_method]
-pub async fn native_get_ns_image_size<T: ristretto_types::Thread + 'static>(
+pub async fn native_get_ns_image_size<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CImage.nativeGetNSImageSize(J)Ljava/awt/geom/Dimension2D;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CImage.nativeGetNSImageSize(J)Ljava/awt/geom/Dimension2D;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeGetPlatformImageBytes([III)[B", Any)]
 #[async_method]
-pub async fn native_get_platform_image_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn native_get_platform_image_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CImage.nativeGetPlatformImageBytes([III)[B")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CImage.nativeGetPlatformImageBytes([III)[B".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -130,20 +160,26 @@ pub async fn native_get_platform_image_bytes<T: ristretto_types::Thread + 'stati
     Any
 )]
 #[async_method]
-pub async fn native_resize_ns_image_representations<T: ristretto_types::Thread + 'static>(
+pub async fn native_resize_ns_image_representations<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CImage.nativeResizeNSImageRepresentations(JDD)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CImage.nativeResizeNSImageRepresentations(JDD)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeSetNSImageSize(JDD)V", Any)]
 #[async_method]
-pub async fn native_set_ns_image_size<T: ristretto_types::Thread + 'static>(
+pub async fn native_set_ns_image_size<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CImage.nativeSetNSImageSize(JDD)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CImage.nativeSetNSImageSize(JDD)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -151,72 +187,55 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeCopyNSImageIntoArray(J[IIIII)V"
-    )]
     async fn test_native_copy_ns_image_into_array() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_copy_ns_image_into_array(thread, Parameters::default()).await;
+        let result = native_copy_ns_image_into_array(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeCreateNSImageFromArray([III)J"
-    )]
     async fn test_native_create_ns_image_from_array() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_array(thread, Parameters::default()).await;
+        let result = native_create_ns_image_from_array(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeCreateNSImageFromArrays([[I[I[I)J"
-    )]
     async fn test_native_create_ns_image_from_arrays() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_arrays(thread, Parameters::default()).await;
+        let result = native_create_ns_image_from_arrays(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeCreateNSImageFromBytes([B)J"
-    )]
     async fn test_native_create_ns_image_from_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_bytes(thread, Parameters::default()).await;
+        let result = native_create_ns_image_from_bytes(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeCreateNSImageFromFileContents(Ljava/lang/String;)J"
-    )]
     async fn test_native_create_ns_image_from_file_contents() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_file_contents(thread, Parameters::default()).await;
+        let result = native_create_ns_image_from_file_contents(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeCreateNSImageFromIconSelector(I)J"
-    )]
     async fn test_native_create_ns_image_from_icon_selector() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_icon_selector(thread, Parameters::default()).await;
+        let result = native_create_ns_image_from_icon_selector(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeCreateNSImageFromImageName(Ljava/lang/String;)J"
-    )]
     async fn test_native_create_ns_image_from_image_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_from_image_name(thread, Parameters::default()).await;
+        let result = native_create_ns_image_from_image_name(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeCreateNSImageOfFileFromLaunchServices(Ljava/lang/String;)J"
-    )]
     async fn test_native_create_ns_image_of_file_from_launch_services() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let _ = native_create_ns_image_of_file_from_launch_services(thread, Parameters::default())
@@ -224,47 +243,37 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeGetNSImageRepresentationSizes(JDD)[Ljava/awt/geom/Dimension2D;"
-    )]
     async fn test_native_get_ns_image_representation_sizes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_ns_image_representation_sizes(thread, Parameters::default()).await;
+        let result = native_get_ns_image_representation_sizes(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeGetNSImageSize(J)Ljava/awt/geom/Dimension2D;"
-    )]
     async fn test_native_get_ns_image_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_ns_image_size(thread, Parameters::default()).await;
+        let result = native_get_ns_image_size(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeGetPlatformImageBytes([III)[B"
-    )]
     async fn test_native_get_platform_image_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_platform_image_bytes(thread, Parameters::default()).await;
+        let result = native_get_platform_image_bytes(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeResizeNSImageRepresentations(JDD)V"
-    )]
     async fn test_native_resize_ns_image_representations() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_resize_ns_image_representations(thread, Parameters::default()).await;
+        let result = native_resize_ns_image_representations(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CImage.nativeSetNSImageSize(JDD)V"
-    )]
     async fn test_native_set_ns_image_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_ns_image_size(thread, Parameters::default()).await;
+        let result = native_set_ns_image_size(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

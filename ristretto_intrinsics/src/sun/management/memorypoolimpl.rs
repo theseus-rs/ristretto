@@ -2,6 +2,8 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -10,11 +12,15 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn get_collection_usage_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_collection_usage_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.MemoryPoolImpl.getCollectionUsage0()Ljava/lang/management/MemoryUsage;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.MemoryPoolImpl.getCollectionUsage0()Ljava/lang/management/MemoryUsage;"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -22,13 +28,11 @@ pub async fn get_collection_usage_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_memory_managers_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_memory_managers_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.management.MemoryPoolImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.management.MemoryPoolImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -36,11 +40,15 @@ pub async fn get_memory_managers_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_peak_usage_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_peak_usage_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.MemoryPoolImpl.getPeakUsage0()Ljava/lang/management/MemoryUsage;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.MemoryPoolImpl.getPeakUsage0()Ljava/lang/management/MemoryUsage;"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -48,29 +56,38 @@ pub async fn get_peak_usage_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_usage_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_usage_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.MemoryPoolImpl.getUsage0()Ljava/lang/management/MemoryUsage;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.MemoryPoolImpl.getUsage0()Ljava/lang/management/MemoryUsage;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/MemoryPoolImpl.resetPeakUsage0()V", Any)]
 #[async_method]
-pub async fn reset_peak_usage_0<T: ristretto_types::Thread + 'static>(
+pub async fn reset_peak_usage_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.MemoryPoolImpl.resetPeakUsage0()V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.MemoryPoolImpl.resetPeakUsage0()V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/MemoryPoolImpl.setCollectionThreshold0(JJ)V", Any)]
 #[async_method]
-pub async fn set_collection_threshold_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_collection_threshold_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.MemoryPoolImpl.setCollectionThreshold0(JJ)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.MemoryPoolImpl.setCollectionThreshold0(JJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -78,11 +95,15 @@ pub async fn set_collection_threshold_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn set_pool_collection_sensor<T: ristretto_types::Thread + 'static>(
+pub async fn set_pool_collection_sensor<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.MemoryPoolImpl.setPoolCollectionSensor(Lsun/management/Sensor;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.MemoryPoolImpl.setPoolCollectionSensor(Lsun/management/Sensor;)V"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -90,20 +111,26 @@ pub async fn set_pool_collection_sensor<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn set_pool_usage_sensor<T: ristretto_types::Thread + 'static>(
+pub async fn set_pool_usage_sensor<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.MemoryPoolImpl.setPoolUsageSensor(Lsun/management/Sensor;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.MemoryPoolImpl.setPoolUsageSensor(Lsun/management/Sensor;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/MemoryPoolImpl.setUsageThreshold0(JJ)V", Any)]
 #[async_method]
-pub async fn set_usage_threshold_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_usage_threshold_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.MemoryPoolImpl.setUsageThreshold0(JJ)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.MemoryPoolImpl.setUsageThreshold0(JJ)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -111,83 +138,65 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryPoolImpl.getCollectionUsage0()Ljava/lang/management/MemoryUsage;"
-    )]
     async fn test_get_collection_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_collection_usage_0(thread, Parameters::default()).await;
+        let result = get_collection_usage_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryPoolImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;"
-    )]
     async fn test_get_memory_managers_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_memory_managers_0(thread, Parameters::default()).await;
+        let result = get_memory_managers_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryPoolImpl.getPeakUsage0()Ljava/lang/management/MemoryUsage;"
-    )]
     async fn test_get_peak_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_peak_usage_0(thread, Parameters::default()).await;
+        let result = get_peak_usage_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryPoolImpl.getUsage0()Ljava/lang/management/MemoryUsage;"
-    )]
     async fn test_get_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_usage_0(thread, Parameters::default()).await;
+        let result = get_usage_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryPoolImpl.resetPeakUsage0()V"
-    )]
     async fn test_reset_peak_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = reset_peak_usage_0(thread, Parameters::default()).await;
+        let result = reset_peak_usage_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryPoolImpl.setCollectionThreshold0(JJ)V"
-    )]
     async fn test_set_collection_threshold_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_collection_threshold_0(thread, Parameters::default()).await;
+        let result = set_collection_threshold_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryPoolImpl.setPoolCollectionSensor(Lsun/management/Sensor;)V"
-    )]
     async fn test_set_pool_collection_sensor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_pool_collection_sensor(thread, Parameters::default()).await;
+        let result = set_pool_collection_sensor(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryPoolImpl.setPoolUsageSensor(Lsun/management/Sensor;)V"
-    )]
     async fn test_set_pool_usage_sensor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_pool_usage_sensor(thread, Parameters::default()).await;
+        let result = set_pool_usage_sensor(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryPoolImpl.setUsageThreshold0(JJ)V"
-    )]
     async fn test_set_usage_threshold_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_usage_threshold_0(thread, Parameters::default()).await;
+        let result = set_usage_threshold_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

@@ -3,6 +3,8 @@ use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_cgl_config_info_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_cgl_config_info_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,38 +28,50 @@ pub async fn get_cgl_config_info_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_cgl_config_info_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_cgl_config_info_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo(III)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo(III)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.getOGLCapabilities(J)I", Any)]
 #[async_method]
-pub async fn get_ogl_capabilities<T: ristretto_types::Thread + 'static>(
+pub async fn get_ogl_capabilities<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.opengl.CGLGraphicsConfig.getOGLCapabilities(J)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.opengl.CGLGraphicsConfig.getOGLCapabilities(J)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.initCGL()Z", Any)]
 #[async_method]
-pub async fn init_cgl<T: ristretto_types::Thread + 'static>(
+pub async fn init_cgl<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.opengl.CGLGraphicsConfig.initCGL()Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.opengl.CGLGraphicsConfig.initCGL()Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.nativeGetMaxTextureSize()I", Any)]
 #[async_method]
-pub async fn native_get_max_texture_size<T: ristretto_types::Thread + 'static>(
+pub async fn native_get_max_texture_size<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.opengl.CGLGraphicsConfig.nativeGetMaxTextureSize()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.opengl.CGLGraphicsConfig.nativeGetMaxTextureSize()I".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -62,47 +79,37 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo()J"
-    )]
     async fn test_get_cgl_config_info_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_cgl_config_info_0(thread, Parameters::default()).await;
+        let result = get_cgl_config_info_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo(III)J"
-    )]
     async fn test_get_cgl_config_info_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_cgl_config_info_1(thread, Parameters::default()).await;
+        let result = get_cgl_config_info_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.opengl.CGLGraphicsConfig.getOGLCapabilities(J)I"
-    )]
     async fn test_get_ogl_capabilities() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_ogl_capabilities(thread, Parameters::default()).await;
+        let result = get_ogl_capabilities(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.opengl.CGLGraphicsConfig.initCGL()Z"
-    )]
     async fn test_init_cgl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_cgl(thread, Parameters::default()).await;
+        let result = init_cgl(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.opengl.CGLGraphicsConfig.nativeGetMaxTextureSize()I"
-    )]
     async fn test_native_get_max_texture_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_max_texture_size(thread, Parameters::default()).await;
+        let result = native_get_max_texture_size(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

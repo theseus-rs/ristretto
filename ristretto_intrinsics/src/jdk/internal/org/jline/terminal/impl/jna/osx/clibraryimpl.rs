@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,7 +13,7 @@ use std::sync::Arc;
     Equal(JAVA_21)
 )]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,13 +25,11 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_21)
 )]
 #[async_method]
-pub async fn ioctl_0<T: ristretto_types::Thread + 'static>(
+pub async fn ioctl_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ioctl0(IJLjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$winsize;)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ioctl0(IJLjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$winsize;)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -37,11 +37,14 @@ pub async fn ioctl_0<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_21)
 )]
 #[async_method]
-pub async fn isatty<T: ristretto_types::Thread + 'static>(
+pub async fn isatty<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.isatty(I)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.isatty(I)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -49,13 +52,11 @@ pub async fn isatty<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_21)
 )]
 #[async_method]
-pub async fn tcgetattr<T: ristretto_types::Thread + 'static>(
+pub async fn tcgetattr<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcgetattr(ILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcgetattr(ILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -63,13 +64,11 @@ pub async fn tcgetattr<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_21)
 )]
 #[async_method]
-pub async fn tcsetattr<T: ristretto_types::Thread + 'static>(
+pub async fn tcsetattr<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcsetattr(IILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcsetattr(IILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -77,11 +76,14 @@ pub async fn tcsetattr<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_21)
 )]
 #[async_method]
-pub async fn ttyname_r<T: ristretto_types::Thread + 'static>(
+pub async fn ttyname_r<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ttyname_r(I[BI)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ttyname_r(I[BI)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -89,47 +91,37 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ioctl0(IJLjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$winsize;)V"
-    )]
     async fn test_ioctl_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ioctl_0(thread, Parameters::default()).await;
+        let result = ioctl_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.isatty(I)I"
-    )]
     async fn test_isatty() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = isatty(thread, Parameters::default()).await;
+        let result = isatty(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcgetattr(ILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
-    )]
     async fn test_tcgetattr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = tcgetattr(thread, Parameters::default()).await;
+        let result = tcgetattr(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.tcsetattr(IILjdk.internal.org.jline.terminal.impl.jna.osx.CLibrary$termios;)V"
-    )]
     async fn test_tcsetattr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = tcsetattr(thread, Parameters::default()).await;
+        let result = tcsetattr(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.org.jline.terminal.impl.jna.osx.CLibraryImpl.ttyname_r(I[BI)V"
-    )]
     async fn test_ttyname_r() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ttyname_r(thread, Parameters::default()).await;
+        let result = ttyname_r(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

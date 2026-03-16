@@ -5,6 +5,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::handles::{SocketHandle, SocketType};
 use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
@@ -15,7 +16,7 @@ use std::sync::Arc;
 )]
 #[async_method]
 #[expect(clippy::too_many_lines)]
-pub async fn accept_0<T: ristretto_types::Thread + 'static>(
+pub async fn accept_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -163,7 +164,7 @@ pub async fn accept_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

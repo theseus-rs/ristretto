@@ -15,6 +15,7 @@ use std::os::unix::fs::MetadataExt;
 use std::sync::Arc;
 
 use super::managed_files;
+use ristretto_types::Thread;
 
 bitflags! {
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -81,11 +82,14 @@ fn set_unix_metadata_fields(
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.access0(JI)V", LessThan(JAVA_21))]
 #[async_method]
-pub async fn access_0_0<T: ristretto_types::Thread + 'static>(
+pub async fn access_0_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.access0(JI)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.access0(JI)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -93,7 +97,7 @@ pub async fn access_0_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn access_0_1<T: ristretto_types::Thread + 'static>(
+pub async fn access_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -114,25 +118,31 @@ pub async fn access_0_1<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.chmod0(JI)V", Any)]
 #[async_method]
-pub async fn chmod_0<T: ristretto_types::Thread + 'static>(
+pub async fn chmod_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.chmod0(JI)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.chmod0(JI)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.chown0(JII)V", Any)]
 #[async_method]
-pub async fn chown_0<T: ristretto_types::Thread + 'static>(
+pub async fn chown_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.chown0(JII)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.chown0(JII)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.close(I)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn close<T: ristretto_types::Thread + 'static>(
+pub async fn close<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -144,7 +154,7 @@ pub async fn close<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn close_0<T: ristretto_types::Thread + 'static>(
+pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -156,20 +166,26 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.closedir(J)V", Any)]
 #[async_method]
-pub async fn closedir<T: ristretto_types::Thread + 'static>(
+pub async fn closedir<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.closedir(J)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.closedir(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.dup(I)I", Any)]
 #[async_method]
-pub async fn dup<T: ristretto_types::Thread + 'static>(
+pub async fn dup<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.dup(I)I");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.dup(I)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -177,29 +193,38 @@ pub async fn dup<T: ristretto_types::Thread + 'static>(
     Between(JAVA_11, JAVA_17)
 )]
 #[async_method]
-pub async fn exists_0<T: ristretto_types::Thread + 'static>(
+pub async fn exists_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.exists0(J)Z");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.exists0(J)Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.fclose(I)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn fclose_0<T: ristretto_types::Thread + 'static>(
+pub async fn fclose_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fclose(I)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fclose(I)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.fclose(J)V", LessThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn fclose_1<T: ristretto_types::Thread + 'static>(
+pub async fn fclose_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fclose(J)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fclose(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -207,7 +232,7 @@ pub async fn fclose_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn fchmod<T: ristretto_types::Thread + 'static>(
+pub async fn fchmod<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -219,11 +244,14 @@ pub async fn fchmod<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn fchmod_0<T: ristretto_types::Thread + 'static>(
+pub async fn fchmod_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fchmod0(II)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fchmod0(II)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -231,7 +259,7 @@ pub async fn fchmod_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn fchmodat_0<T: ristretto_types::Thread + 'static>(
+pub async fn fchmodat_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -239,7 +267,10 @@ pub async fn fchmodat_0<T: ristretto_types::Thread + 'static>(
     let _mode = parameters.pop_int()?;
     let _path = parameters.pop_long()?;
     let _dirfd = parameters.pop_int()?;
-    todo!("sun.nio.fs.UnixNativeDispatcher.fchmodat0(IJII)V")
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fchmodat0(IJII)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -247,11 +278,14 @@ pub async fn fchmodat_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn fchmodat_no_follow_supported_0<T: ristretto_types::Thread + 'static>(
+pub async fn fchmodat_no_follow_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fchmodatNoFollowSupported0()Z")
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fchmodatNoFollowSupported0()Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -259,7 +293,7 @@ pub async fn fchmodat_no_follow_supported_0<T: ristretto_types::Thread + 'static
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn fchown<T: ristretto_types::Thread + 'static>(
+pub async fn fchown<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -271,20 +305,26 @@ pub async fn fchown<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn fchown_0<T: ristretto_types::Thread + 'static>(
+pub async fn fchown_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fchown0(III)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fchown0(III)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.fdopendir(I)J", Any)]
 #[async_method]
-pub async fn fdopendir<T: ristretto_types::Thread + 'static>(
+pub async fn fdopendir<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fdopendir(I)J");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fdopendir(I)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -292,11 +332,14 @@ pub async fn fdopendir<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn fgetxattr_0<T: ristretto_types::Thread + 'static>(
+pub async fn fgetxattr_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fgetxattr0(IJJI)I");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fgetxattr0(IJJI)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -304,11 +347,14 @@ pub async fn fgetxattr_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn flistxattr<T: ristretto_types::Thread + 'static>(
+pub async fn flistxattr<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.flistxattr(IJI)I");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.flistxattr(IJI)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -316,11 +362,14 @@ pub async fn flistxattr<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn fopen_0<T: ristretto_types::Thread + 'static>(
+pub async fn fopen_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fopen0(JJ)J");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fopen0(JJ)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -328,11 +377,14 @@ pub async fn fopen_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn fpathconf<T: ristretto_types::Thread + 'static>(
+pub async fn fpathconf<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fpathconf(II)J");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fpathconf(II)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -340,11 +392,14 @@ pub async fn fpathconf<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn fremovexattr_0<T: ristretto_types::Thread + 'static>(
+pub async fn fremovexattr_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fremovexattr0(IJ)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fremovexattr0(IJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -352,11 +407,14 @@ pub async fn fremovexattr_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn fsetxattr_0<T: ristretto_types::Thread + 'static>(
+pub async fn fsetxattr_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fsetxattr0(IJJI)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fsetxattr0(IJJI)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -364,7 +422,7 @@ pub async fn fsetxattr_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn fstat<T: ristretto_types::Thread + 'static>(
+pub async fn fstat<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -376,7 +434,7 @@ pub async fn fstat<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn fstat_0<T: ristretto_types::Thread + 'static>(
+pub async fn fstat_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -428,16 +486,19 @@ pub async fn fstat_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn fstatat_0<T: ristretto_types::Thread + 'static>(
+pub async fn fstatat_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.fstatat0(IJILsun/nio/fs/UnixFileAttributes;)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.fstatat0(IJILsun/nio/fs/UnixFileAttributes;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.futimens(IJJ)V", Equal(JAVA_17))]
 #[async_method]
-pub async fn futimens<T: ristretto_types::Thread + 'static>(
+pub async fn futimens<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -449,11 +510,14 @@ pub async fn futimens<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn futimens_0<T: ristretto_types::Thread + 'static>(
+pub async fn futimens_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.futimens0(IJJ)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.futimens0(IJJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -461,7 +525,7 @@ pub async fn futimens_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn futimes<T: ristretto_types::Thread + 'static>(
+pub async fn futimes<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -470,16 +534,19 @@ pub async fn futimes<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.futimes0(IJJ)V", Equal(JAVA_21))]
 #[async_method]
-pub async fn futimes_0<T: ristretto_types::Thread + 'static>(
+pub async fn futimes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.futimes0(IJJ)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.futimes0(IJJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getcwd()[B", Any)]
 #[async_method]
-pub async fn getcwd<T: ristretto_types::Thread + 'static>(
+pub async fn getcwd<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -497,20 +564,26 @@ pub async fn getcwd<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getgrgid(I)[B", Any)]
 #[async_method]
-pub async fn getgrgid<T: ristretto_types::Thread + 'static>(
+pub async fn getgrgid<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.getgrgid(I)[B");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.getgrgid(I)[B".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getgrnam0(J)I", Any)]
 #[async_method]
-pub async fn getgrnam_0<T: ristretto_types::Thread + 'static>(
+pub async fn getgrnam_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.getgrnam0(J)I");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.getgrnam0(J)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -518,34 +591,43 @@ pub async fn getgrnam_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn getlinelen<T: ristretto_types::Thread + 'static>(
+pub async fn getlinelen<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.getlinelen(J)I");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.getlinelen(J)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getpwnam0(J)I", Any)]
 #[async_method]
-pub async fn getpwnam_0<T: ristretto_types::Thread + 'static>(
+pub async fn getpwnam_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.getpwnam0(J)I");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.getpwnam0(J)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getpwuid(I)[B", Any)]
 #[async_method]
-pub async fn getpwuid<T: ristretto_types::Thread + 'static>(
+pub async fn getpwuid<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.getpwuid(I)[B");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.getpwuid(I)[B".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.init()I", Any)]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -557,20 +639,26 @@ pub async fn init<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.lchown0(JII)V", Any)]
 #[async_method]
-pub async fn lchown_0<T: ristretto_types::Thread + 'static>(
+pub async fn lchown_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.lchown0(JII)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.lchown0(JII)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.link0(JJ)V", Any)]
 #[async_method]
-pub async fn link_0<T: ristretto_types::Thread + 'static>(
+pub async fn link_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.link0(JJ)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.link0(JJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -578,11 +666,14 @@ pub async fn link_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn lstat_0<T: ristretto_types::Thread + 'static>(
+pub async fn lstat_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.lstat0(JLsun/nio/fs/UnixFileAttributes;)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.lstat0(JLsun/nio/fs/UnixFileAttributes;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -590,34 +681,43 @@ pub async fn lstat_0<T: ristretto_types::Thread + 'static>(
     Between(JAVA_17, JAVA_21)
 )]
 #[async_method]
-pub async fn lutimes_0<T: ristretto_types::Thread + 'static>(
+pub async fn lutimes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.lutimes0(JJJ)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.lutimes0(JJJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.mkdir0(JI)V", Any)]
 #[async_method]
-pub async fn mkdir_0<T: ristretto_types::Thread + 'static>(
+pub async fn mkdir_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.mkdir0(JI)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.mkdir0(JI)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.mknod0(JIJ)V", Any)]
 #[async_method]
-pub async fn mknod_0<T: ristretto_types::Thread + 'static>(
+pub async fn mknod_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.mknod0(JIJ)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.mknod0(JIJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.open0(JII)I", Any)]
 #[async_method]
-pub async fn open_0<T: ristretto_types::Thread + 'static>(
+pub async fn open_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -652,20 +752,26 @@ pub async fn open_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.openat0(IJII)I", Any)]
 #[async_method]
-pub async fn openat_0<T: ristretto_types::Thread + 'static>(
+pub async fn openat_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.openat0(IJII)I");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.openat0(IJII)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.opendir0(J)J", Any)]
 #[async_method]
-pub async fn opendir_0<T: ristretto_types::Thread + 'static>(
+pub async fn opendir_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.opendir0(J)J");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.opendir0(J)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -673,16 +779,19 @@ pub async fn opendir_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn pathconf_0<T: ristretto_types::Thread + 'static>(
+pub async fn pathconf_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.pathconf0(JI)J");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.pathconf0(JI)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.read(IJI)I", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn read<T: ristretto_types::Thread + 'static>(
+pub async fn read<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -694,7 +803,7 @@ pub async fn read<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn read_0<T: ristretto_types::Thread + 'static>(
+pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -727,7 +836,7 @@ pub async fn read_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn readdir<T: ristretto_types::Thread + 'static>(
+pub async fn readdir<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -739,25 +848,31 @@ pub async fn readdir<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn readdir_0<T: ristretto_types::Thread + 'static>(
+pub async fn readdir_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.readdir0(J)[B");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.readdir0(J)[B".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.readlink0(J)[B", Any)]
 #[async_method]
-pub async fn readlink_0<T: ristretto_types::Thread + 'static>(
+pub async fn readlink_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.readlink0(J)[B");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.readlink0(J)[B".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.realpath0(J)[B", Any)]
 #[async_method]
-pub async fn realpath_0<T: ristretto_types::Thread + 'static>(
+pub async fn realpath_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -785,38 +900,50 @@ pub async fn realpath_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.rename0(JJ)V", Any)]
 #[async_method]
-pub async fn rename_0<T: ristretto_types::Thread + 'static>(
+pub async fn rename_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.rename0(JJ)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.rename0(JJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.renameat0(IJIJ)V", Any)]
 #[async_method]
-pub async fn renameat_0<T: ristretto_types::Thread + 'static>(
+pub async fn renameat_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.renameat0(IJIJ)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.renameat0(IJIJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.rewind(J)V", Any)]
 #[async_method]
-pub async fn rewind<T: ristretto_types::Thread + 'static>(
+pub async fn rewind<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.rewind(J)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.rewind(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.rmdir0(J)V", Any)]
 #[async_method]
-pub async fn rmdir_0<T: ristretto_types::Thread + 'static>(
+pub async fn rmdir_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.rmdir0(J)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.rmdir0(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -824,7 +951,7 @@ pub async fn rmdir_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn stat_0_0<T: ristretto_types::Thread + 'static>(
+pub async fn stat_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -837,7 +964,7 @@ pub async fn stat_0_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn stat_0_1<T: ristretto_types::Thread + 'static>(
+pub async fn stat_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -891,11 +1018,14 @@ pub async fn stat_0_1<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.stat1(J)I", Between(JAVA_11, JAVA_17))]
 #[async_method]
-pub async fn stat_1<T: ristretto_types::Thread + 'static>(
+pub async fn stat_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.stat1(J)I");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.stat1(J)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -903,47 +1033,63 @@ pub async fn stat_1<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn statvfs_0<T: ristretto_types::Thread + 'static>(
+pub async fn statvfs_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.statvfs0(JLsun/nio/fs/UnixFileStoreAttributes;)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.statvfs0(JLsun/nio/fs/UnixFileStoreAttributes;)V"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.strerror(I)[B", Any)]
 #[async_method]
-pub async fn strerror<T: ristretto_types::Thread + 'static>(
+pub async fn strerror<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.strerror(I)[B");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.strerror(I)[B".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.symlink0(JJ)V", Any)]
 #[async_method]
-pub async fn symlink_0<T: ristretto_types::Thread + 'static>(
+pub async fn symlink_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.symlink0(JJ)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.symlink0(JJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.unlink0(J)V", Any)]
 #[async_method]
-pub async fn unlink_0<T: ristretto_types::Thread + 'static>(
+pub async fn unlink_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.unlink0(J)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.unlink0(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.unlinkat0(IJI)V", Any)]
 #[async_method]
-pub async fn unlinkat_0<T: ristretto_types::Thread + 'static>(
+pub async fn unlinkat_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.unlinkat0(IJI)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.unlinkat0(IJI)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -951,11 +1097,14 @@ pub async fn unlinkat_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn utimes_0<T: ristretto_types::Thread + 'static>(
+pub async fn utimes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.utimes0(JJJ)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.utimes0(JJJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -963,11 +1112,14 @@ pub async fn utimes_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn utimensat_0<T: ristretto_types::Thread + 'static>(
+pub async fn utimensat_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.fs.UnixNativeDispatcher.utimensat0(IJJJI)V");
+    Err(ristretto_types::JavaError::UnsatisfiedLinkError(
+        "sun.nio.fs.UnixNativeDispatcher.utimensat0(IJJJI)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -975,7 +1127,7 @@ pub async fn utimensat_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn write<T: ristretto_types::Thread + 'static>(
+pub async fn write<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -987,7 +1139,7 @@ pub async fn write<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn write_0<T: ristretto_types::Thread + 'static>(
+pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1016,10 +1168,10 @@ mod tests {
     use zerocopy::transmute_ref;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.access0(JI)V")]
     async fn test_access_0_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = access_0_0(thread, Parameters::default()).await;
+        let result = access_0_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1029,17 +1181,17 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.chmod0(JI)V")]
     async fn test_chmod_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = chmod_0(thread, Parameters::default()).await;
+        let result = chmod_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.chown0(JII)V")]
     async fn test_chown_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = chown_0(thread, Parameters::default()).await;
+        let result = chown_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1055,125 +1207,115 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.closedir(J)V")]
     async fn test_closedir() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = closedir(thread, Parameters::default()).await;
+        let result = closedir(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.dup(I)I")]
     async fn test_dup() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dup(thread, Parameters::default()).await;
+        let result = dup(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.exists0(J)Z")]
     async fn test_exists_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = exists_0(thread, Parameters::default()).await;
+        let result = exists_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fchmod0(II)V")]
     async fn test_fchmod() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fchmod(thread, Parameters::default()).await;
+        let result = fchmod(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fchmod0(II)V")]
     async fn test_fchmod_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fchmod_0(thread, Parameters::default()).await;
+        let result = fchmod_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fchown0(III)V")]
     async fn test_fchown() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fchown(thread, Parameters::default()).await;
+        let result = fchown(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fchown0(III)V")]
     async fn test_fchown_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fchown_0(thread, Parameters::default()).await;
+        let result = fchown_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fclose(I)V")]
     async fn test_fclose_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fclose_0(thread, Parameters::default()).await;
+        let result = fclose_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fclose(J)V")]
     async fn test_fclose_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fclose_1(thread, Parameters::default()).await;
+        let result = fclose_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fdopendir(I)J")]
     async fn test_fdopendir() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fdopendir(thread, Parameters::default()).await;
+        let result = fdopendir(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fgetxattr0(IJJI)I"
-    )]
     async fn test_fgetxattr_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fgetxattr_0(thread, Parameters::default()).await;
+        let result = fgetxattr_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.flistxattr(IJI)I"
-    )]
     async fn test_flistxattr() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = flistxattr(thread, Parameters::default()).await;
+        let result = flistxattr(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fopen0(JJ)J")]
     async fn test_fopen_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fopen_0(thread, Parameters::default()).await;
+        let result = fopen_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fpathconf(II)J"
-    )]
     async fn test_fpathconf() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fpathconf(thread, Parameters::default()).await;
+        let result = fpathconf(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fremovexattr0(IJ)V"
-    )]
     async fn test_fremovexattr_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fremovexattr_0(thread, Parameters::default()).await;
+        let result = fremovexattr_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fsetxattr0(IJJI)V"
-    )]
     async fn test_fsetxattr_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fsetxattr_0(thread, Parameters::default()).await;
+        let result = fsetxattr_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1189,48 +1331,38 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.fstatat0(IJILsun/nio/fs/UnixFileAttributes;)V"
-    )]
     async fn test_fstatat_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fstatat_0(thread, Parameters::default()).await;
+        let result = fstatat_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.futimens0(IJJ)V"
-    )]
     async fn test_futimens() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = futimens(thread, Parameters::default()).await;
+        let result = futimens(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.futimens0(IJJ)V"
-    )]
     async fn test_futimens_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = futimens_0(thread, Parameters::default()).await;
+        let result = futimens_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.futimes0(IJJ)V"
-    )]
     async fn test_futimes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = futimes(thread, Parameters::default()).await;
+        let result = futimes(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.futimes0(IJJ)V"
-    )]
     async fn test_futimes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = futimes_0(thread, Parameters::default()).await;
+        let result = futimes_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1249,40 +1381,38 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.getgrgid(I)[B")]
     async fn test_getgrgid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = getgrgid(thread, Parameters::default()).await;
+        let result = getgrgid(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.getgrnam0(J)I")]
     async fn test_getgrnam_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = getgrnam_0(thread, Parameters::default()).await;
+        let result = getgrnam_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.getlinelen(J)I"
-    )]
     async fn test_getlinelen() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = getlinelen(thread, Parameters::default()).await;
+        let result = getlinelen(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.getpwnam0(J)I")]
     async fn test_getpwnam_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = getpwnam_0(thread, Parameters::default()).await;
+        let result = getpwnam_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.getpwuid(I)[B")]
     async fn test_getpwuid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = getpwuid(thread, Parameters::default()).await;
+        let result = getpwuid(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1294,49 +1424,45 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.lchown0(JII)V")]
     async fn test_lchown_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = lchown_0(thread, Parameters::default()).await;
+        let result = lchown_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.link0(JJ)V")]
     async fn test_link_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = link_0(thread, Parameters::default()).await;
+        let result = link_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.lstat0(JLsun/nio/fs/UnixFileAttributes;)V"
-    )]
     async fn test_lstat_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = lstat_0(thread, Parameters::default()).await;
+        let result = lstat_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.lutimes0(JJJ)V"
-    )]
     async fn test_lutimes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = lutimes_0(thread, Parameters::default()).await;
+        let result = lutimes_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.mkdir0(JI)V")]
     async fn test_mkdir_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = mkdir_0(thread, Parameters::default()).await;
+        let result = mkdir_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.mknod0(JIJ)V")]
     async fn test_mknod_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = mknod_0(thread, Parameters::default()).await;
+        let result = mknod_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1346,28 +1472,24 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.openat0(IJII)I"
-    )]
     async fn test_openat_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = openat_0(thread, Parameters::default()).await;
+        let result = openat_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.opendir0(J)J")]
     async fn test_opendir_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = opendir_0(thread, Parameters::default()).await;
+        let result = opendir_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.pathconf0(JI)J"
-    )]
     async fn test_pathconf_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = pathconf_0(thread, Parameters::default()).await;
+        let result = pathconf_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1383,26 +1505,24 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.readdir0(J)[B")]
     async fn test_readdir() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = readdir(thread, Parameters::default()).await;
+        let result = readdir(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.readdir0(J)[B")]
     async fn test_readdir_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = readdir_0(thread, Parameters::default()).await;
+        let result = readdir_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.readlink0(J)[B"
-    )]
     async fn test_readlink_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = readlink_0(thread, Parameters::default()).await;
+        let result = readlink_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1412,33 +1532,31 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.rename0(JJ)V")]
     async fn test_rename_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = rename_0(thread, Parameters::default()).await;
+        let result = rename_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.renameat0(IJIJ)V"
-    )]
     async fn test_renameat_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = renameat_0(thread, Parameters::default()).await;
+        let result = renameat_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.rewind(J)V")]
     async fn test_rewind() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = rewind(thread, Parameters::default()).await;
+        let result = rewind(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.rmdir0(J)V")]
     async fn test_rmdir_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = rmdir_0(thread, Parameters::default()).await;
+        let result = rmdir_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1469,65 +1587,59 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.stat1(J)I")]
     async fn test_stat_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = stat_1(thread, Parameters::default()).await;
+        let result = stat_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.statvfs0(JLsun/nio/fs/UnixFileStoreAttributes;)V"
-    )]
     async fn test_statvfs_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = statvfs_0(thread, Parameters::default()).await;
+        let result = statvfs_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.strerror(I)[B")]
     async fn test_strerror() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = strerror(thread, Parameters::default()).await;
+        let result = strerror(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.symlink0(JJ)V")]
     async fn test_symlink_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = symlink_0(thread, Parameters::default()).await;
+        let result = symlink_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.unlink0(J)V")]
     async fn test_unlink_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unlink_0(thread, Parameters::default()).await;
+        let result = unlink_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.unlinkat0(IJI)V"
-    )]
     async fn test_unlinkat_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unlinkat_0(thread, Parameters::default()).await;
+        let result = unlinkat_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.utimes0(JJJ)V")]
     async fn test_utimes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = utimes_0(thread, Parameters::default()).await;
+        let result = utimes_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.fs.UnixNativeDispatcher.utimensat0(IJJJI)V"
-    )]
     async fn test_utimensat_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = utimensat_0(thread, Parameters::default()).await;
+        let result = utimensat_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::{Equal, GreaterThan, GreaterThanO
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,15 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_committed_virtual_memory_size_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_committed_virtual_memory_size_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getCommittedVirtualMemorySize0()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getCommittedVirtualMemorySize0()J"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +29,14 @@ pub async fn get_committed_virtual_memory_size_0<T: ristretto_types::Thread + 's
     GreaterThan(JAVA_11)
 )]
 #[async_method]
-pub async fn get_cpu_load_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_cpu_load_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getCpuLoad0()D")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getCpuLoad0()D".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -35,11 +44,14 @@ pub async fn get_cpu_load_0<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_11)
 )]
 #[async_method]
-pub async fn get_free_physical_memory_size_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_free_physical_memory_size_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getFreePhysicalMemorySize0()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getFreePhysicalMemorySize0()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -47,11 +59,14 @@ pub async fn get_free_physical_memory_size_0<T: ristretto_types::Thread + 'stati
     GreaterThan(JAVA_11)
 )]
 #[async_method]
-pub async fn get_free_memory_size_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_free_memory_size_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getFreeMemorySize0()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getFreeMemorySize0()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -59,11 +74,14 @@ pub async fn get_free_memory_size_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_free_swap_space_size_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_free_swap_space_size_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getFreeSwapSpaceSize0()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getFreeSwapSpaceSize0()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -71,11 +89,14 @@ pub async fn get_free_swap_space_size_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_host_configured_cpu_count_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_host_configured_cpu_count_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getHostConfiguredCpuCount0()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getHostConfiguredCpuCount0()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -83,11 +104,14 @@ pub async fn get_host_configured_cpu_count_0<T: ristretto_types::Thread + 'stati
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_host_online_cpu_count_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_host_online_cpu_count_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getHostOnlineCpuCount0()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getHostOnlineCpuCount0()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -95,11 +119,14 @@ pub async fn get_host_online_cpu_count_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_host_total_cpu_ticks_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_host_total_cpu_ticks_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getHostTotalCpuTicks0()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getHostTotalCpuTicks0()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -107,11 +134,14 @@ pub async fn get_host_total_cpu_ticks_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_max_file_descriptor_count_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_max_file_descriptor_count_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getMaxFileDescriptorCount0()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getMaxFileDescriptorCount0()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -119,11 +149,15 @@ pub async fn get_max_file_descriptor_count_0<T: ristretto_types::Thread + 'stati
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_open_file_descriptor_count_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_open_file_descriptor_count_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getOpenFileDescriptorCount0()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getOpenFileDescriptorCount0()J"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -131,11 +165,14 @@ pub async fn get_open_file_descriptor_count_0<T: ristretto_types::Thread + 'stat
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_process_cpu_load_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_process_cpu_load_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getProcessCpuLoad0()D")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getProcessCpuLoad0()D".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -143,11 +180,14 @@ pub async fn get_process_cpu_load_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_process_cpu_time_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_process_cpu_time_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getProcessCpuTime0()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getProcessCpuTime0()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -155,11 +195,14 @@ pub async fn get_process_cpu_time_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_single_cpu_load_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_single_cpu_load_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getSingleCpuLoad0(I)D")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getSingleCpuLoad0(I)D".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -167,11 +210,14 @@ pub async fn get_single_cpu_load_0<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_11)
 )]
 #[async_method]
-pub async fn get_system_cpu_load_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_system_cpu_load_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getSystemCpuLoad0()D")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getSystemCpuLoad0()D".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -179,11 +225,14 @@ pub async fn get_system_cpu_load_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_11)
 )]
 #[async_method]
-pub async fn get_total_memory_size_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_total_memory_size_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getTotalMemorySize0()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getTotalMemorySize0()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -191,11 +240,15 @@ pub async fn get_total_memory_size_0<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_11)
 )]
 #[async_method]
-pub async fn get_total_physical_memory_size_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_total_physical_memory_size_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getTotalPhysicalMemorySize0()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getTotalPhysicalMemorySize0()J"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -203,11 +256,14 @@ pub async fn get_total_physical_memory_size_0<T: ristretto_types::Thread + 'stat
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_total_swap_space_size_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_total_swap_space_size_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.OperatingSystemImpl.getTotalSwapSpaceSize0()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.OperatingSystemImpl.getTotalSwapSpaceSize0()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -215,7 +271,7 @@ pub async fn get_total_swap_space_size_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn initialize_0<T: ristretto_types::Thread + 'static>(
+pub async fn initialize_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -227,156 +283,122 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getCommittedVirtualMemorySize0()J"
-    )]
     async fn test_get_committed_virtual_memory_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_committed_virtual_memory_size_0(thread, Parameters::default()).await;
+        let result = get_committed_virtual_memory_size_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getCpuLoad0()D"
-    )]
     async fn test_get_cpu_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_cpu_load_0(thread, Parameters::default()).await;
+        let result = get_cpu_load_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getFreePhysicalMemorySize0()J"
-    )]
     async fn test_get_free_physical_memory_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_free_physical_memory_size_0(thread, Parameters::default()).await;
+        let result = get_free_physical_memory_size_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getFreeMemorySize0()J"
-    )]
     async fn test_get_free_memory_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_free_memory_size_0(thread, Parameters::default()).await;
+        let result = get_free_memory_size_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getFreeSwapSpaceSize0()J"
-    )]
     async fn test_get_free_swap_space_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_free_swap_space_size_0(thread, Parameters::default()).await;
+        let result = get_free_swap_space_size_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getHostConfiguredCpuCount0()I"
-    )]
     async fn test_get_host_configured_cpu_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_host_configured_cpu_count_0(thread, Parameters::default()).await;
+        let result = get_host_configured_cpu_count_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getHostOnlineCpuCount0()I"
-    )]
     async fn test_get_host_online_cpu_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_host_online_cpu_count_0(thread, Parameters::default()).await;
+        let result = get_host_online_cpu_count_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getHostTotalCpuTicks0()J"
-    )]
     async fn test_get_host_total_cpu_ticks_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_host_total_cpu_ticks_0(thread, Parameters::default()).await;
+        let result = get_host_total_cpu_ticks_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getMaxFileDescriptorCount0()J"
-    )]
     async fn test_get_max_file_descriptor_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_max_file_descriptor_count_0(thread, Parameters::default()).await;
+        let result = get_max_file_descriptor_count_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getOpenFileDescriptorCount0()J"
-    )]
     async fn test_get_open_file_descriptor_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_open_file_descriptor_count_0(thread, Parameters::default()).await;
+        let result = get_open_file_descriptor_count_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getProcessCpuLoad0()D"
-    )]
     async fn test_get_process_cpu_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_process_cpu_load_0(thread, Parameters::default()).await;
+        let result = get_process_cpu_load_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getProcessCpuTime0()J"
-    )]
     async fn test_get_process_cpu_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_process_cpu_time_0(thread, Parameters::default()).await;
+        let result = get_process_cpu_time_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getSingleCpuLoad0(I)D"
-    )]
     async fn test_get_single_cpu_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_single_cpu_load_0(thread, Parameters::default()).await;
+        let result = get_single_cpu_load_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getSystemCpuLoad0()D"
-    )]
     async fn test_get_system_cpu_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_cpu_load_0(thread, Parameters::default()).await;
+        let result = get_system_cpu_load_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getTotalMemorySize0()J"
-    )]
     async fn test_get_total_memory_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_total_memory_size_0(thread, Parameters::default()).await;
+        let result = get_total_memory_size_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getTotalPhysicalMemorySize0()J"
-    )]
     async fn test_get_total_physical_memory_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_total_physical_memory_size_0(thread, Parameters::default()).await;
+        let result = get_total_physical_memory_size_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.OperatingSystemImpl.getTotalSwapSpaceSize0()J"
-    )]
     async fn test_get_total_swap_space_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_total_swap_space_size_0(thread, Parameters::default()).await;
+        let result = get_total_swap_space_size_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

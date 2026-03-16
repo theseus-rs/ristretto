@@ -4,13 +4,14 @@ use ristretto_classfile::attributes::Attribute;
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/reflect/Field.getTypeAnnotationBytes0()[B", Any)]
 #[async_method]
-pub async fn get_type_annotation_bytes_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_type_annotation_bytes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

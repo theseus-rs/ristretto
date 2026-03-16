@@ -3,13 +3,14 @@ use ristretto_classfile::{JAVA_8, JAVA_17};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::ops::Rem;
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/StrictMath.IEEEremainder(DD)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn ieee_remainder<T: ristretto_types::Thread + 'static>(
+pub async fn ieee_remainder<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,7 +22,7 @@ pub async fn ieee_remainder<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.acos(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn acos<T: ristretto_types::Thread + 'static>(
+pub async fn acos<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,7 +33,7 @@ pub async fn acos<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.asin(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn asin<T: ristretto_types::Thread + 'static>(
+pub async fn asin<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -43,7 +44,7 @@ pub async fn asin<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.atan(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn atan<T: ristretto_types::Thread + 'static>(
+pub async fn atan<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,7 +55,7 @@ pub async fn atan<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.atan2(DD)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn atan_2<T: ristretto_types::Thread + 'static>(
+pub async fn atan_2<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,7 +67,7 @@ pub async fn atan_2<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.cbrt(D)D", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn cbrt<T: ristretto_types::Thread + 'static>(
+pub async fn cbrt<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -77,7 +78,7 @@ pub async fn cbrt<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.cos(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn cos<T: ristretto_types::Thread + 'static>(
+pub async fn cos<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -88,7 +89,7 @@ pub async fn cos<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.cosh(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn cosh<T: ristretto_types::Thread + 'static>(
+pub async fn cosh<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,7 +100,7 @@ pub async fn cosh<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.exp(D)D", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn exp<T: ristretto_types::Thread + 'static>(
+pub async fn exp<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -110,7 +111,7 @@ pub async fn exp<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.expm1(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn expm_1<T: ristretto_types::Thread + 'static>(
+pub async fn expm_1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -121,7 +122,7 @@ pub async fn expm_1<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.hypot(DD)D", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn hypot<T: ristretto_types::Thread + 'static>(
+pub async fn hypot<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -133,7 +134,7 @@ pub async fn hypot<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.log(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn log<T: ristretto_types::Thread + 'static>(
+pub async fn log<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -144,7 +145,7 @@ pub async fn log<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.log10(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn log_10<T: ristretto_types::Thread + 'static>(
+pub async fn log_10<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -155,7 +156,7 @@ pub async fn log_10<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.log1p(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn log_1p<T: ristretto_types::Thread + 'static>(
+pub async fn log_1p<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -166,7 +167,7 @@ pub async fn log_1p<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.pow(DD)D", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn pow<T: ristretto_types::Thread + 'static>(
+pub async fn pow<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -178,7 +179,7 @@ pub async fn pow<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.sin(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn sin<T: ristretto_types::Thread + 'static>(
+pub async fn sin<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -189,7 +190,7 @@ pub async fn sin<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.sinh(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn sinh<T: ristretto_types::Thread + 'static>(
+pub async fn sinh<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -200,7 +201,7 @@ pub async fn sinh<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.sqrt(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn sqrt<T: ristretto_types::Thread + 'static>(
+pub async fn sqrt<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -211,7 +212,7 @@ pub async fn sqrt<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.tan(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn tan<T: ristretto_types::Thread + 'static>(
+pub async fn tan<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -222,7 +223,7 @@ pub async fn tan<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/StrictMath.tanh(D)D", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn tanh<T: ristretto_types::Thread + 'static>(
+pub async fn tanh<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

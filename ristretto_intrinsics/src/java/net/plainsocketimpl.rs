@@ -4,6 +4,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::handles::{SocketHandle, SocketType};
 use ristretto_types::{JavaError, Parameters, Result, VM};
 use socket2::{Domain, Protocol, SockAddr, Type};
@@ -87,7 +88,7 @@ fn get_int_from_object(value: &Value) -> Result<i32> {
 
 #[intrinsic_method("java/net/PlainSocketImpl.initProto()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn init_proto<T: ristretto_types::Thread + 'static>(
+pub async fn init_proto<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -100,7 +101,7 @@ pub async fn init_proto<T: ristretto_types::Thread + 'static>(
 )]
 #[expect(clippy::too_many_lines)]
 #[async_method]
-pub async fn socket_accept<T: ristretto_types::Thread + 'static>(
+pub async fn socket_accept<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -299,7 +300,7 @@ pub async fn socket_accept<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn socket_available<T: ristretto_types::Thread + 'static>(
+pub async fn socket_available<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -312,7 +313,7 @@ pub async fn socket_available<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn socket_bind<T: ristretto_types::Thread + 'static>(
+pub async fn socket_bind<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -373,7 +374,7 @@ pub async fn socket_bind<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/PlainSocketImpl.socketClose0(Z)V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn socket_close_0<T: ristretto_types::Thread + 'static>(
+pub async fn socket_close_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -393,7 +394,7 @@ pub async fn socket_close_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn socket_connect<T: ristretto_types::Thread + 'static>(
+pub async fn socket_connect<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -491,7 +492,7 @@ pub async fn socket_connect<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/PlainSocketImpl.socketCreate(Z)V", LessThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn socket_create_0<T: ristretto_types::Thread + 'static>(
+pub async fn socket_create_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -518,7 +519,7 @@ pub async fn socket_create_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/PlainSocketImpl.socketCreate(ZZ)V", Equal(JAVA_17))]
 #[async_method]
-pub async fn socket_create_1<T: ristretto_types::Thread + 'static>(
+pub async fn socket_create_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -559,7 +560,7 @@ pub async fn socket_create_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn socket_get_option<T: ristretto_types::Thread + 'static>(
+pub async fn socket_get_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -627,7 +628,7 @@ pub async fn socket_get_option<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/PlainSocketImpl.socketListen(I)V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn socket_listen<T: ristretto_types::Thread + 'static>(
+pub async fn socket_listen<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -673,7 +674,7 @@ pub async fn socket_listen<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn socket_send_urgent_data<T: ristretto_types::Thread + 'static>(
+pub async fn socket_send_urgent_data<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -731,7 +732,7 @@ pub async fn socket_send_urgent_data<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn socket_set_option_0<T: ristretto_types::Thread + 'static>(
+pub async fn socket_set_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -812,7 +813,7 @@ pub async fn socket_set_option_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn socket_shutdown<T: ristretto_types::Thread + 'static>(
+pub async fn socket_shutdown<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

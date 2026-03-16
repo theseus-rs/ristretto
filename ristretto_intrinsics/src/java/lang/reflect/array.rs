@@ -21,7 +21,7 @@ fn get_class_name(value: &Value) -> Result<String> {
     Any
 )]
 #[async_method]
-pub async fn get<T: ristretto_types::Thread + 'static>(
+pub async fn get<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -100,7 +100,7 @@ pub async fn get<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.getBoolean(Ljava/lang/Object;I)Z", Any)]
 #[async_method]
-pub async fn get_boolean<T: ristretto_types::Thread + 'static>(
+pub async fn get_boolean<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -129,7 +129,7 @@ pub async fn get_boolean<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.getByte(Ljava/lang/Object;I)B", Any)]
 #[async_method]
-pub async fn get_byte<T: ristretto_types::Thread + 'static>(
+pub async fn get_byte<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -158,7 +158,7 @@ pub async fn get_byte<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.getChar(Ljava/lang/Object;I)C", Any)]
 #[async_method]
-pub async fn get_char<T: ristretto_types::Thread + 'static>(
+pub async fn get_char<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -187,7 +187,7 @@ pub async fn get_char<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.getDouble(Ljava/lang/Object;I)D", Any)]
 #[async_method]
-pub async fn get_double<T: ristretto_types::Thread + 'static>(
+pub async fn get_double<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -216,7 +216,7 @@ pub async fn get_double<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.getFloat(Ljava/lang/Object;I)F", Any)]
 #[async_method]
-pub async fn get_float<T: ristretto_types::Thread + 'static>(
+pub async fn get_float<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -245,7 +245,7 @@ pub async fn get_float<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.getInt(Ljava/lang/Object;I)I", Any)]
 #[async_method]
-pub async fn get_int<T: ristretto_types::Thread + 'static>(
+pub async fn get_int<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -274,7 +274,7 @@ pub async fn get_int<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.getLength(Ljava/lang/Object;)I", Any)]
 #[async_method]
-pub async fn get_length<T: ristretto_types::Thread + 'static>(
+pub async fn get_length<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -304,7 +304,7 @@ pub async fn get_length<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.getLong(Ljava/lang/Object;I)J", Any)]
 #[async_method]
-pub async fn get_long<T: ristretto_types::Thread + 'static>(
+pub async fn get_long<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -333,7 +333,7 @@ pub async fn get_long<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.getShort(Ljava/lang/Object;I)S", Any)]
 #[async_method]
-pub async fn get_short<T: ristretto_types::Thread + 'static>(
+pub async fn get_short<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -365,7 +365,7 @@ pub async fn get_short<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn multi_new_array<T: ristretto_types::Thread + 'static>(
+pub async fn multi_new_array<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -462,7 +462,7 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn new_array<T: ristretto_types::Thread + 'static>(
+pub async fn new_array<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -496,7 +496,7 @@ pub async fn new_array<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn set<T: ristretto_types::Thread + 'static>(
+pub async fn set<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -597,7 +597,7 @@ pub async fn set<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.setBoolean(Ljava/lang/Object;IZ)V", Any)]
 #[async_method]
-pub async fn set_boolean<T: ristretto_types::Thread + 'static>(
+pub async fn set_boolean<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -628,7 +628,7 @@ pub async fn set_boolean<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.setByte(Ljava/lang/Object;IB)V", Any)]
 #[async_method]
-pub async fn set_byte<T: ristretto_types::Thread + 'static>(
+pub async fn set_byte<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -659,7 +659,7 @@ pub async fn set_byte<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.setChar(Ljava/lang/Object;IC)V", Any)]
 #[async_method]
-pub async fn set_char<T: ristretto_types::Thread + 'static>(
+pub async fn set_char<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -690,7 +690,7 @@ pub async fn set_char<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.setDouble(Ljava/lang/Object;ID)V", Any)]
 #[async_method]
-pub async fn set_double<T: ristretto_types::Thread + 'static>(
+pub async fn set_double<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -721,7 +721,7 @@ pub async fn set_double<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.setFloat(Ljava/lang/Object;IF)V", Any)]
 #[async_method]
-pub async fn set_float<T: ristretto_types::Thread + 'static>(
+pub async fn set_float<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -752,7 +752,7 @@ pub async fn set_float<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.setInt(Ljava/lang/Object;II)V", Any)]
 #[async_method]
-pub async fn set_int<T: ristretto_types::Thread + 'static>(
+pub async fn set_int<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -783,7 +783,7 @@ pub async fn set_int<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.setLong(Ljava/lang/Object;IJ)V", Any)]
 #[async_method]
-pub async fn set_long<T: ristretto_types::Thread + 'static>(
+pub async fn set_long<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -814,7 +814,7 @@ pub async fn set_long<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/reflect/Array.setShort(Ljava/lang/Object;IS)V", Any)]
 #[async_method]
-pub async fn set_short<T: ristretto_types::Thread + 'static>(
+pub async fn set_short<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

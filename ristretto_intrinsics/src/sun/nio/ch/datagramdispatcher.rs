@@ -5,6 +5,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::handles::{SocketHandle, SocketType};
 use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
@@ -14,7 +15,7 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn dup_0<T: ristretto_types::Thread + 'static>(
+pub async fn dup_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,7 +55,7 @@ pub async fn dup_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn read_0<T: ristretto_types::Thread + 'static>(
+pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -108,7 +109,7 @@ pub async fn read_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn readv_0<T: ristretto_types::Thread + 'static>(
+pub async fn readv_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -195,7 +196,7 @@ pub async fn readv_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn write_0<T: ristretto_types::Thread + 'static>(
+pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -236,7 +237,7 @@ pub async fn write_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn writev_0<T: ristretto_types::Thread + 'static>(
+pub async fn writev_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

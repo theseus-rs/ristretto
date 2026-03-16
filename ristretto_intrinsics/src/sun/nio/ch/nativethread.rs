@@ -5,12 +5,13 @@ use ristretto_classfile::{JAVA_17, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/NativeThread.current()J", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn current<T: ristretto_types::Thread + 'static>(
+pub async fn current<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -20,7 +21,7 @@ pub async fn current<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/NativeThread.current0()J", GreaterThan(JAVA_17))]
 #[async_method]
-pub async fn current_0<T: ristretto_types::Thread + 'static>(
+pub async fn current_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -29,7 +30,7 @@ pub async fn current_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/NativeThread.init()V", Any)]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,7 +39,7 @@ pub async fn init<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/NativeThread.signal(J)V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn signal<T: ristretto_types::Thread + 'static>(
+pub async fn signal<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -47,7 +48,7 @@ pub async fn signal<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/NativeThread.signal0(J)V", GreaterThan(JAVA_17))]
 #[async_method]
-pub async fn signal_0<T: ristretto_types::Thread + 'static>(
+pub async fn signal_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,7 +60,7 @@ pub async fn signal_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn support_pending_signals_0<T: ristretto_types::Thread + 'static>(
+pub async fn support_pending_signals_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

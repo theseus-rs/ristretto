@@ -5,6 +5,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -83,7 +84,7 @@ const DWORD_BITS: u64 = 32;
 const FIND_FILE_PLACEHOLDER_HANDLE: i64 = 1;
 
 /// Read a null-terminated UTF-16 string from native memory at the given address.
-fn read_native_string<T: ristretto_types::Thread + 'static>(
+fn read_native_string<T: Thread + 'static>(
     thread: &Arc<T>,
     address: i64,
     context: &str,
@@ -107,7 +108,7 @@ fn read_native_string<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CloseHandle(J)V", Any)]
 #[async_method]
-pub async fn close_handle<T: ristretto_types::Thread + 'static>(
+pub async fn close_handle<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -119,7 +120,7 @@ pub async fn close_handle<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CreateFile0(JIIJII)J", Any)]
 #[async_method]
-pub async fn create_file_0<T: ristretto_types::Thread + 'static>(
+pub async fn create_file_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -168,7 +169,7 @@ pub async fn create_file_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.FindClose(J)V", Any)]
 #[async_method]
-pub async fn find_close<T: ristretto_types::Thread + 'static>(
+pub async fn find_close<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -181,7 +182,7 @@ pub async fn find_close<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn find_first_file_0<T: ristretto_types::Thread + 'static>(
+pub async fn find_first_file_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -218,7 +219,7 @@ pub async fn find_first_file_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetFileAttributesEx0(JJ)V", Any)]
 #[async_method]
-pub async fn get_file_attributes_ex_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_file_attributes_ex_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -273,7 +274,7 @@ pub async fn get_file_attributes_ex_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_full_path_name_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_full_path_name_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -289,7 +290,7 @@ pub async fn get_full_path_name_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

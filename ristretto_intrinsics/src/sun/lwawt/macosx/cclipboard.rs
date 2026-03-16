@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn check_pasteboard_without_notification<T: ristretto_types::Thread + 'static>(
+pub async fn check_pasteboard_without_notification<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CClipboard.checkPasteboardWithoutNotification()Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CClipboard.checkPasteboardWithoutNotification()Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,38 +28,51 @@ pub async fn check_pasteboard_without_notification<T: ristretto_types::Thread + 
     Any
 )]
 #[async_method]
-pub async fn declare_types<T: ristretto_types::Thread + 'static>(
+pub async fn declare_types<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CClipboard.declareTypes([JLsun/awt/datatransfer/SunClipboard;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CClipboard.declareTypes([JLsun/awt/datatransfer/SunClipboard;)V"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CClipboard.getClipboardData(J)[B", Any)]
 #[async_method]
-pub async fn get_clipboard_data<T: ristretto_types::Thread + 'static>(
+pub async fn get_clipboard_data<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CClipboard.getClipboardData(J)[B")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CClipboard.getClipboardData(J)[B".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CClipboard.getClipboardFormats()[J", Any)]
 #[async_method]
-pub async fn get_clipboard_formats<T: ristretto_types::Thread + 'static>(
+pub async fn get_clipboard_formats<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CClipboard.getClipboardFormats()[J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CClipboard.getClipboardFormats()[J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CClipboard.setData([BJ)V", Any)]
 #[async_method]
-pub async fn set_data<T: ristretto_types::Thread + 'static>(
+pub async fn set_data<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CClipboard.setData([BJ)V")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CClipboard.setData([BJ)V".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method(
@@ -62,11 +80,14 @@ pub async fn set_data<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn write_file_objects<T: ristretto_types::Thread + 'static>(
+pub async fn write_file_objects<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CClipboard.writeFileObjects([B)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CClipboard.writeFileObjects([B)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -74,54 +95,44 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CClipboard.checkPasteboardWithoutNotification()Z"
-    )]
     async fn test_check_pasteboard_without_notification() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = check_pasteboard_without_notification(thread, Parameters::default()).await;
+        let result = check_pasteboard_without_notification(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CClipboard.declareTypes([JLsun/awt/datatransfer/SunClipboard;)V"
-    )]
     async fn test_declare_types() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = declare_types(thread, Parameters::default()).await;
+        let result = declare_types(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CClipboard.getClipboardData(J)[B"
-    )]
     async fn test_get_clipboard_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_clipboard_data(thread, Parameters::default()).await;
+        let result = get_clipboard_data(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CClipboard.getClipboardFormats()[J"
-    )]
     async fn test_get_clipboard_formats() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_clipboard_formats(thread, Parameters::default()).await;
+        let result = get_clipboard_formats(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CClipboard.setData([BJ)V")]
     async fn test_set_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_data(thread, Parameters::default()).await;
+        let result = set_data(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CClipboard.writeFileObjects([B)V"
-    )]
     async fn test_write_file_objects() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = write_file_objects(thread, Parameters::default()).await;
+        let result = write_file_objects(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

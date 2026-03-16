@@ -2,6 +2,8 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -10,13 +12,11 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn blit_bg<T: ristretto_types::Thread + 'static>(
+pub async fn blit_bg<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.loops.blitBg.BlitBg(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIIII)V"
-    );
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.blitBg.BlitBg(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIIII)V".to_string()).into())
 }
 
 #[cfg(test)]
@@ -24,11 +24,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.loops.blitBg.BlitBg(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIIII)V"
-    )]
     async fn test_blit_bg() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = blit_bg(thread, Parameters::default()).await;
+        let result = blit_bg(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

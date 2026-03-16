@@ -4,6 +4,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError::{IllegalArgumentException, NullPointerException};
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -12,7 +13,7 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn bytes_to_doubles<T: ristretto_types::Thread + 'static>(
+pub async fn bytes_to_doubles<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,7 +56,7 @@ pub async fn bytes_to_doubles<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn bytes_to_floats<T: ristretto_types::Thread + 'static>(
+pub async fn bytes_to_floats<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -14,6 +14,7 @@ use ristretto_types::JavaError::RuntimeException;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_types::JavaError::{AccessControlException, IllegalArgumentException};
 use ristretto_types::JavaError::{FileNotFoundException, IoException};
+use ristretto_types::Thread;
 use ristretto_types::VM;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_types::handles::FileHandle;
@@ -34,7 +35,7 @@ use zerocopy::transmute_ref;
 
 #[intrinsic_method("java/io/RandomAccessFile.close0()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn close_0<T: ristretto_types::Thread + 'static>(
+pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -43,7 +44,7 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.getFilePointer()J", Any)]
 #[async_method]
-pub async fn get_file_pointer<T: ristretto_types::Thread + 'static>(
+pub async fn get_file_pointer<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -84,7 +85,7 @@ pub async fn get_file_pointer<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -93,7 +94,7 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.length()J", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn length<T: ristretto_types::Thread + 'static>(
+pub async fn length<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,7 +103,7 @@ pub async fn length<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.length0()J", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn length_0<T: ristretto_types::Thread + 'static>(
+pub async fn length_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -146,7 +147,7 @@ pub async fn length_0<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("java/io/RandomAccessFile.open0(Ljava/lang/String;I)V", Any)]
 #[async_method]
 #[expect(clippy::too_many_lines)]
-pub async fn open_0<T: ristretto_types::Thread + 'static>(
+pub async fn open_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -264,7 +265,7 @@ pub async fn open_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.read0()I", Any)]
 #[async_method]
-pub async fn read_0<T: ristretto_types::Thread + 'static>(
+pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -296,7 +297,7 @@ pub async fn read_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.readBytes([BII)I", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn read_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn read_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -308,7 +309,7 @@ pub async fn read_bytes<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn read_bytes_0<T: ristretto_types::Thread + 'static>(
+pub async fn read_bytes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -376,7 +377,7 @@ pub async fn read_bytes_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.seek0(J)V", Any)]
 #[async_method]
-pub async fn seek_0<T: ristretto_types::Thread + 'static>(
+pub async fn seek_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -412,7 +413,7 @@ pub async fn seek_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.setLength(J)V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn set_length<T: ristretto_types::Thread + 'static>(
+pub async fn set_length<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -421,7 +422,7 @@ pub async fn set_length<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.setLength0(J)V", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn set_length_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_length_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -460,7 +461,7 @@ pub async fn set_length_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.write0(I)V", Any)]
 #[async_method]
-pub async fn write_0<T: ristretto_types::Thread + 'static>(
+pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -482,7 +483,7 @@ pub async fn write_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.writeBytes([BII)V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn write_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn write_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -494,7 +495,7 @@ pub async fn write_bytes<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn write_bytes_0<T: ristretto_types::Thread + 'static>(
+pub async fn write_bytes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

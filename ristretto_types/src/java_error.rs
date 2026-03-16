@@ -205,6 +205,12 @@ pub enum JavaError {
     /// - [StackOverflowError](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/StackOverflowError.html)
     #[error("{0}")]
     StackOverflowError(String),
+    /// `UnsatisfiedLinkError`
+    ///
+    /// # References
+    /// - [UnsatisfiedLinkError](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/UnsatisfiedLinkError.html)
+    #[error("{0}")]
+    UnsatisfiedLinkError(String),
     /// `UnsupportedOperationException`
     ///
     /// # References
@@ -258,6 +264,7 @@ impl JavaError {
             JavaError::SocketException(_) => "java.net.SocketException",
             JavaError::SocketTimeoutException(_) => "java.net.SocketTimeoutException",
             JavaError::StackOverflowError(_) => "java.lang.StackOverflowError",
+            JavaError::UnsatisfiedLinkError(_) => "java.lang.UnsatisfiedLinkError",
             JavaError::UnsupportedOperationException(_) => {
                 "java.lang.UnsupportedOperationException"
             }
@@ -519,6 +526,13 @@ mod tests {
     fn test_stack_overflow_error() {
         let error = JavaError::StackOverflowError("foo".to_string());
         assert_eq!(error.class_name(), "java.lang.StackOverflowError");
+        assert_eq!(error.message(), "foo");
+    }
+
+    #[test]
+    fn test_unsatisfied_link_error() {
+        let error = JavaError::UnsatisfiedLinkError("foo".to_string());
+        assert_eq!(error.class_name(), "java.lang.UnsatisfiedLinkError");
         assert_eq!(error.message(), "foo");
     }
 

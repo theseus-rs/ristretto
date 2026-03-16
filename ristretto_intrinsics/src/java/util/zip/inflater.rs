@@ -9,6 +9,7 @@ use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqua
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM as _};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -36,16 +37,14 @@ impl InflaterState {
     }
 }
 
-fn get_inflater_state<T: ristretto_types::Thread + 'static>(
-    thread: &Arc<T>,
-) -> Result<Arc<InflaterState>> {
+fn get_inflater_state<T: Thread + 'static>(thread: &Arc<T>) -> Result<Arc<InflaterState>> {
     let vm = thread.vm()?;
     vm.resource_manager().get_or_init(InflaterState::new)
 }
 
 #[intrinsic_method("java/util/zip/Inflater.end(J)V", Any)]
 #[async_method]
-pub async fn end<T: ristretto_types::Thread + 'static>(
+pub async fn end<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -58,7 +57,7 @@ pub async fn end<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/Inflater.getAdler(J)I", Any)]
 #[async_method]
-pub async fn get_adler<T: ristretto_types::Thread + 'static>(
+pub async fn get_adler<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -71,7 +70,7 @@ pub async fn get_adler<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn inflate_buffer_buffer<T: ristretto_types::Thread + 'static>(
+pub async fn inflate_buffer_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -83,7 +82,7 @@ pub async fn inflate_buffer_buffer<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn inflate_buffer_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn inflate_buffer_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,7 +94,7 @@ pub async fn inflate_buffer_bytes<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn inflate_bytes_buffer<T: ristretto_types::Thread + 'static>(
+pub async fn inflate_bytes_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -104,7 +103,7 @@ pub async fn inflate_bytes_buffer<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/Inflater.inflateBytes(J[BII)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn inflate_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn inflate_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -178,7 +177,7 @@ pub async fn inflate_bytes<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 #[expect(clippy::too_many_lines)]
-pub async fn inflate_bytes_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn inflate_bytes_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -313,7 +312,7 @@ pub async fn inflate_bytes_bytes<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/Inflater.init(Z)J", Any)]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -341,7 +340,7 @@ pub async fn init<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/Inflater.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -350,7 +349,7 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/Inflater.reset(J)V", Any)]
 #[async_method]
-pub async fn reset<T: ristretto_types::Thread + 'static>(
+pub async fn reset<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -371,7 +370,7 @@ pub async fn reset<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/Inflater.setDictionary(J[BII)V", Any)]
 #[async_method]
-pub async fn set_dictionary<T: ristretto_types::Thread + 'static>(
+pub async fn set_dictionary<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -430,7 +429,7 @@ pub async fn set_dictionary<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn set_dictionary_buffer<T: ristretto_types::Thread + 'static>(
+pub async fn set_dictionary_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

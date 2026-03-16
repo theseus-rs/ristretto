@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,13 +13,11 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn accept_0<T: ristretto_types::Thread + 'static>(
+pub async fn accept_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.nio.ch.UnixDomainSockets.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/lang/Object;)I"
-    );
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.UnixDomainSockets.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/lang/Object;)I".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -25,11 +25,14 @@ pub async fn accept_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn bind_0<T: ristretto_types::Thread + 'static>(
+pub async fn bind_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.UnixDomainSockets.bind0(Ljava/io/FileDescriptor;[B)V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.nio.ch.UnixDomainSockets.bind0(Ljava/io/FileDescriptor;[B)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -37,20 +40,23 @@ pub async fn bind_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn connect_0<T: ristretto_types::Thread + 'static>(
+pub async fn connect_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.UnixDomainSockets.connect0(Ljava/io/FileDescriptor;[B)I");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.nio.ch.UnixDomainSockets.connect0(Ljava/io/FileDescriptor;[B)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/ch/UnixDomainSockets.init()Z", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.UnixDomainSockets.init()Z");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.UnixDomainSockets.init()Z".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -58,20 +64,26 @@ pub async fn init<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn local_address_0<T: ristretto_types::Thread + 'static>(
+pub async fn local_address_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.UnixDomainSockets.localAddress0(Ljava/io/FileDescriptor;)[B");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.nio.ch.UnixDomainSockets.localAddress0(Ljava/io/FileDescriptor;)[B".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/ch/UnixDomainSockets.socket0()I", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn socket_0<T: ristretto_types::Thread + 'static>(
+pub async fn socket_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.UnixDomainSockets.socket0()I");
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.nio.ch.UnixDomainSockets.socket0()I".to_string())
+            .into(),
+    )
 }
 
 #[cfg(test)]
@@ -79,52 +91,44 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.UnixDomainSockets.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/lang/Object;)I"
-    )]
     async fn test_accept_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = accept_0(thread, Parameters::default()).await;
+        let result = accept_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.UnixDomainSockets.bind0(Ljava/io/FileDescriptor;[B)V"
-    )]
     async fn test_bind_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = bind_0(thread, Parameters::default()).await;
+        let result = bind_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.UnixDomainSockets.connect0(Ljava/io/FileDescriptor;[B)I"
-    )]
     async fn test_connect_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = connect_0(thread, Parameters::default()).await;
+        let result = connect_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.UnixDomainSockets.init()Z")]
     async fn test_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init(thread, Parameters::default()).await;
+        let result = init(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.UnixDomainSockets.localAddress0(Ljava/io/FileDescriptor;)[B"
-    )]
     async fn test_local_address_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = local_address_0(thread, Parameters::default()).await;
+        let result = local_address_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.UnixDomainSockets.socket0()I")]
     async fn test_socket_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = socket_0(thread, Parameters::default()).await;
+        let result = socket_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

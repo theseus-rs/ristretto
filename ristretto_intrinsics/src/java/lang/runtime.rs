@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 #[cfg(not(target_family = "wasm"))]
@@ -13,7 +15,7 @@ use sysinfo::System;
 
 #[intrinsic_method("java/lang/Runtime.availableProcessors()I", Any)]
 #[async_method]
-pub async fn available_processors<T: ristretto_types::Thread + 'static>(
+pub async fn available_processors<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,7 +33,7 @@ pub async fn available_processors<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Runtime.freeMemory()J", Any)]
 #[async_method]
-pub async fn free_memory<T: ristretto_types::Thread + 'static>(
+pub async fn free_memory<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,7 +56,7 @@ pub async fn free_memory<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Runtime.gc()V", Any)]
 #[async_method]
-pub async fn gc<T: ristretto_types::Thread + 'static>(
+pub async fn gc<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -64,7 +66,7 @@ pub async fn gc<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Runtime.maxMemory()J", Any)]
 #[async_method]
-pub async fn max_memory<T: ristretto_types::Thread + 'static>(
+pub async fn max_memory<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -83,7 +85,7 @@ pub async fn max_memory<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Runtime.runFinalization0()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn run_finalization_0<T: ristretto_types::Thread + 'static>(
+pub async fn run_finalization_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -92,25 +94,31 @@ pub async fn run_finalization_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Runtime.traceInstructions(Z)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn trace_instructions<T: ristretto_types::Thread + 'static>(
+pub async fn trace_instructions<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Runtime.traceInstructions(Z)V")
+    Err(
+        JavaError::UnsatisfiedLinkError("java.lang.Runtime.traceInstructions(Z)V".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("java/lang/Runtime.traceMethodCalls(Z)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn trace_method_calls<T: ristretto_types::Thread + 'static>(
+pub async fn trace_method_calls<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.lang.Runtime.traceMethodCalls(Z)V")
+    Err(
+        JavaError::UnsatisfiedLinkError("java.lang.Runtime.traceMethodCalls(Z)V".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("java/lang/Runtime.totalMemory()J", Any)]
 #[async_method]
-pub async fn total_memory<T: ristretto_types::Thread + 'static>(
+pub async fn total_memory<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -180,17 +188,17 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Runtime.traceInstructions(Z)V")]
     async fn test_trace_instructions() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = trace_instructions(thread, Parameters::default()).await;
+        let result = trace_instructions(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.lang.Runtime.traceMethodCalls(Z)V")]
     async fn test_trace_method_calls() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = trace_method_calls(thread, Parameters::default()).await;
+        let result = trace_method_calls(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

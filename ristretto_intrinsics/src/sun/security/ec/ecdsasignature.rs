@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     Equal(JAVA_11)
 )]
 #[async_method]
-pub async fn sign_digest<T: ristretto_types::Thread + 'static>(
+pub async fn sign_digest<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.security.ec.ECDSASignature.signDigest([B[B[B[BI)[B")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.security.ec.ECDSASignature.signDigest([B[B[B[BI)[B".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn sign_digest<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_11)
 )]
 #[async_method]
-pub async fn verify_signed_digest<T: ristretto_types::Thread + 'static>(
+pub async fn verify_signed_digest<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.security.ec.ECDSASignature.verifySignedDigest([B[B[B[B)Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.security.ec.ECDSASignature.verifySignedDigest([B[B[B[B)Z".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -35,20 +43,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.security.ec.ECDSASignature.signDigest([B[B[B[BI)[B"
-    )]
     async fn test_sign_digest() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = sign_digest(thread, Parameters::default()).await;
+        let result = sign_digest(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.security.ec.ECDSASignature.verifySignedDigest([B[B[B[B)Z"
-    )]
     async fn test_verify_signed_digest() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = verify_signed_digest(thread, Parameters::default()).await;
+        let result = verify_signed_digest(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

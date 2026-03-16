@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,20 +13,23 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_jdk_special_version<T: ristretto_types::Thread + 'static>(
+pub async fn get_jdk_special_version<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Version.getJdkSpecialVersion()Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.misc.Version.getJdkSpecialVersion()Ljava/lang/String;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/misc/Version.getJdkVersionInfo()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_jdk_version_info<T: ristretto_types::Thread + 'static>(
+pub async fn get_jdk_version_info<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Version.getJdkVersionInfo()V")
+    Err(JavaError::UnsatisfiedLinkError("sun.misc.Version.getJdkVersionInfo()V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -32,20 +37,23 @@ pub async fn get_jdk_version_info<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_jvm_special_version<T: ristretto_types::Thread + 'static>(
+pub async fn get_jvm_special_version<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Version.getJvmSpecialVersion()Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.misc.Version.getJvmSpecialVersion()Ljava/lang/String;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/misc/Version.getJvmVersionInfo()Z", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_jvm_version_info<T: ristretto_types::Thread + 'static>(
+pub async fn get_jvm_version_info<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.misc.Version.getJvmVersionInfo()Z")
+    Err(JavaError::UnsatisfiedLinkError("sun.misc.Version.getJvmVersionInfo()Z".to_string()).into())
 }
 
 #[cfg(test)]
@@ -53,34 +61,30 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Version.getJdkSpecialVersion()Ljava/lang/String;"
-    )]
     async fn test_get_jdk_special_version() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_jdk_special_version(thread, Parameters::default()).await;
+        let result = get_jdk_special_version(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Version.getJdkVersionInfo()V")]
     async fn test_get_jdk_version_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_jdk_version_info(thread, Parameters::default()).await;
+        let result = get_jdk_version_info(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.misc.Version.getJvmSpecialVersion()Ljava/lang/String;"
-    )]
     async fn test_get_jvm_special_version() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_jvm_special_version(thread, Parameters::default()).await;
+        let result = get_jvm_special_version(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.misc.Version.getJvmVersionInfo()Z")]
     async fn test_get_jvm_version_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_jvm_version_info(thread, Parameters::default()).await;
+        let result = get_jvm_version_info(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

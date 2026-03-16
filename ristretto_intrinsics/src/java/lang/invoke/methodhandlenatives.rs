@@ -71,7 +71,7 @@ bitflags! {
     Between(JAVA_11, JAVA_21)
 )]
 #[async_method]
-pub async fn clear_call_site_context<T: ristretto_types::Thread + 'static>(
+pub async fn clear_call_site_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -88,7 +88,7 @@ pub async fn clear_call_site_context<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn copy_out_bootstrap_arguments<T: ristretto_types::Thread + 'static>(
+pub async fn copy_out_bootstrap_arguments<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -468,7 +468,7 @@ async fn resolve_method_handle<T: Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn expand<T: ristretto_types::Thread + 'static>(
+pub async fn expand<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -482,7 +482,7 @@ pub async fn expand<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_constant<T: ristretto_types::Thread + 'static>(
+pub async fn get_constant<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -499,7 +499,7 @@ pub async fn get_constant<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_member_vm_info<T: ristretto_types::Thread + 'static>(
+pub async fn get_member_vm_info<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -546,7 +546,7 @@ fn collect_interfaces(class: &Arc<Class>, result: &mut Vec<Arc<Class>>) -> Resul
 )]
 #[async_method]
 #[expect(clippy::too_many_lines)]
-pub async fn get_members<T: ristretto_types::Thread + 'static>(
+pub async fn get_members<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -707,7 +707,7 @@ pub async fn get_members<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_named_con<T: ristretto_types::Thread + 'static>(
+pub async fn get_named_con<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -784,7 +784,7 @@ pub async fn get_named_con<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -962,7 +962,7 @@ fn init_from_field<T: Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn object_field_offset<T: ristretto_types::Thread + 'static>(
+pub async fn object_field_offset<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1045,7 +1045,7 @@ fn resolve_holder_methods(
 
 #[intrinsic_method("java/lang/invoke/MethodHandleNatives.registerNatives()V", Any)]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1294,7 +1294,7 @@ async fn search_all_loaded_interfaces<T: Thread + 'static>(
 ///
 /// # Errors
 /// Returns an error if the member cannot be resolved.
-pub async fn resolve<T: ristretto_types::Thread + 'static>(
+pub async fn resolve<T: Thread + 'static>(
     thread: Arc<T>,
     member_self: Value,
     caller: Option<Arc<Class>>,
@@ -1778,7 +1778,7 @@ pub fn check_field_access(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn resolve_0<T: ristretto_types::Thread + 'static>(
+pub async fn resolve_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1806,7 +1806,7 @@ pub async fn resolve_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn resolve_1<T: ristretto_types::Thread + 'static>(
+pub async fn resolve_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1834,7 +1834,7 @@ pub async fn resolve_1<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn resolve_2<T: ristretto_types::Thread + 'static>(
+pub async fn resolve_2<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1863,7 +1863,7 @@ pub async fn resolve_2<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn set_call_site_target_normal<T: ristretto_types::Thread + 'static>(
+pub async fn set_call_site_target_normal<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1879,7 +1879,7 @@ pub async fn set_call_site_target_normal<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn set_call_site_target_volatile<T: ristretto_types::Thread + 'static>(
+pub async fn set_call_site_target_volatile<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1895,7 +1895,7 @@ pub async fn set_call_site_target_volatile<T: ristretto_types::Thread + 'static>
     Any
 )]
 #[async_method]
-pub async fn static_field_base<T: ristretto_types::Thread + 'static>(
+pub async fn static_field_base<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1910,7 +1910,7 @@ pub async fn static_field_base<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn static_field_offset<T: ristretto_types::Thread + 'static>(
+pub async fn static_field_offset<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

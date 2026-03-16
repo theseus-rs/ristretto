@@ -3,34 +3,45 @@ use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.menuClosed(J)V", Any)]
 #[async_method]
-pub async fn menu_closed<T: ristretto_types::Thread + 'static>(
+pub async fn menu_closed<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.menuClosed(J)V")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CAccessible.menuClosed(J)V".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.menuItemSelected(J)V", Any)]
 #[async_method]
-pub async fn menu_item_selected<T: ristretto_types::Thread + 'static>(
+pub async fn menu_item_selected<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.menuItemSelected(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CAccessible.menuItemSelected(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.menuOpened(J)V", Any)]
 #[async_method]
-pub async fn menu_opened<T: ristretto_types::Thread + 'static>(
+pub async fn menu_opened<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.menuOpened(J)V")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CAccessible.menuOpened(J)V".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method(
@@ -38,29 +49,38 @@ pub async fn menu_opened<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn selected_cells_changed<T: ristretto_types::Thread + 'static>(
+pub async fn selected_cells_changed<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.selectedCellsChanged(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CAccessible.selectedCellsChanged(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.selectedTextChanged(J)V", Any)]
 #[async_method]
-pub async fn selected_text_changed<T: ristretto_types::Thread + 'static>(
+pub async fn selected_text_changed<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.selectedTextChanged(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CAccessible.selectedTextChanged(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.selectionChanged(J)V", Any)]
 #[async_method]
-pub async fn selection_changed<T: ristretto_types::Thread + 'static>(
+pub async fn selection_changed<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.selectionChanged(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CAccessible.selectionChanged(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -68,11 +88,14 @@ pub async fn selection_changed<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn table_content_cache_clear<T: ristretto_types::Thread + 'static>(
+pub async fn table_content_cache_clear<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.tableContentCacheClear(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CAccessible.tableContentCacheClear(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -80,11 +103,14 @@ pub async fn table_content_cache_clear<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn title_changed<T: ristretto_types::Thread + 'static>(
+pub async fn title_changed<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.titleChanged(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CAccessible.titleChanged(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -92,11 +118,14 @@ pub async fn title_changed<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn tree_node_collapsed<T: ristretto_types::Thread + 'static>(
+pub async fn tree_node_collapsed<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.treeNodeCollapsed(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CAccessible.treeNodeCollapsed(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -104,29 +133,38 @@ pub async fn tree_node_collapsed<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn tree_node_expanded<T: ristretto_types::Thread + 'static>(
+pub async fn tree_node_expanded<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.treeNodeExpanded(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CAccessible.treeNodeExpanded(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.unregisterFromCocoaAXSystem(J)V", Any)]
 #[async_method]
-pub async fn unregister_from_cocoa_ax_system<T: ristretto_types::Thread + 'static>(
+pub async fn unregister_from_cocoa_ax_system<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.unregisterFromCocoaAXSystem(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CAccessible.unregisterFromCocoaAXSystem(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessible.valueChanged(J)V", Any)]
 #[async_method]
-pub async fn value_changed<T: ristretto_types::Thread + 'static>(
+pub async fn value_changed<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CAccessible.valueChanged(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CAccessible.valueChanged(J)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -134,102 +172,86 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CAccessible.menuClosed(J)V")]
     async fn test_menu_closed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = menu_closed(thread, Parameters::default()).await;
+        let result = menu_closed(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CAccessible.menuItemSelected(J)V"
-    )]
     async fn test_menu_item_selected() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = menu_item_selected(thread, Parameters::default()).await;
+        let result = menu_item_selected(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CAccessible.menuOpened(J)V")]
     async fn test_menu_opened() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = menu_opened(thread, Parameters::default()).await;
+        let result = menu_opened(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CAccessible.selectedCellsChanged(J)V"
-    )]
     async fn test_selected_cells_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = selected_cells_changed(thread, Parameters::default()).await;
+        let result = selected_cells_changed(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CAccessible.selectedTextChanged(J)V"
-    )]
     async fn test_selected_text_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = selected_text_changed(thread, Parameters::default()).await;
+        let result = selected_text_changed(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CAccessible.selectionChanged(J)V"
-    )]
     async fn test_selection_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = selection_changed(thread, Parameters::default()).await;
+        let result = selection_changed(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CAccessible.tableContentCacheClear(J)V"
-    )]
     async fn test_table_content_cache_clear() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = table_content_cache_clear(thread, Parameters::default()).await;
+        let result = table_content_cache_clear(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CAccessible.titleChanged(J)V")]
     async fn test_title_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = title_changed(thread, Parameters::default()).await;
+        let result = title_changed(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CAccessible.treeNodeCollapsed(J)V"
-    )]
     async fn test_tree_node_collapsed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = tree_node_collapsed(thread, Parameters::default()).await;
+        let result = tree_node_collapsed(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CAccessible.treeNodeExpanded(J)V"
-    )]
     async fn test_tree_node_expanded() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = tree_node_expanded(thread, Parameters::default()).await;
+        let result = tree_node_expanded(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CAccessible.unregisterFromCocoaAXSystem(J)V"
-    )]
     async fn test_unregister_from_cocoa_ax_system() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unregister_from_cocoa_ax_system(thread, Parameters::default()).await;
+        let result = unregister_from_cocoa_ax_system(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.CAccessible.valueChanged(J)V")]
     async fn test_value_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = value_changed(thread, Parameters::default()).await;
+        let result = value_changed(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

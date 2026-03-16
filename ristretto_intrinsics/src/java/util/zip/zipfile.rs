@@ -3,13 +3,14 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 /// Stub implementation of `ZipFile` methods for Java 8 and earlier
 #[intrinsic_method("java/util/zip/ZipFile.close(J)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn close<T: ristretto_types::Thread + 'static>(
+pub async fn close<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -19,7 +20,7 @@ pub async fn close<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.freeEntry(JJ)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn free_entry<T: ristretto_types::Thread + 'static>(
+pub async fn free_entry<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,7 +31,7 @@ pub async fn free_entry<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getCommentBytes(J)[B", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_comment_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn get_comment_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,7 +41,7 @@ pub async fn get_comment_bytes<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntry(J[BZ)J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_entry<T: ristretto_types::Thread + 'static>(
+pub async fn get_entry<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -52,7 +53,7 @@ pub async fn get_entry<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryBytes(JI)[B", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_entry_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn get_entry_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -63,7 +64,7 @@ pub async fn get_entry_bytes<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryCSize(J)J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_entry_c_size<T: ristretto_types::Thread + 'static>(
+pub async fn get_entry_c_size<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -73,7 +74,7 @@ pub async fn get_entry_c_size<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryCrc(J)J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_entry_crc<T: ristretto_types::Thread + 'static>(
+pub async fn get_entry_crc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -83,7 +84,7 @@ pub async fn get_entry_crc<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryFlag(J)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_entry_flag<T: ristretto_types::Thread + 'static>(
+pub async fn get_entry_flag<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -93,7 +94,7 @@ pub async fn get_entry_flag<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryMethod(J)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_entry_method<T: ristretto_types::Thread + 'static>(
+pub async fn get_entry_method<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -103,7 +104,7 @@ pub async fn get_entry_method<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntrySize(J)J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_entry_size<T: ristretto_types::Thread + 'static>(
+pub async fn get_entry_size<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -113,7 +114,7 @@ pub async fn get_entry_size<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryTime(J)J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_entry_time<T: ristretto_types::Thread + 'static>(
+pub async fn get_entry_time<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -123,7 +124,7 @@ pub async fn get_entry_time<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getManifestNum(J)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_manifest_num<T: ristretto_types::Thread + 'static>(
+pub async fn get_manifest_num<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -133,7 +134,7 @@ pub async fn get_manifest_num<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getNextEntry(JI)J", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_next_entry<T: ristretto_types::Thread + 'static>(
+pub async fn get_next_entry<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -144,7 +145,7 @@ pub async fn get_next_entry<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.getTotal(J)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_total<T: ristretto_types::Thread + 'static>(
+pub async fn get_total<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -157,7 +158,7 @@ pub async fn get_total<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_zip_message<T: ristretto_types::Thread + 'static>(
+pub async fn get_zip_message<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -167,7 +168,7 @@ pub async fn get_zip_message<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.initIDs()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -179,7 +180,7 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn open<T: ristretto_types::Thread + 'static>(
+pub async fn open<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -202,7 +203,7 @@ pub async fn open<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.read(JJJ[BII)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn read<T: ristretto_types::Thread + 'static>(
+pub async fn read<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -219,7 +220,7 @@ pub async fn read<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/util/zip/ZipFile.startsWithLOC(J)Z", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn starts_with_loc<T: ristretto_types::Thread + 'static>(
+pub async fn starts_with_loc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

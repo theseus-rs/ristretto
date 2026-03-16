@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::{GreaterThan, GreaterThanOrEqual,
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     GreaterThan(JAVA_21)
 )]
 #[async_method]
-pub async fn alignof_double<T: ristretto_types::Thread + 'static>(
+pub async fn alignof_double<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.alignof_double()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.alignof_double()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn alignof_double<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_21)
 )]
 #[async_method]
-pub async fn alignof_long_long<T: ristretto_types::Thread + 'static>(
+pub async fn alignof_long_long<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.alignof_long_long()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.alignof_long_long()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -35,11 +43,15 @@ pub async fn alignof_long_long<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn create_closure<T: ristretto_types::Thread + 'static>(
+pub async fn create_closure<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.createClosure(JLjava/lang/Object;[J)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.createClosure(JLjava/lang/Object;[J)I"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -47,11 +59,14 @@ pub async fn create_closure<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn do_downcall_0<T: ristretto_types::Thread + 'static>(
+pub async fn do_downcall_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJJI)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJJI)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -59,13 +74,11 @@ pub async fn do_downcall_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_21)
 )]
 #[async_method]
-pub async fn do_downcall_1<T: ristretto_types::Thread + 'static>(
+pub async fn do_downcall_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJLjava/lang/Object;JI[Ljava/lang/Object;I)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJLjava/lang/Object;JI[Ljava/lang/Object;I)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -73,11 +86,14 @@ pub async fn do_downcall_1<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_default_abi<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_default_abi<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_default_abi()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_default_abi()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -85,11 +101,14 @@ pub async fn ffi_default_abi<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_get_struct_offsets<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_get_struct_offsets<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_get_struct_offsets(IJJ)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_get_struct_offsets(IJJ)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -97,11 +116,14 @@ pub async fn ffi_get_struct_offsets<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_prep_cif<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_prep_cif<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif(JIIJJ)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif(JIIJJ)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -109,11 +131,14 @@ pub async fn ffi_prep_cif<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_prep_cif_var<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_prep_cif_var<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif_var(JIIIJJ)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif_var(JIIIJJ)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -121,11 +146,14 @@ pub async fn ffi_prep_cif_var<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_sizeof_int<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_sizeof_int<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_int()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_int()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -133,11 +161,14 @@ pub async fn ffi_sizeof_int<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_sizeof_long<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_sizeof_long<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_long()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_long()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -145,11 +176,14 @@ pub async fn ffi_sizeof_long<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_sizeof_short<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_sizeof_short<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_short()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_short()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -157,11 +191,14 @@ pub async fn ffi_sizeof_short<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_sizeof_wchar<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_sizeof_wchar<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_wchar()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_wchar()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -169,11 +206,14 @@ pub async fn ffi_sizeof_wchar<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_double<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_double<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_double()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_double()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -181,11 +221,14 @@ pub async fn ffi_type_double<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_float<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_float<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_float()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_float()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -193,11 +236,14 @@ pub async fn ffi_type_float<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_pointer<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_pointer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_pointer()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_pointer()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -205,11 +251,14 @@ pub async fn ffi_type_pointer<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_sint_16<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_sint_16<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint16()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint16()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -217,11 +266,14 @@ pub async fn ffi_type_sint_16<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_sint_32<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_sint_32<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint32()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint32()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -229,11 +281,14 @@ pub async fn ffi_type_sint_32<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_sint_64<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_sint_64<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint64()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint64()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -241,11 +296,14 @@ pub async fn ffi_type_sint_64<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_sint_8<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_sint_8<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint8()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint8()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -253,11 +311,14 @@ pub async fn ffi_type_sint_8<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_struct<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_struct<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_struct()S")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_struct()S".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -265,11 +326,14 @@ pub async fn ffi_type_struct<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_uint_16<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_uint_16<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint16()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint16()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -277,11 +341,14 @@ pub async fn ffi_type_uint_16<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_uint_32<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_uint_32<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint32()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint32()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -289,11 +356,14 @@ pub async fn ffi_type_uint_32<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_uint_64<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_uint_64<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint64()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint64()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -301,11 +371,14 @@ pub async fn ffi_type_uint_64<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_uint_8<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_uint_8<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint8()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint8()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -313,11 +386,14 @@ pub async fn ffi_type_uint_8<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn ffi_type_void<T: ristretto_types::Thread + 'static>(
+pub async fn ffi_type_void<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_void()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_void()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -325,11 +401,14 @@ pub async fn ffi_type_void<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn free_closure<T: ristretto_types::Thread + 'static>(
+pub async fn free_closure<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.freeClosure(JJ)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.freeClosure(JJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -337,7 +416,7 @@ pub async fn free_closure<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -349,11 +428,14 @@ pub async fn init<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn sizeof_cif<T: ristretto_types::Thread + 'static>(
+pub async fn sizeof_cif<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.fallback.LibFallback.sizeofCif()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.fallback.LibFallback.sizeofCif()J".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -361,246 +443,192 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.alignof_double()I"
-    )]
     async fn test_alignof_double() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = alignof_double(thread, Parameters::default()).await;
+        let result = alignof_double(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.alignof_long_long()I"
-    )]
     async fn test_alignof_long_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = alignof_long_long(thread, Parameters::default()).await;
+        let result = alignof_long_long(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.createClosure(JLjava/lang/Object;[J)I"
-    )]
     async fn test_create_closure() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_closure(thread, Parameters::default()).await;
+        let result = create_closure(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJJI)V"
-    )]
     async fn test_do_downcall_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = do_downcall_0(thread, Parameters::default()).await;
+        let result = do_downcall_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJLjava/lang/Object;JI[Ljava/lang/Object;I)V"
-    )]
     async fn test_do_downcall_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = do_downcall_1(thread, Parameters::default()).await;
+        let result = do_downcall_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_default_abi()I"
-    )]
     async fn test_ffi_default_abi() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_default_abi(thread, Parameters::default()).await;
+        let result = ffi_default_abi(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_get_struct_offsets(IJJ)I"
-    )]
     async fn test_ffi_get_struct_offsets() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_get_struct_offsets(thread, Parameters::default()).await;
+        let result = ffi_get_struct_offsets(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif(JIIJJ)I"
-    )]
     async fn test_ffi_prep_cif() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_prep_cif(thread, Parameters::default()).await;
+        let result = ffi_prep_cif(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif_var(JIIIJJ)I"
-    )]
     async fn test_ffi_prep_cif_var() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_prep_cif_var(thread, Parameters::default()).await;
+        let result = ffi_prep_cif_var(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_int()I"
-    )]
     async fn test_ffi_sizeof_int() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_sizeof_int(thread, Parameters::default()).await;
+        let result = ffi_sizeof_int(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_long()I"
-    )]
     async fn test_ffi_sizeof_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_sizeof_long(thread, Parameters::default()).await;
+        let result = ffi_sizeof_long(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_short()I"
-    )]
     async fn test_ffi_sizeof_short() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_sizeof_short(thread, Parameters::default()).await;
+        let result = ffi_sizeof_short(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_wchar()I"
-    )]
     async fn test_ffi_sizeof_wchar() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_sizeof_wchar(thread, Parameters::default()).await;
+        let result = ffi_sizeof_wchar(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_double()J"
-    )]
     async fn test_ffi_type_double() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_double(thread, Parameters::default()).await;
+        let result = ffi_type_double(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_float()J"
-    )]
     async fn test_ffi_type_float() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_float(thread, Parameters::default()).await;
+        let result = ffi_type_float(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_pointer()J"
-    )]
     async fn test_ffi_type_pointer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_pointer(thread, Parameters::default()).await;
+        let result = ffi_type_pointer(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint16()J"
-    )]
     async fn test_ffi_type_sint16() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_sint_16(thread, Parameters::default()).await;
+        let result = ffi_type_sint_16(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint32()J"
-    )]
     async fn test_ffi_type_sint32() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_sint_32(thread, Parameters::default()).await;
+        let result = ffi_type_sint_32(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint64()J"
-    )]
     async fn test_ffi_type_sint64() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_sint_64(thread, Parameters::default()).await;
+        let result = ffi_type_sint_64(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_sint8()J"
-    )]
     async fn test_ffi_type_sint8() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_sint_8(thread, Parameters::default()).await;
+        let result = ffi_type_sint_8(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_struct()S"
-    )]
     async fn test_ffi_type_struct() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_struct(thread, Parameters::default()).await;
+        let result = ffi_type_struct(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint16()J"
-    )]
     async fn test_ffi_type_uint16() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_uint_16(thread, Parameters::default()).await;
+        let result = ffi_type_uint_16(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint32()J"
-    )]
     async fn test_ffi_type_uint32() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_uint_32(thread, Parameters::default()).await;
+        let result = ffi_type_uint_32(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint64()J"
-    )]
     async fn test_ffi_type_uint64() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_uint_64(thread, Parameters::default()).await;
+        let result = ffi_type_uint_64(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_uint8()J"
-    )]
     async fn test_ffi_type_uint8() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_uint_8(thread, Parameters::default()).await;
+        let result = ffi_type_uint_8(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_void()J"
-    )]
     async fn test_ffi_type_void() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ffi_type_void(thread, Parameters::default()).await;
+        let result = ffi_type_void(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.freeClosure(JJ)V"
-    )]
     async fn test_free_closure() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = free_closure(thread, Parameters::default()).await;
+        let result = free_closure(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -612,11 +640,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.fallback.LibFallback.sizeofCif()J"
-    )]
     async fn test_sizeof_cif() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = sizeof_cif(thread, Parameters::default()).await;
+        let result = sizeof_cif(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }
