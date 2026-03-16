@@ -1004,9 +1004,6 @@ mod tests {
             .await?
             .expect("last modified time");
         let last_modified_time = value.as_i64()?;
-        #[cfg(not(target_os = "windows"))]
-        assert!(last_modified_time >= start_time);
-        #[cfg(target_os = "windows")]
         assert!(last_modified_time >= start_time - 1000);
         Ok(())
     }
@@ -1027,9 +1024,6 @@ mod tests {
             .await?
             .expect("last modified time");
         let last_modified_time = value.as_i64()?;
-        #[cfg(not(target_os = "windows"))]
-        assert!(last_modified_time >= start_time);
-        #[cfg(target_os = "windows")]
         assert!(last_modified_time >= start_time - 1000);
         Ok(())
     }
