@@ -385,12 +385,14 @@ fn to_class_object<'a, T: Thread + 'static>(
 
         // Build constructor parameters based on Java version
         let (descriptor, parameters, module) = build_class_constructor_params(
+            thread,
             class,
             java_version,
             class_loader_object,
             component_type_object,
             module,
-        );
+        )
+        .await?;
 
         // Create the Class object
         let object_value = thread
@@ -563,42 +565,75 @@ fn create_unnamed_module<'a, T: Thread + 'static>(
     })
 }
 
+/// Build a `ProtectionDomain` Java object from a code source URL string.
+fn build_protection_domain<'a, T: Thread + 'static>(
+    thread: &'a T,
+    url_str: &'a str,
+) -> crate::BoxFuture<'a, Result<Value>> {
+    Box::pin(async move {
+        let url_string = url_str.to_object(thread).await?;
+        let url = thread
+            .object("java/net/URL", "Ljava/lang/String;", &[url_string])
+            .await?;
+        let code_source = thread
+            .object(
+                "java/security/CodeSource",
+                "Ljava/net/URL;[Ljava/security/cert/Certificate;",
+                &[url, Value::Object(None)],
+            )
+            .await?;
+        thread
+            .object(
+                "java/security/ProtectionDomain",
+                "Ljava/security/CodeSource;Ljava/security/PermissionCollection;",
+                &[code_source, Value::Object(None)],
+            )
+            .await
+    })
+}
+
 /// Build the constructor descriptor and parameters for creating a Class object.
-fn build_class_constructor_params(
-    class: &Arc<Class>,
-    java_version: &ristretto_classfile::Version,
+fn build_class_constructor_params<'a, T: Thread + 'static>(
+    thread: &'a T,
+    class: &'a Arc<Class>,
+    java_version: &'a ristretto_classfile::Version,
     class_loader_object: Value,
     component_type_object: Value,
     module: Value,
-) -> (&'static str, Vec<Value>, Value) {
-    if *java_version <= JAVA_8 {
-        (
-            "Ljava/lang/ClassLoader;",
-            vec![class_loader_object],
-            Value::Object(None),
-        )
-    } else if *java_version < JAVA_25 {
-        (
-            "Ljava/lang/ClassLoader;Ljava/lang/Class;",
-            vec![class_loader_object, component_type_object],
-            module,
-        )
-    } else {
-        let modifiers = Value::from(class.class_file().access_flags.bits());
-        let protected_domain = Value::Object(None);
-        let primitive = Value::from(class.is_primitive());
-        (
-            "Ljava/lang/ClassLoader;Ljava/lang/Class;CLjava/security/ProtectionDomain;Z",
-            vec![
-                class_loader_object,
-                component_type_object,
-                modifiers,
-                protected_domain,
-                primitive,
-            ],
-            module,
-        )
-    }
+) -> crate::BoxFuture<'a, Result<(&'static str, Vec<Value>, Value)>> {
+    Box::pin(async move {
+        if *java_version <= JAVA_8 {
+            Ok((
+                "Ljava/lang/ClassLoader;",
+                vec![class_loader_object],
+                Value::Object(None),
+            ))
+        } else if *java_version < JAVA_25 {
+            Ok((
+                "Ljava/lang/ClassLoader;Ljava/lang/Class;",
+                vec![class_loader_object, component_type_object],
+                module,
+            ))
+        } else {
+            let modifiers = Value::from(class.class_file().access_flags.bits());
+            let protection_domain = match class.class_file().code_source_url.as_deref() {
+                Some(url_str) => build_protection_domain(thread, url_str).await?,
+                None => Value::Object(None),
+            };
+            let primitive = Value::from(class.is_primitive());
+            Ok((
+                "Ljava/lang/ClassLoader;Ljava/lang/Class;CLjava/security/ProtectionDomain;Z",
+                vec![
+                    class_loader_object,
+                    component_type_object,
+                    modifiers,
+                    protection_domain,
+                    primitive,
+                ],
+                module,
+            ))
+        }
+    })
 }
 
 /// Get the component type object for an array class.

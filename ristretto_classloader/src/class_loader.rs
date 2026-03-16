@@ -126,7 +126,12 @@ impl ClassLoader {
             }
         } else {
             let class_path = self.class_path();
-            if let Ok(class_file) = class_path.read_class(class_name_str.as_ref()).await {
+            if let Ok(mut class_file) = class_path.read_class(class_name_str.as_ref()).await {
+                // Only set code source for non-bootstrap class loaders; bootstrap
+                // classes (JDK classes) have no ProtectionDomain.
+                if self.parent().await.is_none() {
+                    class_file.code_source_url = None;
+                }
                 let class = Class::from(Some(self.this.clone()), class_file)?;
                 self.set_class_module_name(&class, &class_name_str).await?;
                 return Ok(self

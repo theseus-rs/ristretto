@@ -61,11 +61,18 @@ impl ClassPath {
         let name = name.as_ref();
 
         for class_path_entry in self.iter() {
-            if let Ok(class_file) = class_path_entry.read_class(name).await {
-                info!(
-                    "load class {name} source: {}",
-                    class_path_entry.name().to_string_lossy()
-                );
+            if let Ok(mut class_file) = class_path_entry.read_class(name).await {
+                let source = class_path_entry.name().to_string_lossy().to_string();
+                info!("load class {name} source: {source}");
+                let abs_path = std::path::Path::new(&source)
+                    .canonicalize()
+                    .unwrap_or_else(|_| std::path::PathBuf::from(&source));
+                let url = if abs_path.is_dir() {
+                    format!("file:{}/", abs_path.display())
+                } else {
+                    format!("file:{}", abs_path.display())
+                };
+                class_file.code_source_url = Some(url);
                 return Ok(class_file);
             }
         }

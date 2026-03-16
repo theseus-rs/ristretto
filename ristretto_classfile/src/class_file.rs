@@ -62,6 +62,9 @@ pub struct ClassFile<'a> {
     pub fields: Vec<Field>,
     pub methods: Vec<Method>,
     pub attributes: Vec<Attribute>,
+    /// The code source URL for this class (e.g., `file:/path/to/classes/`).
+    /// Not part of the binary class file format.
+    pub code_source_url: Option<String>,
 }
 
 impl<'a> ClassFile<'a> {
@@ -78,6 +81,7 @@ impl<'a> ClassFile<'a> {
             fields: self.fields,
             methods: self.methods,
             attributes: self.attributes,
+            code_source_url: self.code_source_url,
         }
     }
 
@@ -235,6 +239,7 @@ impl<'a> ClassFile<'a> {
             fields,
             methods,
             attributes,
+            code_source_url: None,
         })
     }
 
@@ -288,6 +293,7 @@ impl<'a> ClassFile<'a> {
             fields,
             methods,
             attributes,
+            code_source_url: None,
         })
     }
 

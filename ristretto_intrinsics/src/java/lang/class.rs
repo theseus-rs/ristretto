@@ -980,11 +980,35 @@ pub async fn get_primitive_class<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_protection_domain_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let object = parameters.pop()?;
+    let class = get_class_no_init(&thread, &object).await?;
     // Classes loaded by the bootstrap class loader have no ProtectionDomain
-    Ok(Some(Value::Object(None)))
+    let Some(url_str) = class.class_file().code_source_url.as_deref() else {
+        return Ok(Some(Value::Object(None)));
+    };
+
+    let url_string = url_str.to_object(&thread).await?;
+    let url = thread
+        .object("java/net/URL", "Ljava/lang/String;", &[url_string])
+        .await?;
+    let code_source = thread
+        .object(
+            "java/security/CodeSource",
+            "Ljava/net/URL;[Ljava/security/cert/Certificate;",
+            &[url, Value::Object(None)],
+        )
+        .await?;
+    let protection_domain = thread
+        .object(
+            "java/security/ProtectionDomain",
+            "Ljava/security/CodeSource;Ljava/security/PermissionCollection;",
+            &[code_source, Value::Object(None)],
+        )
+        .await?;
+    Ok(Some(protection_domain))
 }
 
 #[intrinsic_method("java/lang/Class.getRawAnnotations()[B", Any)]
@@ -2055,6 +2079,26 @@ mod tests {
         let result = get_protection_domain_0(thread, parameters).await?;
         // Classes loaded by the bootstrap loader return null
         assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_protection_domain_0_with_code_source() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let vm = thread.vm()?;
+        let class_loader_lock = vm.class_loader();
+        let class_loader = class_loader_lock.read().await;
+
+        let mut class_file = create_mock_record_class_file()?;
+        class_file.code_source_url = Some("file:/test/classes/".to_string());
+        let class = Class::from(Some(Arc::downgrade(&class_loader)), class_file)?;
+        class_loader.register(class.clone()).await?;
+
+        let class_object = class.to_object(&thread).await?;
+        let parameters = Parameters::new(vec![class_object]);
+        let result = get_protection_domain_0(thread, parameters).await?;
+        let protection_domain = result.expect("protection domain");
+        assert!(!protection_domain.is_null());
         Ok(())
     }
 
