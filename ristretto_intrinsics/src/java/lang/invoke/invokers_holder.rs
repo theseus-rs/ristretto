@@ -8,12 +8,13 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 /// Helper function for holder method implementations.
 /// Dispatches the method call through the `LambdaForm` interpreter.
-async fn holder_method_stub<T: ristretto_types::Thread + 'static>(
+async fn holder_method_stub<T: Thread + 'static>(
     thread: Arc<T>,
     method_name: &str,
     parameters: Parameters,
@@ -28,7 +29,7 @@ async fn holder_method_stub<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn invoker<T: ristretto_types::Thread + 'static>(
+pub async fn invoker<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {

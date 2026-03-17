@@ -2,6 +2,8 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -10,13 +12,11 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn scale<T: ristretto_types::Thread + 'static>(
+pub async fn scale<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.loops.ScaledBlit.Scale(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIDDDD)V"
-    );
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.ScaledBlit.Scale(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIDDDD)V".to_string()).into())
 }
 
 #[cfg(test)]
@@ -24,11 +24,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.loops.ScaledBlit.Scale(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIDDDD)V"
-    )]
     async fn test_scale() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = scale(thread, Parameters::default()).await;
+        let result = scale(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

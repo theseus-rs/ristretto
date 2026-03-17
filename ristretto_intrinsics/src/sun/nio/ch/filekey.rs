@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::{GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn init_0<T: ristretto_types::Thread + 'static>(
+pub async fn init_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.FileKey.init(Ljava/io/FileDescriptor;)V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.nio.ch.FileKey.init(Ljava/io/FileDescriptor;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,16 +28,19 @@ pub async fn init_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_21)
 )]
 #[async_method]
-pub async fn init_1<T: ristretto_types::Thread + 'static>(
+pub async fn init_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.FileKey.init(Ljava/io/FileDescriptor;[J)V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.nio.ch.FileKey.init(Ljava/io/FileDescriptor;[J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/ch/FileKey.initIDs()V", LessThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,21 +52,17 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.FileKey.init(Ljava/io/FileDescriptor;)V"
-    )]
     async fn test_init_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_0(thread, Parameters::default()).await;
+        let result = init_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.FileKey.init(Ljava/io/FileDescriptor;[J)V"
-    )]
     async fn test_init_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_1(thread, Parameters::default()).await;
+        let result = init_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

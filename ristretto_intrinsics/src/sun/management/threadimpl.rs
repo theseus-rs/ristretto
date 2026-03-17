@@ -2,6 +2,8 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -10,11 +12,15 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn dump_threads_0<T: ristretto_types::Thread + 'static>(
+pub async fn dump_threads_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.dumpThreads0([JZZI)[Ljava/lang/management/ThreadInfo;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.dumpThreads0([JZZI)[Ljava/lang/management/ThreadInfo;"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -22,11 +28,14 @@ pub async fn dump_threads_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn find_deadlocked_threads_0<T: ristretto_types::Thread + 'static>(
+pub async fn find_deadlocked_threads_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.findDeadlockedThreads0()[Ljava/lang/Thread;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.findDeadlockedThreads0()[Ljava/lang/Thread;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -34,29 +43,38 @@ pub async fn find_deadlocked_threads_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn find_monitor_deadlocked_threads_0<T: ristretto_types::Thread + 'static>(
+pub async fn find_monitor_deadlocked_threads_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.findMonitorDeadlockedThreads0()[Ljava/lang/Thread;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.findMonitorDeadlockedThreads0()[Ljava/lang/Thread;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadAllocatedMemory0(J)J", Any)]
 #[async_method]
-pub async fn get_thread_allocated_memory_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_thread_allocated_memory_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.getThreadAllocatedMemory0(J)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.getThreadAllocatedMemory0(J)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadAllocatedMemory1([J[J)V", Any)]
 #[async_method]
-pub async fn get_thread_allocated_memory_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_thread_allocated_memory_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.getThreadAllocatedMemory1([J[J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.getThreadAllocatedMemory1([J[J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -64,92 +82,123 @@ pub async fn get_thread_allocated_memory_1<T: ristretto_types::Thread + 'static>
     Any
 )]
 #[async_method]
-pub async fn get_thread_info_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_thread_info_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.getThreadInfo1([JI[Ljava/lang/management/ThreadInfo;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.getThreadInfo1([JI[Ljava/lang/management/ThreadInfo;)V"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadTotalCpuTime0(J)J", Any)]
 #[async_method]
-pub async fn get_thread_total_cpu_time_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_thread_total_cpu_time_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.getThreadTotalCpuTime0(J)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.getThreadTotalCpuTime0(J)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadTotalCpuTime1([J[J)V", Any)]
 #[async_method]
-pub async fn get_thread_total_cpu_time_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_thread_total_cpu_time_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.getThreadTotalCpuTime1([J[J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.getThreadTotalCpuTime1([J[J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadUserCpuTime0(J)J", Any)]
 #[async_method]
-pub async fn get_thread_user_cpu_time_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_thread_user_cpu_time_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.getThreadUserCpuTime0(J)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.getThreadUserCpuTime0(J)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreadUserCpuTime1([J[J)V", Any)]
 #[async_method]
-pub async fn get_thread_user_cpu_time_1<T: ristretto_types::Thread + 'static>(
+pub async fn get_thread_user_cpu_time_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.getThreadUserCpuTime1([J[J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.getThreadUserCpuTime1([J[J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getThreads()[Ljava/lang/Thread;", Any)]
 #[async_method]
-pub async fn get_threads<T: ristretto_types::Thread + 'static>(
+pub async fn get_threads<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.getThreads()[Ljava/lang/Thread;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.getThreads()[Ljava/lang/Thread;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.getTotalThreadAllocatedMemory()J", Any)]
 #[async_method]
-pub async fn get_total_thread_allocated_memory<T: ristretto_types::Thread + 'static>(
+pub async fn get_total_thread_allocated_memory<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.getTotalThreadAllocatedMemory()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.getTotalThreadAllocatedMemory()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.resetContentionTimes0(J)V", Any)]
 #[async_method]
-pub async fn reset_contention_times_0<T: ristretto_types::Thread + 'static>(
+pub async fn reset_contention_times_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.resetContentionTimes0(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.resetContentionTimes0(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.resetPeakThreadCount0()V", Any)]
 #[async_method]
-pub async fn reset_peak_thread_count_0<T: ristretto_types::Thread + 'static>(
+pub async fn reset_peak_thread_count_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.resetPeakThreadCount0()V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.resetPeakThreadCount0()V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.setThreadAllocatedMemoryEnabled0(Z)V", Any)]
 #[async_method]
-pub async fn set_thread_allocated_memory_enabled_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_thread_allocated_memory_enabled_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.setThreadAllocatedMemoryEnabled0(Z)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.setThreadAllocatedMemoryEnabled0(Z)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -157,20 +206,26 @@ pub async fn set_thread_allocated_memory_enabled_0<T: ristretto_types::Thread + 
     Any
 )]
 #[async_method]
-pub async fn set_thread_contention_monitoring_enabled_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_thread_contention_monitoring_enabled_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.setThreadContentionMonitoringEnabled0(Z)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.setThreadContentionMonitoringEnabled0(Z)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/ThreadImpl.setThreadCpuTimeEnabled0(Z)V", Any)]
 #[async_method]
-pub async fn set_thread_cpu_time_enabled_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_thread_cpu_time_enabled_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.ThreadImpl.setThreadCpuTimeEnabled0(Z)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.ThreadImpl.setThreadCpuTimeEnabled0(Z)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -178,155 +233,122 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.dumpThreads0([JZZI)[Ljava/lang/management/ThreadInfo;"
-    )]
     async fn test_dump_threads_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dump_threads_0(thread, Parameters::default()).await;
+        let result = dump_threads_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.findDeadlockedThreads0()[Ljava/lang/Thread;"
-    )]
     async fn test_find_deadlocked_threads_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = find_deadlocked_threads_0(thread, Parameters::default()).await;
+        let result = find_deadlocked_threads_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.findMonitorDeadlockedThreads0()[Ljava/lang/Thread;"
-    )]
     async fn test_find_monitor_deadlocked_threads_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = find_monitor_deadlocked_threads_0(thread, Parameters::default()).await;
+        let result = find_monitor_deadlocked_threads_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.getThreadAllocatedMemory0(J)J"
-    )]
     async fn test_get_thread_allocated_memory_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_allocated_memory_0(thread, Parameters::default()).await;
+        let result = get_thread_allocated_memory_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.getThreadAllocatedMemory1([J[J)V"
-    )]
     async fn test_get_thread_allocated_memory_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_allocated_memory_1(thread, Parameters::default()).await;
+        let result = get_thread_allocated_memory_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.getThreadInfo1([JI[Ljava/lang/management/ThreadInfo;)V"
-    )]
     async fn test_get_thread_info_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_info_1(thread, Parameters::default()).await;
+        let result = get_thread_info_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.getThreadTotalCpuTime0(J)J"
-    )]
     async fn test_get_thread_total_cpu_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_total_cpu_time_0(thread, Parameters::default()).await;
+        let result = get_thread_total_cpu_time_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.getThreadTotalCpuTime1([J[J)V"
-    )]
     async fn test_get_thread_total_cpu_time_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_total_cpu_time_1(thread, Parameters::default()).await;
+        let result = get_thread_total_cpu_time_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.getThreadUserCpuTime0(J)J"
-    )]
     async fn test_get_thread_user_cpu_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_user_cpu_time_0(thread, Parameters::default()).await;
+        let result = get_thread_user_cpu_time_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.getThreadUserCpuTime1([J[J)V"
-    )]
     async fn test_get_thread_user_cpu_time_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_thread_user_cpu_time_1(thread, Parameters::default()).await;
+        let result = get_thread_user_cpu_time_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.getThreads()[Ljava/lang/Thread;"
-    )]
     async fn test_get_threads() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_threads(thread, Parameters::default()).await;
+        let result = get_threads(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.getTotalThreadAllocatedMemory()J"
-    )]
     async fn test_get_total_thread_allocated_memory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_total_thread_allocated_memory(thread, Parameters::default()).await;
+        let result = get_total_thread_allocated_memory(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.resetContentionTimes0(J)V"
-    )]
     async fn test_reset_contention_times_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = reset_contention_times_0(thread, Parameters::default()).await;
+        let result = reset_contention_times_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.resetPeakThreadCount0()V"
-    )]
     async fn test_reset_peak_thread_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = reset_peak_thread_count_0(thread, Parameters::default()).await;
+        let result = reset_peak_thread_count_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.setThreadAllocatedMemoryEnabled0(Z)V"
-    )]
     async fn test_set_thread_allocated_memory_enabled_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_thread_allocated_memory_enabled_0(thread, Parameters::default()).await;
+        let result = set_thread_allocated_memory_enabled_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.setThreadContentionMonitoringEnabled0(Z)V"
-    )]
     async fn test_set_thread_contention_monitoring_enabled_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_thread_contention_monitoring_enabled_0(thread, Parameters::default()).await;
+        let result =
+            set_thread_contention_monitoring_enabled_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.ThreadImpl.setThreadCpuTimeEnabled0(Z)V"
-    )]
     async fn test_set_thread_cpu_time_enabled_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_thread_cpu_time_enabled_0(thread, Parameters::default()).await;
+        let result = set_thread_cpu_time_enabled_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

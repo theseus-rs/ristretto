@@ -33,7 +33,7 @@ pub fn get_monitor_id(reference: &Reference) -> Option<usize> {
 /// - [java.lang.Object.clone()](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/Object.html#clone())
 #[intrinsic_method("java/lang/Object.clone()Ljava/lang/Object;", Any)]
 #[async_method]
-pub async fn clone<T: ristretto_types::Thread + 'static>(
+pub async fn clone<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -109,7 +109,7 @@ pub async fn clone<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Object.getClass()Ljava/lang/Class;", Any)]
 #[async_method]
-pub async fn get_class<T: ristretto_types::Thread + 'static>(
+pub async fn get_class<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -128,7 +128,7 @@ pub async fn get_class<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Object.hashCode()I", Any)]
 #[async_method]
-pub async fn hash_code<T: ristretto_types::Thread + 'static>(
+pub async fn hash_code<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -146,7 +146,7 @@ pub async fn hash_code<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Object.notify()V", Any)]
 #[async_method]
-pub async fn notify<T: ristretto_types::Thread + 'static>(
+pub async fn notify<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -167,7 +167,7 @@ pub async fn notify<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Object.notifyAll()V", Any)]
 #[async_method]
-pub async fn notify_all<T: ristretto_types::Thread + 'static>(
+pub async fn notify_all<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -188,7 +188,7 @@ pub async fn notify_all<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Object.registerNatives()V", LessThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -197,7 +197,7 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Object.wait(J)V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn wait<T: ristretto_types::Thread + 'static>(
+pub async fn wait<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -206,7 +206,7 @@ pub async fn wait<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/Object.wait0(J)V", GreaterThan(JAVA_17))]
 #[async_method]
-pub async fn wait_0<T: ristretto_types::Thread + 'static>(
+pub async fn wait_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

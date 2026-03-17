@@ -6,6 +6,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError::ClassFormatError;
 use ristretto_types::JavaObject;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 use tracing::error;
@@ -16,7 +17,7 @@ use zerocopy::transmute_ref;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn define_class_0<T: ristretto_types::Thread + 'static>(
+pub async fn define_class_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

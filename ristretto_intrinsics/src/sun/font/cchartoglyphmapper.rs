@@ -2,25 +2,33 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/font/CCharToGlyphMapper.countGlyphs(J)I", Any)]
 #[async_method]
-pub async fn count_glyphs<T: ristretto_types::Thread + 'static>(
+pub async fn count_glyphs<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.CCharToGlyphMapper.countGlyphs(J)I")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.font.CCharToGlyphMapper.countGlyphs(J)I".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("sun/font/CCharToGlyphMapper.nativeCharsToGlyphs(JI[C[I)V", Any)]
 #[async_method]
-pub async fn native_chars_to_glyphs<T: ristretto_types::Thread + 'static>(
+pub async fn native_chars_to_glyphs<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.CCharToGlyphMapper.nativeCharsToGlyphs(JI[C[I)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.CCharToGlyphMapper.nativeCharsToGlyphs(JI[C[I)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -28,18 +36,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.font.CCharToGlyphMapper.countGlyphs(J)I")]
     async fn test_count_glyphs() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = count_glyphs(thread, Parameters::default()).await;
+        let result = count_glyphs(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.CCharToGlyphMapper.nativeCharsToGlyphs(JI[C[I)V"
-    )]
     async fn test_native_chars_to_glyphs() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_chars_to_glyphs(thread, Parameters::default()).await;
+        let result = native_chars_to_glyphs(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

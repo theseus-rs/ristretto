@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn nss_get_library_handle<T: ristretto_types::Thread + 'static>(
+pub async fn nss_get_library_handle<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.security.pkcs11.Secmod.nssGetLibraryHandle(Ljava/lang/String;)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.security.pkcs11.Secmod.nssGetLibraryHandle(Ljava/lang/String;)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,15 @@ pub async fn nss_get_library_handle<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn nss_get_module_list<T: ristretto_types::Thread + 'static>(
+pub async fn nss_get_module_list<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.security.pkcs11.Secmod.nssGetModuleList(JLjava/lang/String;)Ljava/lang/Object;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.security.pkcs11.Secmod.nssGetModuleList(JLjava/lang/String;)Ljava/lang/Object;"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -35,11 +44,15 @@ pub async fn nss_get_module_list<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn nss_initialize<T: ristretto_types::Thread + 'static>(
+pub async fn nss_initialize<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.security.pkcs11.Secmod.nssInitialize(Ljava/lang/String;JLjava/lang/String;Z)Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.security.pkcs11.Secmod.nssInitialize(Ljava/lang/String;JLjava/lang/String;Z)Z"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -47,11 +60,14 @@ pub async fn nss_initialize<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn nss_load_library<T: ristretto_types::Thread + 'static>(
+pub async fn nss_load_library<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.security.pkcs11.Secmod.nssLoadLibrary(Ljava/lang/String;)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.security.pkcs11.Secmod.nssLoadLibrary(Ljava/lang/String;)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -59,11 +75,14 @@ pub async fn nss_load_library<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn nss_version_check<T: ristretto_types::Thread + 'static>(
+pub async fn nss_version_check<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.security.pkcs11.Secmod.nssVersionCheck(JLjava/lang/String;)Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.security.pkcs11.Secmod.nssVersionCheck(JLjava/lang/String;)Z".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -71,47 +90,37 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.security.pkcs11.Secmod.nssGetLibraryHandle(Ljava/lang/String;)J"
-    )]
     async fn test_nss_get_library_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = nss_get_library_handle(thread, Parameters::default()).await;
+        let result = nss_get_library_handle(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.security.pkcs11.Secmod.nssGetModuleList(JLjava/lang/String;)Ljava/lang/Object;"
-    )]
     async fn test_nss_get_module_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = nss_get_module_list(thread, Parameters::default()).await;
+        let result = nss_get_module_list(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.security.pkcs11.Secmod.nssInitialize(Ljava/lang/String;JLjava/lang/String;Z)Z"
-    )]
     async fn test_nss_initialize() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = nss_initialize(thread, Parameters::default()).await;
+        let result = nss_initialize(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.security.pkcs11.Secmod.nssLoadLibrary(Ljava/lang/String;)J"
-    )]
     async fn test_nss_load_library() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = nss_load_library(thread, Parameters::default()).await;
+        let result = nss_load_library(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.security.pkcs11.Secmod.nssVersionCheck(JLjava/lang/String;)Z"
-    )]
     async fn test_nss_version_check() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = nss_version_check(thread, Parameters::default()).await;
+        let result = nss_version_check(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

@@ -17,7 +17,7 @@ use tracing::debug;
     Any
 )]
 #[async_method]
-pub async fn invoke<T: ristretto_types::Thread + 'static>(
+pub async fn invoke<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -79,7 +79,7 @@ pub async fn invoke<T: ristretto_types::Thread + 'static>(
 /// This is an alternative to dispatching through Holder methods, which avoids the argument layout
 /// issues that occur with compiled `LambdaForm`s.
 #[async_method]
-async fn interpret_lambda_form<T: ristretto_types::Thread + 'static>(
+async fn interpret_lambda_form<T: Thread + 'static>(
     thread: Arc<T>,
     form: &Value,
     input_args: Vec<Value>,
@@ -139,7 +139,7 @@ async fn interpret_lambda_form<T: ristretto_types::Thread + 'static>(
 
 /// Interpret a single `Name` from a `LambdaForm`'s names array.
 #[async_method]
-async fn interpret_name<T: ristretto_types::Thread + 'static>(
+async fn interpret_name<T: Thread + 'static>(
     thread: Arc<T>,
     name: &Value,
     values: &[Value],
@@ -381,7 +381,7 @@ async fn box_primitive<T: Thread + 'static>(thread: &T, value: Value) -> Result<
     Any
 )]
 #[async_method]
-pub async fn invoke_basic<T: ristretto_types::Thread + 'static>(
+pub async fn invoke_basic<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -448,7 +448,7 @@ pub async fn invoke_basic<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn invoke_exact<T: ristretto_types::Thread + 'static>(
+pub async fn invoke_exact<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -519,7 +519,7 @@ pub async fn invoke_exact<T: ristretto_types::Thread + 'static>(
 /// This is needed for lambda methods where MemberName.clazz may be Object but the actual
 /// lambda method is defined in an interface (like Function.andThen).
 #[async_method]
-async fn find_method_in_hierarchy<T: ristretto_types::Thread + 'static>(
+async fn find_method_in_hierarchy<T: Thread + 'static>(
     _thread: &Arc<T>,
     target_class: &Arc<Class>,
     receiver: &Value,
@@ -626,7 +626,7 @@ fn search_class_hierarchy_for_method(
 /// This is used when a static lambda method (like those in interface default methods)
 /// cannot be found on the specified target class.
 #[async_method]
-async fn find_static_lambda_method<T: ristretto_types::Thread + 'static>(
+async fn find_static_lambda_method<T: Thread + 'static>(
     _thread: &Arc<T>,
     arguments: &[Value],
     method_name: &str,
@@ -650,7 +650,7 @@ async fn find_static_lambda_method<T: ristretto_types::Thread + 'static>(
 /// Helper: Actually invokes the target referenced by a `MethodHandle`.
 #[expect(clippy::too_many_lines)]
 #[async_method]
-pub async fn call_method_handle_target<T: ristretto_types::Thread + 'static>(
+pub async fn call_method_handle_target<T: Thread + 'static>(
     thread: Arc<T>,
     member: &Value,
     mut arguments: Vec<Value>,
@@ -887,7 +887,7 @@ pub async fn call_method_handle_target<T: ristretto_types::Thread + 'static>(
 /// # Errors
 ///
 /// Returns an error if the method cannot be found or executed.
-async fn invoke_special<T: ristretto_types::Thread + 'static>(
+async fn invoke_special<T: Thread + 'static>(
     thread: Arc<T>,
     target_class: Arc<Class>,
     method_name: String,
@@ -977,7 +977,7 @@ fn is_holder_class(class_name: &str) -> bool {
 /// `depth` is used to prevent infinite recursion in complex method handle chains.
 #[expect(clippy::too_many_lines)]
 #[async_method]
-async fn dispatch_holder_method_internal<T: ristretto_types::Thread + 'static>(
+async fn dispatch_holder_method_internal<T: Thread + 'static>(
     thread: Arc<T>,
     method_name: &str,
     mut arguments: Vec<Value>,
@@ -1293,7 +1293,7 @@ fn extract_target_and_bound_args(
 ///
 /// # Errors
 /// Returns an error if the method dispatch fails.
-pub async fn dispatch_holder_method<T: ristretto_types::Thread + 'static>(
+pub async fn dispatch_holder_method<T: Thread + 'static>(
     thread: Arc<T>,
     method_name: &str,
     arguments: Vec<Value>,
@@ -1306,7 +1306,7 @@ pub async fn dispatch_holder_method<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn link_to_interface<T: ristretto_types::Thread + 'static>(
+pub async fn link_to_interface<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1326,7 +1326,7 @@ pub async fn link_to_interface<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn link_to_native<T: ristretto_types::Thread + 'static>(
+pub async fn link_to_native<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1346,7 +1346,7 @@ pub async fn link_to_native<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn link_to_special<T: ristretto_types::Thread + 'static>(
+pub async fn link_to_special<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1366,7 +1366,7 @@ pub async fn link_to_special<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn link_to_static<T: ristretto_types::Thread + 'static>(
+pub async fn link_to_static<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1386,7 +1386,7 @@ pub async fn link_to_static<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn link_to_virtual<T: ristretto_types::Thread + 'static>(
+pub async fn link_to_virtual<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {

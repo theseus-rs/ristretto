@@ -3,16 +3,21 @@ use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/opengl/CGLSurfaceData.clearWindow()V", Any)]
 #[async_method]
-pub async fn clear_window<T: ristretto_types::Thread + 'static>(
+pub async fn clear_window<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.opengl.CGLSurfaceData.clearWindow()");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.opengl.CGLSurfaceData.clearWindow()".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -20,13 +25,11 @@ pub async fn clear_window<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn create_cgl_context_on_surface<T: ristretto_types::Thread + 'static>(
+pub async fn create_cgl_context_on_surface<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.opengl.CGLSurfaceData.createCGLContextOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)J"
-    );
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.opengl.CGLSurfaceData.createCGLContextOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)J".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -34,11 +37,14 @@ pub async fn create_cgl_context_on_surface<T: ristretto_types::Thread + 'static>
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn destroy_cgl_context<T: ristretto_types::Thread + 'static>(
+pub async fn destroy_cgl_context<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.opengl.CGLSurfaceData.destroyCGLContext(J)V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.opengl.CGLSurfaceData.destroyCGLContext(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -46,11 +52,15 @@ pub async fn destroy_cgl_context<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn init_ops<T: ristretto_types::Thread + 'static>(
+pub async fn init_ops<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.opengl.CGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.opengl.CGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -58,13 +68,11 @@ pub async fn init_ops<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn make_cgl_context_current_on_surface<T: ristretto_types::Thread + 'static>(
+pub async fn make_cgl_context_current_on_surface<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.opengl.CGLSurfaceData.makeCGLContextCurrentOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)Z"
-    );
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.opengl.CGLSurfaceData.makeCGLContextCurrentOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)Z".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -72,11 +80,14 @@ pub async fn make_cgl_context_current_on_surface<T: ristretto_types::Thread + 's
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn validate<T: ristretto_types::Thread + 'static>(
+pub async fn validate<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.opengl.CGLSurfaceData.validate(IIIIZ)V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.opengl.CGLSurfaceData.validate(IIIIZ)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -84,56 +95,44 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.clearWindow()"
-    )]
     async fn test_clear_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = clear_window(thread, Parameters::default()).await;
+        let result = clear_window(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.createCGLContextOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)J"
-    )]
     async fn test_create_cgl_context_on_surface() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_cgl_context_on_surface(thread, Parameters::default()).await;
+        let result = create_cgl_context_on_surface(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.destroyCGLContext(J)V"
-    )]
     async fn test_destroy_cgl_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = destroy_cgl_context(thread, Parameters::default()).await;
+        let result = destroy_cgl_context(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V"
-    )]
     async fn test_init_ops() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_ops(thread, Parameters::default()).await;
+        let result = init_ops(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.makeCGLContextCurrentOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)Z"
-    )]
     async fn test_make_cgl_context_current_on_surface() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = make_cgl_context_current_on_surface(thread, Parameters::default()).await;
+        let result = make_cgl_context_current_on_surface(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.opengl.CGLSurfaceData.validate(IIIIZ)V"
-    )]
     async fn test_validate() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = validate(thread, Parameters::default()).await;
+        let result = validate(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

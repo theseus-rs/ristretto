@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,13 +13,11 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn accept_0<T: ristretto_types::Thread + 'static>(
+pub async fn accept_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.nio.ch.UnixAsynchronousServerSocketChannelImpl.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.UnixAsynchronousServerSocketChannelImpl.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -25,7 +25,7 @@ pub async fn accept_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -37,12 +37,10 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.UnixAsynchronousServerSocketChannelImpl.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I"
-    )]
     async fn test_accept_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = accept_0(thread, Parameters::default()).await;
+        let result = accept_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

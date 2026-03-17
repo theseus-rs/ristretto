@@ -5,6 +5,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::handles::{SocketHandle, SocketType};
 use ristretto_types::{Parameters, Result, VM};
 use socket2::{Domain, Protocol, SockAddr, Type};
@@ -68,7 +69,7 @@ fn get_int_from_object(value: &Value) -> Result<i32> {
 }
 
 /// Send a UDP datagram from a `DatagramPacket` (shared by `send` and `send0`).
-async fn send_datagram<T: ristretto_types::Thread + 'static>(
+async fn send_datagram<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -126,7 +127,7 @@ async fn send_datagram<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn bind_0<T: ristretto_types::Thread + 'static>(
+pub async fn bind_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -170,7 +171,7 @@ pub async fn bind_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn connect_0<T: ristretto_types::Thread + 'static>(
+pub async fn connect_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -210,7 +211,7 @@ pub async fn connect_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn data_available<T: ristretto_types::Thread + 'static>(
+pub async fn data_available<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -223,7 +224,7 @@ pub async fn data_available<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn datagram_socket_close<T: ristretto_types::Thread + 'static>(
+pub async fn datagram_socket_close<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -242,7 +243,7 @@ pub async fn datagram_socket_close<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn datagram_socket_create<T: ristretto_types::Thread + 'static>(
+pub async fn datagram_socket_create<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -266,7 +267,7 @@ pub async fn datagram_socket_create<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn disconnect_0<T: ristretto_types::Thread + 'static>(
+pub async fn disconnect_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -277,7 +278,7 @@ pub async fn disconnect_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/PlainDatagramSocketImpl.getTTL()B", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn get_ttl<T: ristretto_types::Thread + 'static>(
+pub async fn get_ttl<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -294,7 +295,7 @@ pub async fn get_ttl<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_time_to_live<T: ristretto_types::Thread + 'static>(
+pub async fn get_time_to_live<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -318,7 +319,7 @@ pub async fn get_time_to_live<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/PlainDatagramSocketImpl.init()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -330,7 +331,7 @@ pub async fn init<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn join<T: ristretto_types::Thread + 'static>(
+pub async fn join<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -360,7 +361,7 @@ pub async fn join<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn leave<T: ristretto_types::Thread + 'static>(
+pub async fn leave<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -390,7 +391,7 @@ pub async fn leave<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn peek<T: ristretto_types::Thread + 'static>(
+pub async fn peek<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -430,7 +431,7 @@ pub async fn peek<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn peek_data<T: ristretto_types::Thread + 'static>(
+pub async fn peek_data<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -519,7 +520,7 @@ pub async fn peek_data<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn receive_0<T: ristretto_types::Thread + 'static>(
+pub async fn receive_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -625,7 +626,7 @@ pub async fn receive_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn send<T: ristretto_types::Thread + 'static>(
+pub async fn send<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -637,7 +638,7 @@ pub async fn send<T: ristretto_types::Thread + 'static>(
     Between(JAVA_11, JAVA_17)
 )]
 #[async_method]
-pub async fn send_0<T: ristretto_types::Thread + 'static>(
+pub async fn send_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -649,7 +650,7 @@ pub async fn send_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn set_ttl<T: ristretto_types::Thread + 'static>(
+pub async fn set_ttl<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -677,7 +678,7 @@ pub async fn set_ttl<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn set_time_to_live<T: ristretto_types::Thread + 'static>(
+pub async fn set_time_to_live<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -705,7 +706,7 @@ pub async fn set_time_to_live<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn socket_get_option<T: ristretto_types::Thread + 'static>(
+pub async fn socket_get_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -773,7 +774,7 @@ pub async fn socket_get_option<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn socket_set_option_0<T: ristretto_types::Thread + 'static>(
+pub async fn socket_set_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

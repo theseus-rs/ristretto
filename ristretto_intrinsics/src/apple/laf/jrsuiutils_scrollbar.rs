@@ -2,16 +2,21 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("apple/laf/JRSUIUtils$ScrollBar.shouldUseScrollToClick()Z", Any)]
 #[async_method]
-pub async fn should_use_scroll_to_click<T: ristretto_types::Thread + 'static>(
+pub async fn should_use_scroll_to_click<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("apple.laf.JRSUIUtils$ScrollBar.shouldUseScrollToClick()Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "apple.laf.JRSUIUtils$ScrollBar.shouldUseScrollToClick()Z".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -19,11 +24,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: apple.laf.JRSUIUtils$ScrollBar.shouldUseScrollToClick()Z"
-    )]
     async fn test_should_use_scroll_to_click() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = should_use_scroll_to_click(thread, Parameters::default()).await;
+        let result = should_use_scroll_to_click(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

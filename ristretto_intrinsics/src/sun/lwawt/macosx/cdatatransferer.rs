@@ -2,6 +2,8 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -10,11 +12,14 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn format_for_index<T: ristretto_types::Thread + 'static>(
+pub async fn format_for_index<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CDataTransferer.formatForIndex(J)Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CDataTransferer.formatForIndex(J)Ljava/lang/String;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -22,11 +27,14 @@ pub async fn format_for_index<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn native_drag_query_file<T: ristretto_types::Thread + 'static>(
+pub async fn native_drag_query_file<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CDataTransferer.nativeDragQueryFile([B)[Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CDataTransferer.nativeDragQueryFile([B)[Ljava/lang/String;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -34,11 +42,15 @@ pub async fn native_drag_query_file<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn register_format_with_pasteboard<T: ristretto_types::Thread + 'static>(
+pub async fn register_format_with_pasteboard<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.CDataTransferer.registerFormatWithPasteboard(Ljava/lang/String;)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.CDataTransferer.registerFormatWithPasteboard(Ljava/lang/String;)J"
+            .to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -46,29 +58,23 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CDataTransferer.formatForIndex(J)Ljava/lang/String;"
-    )]
     async fn test_format_for_index() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = format_for_index(thread, Parameters::default()).await;
+        let result = format_for_index(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CDataTransferer.nativeDragQueryFile([B)[Ljava/lang/String;"
-    )]
     async fn test_native_drag_query_file() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_drag_query_file(thread, Parameters::default()).await;
+        let result = native_drag_query_file(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.CDataTransferer.registerFormatWithPasteboard(Ljava/lang/String;)J"
-    )]
     async fn test_register_format_with_pasteboard() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = register_format_with_pasteboard(thread, Parameters::default()).await;
+        let result = register_format_with_pasteboard(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

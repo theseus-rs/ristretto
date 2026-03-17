@@ -2,6 +2,8 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -10,13 +12,11 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn draw_aa_pgram<T: ristretto_types::Thread + 'static>(
+pub async fn draw_aa_pgram<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.loops.MaskFill.DrawAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDDDD)V"
-    );
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.MaskFill.DrawAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDDDD)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -24,13 +24,11 @@ pub async fn draw_aa_pgram<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn fill_aa_pgram<T: ristretto_types::Thread + 'static>(
+pub async fn fill_aa_pgram<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.loops.MaskFill.FillAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDD)V"
-    );
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.MaskFill.FillAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDD)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -38,13 +36,11 @@ pub async fn fill_aa_pgram<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn mask_fill<T: ristretto_types::Thread + 'static>(
+pub async fn mask_fill<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.loops.MaskFill.MaskFill(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;IIII[BII)V"
-    );
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.MaskFill.MaskFill(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;IIII[BII)V".to_string()).into())
 }
 
 #[cfg(test)]
@@ -52,29 +48,23 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.loops.MaskFill.DrawAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDDDD)V"
-    )]
     async fn test_draw_aa_pgram() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = draw_aa_pgram(thread, Parameters::default()).await;
+        let result = draw_aa_pgram(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.loops.MaskFill.FillAAPgram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;DDDDDD)V"
-    )]
     async fn test_fill_aa_pgram() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = fill_aa_pgram(thread, Parameters::default()).await;
+        let result = fill_aa_pgram(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.loops.MaskFill.MaskFill(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;IIII[BII)V"
-    )]
     async fn test_mask_fill() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = mask_fill(thread, Parameters::default()).await;
+        let result = mask_fill(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

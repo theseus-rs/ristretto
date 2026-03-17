@@ -3,6 +3,7 @@ use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 use std::time::Duration;
@@ -12,7 +13,7 @@ use std::time::Duration;
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn notify_jvmti_disable_suspend<T: ristretto_types::Thread + 'static>(
+pub async fn notify_jvmti_disable_suspend<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,7 +22,7 @@ pub async fn notify_jvmti_disable_suspend<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/VirtualThread.notifyJvmtiEnd()V", GreaterThan(JAVA_17))]
 #[async_method]
-pub async fn notify_jvmti_end<T: ristretto_types::Thread + 'static>(
+pub async fn notify_jvmti_end<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,7 +31,7 @@ pub async fn notify_jvmti_end<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/VirtualThread.notifyJvmtiHideFrames(Z)V", Equal(JAVA_21))]
 #[async_method]
-pub async fn notify_jvmti_hide_frames<T: ristretto_types::Thread + 'static>(
+pub async fn notify_jvmti_hide_frames<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -39,7 +40,7 @@ pub async fn notify_jvmti_hide_frames<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/VirtualThread.notifyJvmtiMount(Z)V", GreaterThan(JAVA_17))]
 #[async_method]
-pub async fn notify_jvmti_mount<T: ristretto_types::Thread + 'static>(
+pub async fn notify_jvmti_mount<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -48,7 +49,7 @@ pub async fn notify_jvmti_mount<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/VirtualThread.notifyJvmtiStart()V", GreaterThan(JAVA_17))]
 #[async_method]
-pub async fn notify_jvmti_start<T: ristretto_types::Thread + 'static>(
+pub async fn notify_jvmti_start<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -57,7 +58,7 @@ pub async fn notify_jvmti_start<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/VirtualThread.notifyJvmtiUnmount(Z)V", GreaterThan(JAVA_17))]
 #[async_method]
-pub async fn notify_jvmti_unmount<T: ristretto_types::Thread + 'static>(
+pub async fn notify_jvmti_unmount<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -69,7 +70,7 @@ pub async fn notify_jvmti_unmount<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn post_pinned_event<T: ristretto_types::Thread + 'static>(
+pub async fn post_pinned_event<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -81,7 +82,7 @@ pub async fn post_pinned_event<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -93,7 +94,7 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn take_virtual_thread_list_to_unblock<T: ristretto_types::Thread + 'static>(
+pub async fn take_virtual_thread_list_to_unblock<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

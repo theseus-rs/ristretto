@@ -7,6 +7,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError::IoException;
 use ristretto_types::Parameters;
+use ristretto_types::Thread;
 use ristretto_types::{Result, VM};
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
@@ -91,7 +92,7 @@ pub(crate) fn raw_file_descriptor(file: &tokio::fs::File) -> Result<i64> {
 
 #[intrinsic_method("java/io/FileDescriptor.close0()V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn close_0<T: ristretto_types::Thread + 'static>(
+pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -129,7 +130,7 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("java/io/FileDescriptor.getAppend(I)Z", GreaterThanOrEqual(JAVA_11))]
 #[expect(clippy::match_same_arms)]
 #[async_method]
-pub async fn get_append<T: ristretto_types::Thread + 'static>(
+pub async fn get_append<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -163,7 +164,7 @@ pub async fn get_append<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileDescriptor.getHandle(I)J", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn get_handle<T: ristretto_types::Thread + 'static>(
+pub async fn get_handle<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -174,7 +175,7 @@ pub async fn get_handle<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileDescriptor.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -183,7 +184,7 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileDescriptor.sync()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn sync<T: ristretto_types::Thread + 'static>(
+pub async fn sync<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -192,7 +193,7 @@ pub async fn sync<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileDescriptor.sync0()V", GreaterThan(JAVA_17))]
 #[async_method]
-pub async fn sync_0<T: ristretto_types::Thread + 'static>(
+pub async fn sync_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

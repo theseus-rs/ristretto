@@ -11,14 +11,19 @@ Ristretto VM is a [Java Virtual Machine](https://docs.oracle.com/javase/specs/jv
 implementation written in pure Rust. It executes Java bytecode by interpreting class files loaded
 through the Ristretto classloader.
 
-## Features
+### Features
 
-- Bytecode interpretation with no dependencies on existing JVM implementations
-- Pure Rust implementation for memory safety and performance
-- Support for Java class loading and execution
-- Configurable VM parameters
-- Basic JIT compilation capabilities
-- Type safe concurrent, mark-sweep garbage collector
+- Standard runtime classes backed by LTS versions of [AWS Corretto](https://github.com/corretto).
+- Flexible class loading from directories, JARs, JMODs, JImage files, and URLs.
+- Built-in support for reading, writing, and strictly verifying Java bytecode.
+- Interpreter support for all Java byte codes including invokedynamic.
+- Fully asynchronous, non-blocking execution using Rust async/await for:
+    - java.lang.Thread
+    - java.io & java.nio
+    - java.net
+- A low-pause, concurrent, and parallel mark-and-sweep garbage collector.
+- Parallel Just-In-Time (JIT) compilation for x86-64, aarch64, s390x, and riscv64 architectures.
+- WebAssembly (WASM) compilation support for single-threaded edge and browser deployments.
 
 ## Examples
 

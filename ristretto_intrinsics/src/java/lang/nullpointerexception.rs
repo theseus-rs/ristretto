@@ -8,6 +8,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaObject;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -31,7 +32,7 @@ fn field_type_to_name(field_type: &FieldType) -> String {
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_extended_npe_message<T: ristretto_types::Thread + 'static>(
+pub async fn get_extended_npe_message<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

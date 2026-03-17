@@ -3,6 +3,8 @@ use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,13 +13,11 @@ use std::sync::Arc;
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn close_scope_0_0<T: ristretto_types::Thread + 'static>(
+pub async fn close_scope_0_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/misc/ScopedMemoryAccess$Scope;Ljdk/internal/misc/ScopedMemoryAccess$Scope$ScopedAccessError;)Z"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/misc/ScopedMemoryAccess$Scope;Ljdk/internal/misc/ScopedMemoryAccess$Scope$ScopedAccessError;)Z".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -25,13 +25,11 @@ pub async fn close_scope_0_0<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_21)
 )]
 #[async_method]
-pub async fn close_scope_0_1<T: ristretto_types::Thread + 'static>(
+pub async fn close_scope_0_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;)Z"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;)Z".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -39,13 +37,11 @@ pub async fn close_scope_0_1<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_21)
 )]
 #[async_method]
-pub async fn close_scope_0_2<T: ristretto_types::Thread + 'static>(
+pub async fn close_scope_0_2<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;Ljdk/internal/misc/ScopedMemoryAccess$ScopedAccessError;)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;Ljdk/internal/misc/ScopedMemoryAccess$ScopedAccessError;)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -53,7 +49,7 @@ pub async fn close_scope_0_2<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -65,30 +61,24 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/misc/ScopedMemoryAccess$Scope;Ljdk/internal/misc/ScopedMemoryAccess$Scope$ScopedAccessError;)Z"
-    )]
     async fn test_close_scope_0_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_scope_0_0(thread, Parameters::default()).await;
+        let result = close_scope_0_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;)Z"
-    )]
     async fn test_close_scope_0_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_scope_0_1(thread, Parameters::default()).await;
+        let result = close_scope_0_1(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;Ljdk/internal/misc/ScopedMemoryAccess$ScopedAccessError;)V"
-    )]
     async fn test_close_scope_0_2() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_scope_0_2(thread, Parameters::default()).await;
+        let result = close_scope_0_2(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

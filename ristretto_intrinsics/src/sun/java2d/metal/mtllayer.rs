@@ -3,6 +3,8 @@ use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn blit_texture<T: ristretto_types::Thread + 'static>(
+pub async fn blit_texture<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLLayer.blitTexture(J)V")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.java2d.metal.MTLLayer.blitTexture(J)V".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn blit_texture<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn native_create_layer<T: ristretto_types::Thread + 'static>(
+pub async fn native_create_layer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLLayer.nativeCreateLayer()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.metal.MTLLayer.nativeCreateLayer()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -35,11 +43,14 @@ pub async fn native_create_layer<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn native_set_insets<T: ristretto_types::Thread + 'static>(
+pub async fn native_set_insets<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLLayer.nativeSetInsets(JII)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.metal.MTLLayer.nativeSetInsets(JII)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -47,11 +58,14 @@ pub async fn native_set_insets<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn native_set_opaque<T: ristretto_types::Thread + 'static>(
+pub async fn native_set_opaque<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLLayer.nativeSetOpaque(JZ)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.metal.MTLLayer.nativeSetOpaque(JZ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -59,11 +73,14 @@ pub async fn native_set_opaque<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn native_set_scale<T: ristretto_types::Thread + 'static>(
+pub async fn native_set_scale<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLLayer.nativeSetScale(JD)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.metal.MTLLayer.nativeSetScale(JD)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -71,11 +88,14 @@ pub async fn native_set_scale<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn validate<T: ristretto_types::Thread + 'static>(
+pub async fn validate<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLLayer.validate(JLsun/java2d/metal/MTLSurfaceData;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.metal.MTLLayer.validate(JLsun/java2d/metal/MTLSurfaceData;)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -83,52 +103,44 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.java2d.metal.MTLLayer.blitTexture(J)V")]
     async fn test_blit_texture() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = blit_texture(thread, Parameters::default()).await;
+        let result = blit_texture(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.metal.MTLLayer.nativeCreateLayer()J"
-    )]
     async fn test_native_create_layer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_layer(thread, Parameters::default()).await;
+        let result = native_create_layer(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.metal.MTLLayer.nativeSetInsets(JII)V"
-    )]
     async fn test_native_set_insets() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_insets(thread, Parameters::default()).await;
+        let result = native_set_insets(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.metal.MTLLayer.nativeSetOpaque(JZ)V"
-    )]
     async fn test_native_set_opaque() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_opaque(thread, Parameters::default()).await;
+        let result = native_set_opaque(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.java2d.metal.MTLLayer.nativeSetScale(JD)V")]
     async fn test_native_set_scale() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_scale(thread, Parameters::default()).await;
+        let result = native_set_scale(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.metal.MTLLayer.validate(JLsun/java2d/metal/MTLSurfaceData;)V"
-    )]
     async fn test_validate() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = validate(thread, Parameters::default()).await;
+        let result = validate(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

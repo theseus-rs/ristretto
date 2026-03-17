@@ -5,6 +5,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::handles::{SocketHandle, SocketType};
 use ristretto_types::{Parameters, Result, VM};
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
@@ -144,7 +145,7 @@ fn set_socket_option(socket: &Socket, level: i32, opt: i32, value: i32) -> Resul
 )]
 #[async_method]
 #[expect(clippy::too_many_lines)]
-pub async fn accept<T: ristretto_types::Thread + 'static>(
+pub async fn accept<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -323,7 +324,7 @@ pub async fn accept<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn available<T: ristretto_types::Thread + 'static>(
+pub async fn available<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -336,7 +337,7 @@ pub async fn available<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn bind_0<T: ristretto_types::Thread + 'static>(
+pub async fn bind_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -370,7 +371,7 @@ pub async fn bind_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.blockOrUnblock4(ZLjava/io/FileDescriptor;III)I", Any)]
 #[async_method]
-pub async fn block_or_unblock_4<T: ristretto_types::Thread + 'static>(
+pub async fn block_or_unblock_4<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -385,7 +386,7 @@ pub async fn block_or_unblock_4<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.blockOrUnblock6(ZLjava/io/FileDescriptor;[BI[B)I", Any)]
 #[async_method]
-pub async fn block_or_unblock_6<T: ristretto_types::Thread + 'static>(
+pub async fn block_or_unblock_6<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -400,7 +401,7 @@ pub async fn block_or_unblock_6<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.canIPv6SocketJoinIPv4Group0()Z", Any)]
 #[async_method]
-pub async fn can_ipv6_socket_join_ipv4_group_0<T: ristretto_types::Thread + 'static>(
+pub async fn can_ipv6_socket_join_ipv4_group_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -409,7 +410,7 @@ pub async fn can_ipv6_socket_join_ipv4_group_0<T: ristretto_types::Thread + 'sta
 
 #[intrinsic_method("sun/nio/ch/Net.canJoin6WithIPv4Group0()Z", Any)]
 #[async_method]
-pub async fn can_join_6_with_ipv4_group_0<T: ristretto_types::Thread + 'static>(
+pub async fn can_join_6_with_ipv4_group_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -435,7 +436,7 @@ pub async fn can_use_ipv6_options_with_ipv4_local_address_0<
     Any
 )]
 #[async_method]
-pub async fn connect_0<T: ristretto_types::Thread + 'static>(
+pub async fn connect_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -521,7 +522,7 @@ pub async fn connect_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn discard_oob<T: ristretto_types::Thread + 'static>(
+pub async fn discard_oob<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -531,7 +532,7 @@ pub async fn discard_oob<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.getIntOption0(Ljava/io/FileDescriptor;ZII)I", Any)]
 #[async_method]
-pub async fn get_int_option_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_int_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -553,7 +554,7 @@ pub async fn get_int_option_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.getInterface4(Ljava/io/FileDescriptor;)I", Any)]
 #[async_method]
-pub async fn get_interface_4<T: ristretto_types::Thread + 'static>(
+pub async fn get_interface_4<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -564,7 +565,7 @@ pub async fn get_interface_4<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.getInterface6(Ljava/io/FileDescriptor;)I", Any)]
 #[async_method]
-pub async fn get_interface_6<T: ristretto_types::Thread + 'static>(
+pub async fn get_interface_6<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -575,7 +576,7 @@ pub async fn get_interface_6<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -584,7 +585,7 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.isExclusiveBindAvailable()I", Any)]
 #[async_method]
-pub async fn is_exclusive_bind_available<T: ristretto_types::Thread + 'static>(
+pub async fn is_exclusive_bind_available<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -593,7 +594,7 @@ pub async fn is_exclusive_bind_available<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.isIPv6Available0()Z", Any)]
 #[async_method]
-pub async fn is_ipv6_available_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_ipv6_available_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -603,7 +604,7 @@ pub async fn is_ipv6_available_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.isReusePortAvailable0()Z", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn is_reuse_port_available_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_reuse_port_available_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -612,7 +613,7 @@ pub async fn is_reuse_port_available_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.joinOrDrop4(ZLjava/io/FileDescriptor;III)I", Any)]
 #[async_method]
-pub async fn join_or_drop_4<T: ristretto_types::Thread + 'static>(
+pub async fn join_or_drop_4<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -627,7 +628,7 @@ pub async fn join_or_drop_4<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.joinOrDrop6(ZLjava/io/FileDescriptor;[BI[B)I", Any)]
 #[async_method]
-pub async fn join_or_drop_6<T: ristretto_types::Thread + 'static>(
+pub async fn join_or_drop_6<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -642,7 +643,7 @@ pub async fn join_or_drop_6<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.listen(Ljava/io/FileDescriptor;I)V", Any)]
 #[async_method]
-pub async fn listen<T: ristretto_types::Thread + 'static>(
+pub async fn listen<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -688,7 +689,7 @@ pub async fn listen<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn local_inet_address<T: ristretto_types::Thread + 'static>(
+pub async fn local_inet_address<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -737,7 +738,7 @@ pub async fn local_inet_address<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.localPort(Ljava/io/FileDescriptor;)I", Any)]
 #[async_method]
-pub async fn local_port<T: ristretto_types::Thread + 'static>(
+pub async fn local_port<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -762,7 +763,7 @@ pub async fn local_port<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("sun/nio/ch/Net.poll(Ljava/io/FileDescriptor;IJ)I", Any)]
 #[async_method]
 #[expect(unsafe_code)]
-pub async fn poll<T: ristretto_types::Thread + 'static>(
+pub async fn poll<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -848,7 +849,7 @@ pub async fn poll<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn poll_connect<T: ristretto_types::Thread + 'static>(
+pub async fn poll_connect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -860,7 +861,7 @@ pub async fn poll_connect<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.pollconnValue()S", Any)]
 #[async_method]
-pub async fn pollconn_value<T: ristretto_types::Thread + 'static>(
+pub async fn pollconn_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -869,7 +870,7 @@ pub async fn pollconn_value<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.pollerrValue()S", Any)]
 #[async_method]
-pub async fn pollerr_value<T: ristretto_types::Thread + 'static>(
+pub async fn pollerr_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -878,7 +879,7 @@ pub async fn pollerr_value<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.pollhupValue()S", Any)]
 #[async_method]
-pub async fn pollhup_value<T: ristretto_types::Thread + 'static>(
+pub async fn pollhup_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -887,7 +888,7 @@ pub async fn pollhup_value<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.pollinValue()S", Any)]
 #[async_method]
-pub async fn pollin_value<T: ristretto_types::Thread + 'static>(
+pub async fn pollin_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -896,7 +897,7 @@ pub async fn pollin_value<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.pollnvalValue()S", Any)]
 #[async_method]
-pub async fn pollnval_value<T: ristretto_types::Thread + 'static>(
+pub async fn pollnval_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -905,7 +906,7 @@ pub async fn pollnval_value<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.polloutValue()S", Any)]
 #[async_method]
-pub async fn pollout_value<T: ristretto_types::Thread + 'static>(
+pub async fn pollout_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -917,7 +918,7 @@ pub async fn pollout_value<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn remote_inet_address<T: ristretto_types::Thread + 'static>(
+pub async fn remote_inet_address<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -966,7 +967,7 @@ pub async fn remote_inet_address<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.remotePort(Ljava/io/FileDescriptor;)I", Any)]
 #[async_method]
-pub async fn remote_port<T: ristretto_types::Thread + 'static>(
+pub async fn remote_port<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -993,7 +994,7 @@ pub async fn remote_port<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn send_oob<T: ristretto_types::Thread + 'static>(
+pub async fn send_oob<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1005,7 +1006,7 @@ pub async fn send_oob<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.setIntOption0(Ljava/io/FileDescriptor;ZIIIZ)V", Any)]
 #[async_method]
-pub async fn set_int_option_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_int_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1029,7 +1030,7 @@ pub async fn set_int_option_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.setInterface4(Ljava/io/FileDescriptor;I)V", Any)]
 #[async_method]
-pub async fn set_interface_4<T: ristretto_types::Thread + 'static>(
+pub async fn set_interface_4<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1041,7 +1042,7 @@ pub async fn set_interface_4<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.setInterface6(Ljava/io/FileDescriptor;I)V", Any)]
 #[async_method]
-pub async fn set_interface_6<T: ristretto_types::Thread + 'static>(
+pub async fn set_interface_6<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1056,7 +1057,7 @@ pub async fn set_interface_6<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn should_set_both_ipv4_and_ipv6_options_0<T: ristretto_types::Thread + 'static>(
+pub async fn should_set_both_ipv4_and_ipv6_options_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1065,7 +1066,7 @@ pub async fn should_set_both_ipv4_and_ipv6_options_0<T: ristretto_types::Thread 
 
 #[intrinsic_method("sun/nio/ch/Net.shutdown(Ljava/io/FileDescriptor;I)V", Any)]
 #[async_method]
-pub async fn shutdown<T: ristretto_types::Thread + 'static>(
+pub async fn shutdown<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1103,7 +1104,7 @@ pub async fn shutdown<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/Net.socket0(ZZZZ)I", Any)]
 #[async_method]
-pub async fn socket_0<T: ristretto_types::Thread + 'static>(
+pub async fn socket_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1149,7 +1150,7 @@ pub async fn socket_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn should_shutdown_write_before_close_0<T: ristretto_types::Thread + 'static>(
+pub async fn should_shutdown_write_before_close_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

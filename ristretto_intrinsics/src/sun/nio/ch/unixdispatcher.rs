@@ -8,13 +8,14 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 use crate::sun::nio::fs::managed_files;
+use ristretto_types::Thread;
 
 #[intrinsic_method(
     "sun/nio/ch/UnixDispatcher.close0(Ljava/io/FileDescriptor;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn close_0<T: ristretto_types::Thread + 'static>(
+pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -35,7 +36,7 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/UnixDispatcher.init()V", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -47,7 +48,7 @@ pub async fn init<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn pre_close_0<T: ristretto_types::Thread + 'static>(
+pub async fn pre_close_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

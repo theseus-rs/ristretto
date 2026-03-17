@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn clear_window<T: ristretto_types::Thread + 'static>(
+pub async fn clear_window<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLSurfaceData.clearWindow()V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.metal.MTLSurfaceData.clearWindow()V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn clear_window<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_mtl_texture_pointer<T: ristretto_types::Thread + 'static>(
+pub async fn get_mtl_texture_pointer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLSurfaceData.getMTLTexturePointer(J)J");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.metal.MTLSurfaceData.getMTLTexturePointer(J)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -35,11 +43,14 @@ pub async fn get_mtl_texture_pointer<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn init_flip_backbuffer<T: ristretto_types::Thread + 'static>(
+pub async fn init_flip_backbuffer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLSurfaceData.initFlipBackbuffer(J)Z");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.metal.MTLSurfaceData.initFlipBackbuffer(J)Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -47,11 +58,15 @@ pub async fn init_flip_backbuffer<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn init_ops<T: ristretto_types::Thread + 'static>(
+pub async fn init_ops<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLSurfaceData.initOps(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.metal.MTLSurfaceData.initOps(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -59,11 +74,14 @@ pub async fn init_ops<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn init_r_texture<T: ristretto_types::Thread + 'static>(
+pub async fn init_r_texture<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLSurfaceData.initRTexture(JZII)Z");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.metal.MTLSurfaceData.initRTexture(JZII)Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -71,11 +89,14 @@ pub async fn init_r_texture<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn init_texture<T: ristretto_types::Thread + 'static>(
+pub async fn init_texture<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.metal.MTLSurfaceData.initTexture(JZII)Z");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.metal.MTLSurfaceData.initTexture(JZII)Z".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -83,46 +104,44 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLSurfaceData.clearWindow()V")]
     async fn test_clear_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = clear_window(thread, Parameters::default()).await;
+        let result = clear_window(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLSurfaceData.getMTLTexturePointer(J)J")]
     async fn test_get_mtl_texture_pointer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_mtl_texture_pointer(thread, Parameters::default()).await;
+        let result = get_mtl_texture_pointer(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLSurfaceData.initFlipBackbuffer(J)Z")]
     async fn test_init_flip_backbuffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_flip_backbuffer(thread, Parameters::default()).await;
+        let result = init_flip_backbuffer(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "sun.java2d.metal.MTLSurfaceData.initOps(Lsun/java2d/metal/MTLGraphicsConfig;JJJIIZ)V"
-    )]
     async fn test_init_ops() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_ops(thread, Parameters::default()).await;
+        let result = init_ops(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLSurfaceData.initRTexture(JZII)Z")]
     async fn test_init_r_texture() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_r_texture(thread, Parameters::default()).await;
+        let result = init_r_texture(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "sun.java2d.metal.MTLSurfaceData.initTexture(JZII)Z")]
     async fn test_init_texture() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_texture(thread, Parameters::default()).await;
+        let result = init_texture(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

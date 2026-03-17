@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn native_create_concurrent_queue<T: ristretto_types::Thread + 'static>(
+pub async fn native_create_concurrent_queue<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.concurrent.LibDispatchNative.nativeCreateConcurrentQueue(I)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.concurrent.LibDispatchNative.nativeCreateConcurrentQueue(I)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,15 @@ pub async fn native_create_concurrent_queue<T: ristretto_types::Thread + 'static
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn native_create_serial_queue<T: ristretto_types::Thread + 'static>(
+pub async fn native_create_serial_queue<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.concurrent.LibDispatchNative.nativeCreateSerialQueue(Ljava/lang/String;)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.concurrent.LibDispatchNative.nativeCreateSerialQueue(Ljava/lang/String;)J"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -35,11 +44,15 @@ pub async fn native_create_serial_queue<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn native_execute_async<T: ristretto_types::Thread + 'static>(
+pub async fn native_execute_async<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.concurrent.LibDispatchNative.nativeExecuteAsync(JLjava/lang/Runnable;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.concurrent.LibDispatchNative.nativeExecuteAsync(JLjava/lang/Runnable;)V"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -47,11 +60,15 @@ pub async fn native_execute_async<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn native_execute_sync<T: ristretto_types::Thread + 'static>(
+pub async fn native_execute_sync<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.concurrent.LibDispatchNative.nativeExecuteSync(JLjava/lang/Runnable;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.concurrent.LibDispatchNative.nativeExecuteSync(JLjava/lang/Runnable;)V"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -59,11 +76,14 @@ pub async fn native_execute_sync<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn native_get_main_queue<T: ristretto_types::Thread + 'static>(
+pub async fn native_get_main_queue<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.concurrent.LibDispatchNative.nativeGetMainQueue()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.concurrent.LibDispatchNative.nativeGetMainQueue()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -71,11 +91,14 @@ pub async fn native_get_main_queue<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn native_is_dispatch_supported<T: ristretto_types::Thread + 'static>(
+pub async fn native_is_dispatch_supported<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.concurrent.LibDispatchNative.nativeIsDispatchSupported()Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.concurrent.LibDispatchNative.nativeIsDispatchSupported()Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -83,11 +106,14 @@ pub async fn native_is_dispatch_supported<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn native_release_queue<T: ristretto_types::Thread + 'static>(
+pub async fn native_release_queue<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.concurrent.LibDispatchNative.nativeReleaseQueue(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.concurrent.LibDispatchNative.nativeReleaseQueue(J)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -95,65 +121,51 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.concurrent.LibDispatchNative.nativeCreateConcurrentQueue(I)J"
-    )]
     async fn test_native_create_concurrent_queue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_concurrent_queue(thread, Parameters::default()).await;
+        let result = native_create_concurrent_queue(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.concurrent.LibDispatchNative.nativeCreateSerialQueue(Ljava/lang/String;)J"
-    )]
     async fn test_native_create_serial_queue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_serial_queue(thread, Parameters::default()).await;
+        let result = native_create_serial_queue(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.concurrent.LibDispatchNative.nativeExecuteAsync(JLjava/lang/Runnable;)V"
-    )]
     async fn test_native_execute_async() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_execute_async(thread, Parameters::default()).await;
+        let result = native_execute_async(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.concurrent.LibDispatchNative.nativeExecuteSync(JLjava/lang/Runnable;)V"
-    )]
     async fn test_native_execute_sync() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_execute_sync(thread, Parameters::default()).await;
+        let result = native_execute_sync(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.concurrent.LibDispatchNative.nativeGetMainQueue()J"
-    )]
     async fn test_native_get_main_queue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_get_main_queue(thread, Parameters::default()).await;
+        let result = native_get_main_queue(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.concurrent.LibDispatchNative.nativeIsDispatchSupported()Z"
-    )]
     async fn test_native_is_dispatch_supported() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_is_dispatch_supported(thread, Parameters::default()).await;
+        let result = native_is_dispatch_supported(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.concurrent.LibDispatchNative.nativeReleaseQueue(J)V"
-    )]
     async fn test_native_release_queue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_release_queue(thread, Parameters::default()).await;
+        let result = native_release_queue(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

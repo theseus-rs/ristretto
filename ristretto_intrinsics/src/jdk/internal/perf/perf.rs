@@ -4,6 +4,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -11,7 +12,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Helper function to create a `java.nio.ByteBuffer` wrapping a byte array by invoking
 /// `ByteBuffer.wrap(byte[])`.
-async fn create_byte_buffer<T: ristretto_types::Thread + 'static>(
+async fn create_byte_buffer<T: Thread + 'static>(
     thread: &Arc<T>,
     bytes: Vec<i8>,
 ) -> Result<Option<Value>> {
@@ -33,7 +34,7 @@ async fn create_byte_buffer<T: ristretto_types::Thread + 'static>(
     Between(JAVA_11, JAVA_17)
 )]
 #[async_method]
-pub async fn attach<T: ristretto_types::Thread + 'static>(
+pub async fn attach<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,7 +50,7 @@ pub async fn attach<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_17)
 )]
 #[async_method]
-pub async fn attach_0<T: ristretto_types::Thread + 'static>(
+pub async fn attach_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -63,7 +64,7 @@ pub async fn attach_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn create_byte_array<T: ristretto_types::Thread + 'static>(
+pub async fn create_byte_array<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -93,7 +94,7 @@ pub async fn create_byte_array<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn create_long<T: ristretto_types::Thread + 'static>(
+pub async fn create_long<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -113,7 +114,7 @@ pub async fn create_long<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn detach<T: ristretto_types::Thread + 'static>(
+pub async fn detach<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -125,7 +126,7 @@ pub async fn detach<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn high_res_counter<T: ristretto_types::Thread + 'static>(
+pub async fn high_res_counter<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -142,7 +143,7 @@ pub async fn high_res_counter<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn high_res_frequency<T: ristretto_types::Thread + 'static>(
+pub async fn high_res_frequency<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -154,7 +155,7 @@ pub async fn high_res_frequency<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

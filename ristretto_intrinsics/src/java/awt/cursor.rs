@@ -2,21 +2,23 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("java/awt/Cursor.finalizeImpl(J)V", Any)]
 #[async_method]
-pub async fn finalize_impl<T: ristretto_types::Thread + 'static>(
+pub async fn finalize_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.awt.Cursor.finalizeImpl(J)V")
+    Err(JavaError::UnsatisfiedLinkError("java.awt.Cursor.finalizeImpl(J)V".to_string()).into())
 }
 
 #[intrinsic_method("java/awt/Cursor.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,10 +30,10 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.awt.Cursor.finalizeImpl(J)V")]
     async fn test_finalize_impl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = finalize_impl(thread, Parameters::default()).await;
+        let result = finalize_impl(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

@@ -3,6 +3,7 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn find<T: ristretto_types::Thread + 'static>(
+pub async fn find<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,7 +24,7 @@ pub async fn find<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn find_entry<T: ristretto_types::Thread + 'static>(
+pub async fn find_entry<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -35,7 +36,7 @@ pub async fn find_entry<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn load<T: ristretto_types::Thread + 'static>(
+pub async fn load<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,7 +56,7 @@ pub async fn load<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn load_0<T: ristretto_types::Thread + 'static>(
+pub async fn load_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -67,7 +68,7 @@ pub async fn load_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn unload_0<T: ristretto_types::Thread + 'static>(
+pub async fn unload_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -79,7 +80,7 @@ pub async fn unload_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn unload_1<T: ristretto_types::Thread + 'static>(
+pub async fn unload_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -92,7 +93,6 @@ mod tests {
     use ristretto_classfile::{BaseType, FieldType};
     use ristretto_classloader::Reference;
     use ristretto_types::JavaObject;
-    use ristretto_types::Thread;
 
     #[tokio::test]
     async fn test_find() -> Result<()> {

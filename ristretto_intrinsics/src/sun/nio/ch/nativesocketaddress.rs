@@ -3,6 +3,7 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -64,7 +65,7 @@ mod addr_const {
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn afinet<T: ristretto_types::Thread + 'static>(
+pub async fn afinet<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -76,7 +77,7 @@ pub async fn afinet<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn afinet_6<T: ristretto_types::Thread + 'static>(
+pub async fn afinet_6<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -88,7 +89,7 @@ pub async fn afinet_6<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn offset_family<T: ristretto_types::Thread + 'static>(
+pub async fn offset_family<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -100,7 +101,7 @@ pub async fn offset_family<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn offset_sin_4_addr<T: ristretto_types::Thread + 'static>(
+pub async fn offset_sin_4_addr<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -112,7 +113,7 @@ pub async fn offset_sin_4_addr<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn offset_sin_4_port<T: ristretto_types::Thread + 'static>(
+pub async fn offset_sin_4_port<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -124,7 +125,7 @@ pub async fn offset_sin_4_port<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn offset_sin_6_addr<T: ristretto_types::Thread + 'static>(
+pub async fn offset_sin_6_addr<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -136,7 +137,7 @@ pub async fn offset_sin_6_addr<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn offset_sin_6_flow_info<T: ristretto_types::Thread + 'static>(
+pub async fn offset_sin_6_flow_info<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -148,7 +149,7 @@ pub async fn offset_sin_6_flow_info<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn offset_sin_6_port<T: ristretto_types::Thread + 'static>(
+pub async fn offset_sin_6_port<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -160,7 +161,7 @@ pub async fn offset_sin_6_port<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn offset_sin_6_scope_id<T: ristretto_types::Thread + 'static>(
+pub async fn offset_sin_6_scope_id<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -172,7 +173,7 @@ pub async fn offset_sin_6_scope_id<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn sizeof_family<T: ristretto_types::Thread + 'static>(
+pub async fn sizeof_family<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -184,7 +185,7 @@ pub async fn sizeof_family<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn sizeof_sock_addr_4<T: ristretto_types::Thread + 'static>(
+pub async fn sizeof_sock_addr_4<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -196,7 +197,7 @@ pub async fn sizeof_sock_addr_4<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn sizeof_sock_addr_6<T: ristretto_types::Thread + 'static>(
+pub async fn sizeof_sock_addr_6<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

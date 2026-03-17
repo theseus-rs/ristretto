@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_all_flag_names<T: ristretto_types::Thread + 'static>(
+pub async fn get_all_flag_names<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.Flag.getAllFlagNames()[Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.Flag.getAllFlagNames()[Ljava/lang/String;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,13 +28,11 @@ pub async fn get_all_flag_names<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_flags<T: ristretto_types::Thread + 'static>(
+pub async fn get_flags<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "com.sun.management.internal.Flag.getFlags([Ljava/lang/String;[Lcom/sun/management/internal/Flag;I)I"
-    )
+    Err(JavaError::UnsatisfiedLinkError("com.sun.management.internal.Flag.getFlags([Ljava/lang/String;[Lcom/sun/management/internal/Flag;I)I".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -37,11 +40,14 @@ pub async fn get_flags<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_internal_flag_count<T: ristretto_types::Thread + 'static>(
+pub async fn get_internal_flag_count<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.Flag.getInternalFlagCount()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.Flag.getInternalFlagCount()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -49,7 +55,7 @@ pub async fn get_internal_flag_count<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn initialize<T: ristretto_types::Thread + 'static>(
+pub async fn initialize<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -61,11 +67,14 @@ pub async fn initialize<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_boolean_value<T: ristretto_types::Thread + 'static>(
+pub async fn set_boolean_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.Flag.setBooleanValue(Ljava/lang/String;Z)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.Flag.setBooleanValue(Ljava/lang/String;Z)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -73,11 +82,14 @@ pub async fn set_boolean_value<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_double_value<T: ristretto_types::Thread + 'static>(
+pub async fn set_double_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.Flag.setDoubleValue(Ljava/lang/String;D)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.Flag.setDoubleValue(Ljava/lang/String;D)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -85,11 +97,14 @@ pub async fn set_double_value<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_long_value<T: ristretto_types::Thread + 'static>(
+pub async fn set_long_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.Flag.setLongValue(Ljava/lang/String;J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.Flag.setLongValue(Ljava/lang/String;J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -97,11 +112,15 @@ pub async fn set_long_value<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_string_value<T: ristretto_types::Thread + 'static>(
+pub async fn set_string_value<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.sun.management.internal.Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.sun.management.internal.Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V"
+            .to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -109,30 +128,24 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.Flag.getAllFlagNames()[Ljava/lang/String;"
-    )]
     async fn test_get_all_flag_names() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_all_flag_names(thread, Parameters::default()).await;
+        let result = get_all_flag_names(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.Flag.getFlags([Ljava/lang/String;[Lcom/sun/management/internal/Flag;I)I"
-    )]
     async fn test_get_flags() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_flags(thread, Parameters::default()).await;
+        let result = get_flags(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.Flag.getInternalFlagCount()I"
-    )]
     async fn test_get_internal_flag_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_internal_flag_count(thread, Parameters::default()).await;
+        let result = get_internal_flag_count(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -144,38 +157,30 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.Flag.setBooleanValue(Ljava/lang/String;Z)V"
-    )]
     async fn test_set_boolean_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_boolean_value(thread, Parameters::default()).await;
+        let result = set_boolean_value(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.Flag.setDoubleValue(Ljava/lang/String;D)V"
-    )]
     async fn test_set_double_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_double_value(thread, Parameters::default()).await;
+        let result = set_double_value(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.Flag.setLongValue(Ljava/lang/String;J)V"
-    )]
     async fn test_set_long_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_long_value(thread, Parameters::default()).await;
+        let result = set_long_value(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.sun.management.internal.Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V"
-    )]
     async fn test_set_string_value() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_string_value(thread, Parameters::default()).await;
+        let result = set_string_value(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

@@ -3,6 +3,8 @@ use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,47 +13,59 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn activate_application_ignoring_other_apps<T: ristretto_types::Thread + 'static>(
+pub async fn activate_application_ignoring_other_apps<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.activateApplicationIgnoringOtherApps()V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.activateApplicationIgnoringOtherApps()V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.beep()V", Any)]
 #[async_method]
-pub async fn beep<T: ristretto_types::Thread + 'static>(
+pub async fn beep<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.beep()V")
+    Err(JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.LWCToolkit.beep()V".to_string()).into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.createAWTRunLoopMediator()J", Any)]
 #[async_method]
-pub async fn create_awt_run_loop_mediator<T: ristretto_types::Thread + 'static>(
+pub async fn create_awt_run_loop_mediator<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.createAWTRunLoopMediator()J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.createAWTRunLoopMediator()J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.doAWTRunLoopImpl(JZZ)V", Any)]
 #[async_method]
-pub async fn do_awt_run_loop_impl<T: ristretto_types::Thread + 'static>(
+pub async fn do_awt_run_loop_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.doAWTRunLoopImpl(JZZ)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.doAWTRunLoopImpl(JZZ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.flushNativeSelectors()V", Any)]
 #[async_method]
-pub async fn flush_native_selectors<T: ristretto_types::Thread + 'static>(
+pub async fn flush_native_selectors<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.flushNativeSelectors()V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.flushNativeSelectors()V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -59,11 +73,14 @@ pub async fn flush_native_selectors<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_multi_click_time<T: ristretto_types::Thread + 'static>(
+pub async fn get_multi_click_time<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.getMultiClickTime()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.getMultiClickTime()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -71,16 +88,19 @@ pub async fn get_multi_click_time<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn init_appkit<T: ristretto_types::Thread + 'static>(
+pub async fn init_appkit<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.initAppkit(Ljava/lang/ThreadGroup;Z)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.initAppkit(Ljava/lang/ThreadGroup;Z)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -89,56 +109,74 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isApplicationActive()Z", Any)]
 #[async_method]
-pub async fn is_application_active<T: ristretto_types::Thread + 'static>(
+pub async fn is_application_active<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.isApplicationActive()Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.isApplicationActive()Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isCapsLockOn()Z", Any)]
 #[async_method]
-pub async fn is_caps_lock_on<T: ristretto_types::Thread + 'static>(
+pub async fn is_caps_lock_on<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.isCapsLockOn()Z")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.LWCToolkit.isCapsLockOn()Z".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isEmbedded()Z", Any)]
 #[async_method]
-pub async fn is_embedded<T: ristretto_types::Thread + 'static>(
+pub async fn is_embedded<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.isEmbedded()Z")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.LWCToolkit.isEmbedded()Z".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.isInAquaSession()Z", Equal(JAVA_11))]
 #[async_method]
-pub async fn is_in_aqua_session<T: ristretto_types::Thread + 'static>(
+pub async fn is_in_aqua_session<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.isInAquaSession()Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.isInAquaSession()Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.loadNativeColors([I[I)V", Any)]
 #[async_method]
-pub async fn load_native_colors<T: ristretto_types::Thread + 'static>(
+pub async fn load_native_colors<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.loadNativeColors([I[I)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.loadNativeColors([I[I)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.nativeSyncQueue(J)Z", Any)]
 #[async_method]
-pub async fn native_sync_queue<T: ristretto_types::Thread + 'static>(
+pub async fn native_sync_queue<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.nativeSyncQueue(J)Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.nativeSyncQueue(J)Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -146,20 +184,27 @@ pub async fn native_sync_queue<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn perform_on_main_thread_after_delay<T: ristretto_types::Thread + 'static>(
+pub async fn perform_on_main_thread_after_delay<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.performOnMainThreadAfterDelay(Ljava/lang/Runnable;J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.performOnMainThreadAfterDelay(Ljava/lang/Runnable;J)V"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/lwawt/macosx/LWCToolkit.stopAWTRunLoop(J)V", Any)]
 #[async_method]
-pub async fn stop_awt_run_loop<T: ristretto_types::Thread + 'static>(
+pub async fn stop_awt_run_loop<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.lwawt.macosx.LWCToolkit.stopAWTRunLoop(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.lwawt.macosx.LWCToolkit.stopAWTRunLoop(J)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -167,64 +212,52 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.activateApplicationIgnoringOtherApps()V"
-    )]
     async fn test_activate_application_ignoring_other_apps() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = activate_application_ignoring_other_apps(thread, Parameters::default()).await;
+        let result = activate_application_ignoring_other_apps(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.beep()V")]
     async fn test_beep() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = beep(thread, Parameters::default()).await;
+        let result = beep(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.createAWTRunLoopMediator()J"
-    )]
     async fn test_create_awt_run_loop_mediator() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_awt_run_loop_mediator(thread, Parameters::default()).await;
+        let result = create_awt_run_loop_mediator(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.doAWTRunLoopImpl(JZZ)V"
-    )]
     async fn test_do_awt_run_loop_impl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = do_awt_run_loop_impl(thread, Parameters::default()).await;
+        let result = do_awt_run_loop_impl(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.flushNativeSelectors()V"
-    )]
     async fn test_flush_native_selectors() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = flush_native_selectors(thread, Parameters::default()).await;
+        let result = flush_native_selectors(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.getMultiClickTime()I"
-    )]
     async fn test_get_multi_click_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_multi_click_time(thread, Parameters::default()).await;
+        let result = get_multi_click_time(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.initAppkit(Ljava/lang/ThreadGroup;Z)V"
-    )]
     async fn test_init_appkit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_appkit(thread, Parameters::default()).await;
+        let result = init_appkit(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -236,70 +269,58 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.isApplicationActive()Z"
-    )]
     async fn test_is_application_active() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_application_active(thread, Parameters::default()).await;
+        let result = is_application_active(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.isCapsLockOn()Z")]
     async fn test_is_caps_lock_on() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_caps_lock_on(thread, Parameters::default()).await;
+        let result = is_caps_lock_on(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.isEmbedded()Z")]
     async fn test_is_embedded() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_embedded(thread, Parameters::default()).await;
+        let result = is_embedded(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.isInAquaSession()Z"
-    )]
     async fn test_is_in_aqua_session() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_in_aqua_session(thread, Parameters::default()).await;
+        let result = is_in_aqua_session(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.loadNativeColors([I[I)V"
-    )]
     async fn test_load_native_colors() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = load_native_colors(thread, Parameters::default()).await;
+        let result = load_native_colors(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.nativeSyncQueue(J)Z"
-    )]
     async fn test_native_sync_queue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_sync_queue(thread, Parameters::default()).await;
+        let result = native_sync_queue(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.performOnMainThreadAfterDelay(Ljava/lang/Runnable;J)V"
-    )]
     async fn test_perform_on_main_thread_after_delay() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = perform_on_main_thread_after_delay(thread, Parameters::default()).await;
+        let result = perform_on_main_thread_after_delay(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.lwawt.macosx.LWCToolkit.stopAWTRunLoop(J)V"
-    )]
     async fn test_stop_awt_run_loop() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = stop_awt_run_loop(thread, Parameters::default()).await;
+        let result = stop_awt_run_loop(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

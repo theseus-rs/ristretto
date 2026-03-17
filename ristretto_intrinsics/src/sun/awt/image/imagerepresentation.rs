@@ -2,12 +2,14 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/image/ImageRepresentation.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -19,13 +21,11 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn set_diff_icm<T: ristretto_types::Thread + 'static>(
+pub async fn set_diff_icm<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.awt.image.ImageRepresentation.setDiffICM(IIII[IIILjava/awt/image/IndexColorModel;[BIILsun/awt/image/ByteComponentRaster;I)Z"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.awt.image.ImageRepresentation.setDiffICM(IIII[IIILjava/awt/image/IndexColorModel;[BIILsun/awt/image/ByteComponentRaster;I)Z".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -33,13 +33,11 @@ pub async fn set_diff_icm<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn set_icm_pixels<T: ristretto_types::Thread + 'static>(
+pub async fn set_icm_pixels<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.awt.image.ImageRepresentation.setICMpixels(IIII[I[BIILsun/awt/image/IntegerComponentRaster;)Z"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.awt.image.ImageRepresentation.setICMpixels(IIII[I[BIILsun/awt/image/IntegerComponentRaster;)Z".to_string()).into())
 }
 
 #[cfg(test)]
@@ -55,20 +53,16 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.image.ImageRepresentation.setDiffICM(IIII[IIILjava/awt/image/IndexColorModel;[BIILsun/awt/image/ByteComponentRaster;I)Z"
-    )]
     async fn test_set_diff_icm() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_diff_icm(thread, Parameters::default()).await;
+        let result = set_diff_icm(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.image.ImageRepresentation.setICMpixels(IIII[I[BIILsun/awt/image/IntegerComponentRaster;)Z"
-    )]
     async fn test_set_icm_pixels() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_icm_pixels(thread, Parameters::default()).await;
+        let result = set_icm_pixels(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

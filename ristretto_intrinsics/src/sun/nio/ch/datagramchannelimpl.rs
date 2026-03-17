@@ -5,6 +5,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM};
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6};
 use std::sync::Arc;
@@ -109,7 +110,7 @@ fn write_sockaddr_v4(
     Any
 )]
 #[async_method]
-pub async fn disconnect_0<T: ristretto_types::Thread + 'static>(
+pub async fn disconnect_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -196,7 +197,7 @@ pub async fn disconnect_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/DatagramChannelImpl.initIDs()V", LessThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -208,7 +209,7 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn receive_0_0<T: ristretto_types::Thread + 'static>(
+pub async fn receive_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -263,7 +264,7 @@ pub async fn receive_0_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_11)
 )]
 #[async_method]
-pub async fn receive_0_1<T: ristretto_types::Thread + 'static>(
+pub async fn receive_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -323,7 +324,7 @@ pub async fn receive_0_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn send_0_0<T: ristretto_types::Thread + 'static>(
+pub async fn send_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -390,7 +391,7 @@ pub async fn send_0_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_11)
 )]
 #[async_method]
-pub async fn send_0_1<T: ristretto_types::Thread + 'static>(
+pub async fn send_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

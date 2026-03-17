@@ -2,12 +2,14 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/image/JPEGImageDecoder.initIDs(Ljava/lang/Class;)V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -19,11 +21,14 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn read_image<T: ristretto_types::Thread + 'static>(
+pub async fn read_image<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.image.JPEGImageDecoder.readImage(Ljava/io/InputStream;[B)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.image.JPEGImageDecoder.readImage(Ljava/io/InputStream;[B)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -39,11 +44,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.image.JPEGImageDecoder.readImage(Ljava/io/InputStream;[B)V"
-    )]
     async fn test_read_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = read_image(thread, Parameters::default()).await;
+        let result = read_image(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

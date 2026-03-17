@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn native_blit<T: ristretto_types::Thread + 'static>(
+pub async fn native_blit<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.x11.X11PMBlitLoops.nativeBlit(JJJLsun/java2d/pipe/Region;IIIIII)V");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.x11.X11PMBlitLoops.nativeBlit(JJJLsun/java2d/pipe/Region;IIIIII)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,13 +28,11 @@ pub async fn native_blit<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn update_bitmask<T: ristretto_types::Thread + 'static>(
+pub async fn update_bitmask<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.x11.X11PMBlitLoops.updateBitmask(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V"
-    );
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.x11.X11PMBlitLoops.updateBitmask(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V".to_string()).into())
 }
 
 #[cfg(test)]
@@ -37,20 +40,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.x11.X11PMBlitLoops.nativeBlit(JJJLsun/java2d/pipe/Region;IIIIII)V"
-    )]
     async fn test_native_blit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_blit(thread, Parameters::default()).await;
+        let result = native_blit(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.x11.X11PMBlitLoops.updateBitmask(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V"
-    )]
     async fn test_update_bitmask() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = update_bitmask(thread, Parameters::default()).await;
+        let result = update_bitmask(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

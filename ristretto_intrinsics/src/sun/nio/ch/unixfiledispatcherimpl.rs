@@ -6,6 +6,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::io::SeekFrom;
@@ -16,7 +17,7 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn allocation_granularity_0<T: ristretto_types::Thread + 'static>(
+pub async fn allocation_granularity_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,7 +29,7 @@ pub async fn allocation_granularity_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn available_0<T: ristretto_types::Thread + 'static>(
+pub async fn available_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,7 +55,7 @@ pub async fn available_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn close_int_fd<T: ristretto_types::Thread + 'static>(
+pub async fn close_int_fd<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -71,7 +72,7 @@ pub async fn close_int_fd<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn force_0<T: ristretto_types::Thread + 'static>(
+pub async fn force_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -97,7 +98,7 @@ pub async fn force_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn is_other_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_other_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -116,7 +117,7 @@ pub async fn is_other_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn lock_0<T: ristretto_types::Thread + 'static>(
+pub async fn lock_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -139,7 +140,7 @@ pub async fn lock_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn map_0<T: ristretto_types::Thread + 'static>(
+pub async fn map_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -176,7 +177,7 @@ pub async fn map_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn pread_0<T: ristretto_types::Thread + 'static>(
+pub async fn pread_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -215,7 +216,7 @@ pub async fn pread_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn pwrite_0<T: ristretto_types::Thread + 'static>(
+pub async fn pwrite_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -245,7 +246,7 @@ pub async fn pwrite_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn read_0<T: ristretto_types::Thread + 'static>(
+pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -285,7 +286,7 @@ pub async fn read_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn readv_0<T: ristretto_types::Thread + 'static>(
+pub async fn readv_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -346,7 +347,7 @@ pub async fn readv_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn release_0<T: ristretto_types::Thread + 'static>(
+pub async fn release_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -367,7 +368,7 @@ pub async fn release_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn seek_0<T: ristretto_types::Thread + 'static>(
+pub async fn seek_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -396,7 +397,7 @@ pub async fn seek_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn set_direct_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_direct_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -409,7 +410,7 @@ pub async fn set_direct_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn size_0<T: ristretto_types::Thread + 'static>(
+pub async fn size_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -428,7 +429,7 @@ pub async fn size_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn truncate_0<T: ristretto_types::Thread + 'static>(
+pub async fn truncate_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -449,7 +450,7 @@ pub async fn truncate_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn unmap_0<T: ristretto_types::Thread + 'static>(
+pub async fn unmap_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -465,7 +466,7 @@ pub async fn unmap_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn write_0<T: ristretto_types::Thread + 'static>(
+pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -494,7 +495,7 @@ pub async fn write_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn writev_0<T: ristretto_types::Thread + 'static>(
+pub async fn writev_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

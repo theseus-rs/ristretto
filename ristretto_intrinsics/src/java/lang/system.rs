@@ -10,6 +10,7 @@ use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::IllegalArgumentException;
 use ristretto_types::JavaObject;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::env::consts::OS;
@@ -88,7 +89,7 @@ fn arraycopy_within_helper<T: Clone>(
     Any
 )]
 #[async_method]
-pub async fn arraycopy<T: ristretto_types::Thread + 'static>(
+pub async fn arraycopy<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -190,7 +191,7 @@ pub async fn arraycopy<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/System.allowSecurityManager()Z", Any)]
 #[async_method]
-pub async fn allow_security_manager<T: ristretto_types::Thread + 'static>(
+pub async fn allow_security_manager<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -199,7 +200,7 @@ pub async fn allow_security_manager<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/System.currentTimeMillis()J", Any)]
 #[async_method]
-pub async fn current_time_millis<T: ristretto_types::Thread + 'static>(
+pub async fn current_time_millis<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -216,7 +217,7 @@ pub async fn current_time_millis<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_security_manager<T: ristretto_types::Thread + 'static>(
+pub async fn get_security_manager<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -232,7 +233,7 @@ pub async fn get_security_manager<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/System.identityHashCode(Ljava/lang/Object;)I", Any)]
 #[async_method]
-pub async fn identity_hash_code<T: ristretto_types::Thread + 'static>(
+pub async fn identity_hash_code<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -245,7 +246,7 @@ pub async fn identity_hash_code<T: ristretto_types::Thread + 'static>(
 )]
 /// Mechanism for initializing properties for Java versions <= 11
 #[async_method]
-pub async fn init_properties<T: ristretto_types::Thread + 'static>(
+pub async fn init_properties<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -273,7 +274,7 @@ pub async fn init_properties<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn map_library_name<T: ristretto_types::Thread + 'static>(
+pub async fn map_library_name<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -290,7 +291,7 @@ pub async fn map_library_name<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/System.nanoTime()J", Any)]
 #[async_method]
-pub async fn nano_time<T: ristretto_types::Thread + 'static>(
+pub async fn nano_time<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -304,7 +305,7 @@ pub async fn nano_time<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/System.registerNatives()V", Any)]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -343,7 +344,7 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/System.setIn0(Ljava/io/InputStream;)V", Any)]
 #[async_method]
-pub async fn set_in_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_in_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -356,7 +357,7 @@ pub async fn set_in_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/System.setOut0(Ljava/io/PrintStream;)V", Any)]
 #[async_method]
-pub async fn set_out_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_out_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -369,7 +370,7 @@ pub async fn set_out_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/System.setErr0(Ljava/io/PrintStream;)V", Any)]
 #[async_method]
-pub async fn set_err_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_err_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -385,7 +386,7 @@ pub async fn set_err_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn set_security_manager<T: ristretto_types::Thread + 'static>(
+pub async fn set_security_manager<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

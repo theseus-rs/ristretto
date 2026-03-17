@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,13 +13,11 @@ use std::sync::Arc;
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn generate_adapter<T: ristretto_types::Thread + 'static>(
+pub async fn generate_adapter<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.foreign.abi.ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.foreign.abi.ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -25,11 +25,14 @@ pub async fn generate_adapter<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn invoke_native<T: ristretto_types::Thread + 'static>(
+pub async fn invoke_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.foreign.abi.ProgrammableInvoker.invokeNative(JJ)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.foreign.abi.ProgrammableInvoker.invokeNative(JJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -37,7 +40,7 @@ pub async fn invoke_native<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,21 +52,17 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J"
-    )]
     async fn test_generate_adapter() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = generate_adapter(thread, Parameters::default()).await;
+        let result = generate_adapter(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.foreign.abi.ProgrammableInvoker.invokeNative(JJ)V"
-    )]
     async fn test_invoke_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = invoke_native(thread, Parameters::default()).await;
+        let result = invoke_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

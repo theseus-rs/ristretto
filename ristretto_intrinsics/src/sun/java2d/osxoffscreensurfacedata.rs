@@ -2,16 +2,21 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/OSXOffScreenSurfaceData.clearSurfacePixels(II)Z", Any)]
 #[async_method]
-pub async fn clear_surface_pixels<T: ristretto_types::Thread + 'static>(
+pub async fn clear_surface_pixels<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.OSXOffScreenSurfaceData.clearSurfacePixels(IIZ)Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.OSXOffScreenSurfaceData.clearSurfacePixels(IIZ)Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -19,13 +24,11 @@ pub async fn clear_surface_pixels<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_surface_data<T: ristretto_types::Thread + 'static>(
+pub async fn get_surface_data<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.OSXOffScreenSurfaceData.getSurfaceData(Ljava/awt/image/BufferedImage;)Lsun/java2d/SurfaceData;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.OSXOffScreenSurfaceData.getSurfaceData(Ljava/awt/image/BufferedImage;)Lsun/java2d/SurfaceData;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -33,18 +36,16 @@ pub async fn get_surface_data<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn init_custom_raster<T: ristretto_types::Thread + 'static>(
+pub async fn init_custom_raster<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.OSXOffScreenSurfaceData.initCustomRaster(Ljava/nio/IntBuffer;IILjava/nio/ByteBuffer;Ljava/lang/Object;Ljava/nio/ByteBuffer;)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.OSXOffScreenSurfaceData.initCustomRaster(Ljava/nio/IntBuffer;IILjava/nio/ByteBuffer;Ljava/lang/Object;Ljava/nio/ByteBuffer;)V".to_string()).into())
 }
 
 #[intrinsic_method("sun/java2d/OSXOffScreenSurfaceData.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -56,13 +57,11 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn init_raster<T: ristretto_types::Thread + 'static>(
+pub async fn init_raster<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.OSXOffScreenSurfaceData.initRaster(Ljava/lang/Object;IIIIILjava/awt/image/IndexColorModel;ILjava/nio/ByteBuffer;Ljava/lang/Object;Ljava/nio/ByteBuffer;)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.OSXOffScreenSurfaceData.initRaster(Ljava/lang/Object;IIIIILjava/awt/image/IndexColorModel;ILjava/nio/ByteBuffer;Ljava/lang/Object;Ljava/nio/ByteBuffer;)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -70,22 +69,23 @@ pub async fn init_raster<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn set_surface_data<T: ristretto_types::Thread + 'static>(
+pub async fn set_surface_data<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.java2d.OSXOffScreenSurfaceData.setSurfaceData(Ljava/awt/image/BufferedImage;Lsun/java2d/SurfaceData;)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.java2d.OSXOffScreenSurfaceData.setSurfaceData(Ljava/awt/image/BufferedImage;Lsun/java2d/SurfaceData;)V".to_string()).into())
 }
 
 #[intrinsic_method("sun/java2d/OSXOffScreenSurfaceData.syncToJavaPixels()V", Any)]
 #[async_method]
-pub async fn sync_to_java_pixels<T: ristretto_types::Thread + 'static>(
+pub async fn sync_to_java_pixels<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.OSXOffScreenSurfaceData.syncToJavaPixels()V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.OSXOffScreenSurfaceData.syncToJavaPixels()V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -93,11 +93,15 @@ pub async fn sync_to_java_pixels<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn xor_surface_pixels<T: ristretto_types::Thread + 'static>(
+pub async fn xor_surface_pixels<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.java2d.OSXOffScreenSurfaceData.xorSurfacePixels(Lsun/java2d/SurfaceData;IIIII)Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.java2d.OSXOffScreenSurfaceData.xorSurfacePixels(Lsun/java2d/SurfaceData;IIIII)Z"
+            .to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -105,30 +109,24 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.OSXOffScreenSurfaceData.clearSurfacePixels(IIZ)Z"
-    )]
     async fn test_clear_surface_pixels() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = clear_surface_pixels(thread, Parameters::default()).await;
+        let result = clear_surface_pixels(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.OSXOffScreenSurfaceData.getSurfaceData(Ljava/awt/image/BufferedImage;)Lsun/java2d/SurfaceData;"
-    )]
     async fn test_get_surface_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_surface_data(thread, Parameters::default()).await;
+        let result = get_surface_data(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.OSXOffScreenSurfaceData.initCustomRaster(Ljava/nio/IntBuffer;IILjava/nio/ByteBuffer;Ljava/lang/Object;Ljava/nio/ByteBuffer;)V"
-    )]
     async fn test_init_custom_raster() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_custom_raster(thread, Parameters::default()).await;
+        let result = init_custom_raster(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -140,38 +138,30 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.OSXOffScreenSurfaceData.initRaster(Ljava/lang/Object;IIIIILjava/awt/image/IndexColorModel;ILjava/nio/ByteBuffer;Ljava/lang/Object;Ljava/nio/ByteBuffer;)V"
-    )]
     async fn test_init_raster() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_raster(thread, Parameters::default()).await;
+        let result = init_raster(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.OSXOffScreenSurfaceData.setSurfaceData(Ljava/awt/image/BufferedImage;Lsun/java2d/SurfaceData;)V"
-    )]
     async fn test_set_surface_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_surface_data(thread, Parameters::default()).await;
+        let result = set_surface_data(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.OSXOffScreenSurfaceData.syncToJavaPixels()V"
-    )]
     async fn test_sync_to_java_pixels() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = sync_to_java_pixels(thread, Parameters::default()).await;
+        let result = sync_to_java_pixels(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.java2d.OSXOffScreenSurfaceData.xorSurfacePixels(Lsun/java2d/SurfaceData;IIIII)Z"
-    )]
     async fn test_xor_surface_pixels() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = xor_surface_pixels(thread, Parameters::default()).await;
+        let result = xor_surface_pixels(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

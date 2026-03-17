@@ -4,6 +4,7 @@ use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -11,7 +12,7 @@ use zerocopy::transmute_ref;
 
 #[intrinsic_method("java/lang/ProcessEnvironment.environ()[[B", Any)]
 #[async_method]
-pub async fn environ<T: ristretto_types::Thread + 'static>(
+pub async fn environ<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -3,6 +3,8 @@ use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,7 +13,7 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn do_privileged_1<T: ristretto_types::Thread + 'static>(
+pub async fn do_privileged_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,7 +32,7 @@ pub async fn do_privileged_1<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn do_privileged_2<T: ristretto_types::Thread + 'static>(
+pub async fn do_privileged_2<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,7 +52,7 @@ pub async fn do_privileged_2<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn do_privileged_3<T: ristretto_types::Thread + 'static>(
+pub async fn do_privileged_3<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -69,7 +71,7 @@ pub async fn do_privileged_3<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn do_privileged_4<T: ristretto_types::Thread + 'static>(
+pub async fn do_privileged_4<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -89,7 +91,7 @@ pub async fn do_privileged_4<T: ristretto_types::Thread + 'static>(
     Between(JAVA_11, JAVA_21)
 )]
 #[async_method]
-pub async fn ensure_materialized_for_stack_walk<T: ristretto_types::Thread + 'static>(
+pub async fn ensure_materialized_for_stack_walk<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -101,13 +103,11 @@ pub async fn ensure_materialized_for_stack_walk<T: ristretto_types::Thread + 'st
     LessThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn get_inherited_access_control_context<T: ristretto_types::Thread + 'static>(
+pub async fn get_inherited_access_control_context<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.security.AccessController.getInheritedAccessControlContext()Ljava/security/AccessControlContext;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("java.security.AccessController.getInheritedAccessControlContext()Ljava/security/AccessControlContext;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -115,13 +115,11 @@ pub async fn get_inherited_access_control_context<T: ristretto_types::Thread + '
     Between(JAVA_11, JAVA_21)
 )]
 #[async_method]
-pub async fn get_protection_domain<T: ristretto_types::Thread + 'static>(
+pub async fn get_protection_domain<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.security.AccessController.getProtectionDomain(Ljava/lang/Class;)Ljava/security/ProtectionDomain;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("java.security.AccessController.getProtectionDomain(Ljava/lang/Class;)Ljava/security/ProtectionDomain;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -129,7 +127,7 @@ pub async fn get_protection_domain<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn get_stack_access_control_context<T: ristretto_types::Thread + 'static>(
+pub async fn get_stack_access_control_context<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -149,21 +147,17 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.security.AccessController.getInheritedAccessControlContext()Ljava/security/AccessControlContext;"
-    )]
     async fn test_get_inherited_access_control_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_inherited_access_control_context(thread, Parameters::default()).await;
+        let result = get_inherited_access_control_context(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.security.AccessController.getProtectionDomain(Ljava/lang/Class;)Ljava/security/ProtectionDomain;"
-    )]
     async fn test_get_protection_domain() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_protection_domain(thread, Parameters::default()).await;
+        let result = get_protection_domain(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

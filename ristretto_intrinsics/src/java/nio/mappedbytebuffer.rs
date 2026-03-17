@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,29 +13,35 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn force_0<T: ristretto_types::Thread + 'static>(
+pub async fn force_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.nio.MappedByteBuffer.force0(Ljava/io/FileDescriptor;JJ)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "java.nio.MappedByteBuffer.force0(Ljava/io/FileDescriptor;JJ)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("java/nio/MappedByteBuffer.isLoaded0(JJI)Z", LessThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn is_loaded_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_loaded_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.nio.MappedByteBuffer.isLoaded0(JJI)Z")
+    Err(
+        JavaError::UnsatisfiedLinkError("java.nio.MappedByteBuffer.isLoaded0(JJI)Z".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("java/nio/MappedByteBuffer.load0(JJ)V", LessThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn load_0<T: ristretto_types::Thread + 'static>(
+pub async fn load_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.nio.MappedByteBuffer.load0(JJ)V")
+    Err(JavaError::UnsatisfiedLinkError("java.nio.MappedByteBuffer.load0(JJ)V".to_string()).into())
 }
 
 #[cfg(test)]
@@ -41,25 +49,23 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.nio.MappedByteBuffer.force0(Ljava/io/FileDescriptor;JJ)V"
-    )]
     async fn test_force_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = force_0(thread, Parameters::default()).await;
+        let result = force_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.nio.MappedByteBuffer.isLoaded0(JJI)Z")]
     async fn test_is_loaded_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_loaded_0(thread, Parameters::default()).await;
+        let result = is_loaded_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: java.nio.MappedByteBuffer.load0(JJ)V")]
     async fn test_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = load_0(thread, Parameters::default()).await;
+        let result = load_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

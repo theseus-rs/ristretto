@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqua
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,13 +13,11 @@ use std::sync::Arc;
     GreaterThan(JAVA_8)
 )]
 #[async_method]
-pub async fn get_system_proxies<T: ristretto_types::Thread + 'static>(
+pub async fn get_system_proxies<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.net.spi.DefaultProxySelector.getSystemProxies(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.net.spi.DefaultProxySelector.getSystemProxies(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -25,18 +25,16 @@ pub async fn get_system_proxies<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_system_proxy<T: ristretto_types::Thread + 'static>(
+pub async fn get_system_proxy<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.net.spi.DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.net.spi.DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;".to_string()).into())
 }
 
 #[intrinsic_method("sun/net/spi/DefaultProxySelector.init()Z", Any)]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -48,21 +46,17 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.net.spi.DefaultProxySelector.getSystemProxies(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;"
-    )]
     async fn test_get_system_proxies() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_proxies(thread, Parameters::default()).await;
+        let result = get_system_proxies(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.net.spi.DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;"
-    )]
     async fn test_get_system_proxy() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_system_proxy(thread, Parameters::default()).await;
+        let result = get_system_proxy(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

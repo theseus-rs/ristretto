@@ -6,7 +6,9 @@ use ristretto_gc::Gc;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::JavaError;
 use ristretto_types::JavaObject;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -16,13 +18,11 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn init_stack_trace_element<T: ristretto_types::Thread + 'static>(
+pub async fn init_stack_trace_element<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "java.lang.StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("java.lang.StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -30,7 +30,7 @@ pub async fn init_stack_trace_element<T: ristretto_types::Thread + 'static>(
     Between(JAVA_11, JAVA_17)
 )]
 #[async_method]
-pub async fn init_stack_trace_elements_0<T: ristretto_types::Thread + 'static>(
+pub async fn init_stack_trace_elements_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -57,7 +57,7 @@ pub async fn init_stack_trace_elements_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_17)
 )]
 #[async_method]
-pub async fn init_stack_trace_elements_1<T: ristretto_types::Thread + 'static>(
+pub async fn init_stack_trace_elements_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -79,7 +79,7 @@ pub async fn init_stack_trace_elements_1<T: ristretto_types::Thread + 'static>(
 /// \[2\] = method descriptor (String)
 /// \[3\] = Integer (program counter/BCI)
 #[expect(clippy::too_many_lines)]
-async fn init_stack_trace_elements_impl<T: ristretto_types::Thread + 'static>(
+async fn init_stack_trace_elements_impl<T: Thread + 'static>(
     thread: Arc<T>,
     stack_trace_ref: Gc<RwLock<Reference>>,
     back_trace: Value,
@@ -236,11 +236,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.lang.StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V"
-    )]
     async fn test_init_stack_trace_element() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_stack_trace_element(thread, Parameters::default()).await;
+        let result = init_stack_trace_element(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

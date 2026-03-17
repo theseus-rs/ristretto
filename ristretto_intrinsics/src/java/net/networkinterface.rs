@@ -3,6 +3,7 @@ use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
 
@@ -31,9 +32,7 @@ fn loopback_name() -> &'static str {
 }
 
 /// Create a loopback `NetworkInterface` Java object.
-async fn create_loopback_interface<T: ristretto_types::Thread + 'static>(
-    thread: &Arc<T>,
-) -> Result<Value> {
+async fn create_loopback_interface<T: Thread + 'static>(thread: &Arc<T>) -> Result<Value> {
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
 
@@ -92,7 +91,7 @@ async fn create_loopback_interface<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn bound_inet_address_0<T: ristretto_types::Thread + 'static>(
+pub async fn bound_inet_address_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,7 +101,7 @@ pub async fn bound_inet_address_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/NetworkInterface.getAll()[Ljava/net/NetworkInterface;", Any)]
 #[async_method]
-pub async fn get_all<T: ristretto_types::Thread + 'static>(
+pub async fn get_all<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -121,7 +120,7 @@ pub async fn get_all<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_by_index_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_by_index_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -134,7 +133,7 @@ pub async fn get_by_index_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_by_inet_address_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_by_inet_address_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -147,7 +146,7 @@ pub async fn get_by_inet_address_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_by_name_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_by_name_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -157,7 +156,7 @@ pub async fn get_by_name_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/NetworkInterface.getMTU0(Ljava/lang/String;I)I", Any)]
 #[async_method]
-pub async fn get_mtu_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_mtu_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -168,7 +167,7 @@ pub async fn get_mtu_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/NetworkInterface.getMacAddr0([BLjava/lang/String;I)[B", Any)]
 #[async_method]
-pub async fn get_mac_addr_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_mac_addr_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -180,7 +179,7 @@ pub async fn get_mac_addr_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/NetworkInterface.init()V", Any)]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -189,7 +188,7 @@ pub async fn init<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/NetworkInterface.isLoopback0(Ljava/lang/String;I)Z", Any)]
 #[async_method]
-pub async fn is_loopback_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_loopback_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -205,7 +204,7 @@ pub async fn is_loopback_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/NetworkInterface.isP2P0(Ljava/lang/String;I)Z", Any)]
 #[async_method]
-pub async fn is_p2p_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_p2p_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -216,7 +215,7 @@ pub async fn is_p2p_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/NetworkInterface.isUp0(Ljava/lang/String;I)Z", Any)]
 #[async_method]
-pub async fn is_up_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_up_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -230,7 +229,7 @@ pub async fn is_up_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn supports_multicast_0<T: ristretto_types::Thread + 'static>(
+pub async fn supports_multicast_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

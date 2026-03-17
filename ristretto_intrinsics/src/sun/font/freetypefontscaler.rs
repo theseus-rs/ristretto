@@ -3,16 +3,21 @@ use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/font/FreetypeFontScaler.createScalerContextNative(J[DIIFF)J", Any)]
 #[async_method]
-pub async fn create_scaler_context_native<T: ristretto_types::Thread + 'static>(
+pub async fn create_scaler_context_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.FreetypeFontScaler.createScalerContextNative(J[DIIFF)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.FreetypeFontScaler.createScalerContextNative(J[DIIFF)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -20,11 +25,14 @@ pub async fn create_scaler_context_native<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn dispose_native_scaler<T: ristretto_types::Thread + 'static>(
+pub async fn dispose_native_scaler<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.FreetypeFontScaler.disposeNativeScaler(Lsun/font/Font2D;J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.FreetypeFontScaler.disposeNativeScaler(Lsun/font/Font2D;J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -32,13 +40,11 @@ pub async fn dispose_native_scaler<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_font_metrics_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_font_metrics_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.font.FreetypeFontScaler.getFontMetricsNative(Lsun/font/Font2D;JJ)Lsun/font/StrikeMetrics;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.font.FreetypeFontScaler.getFontMetricsNative(Lsun/font/Font2D;JJ)Lsun/font/StrikeMetrics;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -46,11 +52,14 @@ pub async fn get_font_metrics_native<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_glyph_advance_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_glyph_advance_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.FreetypeFontScaler.getGlyphAdvanceNative(Lsun/font/Font2D;JJI)F")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.FreetypeFontScaler.getGlyphAdvanceNative(Lsun/font/Font2D;JJI)F".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -58,11 +67,14 @@ pub async fn get_glyph_advance_native<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_glyph_code_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_glyph_code_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.FreetypeFontScaler.getGlyphCodeNative(Lsun/font/Font2D;JC)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.FreetypeFontScaler.getGlyphCodeNative(Lsun/font/Font2D;JC)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -70,11 +82,14 @@ pub async fn get_glyph_code_native<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_glyph_image_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_glyph_image_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.FreetypeFontScaler.getGlyphImageNative(Lsun/font/Font2D;JJI)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.FreetypeFontScaler.getGlyphImageNative(Lsun/font/Font2D;JJI)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -82,13 +97,11 @@ pub async fn get_glyph_image_native<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_glyph_metrics_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_glyph_metrics_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.font.FreetypeFontScaler.getGlyphMetricsNative(Lsun/font/Font2D;JJILjava/awt/geom/Point2D$Float;)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.font.FreetypeFontScaler.getGlyphMetricsNative(Lsun/font/Font2D;JJILjava/awt/geom/Point2D$Float;)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -96,13 +109,11 @@ pub async fn get_glyph_metrics_native<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_glyph_outline_bounds_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_glyph_outline_bounds_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.font.FreetypeFontScaler.getGlyphOutlineBoundsNative(Lsun/font/Font2D;JJI)Ljava/awt/geom/Rectangle2D$Float;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.font.FreetypeFontScaler.getGlyphOutlineBoundsNative(Lsun/font/Font2D;JJI)Ljava/awt/geom/Rectangle2D$Float;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -110,13 +121,11 @@ pub async fn get_glyph_outline_bounds_native<T: ristretto_types::Thread + 'stati
     Any
 )]
 #[async_method]
-pub async fn get_glyph_outline_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_glyph_outline_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.font.FreetypeFontScaler.getGlyphOutlineNative(Lsun/font/Font2D;JJIFF)Ljava/awt/geom/GeneralPath;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.font.FreetypeFontScaler.getGlyphOutlineNative(Lsun/font/Font2D;JJIFF)Ljava/awt/geom/GeneralPath;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -124,13 +133,11 @@ pub async fn get_glyph_outline_native<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_glyph_point_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_glyph_point_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.font.FreetypeFontScaler.getGlyphPointNative(Lsun/font/Font2D;JJII)Ljava/awt/geom/Point2D$Float;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.font.FreetypeFontScaler.getGlyphPointNative(Lsun/font/Font2D;JJII)Ljava/awt/geom/Point2D$Float;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -138,13 +145,11 @@ pub async fn get_glyph_point_native<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_glyph_vector_outline_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_glyph_vector_outline_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "sun.font.FreetypeFontScaler.getGlyphVectorOutlineNative(Lsun/font/Font2D;JJ[IIFF)Ljava/awt/geom/GeneralPath;"
-    )
+    Err(JavaError::UnsatisfiedLinkError("sun.font.FreetypeFontScaler.getGlyphVectorOutlineNative(Lsun/font/Font2D;JJ[IIFF)Ljava/awt/geom/GeneralPath;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -152,43 +157,55 @@ pub async fn get_glyph_vector_outline_native<T: ristretto_types::Thread + 'stati
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_layout_table_cache_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_layout_table_cache_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.FreetypeFontScaler.getLayoutTableCacheNative(J)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.FreetypeFontScaler.getLayoutTableCacheNative(J)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/font/FreetypeFontScaler.getMissingGlyphCodeNative(J)I", Any)]
 #[async_method]
-pub async fn get_missing_glyph_code_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_missing_glyph_code_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.FreetypeFontScaler.getMissingGlyphCodeNative(J)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.FreetypeFontScaler.getMissingGlyphCodeNative(J)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/font/FreetypeFontScaler.getNumGlyphsNative(J)I", Any)]
 #[async_method]
-pub async fn get_num_glyphs_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_num_glyphs_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.FreetypeFontScaler.getNumGlyphsNative(J)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.FreetypeFontScaler.getNumGlyphsNative(J)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/font/FreetypeFontScaler.getUnitsPerEMNative(J)J", Any)]
 #[async_method]
-pub async fn get_units_per_em_native<T: ristretto_types::Thread + 'static>(
+pub async fn get_units_per_em_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.FreetypeFontScaler.getUnitsPerEMNative(J)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.FreetypeFontScaler.getUnitsPerEMNative(J)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/font/FreetypeFontScaler.initIDs(Ljava/lang/Class;)V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -200,11 +217,14 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn init_native_scaler<T: ristretto_types::Thread + 'static>(
+pub async fn init_native_scaler<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.FreetypeFontScaler.initNativeScaler(Lsun/font/Font2D;IIZI)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.FreetypeFontScaler.initNativeScaler(Lsun/font/Font2D;IIZI)J".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -212,138 +232,108 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.createScalerContextNative(J[DIIFF)J"
-    )]
     async fn test_create_scaler_context_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_scaler_context_native(thread, Parameters::default()).await;
+        let result = create_scaler_context_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.disposeNativeScaler(Lsun/font/Font2D;J)V"
-    )]
     async fn test_dispose_native_scaler() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dispose_native_scaler(thread, Parameters::default()).await;
+        let result = dispose_native_scaler(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getFontMetricsNative(Lsun/font/Font2D;JJ)Lsun/font/StrikeMetrics;"
-    )]
     async fn test_get_font_metrics_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_font_metrics_native(thread, Parameters::default()).await;
+        let result = get_font_metrics_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getGlyphAdvanceNative(Lsun/font/Font2D;JJI)F"
-    )]
     async fn test_get_glyph_advance_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_advance_native(thread, Parameters::default()).await;
+        let result = get_glyph_advance_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getGlyphCodeNative(Lsun/font/Font2D;JC)I"
-    )]
     async fn test_get_glyph_code_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_code_native(thread, Parameters::default()).await;
+        let result = get_glyph_code_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getGlyphImageNative(Lsun/font/Font2D;JJI)J"
-    )]
     async fn test_get_glyph_image_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_image_native(thread, Parameters::default()).await;
+        let result = get_glyph_image_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getGlyphMetricsNative(Lsun/font/Font2D;JJILjava/awt/geom/Point2D$Float;)V"
-    )]
     async fn test_get_glyph_metrics_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_metrics_native(thread, Parameters::default()).await;
+        let result = get_glyph_metrics_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getGlyphOutlineBoundsNative(Lsun/font/Font2D;JJI)Ljava/awt/geom/Rectangle2D$Float;"
-    )]
     async fn test_get_glyph_outline_bounds_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_outline_bounds_native(thread, Parameters::default()).await;
+        let result = get_glyph_outline_bounds_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getGlyphOutlineNative(Lsun/font/Font2D;JJIFF)Ljava/awt/geom/GeneralPath;"
-    )]
     async fn test_get_glyph_outline_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_outline_native(thread, Parameters::default()).await;
+        let result = get_glyph_outline_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getGlyphPointNative(Lsun/font/Font2D;JJII)Ljava/awt/geom/Point2D$Float;"
-    )]
     async fn test_get_glyph_point_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_point_native(thread, Parameters::default()).await;
+        let result = get_glyph_point_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getGlyphVectorOutlineNative(Lsun/font/Font2D;JJ[IIFF)Ljava/awt/geom/GeneralPath;"
-    )]
     async fn test_get_glyph_vector_outline_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_glyph_vector_outline_native(thread, Parameters::default()).await;
+        let result = get_glyph_vector_outline_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getLayoutTableCacheNative(J)J"
-    )]
     async fn test_get_layout_table_cache_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_layout_table_cache_native(thread, Parameters::default()).await;
+        let result = get_layout_table_cache_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getMissingGlyphCodeNative(J)I"
-    )]
     async fn test_get_missing_glyph_code_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_missing_glyph_code_native(thread, Parameters::default()).await;
+        let result = get_missing_glyph_code_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getNumGlyphsNative(J)I"
-    )]
     async fn test_get_num_glyphs_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_num_glyphs_native(thread, Parameters::default()).await;
+        let result = get_num_glyphs_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.getUnitsPerEMNative(J)J"
-    )]
     async fn test_get_units_per_em_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_units_per_em_native(thread, Parameters::default()).await;
+        let result = get_units_per_em_native(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -355,11 +345,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.FreetypeFontScaler.initNativeScaler(Lsun/font/Font2D;IIZI)J"
-    )]
     async fn test_init_native_scaler() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_native_scaler(thread, Parameters::default()).await;
+        let result = init_native_scaler(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

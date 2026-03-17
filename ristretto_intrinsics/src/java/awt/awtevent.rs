@@ -2,12 +2,14 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("java/awt/AWTEvent.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -19,11 +21,14 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn native_set_source<T: ristretto_types::Thread + 'static>(
+pub async fn native_set_source<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("java.awt.AWTEvent.nativeSetSource(Ljava/awt/peer/ComponentPeer;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "java.awt.AWTEvent.nativeSetSource(Ljava/awt/peer/ComponentPeer;)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -39,11 +44,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: java.awt.AWTEvent.nativeSetSource(Ljava/awt/peer/ComponentPeer;)V"
-    )]
     async fn test_native_set_source() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_set_source(thread, Parameters::default()).await;
+        let result = native_set_source(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

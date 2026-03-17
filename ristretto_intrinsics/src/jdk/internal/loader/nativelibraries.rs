@@ -3,7 +3,9 @@ use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
 use ristretto_types::JavaObject;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -13,13 +15,11 @@ use std::sync::Arc;
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn find_entry_0<T: ristretto_types::Thread + 'static>(
+pub async fn find_entry_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.loader.NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.loader.NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -27,7 +27,7 @@ pub async fn find_entry_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn find_builtin_lib<T: ristretto_types::Thread + 'static>(
+pub async fn find_builtin_lib<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -48,7 +48,7 @@ pub async fn find_builtin_lib<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn load_0<T: ristretto_types::Thread + 'static>(
+pub async fn load_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -60,7 +60,7 @@ pub async fn load_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn load_1<T: ristretto_types::Thread + 'static>(
+pub async fn load_1<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,7 +72,7 @@ pub async fn load_1<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn unload_0<T: ristretto_types::Thread + 'static>(
+pub async fn unload_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -87,7 +87,7 @@ pub async fn unload_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn unload_1<T: ristretto_types::Thread + 'static>(
+pub async fn unload_1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,12 +102,10 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.loader.NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J"
-    )]
     async fn test_find_entry_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = find_entry_0(thread, Parameters::default()).await;
+        let result = find_entry_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

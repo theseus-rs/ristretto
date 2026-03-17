@@ -2,6 +2,8 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -10,13 +12,15 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn get_memory_managers_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_memory_managers_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
+    Err(JavaError::UnsatisfiedLinkError(
         "sun.management.MemoryImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;"
+            .to_string(),
     )
+    .into())
 }
 
 #[intrinsic_method(
@@ -24,11 +28,15 @@ pub async fn get_memory_managers_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_memory_pools_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_memory_pools_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.MemoryImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.MemoryImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -36,20 +44,27 @@ pub async fn get_memory_pools_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_memory_usage_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_memory_usage_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.MemoryImpl.getMemoryUsage0(Z)Ljava/lang/management/MemoryUsage;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.MemoryImpl.getMemoryUsage0(Z)Ljava/lang/management/MemoryUsage;"
+            .to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/management/MemoryImpl.setVerboseGC(Z)V", Any)]
 #[async_method]
-pub async fn set_verbose_gc<T: ristretto_types::Thread + 'static>(
+pub async fn set_verbose_gc<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.management.MemoryImpl.setVerboseGC(Z)V")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.management.MemoryImpl.setVerboseGC(Z)V".to_string())
+            .into(),
+    )
 }
 
 #[cfg(test)]
@@ -57,36 +72,30 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;"
-    )]
     async fn test_get_memory_managers_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_memory_managers_0(thread, Parameters::default()).await;
+        let result = get_memory_managers_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;"
-    )]
     async fn test_get_memory_pools_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_memory_pools_0(thread, Parameters::default()).await;
+        let result = get_memory_pools_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.management.MemoryImpl.getMemoryUsage0(Z)Ljava/lang/management/MemoryUsage;"
-    )]
     async fn test_get_memory_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_memory_usage_0(thread, Parameters::default()).await;
+        let result = get_memory_usage_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.management.MemoryImpl.setVerboseGC(Z)V")]
     async fn test_set_verbose_gc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_verbose_gc(thread, Parameters::default()).await;
+        let result = set_verbose_gc(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

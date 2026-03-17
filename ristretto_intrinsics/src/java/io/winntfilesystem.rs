@@ -5,6 +5,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Parameters;
+use ristretto_types::Thread;
 use ristretto_types::{JavaObject, Result};
 use std::sync::Arc;
 
@@ -13,7 +14,7 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn canonicalize_0<T: ristretto_types::Thread + 'static>(
+pub async fn canonicalize_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -25,7 +26,7 @@ pub async fn canonicalize_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn canonicalize_with_prefix_0<T: ristretto_types::Thread + 'static>(
+pub async fn canonicalize_with_prefix_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -56,7 +57,7 @@ pub async fn canonicalize_with_prefix_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn check_access<T: ristretto_types::Thread + 'static>(
+pub async fn check_access<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -68,7 +69,7 @@ pub async fn check_access<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn check_access_0<T: ristretto_types::Thread + 'static>(
+pub async fn check_access_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -80,7 +81,7 @@ pub async fn check_access_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn create_directory<T: ristretto_types::Thread + 'static>(
+pub async fn create_directory<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -92,7 +93,7 @@ pub async fn create_directory<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn create_directory_0<T: ristretto_types::Thread + 'static>(
+pub async fn create_directory_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -104,7 +105,7 @@ pub async fn create_directory_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn create_file_exclusively<T: ristretto_types::Thread + 'static>(
+pub async fn create_file_exclusively<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -116,7 +117,7 @@ pub async fn create_file_exclusively<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn create_file_exclusively_0<T: ristretto_types::Thread + 'static>(
+pub async fn create_file_exclusively_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -125,7 +126,7 @@ pub async fn create_file_exclusively_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/WinNTFileSystem.delete0(Ljava/io/File;)Z", Any)]
 #[async_method]
-pub async fn delete_0<T: ristretto_types::Thread + 'static>(
+pub async fn delete_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -137,7 +138,7 @@ pub async fn delete_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn delete_0_with_flag<T: ristretto_types::Thread + 'static>(
+pub async fn delete_0_with_flag<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -150,7 +151,7 @@ pub async fn delete_0_with_flag<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn get_final_path_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_final_path_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -162,7 +163,7 @@ pub async fn get_final_path_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_boolean_attributes<T: ristretto_types::Thread + 'static>(
+pub async fn get_boolean_attributes<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -174,7 +175,7 @@ pub async fn get_boolean_attributes<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_boolean_attributes_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_boolean_attributes_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -183,7 +184,7 @@ pub async fn get_boolean_attributes_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/WinNTFileSystem.getDriveDirectory(I)Ljava/lang/String;", Any)]
 #[async_method]
-pub async fn get_drive_directory<T: ristretto_types::Thread + 'static>(
+pub async fn get_drive_directory<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -209,7 +210,7 @@ pub async fn get_drive_directory<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_last_modified_time<T: ristretto_types::Thread + 'static>(
+pub async fn get_last_modified_time<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -221,7 +222,7 @@ pub async fn get_last_modified_time<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn get_last_modified_time_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_last_modified_time_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -233,7 +234,7 @@ pub async fn get_last_modified_time_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_length<T: ristretto_types::Thread + 'static>(
+pub async fn get_length<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -245,7 +246,7 @@ pub async fn get_length<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn get_length_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_length_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -257,7 +258,7 @@ pub async fn get_length_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_name_max_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_name_max_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -266,7 +267,7 @@ pub async fn get_name_max_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/WinNTFileSystem.getSpace0(Ljava/io/File;I)J", Any)]
 #[async_method]
-pub async fn get_space_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_space_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -275,7 +276,7 @@ pub async fn get_space_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/WinNTFileSystem.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -287,7 +288,7 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn list<T: ristretto_types::Thread + 'static>(
+pub async fn list<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -299,7 +300,7 @@ pub async fn list<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn list_0<T: ristretto_types::Thread + 'static>(
+pub async fn list_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -308,7 +309,7 @@ pub async fn list_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/WinNTFileSystem.listRoots0()I", Any)]
 #[async_method]
-pub async fn list_roots_0<T: ristretto_types::Thread + 'static>(
+pub async fn list_roots_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -334,7 +335,7 @@ pub async fn list_roots_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/WinNTFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z", Any)]
 #[async_method]
-pub async fn rename_0<T: ristretto_types::Thread + 'static>(
+pub async fn rename_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -346,7 +347,7 @@ pub async fn rename_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn set_last_modified_time<T: ristretto_types::Thread + 'static>(
+pub async fn set_last_modified_time<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -358,7 +359,7 @@ pub async fn set_last_modified_time<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn set_last_modified_time_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_last_modified_time_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -370,7 +371,7 @@ pub async fn set_last_modified_time_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn set_permission<T: ristretto_types::Thread + 'static>(
+pub async fn set_permission<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -382,7 +383,7 @@ pub async fn set_permission<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn set_permission_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_permission_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -394,7 +395,7 @@ pub async fn set_permission_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn set_read_only<T: ristretto_types::Thread + 'static>(
+pub async fn set_read_only<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -406,7 +407,7 @@ pub async fn set_read_only<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn set_read_only_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_read_only_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -419,7 +420,6 @@ mod tests {
     use crate::java::io::unixfilesystem::FileAccessMode;
     use ristretto_types::JavaError::RuntimeException;
     use ristretto_types::JavaObject;
-    use ristretto_types::Thread;
     use std::path::Path;
     use tempfile::NamedTempFile;
 

@@ -8,6 +8,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::io::SeekFrom;
@@ -18,7 +19,7 @@ use std::sync::Arc;
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn can_transfer_to_from_overlapped_map_0<T: ristretto_types::Thread + 'static>(
+pub async fn can_transfer_to_from_overlapped_map_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,7 +31,7 @@ pub async fn can_transfer_to_from_overlapped_map_0<T: ristretto_types::Thread + 
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn close_0<T: ristretto_types::Thread + 'static>(
+pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,7 +56,7 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn close_int_fd<T: ristretto_types::Thread + 'static>(
+pub async fn close_int_fd<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,7 +73,7 @@ pub async fn close_int_fd<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_17)
 )]
 #[async_method]
-pub async fn dup_0<T: ristretto_types::Thread + 'static>(
+pub async fn dup_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -103,7 +104,7 @@ pub async fn dup_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn force_0<T: ristretto_types::Thread + 'static>(
+pub async fn force_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -126,7 +127,7 @@ pub async fn force_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/FileDispatcherImpl.init()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -135,7 +136,7 @@ pub async fn init<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/FileDispatcherImpl.init0()V", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
-pub async fn init_0<T: ristretto_types::Thread + 'static>(
+pub async fn init_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -147,7 +148,7 @@ pub async fn init_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn lock_0<T: ristretto_types::Thread + 'static>(
+pub async fn lock_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -171,7 +172,7 @@ pub async fn lock_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn pre_close_0<T: ristretto_types::Thread + 'static>(
+pub async fn pre_close_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -183,7 +184,7 @@ pub async fn pre_close_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn pread_0<T: ristretto_types::Thread + 'static>(
+pub async fn pread_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -218,7 +219,7 @@ pub async fn pread_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn pwrite_0<T: ristretto_types::Thread + 'static>(
+pub async fn pwrite_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -245,7 +246,7 @@ pub async fn pwrite_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn read_0<T: ristretto_types::Thread + 'static>(
+pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -284,7 +285,7 @@ pub async fn read_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn readv_0<T: ristretto_types::Thread + 'static>(
+pub async fn readv_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -345,7 +346,7 @@ pub async fn readv_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn release_0<T: ristretto_types::Thread + 'static>(
+pub async fn release_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -367,7 +368,7 @@ pub async fn release_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn seek_0<T: ristretto_types::Thread + 'static>(
+pub async fn seek_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -396,7 +397,7 @@ pub async fn seek_0<T: ristretto_types::Thread + 'static>(
     Between(JAVA_11, JAVA_17)
 )]
 #[async_method]
-pub async fn set_direct_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_direct_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -408,7 +409,7 @@ pub async fn set_direct_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn size_0<T: ristretto_types::Thread + 'static>(
+pub async fn size_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -427,7 +428,7 @@ pub async fn size_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn transfer_to_0<T: ristretto_types::Thread + 'static>(
+pub async fn transfer_to_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -440,7 +441,7 @@ pub async fn transfer_to_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn truncate_0<T: ristretto_types::Thread + 'static>(
+pub async fn truncate_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -461,7 +462,7 @@ pub async fn truncate_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn write_0<T: ristretto_types::Thread + 'static>(
+pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -490,7 +491,7 @@ pub async fn write_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn writev_0<T: ristretto_types::Thread + 'static>(
+pub async fn writev_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

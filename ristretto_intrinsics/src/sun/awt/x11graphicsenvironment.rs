@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn check_shm_ext<T: ristretto_types::Thread + 'static>(
+pub async fn check_shm_ext<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsEnvironment.checkShmExt()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsEnvironment.checkShmExt()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn check_shm_ext<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_default_screen_num<T: ristretto_types::Thread + 'static>(
+pub async fn get_default_screen_num<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsEnvironment.getDefaultScreenNum()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsEnvironment.getDefaultScreenNum()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -35,11 +43,14 @@ pub async fn get_default_screen_num<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_display_string<T: ristretto_types::Thread + 'static>(
+pub async fn get_display_string<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsEnvironment.getDisplayString()Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsEnvironment.getDisplayString()Ljava/lang/String;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -47,11 +58,14 @@ pub async fn get_display_string<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_num_screens<T: ristretto_types::Thread + 'static>(
+pub async fn get_num_screens<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsEnvironment.getNumScreens()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsEnvironment.getNumScreens()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -59,11 +73,14 @@ pub async fn get_num_screens<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_xinerama_center_point<T: ristretto_types::Thread + 'static>(
+pub async fn get_xinerama_center_point<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsEnvironment.getXineramaCenterPoint()Ljava/awt/Point;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsEnvironment.getXineramaCenterPoint()Ljava/awt/Point;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -71,20 +88,26 @@ pub async fn get_xinerama_center_point<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn init_display<T: ristretto_types::Thread + 'static>(
+pub async fn init_display<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsEnvironment.initDisplay(Z)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsEnvironment.initDisplay(Z)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsEnvironment.initGLX()Z", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn init_glx<T: ristretto_types::Thread + 'static>(
+pub async fn init_glx<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsEnvironment.initGLX()Z")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.awt.X11GraphicsEnvironment.initGLX()Z".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method(
@@ -92,11 +115,14 @@ pub async fn init_glx<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn init_x_render<T: ristretto_types::Thread + 'static>(
+pub async fn init_x_render<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsEnvironment.initXRender(ZZ)Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsEnvironment.initXRender(ZZ)Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -104,11 +130,14 @@ pub async fn init_x_render<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn p_running_xinerama<T: ristretto_types::Thread + 'static>(
+pub async fn p_running_xinerama<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsEnvironment.pRunningXinerama()Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsEnvironment.pRunningXinerama()Z".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -116,79 +145,65 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.checkShmExt()I")]
     async fn test_check_shm_ext() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = check_shm_ext(thread, Parameters::default()).await;
+        let result = check_shm_ext(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.getDefaultScreenNum()I"
-    )]
     async fn test_get_default_screen_num() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_default_screen_num(thread, Parameters::default()).await;
+        let result = get_default_screen_num(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.getDisplayString()Ljava/lang/String;"
-    )]
     async fn test_get_display_string() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_display_string(thread, Parameters::default()).await;
+        let result = get_display_string(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.getNumScreens()I"
-    )]
     async fn test_get_num_screens() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_num_screens(thread, Parameters::default()).await;
+        let result = get_num_screens(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.getXineramaCenterPoint()Ljava/awt/Point;"
-    )]
     async fn test_get_xinerama_center_point() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_xinerama_center_point(thread, Parameters::default()).await;
+        let result = get_xinerama_center_point(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.initDisplay(Z)V"
-    )]
     async fn test_init_display() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_display(thread, Parameters::default()).await;
+        let result = init_display(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.initGLX()Z")]
     async fn test_init_glx() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_glx(thread, Parameters::default()).await;
+        let result = init_glx(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.initXRender(ZZ)Z"
-    )]
     async fn test_init_x_render() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_x_render(thread, Parameters::default()).await;
+        let result = init_x_render(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsEnvironment.pRunningXinerama()Z"
-    )]
     async fn test_p_running_xinerama() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = p_running_xinerama(thread, Parameters::default()).await;
+        let result = p_running_xinerama(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

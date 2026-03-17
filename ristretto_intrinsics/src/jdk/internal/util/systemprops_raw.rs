@@ -7,6 +7,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaObject;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -16,7 +17,7 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn platform_properties<T: ristretto_types::Thread + 'static>(
+pub async fn platform_properties<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -109,7 +110,7 @@ fn push_property(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn vm_properties<T: ristretto_types::Thread + 'static>(
+pub async fn vm_properties<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

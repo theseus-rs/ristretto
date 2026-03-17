@@ -5,43 +5,51 @@ use ristretto_classfile::VersionSpecification::{
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.addressFamily(I)I", GreaterThan(JAVA_11))]
 #[async_method]
-pub async fn address_family<T: ristretto_types::Thread + 'static>(
+pub async fn address_family<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.InheritedChannel.addressFamily(I)I");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.nio.ch.InheritedChannel.addressFamily(I)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.close0(I)V", Any)]
 #[async_method]
-pub async fn close_0<T: ristretto_types::Thread + 'static>(
+pub async fn close_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.InheritedChannel.close0(I)V");
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.nio.ch.InheritedChannel.close0(I)V".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.dup(I)I", Any)]
 #[async_method]
-pub async fn dup<T: ristretto_types::Thread + 'static>(
+pub async fn dup<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.InheritedChannel.dup(I)I");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.InheritedChannel.dup(I)I".to_string()).into())
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.dup2(II)V", Any)]
 #[async_method]
-pub async fn dup_2<T: ristretto_types::Thread + 'static>(
+pub async fn dup_2<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.InheritedChannel.dup2(II)V");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.InheritedChannel.dup2(II)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -49,16 +57,19 @@ pub async fn dup_2<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_11)
 )]
 #[async_method]
-pub async fn inet_peer_address_0<T: ristretto_types::Thread + 'static>(
+pub async fn inet_peer_address_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.InheritedChannel.inetPeerAddress0(I)Ljava/net/InetAddress;");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.nio.ch.InheritedChannel.inetPeerAddress0(I)Ljava/net/InetAddress;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.initIDs()V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -67,20 +78,26 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.isConnected(I)Z", GreaterThan(JAVA_11))]
 #[async_method]
-pub async fn is_connected<T: ristretto_types::Thread + 'static>(
+pub async fn is_connected<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.InheritedChannel.isConnected(I)Z");
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.nio.ch.InheritedChannel.isConnected(I)Z".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.open0(Ljava/lang/String;I)I", Any)]
 #[async_method]
-pub async fn open_0<T: ristretto_types::Thread + 'static>(
+pub async fn open_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.InheritedChannel.open0(Ljava/lang/String;I)I");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.nio.ch.InheritedChannel.open0(Ljava/lang/String;I)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -88,29 +105,38 @@ pub async fn open_0<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn peer_address_0<T: ristretto_types::Thread + 'static>(
+pub async fn peer_address_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.InheritedChannel.peerAddress0(I)Ljava/net/InetAddress;");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.nio.ch.InheritedChannel.peerAddress0(I)Ljava/net/InetAddress;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.peerPort0(I)I", Any)]
 #[async_method]
-pub async fn peer_port_0<T: ristretto_types::Thread + 'static>(
+pub async fn peer_port_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.InheritedChannel.peerPort0(I)I");
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.nio.ch.InheritedChannel.peerPort0(I)I".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("sun/nio/ch/InheritedChannel.soType0(I)I", Any)]
 #[async_method]
-pub async fn so_type_0<T: ristretto_types::Thread + 'static>(
+pub async fn so_type_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.InheritedChannel.soType0(I)I");
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.nio.ch.InheritedChannel.soType0(I)I".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method(
@@ -118,11 +144,14 @@ pub async fn so_type_0<T: ristretto_types::Thread + 'static>(
     GreaterThan(JAVA_11)
 )]
 #[async_method]
-pub async fn unix_peer_address_0<T: ristretto_types::Thread + 'static>(
+pub async fn unix_peer_address_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.InheritedChannel.unixPeerAddress0(I)[B");
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.nio.ch.InheritedChannel.unixPeerAddress0(I)[B".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -130,38 +159,38 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.InheritedChannel.close0(I)V")]
     async fn test_close_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = close_0(thread, Parameters::default()).await;
+        let result = close_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.InheritedChannel.dup(I)I")]
     async fn test_dup() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dup(thread, Parameters::default()).await;
+        let result = dup(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.InheritedChannel.dup2(II)V")]
     async fn test_dup_2() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dup_2(thread, Parameters::default()).await;
+        let result = dup_2(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.InheritedChannel.peerPort0(I)I")]
     async fn test_peer_port_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = peer_port_0(thread, Parameters::default()).await;
+        let result = peer_port_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.InheritedChannel.soType0(I)I")]
     async fn test_so_type_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = so_type_0(thread, Parameters::default()).await;
+        let result = so_type_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -173,52 +202,44 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.InheritedChannel.inetPeerAddress0(I)Ljava/net/InetAddress;"
-    )]
     async fn test_inet_peer_address_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = inet_peer_address_0(thread, Parameters::default()).await;
+        let result = inet_peer_address_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.InheritedChannel.addressFamily(I)I")]
     async fn test_address_family() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = address_family(thread, Parameters::default()).await;
+        let result = address_family(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.InheritedChannel.isConnected(I)Z")]
     async fn test_is_connected() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_connected(thread, Parameters::default()).await;
+        let result = is_connected(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.InheritedChannel.open0(Ljava/lang/String;I)I"
-    )]
     async fn test_open_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = open_0(thread, Parameters::default()).await;
+        let result = open_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.InheritedChannel.peerAddress0(I)Ljava/net/InetAddress;"
-    )]
     async fn test_peer_address_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = peer_address_0(thread, Parameters::default()).await;
+        let result = peer_address_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.nio.ch.InheritedChannel.unixPeerAddress0(I)[B"
-    )]
     async fn test_unix_peer_address_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = unix_peer_address_0(thread, Parameters::default()).await;
+        let result = unix_peer_address_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

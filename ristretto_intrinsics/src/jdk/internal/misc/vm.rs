@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_nano_time_adjustment<T: ristretto_types::Thread + 'static>(
+pub async fn get_nano_time_adjustment<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.VM.getNanoTimeAdjustment(J)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.misc.VM.getNanoTimeAdjustment(J)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,52 +28,55 @@ pub async fn get_nano_time_adjustment<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_runtime_arguments<T: ristretto_types::Thread + 'static>(
+pub async fn get_runtime_arguments<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.VM.getRuntimeArguments()[Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.misc.VM.getRuntimeArguments()[Ljava/lang/String;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.getegid()J", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn getegid<T: ristretto_types::Thread + 'static>(
+pub async fn getegid<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.VM.getegid()J")
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.VM.getegid()J".to_string()).into())
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.geteuid()J", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn geteuid<T: ristretto_types::Thread + 'static>(
+pub async fn geteuid<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.VM.geteuid()J")
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.VM.geteuid()J".to_string()).into())
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.getgid()J", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn getgid<T: ristretto_types::Thread + 'static>(
+pub async fn getgid<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.VM.getgid()J")
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.VM.getgid()J".to_string()).into())
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.getuid()J", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn getuid<T: ristretto_types::Thread + 'static>(
+pub async fn getuid<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.VM.getuid()J")
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.VM.getuid()J".to_string()).into())
 }
 
 #[intrinsic_method("jdk/internal/misc/VM.initialize()V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn initialize<T: ristretto_types::Thread + 'static>(
+pub async fn initialize<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -80,7 +88,7 @@ pub async fn initialize<T: ristretto_types::Thread + 'static>(
     Equal(JAVA_11)
 )]
 #[async_method]
-pub async fn initialize_from_archive<T: ristretto_types::Thread + 'static>(
+pub async fn initialize_from_archive<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -92,7 +100,7 @@ pub async fn initialize_from_archive<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn latest_user_defined_loader_0<T: ristretto_types::Thread + 'static>(
+pub async fn latest_user_defined_loader_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -104,49 +112,45 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.VM.getNanoTimeAdjustment(J)J"
-    )]
     async fn test_get_nano_time_adjustment() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_nano_time_adjustment(thread, Parameters::default()).await;
+        let result = get_nano_time_adjustment(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.VM.getRuntimeArguments()[Ljava/lang/String;"
-    )]
     async fn test_get_runtime_arguments() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_runtime_arguments(thread, Parameters::default()).await;
+        let result = get_runtime_arguments(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.internal.misc.VM.getegid()J")]
     async fn test_getegid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = getegid(thread, Parameters::default()).await;
+        let result = getegid(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.internal.misc.VM.geteuid()J")]
     async fn test_geteuid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = geteuid(thread, Parameters::default()).await;
+        let result = geteuid(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.internal.misc.VM.getgid()J")]
     async fn test_getgid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = getgid(thread, Parameters::default()).await;
+        let result = getgid(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.internal.misc.VM.getuid()J")]
     async fn test_getuid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = getuid(thread, Parameters::default()).await;
+        let result = getuid(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

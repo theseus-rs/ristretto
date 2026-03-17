@@ -3,6 +3,8 @@ use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::sync::Arc;
@@ -13,13 +15,11 @@ use tracing::debug;
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn define_archived_modules<T: ristretto_types::Thread + 'static>(
+pub async fn define_archived_modules<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!(
-        "jdk.internal.misc.CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V"
-    )
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -27,11 +27,14 @@ pub async fn define_archived_modules<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn dump_class_list<T: ristretto_types::Thread + 'static>(
+pub async fn dump_class_list<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.CDS.dumpClassList(Ljava/lang/String;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.misc.CDS.dumpClassList(Ljava/lang/String;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -39,16 +42,19 @@ pub async fn dump_class_list<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn dump_dynamic_archive<T: ristretto_types::Thread + 'static>(
+pub async fn dump_dynamic_archive<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.CDS.dumpDynamicArchive(Ljava/lang/String;)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.misc.CDS.dumpDynamicArchive(Ljava/lang/String;)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("jdk/internal/misc/CDS.getCDSConfigStatus()I", GreaterThan(JAVA_21))]
 #[async_method]
-pub async fn get_cds_config_status<T: ristretto_types::Thread + 'static>(
+pub async fn get_cds_config_status<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -60,7 +66,7 @@ pub async fn get_cds_config_status<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_random_seed_for_dumping<T: ristretto_types::Thread + 'static>(
+pub async fn get_random_seed_for_dumping<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -76,7 +82,7 @@ pub async fn get_random_seed_for_dumping<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn initialize_from_archive<T: ristretto_types::Thread + 'static>(
+pub async fn initialize_from_archive<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -89,7 +95,7 @@ pub async fn initialize_from_archive<T: ristretto_types::Thread + 'static>(
     Between(JAVA_17, JAVA_21)
 )]
 #[async_method]
-pub async fn is_dumping_archive_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_dumping_archive_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -101,7 +107,7 @@ pub async fn is_dumping_archive_0<T: ristretto_types::Thread + 'static>(
     Between(JAVA_17, JAVA_21)
 )]
 #[async_method]
-pub async fn is_dumping_class_list_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_dumping_class_list_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -113,7 +119,7 @@ pub async fn is_dumping_class_list_0<T: ristretto_types::Thread + 'static>(
     Between(JAVA_17, JAVA_21)
 )]
 #[async_method]
-pub async fn is_sharing_enabled_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_sharing_enabled_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -125,7 +131,7 @@ pub async fn is_sharing_enabled_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn log_lambda_form_invoker<T: ristretto_types::Thread + 'static>(
+pub async fn log_lambda_form_invoker<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -139,12 +145,15 @@ pub async fn log_lambda_form_invoker<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn needs_class_init_barrier_0<T: ristretto_types::Thread + 'static>(
+pub async fn needs_class_init_barrier_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let _class = parameters.pop_reference()?;
-    todo!("jdk.internal.misc.CDS.needsClassInitBarrier0(Ljava/lang/Class;)Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.misc.CDS.needsClassInitBarrier0(Ljava/lang/Class;)Z".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -153,30 +162,24 @@ mod tests {
     use ristretto_types::JavaObject;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V"
-    )]
     async fn test_define_archived_modules() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = define_archived_modules(thread, Parameters::default()).await;
+        let result = define_archived_modules(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.CDS.dumpClassList(Ljava/lang/String;)V"
-    )]
     async fn test_dump_class_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dump_class_list(thread, Parameters::default()).await;
+        let result = dump_class_list(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.CDS.dumpDynamicArchive(Ljava/lang/String;)V"
-    )]
     async fn test_dump_dynamic_archive() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dump_dynamic_archive(thread, Parameters::default()).await;
+        let result = dump_dynamic_archive(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -242,12 +245,10 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.misc.CDS.needsClassInitBarrier0(Ljava/lang/Class;)Z"
-    )]
     async fn test_needs_class_init_barrier_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let parameters = Parameters::new(vec![Value::Object(None)]);
-        let _ = needs_class_init_barrier_0(thread, parameters).await;
+        let result = needs_class_init_barrier_0(thread, parameters).await;
+        assert!(result.is_err());
     }
 }

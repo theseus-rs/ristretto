@@ -3,6 +3,8 @@ use ristretto_classfile::{JAVA_17, JAVA_25};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_max_lane_count<T: ristretto_types::Thread + 'static>(
+pub async fn get_max_lane_count<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.vm.vector.VectorSupport.getMaxLaneCount(Ljava/lang/Class;)I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.vm.vector.VectorSupport.getMaxLaneCount(Ljava/lang/Class;)I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn get_max_lane_count<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn register_natives<T: ristretto_types::Thread + 'static>(
+pub async fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.vm.vector.VectorSupport.registerNatives()I")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.vm.vector.VectorSupport.registerNatives()I".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -35,11 +43,14 @@ pub async fn register_natives<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn get_cpu_features<T: ristretto_types::Thread + 'static>(
+pub async fn get_cpu_features<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.vm.vector.VectorSupport.getCPUFeatures()Ljava/lang/String;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk.internal.vm.vector.VectorSupport.getCPUFeatures()Ljava/lang/String;".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -47,29 +58,23 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.vm.vector.VectorSupport.getMaxLaneCount(Ljava/lang/Class;)I"
-    )]
     async fn test_get_max_lane_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_max_lane_count(thread, Parameters::default()).await;
+        let result = get_max_lane_count(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.vm.vector.VectorSupport.registerNatives()I"
-    )]
     async fn test_register_natives() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = register_natives(thread, Parameters::default()).await;
+        let result = register_natives(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: jdk.internal.vm.vector.VectorSupport.getCPUFeatures()Ljava/lang/String;"
-    )]
     async fn test_get_cpu_features() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_cpu_features(thread, Parameters::default()).await;
+        let result = get_cpu_features(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

@@ -4,6 +4,8 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -12,7 +14,7 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn find_signal_0<T: ristretto_types::Thread + 'static>(
+pub async fn find_signal_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -60,7 +62,7 @@ pub async fn find_signal_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("jdk/internal/misc/Signal.handle0(IJ)J", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn handle_0<T: ristretto_types::Thread + 'static>(
+pub async fn handle_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,11 +74,11 @@ pub async fn handle_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("jdk/internal/misc/Signal.raise0(I)V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
-pub async fn raise_0<T: ristretto_types::Thread + 'static>(
+pub async fn raise_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("jdk.internal.misc.Signal.raise0(I)V")
+    Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.Signal.raise0(I)V".to_string()).into())
 }
 
 #[cfg(test)]
@@ -106,9 +108,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: jdk.internal.misc.Signal.raise0(I)V")]
     async fn test_raise_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = raise_0(thread, Parameters::default()).await;
+        let result = raise_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

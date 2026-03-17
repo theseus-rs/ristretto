@@ -6,6 +6,7 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -18,7 +19,7 @@ const ADLER32_MOD: u32 = 65_521;
 /// Returns: updated adler32 value
 #[intrinsic_method("java/util/zip/Adler32.update(II)I", Any)]
 #[async_method]
-pub async fn update<T: ristretto_types::Thread + 'static>(
+pub async fn update<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,7 +39,7 @@ pub async fn update<T: ristretto_types::Thread + 'static>(
 /// Update Adler-32 checksum from a direct byte buffer.
 #[intrinsic_method("java/util/zip/Adler32.updateByteBuffer(IJII)I", Any)]
 #[async_method]
-pub async fn update_byte_buffer<T: ristretto_types::Thread + 'static>(
+pub async fn update_byte_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -52,7 +53,7 @@ pub async fn update_byte_buffer<T: ristretto_types::Thread + 'static>(
 /// Update Adler-32 checksum from a byte array.
 #[intrinsic_method("java/util/zip/Adler32.updateBytes(I[BII)I", Any)]
 #[async_method]
-pub async fn update_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn update_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

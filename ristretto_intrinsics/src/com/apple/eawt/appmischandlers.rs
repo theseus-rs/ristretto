@@ -2,6 +2,8 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -10,11 +12,14 @@ use std::sync::Arc;
     Any
 )]
 #[async_method]
-pub async fn native_disable_sudden_termination<T: ristretto_types::Thread + 'static>(
+pub async fn native_disable_sudden_termination<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.eawt._AppMiscHandlers.nativeDisableSuddenTermination()V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.eawt._AppMiscHandlers.nativeDisableSuddenTermination()V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -22,38 +27,50 @@ pub async fn native_disable_sudden_termination<T: ristretto_types::Thread + 'sta
     Any
 )]
 #[async_method]
-pub async fn native_enable_sudden_termination<T: ristretto_types::Thread + 'static>(
+pub async fn native_enable_sudden_termination<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.eawt._AppMiscHandlers.nativeEnableSuddenTermination()V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.eawt._AppMiscHandlers.nativeEnableSuddenTermination()V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeOpenHelpViewer()V", Any)]
 #[async_method]
-pub async fn native_open_help_viewer<T: ristretto_types::Thread + 'static>(
+pub async fn native_open_help_viewer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.eawt._AppMiscHandlers.nativeOpenHelpViewer()V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.eawt._AppMiscHandlers.nativeOpenHelpViewer()V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeRequestActivation(Z)V", Any)]
 #[async_method]
-pub async fn native_request_activation<T: ristretto_types::Thread + 'static>(
+pub async fn native_request_activation<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.eawt._AppMiscHandlers.nativeRequestActivation(Z)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.eawt._AppMiscHandlers.nativeRequestActivation(Z)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeRequestUserAttention(Z)V", Any)]
 #[async_method]
-pub async fn native_request_user_attention<T: ristretto_types::Thread + 'static>(
+pub async fn native_request_user_attention<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("com.apple.eawt._AppMiscHandlers.nativeRequestUserAttention(Z)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "com.apple.eawt._AppMiscHandlers.nativeRequestUserAttention(Z)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -61,47 +78,37 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.eawt._AppMiscHandlers.nativeDisableSuddenTermination()V"
-    )]
     async fn test_native_disable_sudden_termination() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_disable_sudden_termination(thread, Parameters::default()).await;
+        let result = native_disable_sudden_termination(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.eawt._AppMiscHandlers.nativeEnableSuddenTermination()V"
-    )]
     async fn test_native_enable_sudden_termination() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_enable_sudden_termination(thread, Parameters::default()).await;
+        let result = native_enable_sudden_termination(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.eawt._AppMiscHandlers.nativeOpenHelpViewer()V"
-    )]
     async fn test_native_open_help_viewer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_open_help_viewer(thread, Parameters::default()).await;
+        let result = native_open_help_viewer(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.eawt._AppMiscHandlers.nativeRequestActivation(Z)V"
-    )]
     async fn test_native_request_activation() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_request_activation(thread, Parameters::default()).await;
+        let result = native_request_activation(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: com.apple.eawt._AppMiscHandlers.nativeRequestUserAttention(Z)V"
-    )]
     async fn test_native_request_user_attention() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_request_user_attention(thread, Parameters::default()).await;
+        let result = native_request_user_attention(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

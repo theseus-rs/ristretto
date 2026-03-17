@@ -3,97 +3,102 @@ use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqua
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/KQueue.create()I", GreaterThan(JAVA_8))]
 #[async_method]
-pub async fn create<T: ristretto_types::Thread + 'static>(
+pub async fn create<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.KQueue.create()I");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueue.create()I".to_string()).into())
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.filterOffset()I", Any)]
 #[async_method]
-pub async fn filter_offset<T: ristretto_types::Thread + 'static>(
+pub async fn filter_offset<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.KQueue.filterOffset()I");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueue.filterOffset()I".to_string()).into())
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.flagsOffset()I", Any)]
 #[async_method]
-pub async fn flags_offset<T: ristretto_types::Thread + 'static>(
+pub async fn flags_offset<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.KQueue.flagsOffset()I");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueue.flagsOffset()I".to_string()).into())
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.identOffset()I", Any)]
 #[async_method]
-pub async fn ident_offset<T: ristretto_types::Thread + 'static>(
+pub async fn ident_offset<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.KQueue.identOffset()I");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueue.identOffset()I".to_string()).into())
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.keventPoll(IJI)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn kevent_poll<T: ristretto_types::Thread + 'static>(
+pub async fn kevent_poll<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.KQueue.keventPoll(IJI)I");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueue.keventPoll(IJI)I".to_string()).into())
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.keventRegister(IIII)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn kevent_register<T: ristretto_types::Thread + 'static>(
+pub async fn kevent_register<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.KQueue.keventRegister(IIII)I");
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueue.keventRegister(IIII)I".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.keventSize()I", Any)]
 #[async_method]
-pub async fn kevent_size<T: ristretto_types::Thread + 'static>(
+pub async fn kevent_size<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.KQueue.keventSize()I");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueue.keventSize()I".to_string()).into())
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.kqueue()I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn kqueue<T: ristretto_types::Thread + 'static>(
+pub async fn kqueue<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.KQueue.kqueue()I");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueue.kqueue()I".to_string()).into())
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.poll(IJIJ)I", GreaterThan(JAVA_8))]
 #[async_method]
-pub async fn poll<T: ristretto_types::Thread + 'static>(
+pub async fn poll<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.KQueue.poll(IJIJ)I");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueue.poll(IJIJ)I".to_string()).into())
 }
 
 #[intrinsic_method("sun/nio/ch/KQueue.register(IIII)I", GreaterThan(JAVA_8))]
 #[async_method]
-pub async fn register_0<T: ristretto_types::Thread + 'static>(
+pub async fn register_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.nio.ch.KQueue.register(IIII)I");
+    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueue.register(IIII)I".to_string()).into())
 }
 
 #[cfg(test)]
@@ -101,72 +106,72 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.create()I")]
     async fn test_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create(thread, Parameters::default()).await;
+        let result = create(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.filterOffset()I")]
     async fn test_filter_offset() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = filter_offset(thread, Parameters::default()).await;
+        let result = filter_offset(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.flagsOffset()I")]
     async fn test_flags_offset() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = flags_offset(thread, Parameters::default()).await;
+        let result = flags_offset(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.identOffset()I")]
     async fn test_ident_offset() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = ident_offset(thread, Parameters::default()).await;
+        let result = ident_offset(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.keventPoll(IJI)I")]
     async fn test_kevent_poll() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = kevent_poll(thread, Parameters::default()).await;
+        let result = kevent_poll(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.keventRegister(IIII)I")]
     async fn test_kevent_register() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = kevent_register(thread, Parameters::default()).await;
+        let result = kevent_register(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.keventSize()I")]
     async fn test_kevent_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = kevent_size(thread, Parameters::default()).await;
+        let result = kevent_size(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.kqueue()I")]
     async fn test_kqueue() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = kqueue(thread, Parameters::default()).await;
+        let result = kqueue(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.poll(IJIJ)I")]
     async fn test_poll() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = poll(thread, Parameters::default()).await;
+        let result = poll(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.nio.ch.KQueue.register(IIII)I")]
     async fn test_register_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = register_0(thread, Parameters::default()).await;
+        let result = register_0(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

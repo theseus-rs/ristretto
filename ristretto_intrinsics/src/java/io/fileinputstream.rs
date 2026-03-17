@@ -14,6 +14,7 @@ use ristretto_types::JavaError::RuntimeException;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_types::JavaError::{AccessControlException, IllegalArgumentException};
 use ristretto_types::JavaError::{FileNotFoundException, IoException};
+use ristretto_types::Thread;
 use ristretto_types::VM;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_types::handles::FileHandle;
@@ -33,7 +34,7 @@ use zerocopy::transmute_ref;
 
 #[intrinsic_method("java/io/FileInputStream.available0()I", Any)]
 #[async_method]
-pub async fn available_0<T: ristretto_types::Thread + 'static>(
+pub async fn available_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -90,7 +91,7 @@ pub async fn available_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileInputStream.close0()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn close_0<T: ristretto_types::Thread + 'static>(
+pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,7 +100,7 @@ pub async fn close_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileInputStream.initIDs()V", Any)]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -111,7 +112,7 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn is_regular_file_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_regular_file_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -153,7 +154,7 @@ pub async fn is_regular_file_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileInputStream.length0()J", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn length_0<T: ristretto_types::Thread + 'static>(
+pub async fn length_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -162,7 +163,7 @@ pub async fn length_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileInputStream.open0(Ljava/lang/String;)V", Any)]
 #[async_method]
-pub async fn open_0<T: ristretto_types::Thread + 'static>(
+pub async fn open_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -247,7 +248,7 @@ pub async fn open_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileInputStream.position0()J", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn position_0<T: ristretto_types::Thread + 'static>(
+pub async fn position_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -256,7 +257,7 @@ pub async fn position_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileInputStream.read0()I", Any)]
 #[async_method]
-pub async fn read_0<T: ristretto_types::Thread + 'static>(
+pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -288,7 +289,7 @@ pub async fn read_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileInputStream.readBytes([BII)I", Any)]
 #[async_method]
-pub async fn read_bytes<T: ristretto_types::Thread + 'static>(
+pub async fn read_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -381,7 +382,7 @@ pub async fn read_bytes<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/io/FileInputStream.skip0(J)J", Any)]
 #[async_method]
-pub async fn skip_0<T: ristretto_types::Thread + 'static>(
+pub async fn skip_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn create_back_buffer<T: ristretto_types::Thread + 'static>(
+pub async fn create_back_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsConfig.createBackBuffer(JI)J")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsConfig.createBackBuffer(JI)J".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -23,29 +28,35 @@ pub async fn create_back_buffer<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn destroy_back_buffer<T: ristretto_types::Thread + 'static>(
+pub async fn destroy_back_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsConfig.destroyBackBuffer(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsConfig.destroyBackBuffer(J)V".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsConfig.dispose(J)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn dispose<T: ristretto_types::Thread + 'static>(
+pub async fn dispose<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsConfig.dispose(J)V")
+    Err(JavaError::UnsatisfiedLinkError("sun.awt.X11GraphicsConfig.dispose(J)V".to_string()).into())
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsConfig.getNumColors()I", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn get_num_colors<T: ristretto_types::Thread + 'static>(
+pub async fn get_num_colors<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsConfig.getNumColors()I")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.awt.X11GraphicsConfig.getNumColors()I".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method(
@@ -53,11 +64,14 @@ pub async fn get_num_colors<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_x_resolution<T: ristretto_types::Thread + 'static>(
+pub async fn get_x_resolution<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsConfig.getXResolution(I)D")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.awt.X11GraphicsConfig.getXResolution(I)D".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method(
@@ -65,25 +79,28 @@ pub async fn get_x_resolution<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn get_y_resolution<T: ristretto_types::Thread + 'static>(
+pub async fn get_y_resolution<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsConfig.getYResolution(I)D")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.awt.X11GraphicsConfig.getYResolution(I)D".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsConfig.init(II)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn init<T: ristretto_types::Thread + 'static>(
+pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsConfig.init(II)V")
+    Err(JavaError::UnsatisfiedLinkError("sun.awt.X11GraphicsConfig.init(II)V".to_string()).into())
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsConfig.initIDs()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn init_ids<T: ristretto_types::Thread + 'static>(
+pub async fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,11 +112,14 @@ pub async fn init_ids<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn is_translucency_capable<T: ristretto_types::Thread + 'static>(
+pub async fn is_translucency_capable<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsConfig.isTranslucencyCapable(J)Z")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsConfig.isTranslucencyCapable(J)Z".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -107,11 +127,14 @@ pub async fn is_translucency_capable<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn make_color_model<T: ristretto_types::Thread + 'static>(
+pub async fn make_color_model<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsConfig.makeColorModel()Ljava/awt/image/ColorModel;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsConfig.makeColorModel()Ljava/awt/image/ColorModel;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method(
@@ -119,20 +142,26 @@ pub async fn make_color_model<T: ristretto_types::Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn p_get_bounds<T: ristretto_types::Thread + 'static>(
+pub async fn p_get_bounds<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsConfig.pGetBounds(I)Ljava/awt/Rectangle;")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.awt.X11GraphicsConfig.pGetBounds(I)Ljava/awt/Rectangle;".to_string(),
+    )
+    .into())
 }
 
 #[intrinsic_method("sun/awt/X11GraphicsConfig.swapBuffers(JI)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn swap_buffers<T: ristretto_types::Thread + 'static>(
+pub async fn swap_buffers<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.awt.X11GraphicsConfig.swapBuffers(JI)V")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.awt.X11GraphicsConfig.swapBuffers(JI)V".to_string())
+            .into(),
+    )
 }
 
 #[cfg(test)]
@@ -140,56 +169,52 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsConfig.createBackBuffer(JI)J"
-    )]
     async fn test_create_back_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = create_back_buffer(thread, Parameters::default()).await;
+        let result = create_back_buffer(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsConfig.destroyBackBuffer(J)V"
-    )]
     async fn test_destroy_back_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = destroy_back_buffer(thread, Parameters::default()).await;
+        let result = destroy_back_buffer(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsConfig.dispose(J)V")]
     async fn test_dispose() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = dispose(thread, Parameters::default()).await;
+        let result = dispose(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsConfig.getNumColors()I")]
     async fn test_get_num_colors() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_num_colors(thread, Parameters::default()).await;
+        let result = get_num_colors(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsConfig.getXResolution(I)D")]
     async fn test_get_x_resolution() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_x_resolution(thread, Parameters::default()).await;
+        let result = get_x_resolution(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsConfig.getYResolution(I)D")]
     async fn test_get_y_resolution() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = get_y_resolution(thread, Parameters::default()).await;
+        let result = get_y_resolution(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsConfig.init(II)V")]
     async fn test_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init(thread, Parameters::default()).await;
+        let result = init(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -201,36 +226,30 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsConfig.isTranslucencyCapable(J)Z"
-    )]
     async fn test_is_translucency_capable() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = is_translucency_capable(thread, Parameters::default()).await;
+        let result = is_translucency_capable(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsConfig.makeColorModel()Ljava/awt/image/ColorModel;"
-    )]
     async fn test_make_color_model() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = make_color_model(thread, Parameters::default()).await;
+        let result = make_color_model(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.awt.X11GraphicsConfig.pGetBounds(I)Ljava/awt/Rectangle;"
-    )]
     async fn test_p_get_bounds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = p_get_bounds(thread, Parameters::default()).await;
+        let result = p_get_bounds(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.awt.X11GraphicsConfig.swapBuffers(JI)V")]
     async fn test_swap_buffers() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = swap_buffers(thread, Parameters::default()).await;
+        let result = swap_buffers(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

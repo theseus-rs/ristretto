@@ -3,12 +3,13 @@ use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/ref/Reference.clear0()V", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
-pub async fn clear_0<T: ristretto_types::Thread + 'static>(
+pub async fn clear_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,7 +24,7 @@ pub async fn clear_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_and_clear_reference_pending_list<T: ristretto_types::Thread + 'static>(
+pub async fn get_and_clear_reference_pending_list<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -36,7 +37,7 @@ pub async fn get_and_clear_reference_pending_list<T: ristretto_types::Thread + '
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn has_reference_pending_list<T: ristretto_types::Thread + 'static>(
+pub async fn has_reference_pending_list<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,7 +50,7 @@ pub async fn has_reference_pending_list<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn refers_to_0<T: ristretto_types::Thread + 'static>(
+pub async fn refers_to_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,7 +67,7 @@ pub async fn refers_to_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn wait_for_reference_pending_list<T: ristretto_types::Thread + 'static>(
+pub async fn wait_for_reference_pending_list<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

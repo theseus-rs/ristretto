@@ -3,6 +3,7 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -12,7 +13,7 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn is_preview_enabled<T: ristretto_types::Thread + 'static>(
+pub async fn is_preview_enabled<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {

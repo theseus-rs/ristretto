@@ -7,6 +7,7 @@ use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Frame;
 use ristretto_types::ModuleAccess;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -33,9 +34,7 @@ pub(crate) fn unbox_primitive(values: &mut [Value], index: usize) -> Result<()> 
 ///
 /// Walks up the call stack to find the first frame that is not in the reflection
 /// implementation, and returns that frame's module.
-async fn get_caller_module<T: ristretto_types::Thread + 'static>(
-    thread: &Arc<T>,
-) -> Result<Option<String>> {
+async fn get_caller_module<T: Thread + 'static>(thread: &Arc<T>) -> Result<Option<String>> {
     let frames = thread.frames().await?;
     // Skip reflection frames to find the actual caller
     for frame in frames.iter().rev() {
@@ -62,7 +61,7 @@ async fn get_caller_module<T: ristretto_types::Thread + 'static>(
     Between(JAVA_11, JAVA_21)
 )]
 #[async_method]
-pub async fn new_instance_0<T: ristretto_types::Thread + 'static>(
+pub async fn new_instance_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

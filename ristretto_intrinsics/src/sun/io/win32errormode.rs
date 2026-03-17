@@ -2,12 +2,13 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/io/Win32ErrorMode.setErrorMode(J)J", Any)]
 #[async_method]
-pub async fn set_error_mode<T: ristretto_types::Thread + 'static>(
+pub async fn set_error_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

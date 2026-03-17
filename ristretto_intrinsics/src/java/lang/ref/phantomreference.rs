@@ -4,6 +4,7 @@ use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -12,7 +13,7 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_25)
 )]
 #[async_method]
-pub async fn clear_0<T: ristretto_types::Thread + 'static>(
+pub async fn clear_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,7 +22,7 @@ pub async fn clear_0<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/lang/ref/PhantomReference.refersTo0(Ljava/lang/Object;)Z", Any)]
 #[async_method]
-pub async fn refers_to_0<T: ristretto_types::Thread + 'static>(
+pub async fn refers_to_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {

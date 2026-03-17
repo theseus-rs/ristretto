@@ -7,6 +7,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Frame;
 use ristretto_types::JavaObject;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -15,7 +16,7 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn are_nest_mates<T: ristretto_types::Thread + 'static>(
+pub async fn are_nest_mates<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,7 +39,7 @@ pub async fn are_nest_mates<T: ristretto_types::Thread + 'static>(
 }
 
 /// Returns the nest host class if it exists, otherwise returns the class.
-async fn get_nest_host<T: ristretto_types::Thread + 'static>(
+async fn get_nest_host<T: Thread + 'static>(
     thread: &Arc<T>,
     class: Arc<Class>,
 ) -> Result<Arc<Class>> {
@@ -65,7 +66,7 @@ async fn get_nest_host<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_caller_class<T: ristretto_types::Thread + 'static>(
+pub async fn get_caller_class<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -105,7 +106,7 @@ pub async fn get_caller_class<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_class_access_flags<T: ristretto_types::Thread + 'static>(
+pub async fn get_class_access_flags<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

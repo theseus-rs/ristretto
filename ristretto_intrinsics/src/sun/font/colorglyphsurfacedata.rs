@@ -3,6 +3,8 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,11 +13,14 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn init_ops<T: ristretto_types::Thread + 'static>(
+pub async fn init_ops<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.ColorGlyphSurfaceData.initOps()V")
+    Err(
+        JavaError::UnsatisfiedLinkError("sun.font.ColorGlyphSurfaceData.initOps()V".to_string())
+            .into(),
+    )
 }
 
 #[intrinsic_method(
@@ -23,11 +28,14 @@ pub async fn init_ops<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn set_current_glyph<T: ristretto_types::Thread + 'static>(
+pub async fn set_current_glyph<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    todo!("sun.font.ColorGlyphSurfaceData.setCurrentGlyph(J)V")
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.font.ColorGlyphSurfaceData.setCurrentGlyph(J)V".to_string(),
+    )
+    .into())
 }
 
 #[cfg(test)]
@@ -35,18 +43,16 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[should_panic(expected = "not yet implemented: sun.font.ColorGlyphSurfaceData.initOps()V")]
     async fn test_init_ops() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = init_ops(thread, Parameters::default()).await;
+        let result = init_ops(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]
-    #[should_panic(
-        expected = "not yet implemented: sun.font.ColorGlyphSurfaceData.setCurrentGlyph(J)V"
-    )]
     async fn test_set_current_glyph() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = set_current_glyph(thread, Parameters::default()).await;
+        let result = set_current_glyph(thread, Parameters::default()).await;
+        assert!(result.is_err());
     }
 }

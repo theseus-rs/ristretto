@@ -3,6 +3,7 @@ use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -11,7 +12,7 @@ use std::sync::Arc;
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn get_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_ip_dont_fragment_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -25,7 +26,7 @@ pub async fn get_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_quick_ack_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_quick_ack_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,7 +39,7 @@ pub async fn get_quick_ack_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn get_so_peer_cred_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_so_peer_cred_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -51,7 +52,7 @@ pub async fn get_so_peer_cred_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -64,7 +65,7 @@ pub async fn get_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_tcp_keep_alive_probes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -77,7 +78,7 @@ pub async fn get_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_tcp_keep_alive_time_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -90,7 +91,7 @@ pub async fn get_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn keep_alive_options_supported_0<T: ristretto_types::Thread + 'static>(
+pub async fn keep_alive_options_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,7 +103,7 @@ pub async fn keep_alive_options_supported_0<T: ristretto_types::Thread + 'static
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn quick_ack_supported_0<T: ristretto_types::Thread + 'static>(
+pub async fn quick_ack_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -114,7 +115,7 @@ pub async fn quick_ack_supported_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn set_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_ip_dont_fragment_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -129,7 +130,7 @@ pub async fn set_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_quick_ack_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_quick_ack_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -143,7 +144,7 @@ pub async fn set_quick_ack_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -157,7 +158,7 @@ pub async fn set_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_tcp_keep_alive_probes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -171,7 +172,7 @@ pub async fn set_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn set_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
+pub async fn set_tcp_keep_alive_time_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -185,7 +186,7 @@ pub async fn set_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn incoming_napi_id_supported_0<T: ristretto_types::Thread + 'static>(
+pub async fn incoming_napi_id_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -197,7 +198,7 @@ pub async fn incoming_napi_id_supported_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn get_incoming_napi_id_0<T: ristretto_types::Thread + 'static>(
+pub async fn get_incoming_napi_id_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

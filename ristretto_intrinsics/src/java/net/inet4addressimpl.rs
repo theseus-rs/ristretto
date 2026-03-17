@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 #[intrinsic_method("java/net/Inet4AddressImpl.getHostByAddr([B)Ljava/lang/String;", Any)]
 #[async_method]
-pub async fn get_host_by_addr<T: ristretto_types::Thread + 'static>(
+pub async fn get_host_by_addr<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,7 +49,7 @@ pub async fn get_host_by_addr<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/Inet4AddressImpl.getLocalHostName()Ljava/lang/String;", Any)]
 #[async_method]
-pub async fn get_local_host_name<T: ristretto_types::Thread + 'static>(
+pub async fn get_local_host_name<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -60,7 +60,7 @@ pub async fn get_local_host_name<T: ristretto_types::Thread + 'static>(
 
 #[intrinsic_method("java/net/Inet4AddressImpl.isReachable0([BI[BI)Z", Any)]
 #[async_method]
-pub async fn is_reachable_0<T: ristretto_types::Thread + 'static>(
+pub async fn is_reachable_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -94,7 +94,7 @@ pub async fn is_reachable_0<T: ristretto_types::Thread + 'static>(
     Any
 )]
 #[async_method]
-pub async fn lookup_all_host_addr<T: ristretto_types::Thread + 'static>(
+pub async fn lookup_all_host_addr<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

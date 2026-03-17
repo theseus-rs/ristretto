@@ -8,6 +8,7 @@ use ristretto_macros::intrinsic_method;
 use ristretto_types::Frame;
 use ristretto_types::JavaError::{IllegalAccessException, InaccessibleObjectException};
 use ristretto_types::ModuleAccess;
+use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -16,7 +17,7 @@ use std::sync::Arc;
 ///
 /// Walks up the call stack to find the first frame that is not in the reflection
 /// implementation, and returns that frame's class name, module name and a hash for the module.
-async fn get_caller_info<T: ristretto_types::Thread + 'static>(
+async fn get_caller_info<T: Thread + 'static>(
     thread: &Arc<T>,
 ) -> Result<(String, Option<String>, usize)> {
     let frames = thread.frames().await?;
@@ -49,7 +50,7 @@ async fn get_caller_info<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 #[expect(clippy::too_many_lines)]
-pub async fn invoke_0<T: ristretto_types::Thread + 'static>(
+pub async fn invoke_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

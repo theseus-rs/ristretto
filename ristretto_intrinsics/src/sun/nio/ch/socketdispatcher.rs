@@ -5,6 +5,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::Thread;
 use ristretto_types::native_memory::NativeMemory;
 use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
@@ -69,7 +70,7 @@ fn parse_iovecs(memory: &NativeMemory, address: i64, count: i32) -> Result<Vec<(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-pub async fn read_0<T: ristretto_types::Thread + 'static>(
+pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -168,7 +169,7 @@ pub async fn read_0<T: ristretto_types::Thread + 'static>(
 )]
 #[async_method]
 #[expect(clippy::too_many_lines)]
-pub async fn readv_0<T: ristretto_types::Thread + 'static>(
+pub async fn readv_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -287,7 +288,7 @@ pub async fn readv_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn write_0<T: ristretto_types::Thread + 'static>(
+pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -356,7 +357,7 @@ pub async fn write_0<T: ristretto_types::Thread + 'static>(
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
-pub async fn writev_0<T: ristretto_types::Thread + 'static>(
+pub async fn writev_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
