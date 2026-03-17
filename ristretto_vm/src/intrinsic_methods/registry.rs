@@ -1,6 +1,7 @@
 use crate::intrinsic_methods::intrinsics;
 use crate::thread::Thread;
 use crate::{Parameters, Result};
+use ahash::AHashMap;
 use ristretto_classfile::Version;
 use ristretto_classloader::Value;
 use std::future::Future;
@@ -70,7 +71,7 @@ pub type IntrinsicMethod = fn(
 /// This forms a fully qualified method signature like `java/lang/Object.hashCode()I`.
 #[derive(Debug)]
 pub struct MethodRegistry {
-    methods: &'static phf::Map<&'static str, IntrinsicMethod>,
+    methods: &'static AHashMap<&'static str, IntrinsicMethod>,
 }
 
 impl MethodRegistry {
@@ -90,7 +91,7 @@ impl MethodRegistry {
     #[inline]
     #[must_use]
     pub fn new(version: &Version) -> Self {
-        let methods = match version.major() {
+        let methods: &'static AHashMap<&'static str, IntrinsicMethod> = match version.major() {
             69.. => &intrinsics::JAVA_25,
             65.. => &intrinsics::JAVA_21,
             61.. => &intrinsics::JAVA_17,
@@ -105,7 +106,7 @@ impl MethodRegistry {
     /// This function provides access to the internal map that stores all registered intrinsic
     /// methods. The keys of the map are method signatures, while the values are the
     /// `IntrinsicMethod` function pointers.
-    pub(crate) fn methods(&self) -> &'static phf::Map<&'static str, IntrinsicMethod> {
+    pub(crate) fn methods(&self) -> &'static AHashMap<&'static str, IntrinsicMethod> {
         self.methods
     }
 
@@ -156,7 +157,7 @@ impl MethodRegistry {
             method_signature.push('.');
             method_signature.push_str(method_name);
             method_signature.push_str(method_descriptor);
-            self.methods.get(&method_signature)
+            self.methods.get(method_signature.as_str())
         }
     }
 }

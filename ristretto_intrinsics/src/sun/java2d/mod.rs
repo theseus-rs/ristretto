@@ -4,8 +4,10 @@ pub mod defaultdisposerrecord;
 pub mod disposer;
 pub mod jules;
 pub mod loops;
+#[cfg(target_os = "macos")]
 pub mod metal;
 pub mod opengl;
+#[cfg(target_os = "macos")]
 pub mod osxoffscreensurfacedata;
 pub mod pipe;
 pub mod surfacedata;
