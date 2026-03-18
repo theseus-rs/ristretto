@@ -10,7 +10,6 @@ pub mod nullpointerexception;
 pub mod object;
 pub mod package;
 pub mod processenvironment;
-#[cfg(not(target_family = "wasm"))]
 pub mod processhandleimpl;
 pub mod processhandleimpl_info;
 pub mod processimpl;
