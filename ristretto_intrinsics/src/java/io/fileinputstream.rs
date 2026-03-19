@@ -73,10 +73,17 @@ pub async fn available_0<T: Thread + 'static>(
 
     #[cfg(not(target_family = "wasm"))]
     {
-        current_position = file.stream_position().await?;
-        let end_position = file.seek(SeekFrom::End(0)).await?;
-        available_bytes = end_position.saturating_sub(current_position);
-        position = file.seek(SeekFrom::Start(current_position)).await?;
+        if let Ok(pos) = file.stream_position().await {
+            current_position = pos;
+            let end_position = file.seek(SeekFrom::End(0)).await?;
+            available_bytes = end_position.saturating_sub(current_position);
+            position = file.seek(SeekFrom::Start(current_position)).await?;
+        } else {
+            // Pipes and special files don't support seek; report 0 available bytes.
+            current_position = 0;
+            available_bytes = 0;
+            position = 0;
+        }
     }
 
     if position != current_position {

@@ -34,3 +34,27 @@ pub async fn environ<T: Thread + 'static>(
     let value = Value::new_object(collector, reference);
     Ok(Some(value))
 }
+
+/// Returns the environment block as a single string with null-separated KEY=VALUE pairs,
+/// terminated by double null. This is the Windows-specific native method.
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/lang/ProcessEnvironment.environmentBlock()Ljava/lang/String;",
+    Any
+)]
+#[async_method]
+pub async fn environment_block<T: Thread + 'static>(
+    thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    let mut block = String::new();
+    for (key, value) in std::env::vars() {
+        block.push_str(&key);
+        block.push('=');
+        block.push_str(&value);
+        block.push('\0');
+    }
+    block.push('\0');
+    let string_value = thread.intern_string(&block).await?;
+    Ok(Some(string_value))
+}
