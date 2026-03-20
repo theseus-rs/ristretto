@@ -95,7 +95,7 @@ stacker = "0.1.23"
 syn = "2.0.117"
 sysinfo = "0.38.4"
 sys-locale = "0.3.2"
-tar = "0.4.44"
+tar = "0.4.45"
 tempfile = "3.27.0"
 test-log = "0.2.19"
 thiserror = "2.0.18"
@@ -107,8 +107,8 @@ walkdir = "2.5.0"
 wasm-bindgen-futures = "0.4.64"
 whoami = "2.1.1"
 windows-sys = { version = "0.61.2", features = ["Win32_System_Registry", "Win32_Security"] }
-zerocopy = "0.8.42"
-zip = { version = "8.2.0", default-features = false }
+zerocopy = "0.8.47"
+zip = { version = "8.3.0", default-features = false }
 
 [workspace.metadata.release]
 shared-version = true
