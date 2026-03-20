@@ -1,7 +1,3 @@
-#![expect(clippy::cast_possible_truncation)]
-#![expect(clippy::cast_sign_loss)]
-#![expect(clippy::cast_possible_wrap)]
-
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
@@ -16,6 +12,7 @@ use std::sync::LazyLock;
 static CRC32_TABLE: LazyLock<[u32; 256]> = LazyLock::new(|| {
     let mut table = [0u32; 256];
     for (i, entry) in table.iter_mut().enumerate() {
+        #[expect(clippy::cast_possible_truncation)]
         let mut crc = i as u32;
         for _ in 0..8 {
             if crc & 1 != 0 {
@@ -36,15 +33,19 @@ pub async fn update<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     let b = parameters.pop_int()? as u8;
+    #[expect(clippy::cast_sign_loss)]
     let crc = parameters.pop_int()? as u32;
 
     // CRC-32 is computed with inverted bits
     let crc = crc ^ 0xffff_ffff;
+    #[expect(clippy::cast_possible_truncation)]
     let index = ((crc as u8) ^ b) as usize;
     let crc = CRC32_TABLE[index] ^ (crc >> 8);
     let result = crc ^ 0xffff_ffff;
 
+    #[expect(clippy::cast_possible_wrap)]
     Ok(Some(Value::Int(result as i32)))
 }
 
@@ -91,6 +92,7 @@ pub async fn update_bytes_0<T: Thread + 'static>(
     let len = parameters.pop_int()?;
     let off = parameters.pop_int()?;
     let array_ref = parameters.pop_reference()?;
+    #[expect(clippy::cast_sign_loss)]
     let crc = parameters.pop_int()? as u32;
 
     let Some(array_ref) = array_ref else {
@@ -101,10 +103,13 @@ pub async fn update_bytes_0<T: Thread + 'static>(
     };
 
     if len <= 0 {
+        #[expect(clippy::cast_possible_wrap)]
         return Ok(Some(Value::Int(crc as i32)));
     }
 
+    #[expect(clippy::cast_sign_loss)]
     let off = off as usize;
+    #[expect(clippy::cast_sign_loss)]
     let len = len as usize;
 
     let guard = array_ref.read();
@@ -112,6 +117,7 @@ pub async fn update_bytes_0<T: Thread + 'static>(
 
     if off >= bytes.len() || off + len > bytes.len() {
         return Err(ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
+            #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             index: (off + len) as i32,
             length: bytes.len(),
         }
@@ -121,12 +127,15 @@ pub async fn update_bytes_0<T: Thread + 'static>(
     let mut crc = crc ^ 0xffff_ffff;
 
     for &b in &bytes[off..off + len] {
+        #[expect(clippy::cast_sign_loss)]
         let byte = b as u8;
+        #[expect(clippy::cast_possible_truncation)]
         let index = ((crc as u8) ^ byte) as usize;
         crc = CRC32_TABLE[index] ^ (crc >> 8);
     }
 
     let result = crc ^ 0xffff_ffff;
+    #[expect(clippy::cast_possible_wrap)]
     Ok(Some(Value::Int(result as i32)))
 }
 
@@ -148,7 +157,7 @@ mod tests {
         let crc = result.expect("crc value").as_i32()?;
 
         // Known CRC32 value for single byte 'a' starting from 0
-        assert_eq!(crc, 0xe8b7_be43_u32 as i32);
+        assert_eq!(crc, 0xe8b7_be43_u32.cast_signed());
         Ok(())
     }
 
@@ -168,7 +177,7 @@ mod tests {
         }
 
         // Known CRC32 for "abc"
-        assert_eq!(crc, 0x3524_41c2_u32 as i32);
+        assert_eq!(crc, 0x3524_41c2_u32.cast_signed());
         Ok(())
     }
 
@@ -176,7 +185,7 @@ mod tests {
     async fn test_update_bytes_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let bytes: Vec<i8> = vec![b'a' as i8, b'b' as i8, b'c' as i8];
+        let bytes: Vec<i8> = vec![b'a'.cast_signed(), b'b'.cast_signed(), b'c'.cast_signed()];
         let reference = Reference::from(bytes);
         let vm = thread.vm()?;
         let gc = vm.garbage_collector();
@@ -195,7 +204,7 @@ mod tests {
         let crc = result.expect("crc value").as_i32()?;
 
         // Same as updating byte by byte
-        assert_eq!(crc, 0x3524_41c2_u32 as i32);
+        assert_eq!(crc, 0x3524_41c2_u32.cast_signed());
         Ok(())
     }
 
@@ -203,7 +212,7 @@ mod tests {
     async fn test_update_bytes() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let bytes: Vec<i8> = vec![b'a' as i8, b'b' as i8, b'c' as i8];
+        let bytes: Vec<i8> = vec![b'a'.cast_signed(), b'b'.cast_signed(), b'c'.cast_signed()];
         let reference = Reference::from(bytes);
         let vm = thread.vm()?;
         let gc = vm.garbage_collector();
@@ -221,7 +230,7 @@ mod tests {
         let result = update_bytes(thread, parameters).await?;
         let crc = result.expect("crc value").as_i32()?;
 
-        assert_eq!(crc, 0x3524_41c2_u32 as i32);
+        assert_eq!(crc, 0x3524_41c2_u32.cast_signed());
         Ok(())
     }
 
@@ -229,7 +238,13 @@ mod tests {
     async fn test_update_bytes_with_offset() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let bytes: Vec<i8> = vec![b'x' as i8, b'a' as i8, b'b' as i8, b'c' as i8, b'y' as i8];
+        let bytes: Vec<i8> = vec![
+            b'x'.cast_signed(),
+            b'a'.cast_signed(),
+            b'b'.cast_signed(),
+            b'c'.cast_signed(),
+            b'y'.cast_signed(),
+        ];
         let reference = Reference::from(bytes);
         let vm = thread.vm()?;
         let gc = vm.garbage_collector();
@@ -248,7 +263,7 @@ mod tests {
         let crc = result.expect("crc value").as_i32()?;
 
         // Same as "abc"
-        assert_eq!(crc, 0x3524_41c2_u32 as i32);
+        assert_eq!(crc, 0x3524_41c2_u32.cast_signed());
         Ok(())
     }
 
@@ -270,7 +285,7 @@ mod tests {
     async fn test_update_bytes_zero_length() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
-        let bytes: Vec<i8> = vec![b'a' as i8, b'b' as i8, b'c' as i8];
+        let bytes: Vec<i8> = vec![b'a'.cast_signed(), b'b'.cast_signed(), b'c'.cast_signed()];
         let reference = Reference::from(bytes);
         let vm = thread.vm()?;
         let gc = vm.garbage_collector();

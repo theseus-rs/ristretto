@@ -1,7 +1,3 @@
-#![expect(clippy::cast_possible_truncation)]
-#![expect(clippy::cast_sign_loss)]
-#![expect(clippy::cast_possible_wrap)]
-
 use flate2::{Compress, Compression, FlushCompress, Status};
 use parking_lot::RwLock;
 use ristretto_classfile::JAVA_8;
@@ -62,6 +58,7 @@ fn update_adler32(adler: u32, data: &[u8]) -> u32 {
 fn level_to_compression(level: i32) -> Compression {
     match level {
         0 => Compression::none(),
+        #[expect(clippy::cast_sign_loss)]
         1..=9 => Compression::new(level as u32),
         _ => Compression::default(), // DEFAULT_COMPRESSION = -1 and any other value
     }
@@ -94,7 +91,9 @@ pub async fn deflate_bytes<T: Thread + 'static>(
         return Ok(Some(Value::Int(0)));
     }
 
+    #[expect(clippy::cast_sign_loss)]
     let out_off = out_off as usize;
+    #[expect(clippy::cast_sign_loss)]
     let out_len = out_len as usize;
 
     let deflaters = get_or_init_deflaters();
@@ -133,6 +132,7 @@ pub async fn deflate_bytes<T: Thread + 'static>(
         }
     };
 
+    #[expect(clippy::cast_possible_truncation)]
     let bytes_written = (context.compress.total_out() - before_out) as usize;
     context.output_produced += bytes_written as u64;
 
@@ -145,10 +145,14 @@ pub async fn deflate_bytes<T: Thread + 'static>(
         let mut guard = output_ref.write();
         let output_bytes = guard.as_byte_vec_mut()?;
         for (i, byte) in output_buffer[..bytes_written].iter().enumerate() {
-            output_bytes[out_off + i] = *byte as i8;
+            #[expect(clippy::cast_possible_wrap)]
+            {
+                output_bytes[out_off + i] = *byte as i8;
+            }
         }
     }
 
+    #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     Ok(Some(Value::Int(bytes_written as i32)))
 }
 
@@ -252,9 +256,13 @@ pub async fn deflate_bytes_bytes<T: Thread + 'static>(
         return Ok(Some(Value::Long(0)));
     }
 
+    #[expect(clippy::cast_sign_loss)]
     let in_off = in_off as usize;
+    #[expect(clippy::cast_sign_loss)]
     let in_len = in_len as usize;
+    #[expect(clippy::cast_sign_loss)]
     let out_off = out_off as usize;
+    #[expect(clippy::cast_sign_loss)]
     let out_len = out_len as usize;
 
     // Get input bytes
@@ -265,6 +273,7 @@ pub async fn deflate_bytes_bytes<T: Thread + 'static>(
             Vec::new()
         } else if in_off >= bytes.len() || in_off + in_len > bytes.len() {
             return Err(ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
+                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 index: (in_off + in_len) as i32,
                 length: bytes.len(),
             }
@@ -272,7 +281,11 @@ pub async fn deflate_bytes_bytes<T: Thread + 'static>(
         } else {
             bytes[in_off..in_off + in_len]
                 .iter()
-                .map(|b| *b as u8)
+                .map(|b| {
+                    #[expect(clippy::cast_sign_loss)]
+                    let v = *b as u8;
+                    v
+                })
                 .collect()
         }
     };
@@ -315,13 +328,22 @@ pub async fn deflate_bytes_bytes<T: Thread + 'static>(
         }
     };
 
+    #[expect(clippy::cast_possible_wrap)]
     let bytes_read = (context.compress.total_in() - before_in) as i64;
+    #[expect(clippy::cast_possible_wrap)]
     let bytes_written = (context.compress.total_out() - before_out) as i64;
-    context.input_consumed += bytes_read as u64;
-    context.output_produced += bytes_written as u64;
+    #[expect(clippy::cast_sign_loss)]
+    {
+        context.input_consumed += bytes_read as u64;
+    }
+    #[expect(clippy::cast_sign_loss)]
+    {
+        context.output_produced += bytes_written as u64;
+    }
 
     // Update Adler32 checksum with the input data that was consumed
     if bytes_read > 0 {
+        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let consumed_input = &input_bytes[..bytes_read as usize];
         context.adler32 = update_adler32(context.adler32, consumed_input);
     }
@@ -335,8 +357,12 @@ pub async fn deflate_bytes_bytes<T: Thread + 'static>(
     if bytes_written > 0 {
         let mut guard = output_ref.write();
         let output_bytes = guard.as_byte_vec_mut()?;
+        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         for (i, byte) in output_buffer[..bytes_written as usize].iter().enumerate() {
-            output_bytes[out_off + i] = *byte as i8;
+            #[expect(clippy::cast_possible_wrap)]
+            {
+                output_bytes[out_off + i] = *byte as i8;
+            }
         }
     }
 
@@ -385,6 +411,7 @@ pub async fn get_adler<T: Thread + 'static>(
     };
 
     // Return the running Adler32 checksum of all input data
+    #[expect(clippy::cast_possible_wrap)]
     Ok(Some(Value::Int(context.adler32 as i32)))
 }
 
@@ -486,7 +513,9 @@ pub async fn set_dictionary<T: Thread + 'static>(
         return Ok(None);
     }
 
+    #[expect(clippy::cast_sign_loss)]
     let off = off as usize;
+    #[expect(clippy::cast_sign_loss)]
     let len = len as usize;
 
     // Get dictionary bytes
@@ -495,12 +524,20 @@ pub async fn set_dictionary<T: Thread + 'static>(
         let bytes = guard.as_byte_vec_ref()?;
         if off >= bytes.len() || off + len > bytes.len() {
             return Err(ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
+                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 index: (off + len) as i32,
                 length: bytes.len(),
             }
             .into());
         }
-        bytes[off..off + len].iter().map(|b| *b as u8).collect()
+        bytes[off..off + len]
+            .iter()
+            .map(|b| {
+                #[expect(clippy::cast_sign_loss)]
+                let v = *b as u8;
+                v
+            })
+            .collect()
     };
 
     let deflaters = get_or_init_deflaters();
@@ -670,7 +707,10 @@ mod tests {
         let handle = create_deflater(&thread, 6, false).await?;
 
         // Create input array
-        let input_bytes: Vec<i8> = b"Hello, World!".iter().map(|b| *b as i8).collect();
+        let input_bytes: Vec<i8> = b"Hello, World!"
+            .iter()
+            .map(|b| (*b).cast_signed())
+            .collect();
         let input_ref = Reference::from(input_bytes);
         let vm = thread.vm()?;
         let gc = vm.garbage_collector();
@@ -767,7 +807,7 @@ mod tests {
         let handle = create_deflater(&thread, 6, false).await?;
 
         // Create dictionary array
-        let dict_bytes: Vec<i8> = b"dictionary".iter().map(|b| *b as i8).collect();
+        let dict_bytes: Vec<i8> = b"dictionary".iter().map(|b| (*b).cast_signed()).collect();
         let dict_ref = Reference::from(dict_bytes);
         let vm = thread.vm()?;
         let gc = vm.garbage_collector();
@@ -858,7 +898,7 @@ mod tests {
 
         let handle = create_deflater(&thread, 6, false).await?;
 
-        let input_bytes: Vec<i8> = vec![b'a' as i8];
+        let input_bytes: Vec<i8> = vec![b'a'.cast_signed()];
         let input_ref = Reference::from(input_bytes);
         let vm = thread.vm()?;
         let gc = vm.garbage_collector();

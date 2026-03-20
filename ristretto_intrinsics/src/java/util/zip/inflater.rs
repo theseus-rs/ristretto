@@ -1,7 +1,3 @@
-#![expect(clippy::cast_possible_truncation)]
-#![expect(clippy::cast_sign_loss)]
-#![expect(clippy::cast_possible_wrap)]
-
 use flate2::{Decompress, FlushDecompress};
 use parking_lot::RwLock;
 use ristretto_classfile::JAVA_8;
@@ -123,7 +119,9 @@ pub async fn inflate_bytes<T: Thread + 'static>(
         return Ok(Some(Value::Int(0)));
     }
 
+    #[expect(clippy::cast_sign_loss)]
     let off = off as usize;
+    #[expect(clippy::cast_sign_loss)]
     let len = len as usize;
 
     let state = get_inflater_state(&thread)?;
@@ -150,6 +148,7 @@ pub async fn inflate_bytes<T: Thread + 'static>(
         }
     };
 
+    #[expect(clippy::cast_possible_truncation)]
     let bytes_written = (context.decompress.total_out() - before_out) as usize;
 
     // Copy output to array
@@ -158,16 +157,21 @@ pub async fn inflate_bytes<T: Thread + 'static>(
         let output_bytes = guard.as_byte_vec_mut()?;
         if off >= output_bytes.len() || off + bytes_written > output_bytes.len() {
             return Err(ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
+                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 index: (off + bytes_written) as i32,
                 length: output_bytes.len(),
             }
             .into());
         }
         for (i, byte) in output_buffer[..bytes_written].iter().enumerate() {
-            output_bytes[off + i] = *byte as i8;
+            #[expect(clippy::cast_possible_wrap)]
+            {
+                output_bytes[off + i] = *byte as i8;
+            }
         }
     }
 
+    #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     Ok(Some(Value::Int(bytes_written as i32)))
 }
 
@@ -190,21 +194,25 @@ pub async fn inflate_bytes_bytes<T: Thread + 'static>(
     let handle = parameters.pop_long()?;
 
     // Convert with proper bounds checking
+    #[expect(clippy::cast_sign_loss)]
     let output_len = if output_len_i32 >= 0 {
         output_len_i32 as usize
     } else {
         0
     };
+    #[expect(clippy::cast_sign_loss)]
     let output_off = if output_off_i32 >= 0 {
         output_off_i32 as usize
     } else {
         0
     };
+    #[expect(clippy::cast_sign_loss)]
     let input_len = if input_len_i32 >= 0 {
         input_len_i32 as usize
     } else {
         0
     };
+    #[expect(clippy::cast_sign_loss)]
     let input_off = if input_off_i32 >= 0 {
         input_off_i32 as usize
     } else {
@@ -228,14 +236,20 @@ pub async fn inflate_bytes_bytes<T: Thread + 'static>(
             // Invalid bounds; this shouldn't happen with correct usage
             // Return an error to avoid infinite loop
             return Err(ristretto_types::JavaError::IndexOutOfBoundsException {
+                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 index: input_off as i32,
+                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 size: bytes.len() as i32,
             }
             .into());
         } else {
             bytes[input_off..input_off + input_len]
                 .iter()
-                .map(|b| *b as u8)
+                .map(|b| {
+                    #[expect(clippy::cast_sign_loss)]
+                    let v = *b as u8;
+                    v
+                })
                 .collect()
         }
     };
@@ -274,7 +288,9 @@ pub async fn inflate_bytes_bytes<T: Thread + 'static>(
         }
     };
 
+    #[expect(clippy::cast_possible_wrap)]
     let bytes_read = (context.decompress.total_in() - before_in) as i64;
+    #[expect(clippy::cast_possible_wrap)]
     let bytes_written = (context.decompress.total_out() - before_out) as i64;
 
     // Check if finished (stream end)
@@ -290,8 +306,12 @@ pub async fn inflate_bytes_bytes<T: Thread + 'static>(
         };
         let mut guard = output_ref.write();
         let output_bytes = guard.as_byte_vec_mut()?;
+        #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         for (i, byte) in output_buffer[..bytes_written as usize].iter().enumerate() {
-            output_bytes[output_off + i] = *byte as i8;
+            #[expect(clippy::cast_possible_wrap)]
+            {
+                output_bytes[output_off + i] = *byte as i8;
+            }
         }
     }
 
@@ -379,7 +399,9 @@ pub async fn set_dictionary<T: Thread + 'static>(
     let dict_ref = parameters.pop_reference()?;
     let handle = parameters.pop_long()?;
 
+    #[expect(clippy::cast_sign_loss)]
     let off = if off >= 0 { off as usize } else { 0 };
+    #[expect(clippy::cast_sign_loss)]
     let len = if len >= 0 { len as usize } else { 0 };
 
     // Get dictionary bytes
@@ -396,12 +418,20 @@ pub async fn set_dictionary<T: Thread + 'static>(
             Vec::new()
         } else if off >= bytes.len() || off + len > bytes.len() {
             return Err(ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
+                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
                 index: (off + len) as i32,
                 length: bytes.len(),
             }
             .into());
         } else {
-            bytes[off..off + len].iter().map(|b| *b as u8).collect()
+            bytes[off..off + len]
+                .iter()
+                .map(|b| {
+                    #[expect(clippy::cast_sign_loss)]
+                    let v = *b as u8;
+                    v
+                })
+                .collect()
         }
     };
 
@@ -578,7 +608,7 @@ mod tests {
         let handle = result.expect("handle").as_i64().expect("handle value");
 
         // Create dictionary array
-        let dict_bytes: Vec<i8> = b"dictionary".iter().map(|b| *b as i8).collect();
+        let dict_bytes: Vec<i8> = b"dictionary".iter().map(|b| (*b).cast_signed()).collect();
         let dict_ref = Reference::from(dict_bytes);
         let vm = thread.vm().expect("vm");
         let gc = vm.garbage_collector();
