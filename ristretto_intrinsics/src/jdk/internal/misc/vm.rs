@@ -15,12 +15,21 @@ use std::sync::Arc;
 #[async_method]
 pub async fn get_nano_time_adjustment<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "jdk.internal.misc.VM.getNanoTimeAdjustment(J)J".to_string(),
-    )
-    .into())
+    let offset_secs = parameters.pop_long()?;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| ristretto_types::Error::InternalError(e.to_string()))?;
+    let now_secs = i64::try_from(now.as_secs())
+        .map_err(|e| ristretto_types::Error::InternalError(e.to_string()))?;
+    let nanos_of_sec = i64::from(now.subsec_nanos());
+    // Return nanoseconds adjustment: (now_secs - offset_secs) * 1_000_000_000 + nanos_of_sec
+    let diff_secs = now_secs.saturating_sub(offset_secs);
+    let result = diff_secs
+        .saturating_mul(1_000_000_000)
+        .saturating_add(nanos_of_sec);
+    Ok(Some(Value::Long(result)))
 }
 
 #[intrinsic_method(
@@ -114,8 +123,11 @@ mod tests {
     #[tokio::test]
     async fn test_get_nano_time_adjustment() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_nano_time_adjustment(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let params = Parameters::new(vec![Value::Long(0)]);
+        let result = get_nano_time_adjustment(thread, params).await;
+        assert!(result.is_ok());
+        let value = result.unwrap();
+        assert!(matches!(value, Some(Value::Long(_))));
     }
 
     #[tokio::test]
