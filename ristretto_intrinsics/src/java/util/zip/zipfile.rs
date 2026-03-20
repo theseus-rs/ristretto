@@ -13,48 +13,49 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use zip::ZipArchive;
 
 /// Pre-parsed information about a single ZIP entry.
-struct ZipEntryInfo {
+pub(crate) struct ZipEntryInfo {
     /// Entry name as raw bytes (UTF-8)
-    name_bytes: Vec<u8>,
+    pub(crate) name_bytes: Vec<u8>,
     /// Extra field bytes (may be empty)
-    extra_bytes: Vec<u8>,
+    pub(crate) extra_bytes: Vec<u8>,
     /// Comment bytes (may be empty)
-    comment_bytes: Vec<u8>,
+    pub(crate) comment_bytes: Vec<u8>,
     /// Compressed size
-    compressed_size: u64,
+    pub(crate) compressed_size: u64,
     /// Uncompressed size
-    uncompressed_size: u64,
+    pub(crate) uncompressed_size: u64,
     /// CRC-32
-    crc32: u32,
+    pub(crate) crc32: u32,
     /// Compression method (0 = stored, 8 = deflated)
-    method: u16,
+    pub(crate) method: u16,
     /// General purpose bit flag
-    flag: u16,
+    pub(crate) flag: u16,
     /// Last modification time in DOS format packed as a long.
     /// High 16 bits = date, low 16 bits = time.
-    last_modified_time: i64,
+    pub(crate) last_modified_time: i64,
     /// Raw (decompressed) data of the entry
-    data: Vec<u8>,
+    pub(crate) data: Vec<u8>,
 }
 
 /// Context for an open ZIP file.
-struct ZipFileContext {
+pub(crate) struct ZipFileContext {
     /// Pre-parsed entries
-    entries: Vec<ZipEntryInfo>,
+    pub(crate) entries: Vec<ZipEntryInfo>,
     /// ZIP-level comment bytes
-    comment: Vec<u8>,
+    pub(crate) comment: Vec<u8>,
     /// Whether the file starts with a local file header (LOC signature)
-    starts_with_loc: bool,
+    pub(crate) starts_with_loc: bool,
 }
 
 /// Per-VM storage for `ZipFile` native handles.
-struct ZipFileState {
+pub(crate) struct ZipFileState {
     /// Map from zip handle to `ZipFileContext`
-    zip_handles: RwLock<HashMap<i64, ZipFileContext>>,
-    next_zip_id: AtomicI64,
+    pub(crate) zip_handles: RwLock<HashMap<i64, ZipFileContext>>,
+    pub(crate) next_zip_id: AtomicI64,
     /// Map from entry handle to (`zip_handle`, `entry_index`)
-    entry_handles: RwLock<HashMap<i64, (i64, usize)>>,
-    next_entry_id: AtomicI64,
+    pub(crate) entry_handles: RwLock<HashMap<i64, (i64, usize)>>,
+    /// Next entry handle ID
+    pub(crate) next_entry_id: AtomicI64,
 }
 
 impl ZipFileState {
@@ -68,7 +69,9 @@ impl ZipFileState {
     }
 }
 
-fn get_zip_file_state<T: Thread + 'static>(thread: &Arc<T>) -> Result<Arc<ZipFileState>> {
+pub(crate) fn get_zip_file_state<T: Thread + 'static>(
+    thread: &Arc<T>,
+) -> Result<Arc<ZipFileState>> {
     let vm = thread.vm()?;
     vm.resource_manager().get_or_init(ZipFileState::new)
 }
