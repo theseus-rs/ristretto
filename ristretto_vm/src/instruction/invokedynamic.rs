@@ -20,9 +20,10 @@
 //!    `MethodHandles.Lookup` object, the method name, the method type, and any additional static
 //!    arguments.
 //! 4. **Bootstrap Method Invocation:** The bootstrap method is invoked to produce a `CallSite`
-//!    object, which encapsulates the target method handle for the call site.
-//! 5. **Call Site Caching:** The resolved `CallSite` and its target are cached for efficient
-//!    subsequent invocations.
+//!    object (or a `MethodHandle` for record-related bootstrap methods), which encapsulates the
+//!    target method handle for the call site.
+//! 5. **Call Site Caching:** The resolved `CallSite` (or `MethodHandle`) and its target are cached
+//!    for efficient subsequent invocations.
 //! 6. **Dynamic Invocation:** The target method handle is invoked with the runtime arguments.
 //!
 //! ## Step 1: Instruction Encounter and Validation
@@ -52,14 +53,13 @@
 //!   - Extract UTF8 string for method name
 //!
 //! 2.4 Validate bootstrap method signature matches required pattern:
-//!     (`MethodHandles.Lookup`, `String`, `MethodType`, ...additionalArgs) -> `CallSite`
+//!     (`MethodHandles.Lookup`, `String`, `MethodType`|`TypeDescriptor`, ...additionalArgs) -> `CallSite`|`Object`
 //!
 //! ## Step 3: Argument Preparation
 //!
 //! 3.1 Create MethodHandles.Lookup object:
 //!   - Set lookup class to the class containing the invokedynamic instruction
-//!   - Set access modes based on the calling class's access rights
-//!   - Lookup modes include: MODULE, PACKAGE, PROTECTED, PUBLIC
+//!   - Create a trusted lookup with `allowedModes = -1` (TRUSTED) to bypass all access checks
 //!
 //! 3.2 Create `MethodType` from method descriptor:
 //!   - Parse method descriptor string (e.g., "(Ljava/lang/String;I)V")
@@ -104,44 +104,36 @@
 //!   }
 //!   ```
 //!
-//! 4.3 Validate returned `CallSite`:
+//! 4.3 Validate returned `CallSite` or `MethodHandle`:
 //!   - Must not be null
-//!   - `CallSite.type()` must exactly match the expected `MethodType`
+//!   - For `CallSite`: `CallSite.type()` must exactly match the expected `MethodType`
+//!   - For `MethodHandle`: also valid (used by record-related bootstrap methods)
 //!   - If validation fails, throw `BootstrapMethodError`
 //!
 //! ## Step 5: Call Site Linkage and Caching
 //!
-//! 5.1 Extract target `MethodHandle` from `CallSite`:
-//!     `MethodHandle` target = `callSite.getTarget()`;
+//! 5.1 Extract target `MethodHandle`:
+//!   - If the result is a `CallSite`: `MethodHandle` target = `callSite.getTarget()`;
+//!   - If the result is already a `MethodHandle`: use it directly
 //!
 //! 5.2 Validate target `MethodHandle`:
 //!   - Must not be null
-//!   - `target.type()` must exactly match expected `MethodType`
+//!   - For `CallSite` results: `target.type()` must exactly match expected `MethodType`
 //!   - If validation fails, throw `BootstrapMethodError`
 //!
 //! 5.3 Create call site cache entry:
-//!   - Store `CallSite` object indexed by the invokedynamic instruction location
-//!   - Store target `MethodHandle` for fast access
+//!   - Store result indexed by class name and invokedynamic instruction index
 //!   - Mark call site as resolved
+//!   - Subsequent invocations use the cached result
 //!
-//! 5.4 Set up call site invalidation handling:
-//!   - If `CallSite` is `MutableCallSite` or `VolatileCallSite`:
-//!     - Register for target change notifications
-//!     - Set up invalidation callbacks for JIT compiler
-//!
-//! ## Step 6: Method Invocation Setup
+//! ## Step 6: Method Invocation
 //!
 //! 6.1 Prepare for actual method invocation:
-//!   - Stack frame contains the runtime arguments for the dynamic method
-//!   - Target `MethodHandle` is now available for invocation
+//!   - Parse the method descriptor to determine argument count and types
+//!   - Pop runtime arguments from the operand stack
 //!
-//! 6.2 Configure JIT compilation hints:
-//!   - Mark call site for potential inlining
-//!   - If `ConstantCallSite`, mark target as stable for aggressive optimization
-//!   - If mutable call site, set up guard conditions for speculative inlining
-//!
-//! 6.3 Execute the target method:
-//!   - Use `MethodHandle.invoke()` or `invokeExact()`
+//! 6.2 Execute the target method:
+//!   - Resolve the target via the `MethodHandle`'s `LambdaForm` vmentry or `MemberName` member
 //!   - Pass runtime arguments from the current stack frame
 //!   - Handle return value according to method descriptor
 //!

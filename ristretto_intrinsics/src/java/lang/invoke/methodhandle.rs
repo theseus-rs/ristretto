@@ -116,7 +116,12 @@ async fn interpret_lambda_form<T: Thread + 'static>(
             continue;
         }
 
-        let result = interpret_name(thread.clone(), name, &values).await?;
+        let result = match interpret_name(thread.clone(), name, &values).await {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(e);
+            }
+        };
         values.push(result);
     }
 
@@ -155,8 +160,8 @@ async fn interpret_name<T: Thread + 'static>(
 
     // Resolve each argument; if it's a Name, look it up in values
     let mut resolved_args: Vec<Value> = Vec::with_capacity(args_elements.len());
-    for arg_val in args_elements {
-        let resolved = resolve_lambda_form_argument(&arg_val, values)?;
+    for arg_val in &args_elements {
+        let resolved = resolve_lambda_form_argument(arg_val, values)?;
         resolved_args.push(resolved);
     }
 
@@ -678,6 +683,7 @@ pub async fn call_method_handle_target<T: Thread + 'static>(
         );
         return dispatch_holder_method(thread, &member_name, arguments).await;
     }
+
     debug!("call_method_handle_target: NOT a holder class: {target_class_name}");
 
     let target_class = match thread.class(&target_class_name).await {
@@ -1006,26 +1012,49 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
 
     let method_handle = arguments.remove(0);
 
-    // For constant_* methods, extract the constant from the MethodHandle's bound arguments
-    // These holder methods return a constant value that was bound when the MethodHandle was created
+    // For constant_* methods, extract the constant from the MethodHandle's bound arguments.
+    // When used as a vmentry, the first arg is the carrier BoundMethodHandle whose LambdaForm's
+    // vmentry is constant_* itself - the constant is in its argL0 field. When called from
+    // LambdaForm interpretation with a BoundMethodHandle that IS the constant value (not a
+    // carrier), we must return it as-is. We distinguish by checking whether the BMH's own
+    // form vmentry is a constant_* method.
     if method_name.starts_with("constant_") {
-        let constant_value = {
-            let mh_obj = method_handle.as_object_ref()?;
-            let mh_class = mh_obj.class().name().to_string();
+        let extracted = {
+            if let Ok(mh_obj) = method_handle.as_object_ref() {
+                let mh_class = mh_obj.class().name().to_string();
+                if mh_class.starts_with("java/lang/invoke/BoundMethodHandle") {
+                    // Check if this BMH is a constant-carrier (its own vmentry is constant_*)
+                    let is_constant_carrier = mh_obj
+                        .value("form")
+                        .ok()
+                        .filter(|f| !f.is_null())
+                        .and_then(|form| {
+                            let form_ref = form.as_object_ref().ok()?;
+                            let vmentry =
+                                form_ref.value("vmentry").ok().filter(|v| !v.is_null())?;
+                            let vmentry_ref = vmentry.as_object_ref().ok()?;
+                            let name = vmentry_ref.value("name").ok()?.as_string().ok()?;
+                            Some(name.starts_with("constant_"))
+                        })
+                        .unwrap_or(false);
 
-            // For BoundMethodHandle, the constant is in argL0
-            if mh_class.starts_with("java/lang/invoke/BoundMethodHandle") {
-                mh_obj.value("argL0").ok()
+                    if is_constant_carrier {
+                        mh_obj.value("argL0").ok()
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
             } else {
                 None
             }
         };
 
-        if let Some(value) = constant_value {
+        if let Some(value) = extracted {
             return Ok(value);
         }
-
-        // Fallback; just return the first argument
+        // Not a constant-carrier BMH; the value IS the constant
         return Ok(method_handle);
     }
 
@@ -1128,13 +1157,18 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
         input_args.extend(arguments.clone());
 
         match interpret_lambda_form(thread.clone(), &form, input_args).await {
-            Ok(result) => return Ok(result),
+            Ok(result) => {
+                return Ok(result);
+            }
             Err(e) => {
-                debug!(
-                    "dispatch_holder_method: LambdaForm interpretation failed for {}: {:?}",
-                    method_name, e
-                );
-                // Fall through to direct dispatch
+                // If the error is a Java exception (Throwable), propagate it rather than
+                // falling through to the fallback path. The fallback can corrupt arguments
+                // by prepending BMH carrier objects as method arguments. Only VM internal
+                // errors should trigger the fallback dispatch.
+                if matches!(e, ristretto_types::Error::Throwable(_)) {
+                    return Err(e);
+                }
+                // Fall through to direct dispatch for VM internal errors only
             }
         }
     }
@@ -1158,11 +1192,35 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
     let (target_member, mut bound_args) =
         extract_target_and_bound_args(&method_handle, depth, MAX_DEPTH)?;
 
-    // Prepend bound arguments to the call arguments
-    bound_args.append(&mut arguments);
+    // For NewInvokeSpecial, the bound args from the MH chain are internal state (carriers,
+    // constant values), NOT constructor arguments. The original `arguments` already contain
+    // the actual constructor parameters. Only prepend bound args for other reference kinds
+    // where they represent real method arguments (e.g., a bound receiver for InvokeVirtual).
+    let is_new_invoke_special = target_member
+        .as_object_ref()
+        .ok()
+        .and_then(|m| m.value("flags").ok())
+        .and_then(|f| f.as_i32().ok())
+        .is_some_and(|flags| {
+            let ref_kind = (flags
+                & (MemberNameFlags::REFERENCE_KIND_MASK.bits()
+                    << MemberNameFlags::REFERENCE_KIND_SHIFT.bits()))
+                >> MemberNameFlags::REFERENCE_KIND_SHIFT.bits();
+            u8::try_from(ref_kind)
+                .ok()
+                .and_then(|v| ReferenceKind::try_from(v).ok())
+                .is_some_and(|k| matches!(k, ReferenceKind::NewInvokeSpecial))
+        });
 
-    // Dispatch to the target
-    call_method_handle_target(thread, &target_member, bound_args).await
+    if is_new_invoke_special {
+        // For constructors, only pass the actual arguments
+        call_method_handle_target(thread, &target_member, arguments).await
+    } else {
+        // For other reference kinds, prepend bound arguments
+        bound_args.append(&mut arguments);
+        let result = call_method_handle_target(thread, &target_member, bound_args).await?;
+        Ok(result)
+    }
 }
 
 /// Extract the ultimate target `MemberName` and all bound arguments from a `MethodHandle` chain.
