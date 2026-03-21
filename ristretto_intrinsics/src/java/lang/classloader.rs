@@ -400,7 +400,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_find_builtin_lib() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         let mut parameters = Parameters::default();
         parameters.push("foo".to_object(&thread).await?);
         let result = find_builtin_lib(thread.clone(), parameters).await?;
@@ -432,7 +432,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_resolve_class_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = resolve_class_0(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())

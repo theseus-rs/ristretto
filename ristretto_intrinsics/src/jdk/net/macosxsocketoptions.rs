@@ -222,7 +222,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_tcpkeep_alive_probes_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_tcpkeep_alive_probes_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -273,7 +273,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_tcpkeep_alive_probes_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = set_tcpkeep_alive_probes_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

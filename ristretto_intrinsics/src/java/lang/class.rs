@@ -1714,7 +1714,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_component_type() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let class = thread.class("[I").await?;
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
@@ -1728,7 +1728,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_component_type_null() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let class = thread.class("java.lang.String").await?;
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
@@ -1739,7 +1739,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_constant_pool_0() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (vm, thread) = crate::test::java8_thread().await?;
         // This test only applies to Java 8 where sun.reflect.ConstantPool exists
         if vm.java_major_version() > JAVA_8.java() {
             // sun.reflect.ConstantPool doesn't exist in Java 9+
@@ -2027,7 +2027,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_name_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let object = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
         let result = get_name_0(thread, parameters).await?;
@@ -2350,7 +2350,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_signers() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let result = get_signers(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
@@ -2446,7 +2446,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_array() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let class = thread.class("[I").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
@@ -2457,7 +2457,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_array_false() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let class = thread.class("int").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
@@ -2547,7 +2547,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_interface() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let class = thread.class("java.lang.Cloneable").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
@@ -2558,7 +2558,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_interface_false() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let class = thread.class("java.lang.Integer").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
@@ -2569,7 +2569,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_primitive() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let class = thread.class("int").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
@@ -2580,7 +2580,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_primitive_false() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let class = thread.class("java.lang.Integer").await?;
         let object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![object]);
@@ -2646,7 +2646,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_signers() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let result = set_signers(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())

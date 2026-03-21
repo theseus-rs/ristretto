@@ -210,7 +210,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_bytes() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         let bytes: Vec<i8> = vec![b'a'.cast_signed(), b'b'.cast_signed(), b'c'.cast_signed()];
         let reference = Reference::from(bytes);
@@ -236,7 +236,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_bytes_with_offset() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         let bytes: Vec<i8> = vec![
             b'x'.cast_signed(),
@@ -269,7 +269,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_bytes_null_array() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
 
         let mut parameters = Parameters::default();
         parameters.push_int(0); // crc
@@ -283,7 +283,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_bytes_zero_length() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         let bytes: Vec<i8> = vec![b'a'.cast_signed(), b'b'.cast_signed(), b'c'.cast_signed()];
         let reference = Reference::from(bytes);
@@ -310,7 +310,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_byte_buffer() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         // Test with zero length; should return unchanged crc
         let mut parameters = Parameters::default();

@@ -44,14 +44,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_sign_digest() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = sign_digest(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_verify_signed_digest() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = verify_signed_digest(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

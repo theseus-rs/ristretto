@@ -103,14 +103,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_cgl_context_on_surface() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = create_cgl_context_on_surface(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_destroy_cgl_context() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = destroy_cgl_context(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -124,14 +124,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_make_cgl_context_current_on_surface() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = make_cgl_context_current_on_surface(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_validate() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = validate(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

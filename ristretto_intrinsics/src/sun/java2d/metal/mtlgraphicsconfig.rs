@@ -81,7 +81,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_metal_framework_available() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result = is_metal_framework_available(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

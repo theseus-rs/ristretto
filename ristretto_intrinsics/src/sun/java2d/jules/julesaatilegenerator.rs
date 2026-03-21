@@ -44,14 +44,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_free_pixman_img_ptr() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = free_pixman_img_ptr(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_rasterize_trapezoids_native() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = rasterize_trapezoids_native(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

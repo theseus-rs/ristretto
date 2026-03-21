@@ -51,7 +51,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_domain_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = local_domain_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

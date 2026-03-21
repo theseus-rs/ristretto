@@ -223,7 +223,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lookup_all_host_addr_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = lookup_all_host_addr_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

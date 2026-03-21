@@ -229,7 +229,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_catches_and_send_quit_to() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java25_thread().await.expect("thread");
         let parameters = Parameters::new(vec![Value::Int(1234), Value::from(true)]);
         let result = check_catches_and_send_quit_to(thread, parameters).await;
         assert!(result.is_err());

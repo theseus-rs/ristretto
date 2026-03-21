@@ -111,7 +111,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ns_to_java_char_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = ns_to_java_char_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -132,7 +132,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ns_to_java_key_modifiers() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = ns_to_java_key_modifiers(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -146,7 +146,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ns_to_java_mouse_modifiers() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = ns_to_java_mouse_modifiers(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

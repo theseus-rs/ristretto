@@ -41,14 +41,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_native_blit() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_blit(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_update_bitmask() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = update_bitmask(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

@@ -84,7 +84,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_command() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = command(thread, Parameters::default()).await?;
         assert_eq!(Some(Value::Object(None)), result);
         Ok(())
@@ -92,7 +92,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_compile_class() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = compile_class(thread, Parameters::default()).await?;
         assert_eq!(Some(Value::from(false)), result);
         Ok(())
@@ -100,7 +100,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_compile_classes() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = compile_classes(thread, Parameters::default()).await?;
         assert_eq!(Some(Value::from(false)), result);
         Ok(())
@@ -108,7 +108,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_disable() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = disable(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
@@ -116,7 +116,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_enable() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = enable(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
@@ -124,7 +124,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_initialize() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = initialize(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
@@ -132,7 +132,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())

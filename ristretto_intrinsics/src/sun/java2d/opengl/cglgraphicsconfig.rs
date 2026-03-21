@@ -87,7 +87,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_cgl_config_info_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_cgl_config_info_1(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

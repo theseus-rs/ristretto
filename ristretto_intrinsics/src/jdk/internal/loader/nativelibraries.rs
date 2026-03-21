@@ -103,14 +103,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_find_entry_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = find_entry_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_load_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let result = load_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
@@ -126,7 +126,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_unload_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let name = "foo".to_object(&thread).await?;
         let parameters = Parameters::new(vec![name, Value::Int(1), Value::Long(2)]);
         let result = unload_0(thread, parameters).await?;

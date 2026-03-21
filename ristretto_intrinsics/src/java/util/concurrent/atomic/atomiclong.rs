@@ -39,7 +39,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_vm_supports_cs_8() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let value = vm_supports_cs_8(thread, Parameters::default()).await?;
         assert_eq!(value, Some(Value::from(true)));
         Ok(())

@@ -236,7 +236,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_stack_trace_depth_empty() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (vm, thread) = crate::test::java8_thread().await?;
         let throwable = create_throwable_with_stack_trace(&vm, &thread, 0).await?;
         let mut parameters = Parameters::default();
         parameters.push(throwable);
@@ -247,7 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_stack_trace_depth_with_elements() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (vm, thread) = crate::test::java8_thread().await?;
         let throwable = create_throwable_with_stack_trace(&vm, &thread, 3).await?;
         let mut parameters = Parameters::default();
         parameters.push(throwable);
@@ -258,7 +258,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_stack_trace_depth_null_stack_trace() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (vm, thread) = crate::test::java8_thread().await?;
         let throwable_class = thread.class("java/lang/Throwable").await?;
         let stack_element_array_class = thread.class("[Ljava/lang/StackTraceElement;").await?;
         // Create a throwable with a null stackTrace (empty array wrapped)
@@ -277,7 +277,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_stack_trace_element_first() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (vm, thread) = crate::test::java8_thread().await?;
         let throwable = create_throwable_with_stack_trace(&vm, &thread, 3).await?;
         let mut parameters = Parameters::default();
         parameters.push(throwable);
@@ -295,7 +295,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_stack_trace_element_middle() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (vm, thread) = crate::test::java8_thread().await?;
         let throwable = create_throwable_with_stack_trace(&vm, &thread, 3).await?;
         let mut parameters = Parameters::default();
         parameters.push(throwable);
@@ -313,7 +313,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_stack_trace_element_last() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (vm, thread) = crate::test::java8_thread().await?;
         let throwable = create_throwable_with_stack_trace(&vm, &thread, 3).await?;
         let mut parameters = Parameters::default();
         parameters.push(throwable);
@@ -331,7 +331,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_stack_trace_element_out_of_bounds() {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (vm, thread) = crate::test::java8_thread().await.expect("thread");
         let throwable = create_throwable_with_stack_trace(&vm, &thread, 2)
             .await
             .expect("throwable");

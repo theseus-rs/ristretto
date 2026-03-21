@@ -140,7 +140,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ensure_materialized_for_stack_walk() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let result = ensure_materialized_for_stack_walk(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -148,21 +148,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_inherited_access_control_context() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result = get_inherited_access_control_context(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_protection_domain() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result = get_protection_domain(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_stack_access_control_context() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let result = get_stack_access_control_context(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())

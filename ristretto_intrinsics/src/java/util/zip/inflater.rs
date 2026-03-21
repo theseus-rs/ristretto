@@ -532,7 +532,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_inflate_bytes() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         // Create an inflater
         let mut parameters = Parameters::default();

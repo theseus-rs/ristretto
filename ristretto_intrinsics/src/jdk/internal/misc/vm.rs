@@ -175,7 +175,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_initialize_from_archive() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         let value = initialize_from_archive(thread, Parameters::default()).await?;
         assert_eq!(value, None);
         Ok(())

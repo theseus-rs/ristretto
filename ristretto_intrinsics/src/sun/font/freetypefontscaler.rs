@@ -310,7 +310,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_layout_table_cache_native() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = get_layout_table_cache_native(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

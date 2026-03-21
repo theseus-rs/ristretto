@@ -60,7 +60,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_lookup_cache_for_class_loader() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_lookup_cache_for_class_loader(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
@@ -68,7 +68,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_lookup_cache_urls() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_lookup_cache_urls(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
@@ -76,7 +76,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_known_to_not_exist_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = known_to_not_exist_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())

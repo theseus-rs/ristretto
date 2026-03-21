@@ -126,7 +126,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_notify_jvmti_hide_frames() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let result = notify_jvmti_hide_frames(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())

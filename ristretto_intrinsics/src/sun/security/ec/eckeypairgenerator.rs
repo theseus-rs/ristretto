@@ -45,14 +45,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_ec_key_pair() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = generate_ec_key_pair(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_is_curve_supported() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = is_curve_supported(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

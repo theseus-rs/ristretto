@@ -238,7 +238,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ieee_remainder() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(1.0), Value::Double(2.0)]);
         let result = ieee_remainder(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
@@ -247,7 +247,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_acos() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
         let result = acos(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(std::f64::consts::FRAC_PI_2)));
@@ -256,7 +256,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_asin() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
         let result = asin(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
@@ -265,7 +265,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_atan() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
         let result = atan(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
@@ -274,7 +274,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_atan_2() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0), Value::Double(0.0)]);
         let result = atan_2(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
@@ -283,7 +283,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cbrt() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(8.0)]);
         let result = cbrt(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(2.0)));
@@ -292,7 +292,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cos() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
         let result = cos(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
@@ -301,7 +301,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cosh() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
         let result = cosh(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
@@ -310,7 +310,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_exp() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
         let result = exp(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
@@ -319,7 +319,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_expm_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
         let result = expm_1(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
@@ -328,7 +328,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hypot() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(3.0), Value::Double(4.0)]);
         let result = hypot(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(5.0)));
@@ -337,7 +337,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_log() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(std::f64::consts::E)]);
         let result = log(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
@@ -346,7 +346,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_log_10() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(100.0)]);
         let result = log_10(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(2.0)));
@@ -355,7 +355,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_log_1p() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(std::f64::consts::E - 1.0)]);
         let result = log_1p(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(1.0)));
@@ -364,7 +364,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_pow() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(2.0), Value::Double(3.0)]);
         let result = pow(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(8.0)));
@@ -373,7 +373,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sin() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
         let result = sin(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
@@ -382,7 +382,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sinh() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
         let result = sinh(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
@@ -391,7 +391,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqrt() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(4.0)]);
         let result = sqrt(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(2.0)));
@@ -400,7 +400,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tan() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
         let result = tan(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));
@@ -409,7 +409,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_tanh() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let parameters = Parameters::new(vec![Value::Double(0.0)]);
         let result = tanh(thread, parameters).await?;
         assert_eq!(result, Some(Value::Double(0.0)));

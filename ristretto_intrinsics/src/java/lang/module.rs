@@ -336,7 +336,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_define_module_0_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         // Push parameters in reverse order: module, isOpen, version, location, packages
         parameters.push(Value::Object(None)); // module

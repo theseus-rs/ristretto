@@ -61,7 +61,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_define_class_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         // Test with empty parameters should return an error (not panic)
         let result = define_class_0(thread, Parameters::default()).await;
         assert!(result.is_err());

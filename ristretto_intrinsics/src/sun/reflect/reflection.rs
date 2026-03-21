@@ -79,7 +79,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_caller_class_1_null() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let parameters = Parameters::default();
         let result = get_caller_class_1(thread, parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
@@ -88,7 +88,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_caller_class_2() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         parameters.push_int(42); // Depth parameter
         let result = get_caller_class_2(thread, parameters).await?;
@@ -98,7 +98,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_class_access_flags() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let class = thread.class("java.lang.String").await?;
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);

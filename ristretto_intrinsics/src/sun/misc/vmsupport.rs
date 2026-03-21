@@ -45,14 +45,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_vm_temporary_directory() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = get_vm_temporary_directory(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_init_agent_properties() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = init_agent_properties(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

@@ -73,7 +73,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_current() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = current(thread, Parameters::default()).await;
         assert!(result.is_ok());
     }
@@ -87,7 +87,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_signal() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let _ = signal(thread, Parameters::default()).await;
     }
 

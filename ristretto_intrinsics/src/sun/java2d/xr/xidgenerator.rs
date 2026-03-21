@@ -26,7 +26,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_buffer_x_ids() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = buffer_x_ids(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

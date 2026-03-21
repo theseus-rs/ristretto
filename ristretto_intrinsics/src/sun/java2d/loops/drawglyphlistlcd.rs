@@ -38,7 +38,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_draw_glyph_list_lcd_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = draw_glyph_list_lcd_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

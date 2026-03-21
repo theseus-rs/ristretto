@@ -96,7 +96,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_doubles_to_bytes() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let source = Value::new_object(
             thread.vm()?.garbage_collector(),
@@ -123,7 +123,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_floats_to_bytes() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let source = Value::new_object(
             thread.vm()?.garbage_collector(),

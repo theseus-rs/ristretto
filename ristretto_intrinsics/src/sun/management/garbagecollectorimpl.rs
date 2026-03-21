@@ -64,7 +64,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_notification_enabled() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = set_notification_enabled(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

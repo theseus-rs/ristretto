@@ -29,7 +29,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_native_blit_bg() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_blit_bg(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

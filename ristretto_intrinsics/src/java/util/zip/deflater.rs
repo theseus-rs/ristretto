@@ -694,7 +694,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
@@ -767,7 +767,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_deflate_bytes() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         let handle = create_deflater(&thread, 6, false).await?;
 

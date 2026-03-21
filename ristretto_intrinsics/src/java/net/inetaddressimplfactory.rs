@@ -25,7 +25,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_ipv_6_supported() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let result = is_ipv_6_supported(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
