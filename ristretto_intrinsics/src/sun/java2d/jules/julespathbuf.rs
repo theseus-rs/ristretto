@@ -45,14 +45,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_tesselate_fill_native() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = tesselate_fill_native(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_tesselate_stroke_native() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = tesselate_stroke_native(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

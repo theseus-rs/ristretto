@@ -329,140 +329,140 @@ mod tests {
 
     #[tokio::test]
     async fn test_native_finish_painting() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_finish_painting(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_set_range_value() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_set_range_value(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_start_painting() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_start_painting(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_get_gtk_setting() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_get_gtk_setting(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_arrow() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_arrow(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_background() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_background(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_box() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_box(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_box_gap() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_box_gap(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_check() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_check(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_expander() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_expander(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_extension() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_extension(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_flat_box() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_flat_box(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_focus() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_focus(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_handle() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_handle(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_hline() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_hline(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_option() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_option(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_shadow() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_shadow(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_slider() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_slider(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_paint_vline() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_paint_vline(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_switch_theme() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_switch_theme(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

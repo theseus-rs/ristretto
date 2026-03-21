@@ -96,7 +96,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_find() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         let result = find(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Long(1)));
         Ok(())
@@ -104,7 +104,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_find_entry() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         let result = find_entry(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Long(2)));
         Ok(())
@@ -112,7 +112,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (vm, thread) = crate::test::java11_thread().await?;
         let mut parameters = Parameters::default();
 
         // Create a mock java.lang.ClassLoader$NativeLibrary class
@@ -172,7 +172,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         let result = load_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(true)));
         Ok(())
@@ -180,7 +180,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_unload_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         let result = unload_0(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -188,7 +188,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_unload_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         let result = unload_1(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())

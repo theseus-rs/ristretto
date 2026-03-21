@@ -43,7 +43,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_find_signal() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = find_signal(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
@@ -51,7 +51,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = handle_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
@@ -59,7 +59,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_raise_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = raise_0(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())

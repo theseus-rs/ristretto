@@ -41,14 +41,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_native_convert_and_release() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_convert_and_release(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_invoke_non_public() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_invoke_non_public(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

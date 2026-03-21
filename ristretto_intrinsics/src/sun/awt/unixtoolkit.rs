@@ -107,56 +107,56 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_gtk() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = check_gtk(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_gtk_version() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = get_gtk_version(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_gtk_check_version_impl() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = gtk_check_version_impl(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_load_gtk() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = load_gtk(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_load_gtk_icon() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = load_gtk_icon(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_load_stock_icon() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = load_stock_icon(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_native_sync() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_sync(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_unload_gtk() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = unload_gtk(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

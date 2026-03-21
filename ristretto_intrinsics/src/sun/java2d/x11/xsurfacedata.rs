@@ -122,56 +122,56 @@ mod tests {
 
     #[tokio::test]
     async fn test_x_create_gc() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = x_create_gc(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_x_reset_clip() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = x_reset_clip(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_x_set_clip() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = x_set_clip(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_x_set_graphics_exposures() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = x_set_graphics_exposures(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_flush_native_surface() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = flush_native_surface(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_init_ops() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = init_ops(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_is_drawable_valid() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = is_drawable_valid(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_set_invalid() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = set_invalid(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

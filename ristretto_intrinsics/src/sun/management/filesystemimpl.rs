@@ -29,7 +29,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_access_user_only_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = is_access_user_only_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

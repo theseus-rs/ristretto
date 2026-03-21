@@ -181,7 +181,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_finalization_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = run_finalization_0(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -189,14 +189,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_trace_instructions() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = trace_instructions(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_trace_method_calls() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = trace_method_calls(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

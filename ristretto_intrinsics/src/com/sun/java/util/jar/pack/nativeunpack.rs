@@ -118,35 +118,35 @@ mod tests {
 
     #[tokio::test]
     async fn test_finish() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = finish(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_next_file() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_next_file(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_option() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_option(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_unused_input() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_unused_input(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -154,14 +154,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_option() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = set_option(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_start() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = start(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

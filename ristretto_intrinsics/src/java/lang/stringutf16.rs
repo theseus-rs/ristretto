@@ -23,7 +23,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_big_endian() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let value = is_big_endian(thread, Parameters::default()).await?;
         let big_endian = cfg!(target_endian = "big");
         assert_eq!(value, Some(Value::from(big_endian)));

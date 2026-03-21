@@ -38,14 +38,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_interrupt() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = interrupt(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_poll_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = poll_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

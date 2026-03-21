@@ -1343,7 +1343,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_connect_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = connect_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1364,7 +1364,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_disconnect_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = disconnect_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1385,7 +1385,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_free_mechanism() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result = free_mechanism(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

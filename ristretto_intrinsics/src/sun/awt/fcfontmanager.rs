@@ -29,7 +29,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_font_path_native() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = get_font_path_native(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

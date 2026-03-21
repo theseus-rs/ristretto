@@ -169,7 +169,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_attach() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let mut parameters = Parameters::default();
         parameters.push(Value::Object(None)); // this
         parameters.push(Value::Object(None)); // user

@@ -44,14 +44,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_stderr() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = to_stderr(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_to_stdout() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = to_stdout(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

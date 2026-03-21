@@ -50,21 +50,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_fill_gc_attribute_info() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = fill_gc_attribute_info(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_last_gc_info_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = get_last_gc_info_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_num_gc_ext_attributes() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = get_num_gc_ext_attributes(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

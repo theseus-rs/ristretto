@@ -210,14 +210,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_color_convert_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = color_convert_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_color_convert_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = color_convert_1(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -231,7 +231,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_create_native_transform_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = create_native_transform_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -245,14 +245,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_free_transform() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = free_transform(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_profile_data_native_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_profile_data_native_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -266,14 +266,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_profile_id() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = get_profile_id(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_profile_size_native() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_profile_size_native(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -287,7 +287,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_init_lcms() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = init_lcms(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

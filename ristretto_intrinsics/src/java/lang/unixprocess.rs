@@ -84,7 +84,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_destroy_process_nonexistent() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         parameters.push_int(999_999);
         parameters.push_bool(false);
@@ -95,7 +95,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_destroy_process_force() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         parameters.push_int(999_999);
         parameters.push_bool(true);
@@ -106,14 +106,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_fork_and_exec_empty_params() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = fork_and_exec(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_fork_and_exec() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let gc = GarbageCollector::new();
 
         let (file_bytes, arg_bytes, argc) = if cfg!(target_os = "windows") {
@@ -157,7 +157,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_init() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = init(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -165,7 +165,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_wait_for_process_exit_nonexistent() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         parameters.push_int(999_999);
         let result = wait_for_process_exit(thread, parameters).await?;
@@ -175,7 +175,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_wait_for_process_exit_completed_process() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
 
         let noop_command = if cfg!(target_os = "windows") {
             "cmd.exe"

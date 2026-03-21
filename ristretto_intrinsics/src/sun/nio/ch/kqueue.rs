@@ -135,14 +135,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_kevent_poll() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = kevent_poll(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_kevent_register() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = kevent_register(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -156,7 +156,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_kqueue() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = kqueue(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

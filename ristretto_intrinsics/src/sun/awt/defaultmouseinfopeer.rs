@@ -44,14 +44,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_fill_point_with_coords() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = fill_point_with_coords(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_is_window_under_mouse() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = is_window_under_mouse(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

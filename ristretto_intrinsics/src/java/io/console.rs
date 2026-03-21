@@ -57,7 +57,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_echo() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         parameters.push_bool(true);
         let enabled = echo(thread, parameters)
@@ -70,7 +70,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_encoding() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let value = encoding(thread, Parameters::default())
             .await?
             .expect("encoding");

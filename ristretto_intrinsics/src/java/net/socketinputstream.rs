@@ -192,7 +192,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_init() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let result = init(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
@@ -200,7 +200,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_socket_read_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = socket_read_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

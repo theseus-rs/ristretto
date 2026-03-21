@@ -857,6 +857,7 @@ pub async fn starts_with_loc<T: Thread + 'static>(
 mod tests {
     use super::*;
     use ristretto_classloader::Reference;
+    use ristretto_types::JavaObject;
     use std::io::Write;
 
     /// Helper to create a test zip file with known content and return its path.
@@ -915,23 +916,13 @@ mod tests {
         thread: &Arc<T>,
         s: &str,
     ) -> Result<Option<ristretto_gc::Gc<RwLock<Reference>>>> {
-        let vm = thread.vm()?;
-        let gc = vm.garbage_collector();
-        let class_loader = vm.class_loader();
-        let class_loader = class_loader.read().await;
-        let string_class = class_loader
-            .load(ristretto_classfile::JavaStr::try_from_str(
-                "java/lang/String",
-            )?)
-            .await?;
-        let mut object = ristretto_classloader::Object::new(string_class)?;
-        let string_bytes: Vec<i8> = s.as_bytes().iter().map(|&b| b.cast_signed()).collect();
-        let byte_ref = Reference::from(string_bytes);
-        let byte_value = Value::new_object(gc, byte_ref);
-        object.set_value("value", byte_value)?;
-        let reference = Reference::from(object);
-        let gc_ref = ristretto_gc::Gc::new(gc, RwLock::new(reference)).clone_gc();
-        Ok(Some(gc_ref))
+        let value = s.to_object(thread.as_ref()).await?;
+        let Value::Object(gc_ref) = value else {
+            return Err(ristretto_types::Error::InternalError(
+                "Expected object value from to_object".to_string(),
+            ));
+        };
+        Ok(gc_ref)
     }
 
     /// Helper: create a byte array reference (for entry name lookups).
@@ -961,7 +952,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
@@ -969,7 +960,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_open_and_close() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
 
         let handle = open_zip(&thread, &path).await?;
@@ -984,7 +975,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_open_null_name() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         let mut parameters = Parameters::default();
         parameters.push_reference(None);
@@ -999,7 +990,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_open_nonexistent_file() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         let string_ref = create_string_ref(&thread, "/nonexistent/path/to/file.zip").await?;
         let mut parameters = Parameters::default();
@@ -1015,7 +1006,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_total() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1034,7 +1025,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_entry_and_metadata() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1115,7 +1106,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_entry_not_found() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1140,7 +1131,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_entry_null_name() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1160,7 +1151,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_entry_with_add_slash() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1187,7 +1178,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_compressed_entry_metadata() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1227,7 +1218,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_next_entry() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1255,7 +1246,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_manifest_num() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1273,7 +1264,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_comment_bytes_empty() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1292,7 +1283,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_zip_message() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         let mut parameters = Parameters::default();
         parameters.push_long(1);
@@ -1303,7 +1294,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_entry_data() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1370,7 +1361,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_partial() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1424,7 +1415,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_null_output() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         let mut parameters = Parameters::default();
         parameters.push_long(1); // handle
@@ -1441,7 +1432,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_zero_length() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1483,7 +1474,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_starts_with_loc() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1501,7 +1492,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_free_entry() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1534,7 +1525,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_close_removes_entry_handles() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1560,7 +1551,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_entry_bytes_all_types() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1613,7 +1604,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_total_closed() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1632,7 +1623,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_compressed_entry() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1689,7 +1680,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_open_classes_jar() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         let cargo_manifest = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let jar_path = cargo_manifest
@@ -1716,7 +1707,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_comment_bytes_closed() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let (_temp, path) = create_test_zip();
         let handle = open_zip(&thread, &path).await?;
 
@@ -1733,7 +1724,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_manifest_num_no_manifest() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
 
         // Create a zip without a manifest
         let temp = tempfile::NamedTempFile::new().expect("failed to create temp file");

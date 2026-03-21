@@ -22,7 +22,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_max_object_inspection_age() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = max_object_inspection_age(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())

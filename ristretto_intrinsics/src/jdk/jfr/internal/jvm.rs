@@ -1208,7 +1208,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_emit_old_object_samples_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = emit_old_object_samples_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1243,7 +1243,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_flush_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = flush_1(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1285,7 +1285,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_class_id_non_intrinsic() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_class_id_non_intrinsic(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1306,7 +1306,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_event_writer_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = get_event_writer_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1320,7 +1320,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_handler() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = get_handler(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1334,7 +1334,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_stack_trace_id_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result = get_stack_trace_id_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1481,7 +1481,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_new_event_writer_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = new_event_writer_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1580,7 +1580,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_handler() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = set_handler(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1594,7 +1594,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_method_sampling_interval() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = set_method_sampling_interval(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1629,7 +1629,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_sample_threads() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = set_sample_threads(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

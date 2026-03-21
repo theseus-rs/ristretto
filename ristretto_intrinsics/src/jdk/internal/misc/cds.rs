@@ -210,7 +210,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_dumping_archive_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let result = is_dumping_archive_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
@@ -218,7 +218,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_dumping_class_list_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let result = is_dumping_class_list_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
@@ -226,7 +226,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_sharing_enabled_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let result = is_sharing_enabled_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())

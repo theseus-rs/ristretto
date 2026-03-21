@@ -783,7 +783,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_count_stack_frames() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         let result = count_stack_frames(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
@@ -879,7 +879,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_interrupted() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
+        let (vm, thread) = crate::test::java11_thread().await?;
         let thread_instance = create_thread(&vm).await?;
         let mut parameters = Parameters::default();
         parameters.push(thread_instance.clone());
@@ -916,7 +916,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_resume_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = resume_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -956,7 +956,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sleep() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let millis = Value::Long(250);
         let start = std::time::Instant::now();
         let result = sleep(thread, Parameters::new(vec![millis])).await?;
@@ -968,7 +968,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sleep_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let millis = Value::Long(250);
         let start = std::time::Instant::now();
         let result = sleep_0(thread, Parameters::new(vec![millis])).await?;
@@ -992,21 +992,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_stop_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = stop_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_suspend_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = suspend_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_yield() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let result = r#yield(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())

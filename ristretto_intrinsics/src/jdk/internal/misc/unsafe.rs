@@ -2244,7 +2244,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_address_size_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         let result = address_size_0(thread, Parameters::default()).await?;
         let pointer_size = i32::try_from(REFERENCE_SIZE)?;
         assert_eq!(result, Some(Value::Int(pointer_size)));
@@ -2348,7 +2348,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_compare_and_exchange_object() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         // Test with an object that has fields
         let class = thread.class("java/lang/Object").await?;
         let object = Object::new(class)?;
@@ -2423,7 +2423,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_define_anonymous_class_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         // Create class file bytes from Minimum.class
         let class_bytes = include_bytes!("../../../../../classes/Minimum.class");
         let bytes: &[i8] = zerocopy::transmute_ref!(class_bytes.as_slice());
@@ -2559,7 +2559,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_big_endian_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         let result = is_big_endian_0(thread, Parameters::default()).await?;
         let big_endian = cfg!(target_endian = "big");
         assert_eq!(result, Some(Value::from(big_endian)));
@@ -2568,7 +2568,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_fence() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let result = load_fence(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -2590,7 +2590,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_page_size() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let value = page_size(thread, Parameters::default())
             .await?
             .expect("page_size");
@@ -2715,7 +2715,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_store_fence() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let result = store_fence(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -2734,7 +2734,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_unaligned_access_0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java11_thread().await?;
         let result = unaligned_access_0(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())

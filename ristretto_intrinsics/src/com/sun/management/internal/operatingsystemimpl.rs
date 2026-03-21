@@ -298,7 +298,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_free_physical_memory_size_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_free_physical_memory_size_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -375,7 +375,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_system_cpu_load_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_system_cpu_load_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -389,7 +389,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_total_physical_memory_size_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_total_physical_memory_size_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

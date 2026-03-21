@@ -984,17 +984,17 @@ mod tests {
     use ristretto_types::JavaObject;
 
     /// Creates a java.lang.reflect.Field for testing purposes.
+    /// Java 8 Field constructor: (Class, String, Class, int, int, String, byte[])
     async fn create_field<T: Thread + 'static>(thread: &T) -> Result<Value> {
         let string_class = thread.class("java/lang/String").await?;
         let string_class_object = string_class.to_object(thread).await?;
         let descriptor =
-            "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IZILjava/lang/String;[B";
+            "Ljava/lang/Class;Ljava/lang/String;Ljava/lang/Class;IILjava/lang/String;[B";
         let parameters = vec![
             string_class_object,              // Declaring Class
             "value".to_object(thread).await?, // Field name
             Value::Object(None),              // Type
             Value::Int(0),                    // Modifiers
-            Value::from(false),               // Trusted Final
             Value::Int(0),                    // Slot
             "[B".to_object(thread).await?,    // Signature
             Value::Object(None),              // Annotations
@@ -1006,7 +1006,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_address_size() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = address_size(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(8)));
         Ok(())
@@ -1014,7 +1014,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_allocate_instance() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let class = thread.class("java.lang.Object").await?;
         let class_object = class.to_object(&thread).await?;
         let mut parameters = Parameters::default();
@@ -1026,7 +1026,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_allocate_memory() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         parameters.push(Value::Long(100)); // bytes to allocate
         let result = allocate_memory(thread, parameters).await?;
@@ -1040,7 +1040,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_array_base_offset() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = array_base_offset(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
@@ -1048,7 +1048,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_array_index_scale() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let tests = vec![
             ("[Z", BOOLEAN_SIZE),
             ("[B", BYTE_SIZE),
@@ -1077,7 +1077,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ensure_class_initialized() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let string_class = thread.class("java/lang/String").await?;
         let class_object = string_class.to_object(&thread).await?;
         let mut parameters = Parameters::default();
@@ -1089,7 +1089,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_free_memory() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         // First allocate memory, then free it
         let mut alloc_params = Parameters::default();
         alloc_params.push(Value::Long(64));
@@ -1104,7 +1104,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_full_fence() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = full_fence(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -1112,7 +1112,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_address() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_address(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
@@ -1120,7 +1120,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_byte_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_byte_1(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(8i8)));
         Ok(())
@@ -1128,7 +1128,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_char_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_char_1(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(0 as char)));
         Ok(())
@@ -1136,7 +1136,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_double_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_double_1(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(0.0f64)));
         Ok(())
@@ -1144,7 +1144,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_float_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_float_1(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(0.0f32)));
         Ok(())
@@ -1152,7 +1152,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_int_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_int_1(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(0i32)));
         Ok(())
@@ -1160,7 +1160,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_long_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_long_1(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
@@ -1168,7 +1168,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_short_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_short_1(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::from(0i16)));
         Ok(())
@@ -1176,7 +1176,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_fence() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = load_fence(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -1184,21 +1184,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_monitor_enter() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = monitor_enter(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_monitor_exit() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = monitor_exit(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_object_field_offset() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let field = create_field(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(field);
@@ -1212,7 +1212,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_page_size() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let value = page_size(thread, Parameters::default())
             .await?
             .expect("page_size");
@@ -1235,7 +1235,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_address() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = put_address(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -1243,7 +1243,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_byte_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = put_byte_1(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -1251,7 +1251,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_char_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = put_char_1(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -1259,7 +1259,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_double_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = put_double_1(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -1267,7 +1267,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_float_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = put_float_1(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -1275,7 +1275,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_int_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = put_int_1(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -1283,7 +1283,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_long_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = put_long_1(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -1291,28 +1291,28 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_ordered_int() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = put_ordered_int(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_put_ordered_long() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = put_ordered_long(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_put_ordered_object() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = put_ordered_object(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_put_short_1() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = put_short_1(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -1320,7 +1320,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = register_natives(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -1328,7 +1328,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_should_be_initialized() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         // Create a Class object for testing; the class is already initialized
         let string_class = thread.class("java/lang/String").await?;
         let class_object = string_class.to_object(&thread).await?;
@@ -1342,7 +1342,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_static_field_base() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let field = create_field(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(field);
@@ -1358,7 +1358,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_static_field_offset() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let field = create_field(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(field);
@@ -1372,7 +1372,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_store_fence() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result =
             crate::jdk::internal::misc::r#unsafe::store_fence(thread, Parameters::default())
                 .await?;
@@ -1382,7 +1382,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_try_monitor_enter() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = try_monitor_enter(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

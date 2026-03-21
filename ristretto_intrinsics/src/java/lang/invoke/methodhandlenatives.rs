@@ -1937,7 +1937,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clear_call_site_context() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         parameters.push(Value::Object(None));
         let result = clear_call_site_context(thread, parameters).await?;
@@ -2013,7 +2013,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_constant() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         // GC_COUNT_MAX constant index
         parameters.push(Value::Int(0));
@@ -2053,7 +2053,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_members() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let (vm, thread) = crate::test::java17_thread().await.expect("thread");
         let collector = vm.garbage_collector();
         let mut parameters = Parameters::default();
 
@@ -2315,7 +2315,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_resolve_0_field() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let member_name_class = thread.class("java.lang.invoke.MemberName").await?;
         let mut member_name = Object::new(member_name_class)?;

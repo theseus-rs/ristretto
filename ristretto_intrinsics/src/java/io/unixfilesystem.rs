@@ -850,7 +850,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_access() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let (_file, file_object) = create_file(&thread, "check_access").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
@@ -880,7 +880,7 @@ mod tests {
         if Path::new(path_name).exists() {
             tokio::fs::remove_dir_all(path_name).await?;
         }
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let path_object: Value = path_name.to_object(&thread).await?;
         let file_object = thread
             .object("java.io.File", "Ljava/lang/String;", &[path_object])
@@ -925,7 +925,7 @@ mod tests {
             tokio::fs::remove_file(path_name).await?;
         }
 
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let path_object: Value = path_name.to_object(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(path_object);
@@ -990,7 +990,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_last_modified_time() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let start_time = i64::try_from(
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -1030,7 +1030,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_length() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let (_file, file_object) = create_file(&thread, "get_length").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
@@ -1067,7 +1067,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_space() -> Result<()> {
         for space_type in [0, 1, 2, 3] {
-            let (_vm, thread) = crate::test::thread().await?;
+            let (_vm, thread) = crate::test::java17_thread().await?;
             let (_file, file_object) = create_file(&thread, "get_space").await?;
             let mut parameters = Parameters::default();
             parameters.push(file_object);
@@ -1114,7 +1114,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_list() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let path_object: Value = ".".to_object(&thread).await?;
         let file_object = thread
             .object("java.io.File", "Ljava/lang/String;", &[path_object])
@@ -1168,7 +1168,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_last_modified_time() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let (_file, file_object) = create_file(&thread, "set_last_modified_time").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
@@ -1198,7 +1198,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_permission() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let (_file, file_object) = create_file(&thread, "set_permission").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
@@ -1230,7 +1230,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_read_only() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java17_thread().await?;
         let (_file, file_object) = create_file(&thread, "set_read_only").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);

@@ -66,14 +66,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_n_get_extra_libraries() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = n_get_extra_libraries(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_n_get_library_for_feature() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = n_get_library_for_feature(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -89,7 +89,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_n_is_signed_8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = n_is_signed_8(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

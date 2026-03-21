@@ -112,7 +112,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mouse_event_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = mouse_event_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -133,7 +133,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_native_get_screen_pixels_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = native_get_screen_pixels_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

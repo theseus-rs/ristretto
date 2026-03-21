@@ -53,7 +53,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_init_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result = init_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -67,7 +67,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java21_thread().await?;
         let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())

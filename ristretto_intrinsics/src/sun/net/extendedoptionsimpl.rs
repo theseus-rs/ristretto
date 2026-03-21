@@ -147,7 +147,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_flow_supported() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = flow_supported(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
@@ -155,7 +155,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_flow_option() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_flow_option(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -163,7 +163,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_tcp_keep_alive_intvl() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_tcp_keep_alive_intvl(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(75)));
         Ok(())
@@ -171,7 +171,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_tcp_keep_alive_probes() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_tcp_keep_alive_probes(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(9)));
         Ok(())
@@ -179,7 +179,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_tcp_keep_alive_time() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = get_tcp_keep_alive_time(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(7200)));
         Ok(())
@@ -187,7 +187,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_init() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = init(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -195,7 +195,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_keep_alive_options_supported() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = keep_alive_options_supported(thread, Parameters::default()).await?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
@@ -203,7 +203,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_flow_option() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = set_flow_option(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -211,7 +211,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_tcp_keep_alive_intvl() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = set_tcp_keep_alive_intvl(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -219,7 +219,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_tcp_keep_alive_probes() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = set_tcp_keep_alive_probes(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -227,7 +227,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_set_tcp_keep_alive_time() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = set_tcp_keep_alive_time(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())

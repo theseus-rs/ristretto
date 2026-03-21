@@ -26,7 +26,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cleanup_close_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = cleanup_close_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

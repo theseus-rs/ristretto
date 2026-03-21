@@ -297,7 +297,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fetch_stack_frames_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let params = Parameters::new(vec![
             Value::Object(None), // this
             Value::Long(0),      // mode

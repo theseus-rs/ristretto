@@ -38,7 +38,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_initialize() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = initialize(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
@@ -46,7 +46,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_latest_user_defined_loader_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = latest_user_defined_loader_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

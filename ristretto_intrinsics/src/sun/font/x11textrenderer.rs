@@ -30,7 +30,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_do_draw_glyph_list() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = do_draw_glyph_list(thread, Parameters::default()).await;
         assert!(result.is_err());
     }

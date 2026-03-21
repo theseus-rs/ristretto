@@ -1169,7 +1169,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_access_0_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result = access_0_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1196,7 +1196,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_close() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let _ = close(thread, Parameters::default()).await;
     }
 
@@ -1222,14 +1222,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_exists_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = exists_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_fchmod() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = fchmod(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1243,7 +1243,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fchown() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = fchown(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1257,14 +1257,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_fclose_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = fclose_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_fclose_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = fclose_1(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1292,14 +1292,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_fopen_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = fopen_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_fpathconf() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = fpathconf(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1320,7 +1320,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fstat() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let _ = fstat(thread, Parameters::default()).await;
     }
 
@@ -1339,7 +1339,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_futimens() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = futimens(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1353,14 +1353,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_futimes() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = futimes(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_futimes_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result = futimes_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1446,7 +1446,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_lutimes_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result = lutimes_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1487,14 +1487,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_pathconf_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = pathconf_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_read() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let _ = read(thread, Parameters::default()).await;
     }
 
@@ -1506,7 +1506,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_readdir() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = readdir(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1588,7 +1588,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_stat_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = stat_1(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1630,7 +1630,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_utimes_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result = utimes_0(thread, Parameters::default()).await;
         assert!(result.is_err());
     }
@@ -1644,7 +1644,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_write() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let _ = write(thread, Parameters::default()).await;
     }
 

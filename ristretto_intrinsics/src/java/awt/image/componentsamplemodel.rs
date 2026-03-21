@@ -25,7 +25,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+        let (_vm, thread) = crate::test::java8_thread().await?;
         let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())

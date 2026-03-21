@@ -100,7 +100,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bytes_to_doubles() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let bytes: Vec<i8> = vec![64, 8, 0, 0, 0, 0, 0, 0, 64, 69, 0, 0, 0, 0, 0, 0];
         let source = Value::new_object(thread.vm()?.garbage_collector(), Reference::from(bytes));
@@ -122,7 +122,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bytes_to_floats() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         let bytes: Vec<i8> = vec![64, 64, 0, 0, 66, 40, 0, 0];
         let source = Value::new_object(thread.vm()?.garbage_collector(), Reference::from(bytes));

@@ -25,7 +25,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_init_native() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = init_native(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
