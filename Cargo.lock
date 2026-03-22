@@ -446,7 +446,7 @@ checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
 name = "class_loader"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ristretto_classloader",
  "tokio",
@@ -845,7 +845,7 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
 name = "embedded_jvm"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ristretto_vm",
  "tokio",
@@ -2314,7 +2314,7 @@ dependencies = [
 
 [[package]]
 name = "read_class"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "anyhow",
  "ristretto_classfile",
@@ -2493,7 +2493,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classfile"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ahash 0.8.12",
  "anyhow",
@@ -2514,7 +2514,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_classloader"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ahash 0.8.12",
  "bytemuck",
@@ -2541,7 +2541,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_cli"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ahash 0.8.12",
  "anstyle",
@@ -2556,7 +2556,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_gc"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "criterion",
  "dashmap",
@@ -2570,7 +2570,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_intrinsics"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ahash 0.8.12",
  "async-recursion",
@@ -2608,7 +2608,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_jimage"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "byteorder",
  "memchr",
@@ -2619,7 +2619,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_jit"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ahash 0.8.12",
  "cranelift",
@@ -2631,7 +2631,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_macros"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ahash 0.8.12",
  "proc-macro2",
@@ -2643,7 +2643,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_pom"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "quick-xml",
  "serde",
@@ -2653,7 +2653,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_types"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ahash 0.8.12",
  "bitflags 2.11.0",
@@ -2671,7 +2671,7 @@ dependencies = [
 
 [[package]]
 name = "ristretto_vm"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ahash 0.8.12",
  "async-recursion",
@@ -2744,7 +2744,7 @@ dependencies = [
 
 [[package]]
 name = "runtime_class_loader"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ristretto_classloader",
  "tokio",
@@ -4409,7 +4409,7 @@ dependencies = [
 
 [[package]]
 name = "write_class"
-version = "0.29.0"
+version = "0.30.0"
 dependencies = [
  "ristretto_classfile",
 ]
