@@ -134,8 +134,11 @@ pub async fn vm_properties<T: Thread + 'static>(
     );
     system_properties.insert("java.vm.version".to_string(), vm_version.to_string());
     system_properties.insert("java.vm.name".to_string(), vm_name);
+    system_properties
+        .entry("jdk.module.illegal.native.access".to_string())
+        .or_insert_with(|| "allow".to_string());
 
-    let mut properties: Vec<Value> = Vec::new();
+    let mut properties: Vec<Value> = Vec::with_capacity(system_properties.len());
     for (key, value) in system_properties {
         let key = key.to_object(&thread).await?;
         let value = value.to_object(&thread).await?;
