@@ -121,5 +121,9 @@ lto = true
 opt-level = 3
 panic = "abort"
 
+[profile.release-tests]
+inherits = "release"
+debug-assertions = true
+
 [profile.dist]
 inherits = "release"
