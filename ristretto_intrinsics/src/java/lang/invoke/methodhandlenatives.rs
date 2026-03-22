@@ -1508,6 +1508,41 @@ async fn resolve_method<T: Thread + 'static>(
                         )));
                     }
                 }
+                Err(_) if class.is_interface() => {
+                    // Per JVMS §5.4.3.4, when resolving an interface method, also
+                    // check java.lang.Object for public instance methods (e.g.,
+                    // toString, hashCode, equals). Then check parent interfaces.
+                    let object_class = thread.class("java/lang/Object").await?;
+                    if let Ok(m) = object_class.try_get_method(&method_name, &method_descriptor) {
+                        (object_class, m, false)
+                    } else {
+                        // Search super-interfaces for the method
+                        let mut found = None;
+                        let mut ifaces_to_check: Vec<Arc<Class>> = class.interfaces()?;
+                        let mut visited = std::collections::HashSet::new();
+                        visited.insert(class.name().to_string());
+                        while let Some(iface) = ifaces_to_check.pop() {
+                            if !visited.insert(iface.name().to_string()) {
+                                continue;
+                            }
+                            if let Ok(m) = iface.try_get_method(&method_name, &method_descriptor) {
+                                found = Some((iface, m));
+                                break;
+                            }
+                            ifaces_to_check.extend(iface.interfaces()?);
+                        }
+                        if let Some((found_class, found_method)) = found {
+                            (found_class, found_method, false)
+                        } else {
+                            return Err(ristretto_classloader::Error::MethodNotFound {
+                                class_name: class.name().to_string(),
+                                method_name: method_name.clone(),
+                                method_descriptor: method_descriptor.clone(),
+                            }
+                            .into());
+                        }
+                    }
+                }
                 Err(e) => return Err(e.into()),
             }
         }

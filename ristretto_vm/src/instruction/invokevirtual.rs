@@ -31,7 +31,9 @@ pub(crate) async fn invokevirtual(
         Some(Value::Object(None)) => {
             return Err(NullPointerException(None).into());
         }
-        _ => return Err(InternalError("Expected object reference".to_string())),
+        _ => {
+            return Err(InternalError("Expected object reference".to_string()));
+        }
     };
 
     // Virtual dispatch: if method is not private, look up in receiver's actual class
@@ -43,19 +45,34 @@ pub(crate) async fn invokevirtual(
             guard.class_name()?.clone()
         };
         let object_class = thread.class(&class_name).await?;
-        lookup_method(
+        match lookup_method(
             &object_class,
             &resolution.method_name,
             &resolution.method_descriptor,
-        )?
+        ) {
+            Ok(result) => result,
+            Err(_) if object_class.is_interface() => {
+                // Per JVMS §5.4.6, interfaces implicitly extend java.lang.Object.
+                // If the method isn't found on the interface hierarchy, check Object.
+                let object_class = thread.class("java/lang/Object").await?;
+                lookup_method(
+                    &object_class,
+                    &resolution.method_name,
+                    &resolution.method_descriptor,
+                )?
+            }
+            Err(e) => {
+                return Err(e);
+            }
+        }
     };
 
     let result = Box::pin(thread.execute(&class, &method, &parameters)).await?;
     // For polymorphic methods, only push if the call site has a return type
-    if resolution.has_return_type
-        && let Some(result) = result
+    if let Some(value) = result
+        && resolution.has_return_type
     {
-        stack.push(result)?;
+        stack.push(value)?;
     }
     Ok(Continue)
 }

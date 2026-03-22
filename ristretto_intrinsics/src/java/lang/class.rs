@@ -1524,10 +1524,11 @@ pub async fn is_instance<T: Thread + 'static>(
     if compare_object.is_null() {
         return Ok(Some(Value::from(false)));
     }
-    let compare_object_class = {
-        let compare_object = compare_object.as_object_ref()?;
-        compare_object.class().clone()
+    let compare_class_name = {
+        let reference = compare_object.as_reference()?;
+        reference.class_name()?
     };
+    let compare_object_class = thread.class(&compare_class_name).await?;
     if self_class
         .is_assignable_from(&thread, &compare_object_class)
         .await?

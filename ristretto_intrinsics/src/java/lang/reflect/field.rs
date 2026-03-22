@@ -78,12 +78,7 @@ pub async fn get_type_annotation_bytes_0<T: Thread + 'static>(
     }
 
     // Create byte array
-    let byte_array_class = thread.class("[B").await?;
-    let byte_values: Vec<Value> = bytes
-        .into_iter()
-        .map(|b| Value::Int(i32::from(b)))
-        .collect();
-    let result = Reference::try_from((byte_array_class, byte_values))?;
+    let result = Reference::from(bytes);
     Ok(Some(Value::new_object(
         thread.vm()?.garbage_collector(),
         result,
