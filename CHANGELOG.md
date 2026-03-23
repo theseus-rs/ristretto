@@ -7,6 +7,174 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_pom` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.30.0) - 2026-03-22
+
+### Added
+- implement sockets
+
+## `ristretto_cli` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/v0.29.0...v0.30.0) - 2026-03-22
+
+### Added
+- implement sockets
+- implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
+- implement jdk/internal/jimage/NativeImageBuffer.getNativeMap(Ljava/lang/String;)Ljava/nio/ByteBuffer;
+- implement java/util/jar/JarFile
+- implement java/util/zip/ZipFile
+- implement java/lang/ProcessBuilder
+- implement java/lang/Compiler
+- implement jdk/internal/perf/Perf
+- implement sun/nio/fs/WindowsNativeDispatcher
+- implement java/lang/invoke/VarHandle
+- implement threading
+- implement java/lang/Package
+- implement java/lang/StringCoding.err(Ljava/lang/String;)V
+- implement java/util/logging/FileHandler.isSetUID()Z
+- implement jdk/internal/misc/VM.getNanoTimeAdjustment(J)J
+- implement java/util/prefs/FileSystemPreferences
+- implement jdk/net/WindowsSocketOptions
+- implement sun/misc/URLClassPath
+- implement java/lang/UNIXProcess
+- implement java/lang/StackStreamFactory
+
+### Fixed
+- add areturn class file verification
+- correct manifest to handle line continuations
+- add system property jdk.module.illegal.native.access=allow
+- correct java/lang/reflect/Array boxing, widening and error handling
+- correct java/lang/Class.forName0 to support custom class loaders
+- unify file java.io and java.nio file handles
+- update nio to use async file io
+- improve interface method resolution and MethodHandle dispatch
+
+### Other
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+- update intrinsic method java versions
+- update unimplemented intrinsic functions to return java.lang.UnsatisfiedLinkError
+- update Cargo.toml dependencies
+- update intrinsic functions to support configuration macros
+- optimize native memory access
+- update to rust 1.94.0
+- update cranelift=0.130.0
+- enable all release compiler optimizations
+- update macos builds to use macos 26
+- update dist=0.31.0
+- update test profile
+
+## `ristretto_vm` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.29.0...ristretto_vm-v0.30.0) - 2026-03-22
+
+### Added
+- implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
+- implement sockets
+- add sun/nio/fs/WindowsNativeDispatcher
+- implement threading
+
+### Fixed
+- improve interface method resolution and MethodHandle dispatch
+- unify file java.io and java.nio file handles
+- update nio to use async file io
+
+### Other
+- update to rust 1.94.0
+- update intrinsic functions to support configuration macros
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+
+## `ristretto_intrinsics` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.29.0...ristretto_intrinsics-v0.30.0) - 2026-03-22
+
+### Added
+- implement jdk/internal/jimage/NativeImageBuffer.getNativeMap(Ljava/lang/String;)Ljava/nio/ByteBuffer;
+- implement java/util/jar/JarFile
+- implement java/util/zip/ZipFile
+- implement java/lang/ProcessBuilder
+- implement java/lang/Compiler
+- implement jdk/internal/perf/Perf
+- implement sockets
+- implement sun/nio/fs/WindowsNativeDispatcher
+- implement java/lang/invoke/VarHandle
+- implement threading
+
+### Fixed
+- add system property jdk.module.illegal.native.access=allow
+- correct java/lang/reflect/Array boxing, widening and error handling
+- correct java/lang/Class.forName0 to support custom class loaders
+- unify file java.io and java.nio file handles
+- update nio to use async file io
+
+### Other
+- update intrinsic method java versions
+- update unimplemented intrinsic functions to return java.lang.UnsatisfiedLinkError
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+
+## `ristretto_types` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.29.0...ristretto_types-v0.30.0) - 2026-03-22
+
+### Added
+- implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
+- implement sockets
+- implement threading
+
+### Fixed
+- unify file java.io and java.nio file handles
+- update nio to use async file io
+
+### Other
+- update intrinsic functions to support configuration macros
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- optimize native memory access
+
+## `ristretto_jit` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.29.0...ristretto_jit-v0.30.0) - 2026-03-22
+
+### Added
+- implement sockets
+
+### Other
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+
+## `ristretto_macros` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.29.0...ristretto_macros-v0.30.0) - 2026-03-22
+
+### Added
+- implement sockets
+
+### Other
+- update intrinsic functions to support configuration macros
+
+## `ristretto_classloader` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.29.0...ristretto_classloader-v0.30.0) - 2026-03-22
+
+### Added
+- implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
+- implement sockets
+
+### Fixed
+- correct manifest to handle line continuations
+
+### Other
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+
+## `ristretto_jimage` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.29.0...ristretto_jimage-v0.30.0) - 2026-03-22
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_gc` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.29.0...ristretto_gc-v0.30.0) - 2026-03-22
+
+### Added
+- implement sockets
+
+## `ristretto_classfile` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.29.0...ristretto_classfile-v0.30.0) - 2026-03-22
+
+### Added
+- implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
+- implement sockets
+
+### Fixed
+- add areturn class file verification
+
+### Other
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+
 ## `ristretto_pom` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.28.0...ristretto_pom-v0.29.0) - 2026-02-08
 
 ### Added
