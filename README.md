@@ -59,10 +59,6 @@ The Java runtime requires hundreds of native methods. This project aims to provi
 If a native method is called that is not implemented, the program throw a `java.lang.UnsatisfiedLinkError`. Please
 submit a pull request, or open an issue if you need a specific native method implemented.
 
-#### Java Native Interface (JNI)
-
-JNI is not implemented.
-
 #### Security Manager
 
 Support for the Security Manager is not implemented and there are no plans to implement it. The security manager has
