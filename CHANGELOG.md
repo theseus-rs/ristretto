@@ -7,6 +7,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_pom` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.30.0) - 2026-03-23
+
+### Added
+- implement sockets
+
+## `ristretto_cli` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/v0.29.0...v0.30.0) - 2026-03-23
+
+### Added
+- implement sockets
+- implement jdk/internal/jimage/NativeImageBuffer.getNativeMap(Ljava/lang/String;)Ljava/nio/ByteBuffer;
+- implement java/util/jar/JarFile
+- implement java/util/zip/ZipFile
+- implement java.lang.ProcessBuilder
+- implement java/lang/Compiler
+- implement jdk/internal/perf/Perf
+- add sun/nio/fs/WindowsNativeDispatcher
+- implement java/lang/invoke/VarHandle
+- implement threading
+- implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
+
+### Fixed
+- add system property jdk.module.illegal.native.access=allow
+- correct java/lang/reflect/Array boxing, widening and error handling
+- correct java/lang/Class.forName0 to support custom class loaders
+- unify file java.io and java.nio file handles
+- update nio to use async file io
+- improve interface method resolution and MethodHandle dispatch
+
+### Other
+- ristretto-v0.30.0
+- Merge pull request #688 from theseus-rs/correct-invokedynamic
+- Merge pull request #692 from theseus-rs/impl-package
+- Merge pull request #693 from theseus-rs/impl-stringcoding
+- Merge pull request #690 from theseus-rs/impl-nativeimagebuffer
+- update intrinsic method java versions
+- Merge pull request #685 from theseus-rs/impl-zipfile
+- Merge pull request #683 from theseus-rs/impl-processhandle
+- Merge pull request #682 from theseus-rs/refactor-intrinsic-macro
+- Merge pull request #681 from theseus-rs/refactor-intrinsic-todo
+- update unimplemented intrinsic functions to return java.lang.UnsatisfiedLinkError
+- Merge pull request #678 from theseus-rs/fix-support-custom-classloaders
+- Merge pull request #675 from theseus-rs/impl-java-lang-compiler
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+- update to rust 1.94.0
+- update intrinsic functions to support configuration macros
+
+## `ristretto_vm` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.29.0...ristretto_vm-v0.30.0) - 2026-03-23
+
+### Added
+- implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
+- implement sockets
+- add sun/nio/fs/WindowsNativeDispatcher
+- implement threading
+
+### Fixed
+- improve interface method resolution and MethodHandle dispatch
+- unify file java.io and java.nio file handles
+- update nio to use async file io
+
+### Other
+- ristretto-v0.30.0
+- update to rust 1.94.0
+- Merge pull request #682 from theseus-rs/refactor-intrinsic-macro
+- update intrinsic functions to support configuration macros
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+
+## `ristretto_intrinsics` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.29.0...ristretto_intrinsics-v0.30.0) - 2026-03-23
+
+### Added
+- implement jdk/internal/jimage/NativeImageBuffer.getNativeMap(Ljava/lang/String;)Ljava/nio/ByteBuffer;
+- implement java/util/jar/JarFile
+- implement java/util/zip/ZipFile
+- implement java.lang.ProcessBuilder
+- implement java/lang/Compiler
+- implement jdk/internal/perf/Perf
+- implement sockets
+- add sun/nio/fs/WindowsNativeDispatcher
+- implement java/lang/invoke/VarHandle
+- implement threading
+
+### Fixed
+- add system property jdk.module.illegal.native.access=allow
+- correct java/lang/reflect/Array boxing, widening and error handling
+- correct java/lang/Class.forName0 to support custom class loaders
+- unify file java.io and java.nio file handles
+- update nio to use async file io
+
+### Other
+- ristretto-v0.30.0
+- Merge pull request #688 from theseus-rs/correct-invokedynamic
+- Merge pull request #692 from theseus-rs/impl-package
+- Merge pull request #693 from theseus-rs/impl-stringcoding
+- Merge pull request #690 from theseus-rs/impl-nativeimagebuffer
+- update intrinsic method java versions
+- Merge pull request #685 from theseus-rs/impl-zipfile
+- Merge pull request #683 from theseus-rs/impl-processhandle
+- Merge pull request #682 from theseus-rs/refactor-intrinsic-macro
+- Merge pull request #681 from theseus-rs/refactor-intrinsic-todo
+- update unimplemented intrinsic functions to return java.lang.UnsatisfiedLinkError
+- Merge pull request #678 from theseus-rs/fix-support-custom-classloaders
+- Merge pull request #675 from theseus-rs/impl-java-lang-compiler
+- [**breaking**] correct java.lang.String to comply with the JVM specification
+- [**breaking**] optimize class file reading
+
 ## `ristretto_pom` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.30.0) - 2026-03-22
 
 ### Added
