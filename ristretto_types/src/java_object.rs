@@ -408,8 +408,8 @@ fn to_class_object<'a, T: Thread + 'static>(
             }
         }
 
-        class.set_object(Some(object_value.clone()))?;
-        Ok(object_value)
+        let result = class.set_object_if_absent(object_value)?;
+        Ok(result)
     })
 }
 

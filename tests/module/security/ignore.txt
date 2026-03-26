@@ -1,4 +1,0 @@
-These tests require full security manager and reflection support.
-Current issues:
-- "ExceptionInInitializerError" - Security initialization issues
-- Requires full module reflection access control

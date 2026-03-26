@@ -29,7 +29,7 @@ public class Test {
 
         // Test valueOf with Object
         Object obj = new Object();
-        System.out.println("valueOf(Object): " + String.valueOf(obj));
+        System.out.println("valueOf(Object) starts with 'java.lang.Object@': " + String.valueOf(obj).startsWith("java.lang.Object@"));
         System.out.println("valueOf(null): " + String.valueOf((Object)null));
     }
 

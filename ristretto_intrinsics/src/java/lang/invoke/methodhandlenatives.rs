@@ -175,7 +175,8 @@ async fn resolve_constant_to_value<T: Thread + 'static>(
         }
         Constant::Class(name_index) => {
             let class_name = constant_pool.try_get_utf8(*name_index)?;
-            let class = thread.class_java_str(class_name).await?;
+            // Class resolution per JVM spec §5.4.3.1 should NOT trigger initialization
+            let class = thread.load_and_link_class(class_name).await?;
             class.to_object(thread).await
         }
         Constant::MethodType(descriptor_index) => {
@@ -309,7 +310,9 @@ async fn resolve_method_handle<T: Thread + 'static>(
     };
 
     // Get the class and lookup object
-    let class = thread.class_java_str(class_name).await?;
+    // Per JVM spec §5.4.3, method handle resolution should only load and link the class,
+    // NOT initialize it. Initialization is deferred until the method handle is invoked.
+    let class = thread.load_and_link_class(class_name).await?;
     let class_object = class.to_object(thread).await?;
     let lookup_class = thread
         .class("java.lang.invoke.MethodHandles$Lookup")
@@ -1312,7 +1315,11 @@ pub async fn resolve<T: Thread + 'static>(
         let class_object = class_object.as_object_ref()?;
         class_object.value("name")?.as_string()?
     };
-    let class = thread.class(&class_name).await?;
+    // Per JVM spec §5.4.3, member resolution should only load and link the class,
+    // NOT initialize it. Class initialization (§5.5) only occurs on active use
+    // (e.g., new, getstatic, invokestatic), not during resolution.
+    let class_name_java = JavaStr::cow_from_str(&class_name);
+    let class = thread.load_and_link_class(&class_name_java).await?;
     let member_name_flags = MemberNameFlags::from_bits_truncate(flags);
 
     if member_name_flags.contains(MemberNameFlags::IS_METHOD)

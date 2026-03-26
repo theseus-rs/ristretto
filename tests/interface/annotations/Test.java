@@ -198,7 +198,7 @@ public class Test {
 
         // Test annotation on lambda class (generated)
         Class<?> lambdaClass = lambda.getClass();
-        System.out.println("Lambda class: " + lambdaClass.getName());
+        System.out.println("Lambda class: " + lambdaClass.getName().replaceAll("[/+]0x[0-9a-fA-F]+", ""));
         System.out.println("Lambda class annotations: " + lambdaClass.getAnnotations().length);
 
         // Test method invocation and annotation checking

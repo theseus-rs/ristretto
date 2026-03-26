@@ -38,7 +38,7 @@ use std::time::Duration;
 #[cfg(not(target_family = "wasm"))]
 #[derive(Debug)]
 pub enum SocketType {
-    /// Raw socket2 socket — used during creation and configuration before
+    /// Raw socket2 socket; used during creation and configuration before
     /// transitioning to a specific async socket type.
     Raw(Socket),
     /// Connected TCP stream for async read/write.

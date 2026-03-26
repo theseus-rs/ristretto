@@ -310,8 +310,7 @@ pub async fn read_bytes<T: Thread + 'static>(
     };
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
-    let capacity = length.saturating_sub(offset);
-    let mut buffer = vec![0u8; capacity];
+    let mut buffer = vec![0u8; length];
 
     let bytes_read = if fd == 0 {
         let stdin_lock = vm.stdin();

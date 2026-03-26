@@ -30,13 +30,13 @@ public class Test {
         System.out.println("A.staticField = " + A.staticField);
         System.out.println();
 
-        // Creating first object - instance fields initialized here
+        // Creating first object; instance fields initialized here
         System.out.println("Step 2: Creating first A object:");
         A obj1 = new A();
         System.out.println("obj1.instanceField = " + obj1.instanceField);
         System.out.println();
 
-        // Creating second object - instance fields initialized again
+        // Creating second object; instance fields initialized again
         System.out.println("Step 3: Creating second A object:");
         A obj2 = new A();
         System.out.println("obj2.instanceField = " + obj2.instanceField);

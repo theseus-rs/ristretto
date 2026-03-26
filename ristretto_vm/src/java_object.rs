@@ -306,17 +306,31 @@ async fn to_class_loader_object(thread: &Thread, class_loader: &Arc<ClassLoader>
                 &[class_path_object, Value::from(false)],
             )
             .await?;
-        let builtin_class_loader = thread
-            .object(
-                "jdk.internal.loader.BuiltinClassLoader",
-                "Ljava/lang/String;Ljdk/internal/loader/BuiltinClassLoader;Ljdk/internal/loader/URLClassPath;",
-                &[name, parent_class_loader, url_class_path],
-            )
+
+        // For the system/app class loader, create a ClassLoaders$AppClassLoader instance
+        // to match the JDK behavior where the app class loader is AppClassLoader
+        let loader_class_name = if class_loader.name() == "system" {
+            "jdk.internal.loader.ClassLoaders$AppClassLoader"
+        } else {
+            "jdk.internal.loader.BuiltinClassLoader"
+        };
+        let loader_class = thread.class(loader_class_name).await?;
+        let builtin_class = thread
+            .class("jdk.internal.loader.BuiltinClassLoader")
             .await?;
-        class_loader
-            .set_object(Some(builtin_class_loader.clone()))
-            .await;
-        builtin_class_loader
+        let init_descriptor = "(Ljava/lang/String;Ljdk/internal/loader/BuiltinClassLoader;Ljdk/internal/loader/URLClassPath;)V";
+        let Some(init_method) = builtin_class.method("<init>", init_descriptor) else {
+            return Err(InternalError(format!(
+                "No constructor found: BuiltinClassLoader.<init>{init_descriptor}"
+            )));
+        };
+        let gc = vm.garbage_collector();
+        let object = Value::new_object(gc, Reference::Object(Object::new(loader_class)?));
+        let parameters = [object.clone(), name, parent_class_loader, url_class_path];
+        Box::pin(thread.execute(&builtin_class, &init_method, &parameters)).await?;
+
+        class_loader.set_object(Some(object.clone())).await;
+        object
     };
 
     Ok(builtin_class_loader)
@@ -382,8 +396,8 @@ async fn to_class_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
         }
     }
 
-    class.set_object(Some(object_value.clone()))?;
-    Ok(object_value)
+    let result = class.set_object_if_absent(object_value)?;
+    Ok(result)
 }
 
 /// Update the module field on a cached Class object for Java 9+.
@@ -401,6 +415,44 @@ async fn update_cached_class_module(
     let vm = thread.vm()?;
     let current_module = object.as_object_ref()?.value("module")?;
     if !current_module.is_null() {
+        // Check if this is an unnamed module that should be upgraded to a named module.
+        // During early bootstrap, classes get assigned to the unnamed module before
+        // ModuleBootstrap.boot() defines the named modules.
+        let is_unnamed = current_module
+            .as_object_ref()
+            .map(|obj| obj.value("name").map(|v| v.is_null()).unwrap_or(true))
+            .unwrap_or(true);
+        if !is_unnamed {
+            return Ok(());
+        }
+        // If the unnamed module belongs to a non-bootstrap class loader (loader != null),
+        // it was correctly set by defineClass and should not be overwritten.
+        let has_real_loader = current_module
+            .as_object_ref()
+            .map(|obj| obj.value("loader").map(|v| !v.is_null()).unwrap_or(false))
+            .unwrap_or(false);
+        if has_real_loader {
+            return Ok(());
+        }
+        // Fall through to check if a named module is now available
+    }
+
+    // Try to upgrade to a named module first (bootstrap classes loaded from system modules)
+    let package = ClassLoader::package_from_class_name(class.name());
+
+    // Primitive types (int, boolean, etc.) have no package but belong to java.base
+    if package.is_empty()
+        && class.is_primitive()
+        && let Some(module) = vm.module_system().get_module_for_package("java/lang")
+    {
+        let mut object_mut = object.as_object_mut()?;
+        object_mut.set_value_unchecked("module", module)?;
+        return Ok(());
+    }
+
+    if let Some(module) = vm.module_system().get_module_for_package(package) {
+        let mut object_mut = object.as_object_mut()?;
+        object_mut.set_value_unchecked("module", module)?;
         return Ok(());
     }
 
@@ -431,17 +483,6 @@ async fn update_cached_class_module(
             }
         }
     } else {
-        // For bootstrap classes, try named module first, then unnamed
-        let package = ClassLoader::package_from_class_name(class.name());
-
-        // First, try to get the module from the defined modules (from defineModule0)
-        // This should have a complete Module object with descriptor
-        if let Some(module) = vm.module_system().get_module_for_package(package) {
-            let mut object_mut = object.as_object_mut()?;
-            object_mut.set_value_unchecked("module", module)?;
-            return Ok(());
-        }
-
         // Fall back to the boot loader's unnamed module
         if let Some(module) = vm.module_system().boot_unnamed_module() {
             let mut object_mut = object.as_object_mut()?;
@@ -498,6 +539,14 @@ async fn get_class_module(
         // For bootstrap-loaded classes, try to find the correct named module first (e.g., java.base
         // for java.lang.String). If not found, fall back to the boot loader's unnamed module.
         let package = ClassLoader::package_from_class_name(class.name());
+
+        // Primitive types (int, boolean, etc.) have no package but belong to java.base
+        if package.is_empty()
+            && class.is_primitive()
+            && let Some(module) = vm.module_system().get_module_for_package("java/lang")
+        {
+            return Ok(module);
+        }
 
         // First, try to get the module from the defined modules (from defineModule0)
         // This should have a complete Module object with descriptor

@@ -1,7 +1,7 @@
 /** Test basic instanceof behavior with classes and null values */
 public class Test {
     public static void main(String[] args) {
-        // Test null instanceof - should always be false
+        // Test null instanceof; should always be false
         Object nullRef = null;
         System.out.println("null instanceof Object: " + (nullRef instanceof Object));
         System.out.println("null instanceof String: " + (nullRef instanceof String));

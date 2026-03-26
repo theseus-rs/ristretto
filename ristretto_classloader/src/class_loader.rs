@@ -304,6 +304,64 @@ impl ClassLoader {
         let classes = self.classes.read().await;
         classes.values().cloned().collect()
     }
+
+    /// Check whether a class with the given name has already been loaded (cached) by this
+    /// classloader or any of its parents.
+    ///
+    /// Unlike [`load`](Self::load), this method never reads from disk or creates new classes.
+    /// It only checks the in-memory caches.
+    ///
+    /// Per [JVMS §5.3.4](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3.4),
+    /// `ClassLoader.findLoadedClass` must return a previously loaded class without triggering
+    /// new class loading.
+    pub async fn find_loaded(&self, class_name: &JavaStr) -> Option<Arc<Class>> {
+        let class_name_internal: Cow<'_, JavaStr> =
+            if memchr::memchr(b'.', class_name.as_bytes()).is_none() {
+                Cow::Borrowed(class_name)
+            } else {
+                let mut bytes = class_name.as_bytes().to_vec();
+                for b in &mut bytes {
+                    if *b == b'.' {
+                        *b = b'/';
+                    }
+                }
+                #[expect(unsafe_code)]
+                // SAFETY: class_name is already valid MUTF-8 and replacing ASCII '.' with ASCII '/'
+                // preserves MUTF-8 validity.
+                Cow::Owned(unsafe { JavaString::from_mutf8_unchecked(bytes) })
+            };
+
+        // Walk the classloader hierarchy iteratively
+        let mut current = self.this.upgrade()?;
+        loop {
+            {
+                let classes = current.classes.read().await;
+                if let Some(class) = classes.get(&*class_name_internal) {
+                    return Some(Arc::clone(class));
+                }
+            }
+
+            match current.parent().await {
+                Some(parent) => current = parent,
+                None => return None,
+            }
+        }
+    }
+
+    /// Traverse the classloader hierarchy to find the bootstrap (root) classloader.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the classloader has already been dropped.
+    pub async fn bootstrap(&self) -> Arc<ClassLoader> {
+        let mut current = self.this.upgrade().expect("classloader already dropped");
+        loop {
+            match current.parent().await {
+                Some(parent) => current = parent,
+                None => return current,
+            }
+        }
+    }
 }
 
 impl Clone for ClassLoader {

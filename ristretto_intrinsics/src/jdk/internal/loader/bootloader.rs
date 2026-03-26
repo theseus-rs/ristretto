@@ -32,25 +32,17 @@ pub async fn get_system_package_location<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let package_name = parameters.pop()?.as_string()?;
-    let boot_class_loader = boot_class_loader(&thread).await?;
-    let package_path = package_name.replace('.', "/");
+    let vm = thread.vm()?;
 
-    for class_path_entry in boot_class_loader.class_path().iter() {
-        let class_names = class_path_entry.class_names().await?;
-        for class_name in class_names {
-            if class_name.starts_with(&package_path) && class_name.contains('/') {
-                let class_package = class_name.rsplit_once('/').map_or("", |x| x.0);
-                if class_package == package_path {
-                    let class_path_entry_name =
-                        class_path_entry.name().to_string_lossy().to_string();
-                    let location = class_path_entry_name.to_object(&thread).await?;
-                    return Ok(Some(location));
-                }
-            }
-        }
+    // Use resolved module configuration to find which module contains this package
+    let resolved_config = vm.module_system().resolved_configuration();
+    let pkg_internal = package_name.replace('.', "/");
+    if let Some(module_name) = resolved_config.find_module_for_package(&pkg_internal) {
+        let location = format!("jrt:/{module_name}").to_object(&thread).await?;
+        return Ok(Some(location));
     }
 
-    // Package not found in system class loader
+    // Package not found
     Ok(Some(Value::Object(None)))
 }
 
@@ -63,22 +55,28 @@ pub async fn get_system_package_names<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let boot_class_loader = boot_class_loader(&thread).await?;
-    let class_path = boot_class_loader.class_path();
-    let mut package_names = AHashSet::default();
+    let vm = thread.vm()?;
 
-    for class_path_entry in class_path.iter() {
-        let class_names = class_path_entry.class_names().await?;
-        for class_name in class_names {
-            if let Some(last_slash_index) = class_name.rfind('/') {
-                let package_path = &class_name[..last_slash_index];
-                let package_name = package_path.replace('/', ".");
-                package_names.insert(package_name);
-            }
+    // Return packages from classes that have actually been loaded by the boot class loader.
+    // This matches JDK behavior where BootLoader tracks packages from defineClass calls;
+    // packages are only included once a class from that package has been loaded.
+    let boot_class_loader = boot_class_loader(&thread).await?;
+    let loaded_classes = boot_class_loader.loaded_classes().await;
+    let mut package_set = AHashSet::default();
+
+    for class in &loaded_classes {
+        let name = class.name();
+        // Skip array classes; their names start with '[' and should not be treated as packages
+        if name.starts_with('[') {
+            continue;
+        }
+        if let Some(last_slash) = name.rfind('/') {
+            let package = &name[..last_slash];
+            package_set.insert(package.replace('/', "."));
         }
     }
 
-    let mut package_names: Vec<String> = package_names.into_iter().collect();
+    let mut package_names: Vec<String> = package_set.into_iter().collect();
     package_names.sort();
 
     let mut string_objects = Vec::with_capacity(package_names.len());
@@ -87,9 +85,8 @@ pub async fn get_system_package_names<T: Thread + 'static>(
         string_objects.push(string_object);
     }
 
-    let string_class = thread.class("java.lang.String").await?;
+    let string_class = thread.class("[Ljava/lang/String;").await?;
     let reference = Reference::try_from((string_class, string_objects))?;
-    let vm = thread.vm()?;
     let package_names = Value::new_object(vm.garbage_collector(), reference);
     Ok(Some(package_names))
 }
@@ -120,7 +117,7 @@ mod tests {
         let parameters = Parameters::new(vec![package_name]);
         let result = get_system_package_location(thread, parameters).await?;
         let location = result.expect("location").as_string()?;
-        assert!(location.ends_with("java.base.jmod") || location.ends_with("modules"));
+        assert!(location.starts_with("jrt:/"));
         Ok(())
     }
 
@@ -137,7 +134,8 @@ mod tests {
         }
 
         assert!(package_names.contains(&"java.lang".to_string()));
-        assert!(package_names.len() > 250);
+        // The count depends on how many classes the boot loader has loaded in this test context
+        assert!(!package_names.is_empty());
         Ok(())
     }
 

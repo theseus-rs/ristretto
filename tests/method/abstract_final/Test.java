@@ -23,7 +23,7 @@ public class Test {
             System.out.println("Concrete method overridden in child");
         }
 
-        // Cannot override final method - would cause compilation error
+        // Cannot override final method; would cause compilation error
         // public void finalMethod() { ... }
     }
 

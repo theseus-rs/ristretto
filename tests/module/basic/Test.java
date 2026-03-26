@@ -27,7 +27,8 @@ public class Test {
             Module currentModule = Test.class.getModule();
             System.out.println("Current module: " + currentModule.getName());
             System.out.println("Is named: " + currentModule.isNamed());
-            System.out.println("Module string: " + currentModule.toString());
+            String moduleStr = currentModule.toString();
+            System.out.println("Module string starts with 'unnamed module @': " + moduleStr.startsWith("unnamed module @"));
         } catch (Exception e) {
             System.out.println("Error getting current module: " + e.getMessage());
         }
@@ -49,12 +50,16 @@ public class Test {
         System.out.println("--- Test: Module Layer ---");
         try {
             ModuleLayer bootLayer = ModuleLayer.boot();
-            System.out.println("Boot layer: " + bootLayer);
+            System.out.println("Boot layer: " + bootLayer.modules().stream()
+                .map(Module::getName)
+                .sorted()
+                .collect(java.util.stream.Collectors.joining(", ")));
             System.out.println("Boot layer modules count: " + bootLayer.modules().size());
 
             // List some boot layer modules
             System.out.println("First 5 boot layer modules:");
             bootLayer.modules().stream()
+                .sorted(java.util.Comparator.comparing(Module::getName))
                 .limit(5)
                 .forEach(m -> System.out.println("  " + m.getName()));
 

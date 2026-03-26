@@ -53,6 +53,7 @@ public class Test {
             if (javaBase != null && javaBase.getDescriptor() != null) {
                 System.out.println("java.base provides services:");
                 javaBase.getDescriptor().provides().stream()
+                    .sorted(java.util.Comparator.comparing(p -> p.service()))
                     .limit(5)
                     .forEach(provides -> {
                         System.out.println("  Service: " + provides.service());
@@ -61,6 +62,7 @@ public class Test {
 
                 System.out.println("java.base uses services:");
                 javaBase.getDescriptor().uses().stream()
+                    .sorted()
                     .limit(5)
                     .forEach(uses -> System.out.println("  " + uses));
             }
@@ -77,12 +79,17 @@ public class Test {
             ServiceLoader<java.nio.file.spi.FileSystemProvider> fsLoader =
                 ServiceLoader.load(java.nio.file.spi.FileSystemProvider.class);
             System.out.println("FileSystemProvider services:");
-            int fsCount = 0;
+            java.util.List<java.nio.file.spi.FileSystemProvider> fsList = new java.util.ArrayList<>();
             for (java.nio.file.spi.FileSystemProvider provider : fsLoader) {
+                fsList.add(provider);
+                if (fsList.size() >= 5) break;
+            }
+            fsList.sort(java.util.Comparator.comparing(p -> p.getScheme()));
+            int fsCount = 0;
+            for (java.nio.file.spi.FileSystemProvider provider : fsList) {
                 fsCount++;
                 System.out.println("  " + fsCount + ": " + provider.getScheme() +
                     " (" + provider.getClass().getName() + ")");
-                if (fsCount >= 5) break;
             }
 
             // Test locale service provider

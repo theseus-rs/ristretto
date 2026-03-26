@@ -19,7 +19,7 @@ abstract class PartialImplementation implements CompleteInterface {
         return param.hashCode();
     }
 
-    // Leave method2 abstract - must be implemented by subclasses
+    // Leave method2 abstract; must be implemented by subclasses
 
     // Add abstract method of our own
     abstract void abstractMethod();

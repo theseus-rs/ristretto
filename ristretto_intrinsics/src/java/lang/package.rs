@@ -96,7 +96,7 @@ pub async fn get_system_packages_0<T: Thread + 'static>(
         string_objects.push(string_object);
     }
 
-    let string_class = thread.class("java.lang.String").await?;
+    let string_class = thread.class("[Ljava/lang/String;").await?;
     let reference = Reference::try_from((string_class, string_objects))?;
     let package_names = Value::new_object(vm.garbage_collector(), reference);
     Ok(Some(package_names))

@@ -38,6 +38,7 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 - Built-in support for reading, writing, and strictly verifying Java bytecode.
 - Interpreter support for all Java byte codes including invokedynamic.
 - Fully asynchronous, non-blocking execution using Rust async/await for:
+    - java.lang.Process
     - java.lang.Thread
     - java.io & java.nio
     - java.net

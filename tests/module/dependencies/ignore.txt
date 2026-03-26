@@ -1,4 +1,0 @@
-These tests require full LambdaMetafactory support.
-Current issues:
-- "illegal lookupClass: class java.lang.invoke.LambdaMetafactory" - Stream operations use lambdas
-- Module descriptor analysis uses stream().filter().forEach() patterns

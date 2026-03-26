@@ -227,7 +227,7 @@ pub async fn get_member_ref_info_at_0<T: Thread + 'static>(
     let name = name.to_object(&thread).await?;
     let descriptor = constant_pool.try_get_utf8(*type_index)?;
     let descriptor = descriptor.to_object(&thread).await?;
-    let string_class = thread.class("java/lang/String").await?;
+    let string_class = thread.class("[Ljava/lang/String;").await?;
     let string_array = vec![class_name, name, descriptor];
     let reference = Reference::try_from((string_class, string_array))?;
     let results = Value::new_object(thread.vm()?.garbage_collector(), reference);
@@ -264,7 +264,7 @@ pub async fn get_method_at_0<T: Thread + 'static>(
         let parameter_type = parameter_type.to_object(&thread).await?;
         parameters_classes.push(parameter_type);
     }
-    let class = thread.class("java.lang.Class").await?;
+    let class = thread.class("[Ljava/lang/Class;").await?;
     let reference = Reference::try_from((class, parameters_classes))?;
     let class_parameters = Value::new_object(thread.vm()?.garbage_collector(), reference);
 
@@ -391,7 +391,7 @@ pub async fn get_name_and_type_ref_info_at_0<T: Thread + 'static>(
     let name = name.to_object(&thread).await?;
     let descriptor = constant_pool.try_get_utf8(*type_index)?;
     let descriptor = descriptor.to_object(&thread).await?;
-    let string_class = thread.class("java/lang/String").await?;
+    let string_class = thread.class("[Ljava/lang/String;").await?;
     let string_array = vec![name, descriptor];
     let result_ref = Reference::try_from((string_class, string_array))?;
     let results = Value::new_object(thread.vm()?.garbage_collector(), result_ref);
@@ -739,7 +739,7 @@ pub(crate) mod tests {
             .await?
             .expect("value");
         let (class, values) = value.as_class_vec_ref()?;
-        assert_eq!("java/lang/String", class.name());
+        assert_eq!("[Ljava/lang/String;", class.name());
         assert_eq!(3, values.len());
         let class_name = values.first().expect("class_name").as_string()?;
         let name = values.get(1).expect("name").as_string()?;
@@ -764,7 +764,7 @@ pub(crate) mod tests {
             .await?
             .expect("value");
         let (class, values) = value.as_class_vec_ref()?;
-        assert_eq!("java/lang/String", class.name());
+        assert_eq!("[Ljava/lang/String;", class.name());
         assert_eq!(3, values.len());
         let class_name = values.first().expect("class_name").as_string()?;
         let name = values.get(1).expect("name").as_string()?;
@@ -884,7 +884,7 @@ pub(crate) mod tests {
             .await?
             .expect("value");
         let (class, values) = value.as_class_vec_ref()?;
-        assert_eq!("java/lang/String", class.name());
+        assert_eq!("[Ljava/lang/String;", class.name());
         assert_eq!(2, values.len());
         let name = values.first().expect("name").as_string()?;
         let descriptor = values.get(1).expect("descriptor").as_string()?;
@@ -901,7 +901,7 @@ pub(crate) mod tests {
             .await?
             .expect("value");
         let (class, values) = value.as_class_vec_ref()?;
-        assert_eq!("java/lang/String", class.name());
+        assert_eq!("[Ljava/lang/String;", class.name());
         assert_eq!(2, values.len());
         let name = values.first().expect("name").as_string()?;
         let descriptor = values.get(1).expect("descriptor").as_string()?;
