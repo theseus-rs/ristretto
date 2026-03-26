@@ -19,6 +19,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use std::sync::Arc;
+use tracing::debug;
 
 /// Get the class of an object, handling special cases for `java/lang/Class`.
 /// This WILL initialize the class if not already initialized.
@@ -76,6 +77,77 @@ pub async fn desired_assertion_status_0<T: Thread + 'static>(
     Ok(Some(Value::from(false)))
 }
 
+/// Known class names for built-in classloaders across JDK versions.
+///
+/// These are the exact internal-form class names used by the JDK's own classloaders. The function
+/// uses class hierarchy walking as the primary check, with these names as the definitive reference
+/// targets.
+///
+/// **Java 9+ ([JEP 261: Module System](https://openjdk.org/jeps/261)):**
+/// - `jdk/internal/loader/BuiltinClassLoader`: abstract base for all built-in loaders
+/// - `jdk/internal/loader/ClassLoaders$AppClassLoader`: application/system classloader
+/// - `jdk/internal/loader/ClassLoaders$PlatformClassLoader`: platform classloader (replaces ext)
+///
+/// **Java 8 (and earlier):**
+/// - `sun/misc/Launcher$AppClassLoader`: application/system classloader
+/// - `sun/misc/Launcher$ExtClassLoader`: extension classloader
+///
+/// Validated against `OpenJDK` 8u, 11, 17, 21, and 25.
+const BUILTIN_CLASSLOADER_NAMES: &[&str] = &[
+    // Java 9+ hierarchy
+    "jdk/internal/loader/BuiltinClassLoader",
+    "jdk/internal/loader/ClassLoaders$AppClassLoader",
+    "jdk/internal/loader/ClassLoaders$PlatformClassLoader",
+    // Java 8 hierarchy
+    "sun/misc/Launcher$AppClassLoader",
+    "sun/misc/Launcher$ExtClassLoader",
+];
+
+/// Determines whether a classloader object is a JVM built-in classloader.
+///
+/// Walks the class hierarchy (the classloader's own class and all its superclasses)
+/// to check if any match a known built-in classloader name.
+///
+/// Per JVM specification (JVMS §5.3.1), the bootstrap classloader is represented as `null`
+/// and will not reach this function.
+///
+/// # Errors
+/// Returns an error if the class hierarchy cannot be traversed (e.g., due to a poisoned lock).
+fn is_builtin_class_loader(class: &Arc<Class>) -> Result<bool> {
+    if BUILTIN_CLASSLOADER_NAMES.contains(&class.name()) {
+        return Ok(true);
+    }
+    let mut current = class.parent()?;
+    while let Some(ref parent) = current {
+        if BUILTIN_CLASSLOADER_NAMES.contains(&parent.name()) {
+            return Ok(true);
+        }
+        current = parent.parent()?;
+    }
+    Ok(false)
+}
+
+/// Determines whether a `Throwable` value is a `ClassNotFoundException` or a subclass thereof.
+///
+/// Walks the class hierarchy of the throwable's runtime class to check if any class in the chain
+/// matches `java/lang/ClassNotFoundException`. This is necessary because `ClassNotFoundException`
+/// is not final and custom subclasses may be thrown by classloaders.
+fn is_class_not_found_exception(throwable: &Value) -> bool {
+    let Some(obj) = throwable.as_object_ref().ok() else {
+        return false;
+    };
+    let mut current_class = Arc::clone(obj.class());
+    loop {
+        if current_class.name() == "java/lang/ClassNotFoundException" {
+            return true;
+        }
+        match current_class.parent() {
+            Ok(Some(parent)) => current_class = parent,
+            _ => return false,
+        }
+    }
+}
+
 #[intrinsic_method(
     "java/lang/Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;",
     Any
@@ -95,27 +167,93 @@ pub async fn for_name_0<T: Thread + 'static>(
 
     let class_name = object.as_string()?;
 
-    // When a custom ClassLoader is provided and the class is not an array type,
-    // delegate to ClassLoader.loadClass(). Array classes are created by the VM
-    // directly and are not loaded through ClassLoader.loadClass() per the JVM
-    // specification (JVMS §5.3.2).
-    if let Some(cl_ref) = class_loader
+    // When a custom ClassLoader is provided and the class is not an array type, delegate to
+    // ClassLoader.loadClass(). Array classes are created by the VM directly and are not loaded
+    // through ClassLoader.loadClass() per the JVM specification (JVMS §5.3.2).
+    if let Some(class_loader_ref) = class_loader
         && !class_name.starts_with('[')
     {
-        let class_loader_value = Value::Object(Some(cl_ref));
-        let cl_class = thread.class("java.lang.ClassLoader").await?;
-        let load_class_method =
-            cl_class.try_get_method("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;")?;
+        // Capture the classloader's class eagerly (cheap Arc refcount increment) so we can walk the
+        // hierarchy lazily only if loadClass fails.
+        let loader_class = {
+            let guard = class_loader_ref.read();
+            guard
+                .as_object_ref()
+                .ok()
+                .map(|obj| Arc::clone(obj.class()))
+        };
+
+        let class_loader_value = Value::Object(Some(class_loader_ref));
+        let class_loader_class = thread.class("java.lang.ClassLoader").await?;
+        let load_class_method = class_loader_class
+            .try_get_method("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;")?;
         let class_name_value = class_name.to_object(&thread).await?;
-        match thread
+        let load_result = thread
             .execute(
-                &cl_class,
+                &class_loader_class,
                 &load_class_method,
                 &[class_loader_value, class_name_value],
             )
-            .await
+            .await;
+
+        // Happy path: loadClass returned a non-null class value.
+        // Per JVM spec §12.4.1, Class.forName(name, true, loader) must initialize the
+        // class before returning. The Java ClassLoader.loadClass only loads/links; we
+        // must perform initialization ourselves when the caller requested it.
+        if let Ok(Some(value)) = &load_result
+            && !value.is_null()
         {
-            Ok(Some(value)) if !value.is_null() => return Ok(Some(value)),
+            if initialize {
+                let _class = get_class(&*thread, value).await?;
+            }
+            return load_result;
+        }
+
+        // loadClass failed or returned null/None. Determine if this is a built-in classloader
+        // by walking its class hierarchy. This check is deferred to here (not computed eagerly)
+        // to avoid the cost of hierarchy walking on the common success path.
+        let is_builtin = match &loader_class {
+            Some(class) => is_builtin_class_loader(class)?,
+            None => false,
+        };
+
+        match load_result {
+            Ok(_) if is_builtin => {
+                // Built-in classloader returned null. Fall through to try the Rust-side classloader
+                // below. This handles cases where the Java-side classloader hierarchy is not fully
+                // functional (e.g., during bootstrap or when module resolution has issues) but the
+                // class is available through the VM's own class path.
+                debug!(
+                    "Built-in classloader returned null for '{}'; falling back to VM classloader",
+                    class_name
+                );
+            }
+            Err(ristretto_types::Error::JavaError(ClassNotFoundException(_))) if is_builtin => {
+                // Built-in classloader threw ClassNotFoundException. Fall through to try the
+                // Rust-side classloader as above. Only ClassNotFoundException is caught here; other
+                // exceptions (SecurityException, LinkageError, NoClassDefFoundError, etc.) are
+                // propagated immediately since they indicate real failures that should not be
+                // silently retried.
+                debug!(
+                    "Built-in classloader threw ClassNotFoundException for '{}'; \
+                     falling back to VM classloader",
+                    class_name
+                );
+            }
+            Err(ristretto_types::Error::Throwable(ref throwable)) if is_builtin => {
+                // Java-thrown exceptions arrive as Throwable(value). Check if the throwable
+                // is a ClassNotFoundException (or subclass) before falling through.
+                let is_cnf = is_class_not_found_exception(throwable);
+                if is_cnf {
+                    debug!(
+                        "Built-in classloader threw ClassNotFoundException for '{}'; \
+                         falling back to VM classloader",
+                        class_name
+                    );
+                } else {
+                    return Err(ristretto_types::Error::Throwable(throwable.clone()));
+                }
+            }
             Ok(_) => return Err(ClassNotFoundException(class_name).into()),
             Err(e) => return Err(e),
         }
@@ -1687,6 +1825,220 @@ mod tests {
         let result = for_name_0(thread, parameters).await;
         assert!(matches!(result, Err(JavaError(ClassNotFoundException(_)))));
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_builtin_class_loader_java9_app() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let class = thread
+            .class("jdk.internal.loader.ClassLoaders$AppClassLoader")
+            .await?;
+        assert!(is_builtin_class_loader(&class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_builtin_class_loader_java9_platform() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let class = thread
+            .class("jdk.internal.loader.ClassLoaders$PlatformClassLoader")
+            .await?;
+        assert!(is_builtin_class_loader(&class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_builtin_class_loader_java9_builtin_base() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let class = thread
+            .class("jdk.internal.loader.BuiltinClassLoader")
+            .await?;
+        assert!(is_builtin_class_loader(&class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_builtin_class_loader_java8_app() -> Result<()> {
+        let (_vm, thread) = crate::test::java8_thread().await?;
+        let class = thread.class("sun.misc.Launcher$AppClassLoader").await?;
+        assert!(is_builtin_class_loader(&class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_builtin_class_loader_java8_ext() -> Result<()> {
+        let (_vm, thread) = crate::test::java8_thread().await?;
+        let class = thread.class("sun.misc.Launcher$ExtClassLoader").await?;
+        assert!(is_builtin_class_loader(&class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_builtin_class_loader_custom_returns_false() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        // URLClassLoader is not a built-in classloader
+        let class = thread.class("java.net.URLClassLoader").await?;
+        assert!(!is_builtin_class_loader(&class)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_is_builtin_class_loader_base_classloader_returns_false() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        // java.lang.ClassLoader itself is not a built-in classloader
+        let class = thread.class("java.lang.ClassLoader").await?;
+        assert!(!is_builtin_class_loader(&class)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_builtin_classloader_names_constant() {
+        // Verify the constant contains expected entries for both Java 8 and 9+
+        assert!(BUILTIN_CLASSLOADER_NAMES.contains(&"jdk/internal/loader/BuiltinClassLoader"));
+        assert!(
+            BUILTIN_CLASSLOADER_NAMES.contains(&"jdk/internal/loader/ClassLoaders$AppClassLoader")
+        );
+        assert!(
+            BUILTIN_CLASSLOADER_NAMES
+                .contains(&"jdk/internal/loader/ClassLoaders$PlatformClassLoader")
+        );
+        assert!(BUILTIN_CLASSLOADER_NAMES.contains(&"sun/misc/Launcher$AppClassLoader"));
+        assert!(BUILTIN_CLASSLOADER_NAMES.contains(&"sun/misc/Launcher$ExtClassLoader"));
+        // Bootstrap classloader is null per JVMS §5.3.1, so should NOT be listed
+        assert!(
+            !BUILTIN_CLASSLOADER_NAMES
+                .iter()
+                .any(|n| n.contains("BootClassLoader"))
+        );
+    }
+
+    async fn test_for_name_0_with_version(
+        version_thread: impl Future<Output = Result<(Arc<ristretto_vm::VM>, Arc<ristretto_vm::Thread>)>>,
+    ) -> Result<()> {
+        let (_vm, thread) = version_thread.await?;
+        let object = "java.lang.String".to_object(&thread).await?;
+        let parameters = Parameters::new(vec![
+            object,
+            Value::from(true),
+            Value::Object(None),
+            Value::Object(None),
+        ]);
+        let result = for_name_0(thread, parameters).await?;
+        let class_object = result.expect("class");
+        let class_object = class_object.as_object_ref()?;
+        let class_name = class_object.value("name")?.as_string()?;
+        assert_eq!(class_name.as_str(), "java.lang.String");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_java8() -> Result<()> {
+        test_for_name_0_with_version(crate::test::java8_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_java11() -> Result<()> {
+        test_for_name_0_with_version(crate::test::java11_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_java17() -> Result<()> {
+        test_for_name_0_with_version(crate::test::java17_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_java21() -> Result<()> {
+        test_for_name_0_with_version(crate::test::java21_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_java25() -> Result<()> {
+        test_for_name_0_with_version(crate::test::java25_thread()).await
+    }
+
+    async fn test_for_name_0_no_init_with_version(
+        version_thread: impl Future<Output = Result<(Arc<ristretto_vm::VM>, Arc<ristretto_vm::Thread>)>>,
+    ) -> Result<()> {
+        let (_vm, thread) = version_thread.await?;
+        let object = "java.lang.StringBuilder".to_object(&thread).await?;
+        let parameters = Parameters::new(vec![
+            object,
+            Value::from(false),
+            Value::Object(None),
+            Value::Object(None),
+        ]);
+        let result = for_name_0(thread, parameters).await?;
+        let class_object = result.expect("class");
+        let class_object = class_object.as_object_ref()?;
+        let class_name = class_object.value("name")?.as_string()?;
+        assert_eq!(class_name.as_str(), "java.lang.StringBuilder");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_no_init_java8() -> Result<()> {
+        test_for_name_0_no_init_with_version(crate::test::java8_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_no_init_java11() -> Result<()> {
+        test_for_name_0_no_init_with_version(crate::test::java11_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_no_init_java17() -> Result<()> {
+        test_for_name_0_no_init_with_version(crate::test::java17_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_no_init_java21() -> Result<()> {
+        test_for_name_0_no_init_with_version(crate::test::java21_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_no_init_java25() -> Result<()> {
+        test_for_name_0_no_init_with_version(crate::test::java25_thread()).await
+    }
+
+    async fn test_for_name_0_array_with_version(
+        version_thread: impl Future<Output = Result<(Arc<ristretto_vm::VM>, Arc<ristretto_vm::Thread>)>>,
+    ) -> Result<()> {
+        let (_vm, thread) = version_thread.await?;
+        let object = "[Ljava.lang.String;".to_object(&thread).await?;
+        let parameters = Parameters::new(vec![
+            object,
+            Value::from(true),
+            Value::Object(None),
+            Value::Object(None),
+        ]);
+        let result = for_name_0(thread, parameters).await?;
+        assert!(result.is_some());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_array_java8() -> Result<()> {
+        test_for_name_0_array_with_version(crate::test::java8_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_array_java11() -> Result<()> {
+        test_for_name_0_array_with_version(crate::test::java11_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_array_java17() -> Result<()> {
+        test_for_name_0_array_with_version(crate::test::java17_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_array_java21() -> Result<()> {
+        test_for_name_0_array_with_version(crate::test::java21_thread()).await
+    }
+
+    #[tokio::test]
+    async fn test_for_name_0_array_java25() -> Result<()> {
+        test_for_name_0_array_with_version(crate::test::java25_thread()).await
     }
 
     #[tokio::test]
