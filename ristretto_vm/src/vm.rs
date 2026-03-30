@@ -538,6 +538,8 @@ impl VM {
         let mut new_thread = Object::new(thread_class)?;
         new_thread.set_value("eetop", Value::Long(thread_id))?;
         new_thread.set_value("tid", Value::Long(thread_id))?;
+        let thread_name: Value = "main".to_object(&thread).await?;
+        new_thread.set_value("name", thread_name)?;
 
         // The internal structure of Thread changed in Java 19
         if java_version <= &JAVA_17 {
