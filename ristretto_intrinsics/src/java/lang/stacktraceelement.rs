@@ -176,8 +176,9 @@ async fn init_stack_trace_elements_impl<T: Thread + 'static>(
         // Now we can do async operations without holding any guards
         let class_name_obj = class_name.to_object(&thread).await?;
 
-        // Get the actual class to find source file
+        // Get the actual class to find source file and set declaringClassObject
         let actual_class = thread.class(&class_name).await?;
+        let declaring_class_object = actual_class.to_object(&thread).await?;
         let source_file = if let Some(sf) = actual_class.source_file() {
             sf.to_object(&thread).await?
         } else {
@@ -203,6 +204,7 @@ async fn init_stack_trace_elements_impl<T: Thread + 'static>(
         // Create StackTraceElement
         let mut stack_element = Object::new(stack_element_class.clone())?;
         stack_element.set_value("declaringClass", class_name_obj)?;
+        stack_element.set_value("declaringClassObject", declaring_class_object)?;
         stack_element.set_value("methodName", method_name_value)?;
         stack_element.set_value("fileName", source_file)?;
         stack_element.set_value("lineNumber", Value::Int(line_number))?;
@@ -234,11 +236,458 @@ async fn init_stack_trace_elements_impl<T: Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_classloader::{Object, Reference};
+    use ristretto_types::JavaObject;
+
+    /// Create a backtrace Object[] with the given number of frames.
+    /// Each frame references "java/lang/Object" class with method "hashCode()I".
+    async fn create_backtrace(
+        vm: &Arc<impl VM + 'static>,
+        thread: &Arc<impl Thread + 'static>,
+        count: usize,
+    ) -> Result<Value> {
+        let object_array_class = thread.class("[Ljava/lang/Object;").await?;
+        let integer_class = thread.class("java/lang/Integer").await?;
+        let obj_class = thread.class("java/lang/Object").await?;
+        let class_obj = obj_class.to_object(thread).await?;
+
+        let mut backtrace_elements = Vec::new();
+        for i in 0..count {
+            let method_name = "hashCode".to_object(thread).await?;
+            let descriptor = "()I".to_object(thread).await?;
+
+            let mut pc_obj = Object::new(integer_class.clone())?;
+            pc_obj.set_value("value", Value::Int(i32::try_from(i)?))?;
+            let pc_value = Value::new_object(vm.garbage_collector(), Reference::Object(pc_obj));
+
+            let frame_info = vec![class_obj.clone(), method_name, descriptor, pc_value];
+            let reference = Reference::try_from((object_array_class.clone(), frame_info))?;
+            backtrace_elements.push(Value::new_object(vm.garbage_collector(), reference));
+        }
+
+        let reference = Reference::try_from((object_array_class, backtrace_elements))?;
+        Ok(Value::new_object(vm.garbage_collector(), reference))
+    }
+
+    /// Create a pre-allocated `StackTraceElement[]` array with null entries.
+    async fn create_stack_trace_array(
+        vm: &Arc<impl VM + 'static>,
+        thread: &Arc<impl Thread + 'static>,
+        count: usize,
+    ) -> Result<Value> {
+        let stack_element_array_class = thread.class("[Ljava/lang/StackTraceElement;").await?;
+        let elements = vec![Value::Object(None); count];
+        let reference = Reference::try_from((stack_element_array_class, elements))?;
+        Ok(Value::new_object(vm.garbage_collector(), reference))
+    }
+
+    /// Create a Throwable with backtrace and depth fields set.
+    async fn create_throwable_with_backtrace(
+        vm: &Arc<impl VM + 'static>,
+        thread: &Arc<impl Thread + 'static>,
+        count: usize,
+    ) -> Result<Value> {
+        let throwable_class = thread.class("java/lang/Throwable").await?;
+        let backtrace = create_backtrace(vm, thread, count).await?;
+        let depth = i32::try_from(count)?;
+
+        let mut throwable_object = Object::new(throwable_class)?;
+        throwable_object.set_value("backtrace", backtrace)?;
+        throwable_object.set_value("depth", Value::Int(depth))?;
+        Ok(Value::new_object(
+            vm.garbage_collector(),
+            Reference::Object(throwable_object),
+        ))
+    }
 
     #[tokio::test]
     async fn test_init_stack_trace_element() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = init_stack_trace_element(thread, Parameters::default()).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_element_java11() {
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
+        let result = init_stack_trace_element(thread, Parameters::default()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_element_java17() {
+        let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
+        let result = init_stack_trace_element(thread, Parameters::default()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_element_java21() {
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
+        let result = init_stack_trace_element(thread, Parameters::default()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_element_java25() {
+        let (_vm, thread) = crate::test::java25_thread().await.expect("thread");
+        let result = init_stack_trace_element(thread, Parameters::default()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_0_empty_java11() -> Result<()> {
+        let (vm, thread) = crate::test::java11_thread().await?;
+        let stack_trace = create_stack_trace_array(&vm, &thread, 0).await?;
+        let throwable = create_throwable_with_backtrace(&vm, &thread, 0).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace);
+        parameters.push(throwable);
+        let result = init_stack_trace_elements_0(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_0_empty_java17() -> Result<()> {
+        let (vm, thread) = crate::test::java17_thread().await?;
+        let stack_trace = create_stack_trace_array(&vm, &thread, 0).await?;
+        let throwable = create_throwable_with_backtrace(&vm, &thread, 0).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace);
+        parameters.push(throwable);
+        let result = init_stack_trace_elements_0(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_0_single_frame_java11() -> Result<()> {
+        let (vm, thread) = crate::test::java11_thread().await?;
+        let stack_trace = create_stack_trace_array(&vm, &thread, 1).await?;
+        let throwable = create_throwable_with_backtrace(&vm, &thread, 1).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace.clone());
+        parameters.push(throwable);
+        let result = init_stack_trace_elements_0(thread, parameters).await?;
+        assert_eq!(result, None);
+
+        let stack_trace_guard = stack_trace.as_reference()?;
+        let Reference::Array(array) = &*stack_trace_guard else {
+            panic!("Expected array");
+        };
+        assert!(!array.elements[0].is_null());
+        let element_ref = array.elements[0].as_object_ref()?;
+        let declaring_class = element_ref.value("declaringClass")?.as_string()?;
+        assert_eq!(declaring_class, "java.lang.Object");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_0_single_frame_java17() -> Result<()> {
+        let (vm, thread) = crate::test::java17_thread().await?;
+        let stack_trace = create_stack_trace_array(&vm, &thread, 1).await?;
+        let throwable = create_throwable_with_backtrace(&vm, &thread, 1).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace.clone());
+        parameters.push(throwable);
+        let result = init_stack_trace_elements_0(thread, parameters).await?;
+        assert_eq!(result, None);
+
+        let stack_trace_guard = stack_trace.as_reference()?;
+        let Reference::Array(array) = &*stack_trace_guard else {
+            panic!("Expected array");
+        };
+        assert!(!array.elements[0].is_null());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_0_null_backtrace() {
+        let (vm, thread) = crate::test::java11_thread().await.expect("thread");
+        let stack_trace = create_stack_trace_array(&vm, &thread, 1)
+            .await
+            .expect("stack trace");
+        let throwable_class = thread
+            .class("java/lang/Throwable")
+            .await
+            .expect("throwable class");
+        let mut throwable_object = Object::new(throwable_class).expect("throwable object");
+        throwable_object
+            .set_value("backtrace", Value::Object(None))
+            .expect("set backtrace");
+        throwable_object
+            .set_value("depth", Value::Int(1))
+            .expect("set depth");
+        let throwable =
+            Value::new_object(vm.garbage_collector(), Reference::Object(throwable_object));
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace);
+        parameters.push(throwable);
+        let result = init_stack_trace_elements_0(thread, parameters).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_0_multiple_frames_java11() -> Result<()> {
+        let (vm, thread) = crate::test::java11_thread().await?;
+        let count = 3;
+        let stack_trace = create_stack_trace_array(&vm, &thread, count).await?;
+        let throwable = create_throwable_with_backtrace(&vm, &thread, count).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace.clone());
+        parameters.push(throwable);
+        let result = init_stack_trace_elements_0(thread, parameters).await?;
+        assert_eq!(result, None);
+
+        let stack_trace_guard = stack_trace.as_reference()?;
+        let Reference::Array(array) = &*stack_trace_guard else {
+            panic!("Expected array");
+        };
+        for i in 0..count {
+            assert!(
+                !array.elements[i].is_null(),
+                "element {i} should not be null"
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_0_null_stack_trace_ref() {
+        let (vm, thread) = crate::test::java11_thread().await.expect("thread");
+        let throwable = create_throwable_with_backtrace(&vm, &thread, 1)
+            .await
+            .expect("throwable");
+
+        let mut parameters = Parameters::default();
+        parameters.push_reference(None);
+        parameters.push(throwable);
+        let result = init_stack_trace_elements_0(thread, parameters).await;
+        assert!(result.is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // init_stack_trace_elements_1 (GreaterThan(JAVA_17))
+    // Parameters: (stack_trace_elements[], backtrace, depth)
+    // -----------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_1_empty_java21() -> Result<()> {
+        let (vm, thread) = crate::test::java21_thread().await?;
+        let stack_trace = create_stack_trace_array(&vm, &thread, 0).await?;
+        let backtrace = create_backtrace(&vm, &thread, 0).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace);
+        parameters.push(backtrace);
+        parameters.push(Value::Int(0));
+        let result = init_stack_trace_elements_1(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_1_empty_java25() -> Result<()> {
+        let (vm, thread) = crate::test::java25_thread().await?;
+        let stack_trace = create_stack_trace_array(&vm, &thread, 0).await?;
+        let backtrace = create_backtrace(&vm, &thread, 0).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace);
+        parameters.push(backtrace);
+        parameters.push(Value::Int(0));
+        let result = init_stack_trace_elements_1(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_1_single_frame_java21() -> Result<()> {
+        let (vm, thread) = crate::test::java21_thread().await?;
+        let stack_trace = create_stack_trace_array(&vm, &thread, 1).await?;
+        let backtrace = create_backtrace(&vm, &thread, 1).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace.clone());
+        parameters.push(backtrace);
+        parameters.push(Value::Int(1));
+        let result = init_stack_trace_elements_1(thread, parameters).await?;
+        assert_eq!(result, None);
+
+        let stack_trace_guard = stack_trace.as_reference()?;
+        let Reference::Array(array) = &*stack_trace_guard else {
+            panic!("Expected array");
+        };
+        assert!(!array.elements[0].is_null());
+        let element_ref = array.elements[0].as_object_ref()?;
+        let declaring_class = element_ref.value("declaringClass")?.as_string()?;
+        assert_eq!(declaring_class, "java.lang.Object");
+        let method_name = element_ref.value("methodName")?.as_string()?;
+        assert_eq!(method_name, "hashCode");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_1_single_frame_java25() -> Result<()> {
+        let (vm, thread) = crate::test::java25_thread().await?;
+        let stack_trace = create_stack_trace_array(&vm, &thread, 1).await?;
+        let backtrace = create_backtrace(&vm, &thread, 1).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace.clone());
+        parameters.push(backtrace);
+        parameters.push(Value::Int(1));
+        let result = init_stack_trace_elements_1(thread, parameters).await?;
+        assert_eq!(result, None);
+
+        let stack_trace_guard = stack_trace.as_reference()?;
+        let Reference::Array(array) = &*stack_trace_guard else {
+            panic!("Expected array");
+        };
+        assert!(!array.elements[0].is_null());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_1_null_backtrace() {
+        let (vm, thread) = crate::test::java21_thread().await.expect("thread");
+        let stack_trace = create_stack_trace_array(&vm, &thread, 1)
+            .await
+            .expect("stack trace");
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace);
+        parameters.push(Value::Object(None));
+        parameters.push(Value::Int(1));
+        let result = init_stack_trace_elements_1(thread, parameters).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_1_multiple_frames_java21() -> Result<()> {
+        let (vm, thread) = crate::test::java21_thread().await?;
+        let count = 3;
+        let stack_trace = create_stack_trace_array(&vm, &thread, count).await?;
+        let backtrace = create_backtrace(&vm, &thread, count).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace.clone());
+        parameters.push(backtrace);
+        parameters.push(Value::Int(i32::try_from(count)?));
+        let result = init_stack_trace_elements_1(thread, parameters).await?;
+        assert_eq!(result, None);
+
+        let stack_trace_guard = stack_trace.as_reference()?;
+        let Reference::Array(array) = &*stack_trace_guard else {
+            panic!("Expected array");
+        };
+        for i in 0..count {
+            assert!(
+                !array.elements[i].is_null(),
+                "element {i} should not be null"
+            );
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_1_null_stack_trace_ref() {
+        let (vm, thread) = crate::test::java21_thread().await.expect("thread");
+        let backtrace = create_backtrace(&vm, &thread, 1).await.expect("backtrace");
+
+        let mut parameters = Parameters::default();
+        parameters.push_reference(None);
+        parameters.push(backtrace);
+        parameters.push(Value::Int(1));
+        let result = init_stack_trace_elements_1(thread, parameters).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_1_verifies_fields_java21() -> Result<()> {
+        let (vm, thread) = crate::test::java21_thread().await?;
+        let stack_trace = create_stack_trace_array(&vm, &thread, 1).await?;
+        let backtrace = create_backtrace(&vm, &thread, 1).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace.clone());
+        parameters.push(backtrace);
+        parameters.push(Value::Int(1));
+        let result = init_stack_trace_elements_1(thread, parameters).await?;
+        assert_eq!(result, None);
+
+        let stack_trace_guard = stack_trace.as_reference()?;
+        let Reference::Array(array) = &*stack_trace_guard else {
+            panic!("Expected array");
+        };
+        let element_ref = array.elements[0].as_object_ref()?;
+
+        // Verify declaringClass is set
+        let declaring_class = element_ref.value("declaringClass")?.as_string()?;
+        assert_eq!(declaring_class, "java.lang.Object");
+
+        // Verify declaringClassObject is not null
+        let declaring_class_obj = element_ref.value("declaringClassObject")?;
+        assert!(!declaring_class_obj.is_null());
+
+        // Verify methodName is set
+        let method_name = element_ref.value("methodName")?.as_string()?;
+        assert_eq!(method_name, "hashCode");
+
+        // Verify lineNumber is set (may be -1 for native/synthetic methods)
+        let line_number = element_ref.value("lineNumber")?.as_i32()?;
+        assert!(
+            line_number >= -1,
+            "line number should be >= -1, got {line_number}"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_stack_trace_elements_0_verifies_fields_java11() -> Result<()> {
+        let (vm, thread) = crate::test::java11_thread().await?;
+        let stack_trace = create_stack_trace_array(&vm, &thread, 1).await?;
+        let throwable = create_throwable_with_backtrace(&vm, &thread, 1).await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(stack_trace.clone());
+        parameters.push(throwable);
+        let result = init_stack_trace_elements_0(thread, parameters).await?;
+        assert_eq!(result, None);
+
+        let stack_trace_guard = stack_trace.as_reference()?;
+        let Reference::Array(array) = &*stack_trace_guard else {
+            panic!("Expected array");
+        };
+        let element_ref = array.elements[0].as_object_ref()?;
+
+        // Verify declaringClass
+        let declaring_class = element_ref.value("declaringClass")?.as_string()?;
+        assert_eq!(declaring_class, "java.lang.Object");
+
+        // Verify declaringClassObject is not null
+        let declaring_class_obj = element_ref.value("declaringClassObject")?;
+        assert!(!declaring_class_obj.is_null());
+
+        // Verify methodName
+        let method_name = element_ref.value("methodName")?.as_string()?;
+        assert_eq!(method_name, "hashCode");
+
+        // Verify lineNumber
+        let line_number = element_ref.value("lineNumber")?.as_i32()?;
+        assert!(
+            line_number >= -1,
+            "line number should be >= -1, got {line_number}"
+        );
+
+        Ok(())
     }
 }
