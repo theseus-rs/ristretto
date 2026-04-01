@@ -52,11 +52,14 @@ public class Test {
         try {
             // Test access to internal packages
             Package[] packages = Package.getPackages();
-            System.out.println("Total accessible packages: " + packages.length);
+            System.out.println("Total accessible packages > 0: " + (packages.length > 0));
 
-            // Look for internal packages
+            // Look for internal packages (sort to get deterministic output)
             boolean hasInternalPackages = false;
-            for (Package pkg : packages) {
+            java.util.List<Package> sortedPackages = java.util.Arrays.stream(packages)
+                .sorted(java.util.Comparator.comparing(Package::getName))
+                .collect(java.util.stream.Collectors.toList());
+            for (Package pkg : sortedPackages) {
                 if (pkg.getName().contains(".internal") || pkg.getName().contains(".impl")) {
                     hasInternalPackages = true;
                     System.out.println("Internal package found: " + pkg.getName());
@@ -88,10 +91,11 @@ public class Test {
                 .filter(Module::isNamed)
                 .filter(m -> m.getDescriptor() != null)
                 .filter(m -> !m.getDescriptor().opens().isEmpty())
+                .sorted(java.util.Comparator.comparing(Module::getName))
                 .limit(3)
                 .forEach(module -> {
                     System.out.println("Module " + module.getName() + " opens:");
-                    module.getDescriptor().opens().forEach(opens -> {
+                    module.getDescriptor().opens().stream().sorted(java.util.Comparator.comparing(o -> o.source())).forEach(opens -> {
                         System.out.println("  Package: " + opens.source());
                         if (opens.isQualified()) {
                             System.out.println("    To modules: " + opens.targets());
@@ -133,7 +137,7 @@ public class Test {
                     firstField.setAccessible(true);
                     System.out.println("setAccessible(true) succeeded");
                 } catch (Exception e) {
-                    System.out.println("setAccessible(true) failed: " + e.getMessage());
+                    System.out.println("setAccessible(true) failed: " + e.getMessage().replaceAll("@[0-9a-fA-F]+", "@HASH"));
                 }
             }
 

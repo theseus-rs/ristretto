@@ -8,7 +8,7 @@ public class Test {
         System.out.println("String[] instanceof java.io.Serializable: " + (stringArray instanceof java.io.Serializable));
         System.out.println("String[] instanceof String[]: " + (stringArray instanceof String[]));
 
-        // Test reference array covariance - String[] is assignable to Object[]
+        // Test reference array covariance; String[] is assignable to Object[]
         System.out.println("String[] instanceof Object[]: " + (stringArray instanceof Object[]));
         System.out.println("String[] instanceof CharSequence[]: " + (stringArray instanceof CharSequence[]));
         System.out.println("String[] instanceof Comparable[]: " + (stringArray instanceof Comparable[]));

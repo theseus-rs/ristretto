@@ -101,7 +101,7 @@ pub async fn set_flow_option<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // Flow options not supported — no-op
+    // Flow options not supported; no-op
     Ok(None)
 }
 

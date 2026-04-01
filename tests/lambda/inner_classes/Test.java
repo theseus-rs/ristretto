@@ -110,7 +110,7 @@ public class Test {
             }
         };
 
-        System.out.println("Lambda class: " + lambda.getClass().getSimpleName());
+        System.out.println("Lambda class: " + lambda.getClass().getSimpleName().replaceAll("[/+]0x[0-9a-fA-F]+", ""));
         System.out.println("Anonymous class: " + anon.getClass().getSimpleName());
         lambda.run();
         anon.run();

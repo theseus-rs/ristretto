@@ -5,6 +5,7 @@ use crate::JavaError::{RuntimeException, VerifyError};
 use crate::Parameters;
 use crate::RustValue;
 use crate::configuration::VerifyMode;
+use crate::java_object::JavaObject;
 use crate::rust_value::process_values;
 use crate::{Frame, Result, VM, jit};
 #[cfg(not(target_family = "wasm"))]
@@ -15,8 +16,9 @@ use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
 use ristretto_intrinsics::get_monitor_id;
 use ristretto_macros::async_method;
+use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 #[cfg(not(target_family = "wasm"))]
 use sysinfo::{Pid, ProcessRefreshKind, RefreshKind, System};
@@ -58,6 +60,11 @@ pub struct Thread {
     name: Arc<RwLock<String>>,
     java_object: Arc<RwLock<Value>>,
     frames: Arc<RwLock<Vec<Arc<Frame>>>>,
+    /// Tracks class names currently being loaded via a Java classloader on this
+    /// thread, preventing infinite recursion when `loadClass()` internally
+    /// triggers further class resolution.
+    /// Uses `std::sync::Mutex` (not tokio) so it can be accessed from `Drop`.
+    java_cl_loading: Mutex<HashSet<String>>,
     park_state: ParkState,
 }
 
@@ -75,6 +82,7 @@ impl Thread {
             name: Arc::new(RwLock::new(name)),
             java_object: Arc::new(RwLock::new(java_object)),
             frames: Arc::new(RwLock::new(Vec::new())),
+            java_cl_loading: Mutex::new(HashSet::new()),
             park_state: ParkState::new(),
         })
     }
@@ -336,7 +344,20 @@ impl Thread {
         let class = {
             let class_loader_lock = vm.class_loader();
             let class_loader = class_loader_lock.read().await;
-            class_loader.load(class_name).await?
+            match class_loader.load(class_name).await {
+                Ok(class) => class,
+                Err(ristretto_classloader::Error::ClassNotFound(_)) => {
+                    // Per JVM spec §5.3, when a class D references class C, the JVM must
+                    // use D's defining classloader to load C.  If D was loaded by a
+                    // user-defined (Java) classloader, the JVM invokes loadClass() on it.
+                    drop(class_loader);
+                    match self.load_class_via_java_classloader(&vm, class_name).await {
+                        Ok(c) => c,
+                        Err(e) => return Err(e),
+                    }
+                }
+                Err(e) => return Err(e.into()),
+            }
         };
 
         // Check class version compatibility
@@ -383,7 +404,7 @@ impl Thread {
             let mut interfaces = Vec::with_capacity(interface_indices.len());
             for interface_index in interface_indices {
                 let interface_name = class.constant_pool().try_get_class(interface_index)?;
-                // Pass &JavaStr directly from constant pool — no String allocation
+                // Pass &JavaStr directly from constant pool; no String allocation
                 let interface_class = self.load_and_link_class(interface_name).await?;
                 interfaces.push(interface_class);
             }
@@ -395,19 +416,135 @@ impl Thread {
         if class.parent()?.is_none() && class.name() != "java/lang/Object" {
             let super_class_index = class.class_file().super_class;
             if super_class_index == 0 {
-                // Default to java/lang/Object — zero-copy via try_from_str on static ASCII
+                // Default to java/lang/Object; zero-copy via try_from_str on static ASCII
                 let object_name = JavaStr::try_from_str("java/lang/Object").expect("valid ASCII");
                 let super_class = self.load_and_link_class(object_name).await?;
                 class.set_parent(Some(super_class))?;
             } else {
                 let super_class_name = class.constant_pool().try_get_class(super_class_index)?;
-                // Pass &JavaStr directly from constant pool — no String allocation
+                // Pass &JavaStr directly from constant pool; no String allocation
                 let super_class = self.load_and_link_class(super_class_name).await?;
                 class.set_parent(Some(super_class))?;
             }
         }
 
         Ok(class)
+    }
+
+    /// Attempt to load a class by invoking `ClassLoader.loadClass()` on the Java classloader
+    /// associated with a class on the current call stack.
+    ///
+    /// Per [JVMS §5.3](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.3),
+    /// when class D references class C, the JVM uses D's defining classloader to load C.  If D
+    /// was loaded by a user-defined classloader, the JVM must invoke that classloader's
+    /// `loadClass()` method so the classloader can locate, define, and register the class.
+    ///
+    /// This method walks the call stack from newest to oldest frame looking for a class whose
+    /// Java mirror object carries a non-null `classLoader` field.  When found it invokes
+    /// `ClassLoader.loadClass(className)` on that object.  The Java `loadClass` implementation
+    /// ultimately calls the native `defineClass()`, which registers the class with the VM's
+    /// Rust classloader so that subsequent lookups succeed.
+    async fn load_class_via_java_classloader(
+        &self,
+        vm: &Arc<VM>,
+        class_name: &JavaStr,
+    ) -> Result<Arc<Class>> {
+        // RAII guard that removes the class name from the loading set on drop,
+        // ensuring cleanup even if a panic occurs during loadClass invocation.
+        struct LoadGuard<'a> {
+            loading: &'a Mutex<HashSet<String>>,
+            name: Option<String>,
+        }
+        impl Drop for LoadGuard<'_> {
+            fn drop(&mut self) {
+                if let Some(name) = self.name.take()
+                    && let Ok(mut set) = self.loading.lock()
+                {
+                    set.remove(&name);
+                }
+            }
+        }
+
+        let class_name_str = class_name.to_rust_string();
+
+        // Re-entrance guard: if this class is already being loaded via a Java
+        // classloader on this thread, bail out to prevent infinite recursion
+        // (e.g. loadClass -> findLoadedClass -> load_and_link -> loadClass …).
+        {
+            let mut loading = self
+                .java_cl_loading
+                .lock()
+                .map_err(|e| InternalError(e.to_string()))?;
+            if !loading.insert(class_name_str.clone()) {
+                return Err(ristretto_classloader::Error::ClassNotFound(class_name_str).into());
+            }
+        }
+
+        let mut load_guard = LoadGuard {
+            loading: &self.java_cl_loading,
+            name: Some(class_name_str.clone()),
+        };
+
+        // Walk the call stack to find a Java classloader from the referencing class.
+        // We must drop the frames lock before invoking any Java methods to avoid
+        // deadlocks (execute() modifies frames).
+        let java_classloader = {
+            let frames = self.frames.read().await;
+            let mut found = None;
+            for frame in frames.iter().rev() {
+                let class = frame.class();
+                if let Ok(Some(mirror)) = class.object()
+                    && let Ok(obj) = mirror.as_object_ref()
+                    && let Ok(cl) = obj.value("classLoader")
+                    && !cl.is_null()
+                {
+                    found = Some(cl);
+                    break;
+                }
+            }
+            found
+        };
+
+        let Some(java_classloader) = java_classloader else {
+            return Err(ristretto_classloader::Error::ClassNotFound(class_name_str).into());
+        };
+
+        // Convert from internal format (slashes) to Java format (dots) for loadClass().
+        let dot_name = class_name_str.replace('/', ".");
+
+        let load_result = async {
+            let cl_class = self.class("java/lang/ClassLoader").await?;
+            let load_class_method =
+                cl_class.try_get_method("loadClass", "(Ljava/lang/String;)Ljava/lang/Class;")?;
+            let name_value: Value = dot_name.to_object(self).await?;
+            self.execute(
+                &cl_class,
+                &load_class_method,
+                &[java_classloader, name_value],
+            )
+            .await
+        }
+        .await;
+
+        // Explicitly remove the guard before proceeding; disarm the drop.
+        load_guard.name.take();
+        if let Ok(mut set) = self.java_cl_loading.lock() {
+            set.remove(&class_name_str);
+        }
+
+        let result = load_result?;
+        if let Some(ref value) = result
+            && !value.is_null()
+        {
+            // loadClass succeeded.  The class should now be registered in the Rust
+            // classloader via the defineClass native call that loadClass ultimately made.
+            let class_loader_lock = vm.class_loader();
+            let class_loader = class_loader_lock.read().await;
+            let loaded_class: Arc<Class> = class_loader.load(class_name).await?;
+            return Ok(loaded_class);
+        }
+
+        Err(ristretto_classloader::Error::ClassNotFound(class_name_str).into())
     }
 
     /// Initialize a class following

@@ -1376,6 +1376,27 @@ impl Class {
         Ok(())
     }
 
+    /// Set the object for the class only if it has not already been set.
+    /// Returns the existing object if one was already cached, or the provided object if it was set.
+    /// This prevents TOCTOU races in async contexts where multiple tasks may try to create
+    /// and cache a class mirror concurrently.
+    ///
+    /// # Errors
+    ///
+    /// if the object cannot be set due to a poisoned lock.
+    pub fn set_object_if_absent(&self, object: Value) -> Result<Value> {
+        let mut object_guard = self
+            .object
+            .write()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        if let Some(existing) = object_guard.as_ref() {
+            Ok(existing.clone())
+        } else {
+            *object_guard = Some(object.clone());
+            Ok(object)
+        }
+    }
+
     /// Determine if this class is a subclass of the given class.
     ///
     /// # Errors

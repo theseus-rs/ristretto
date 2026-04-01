@@ -50,6 +50,7 @@ public class Test {
             if (javaBase != null && javaBase.getDescriptor() != null) {
                 System.out.println("java.base exported packages:");
                 javaBase.getDescriptor().exports().stream()
+                    .sorted(java.util.Comparator.comparing(e -> e.source()))
                     .limit(10)
                     .forEach(export -> {
                         System.out.println("  " + export.source() +
@@ -73,6 +74,7 @@ public class Test {
             System.out.println("Current module reads:");
             ModuleLayer.boot().modules().stream()
                 .filter(currentModule::canRead)
+                .sorted(java.util.Comparator.comparing(Module::getName))
                 .limit(10)
                 .forEach(m -> System.out.println("  " + m.getName()));
 

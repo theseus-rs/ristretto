@@ -2,7 +2,7 @@ use crate::java::lang::class::get_class;
 use parking_lot::RwLock;
 use ristretto_classfile::VerifyMode;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
-use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11};
+use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11, JavaStr};
 use ristretto_classloader::{Class, Reference, Value};
 use ristretto_gc::Gc;
 use ristretto_macros::async_method;
@@ -16,6 +16,38 @@ use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 use zerocopy::transmute_ref;
+
+/// Set the defining class loader and module on a class mirror created by defineClass.
+///
+/// Per JVM spec §5.3.5, when defineClass is called, the class is defined by the given
+/// class loader. The class belongs to the unnamed module of that class loader (§7.7.5).
+/// This function sets both the `classLoader` and `module` fields on the java.lang.Class
+/// mirror to maintain consistency between the classLoader identity and the module's
+/// owning classLoader.
+fn set_defining_class_loader(class: &Value, class_loader: &Value) -> Result<()> {
+    if class_loader.is_null() {
+        return Ok(());
+    }
+
+    // Read the unnamed module from the classLoader before mutating the class mirror.
+    // If the field doesn't exist (e.g. pre-Java 9), treat as no module.
+    let unnamed_module = {
+        let cl_obj = class_loader.as_object_ref()?;
+        match cl_obj.value("unnamedModule") {
+            Ok(module) => module,
+            Err(ristretto_classloader::Error::FieldNotFound { .. }) => Value::Object(None),
+            Err(e) => return Err(e.into()),
+        }
+    };
+
+    let mut class_object = class.as_object_mut()?;
+    class_object.set_value("classLoader", class_loader.clone())?;
+
+    if !unnamed_module.is_null() {
+        class_object.set_value_unchecked("module", unnamed_module)?;
+    }
+    Ok(())
+}
 
 /// Create a `java.lang.Class` object from a byte array.
 /// This method is used by the `defineClass0`, `defineClass1`, and `defineClass2` native methods.
@@ -207,13 +239,11 @@ pub async fn define_class_0_1<T: Thread + 'static>(
     let _lookup = get_class(&thread, &lookup).await?;
     let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
-    {
+    set_defining_class_loader(&class, &class_loader)?;
+    // Set classData for hidden classes; this is used by StringConcatFactory and others
+    if !class_data.is_null() {
         let mut class_object = class.as_object_mut()?;
-        class_object.set_value("classLoader", class_loader)?;
-        // Set classData for hidden classes; this is used by StringConcatFactory and others
-        if !class_data.is_null() {
-            class_object.set_value("classData", class_data)?;
-        }
+        class_object.set_value("classData", class_data)?;
     }
     Ok(Some(class))
 }
@@ -240,10 +270,7 @@ pub async fn define_class_1_1<T: Thread + 'static>(
     let _name = parameters.pop()?;
     let class_loader = parameters.pop()?;
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
-    if !class_loader.is_null() {
-        let mut class_object = class.as_object_mut()?;
-        class_object.set_value("classLoader", class_loader)?;
-    }
+    set_defining_class_loader(&class, &class_loader)?;
     Ok(Some(class))
 }
 
@@ -276,10 +303,7 @@ pub async fn define_class_2_1<T: Thread + 'static>(
     let bytes: Vec<u8> = buffer.iter().copied().skip(buffer_offset).collect();
     let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
     let class_loader = parameters.pop()?;
-    {
-        let mut class_object = class.as_object_mut()?;
-        class_object.set_value("classLoader", class_loader)?;
-    }
+    set_defining_class_loader(&class, &class_loader)?;
     Ok(Some(class))
 }
 
@@ -293,9 +317,18 @@ pub async fn find_bootstrap_class<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let class_name = parameters.pop()?.as_string()?;
-    let Ok(class) = thread.class(&class_name).await else {
+    // findBootstrapClass searches only the bootstrap classpath.  Use the bootstrap
+    // (root) classloader directly so that application level classloaders are not
+    // consulted, matching the JVM spec semantics.
+    let vm = thread.vm()?;
+    let class_loader_lock = vm.class_loader();
+    let class_loader = class_loader_lock.read().await;
+    let bootstrap = class_loader.bootstrap().await;
+    let class_name_jstr = JavaStr::cow_from_str(&class_name);
+    let Ok(class) = bootstrap.load(&class_name_jstr).await else {
         return Ok(Some(Value::Object(None)));
     };
+    drop(class_loader);
     let class = class.to_object(&thread).await?;
     Ok(Some(class))
 }
@@ -327,7 +360,14 @@ pub async fn find_loaded_class_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let class_name = parameters.pop()?.as_string()?;
-    let Ok(class) = thread.class(&class_name).await else {
+    // Per JVM spec, findLoadedClass only checks whether the class was already loaded;
+    // it must NOT trigger new class loading (which would recurse through Java
+    // classloaders).  Use find_loaded which only checks the in-memory cache.
+    let vm = thread.vm()?;
+    let class_loader_lock = vm.class_loader();
+    let class_loader = class_loader_lock.read().await;
+    let class_name_jstr = JavaStr::cow_from_str(&class_name);
+    let Some(class) = class_loader.find_loaded(&class_name_jstr).await else {
         return Ok(Some(Value::Object(None)));
     };
     let class = class.to_object(&thread).await?;

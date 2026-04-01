@@ -39,7 +39,7 @@ public class Test {
 
         Class<?> clazz = Test.class;
 
-        // Test class annotations - only RUNTIME should be visible
+        // Test class annotations; only RUNTIME should be visible
         System.out.println("Class has SourceRetention: " + clazz.isAnnotationPresent(SourceRetention.class));
         System.out.println("Class has ClassRetention: " + clazz.isAnnotationPresent(ClassRetention.class));
         System.out.println("Class has RuntimeRetention: " + clazz.isAnnotationPresent(RuntimeRetention.class));

@@ -1,5 +1,6 @@
 use crate::Result;
 use ristretto_classloader::Value;
+use ristretto_classloader::module::ResolvedConfiguration;
 
 /// Information about a defined module.
 #[derive(Clone, Debug)]
@@ -66,11 +67,34 @@ pub trait ModuleAccess: Send + Sync {
     /// Add an export from `source_module` of package to all unnamed modules.
     fn add_export_to_all_unnamed(&self, source_module: &str, package: &str);
 
+    /// Add an opens from `source_module` of package to `target_module`.
+    fn add_opens(&self, source_module: &str, package: &str, target_module: Option<&str>);
+
+    /// Add an opens from `source_module` of package to all modules.
+    fn add_opens_to_all(&self, source_module: &str, package: &str);
+
+    /// Add an opens from `source_module` of package to all unnamed modules.
+    fn add_opens_to_all_unnamed(&self, source_module: &str, package: &str);
+
     /// Add a read edge from `source_module` to `target_module`.
     fn add_read(&self, source_module: &str, target_module: &str);
 
     /// Define a module.
     fn define_module(&self, module: DefinedModule);
+
+    /// Get a defined module by name.
+    fn get_module(&self, name: &str) -> Option<DefinedModule>;
+
+    /// Check if a module is open.
+    fn is_module_open(&self, name: &str) -> bool;
+
+    /// Check access between modules.
+    fn check_access(
+        &self,
+        from_module: Option<&str>,
+        to_module: Option<&str>,
+        to_class_name: &str,
+    ) -> AccessCheckResult;
 
     /// Check reflection access between modules.
     fn check_reflection_access(
@@ -99,4 +123,10 @@ pub trait ModuleAccess: Send + Sync {
 
     /// Get the module object for a given package.
     fn get_module_for_package(&self, package: &str) -> Option<Value>;
+
+    /// Get the resolved module configuration.
+    fn resolved_configuration(&self) -> &ResolvedConfiguration;
+
+    /// Get all packages from all defined modules.
+    fn all_defined_packages(&self) -> Vec<String>;
 }

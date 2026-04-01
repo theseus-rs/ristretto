@@ -25,8 +25,8 @@ use ahash::{AHashMap, AHashSet};
 use parking_lot::RwLock;
 use ristretto_classloader::Value;
 use ristretto_classloader::module::{
-    AccessCheck, ModuleFinder, ModuleFinderChain, ModulePathFinder, ResolvedConfiguration,
-    Resolver, SystemModuleFinder,
+    AccessCheck, ModuleFinder, ModuleFinderChain, ModulePathFinder, ModuleSource,
+    ResolvedConfiguration, Resolver, SystemModuleFinder,
 };
 use ristretto_types::ModuleAccess;
 use std::collections::BTreeMap;
@@ -94,8 +94,8 @@ impl ModuleSystem {
     /// 3. Resolves the module graph starting from root modules
     /// 4. Applies command-line overrides (--add-reads, --add-exports, --add-opens)
     ///
-    /// For simple classpath-based applications (no module path, no main module), this skips
-    /// expensive module resolution and uses a fast path.
+    /// System modules are always loaded for Java 9+ to ensure the boot layer
+    /// contains java.base and other required modules.
     ///
     /// # Errors
     ///
@@ -118,21 +118,7 @@ impl ModuleSystem {
             return Ok(module_system);
         }
 
-        // Fast path: Skip expensive module resolution for simple classpath applications
-        // that don't use JPMS features (no module path, no main module, no custom limits)
-        let is_simple_classpath_app = configuration.module_path().is_empty()
-            && configuration.main_module().is_none()
-            && configuration.limit_modules().is_empty()
-            && configuration.upgrade_module_path().is_empty();
-
-        if is_simple_classpath_app {
-            debug!("Simple classpath application; skipping full module resolution");
-            module_system.resolved_configuration =
-                Self::create_fallback_configuration(configuration);
-            return Ok(module_system);
-        }
-
-        // Build the module finder chain
+        // Build the module finder chain (always load system modules for Java 9+)
         let finder_chain = Self::build_finder_chain(configuration, java_home).await;
 
         // Check if we have a valid finder chain (needs system modules)
@@ -365,40 +351,83 @@ impl ModuleSystem {
     ) {
         for module in configuration.add_modules() {
             if module == "ALL-SYSTEM" {
-                // Add all system modules
+                // JEP 261: ALL-SYSTEM resolves all system modules (from the runtime image).
+                // Upgrade modules replace system modules, so include both.
                 for reference in finder_chain.find_all() {
+                    if !matches!(
+                        reference.source(),
+                        ModuleSource::System | ModuleSource::Upgrade
+                    ) {
+                        continue;
+                    }
                     let name = reference.name().to_string();
                     if !root_modules.contains(&name) {
                         root_modules.push(name);
                     }
                 }
-            } else if module == "ALL-MODULE-PATH" || module == "ALL-DEFAULT" {
-                // ALL-MODULE-PATH: Add all modules from module path (resolved as needed)
-                // ALL-DEFAULT: Add default modules (those that export at least one package)
-                // These are simplifications; OpenJDK has more complex rules
+            } else if module == "ALL-MODULE-PATH" {
+                // JEP 261: ALL-MODULE-PATH resolves all observable modules on the module path,
+                // including automatic modules.
+                for reference in finder_chain.find_all() {
+                    if !matches!(
+                        reference.source(),
+                        ModuleSource::ModulePath | ModuleSource::Automatic
+                    ) {
+                        continue;
+                    }
+                    let name = reference.name().to_string();
+                    if !root_modules.contains(&name) {
+                        root_modules.push(name);
+                    }
+                }
+            } else if module == "ALL-DEFAULT" {
+                // ALL-DEFAULT: add modules that export at least one unqualified package,
+                // excluding incubator modules (consistent with add_default_modules)
+                for reference in finder_chain.find_all() {
+                    let name = reference.name().to_string();
+                    if name.starts_with("jdk.incubator.") {
+                        continue;
+                    }
+                    let has_unqualified_export = reference
+                        .descriptor()
+                        .exports
+                        .iter()
+                        .any(|e| e.targets.is_none());
+                    if has_unqualified_export && !root_modules.contains(&name) {
+                        root_modules.push(name);
+                    }
+                }
             } else if !root_modules.contains(module) {
                 root_modules.push(module.clone());
             }
         }
     }
 
-    /// Adds commonly needed default modules if no explicit roots beyond java.base.
+    /// Adds all system modules as default roots when no explicit modules are specified.
+    ///
+    /// Per the JVM specification, the boot layer should contain all system modules
+    /// so that `ModuleLayer.boot().modules()` returns the full set.
     fn add_default_modules(root_modules: &mut Vec<String>, finder_chain: &ModuleFinderChain) {
         if root_modules.len() > 1 {
             return;
         }
 
-        let default_modules = [
-            "java.logging",
-            "java.management",
-            "java.naming",
-            "java.security.sasl",
-            "java.xml",
-        ];
-
-        for module in default_modules {
-            if finder_chain.find(module).is_some() && !root_modules.contains(&module.to_string()) {
-                root_modules.push(module.to_string());
+        // JEP 261 default root modules for classpath applications:
+        // All observable modules that export at least one package without qualification,
+        // excluding incubator modules.
+        for reference in finder_chain.find_all() {
+            let name = reference.name().to_string();
+            if root_modules.contains(&name) {
+                continue;
+            }
+            // Incubator modules are not default root modules
+            if name.starts_with("jdk.incubator.") {
+                continue;
+            }
+            let desc = reference.descriptor();
+            let has_unqualified_exports = desc.exports.iter().any(|e| e.targets.is_none());
+            if has_unqualified_exports {
+                root_modules.push(name);
             }
         }
     }
@@ -514,7 +543,10 @@ impl ModuleSystem {
     /// Adds an export from `source_module` of `package` to `target_module`.
     ///
     /// This is called by `Module.addExports0(Module, String, Module)`.
-    /// If `target_module` is `None`, the package is exported to all modules.
+    /// If `target_module` is `None`, the package is exported to all unnamed modules.
+    /// This matches the JVM behavior of `Module.addExports(String, Module)` where a null
+    /// caller module implies the unnamed module. For unqualified exports declared in
+    /// `module-info.class` (which export to all modules), use [`Self::add_export_to_all`] instead.
     pub fn add_export(&self, source_module: &str, package: &str, target_module: Option<&str>) {
         let target = target_module.unwrap_or(ALL_UNNAMED);
         let mut exports = self.exports.write();
@@ -542,13 +574,26 @@ impl ModuleSystem {
     }
 
     /// Checks if `package` in `source_module` is exported to `target_module`.
+    ///
+    /// This checks both the static resolved configuration and runtime dynamic state,
+    /// per the JPMS specification. A package is exported if:
+    /// - It is declared as `exports` in the module descriptor (static), or
+    /// - `Module.addExports()` was called at runtime (dynamic).
     #[must_use]
     pub fn is_exported(&self, source_module: &str, package: &str, target_module: &str) -> bool {
+        // Check static configuration
+        if self
+            .resolved_configuration
+            .exports(source_module, package, target_module)
+        {
+            return true;
+        }
+
+        // Check dynamic runtime state
         let exports = self.exports.read();
         if let Some(module_exports) = exports.get(source_module)
             && let Some(targets) = module_exports.get(package)
         {
-            // Check for specific target, ALL-UNNAMED, or ALL (unqualified)
             return targets.contains(target_module)
                 || targets.contains("ALL")
                 || (target_module == ALL_UNNAMED && targets.contains(ALL_UNNAMED));
@@ -559,7 +604,10 @@ impl ModuleSystem {
     /// Adds an opens from `source_module` of `package` to `target_module`.
     ///
     /// This is called by `Module.addOpens0(Module, String, Module)`.
-    /// If `target_module` is `None`, the package is opened to all modules.
+    /// If `target_module` is `None`, the package is opened to all unnamed modules.
+    /// This matches the JVM behavior of `Module.addOpens(String, Module)` where a null
+    /// caller module implies the unnamed module. For unqualified opens declared in
+    /// `module-info.class` (which open to all modules), use [`Self::add_opens_to_all`] instead.
     pub fn add_opens(&self, source_module: &str, package: &str, target_module: Option<&str>) {
         let target = target_module.unwrap_or(ALL_UNNAMED);
         let mut opens = self.opens.write();
@@ -582,6 +630,12 @@ impl ModuleSystem {
     }
 
     /// Checks if `package` in `source_module` is opened to `target_module`.
+    ///
+    /// This checks both the static resolved configuration and runtime dynamic state,
+    /// per the JPMS specification. A package is opened if:
+    /// - The module is declared as `open` (all packages implicitly opened), or
+    /// - It is declared as `opens` in the module descriptor (static), or
+    /// - `Module.addOpens()` was called at runtime (dynamic).
     #[must_use]
     pub fn is_opened(&self, source_module: &str, package: &str, target_module: &str) -> bool {
         // First check if the module is open (all packages implicitly opened)
@@ -589,6 +643,15 @@ impl ModuleSystem {
             return true;
         }
 
+        // Check static configuration
+        if self
+            .resolved_configuration
+            .opens(source_module, package, target_module)
+        {
+            return true;
+        }
+
+        // Check dynamic runtime state
         let opens = self.opens.read();
         if let Some(module_opens) = opens.get(source_module)
             && let Some(targets) = module_opens.get(package)
@@ -612,6 +675,11 @@ impl ModuleSystem {
     }
 
     /// Checks if `source_module` reads `target_module`.
+    ///
+    /// This checks both the static resolved configuration and runtime dynamic state,
+    /// per the JPMS specification (JEP 261). A module reads another if:
+    /// - It declares `requires` in its module descriptor (static), or
+    /// - `Module.addReads()` was called at runtime (dynamic).
     #[must_use]
     pub fn can_read(&self, source_module: &str, target_module: &str) -> bool {
         // Same module can always read itself
@@ -624,6 +692,15 @@ impl ModuleSystem {
             return true;
         }
 
+        // Check static configuration
+        if self
+            .resolved_configuration
+            .reads(source_module, target_module)
+        {
+            return true;
+        }
+
+        // Check dynamic runtime state
         let reads = self.reads.read();
         reads
             .get(source_module)
@@ -650,6 +727,18 @@ impl ModuleSystem {
     pub fn is_module_open(&self, name: &str) -> bool {
         let modules = self.modules.read();
         modules.get(name).is_some_and(|m| m.is_open)
+    }
+
+    /// Returns all packages from all defined modules.
+    #[must_use]
+    pub fn all_defined_packages(&self) -> Vec<String> {
+        let modules = self.modules.read();
+        let capacity: usize = modules.values().map(|m| m.packages.len()).sum();
+        let mut packages = Vec::with_capacity(capacity);
+        for module in modules.values() {
+            packages.extend(module.packages.iter().cloned());
+        }
+        packages
     }
 
     /// Returns all dynamic exports for merging with static configuration.
@@ -690,12 +779,13 @@ impl ModuleSystem {
     /// - The module was defined but no Module object was stored
     #[must_use]
     pub fn get_module_for_package(&self, package: &str) -> Option<Value> {
+        // Normalize to dotted format since DefinedModule.packages stores dotted names
+        let dot_package = package.replace('/', ".");
+
         // First check the defined modules from defineModule0 calls
         let modules = self.modules.read();
         for module in modules.values() {
-            // Convert package name from internal format (java/lang) to dot format (java.lang)
-            let dot_package = package.replace('/', ".");
-            if module.packages.contains(&dot_package) || module.packages.contains(package) {
+            if module.packages.contains(&dot_package) {
                 return module.module_object.clone();
             }
         }
@@ -813,14 +903,9 @@ impl ModuleSystem {
     /// Checks access for code in the unnamed module (classpath).
     ///
     /// The unnamed module can read all named modules, so we only check exports.
+    /// Per JPMS spec, `opens` only grants deep reflection access, not normal access.
     fn check_unnamed_module_access(&self, to_module: &str, package: &str) -> AccessCheckResult {
-        // Check if the package is exported (to ALL-UNNAMED or to ALL)
         if self.is_exported(to_module, package, ALL_UNNAMED) {
-            return AccessCheckResult::Allowed;
-        }
-
-        // Check if the module has opened the package to all
-        if self.is_opened(to_module, package, ALL_UNNAMED) {
             return AccessCheckResult::Allowed;
         }
 
@@ -971,12 +1056,41 @@ impl ModuleAccess for ModuleSystem {
         ModuleSystem::add_export_to_all_unnamed(self, source_module, package);
     }
 
+    fn add_opens(&self, source_module: &str, package: &str, target_module: Option<&str>) {
+        ModuleSystem::add_opens(self, source_module, package, target_module);
+    }
+
+    fn add_opens_to_all(&self, source_module: &str, package: &str) {
+        ModuleSystem::add_opens_to_all(self, source_module, package);
+    }
+
+    fn add_opens_to_all_unnamed(&self, source_module: &str, package: &str) {
+        ModuleSystem::add_opens_to_all_unnamed(self, source_module, package);
+    }
+
     fn add_read(&self, source_module: &str, target_module: &str) {
         ModuleSystem::add_read(self, source_module, target_module);
     }
 
     fn define_module(&self, module: DefinedModule) {
         ModuleSystem::define_module(self, module);
+    }
+
+    fn get_module(&self, name: &str) -> Option<DefinedModule> {
+        ModuleSystem::get_module(self, name)
+    }
+
+    fn is_module_open(&self, name: &str) -> bool {
+        ModuleSystem::is_module_open(self, name)
+    }
+
+    fn check_access(
+        &self,
+        from_module: Option<&str>,
+        to_module: Option<&str>,
+        to_class_name: &str,
+    ) -> AccessCheckResult {
+        ModuleSystem::check_access(self, from_module, to_module, to_class_name)
     }
 
     fn check_reflection_access(
@@ -1007,6 +1121,14 @@ impl ModuleAccess for ModuleSystem {
 
     fn get_module_for_package(&self, package: &str) -> Option<Value> {
         ModuleSystem::get_module_for_package(self, package)
+    }
+
+    fn resolved_configuration(&self) -> &ResolvedConfiguration {
+        ModuleSystem::resolved_configuration(self)
+    }
+
+    fn all_defined_packages(&self) -> Vec<String> {
+        ModuleSystem::all_defined_packages(self)
     }
 }
 
@@ -1836,15 +1958,29 @@ mod tests {
     }
 
     #[test]
-    fn test_require_access_unnamed_module_can_access_opened_package() {
+    fn test_require_access_unnamed_module_cannot_normal_access_opened_package() {
+        let module_system = ModuleSystem::empty();
+        // Open package to all unnamed (opens grants reflection, not normal access)
+        module_system.add_opens_to_all_unnamed("java.base", "java/lang/internal");
+
+        // Normal access to an opened-but-not-exported package must fail per JPMS spec
+        let result =
+            module_system.require_access(None, Some("java.base"), "java/lang/internal/Unsafe");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_require_reflection_access_unnamed_module_can_access_opened_package() {
         let module_system = ModuleSystem::empty();
         // Open package to all unnamed
         module_system.add_opens_to_all_unnamed("java.base", "java/lang/internal");
 
-        // Unnamed module accessing opened package; this works because
-        // check_unnamed_module_access checks both exports AND opens
-        let result =
-            module_system.require_access(None, Some("java.base"), "java/lang/internal/Unsafe");
+        // Reflection access to an opened package should succeed
+        let result = module_system.require_reflection_access(
+            None,
+            Some("java.base"),
+            "java/lang/internal/Unsafe",
+        );
         assert!(result.is_ok());
     }
 }

@@ -164,7 +164,7 @@ pub fn to_utf16(input: &[u8]) -> Result<Vec<u16>> {
                 let ch = u16::from(byte1 & 0x1F) << 6 | u16::from(byte2 & 0x3F);
                 result.push(ch);
             }
-            // 3-byte sequence — surrogates are preserved as raw u16 values
+            // 3-byte sequence; surrogates are preserved as raw u16 values
             0xE0..=0xEF => {
                 let Some(&byte2) = iter.next() else {
                     return Err(FromUtf8Error("Invalid MUTF-8 byte sequence".to_string()));
@@ -251,7 +251,7 @@ pub fn from_bytes(input: &[u8]) -> Result<String> {
 /// Zero-copy version of `from_bytes` that returns a `Cow<'a, str>`.
 ///
 /// For ASCII input (the vast majority of constant pool strings), this returns a borrowed
-/// `&str` pointing directly into the input slice — no allocation at all.
+/// `&str` pointing directly into the input slice; no allocation at all.
 /// For non-ASCII MUTF-8, it allocates a new `String`.
 ///
 /// # Errors

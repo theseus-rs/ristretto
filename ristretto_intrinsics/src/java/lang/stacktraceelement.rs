@@ -473,11 +473,6 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // -----------------------------------------------------------------------
-    // init_stack_trace_elements_1 (GreaterThan(JAVA_17))
-    // Parameters: (stack_trace_elements[], backtrace, depth)
-    // -----------------------------------------------------------------------
-
     #[tokio::test]
     async fn test_init_stack_trace_elements_1_empty_java21() -> Result<()> {
         let (vm, thread) = crate::test::java21_thread().await?;

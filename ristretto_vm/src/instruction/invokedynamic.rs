@@ -365,7 +365,10 @@ async fn get_field_type_class(thread: &Thread, field_type: Option<FieldType>) ->
     } else {
         "void".to_string()
     };
-    let class = thread.class(class_name).await?;
+    // Per JVM spec §5.4.3.5, resolving field/method types for method handles and
+    // method types should NOT trigger class initialization.
+    let class_name_java = JavaStr::cow_from_str(&class_name);
+    let class = thread.load_and_link_class(&class_name_java).await?;
     class.to_object(thread).await
 }
 
@@ -491,7 +494,10 @@ pub async fn get_method_handle(
     };
 
     // 3. Get the class and lookup object
-    let class = thread.class_java_str(class_name).await?;
+    // Per JVM spec §5.5, method handle resolution should NOT trigger class initialization.
+    // Class initialization only occurs when the method handle is invoked (for REF_getStatic,
+    // REF_putStatic, REF_invokeStatic, REF_newInvokeSpecial).
+    let class = thread.load_and_link_class(class_name).await?;
     let class_object = class.to_object(thread).await?;
     let lookup_class = thread
         .class("java.lang.invoke.MethodHandles$Lookup")
@@ -693,7 +699,8 @@ async fn resolve_static_bootstrap_arguments(
             }
             Constant::Class(class_index) => {
                 let class_name = constant_pool.try_get_utf8(*class_index)?;
-                let class = thread.class_java_str(class_name).await?;
+                // Per JVM spec §5.4.3.1, class resolution should NOT trigger initialization
+                let class = thread.load_and_link_class(class_name).await?;
                 let class_object = class.to_object(thread).await?;
                 arguments.push(class_object);
             }

@@ -31,7 +31,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 use tokio::sync::{Mutex, RwLock};
-use tracing::debug;
+use tracing::{debug, warn};
 
 /// The offset to add to the major version to get the class file version.  Java 1.0 has a class
 /// file major version of 45, so the class file major version is the Java version (1) + the
@@ -505,12 +505,260 @@ impl VM {
             self.invoke("java.lang.System", "initPhase3()V", &[] as &[Value])
                 .await?;
             startup_trace!("[vm] init phase 3");
+
+            // After phase 3, ClassLoaders is fully initialized. Register the boot layer
+            // with class loaders so ServiceLoader can find providers via ModuleLayer.layers(cl).
+            self.register_boot_layer_with_loaders().await;
+            startup_trace!("[vm] boot layer registered with loaders");
         }
 
         Ok(())
     }
 
-    /// Initialize the primordial thread
+    /// Register the boot layer with class loaders so `ServiceLoader` can discover providers.
+    /// Must be called after `System.initPhase3()` when `ClassLoaders` is fully initialized.
+    async fn register_boot_layer_with_loaders(&self) {
+        let result: Result<()> = async {
+            // Get the boot layer
+            let boot_layer = self
+                .invoke(
+                    "java.lang.ModuleLayer",
+                    "boot()Ljava/lang/ModuleLayer;",
+                    &[] as &[Value],
+                )
+                .await?
+                .unwrap_or(Value::Object(None));
+            if boot_layer.is_null() {
+                warn!("Boot layer is null, skipping registration");
+                return Ok(());
+            }
+
+            // Get boot, platform, and app class loaders
+            let boot_loader = self
+                .invoke(
+                    "jdk.internal.loader.ClassLoaders",
+                    "bootLoader()Ljdk/internal/loader/BuiltinClassLoader;",
+                    &[] as &[Value],
+                )
+                .await?
+                .unwrap_or(Value::Object(None));
+            let platform_loader = self
+                .invoke(
+                    "jdk.internal.loader.ClassLoaders",
+                    "platformClassLoader()Ljava/lang/ClassLoader;",
+                    &[] as &[Value],
+                )
+                .await?
+                .unwrap_or(Value::Object(None));
+            let app_loader = self
+                .invoke(
+                    "jdk.internal.loader.ClassLoaders",
+                    "appClassLoader()Ljava/lang/ClassLoader;",
+                    &[] as &[Value],
+                )
+                .await?
+                .unwrap_or(Value::Object(None));
+
+            debug!(
+                "Registering boot layer with loaders: boot={}, platform={}, app={}",
+                !boot_loader.is_null(),
+                !platform_loader.is_null(),
+                !app_loader.is_null()
+            );
+
+            // Run each sub-operation independently so one failure doesn't prevent the others
+            self.bind_layer_to_loaders(&boot_layer, &boot_loader, &platform_loader, &app_loader)
+                .await;
+
+            if let Err(e) = self
+                .register_services_catalog(&boot_layer, &boot_loader)
+                .await
+            {
+                warn!("Failed to register services catalog: {e}");
+            }
+
+            if let Err(e) = self.register_module_references(&boot_loader).await {
+                warn!("Failed to register module references: {e}");
+            }
+
+            Ok(())
+        }
+        .await;
+
+        if let Err(e) = result {
+            warn!("Failed to register boot layer with loaders: {e}");
+        }
+    }
+
+    /// Bind the boot layer to each class loader so `ModuleLayer.layers(cl)` includes it.
+    async fn bind_layer_to_loaders(
+        &self,
+        boot_layer: &Value,
+        boot_loader: &Value,
+        platform_loader: &Value,
+        app_loader: &Value,
+    ) {
+        // Note: bindToLoader is package-private in java.lang.ModuleLayer, but
+        // VM.invoke() bypasses Java access checks (intentional for bootstrap).
+        for loader in [boot_loader, platform_loader, app_loader] {
+            if !loader.is_null()
+                && let Err(e) = self
+                    .invoke(
+                        "java.lang.ModuleLayer",
+                        "bindToLoader(Ljava/lang/ClassLoader;)V",
+                        &[boot_layer.clone(), loader.clone()],
+                    )
+                    .await
+            {
+                warn!("Failed to bind boot layer to loader: {e}");
+            }
+        }
+    }
+
+    /// Register modules with the boot loader's `ServicesCatalog` so
+    /// `BootLoader.getServicesCatalog()` returns providers.
+    async fn register_services_catalog(
+        &self,
+        boot_layer: &Value,
+        boot_loader: &Value,
+    ) -> Result<()> {
+        if boot_loader.is_null() {
+            return Ok(());
+        }
+
+        let boot_catalog = self
+            .invoke(
+                "jdk.internal.loader.BootLoader",
+                "getServicesCatalog()Ljdk/internal/module/ServicesCatalog;",
+                &[] as &[Value],
+            )
+            .await?
+            .unwrap_or(Value::Object(None));
+
+        if boot_catalog.is_null() {
+            return Ok(());
+        }
+
+        let resolved_config = self.module_system.resolved_configuration();
+        let modules_with_provides: Vec<String> = resolved_config
+            .modules()
+            .filter(|rm| !rm.descriptor().provides.is_empty())
+            .map(|rm| rm.name().to_string())
+            .collect();
+
+        for module_name in &modules_with_provides {
+            let thread = self.primordial_thread().await?;
+            let name_str: Value = module_name.as_str().to_object(&thread).await?;
+            let module_opt = self
+                .invoke(
+                    "java.lang.ModuleLayer",
+                    "findModule(Ljava/lang/String;)Ljava/util/Optional;",
+                    &[boot_layer.clone(), name_str],
+                )
+                .await?
+                .unwrap_or(Value::Object(None));
+
+            if !module_opt.is_null() {
+                let module_val = self
+                    .invoke(
+                        "java.util.Optional",
+                        "orElse(Ljava/lang/Object;)Ljava/lang/Object;",
+                        &[module_opt, Value::Object(None)],
+                    )
+                    .await?
+                    .unwrap_or(Value::Object(None));
+
+                if !module_val.is_null()
+                    && let Err(error) = self
+                        .invoke(
+                            "jdk.internal.module.ServicesCatalog",
+                            "register(Ljava/lang/Module;)V",
+                            &[boot_catalog.clone(), module_val],
+                        )
+                        .await
+                {
+                    warn!("Failed to register services for module {module_name}: {error}");
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Register module references with the boot class loader so resource loading works.
+    /// `BuiltinClassLoader.findResourceAsStream()` requires `nameToModule` entries.
+    async fn register_module_references(&self, boot_loader: &Value) -> Result<()> {
+        if boot_loader.is_null() {
+            return Ok(());
+        }
+
+        let system_finder = self
+            .invoke(
+                "java.lang.module.ModuleFinder",
+                "ofSystem()Ljava/lang/module/ModuleFinder;",
+                &[] as &[Value],
+            )
+            .await?
+            .unwrap_or(Value::Object(None));
+
+        if system_finder.is_null() {
+            return Ok(());
+        }
+
+        // findAll() returns Set<ModuleReference>; call on the implementation class
+        let finder_class = system_finder.as_object_ref()?.class().name().to_string();
+        let all_refs = self
+            .invoke(
+                &finder_class.replace('/', "."),
+                "findAll()Ljava/util/Set;",
+                std::slice::from_ref(&system_finder),
+            )
+            .await?
+            .unwrap_or(Value::Object(None));
+
+        if all_refs.is_null() {
+            return Ok(());
+        }
+
+        // Convert Set to array for easy iteration
+        let refs_class = all_refs.as_object_ref()?.class().name().to_string();
+        let array = self
+            .invoke(
+                &refs_class.replace('/', "."),
+                "toArray()[Ljava/lang/Object;",
+                std::slice::from_ref(&all_refs),
+            )
+            .await?
+            .unwrap_or(Value::Object(None));
+
+        if let Value::Object(Some(ref arc)) = array {
+            let elements: Vec<Value> = {
+                let reference = arc.read();
+                if let Reference::Array(obj_array) = &*reference {
+                    obj_array.elements.to_vec()
+                } else {
+                    Vec::new()
+                }
+            };
+            for element in &elements {
+                if !element.is_null()
+                    && let Err(error) = self
+                        .invoke(
+                            "jdk.internal.loader.BuiltinClassLoader",
+                            "loadModule(Ljava/lang/module/ModuleReference;)V",
+                            &[boot_loader.clone(), element.clone()],
+                        )
+                        .await
+                {
+                    warn!("Failed to register module reference: {error}");
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Initialize the primordial thread.
     ///
     /// # Errors
     ///

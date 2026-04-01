@@ -31,7 +31,7 @@ public class Test {
             Module javaBase = ModuleLayer.boot().findModule("java.base").orElse(null);
             if (javaBase != null && javaBase.getDescriptor() != null) {
                 System.out.println("java.base requires:");
-                javaBase.getDescriptor().requires().forEach(requires -> {
+                javaBase.getDescriptor().requires().stream().sorted(java.util.Comparator.comparing(r -> r.name())).forEach(requires -> {
                     System.out.println("  " + requires.name() +
                         (requires.modifiers().contains(java.lang.module.ModuleDescriptor.Requires.Modifier.TRANSITIVE) ? " (transitive)" : "") +
                         (requires.modifiers().contains(java.lang.module.ModuleDescriptor.Requires.Modifier.STATIC) ? " (static)" : ""));
@@ -43,7 +43,7 @@ public class Test {
             Module javaLogging = ModuleLayer.boot().findModule("java.logging").orElse(null);
             if (javaLogging != null && javaLogging.getDescriptor() != null) {
                 System.out.println("java.logging requires:");
-                javaLogging.getDescriptor().requires().forEach(requires -> {
+                javaLogging.getDescriptor().requires().stream().sorted(java.util.Comparator.comparing(r -> r.name())).forEach(requires -> {
                     System.out.println("  " + requires.name() +
                         (requires.modifiers().contains(java.lang.module.ModuleDescriptor.Requires.Modifier.TRANSITIVE) ? " (transitive)" : "") +
                         (requires.modifiers().contains(java.lang.module.ModuleDescriptor.Requires.Modifier.STATIC) ? " (static)" : ""));
@@ -67,12 +67,14 @@ public class Test {
                 .filter(m -> m.getDescriptor().requires().stream()
                     .anyMatch(req -> req.modifiers().contains(
                         java.lang.module.ModuleDescriptor.Requires.Modifier.TRANSITIVE)))
+                .sorted(java.util.Comparator.comparing(Module::getName))
                 .limit(3)
                 .forEach(module -> {
                     System.out.println("Module " + module.getName() + " has transitive requires:");
                     module.getDescriptor().requires().stream()
                         .filter(req -> req.modifiers().contains(
                             java.lang.module.ModuleDescriptor.Requires.Modifier.TRANSITIVE))
+                        .sorted(java.util.Comparator.comparing(r -> r.name()))
                         .forEach(req -> System.out.println("  " + req.name() + " (transitive)"));
                 });
 
@@ -105,12 +107,14 @@ public class Test {
                 .filter(m -> m.getDescriptor().requires().stream()
                     .anyMatch(req -> req.modifiers().contains(
                         java.lang.module.ModuleDescriptor.Requires.Modifier.STATIC)))
+                .sorted(java.util.Comparator.comparing(Module::getName))
                 .limit(2)
                 .forEach(module -> {
                     System.out.println("Module " + module.getName() + " has static requires:");
                     module.getDescriptor().requires().stream()
                         .filter(req -> req.modifiers().contains(
                             java.lang.module.ModuleDescriptor.Requires.Modifier.STATIC))
+                        .sorted(java.util.Comparator.comparing(r -> r.name()))
                         .forEach(req -> System.out.println("  " + req.name() + " (static)"));
                 });
 
@@ -135,6 +139,7 @@ public class Test {
                 System.out.println("java.base reads " + resolved.reads().size() + " modules");
                 System.out.println("First 3 modules java.base reads:");
                 resolved.reads().stream()
+                    .sorted(java.util.Comparator.comparing(r -> r.name()))
                     .limit(3)
                     .forEach(read -> System.out.println("  " + read.name()));
             }

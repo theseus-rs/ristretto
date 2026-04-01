@@ -53,8 +53,8 @@ public class Test {
             Module currentModule = Test.class.getModule();
             ClassLoader loader = Test.class.getClassLoader();
 
-            System.out.println("Current module: " + currentModule);
-            System.out.println("Class loader: " + loader);
+            System.out.println("Current module is named: " + currentModule.isNamed());
+            System.out.println("Class loader is not null: " + (loader != null));
 
             // Try to access a common resource
             java.net.URL resource = Test.class.getResource("/Test.java");
@@ -97,7 +97,7 @@ public class Test {
             // Test current class
             Class<?> currentClass = Test.class;
             System.out.println("Current class module: " + currentClass.getModule().getName());
-            System.out.println("Current class loader: " + currentClass.getClassLoader());
+            System.out.println("Current class loader is not null: " + (currentClass.getClassLoader() != null));
 
             // Test primitive classes
             Class<?> intClass = int.class;
@@ -134,7 +134,7 @@ public class Test {
             // Test current module location
             Module currentModule = Test.class.getModule();
             System.out.println("Current module location info:");
-            System.out.println("  Module: " + currentModule);
+            System.out.println("  Module is named: " + currentModule.isNamed());
             System.out.println("  Is named: " + currentModule.isNamed());
 
         } catch (Exception e) {

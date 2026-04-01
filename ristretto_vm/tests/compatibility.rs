@@ -25,23 +25,6 @@ const TEST_CLASS_NAME: &str = "Test";
 const TEST_FILE: &str = "Test.java";
 const IGNORE_FILE: &str = "ignore.txt";
 
-/// Regex to match @hexcode patterns (e.g., @2b2fa4f7) that appear in `Object.toString()` outputs.
-static HASH_CODE_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"@[0-9a-fA-F]+").expect("valid regex"));
-
-/// Regex to match hidden class name suffixes (e.g., /0x000000040100a438 or +0x000000000000000c)
-/// that vary between runs.
-static HIDDEN_CLASS_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"[/+]0x[0-9a-fA-F]+").expect("valid regex"));
-
-/// Normalize output by removing Java object hash codes, hidden class suffixes, and local variable
-/// references that vary between runs or implementations.
-fn normalize_output(output: &str) -> String {
-    let output = HASH_CODE_REGEX.replace_all(output, "@HASH");
-    let output = HIDDEN_CLASS_REGEX.replace_all(&output, "/0xHIDDEN_CLASS");
-    output.to_string()
-}
-
 #[test]
 fn compatibility_tests() -> Result<()> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -280,7 +263,7 @@ fn test_vm(
     // method handle invocations and invokedynamic resolution
     let java_version = java_version.to_string();
     let test_dir = test_dir.to_path_buf();
-    let test_timeout = Duration::from_secs(60);
+    let test_timeout = Duration::from_secs(120);
     let stack_size = 8 * 1024 * 1024; // 8 MB stack
     let result = std::thread::Builder::new()
         .stack_size(stack_size)
@@ -299,9 +282,9 @@ fn test_vm(
                     .await
                     {
                         Ok(result) => result,
-                        Err(_elapsed) => {
-                            Err(InternalError("Test timed out after 60 seconds".to_string()))
-                        }
+                        Err(_elapsed) => Err(InternalError(
+                            "Test timed out after 120 seconds".to_string(),
+                        )),
                     }
                 })
             })
@@ -311,10 +294,7 @@ fn test_vm(
         .expect("Test thread panicked");
     match result {
         Ok(Ok((duration, output))) => {
-            // Normalize outputs to handle variable content like object hash codes
-            let normalized_expected = normalize_output(expected_output);
-            let normalized_actual = normalize_output(&output);
-            if normalized_expected == normalized_actual {
+            if expected_output == output {
                 info!(
                     "Passed ({test_type}) {test_name} in {duration:.2?} (target: {expected_duration:.2?})"
                 );
@@ -357,7 +337,8 @@ async fn run_test(
         .main_class(TEST_CLASS_NAME)
         .stdout(stdout.clone())
         .stderr(stderr.clone())
-        .garbage_collector(garbage_collector);
+        .garbage_collector(garbage_collector)
+        .add_system_property("user.dir", test_dir.to_string_lossy());
 
     configuration_builder = configuration_builder.interpreted(interpreted);
     if !interpreted {

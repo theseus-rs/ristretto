@@ -28,5 +28,5 @@ pub use error::{ModuleError, Result};
 pub use finder::{ModuleFinder, ModuleFinderChain, ModulePathFinder, SystemModuleFinder};
 pub use graph::ModuleGraph;
 pub use layer::ModuleLayer;
-pub use reference::ModuleReference;
+pub use reference::{ModuleReference, ModuleSource};
 pub use resolution::{ResolvedConfiguration, ResolvedModule, Resolver};

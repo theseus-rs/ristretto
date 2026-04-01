@@ -30,6 +30,7 @@ public class Test {
             bootLayer.modules().stream()
                 .filter(Module::isNamed)
                 .filter(m -> m.getDescriptor() != null)
+                .sorted(java.util.Comparator.comparing(Module::getName))
                 .limit(5)
                 .forEach(module -> {
                     System.out.println("Module: " + module.getName());
@@ -61,6 +62,7 @@ public class Test {
             bootLayer.modules().stream()
                 .filter(Module::isNamed)
                 .filter(m -> m.getDescriptor() != null)
+                .sorted(java.util.Comparator.comparing(Module::getName))
                 .limit(5)
                 .forEach(module -> {
                     System.out.println("Module: " + module.getName());
@@ -95,6 +97,7 @@ public class Test {
                 .filter(Module::isNamed)
                 .filter(m -> m.getDescriptor() != null)
                 .filter(m -> m.getDescriptor().mainClass().isPresent())
+                .sorted(java.util.Comparator.comparing(Module::getName))
                 .limit(3)
                 .forEach(module -> {
                     System.out.println("Module: " + module.getName());
@@ -124,8 +127,8 @@ public class Test {
 
                 // Show first 10 packages
                 javaBase.getDescriptor().packages().stream()
-                    .limit(10)
                     .sorted()
+                    .limit(10)
                     .forEach(pkg -> System.out.println("  " + pkg));
 
                 // Check if specific packages are present

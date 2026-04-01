@@ -1,4 +1,0 @@
-These tests require full LambdaMetafactory support and ServiceLoader functionality.
-Current issues:
-- "illegal lookupClass: class java.lang.invoke.LambdaMetafactory" - Lambda expressions not fully supported
-- "null 'this' reference" - ServiceLoader iteration issues

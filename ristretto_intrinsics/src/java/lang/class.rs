@@ -92,7 +92,7 @@ pub async fn desired_assertion_status_0<T: Thread + 'static>(
 /// - `sun/misc/Launcher$AppClassLoader`: application/system classloader
 /// - `sun/misc/Launcher$ExtClassLoader`: extension classloader
 ///
-/// Validated against `OpenJDK` 8u, 11, 17, 21, and 25.
+/// Validated against `OpenJDK` 8, 11, 17, 21, and 25.
 const BUILTIN_CLASSLOADER_NAMES: &[&str] = &[
     // Java 9+ hierarchy
     "jdk/internal/loader/BuiltinClassLoader",

@@ -22,7 +22,7 @@ public class Test {
         // Test String.valueOf with null
         System.out.println("String.valueOf(null): " + String.valueOf(nullStr));
 
-        // Test concat with null - should throw NullPointerException
+        // Test concat with null; should throw NullPointerException
         try {
             String result = normalStr.concat(null);
             System.out.println("concat(null) succeeded: " + result);
@@ -33,7 +33,7 @@ public class Test {
         // Test equals with null
         System.out.println("'Hello'.equals(null): " + normalStr.equals(null));
 
-        // Test null.equals() - should throw NullPointerException
+        // Test null.equals(); should throw NullPointerException
         try {
             boolean result = nullStr.equals("Hello");
             System.out.println("null.equals('Hello'): " + result);

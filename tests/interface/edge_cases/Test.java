@@ -1,6 +1,6 @@
 /** Test interface edge cases and boundary conditions */
 interface EmptyInterface {
-    // Empty interface - valid but has no methods
+    // Empty interface; valid but has no methods
 }
 
 interface MarkerInterface {
@@ -61,12 +61,12 @@ abstract class CovariantBase implements CovariantReturns {
 
 class CovariantImplementation extends CovariantBase {
     @Override
-    public String getObject() { // Covariant return - String is subtype of Object
+    public String getObject() { // Covariant return; String is subtype of Object
         return "Covariant String Object";
     }
 
     @Override
-    public Integer getNumber() { // Covariant return - Integer is subtype of Number
+    public Integer getNumber() { // Covariant return; Integer is subtype of Number
         return 123;
     }
 

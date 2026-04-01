@@ -29,7 +29,10 @@ public class Test {
         System.out.println("--- Test: Boot Layer Analysis ---");
         try {
             ModuleLayer bootLayer = ModuleLayer.boot();
-            System.out.println("Boot layer: " + bootLayer);
+            System.out.println("Boot layer: " + bootLayer.modules().stream()
+                .map(Module::getName)
+                .sorted()
+                .collect(java.util.stream.Collectors.joining(", ")));
             System.out.println("Boot layer parents: " + bootLayer.parents());
             System.out.println("Boot layer is empty: " + bootLayer.parents().isEmpty());
 
@@ -55,12 +58,16 @@ public class Test {
         try {
             ModuleLayer bootLayer = ModuleLayer.boot();
             Configuration config = bootLayer.configuration();
-            System.out.println("Boot layer configuration: " + config);
+            System.out.println("Boot layer configuration: " + config.modules().stream()
+                .map(r -> r.name())
+                .sorted()
+                .collect(java.util.stream.Collectors.joining(", ")));
             System.out.println("Configuration parents: " + config.parents());
 
             // List some modules in configuration
             System.out.println("Modules in configuration (first 10):");
             config.modules().stream()
+                .sorted(java.util.Comparator.comparing(r -> r.name()))
                 .limit(10)
                 .forEach(resolved -> {
                     System.out.println("  " + resolved.name());
@@ -77,7 +84,7 @@ public class Test {
         try {
             // Test system module finder
             ModuleFinder systemFinder = ModuleFinder.ofSystem();
-            System.out.println("System module finder: " + systemFinder);
+            System.out.println("System module finder is not null: " + (systemFinder != null));
 
             // Find specific modules
             java.util.Optional<ModuleReference> javaBase = systemFinder.find("java.base");

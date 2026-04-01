@@ -19,9 +19,9 @@ const ANY_HOST: i64 = 4;
 ///
 /// Keyed by `(user_domain, host_domain, app_name)`.  Within each domain the
 /// flat key-space follows the macOS convention:
-///   - node markers:      `path` (e.g. `"/a/b/"`) → empty string
-///   - preference values:  `path + key` (e.g. `"/a/b/myKey"`) → value string
-///   - child markers:      `path + child + "/"` → empty string
+///   - node markers:      `path` (e.g. `"/a/b/"`) -> empty string
+///   - preference values:  `path + key` (e.g. `"/a/b/myKey"`) -> value string
+///   - child markers:      `path + child + "/"` -> empty string
 type DomainKey = (i64, i64, String);
 
 static PREFS: LazyLock<Mutex<HashMap<DomainKey, HashMap<String, String>>>> =
