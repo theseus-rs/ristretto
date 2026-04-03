@@ -97,16 +97,16 @@ fn gc_from_context(context: *const u8) -> &'static GarbageCollector {
 
 /// Wraps a `Reference` in a `Gc<RwLock<Reference>>` and returns the raw pointer as i64.
 ///
-/// The `GcRootGuard` is intentionally leaked via `mem::forget` to keep the allocation
-/// rooted until proper root tracking across JIT/interpreter boundaries is implemented.
-/// Without this, the GC may collect the allocation before the interpreter has a chance
-/// to use the returned value.
+/// The object is allocated through the GC. The `GcRootGuard` returned by `Gc::new` is
+/// dropped at the end of this function, removing the root. This is safe because newly
+/// allocated objects start with `marked = true` (allocation-color-black), so they survive
+/// any in-flight GC cycle. By the next GC cycle, the pointer will either be reachable from
+/// a rooted object (e.g., stored in a field or on the operand stack traced from a root)
+/// or it is truly garbage and should be collected.
 fn alloc_reference(gc: &GarbageCollector, reference: Reference) -> i64 {
-    let root_guard = Gc::new(gc, RwLock::new(reference));
-    let gc_ref = root_guard.clone_gc();
-    let ptr = gc_ref.as_ptr_i64();
-    std::mem::forget(root_guard);
-    ptr
+    let guard = Gc::new(gc, RwLock::new(reference));
+    let gc_ref = guard.clone_gc();
+    gc_ref.as_ptr_i64()
 }
 
 /// Reconstructs a `Gc<RwLock<Reference>>` from a raw i64 pointer.

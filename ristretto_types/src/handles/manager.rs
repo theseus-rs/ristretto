@@ -91,6 +91,13 @@ where
     pub async fn write(&self) -> RwLockWriteGuard<'_, AHashMap<K, V>> {
         self.handles.write().await
     }
+
+    /// Attempts to acquire a write lock synchronously (non-blocking).
+    /// Returns `None` if the lock is currently held.
+    #[must_use]
+    pub fn try_write_sync(&self) -> Option<RwLockWriteGuard<'_, AHashMap<K, V>>> {
+        self.handles.try_write().ok()
+    }
 }
 
 #[cfg(test)]

@@ -1294,6 +1294,14 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_vm_drop_only() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        drop(thread);
+        drop(vm);
+        Ok(())
+    }
+
     #[tokio::test]
     async fn test_primitive_class() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
