@@ -78,6 +78,7 @@ mod platform {
     pub async fn chmod(filename: &str, permission: i32) -> i32 {
         let filename = filename.to_string();
         #[expect(clippy::cast_sign_loss)]
+        #[cfg_attr(target_os = "macos", expect(clippy::cast_possible_truncation))]
         let permission = permission as libc::mode_t;
         tokio::task::spawn_blocking(move || {
             let Ok(c_path) = CString::new(filename) else {
