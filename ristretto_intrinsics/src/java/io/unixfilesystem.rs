@@ -251,13 +251,18 @@ pub async fn delete_0<T: Thread + 'static>(
     #[cfg(target_os = "wasi")]
     {
         let path = PathBuf::from(&path);
-        deleted = std::fs::remove_file(&path).is_ok();
+        deleted = std::fs::remove_file(&path)
+            .or_else(|_| std::fs::remove_dir(&path))
+            .is_ok();
     }
 
     #[cfg(not(target_family = "wasm"))]
     {
         let path = PathBuf::from(&path);
-        deleted = tokio::fs::remove_file(&path).await.is_ok();
+        deleted = tokio::fs::remove_file(&path)
+            .await
+            .or(tokio::fs::remove_dir(&path).await)
+            .is_ok();
     }
 
     Ok(Some(Value::from(deleted)))
@@ -330,25 +335,29 @@ pub async fn get_last_modified_time_0<T: Thread + 'static>(
     #[cfg(target_os = "wasi")]
     {
         let path = PathBuf::from(&path);
-        let metadata = std::fs::metadata(&path)?;
-        last_modified = metadata
-            .modified()?
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_err(|error| RuntimeException(error.to_string()))?
-            .as_millis() as i64;
+        last_modified = match std::fs::metadata(&path) {
+            Ok(metadata) => metadata
+                .modified()?
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|error| RuntimeException(error.to_string()))?
+                .as_millis() as i64,
+            Err(_) => 0,
+        };
     }
 
     #[cfg(not(target_family = "wasm"))]
     {
         let path = PathBuf::from(&path);
-        let metadata = tokio::fs::metadata(&path).await?;
-        last_modified = i64::try_from(
-            metadata
-                .modified()?
-                .duration_since(std::time::UNIX_EPOCH)
-                .map_err(|error| RuntimeException(error.to_string()))?
-                .as_millis(),
-        )?;
+        last_modified = match tokio::fs::metadata(&path).await {
+            Ok(metadata) => i64::try_from(
+                metadata
+                    .modified()?
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_err(|error| RuntimeException(error.to_string()))?
+                    .as_millis(),
+            )?,
+            Err(_) => 0,
+        };
     }
 
     Ok(Some(Value::Long(last_modified)))
@@ -533,7 +542,7 @@ pub async fn list_0<T: Thread + 'static>(
         {
             let read_directory = match std::fs::read_dir(&path) {
                 Ok(directory) => directory,
-                Err(_) => return Ok(None),
+                Err(_) => return Ok(Some(Value::Object(None))),
             };
 
             for entry in read_directory {
@@ -549,7 +558,7 @@ pub async fn list_0<T: Thread + 'static>(
         #[cfg(not(target_family = "wasm"))]
         {
             let Ok(read_directory) = tokio::fs::read_dir(&path).await else {
-                return Ok(None);
+                return Ok(Some(Value::Object(None)));
             };
             let mut directory = read_directory;
             while let Ok(Some(entry)) = directory.next_entry().await {
