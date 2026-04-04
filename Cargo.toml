@@ -72,7 +72,7 @@ flate2 = "1.1.9"
 getrandom = { version = "0.3.4", features = ["wasm_js"] }
 hashbrown = { version = "0.16.1", features = ["equivalent"] }
 indoc = "2.0.7"
-indexmap = "2.13.0"
+indexmap = "2.13.1"
 jiff = "0.2.23"
 libc = "0.2.182"
 memchr = "2.8.0"
@@ -100,7 +100,7 @@ tempfile = "3.27.0"
 test-log = "0.2.19"
 thiserror = "2.0.18"
 thread-priority = "3.0.0"
-tokio = { version = "1.50.0", default-features = false, features = ["macros", "rt", "sync"] }
+tokio = { version = "1.51.0", default-features = false, features = ["macros", "rt", "sync"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 walkdir = "2.5.0"
@@ -108,7 +108,7 @@ wasm-bindgen-futures = "0.4.67"
 whoami = "2.1.1"
 windows-sys = { version = "0.61.2", features = ["Win32_System_Registry", "Win32_Security"] }
 zerocopy = "0.8.47"
-zip = { version = "8.4.0", default-features = false }
+zip = { version = "8.5.0", default-features = false }
 
 [workspace.metadata.release]
 shared-version = true
