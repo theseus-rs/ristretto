@@ -10,6 +10,9 @@ use std::fmt::Display;
 use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
 
+/// Synchronous lock for module configuration to avoid async overhead on every class load.
+type ModuleConfigLock = parking_lot::RwLock<Option<Arc<ResolvedConfiguration>>>;
+
 /// Implementation of a Java class loader.
 ///
 /// # References
@@ -25,7 +28,8 @@ pub struct ClassLoader {
     object: Arc<RwLock<Option<Value>>>,
     /// Module configuration for JPMS support.
     /// When set, the class loader will determine module names from packages during class loading.
-    module_configuration: Arc<RwLock<Option<Arc<ResolvedConfiguration>>>>,
+    /// Uses a synchronous lock to avoid async overhead on every class load.
+    module_configuration: Arc<ModuleConfigLock>,
 }
 
 impl ClassLoader {
@@ -38,7 +42,7 @@ impl ClassLoader {
             parent: Arc::new(RwLock::new(None)),
             classes: Arc::new(RwLock::new(AHashMap::default())),
             object: Arc::new(RwLock::new(None)),
-            module_configuration: Arc::new(RwLock::new(None)),
+            module_configuration: Arc::new(ModuleConfigLock::new(None)),
         })
     }
 
@@ -133,7 +137,7 @@ impl ClassLoader {
                     class_file.code_source_url = None;
                 }
                 let class = Class::from(Some(self.this.clone()), class_file)?;
-                self.set_class_module_name(&class, &class_name_str).await?;
+                self.set_class_module_name(&class, &class_name_str)?;
                 return Ok(self
                     .cache_class(class_name_internal.into_owned(), class)
                     .await);
@@ -146,9 +150,9 @@ impl ClassLoader {
     /// Determines and sets the module name for a class based on its package.
     ///
     /// This uses the module configuration's package-to-module mapping to determine which module
-    /// (if any) the class belongs to.
-    async fn set_class_module_name(&self, class: &Arc<Class>, class_name: &str) -> Result<()> {
-        let config_guard = self.module_configuration.read().await;
+    /// (if any) the class belongs to. Uses a synchronous lock to avoid async overhead.
+    fn set_class_module_name(&self, class: &Arc<Class>, class_name: &str) -> Result<()> {
+        let config_guard = self.module_configuration.read();
         if let Some(ref config) = *config_guard {
             // Extract package from class name (e.g., "java/lang/String" -> "java/lang")
             let package = Self::package_from_class_name(class_name);
@@ -285,8 +289,9 @@ impl ClassLoader {
     }
 
     /// Get the module configuration for JPMS support.
-    pub async fn module_configuration(&self) -> Option<Arc<ResolvedConfiguration>> {
-        let config_guard = self.module_configuration.read().await;
+    #[must_use]
+    pub fn module_configuration(&self) -> Option<Arc<ResolvedConfiguration>> {
+        let config_guard = self.module_configuration.read();
         config_guard.clone()
     }
 
@@ -294,8 +299,8 @@ impl ClassLoader {
     ///
     /// When set, the class loader will determine module names for loaded classes
     /// based on the package-to-module mapping in the configuration.
-    pub async fn set_module_configuration(&self, config: Option<Arc<ResolvedConfiguration>>) {
-        let mut config_guard = self.module_configuration.write().await;
+    pub fn set_module_configuration(&self, config: Option<Arc<ResolvedConfiguration>>) {
+        let mut config_guard = self.module_configuration.write();
         *config_guard = config;
     }
 
@@ -600,7 +605,7 @@ mod tests {
         use std::collections::BTreeMap;
 
         // Create a module configuration with a package-to-module mapping
-        let mut package_to_module = BTreeMap::new();
+        let mut package_to_module = AHashMap::default();
         package_to_module.insert("test/pkg".to_string(), "test.module".to_string());
 
         let config = ResolvedConfiguration::new(
@@ -614,15 +619,13 @@ mod tests {
         let class_loader = ClassLoader::new("test", class_path);
 
         // Verify no module configuration initially
-        assert!(class_loader.module_configuration().await.is_none());
+        assert!(class_loader.module_configuration().is_none());
 
         // Set module configuration
-        class_loader
-            .set_module_configuration(Some(Arc::new(config)))
-            .await;
+        class_loader.set_module_configuration(Some(Arc::new(config)));
 
         // Verify configuration is set
-        assert!(class_loader.module_configuration().await.is_some());
+        assert!(class_loader.module_configuration().is_some());
 
         Ok(())
     }

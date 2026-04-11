@@ -29,7 +29,6 @@ use ristretto_classloader::module::{
     ResolvedConfiguration, Resolver, SystemModuleFinder,
 };
 use ristretto_types::ModuleAccess;
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
@@ -60,6 +59,14 @@ pub const JAVA_BASE_MODULE: &str = "java.base";
 pub struct ModuleSystem {
     /// Static module configuration from resolution at startup.
     resolved_configuration: ResolvedConfiguration,
+
+    /// Java home path, stored for lazy full resolution when needed.
+    java_home: Option<PathBuf>,
+
+    /// Whether the lightweight fast path was used and lazy resolution should NOT be done.
+    /// When true, `ModuleBootstrap.boot()` will create an empty layer instead of
+    /// performing expensive full resolution. This is set for simple classpath apps.
+    lightweight_mode: bool,
 
     /// Dynamic exports: `source_module` -> (package -> set of target modules).
     /// An entry means the package is exported from `source_module` to the targets.
@@ -94,8 +101,9 @@ impl ModuleSystem {
     /// 3. Resolves the module graph starting from root modules
     /// 4. Applies command-line overrides (--add-reads, --add-exports, --add-opens)
     ///
-    /// System modules are always loaded for Java 9+ to ensure the boot layer
-    /// contains java.base and other required modules.
+    /// For simple classpath-based applications (no module path, no main module), this skips
+    /// expensive module resolution and uses a fast path that only builds the package-to-module
+    /// mapping for class loading.
     ///
     /// # Errors
     ///
@@ -115,6 +123,25 @@ impl ModuleSystem {
             debug!("Java 8 or earlier; module system disabled");
             module_system.resolved_configuration =
                 Self::create_fallback_configuration(configuration);
+            return Ok(module_system);
+        }
+
+        // Fast path: Skip expensive module resolution for simple classpath applications
+        // that don't use JPMS features. We still build the package-to-module mapping so
+        // that classes get correct module names assigned during loading.
+        // Full resolution can be triggered lazily by ModuleBootstrap.boot() if needed.
+        if Self::is_simple_classpath_app(configuration) {
+            debug!("Simple classpath application; using lightweight module configuration");
+            let jimage_path = java_home.join("lib").join("modules");
+            if jimage_path.exists() {
+                module_system.resolved_configuration =
+                    Self::create_lightweight_configuration(configuration, &jimage_path).await;
+                module_system.java_home = Some(java_home.to_path_buf());
+                module_system.lightweight_mode = true;
+            } else {
+                module_system.resolved_configuration =
+                    Self::create_fallback_configuration(configuration);
+            }
             return Ok(module_system);
         }
 
@@ -157,6 +184,16 @@ impl ModuleSystem {
         Ok(module_system)
     }
 
+    /// Returns true if this is a simple classpath application that doesn't need
+    /// full JPMS module resolution.
+    fn is_simple_classpath_app(configuration: &Configuration) -> bool {
+        configuration.module_path().is_empty()
+            && configuration.main_module().is_none()
+            && configuration.limit_modules().is_empty()
+            && configuration.upgrade_module_path().is_empty()
+            && configuration.add_modules().is_empty()
+    }
+
     /// Creates a new empty module system with no static configuration.
     ///
     /// This is primarily useful for testing or when creating a module system
@@ -165,6 +202,8 @@ impl ModuleSystem {
     pub fn empty() -> Self {
         Self {
             resolved_configuration: ResolvedConfiguration::empty(),
+            java_home: None,
+            lightweight_mode: false,
             exports: RwLock::new(AHashMap::default()),
             opens: RwLock::new(AHashMap::default()),
             reads: RwLock::new(AHashMap::default()),
@@ -177,6 +216,20 @@ impl ModuleSystem {
     #[must_use]
     pub fn resolved_configuration(&self) -> &ResolvedConfiguration {
         &self.resolved_configuration
+    }
+
+    /// Returns true if the module system is using lightweight mode (fast path).
+    /// In this mode, `ModuleBootstrap.boot()` should create an empty boot layer
+    /// instead of performing expensive full resolution.
+    #[must_use]
+    pub fn is_lightweight_mode(&self) -> bool {
+        self.lightweight_mode
+    }
+
+    /// Returns the java home path if stored for lazy resolution.
+    #[must_use]
+    pub fn java_home_path(&self) -> Option<&Path> {
+        self.java_home.as_deref()
     }
 
     /// Builds the resolver with command-line overrides and populates initial dynamic state.
@@ -463,7 +516,77 @@ impl ModuleSystem {
                 acc
             });
 
-        ResolvedConfiguration::new(BTreeMap::new(), BTreeMap::new(), add_exports, add_opens)
+        ResolvedConfiguration::new(
+            std::collections::BTreeMap::new(),
+            AHashMap::default(),
+            add_exports,
+            add_opens,
+        )
+    }
+
+    /// Creates a lightweight configuration by scanning jimage for package-to-module mapping
+    /// only, without full module resolution. This is much faster than full resolution.
+    async fn create_lightweight_configuration(
+        configuration: &Configuration,
+        jimage_path: &Path,
+    ) -> ResolvedConfiguration {
+        let path = jimage_path.to_path_buf();
+        let package_map = {
+            #[cfg(not(target_family = "wasm"))]
+            {
+                tokio::task::spawn_blocking(move || {
+                    SystemModuleFinder::package_map_from_jimage(&path)
+                })
+                .await
+                .ok()
+                .and_then(std::result::Result::ok)
+            }
+            #[cfg(target_family = "wasm")]
+            {
+                SystemModuleFinder::package_map_from_jimage(&path).ok()
+            }
+        };
+
+        if let Some(package_to_module) = package_map {
+            debug!(
+                "Loaded {} package-to-module mappings from jimage (lightweight)",
+                package_to_module.len()
+            );
+
+            // Apply any command-line overrides
+            let add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>> = configuration
+                .add_exports()
+                .iter()
+                .fold(AHashMap::default(), |mut acc, export| {
+                    acc.entry(export.source.clone())
+                        .or_default()
+                        .entry(export.package.clone())
+                        .or_default()
+                        .insert(export.target.clone());
+                    acc
+                });
+
+            let add_opens: AHashMap<String, AHashMap<String, AHashSet<String>>> = configuration
+                .add_opens()
+                .iter()
+                .fold(AHashMap::default(), |mut acc, opens| {
+                    acc.entry(opens.source.clone())
+                        .or_default()
+                        .entry(opens.package.clone())
+                        .or_default()
+                        .insert(opens.target.clone());
+                    acc
+                });
+
+            ResolvedConfiguration::new(
+                std::collections::BTreeMap::new(),
+                package_to_module,
+                add_exports,
+                add_opens,
+            )
+        } else {
+            Self::create_fallback_configuration(configuration)
+        }
     }
 
     /// Checks if access from one module to a class in another module is allowed.
@@ -1125,6 +1248,10 @@ impl ModuleAccess for ModuleSystem {
 
     fn resolved_configuration(&self) -> &ResolvedConfiguration {
         ModuleSystem::resolved_configuration(self)
+    }
+
+    fn is_lightweight_mode(&self) -> bool {
+        ModuleSystem::is_lightweight_mode(self)
     }
 
     fn all_defined_packages(&self) -> Vec<String> {

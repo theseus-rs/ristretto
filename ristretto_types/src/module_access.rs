@@ -127,6 +127,13 @@ pub trait ModuleAccess: Send + Sync {
     /// Get the resolved module configuration.
     fn resolved_configuration(&self) -> &ResolvedConfiguration;
 
+    /// Returns true if the module system is in lightweight mode.
+    /// In this mode, full module resolution was deferred at startup for performance.
+    /// `ModuleBootstrap.boot()` should create an empty layer without triggering lazy resolution.
+    fn is_lightweight_mode(&self) -> bool {
+        false
+    }
+
     /// Get all packages from all defined modules.
     fn all_defined_packages(&self) -> Vec<String>;
 }

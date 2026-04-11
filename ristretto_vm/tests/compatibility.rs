@@ -262,6 +262,7 @@ fn test_vm(
     // Spawn a thread with a larger stack to handle deeply nested async calls that occur during
     // method handle invocations and invokedynamic resolution
     let java_version = java_version.to_string();
+    let test_name_owned = test_name.to_string();
     let test_dir = test_dir.to_path_buf();
     let test_timeout = Duration::from_secs(120);
     let stack_size = 8 * 1024 * 1024; // 8 MB stack
@@ -277,7 +278,7 @@ fn test_vm(
                 runtime.block_on(async {
                     match tokio::time::timeout(
                         test_timeout,
-                        run_test(&java_version, &test_dir, interpreted),
+                        run_test(&java_version, &test_name_owned, &test_dir, interpreted),
                     )
                     .await
                     {
@@ -320,6 +321,7 @@ fn test_vm(
 /// Runs the test by creating a VM and invoking the `Test` class.
 async fn run_test(
     java_version: &str,
+    test_name: &str,
     test_dir: &Path,
     interpreted: bool,
 ) -> Result<(Duration, String)> {
@@ -339,6 +341,13 @@ async fn run_test(
         .stderr(stderr.clone())
         .garbage_collector(garbage_collector)
         .add_system_property("user.dir", test_dir.to_string_lossy());
+
+    // Module tests need full JPMS resolution. The real JVM always initializes the
+    // module system fully; our lightweight fast path skips it for classpath apps.
+    // Adding ALL-SYSTEM ensures full resolution is triggered for module tests.
+    if test_name.starts_with("module/") {
+        configuration_builder = configuration_builder.add_module("ALL-DEFAULT");
+    }
 
     configuration_builder = configuration_builder.interpreted(interpreted);
     if !interpreted {
