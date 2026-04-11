@@ -34,9 +34,39 @@ pub async fn boot<T: Thread + 'static>(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
-    let resolved_config = vm.module_system().resolved_configuration().clone();
+    let module_system = vm.module_system();
+    let resolved_config = module_system.resolved_configuration().clone();
 
     if resolved_config.is_empty() {
+        // If in lightweight mode (simple classpath app), create an empty layer without
+        // performing expensive lazy resolution. This keeps startup fast for apps that
+        // don't need module introspection.
+        if module_system.is_lightweight_mode() {
+            debug!("Lightweight mode; creating empty boot layer for classpath app");
+            return create_empty_layer(&thread).await;
+        }
+
+        // Attempt lazy full resolution from jimage if a java_home is available.
+        // This handles the case where no module resolution was done at startup
+        // but the application needs a populated boot layer.
+        let java_home = vm.java_home();
+        let jimage_path = java_home.join("lib").join("modules");
+        if jimage_path.exists() {
+            debug!("Performing lazy full module resolution from jimage");
+            match ResolvedConfiguration::resolve_from_jimage(&jimage_path).await {
+                Ok(full_config) if !full_config.is_empty() => {
+                    debug!("Lazy-resolved {} modules for boot layer", full_config.len());
+                    let layer = create_populated_layer(&thread, &full_config).await?;
+                    return Ok(Some(layer));
+                }
+                Ok(_) => {
+                    debug!("Lazy resolution returned empty config; creating empty boot layer");
+                }
+                Err(e) => {
+                    warn!("Lazy module resolution failed: {e}; creating empty boot layer");
+                }
+            }
+        }
         debug!("No resolved modules; creating empty boot layer");
         return create_empty_layer(&thread).await;
     }

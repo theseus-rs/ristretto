@@ -128,7 +128,7 @@ impl Resolver {
         finder: &dyn ModuleFinder,
     ) -> Result<ResolvedConfiguration> {
         let mut resolved: BTreeMap<String, ResolvedModule> = BTreeMap::new();
-        let mut package_to_module: BTreeMap<String, String> = BTreeMap::new();
+        let mut package_to_module: AHashMap<String, String> = AHashMap::default();
         let mut queue: VecDeque<String> = VecDeque::new();
         let mut visited: AHashSet<String> = AHashSet::default();
 
@@ -272,7 +272,7 @@ impl Resolver {
     fn bind_services(
         &self,
         resolved: &mut BTreeMap<String, ResolvedModule>,
-        package_to_module: &mut BTreeMap<String, String>,
+        package_to_module: &mut AHashMap<String, String>,
         visited: &mut AHashSet<String>,
         finder: &dyn ModuleFinder,
     ) -> Result<()> {
@@ -354,7 +354,7 @@ impl Resolver {
         &self,
         new_modules: Vec<String>,
         resolved: &mut BTreeMap<String, ResolvedModule>,
-        package_to_module: &mut BTreeMap<String, String>,
+        package_to_module: &mut AHashMap<String, String>,
         visited: &mut AHashSet<String>,
         finder: &dyn ModuleFinder,
     ) -> Result<()> {
@@ -507,7 +507,7 @@ pub struct ResolvedConfiguration {
     /// Resolved modules by name.
     pub(crate) resolved: BTreeMap<String, ResolvedModule>,
     /// Package to module mapping.
-    pub(crate) package_to_module: BTreeMap<String, String>,
+    pub(crate) package_to_module: AHashMap<String, String>,
     /// Additional exports (from --add-exports).
     pub(crate) add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>>,
     /// Additional opens (from --add-opens).
@@ -520,7 +520,7 @@ impl ResolvedConfiguration {
     pub fn empty() -> Self {
         Self {
             resolved: BTreeMap::new(),
-            package_to_module: BTreeMap::new(),
+            package_to_module: AHashMap::default(),
             add_exports: AHashMap::default(),
             add_opens: AHashMap::default(),
         }
@@ -530,7 +530,7 @@ impl ResolvedConfiguration {
     #[must_use]
     pub fn new(
         resolved: BTreeMap<String, ResolvedModule>,
-        package_to_module: BTreeMap<String, String>,
+        package_to_module: AHashMap<String, String>,
         add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>>,
         add_opens: AHashMap<String, AHashMap<String, AHashSet<String>>>,
     ) -> Self {
@@ -539,6 +539,62 @@ impl ResolvedConfiguration {
             package_to_module,
             add_exports,
             add_opens,
+        }
+    }
+
+    /// Creates a configuration with only a package-to-module mapping (no resolved modules).
+    /// This is used as a lightweight configuration for classpath applications that need
+    /// module name assignment during class loading but don't require full JPMS resolution.
+    #[must_use]
+    pub fn from_package_map(package_to_module: AHashMap<String, String>) -> Self {
+        Self {
+            resolved: BTreeMap::new(),
+            package_to_module,
+            add_exports: AHashMap::default(),
+            add_opens: AHashMap::default(),
+        }
+    }
+
+    /// Performs full module resolution from a jimage file.
+    ///
+    /// This resolves all system modules with unqualified exports as root modules,
+    /// producing a fully populated configuration suitable for creating a boot layer.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the jimage cannot be read or resolution fails.
+    pub async fn resolve_from_jimage(jimage_path: &std::path::Path) -> Result<Self> {
+        use crate::module::finder::{ModuleFinder, ModuleFinderChain, SystemModuleFinder};
+
+        let system_finder = SystemModuleFinder::new(jimage_path).await?;
+        let mut finder_chain = ModuleFinderChain::new();
+        finder_chain.add(Box::new(system_finder));
+
+        if finder_chain.find("java.base").is_none() {
+            return Ok(Self::empty());
+        }
+
+        // Determine default root modules (all modules with unqualified exports)
+        let mut root_modules = vec!["java.base".to_string()];
+        for reference in finder_chain.find_all() {
+            let name = reference.name().to_string();
+            if root_modules.contains(&name) || name.starts_with("jdk.incubator.") {
+                continue;
+            }
+            let has_unqualified_exports = reference
+                .descriptor()
+                .exports
+                .iter()
+                .any(|e| e.targets.is_none());
+            if has_unqualified_exports {
+                root_modules.push(name);
+            }
+        }
+
+        let resolver = Resolver::new();
+        match resolver.resolve(&root_modules, &finder_chain) {
+            Ok(config) => Ok(config),
+            Err(_) => Ok(Self::empty()),
         }
     }
 }

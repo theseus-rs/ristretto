@@ -132,12 +132,8 @@ impl VM {
         // Set module configuration on class loaders for JPMS support. This enables module name
         // assignment during class loading
         let module_config = Arc::new(module_system.resolved_configuration().clone());
-        bootstrap_class_loader
-            .set_module_configuration(Some(module_config.clone()))
-            .await;
-        class_loader
-            .set_module_configuration(Some(module_config))
-            .await;
+        bootstrap_class_loader.set_module_configuration(Some(module_config.clone()));
+        class_loader.set_module_configuration(Some(module_config));
         startup_trace!("[vm] class loader module config");
 
         // Use the configured garbage collector or create a default one
@@ -508,8 +504,13 @@ impl VM {
 
             // After phase 3, ClassLoaders is fully initialized. Register the boot layer
             // with class loaders so ServiceLoader can find providers via ModuleLayer.layers(cl).
-            self.register_boot_layer_with_loaders().await;
-            startup_trace!("[vm] boot layer registered with loaders");
+            // Only do this when full module resolution was performed at startup (i.e., there
+            // are resolved modules). For simple classpath apps using the lightweight fast path,
+            // ModuleBootstrap.boot() handles lazy resolution and the boot layer is already set.
+            if !self.module_system.resolved_configuration().is_empty() {
+                self.register_boot_layer_with_loaders().await;
+                startup_trace!("[vm] boot layer registered with loaders");
+            }
         }
 
         Ok(())

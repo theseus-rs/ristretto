@@ -3,6 +3,7 @@
 use crate::module::descriptor::ModuleDescriptor;
 use crate::module::error::{ModuleError, Result};
 use crate::module::reference::{ModuleReference, ModuleSource};
+use ahash::AHashMap;
 use ristretto_classfile::ClassFile;
 use ristretto_jimage::Image as JImage;
 use std::collections::{BTreeSet, HashMap};
@@ -109,15 +110,15 @@ impl SystemModuleFinder {
         Ok(Self { modules })
     }
 
-    /// Loads modules from a jimage file (sync implementation).
+    /// Loads modules from a jimage file (sync implementation, single pass).
     fn load_from_jimage(jimage_path: &Path) -> Result<HashMap<String, ModuleReference>> {
         let image =
             JImage::from_file(jimage_path).map_err(|e| ModuleError::IoError(e.to_string()))?;
 
-        let mut modules: HashMap<String, ModuleReference> = HashMap::new();
         let mut module_packages: HashMap<String, BTreeSet<String>> = HashMap::new();
+        let mut module_infos: HashMap<String, Vec<u8>> = HashMap::new();
 
-        // First pass: collect all packages per module
+        // Single pass: collect packages and module-info.class data simultaneously
         for resource in &image {
             let resource = resource.map_err(|e| ModuleError::IoError(e.to_string()))?;
             let module_name = resource.module().to_string();
@@ -125,45 +126,76 @@ impl SystemModuleFinder {
                 continue;
             }
 
-            // Collect packages from class files
-            if resource.extension() == "class" && resource.base() != "module-info" {
-                let package = resource.parent().to_string();
-                module_packages
-                    .entry(module_name)
-                    .or_default()
-                    .insert(package);
+            if resource.extension() == "class" {
+                if resource.base() == "module-info" {
+                    module_infos.insert(module_name, resource.data().to_vec());
+                } else {
+                    let package = resource.parent().to_string();
+                    module_packages
+                        .entry(module_name)
+                        .or_default()
+                        .insert(package);
+                }
             }
         }
 
-        // Second pass: parse module-info.class for each module
-        for resource in &image {
-            let resource = resource.map_err(|e| ModuleError::IoError(e.to_string()))?;
-            if resource.base() != "module-info" || resource.extension() != "class" {
-                continue;
-            }
+        // Build module references from collected data
+        let mut modules: HashMap<String, ModuleReference> =
+            HashMap::with_capacity(module_infos.len());
 
-            let module_name = resource.module().to_string();
-            if module_name.is_empty() {
-                continue;
-            }
-
-            let class_file = ClassFile::from_bytes(resource.data())
+        for (module_name, data) in &module_infos {
+            let class_file = ClassFile::from_bytes(data)
                 .map_err(|e| ModuleError::DescriptorParseError(e.to_string()))?;
 
             let mut descriptor = ModuleDescriptor::from_class_file(&class_file)?;
 
             // Add packages discovered from class files
-            if let Some(packages) = module_packages.get(&module_name) {
+            if let Some(packages) = module_packages.get(module_name) {
                 for pkg in packages {
                     descriptor.packages.insert(pkg.clone());
                 }
             }
 
             let reference = ModuleReference::new(descriptor, ModuleSource::System, None);
-            modules.insert(module_name, reference);
+            modules.insert(module_name.clone(), reference);
         }
 
         Ok(modules)
+    }
+
+    /// Extracts only the package-to-module mapping from a jimage file.
+    /// This is a lightweight alternative to `load_from_jimage` that skips parsing
+    /// module-info.class files, making it much faster for classpath applications
+    /// that only need module name assignment during class loading.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the jimage cannot be read.
+    pub fn package_map_from_jimage(jimage_path: &Path) -> Result<AHashMap<String, String>> {
+        let image =
+            JImage::from_file(jimage_path).map_err(|e| ModuleError::IoError(e.to_string()))?;
+
+        let mut package_to_module: AHashMap<String, String> = AHashMap::default();
+
+        for resource in &image {
+            let resource = resource.map_err(|e| ModuleError::IoError(e.to_string()))?;
+            let module_name = resource.module();
+            if module_name.is_empty() {
+                continue;
+            }
+
+            if resource.extension() == "class" && resource.base() != "module-info" {
+                let package = resource.parent();
+                if !package.is_empty() {
+                    // Use entry API to avoid duplicate insertions
+                    package_to_module
+                        .entry(package.to_string())
+                        .or_insert_with(|| module_name.to_string());
+                }
+            }
+        }
+
+        Ok(package_to_module)
     }
 
     /// Creates a finder with pre-built module references.

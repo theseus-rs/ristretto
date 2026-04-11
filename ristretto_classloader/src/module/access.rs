@@ -450,7 +450,7 @@ mod tests {
     /// Creates a test configuration with the given modules.
     fn create_test_config(modules: Vec<ResolvedModule>) -> ResolvedConfiguration {
         let mut resolved = BTreeMap::new();
-        let mut package_to_module = BTreeMap::new();
+        let mut package_to_module = AHashMap::default();
 
         for module in modules {
             let name = module.name().to_string();
@@ -474,7 +474,7 @@ mod tests {
         add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>>,
     ) -> ResolvedConfiguration {
         let mut resolved = BTreeMap::new();
-        let mut package_to_module = BTreeMap::new();
+        let mut package_to_module = AHashMap::default();
 
         for module in modules {
             let name = module.name().to_string();
@@ -498,7 +498,7 @@ mod tests {
         add_opens: AHashMap<String, AHashMap<String, AHashSet<String>>>,
     ) -> ResolvedConfiguration {
         let mut resolved = BTreeMap::new();
-        let mut package_to_module = BTreeMap::new();
+        let mut package_to_module = AHashMap::default();
 
         for module in modules {
             let name = module.name().to_string();
