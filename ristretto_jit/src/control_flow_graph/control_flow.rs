@@ -37,6 +37,8 @@ impl InstructionControlFlow for Instruction {
                 | Instruction::If_icmple(..)
                 | Instruction::If_acmpeq(..)
                 | Instruction::If_acmpne(..)
+                | Instruction::Ifnull(..)
+                | Instruction::Ifnonnull(..)
                 | Instruction::Goto(..)
                 | Instruction::Goto_w(..)
                 | Instruction::Jsr(..)
@@ -79,6 +81,8 @@ mod tests {
             Instruction::If_icmple(0),
             Instruction::If_acmpeq(0),
             Instruction::If_acmpne(0),
+            Instruction::Ifnull(0),
+            Instruction::Ifnonnull(0),
             Instruction::Goto(0),
             Instruction::Goto_w(0),
             Instruction::Jsr(0),

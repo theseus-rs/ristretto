@@ -49,11 +49,6 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) sit
 
 ### Limitations
 
-#### Just-In-Time (JIT) Compilation
-
-The JIT compiler only supports functions that use primitive type byte codes. The JIT compiler is not implemented for
-functions that use object byte code or call other functions.
-
 #### Runtime Native Methods
 
 The Java runtime requires hundreds of native methods. This project aims to provide Rust equivalents for these methods.

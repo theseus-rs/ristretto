@@ -6,7 +6,7 @@ use ristretto_jit::Result;
 fn compile_object_init() -> Result<()> {
     let instructions = vec![Instruction::Return];
     let function = create_function("()V", &instructions)?;
-    let value = function.execute(Vec::new())?;
+    let value = function.execute(&[], std::ptr::null())?;
     assert_eq!(value, None);
     Ok(())
 }

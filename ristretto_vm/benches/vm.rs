@@ -17,17 +17,31 @@ fn benchmarks(criterion: &mut Criterion) {
 fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
     let runtime = Runtime::new().map_err(|error| Error::IoError(error.to_string()))?;
 
+    criterion.bench_function("vm_init_int", |bencher| {
+        bencher.iter(|| {
+            runtime.block_on(async {
+                vm_init(true).await.ok();
+            });
+        });
+    });
     criterion.bench_function("vm_init", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                vm_init().await.ok();
+                vm_init(false).await.ok();
+            });
+        });
+    });
+    criterion.bench_function("hello_world_int", |bencher| {
+        bencher.iter(|| {
+            runtime.block_on(async {
+                hello_world(true).await.ok();
             });
         });
     });
     criterion.bench_function("hello_world", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                hello_world().await.ok();
+                hello_world(false).await.ok();
             });
         });
     });
@@ -35,19 +49,7 @@ fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
     Ok(())
 }
 
-async fn vm_init() -> Result<()> {
-    let cargo_manifest = PathBuf::from(CARGO_MANIFEST);
-    let classes_jar_path = cargo_manifest
-        .join("..")
-        .join("classes")
-        .join("classes.jar");
-    let class_path = ClassPath::from(&[classes_jar_path]);
-    let configuration = ConfigurationBuilder::new().class_path(class_path).build()?;
-    let _ = VM::new(configuration).await?;
-    Ok(())
-}
-
-async fn hello_world() -> Result<()> {
+async fn vm_init(interpreted: bool) -> Result<()> {
     let cargo_manifest = PathBuf::from(CARGO_MANIFEST);
     let classes_jar_path = cargo_manifest
         .join("..")
@@ -56,6 +58,22 @@ async fn hello_world() -> Result<()> {
     let class_path = ClassPath::from(&[classes_jar_path]);
     let configuration = ConfigurationBuilder::new()
         .class_path(class_path)
+        .interpreted(interpreted)
+        .build()?;
+    let _ = VM::new(configuration).await?;
+    Ok(())
+}
+
+async fn hello_world(interpreted: bool) -> Result<()> {
+    let cargo_manifest = PathBuf::from(CARGO_MANIFEST);
+    let classes_jar_path = cargo_manifest
+        .join("..")
+        .join("classes")
+        .join("classes.jar");
+    let class_path = ClassPath::from(&[classes_jar_path]);
+    let configuration = ConfigurationBuilder::new()
+        .class_path(class_path)
+        .interpreted(interpreted)
         .stdout(Arc::new(Mutex::new(std::io::sink())))
         .main_class("HelloWorld")
         .build()?;

@@ -416,6 +416,57 @@ impl GarbageCollector {
         false
     }
 
+    /// Returns this collector as a raw pointer suitable for passing to JIT-compiled code.
+    #[must_use]
+    pub fn as_context_ptr(&self) -> *const u8 {
+        let ptr: *const Self = self;
+        ptr.cast::<u8>()
+    }
+
+    /// Reconstructs a `&GarbageCollector` from a raw pointer.
+    ///
+    /// This is intended for JIT interop where the GC pointer is passed through compiled
+    /// code as a raw pointer. The caller must ensure the pointer was obtained from a valid
+    /// `&GarbageCollector` reference that is still alive.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the pointer is null.
+    #[must_use]
+    #[expect(clippy::cast_ptr_alignment)]
+    pub fn from_raw_ptr<'a>(ptr: *const u8) -> &'a Self {
+        assert!(
+            !ptr.is_null(),
+            "GarbageCollector::from_raw_ptr: null pointer"
+        );
+        let gc_ptr = ptr.cast::<Self>();
+        // Safety: The caller guarantees this pointer was obtained from a live &GarbageCollector.
+        unsafe { &*gc_ptr }
+    }
+
+    /// Reconstructs a `&GarbageCollector` from a pointer to a `#[repr(C)]` context struct
+    /// whose first field is `*const u8` pointing to the `GarbageCollector`.
+    ///
+    /// This is intended for JIT interop where a `RuntimeContext` struct is passed to compiled
+    /// code and the GC pointer is the first field.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either the context pointer or the contained GC pointer is null.
+    #[must_use]
+    #[expect(clippy::cast_ptr_alignment)]
+    pub fn from_context_struct_ptr<'a>(context_ptr: *const u8) -> &'a Self {
+        assert!(
+            !context_ptr.is_null(),
+            "GarbageCollector::from_context_struct_ptr: null context pointer"
+        );
+        // Safety: The caller guarantees context_ptr points to a #[repr(C)] struct
+        // whose first field is *const u8 (the GC pointer).
+        let gc_ptr_ptr = context_ptr.cast::<*const u8>();
+        let gc_ptr = unsafe { *gc_ptr_ptr };
+        Self::from_raw_ptr(gc_ptr)
+    }
+
     /// Write barrier to be called when a `Gc` reference is modified. This ensures that the target
     /// object is marked if the collector is in the concurrent marking phase.
     pub fn write_barrier<T: Trace>(&self, obj: &Gc<T>) {

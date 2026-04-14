@@ -11,7 +11,7 @@ fn newarray_and_arraylength() -> Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(10));
     Ok(())
 }

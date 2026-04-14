@@ -1,7 +1,7 @@
-use crate::control_flow_graph::append_block_params;
-use crate::instruction::object::{aload, astore};
+use crate::instruction::object::{array_load, array_store};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
+use crate::runtime_helpers::RuntimeHelpers;
 use crate::{Result, jit_value};
 use cranelift::frontend::FunctionBuilder;
 use cranelift::prelude::{InstBuilder, IntCC, MemFlags, Value, types};
@@ -187,8 +187,11 @@ pub(crate) fn lstore_3(
 pub(crate) fn laload(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
+    helpers: &RuntimeHelpers,
 ) -> Result<()> {
-    aload(function_builder, stack, types::I64, 8, false, false)
+    let value = array_load(function_builder, stack, helpers.laload)?;
+    stack.push_long(function_builder, value)?;
+    Ok(())
 }
 
 /// # References
@@ -196,8 +199,10 @@ pub(crate) fn laload(
 pub(crate) fn lastore(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
+    helpers: &RuntimeHelpers,
 ) -> Result<()> {
-    astore(function_builder, stack, types::I64, 8)
+    let value = stack.pop_long(function_builder)?;
+    array_store(function_builder, stack, helpers.lastore, value)
 }
 
 /// # References
@@ -348,66 +353,18 @@ pub(crate) fn lxor(function_builder: &mut FunctionBuilder, stack: &mut OperandSt
 pub(crate) fn lcmp(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value2 = stack.pop_long(function_builder)?;
     let value1 = stack.pop_long(function_builder)?;
-    let stack_types = stack.to_type_vec(function_builder);
-    let params = stack.as_block_arguments();
-
-    let equal_block = function_builder.create_block();
-    append_block_params(function_builder, equal_block, &stack_types);
-    let else_block = function_builder.create_block();
-    append_block_params(function_builder, equal_block, &stack_types);
-    let greater_than_block = function_builder.create_block();
-    append_block_params(function_builder, equal_block, &stack_types);
-    let less_than_block = function_builder.create_block();
-    append_block_params(function_builder, equal_block, &stack_types);
-    let merge_block = function_builder.create_block();
-    append_block_params(function_builder, equal_block, &stack_types);
-    function_builder.append_block_param(merge_block, types::I32);
-
-    let condition_value = function_builder.ins().icmp(IntCC::Equal, value1, value2);
-    function_builder
-        .ins()
-        .brif(condition_value, equal_block, &params, else_block, &params);
-
-    function_builder.switch_to_block(equal_block);
-    function_builder.seal_block(equal_block);
-    let equal_return = function_builder.ins().iconst(types::I32, 0);
-    function_builder
-        .ins()
-        .jump(merge_block, &[equal_return.into()]);
-
-    function_builder.switch_to_block(else_block);
-    function_builder.seal_block(else_block);
-    let condition_value = function_builder
+    let is_greater = function_builder
         .ins()
         .icmp(IntCC::SignedGreaterThan, value1, value2);
-    function_builder.ins().brif(
-        condition_value,
-        greater_than_block,
-        &params,
-        less_than_block,
-        &params,
-    );
-
-    function_builder.switch_to_block(greater_than_block);
-    function_builder.seal_block(greater_than_block);
-    let mut greater_than_params = params.clone();
-    let greater_than_return = function_builder.ins().iconst(types::I32, 1);
-    greater_than_params.push(greater_than_return.into());
-    function_builder
+    let is_less = function_builder
         .ins()
-        .jump(merge_block, &greater_than_params);
-
-    function_builder.switch_to_block(less_than_block);
-    function_builder.seal_block(less_than_block);
-    let mut less_than_params = params.clone();
-    let less_than_return = function_builder.ins().iconst(types::I32, -1);
-    less_than_params.push(less_than_return.into());
-    function_builder.ins().jump(merge_block, &less_than_params);
-
-    function_builder.switch_to_block(merge_block);
-    function_builder.seal_block(merge_block);
-    let value = function_builder.block_params(merge_block)[0];
-    stack.push_int(function_builder, value)?;
+        .icmp(IntCC::SignedLessThan, value1, value2);
+    let one = function_builder.ins().iconst(types::I32, 1);
+    let neg_one = function_builder.ins().iconst(types::I32, -1);
+    let zero = function_builder.ins().iconst(types::I32, 0);
+    let result = function_builder.ins().select(is_less, neg_one, zero);
+    let result = function_builder.ins().select(is_greater, one, result);
+    stack.push_int(function_builder, result)?;
     Ok(())
 }
 

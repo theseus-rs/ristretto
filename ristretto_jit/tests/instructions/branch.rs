@@ -16,11 +16,15 @@ fn ifeq() -> Result<()> {
     let function = create_function("(I)Z", &instructions)?;
 
     // return true if equal to zero
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if not equal to zero
-    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
 }
@@ -38,11 +42,15 @@ fn ifne() -> Result<()> {
     let function = create_function("(I)Z", &instructions)?;
 
     // return true if not equal to zero
-    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if equal to zero
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
 }
@@ -60,11 +68,15 @@ fn iflt() -> Result<()> {
     let function = create_function("(I)Z", &instructions)?;
 
     // return true if less than zero
-    let value = function.execute(vec![Value::I32(-1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(-1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if equal to or greater than zero
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
 }
@@ -82,13 +94,19 @@ fn ifge() -> Result<()> {
     let function = create_function("(I)Z", &instructions)?;
 
     // return true if greater than or equal to zero
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
-    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if less than zero
-    let value = function.execute(vec![Value::I32(-1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(-1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
 }
@@ -106,11 +124,15 @@ fn ifgt() -> Result<()> {
     let function = create_function("(I)Z", &instructions)?;
 
     // return true if greater than zero
-    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if less than or equal to zero
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
 }
@@ -128,13 +150,19 @@ fn ifle() -> Result<()> {
     let function = create_function("(I)Z", &instructions)?;
 
     // return true if less than or equal to zero
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
-    let value = function.execute(vec![Value::I32(-1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(-1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if greater than zero
-    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
 }
@@ -154,13 +182,13 @@ fn if_icmpeq() -> Result<()> {
 
     // return true if values are equal
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(0)])?
+        .execute(&[Value::I32(0), Value::I32(0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if values are not equal
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(1)])?
+        .execute(&[Value::I32(0), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
@@ -181,13 +209,13 @@ fn if_icmpne() -> Result<()> {
 
     // return true if values are not equal
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(1)])?
+        .execute(&[Value::I32(0), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if values are equal
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(0)])?
+        .execute(&[Value::I32(0), Value::I32(0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
@@ -208,13 +236,13 @@ fn if_icmplt() -> Result<()> {
 
     // return true if the first value is less than the second
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(1)])?
+        .execute(&[Value::I32(0), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if the first value is greater than or equal to the second
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(0)])?
+        .execute(&[Value::I32(0), Value::I32(0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
@@ -235,17 +263,17 @@ fn if_icmpge() -> Result<()> {
 
     // return true if the first value is greater than or equal to the second
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(0)])?
+        .execute(&[Value::I32(0), Value::I32(0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
     let value = function
-        .execute(vec![Value::I32(1), Value::I32(0)])?
+        .execute(&[Value::I32(1), Value::I32(0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if the first value is less than the second
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(1)])?
+        .execute(&[Value::I32(0), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
@@ -266,13 +294,13 @@ fn if_icmpgt() -> Result<()> {
 
     // return true if the first value is greater than the second
     let value = function
-        .execute(vec![Value::I32(1), Value::I32(0)])?
+        .execute(&[Value::I32(1), Value::I32(0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if the first value is less than or equal to the second
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(0)])?
+        .execute(&[Value::I32(0), Value::I32(0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
@@ -293,17 +321,17 @@ fn if_icmple() -> Result<()> {
 
     // return true if the first value is less than or equal to the second
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(0)])?
+        .execute(&[Value::I32(0), Value::I32(0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(1)])?
+        .execute(&[Value::I32(0), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // return false if the first value is greater than the second
     let value = function
-        .execute(vec![Value::I32(1), Value::I32(0)])?
+        .execute(&[Value::I32(1), Value::I32(0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(0));
     Ok(())
@@ -317,7 +345,9 @@ fn goto() -> Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("(I)I", &instructions)?;
-    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())
 }
@@ -330,7 +360,9 @@ fn goto_w() -> Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("(I)I", &instructions)?;
-    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())
 }
@@ -345,7 +377,7 @@ fn jsr_and_ret() -> Result<()> {
         Instruction::Ret(0),
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(2));
     Ok(())
 }
@@ -360,7 +392,7 @@ fn jsr_w_and_ret_w() -> Result<()> {
         Instruction::Ret_w(0),
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(2));
     Ok(())
 }
@@ -387,27 +419,39 @@ fn tableswitch() -> Result<()> {
     let function = create_function("(I)I", &instructions)?;
 
     // Test case 0 (within range)
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
 
     // Test case 1 (within range)
-    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // Test case 2 (within range)
-    let value = function.execute(vec![Value::I32(2)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(2)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(2));
 
     // Test default case (below range)
-    let value = function.execute(vec![Value::I32(-1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(-1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     // Test default case (above range)
-    let value = function.execute(vec![Value::I32(3)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(3)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     // Test default case (far above range)
-    let value = function.execute(vec![Value::I32(100)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(100)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     Ok(())
@@ -437,15 +481,21 @@ fn tableswitch_negative_offset() -> Result<()> {
     let function = create_function("(I)I", &instructions)?;
 
     // Test case 0; should take the backward jump and return 0
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
 
     // Test case 1; should go forward and return 1
-    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // Test default case; should go forward and return 1
-    let value = function.execute(vec![Value::I32(99)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(99)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     Ok(())
@@ -475,11 +525,15 @@ fn tableswitch_negative_default_offset() -> Result<()> {
     let function = create_function("(I)I", &instructions)?;
 
     // Test case 0; should go forward and return 0
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
 
     // Test default case (value not in range); should take backward jump and return -1
-    let value = function.execute(vec![Value::I32(99)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(99)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     Ok(())
@@ -505,27 +559,39 @@ fn test_lookupswitch() -> Result<()> {
     let function = create_function("(I)I", &instructions)?;
 
     // Test case 0 (within range)
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
 
     // Test case 1 (within range)
-    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // Test case 2 (within range)
-    let value = function.execute(vec![Value::I32(2)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(2)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(2));
 
     // Test default case (below range)
-    let value = function.execute(vec![Value::I32(-1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(-1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     // Test default case (above range)
-    let value = function.execute(vec![Value::I32(3)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(3)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     // Test default case (far above range)
-    let value = function.execute(vec![Value::I32(100)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(100)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     Ok(())
@@ -556,15 +622,21 @@ fn lookupswitch_negative_offset() -> Result<()> {
     let function = create_function("(I)I", &instructions)?;
 
     // Test case 42; should take the backward jump and return 0
-    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
 
     // Test case 100; should go forward and return 1
-    let value = function.execute(vec![Value::I32(100)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(100)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // Test default case; should go forward and return 1
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(1));
 
     Ok(())
@@ -594,11 +666,15 @@ fn lookupswitch_negative_default_offset() -> Result<()> {
     let function = create_function("(I)I", &instructions)?;
 
     // Test case 42; should go forward and return 0
-    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
 
     // Test default case; should take backward jump and return -1
-    let value = function.execute(vec![Value::I32(0)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     Ok(())
@@ -608,7 +684,7 @@ fn lookupswitch_negative_default_offset() -> Result<()> {
 fn r#return() -> Result<()> {
     let instructions = vec![Instruction::Return];
     let function = create_function("()V", &instructions)?;
-    let value = function.execute(vec![])?;
+    let value = function.execute(&[], std::ptr::null())?;
     assert_eq!(value, None);
     Ok(())
 }

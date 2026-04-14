@@ -7,7 +7,7 @@ fn iconst_m1() -> Result<()> {
     let instructions = vec![Instruction::Iconst_m1, Instruction::Ireturn];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(-1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -17,7 +17,7 @@ fn iconst_0() -> Result<()> {
     let instructions = vec![Instruction::Iconst_0, Instruction::Ireturn];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -27,7 +27,7 @@ fn iconst_1() -> Result<()> {
     let instructions = vec![Instruction::Iconst_1, Instruction::Ireturn];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -37,7 +37,7 @@ fn iconst_2() -> Result<()> {
     let instructions = vec![Instruction::Iconst_2, Instruction::Ireturn];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(2);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -47,7 +47,7 @@ fn iconst_3() -> Result<()> {
     let instructions = vec![Instruction::Iconst_3, Instruction::Ireturn];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(3);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -57,7 +57,7 @@ fn iconst_4() -> Result<()> {
     let instructions = vec![Instruction::Iconst_4, Instruction::Ireturn];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(4);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -67,7 +67,7 @@ fn iconst_5() -> Result<()> {
     let instructions = vec![Instruction::Iconst_5, Instruction::Ireturn];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(5);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -78,7 +78,7 @@ fn iload() -> Result<()> {
     let function = create_function("(I)I", &instructions)?;
     let expected_value = Value::I32(42);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -90,7 +90,7 @@ fn iload_w() -> Result<()> {
     let function = create_function("(I)I", &instructions)?;
     let expected_value = Value::I32(42);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -102,7 +102,7 @@ fn iload_0() -> Result<()> {
     let function = create_function("(I)I", &instructions)?;
     let expected_value = Value::I32(42);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -114,7 +114,7 @@ fn iload_1() -> Result<()> {
     let function = create_function("(II)I", &instructions)?;
     let expected_value = Value::I32(42);
     let value = function
-        .execute(vec![Value::I32(0), expected_value.clone()])?
+        .execute(&[Value::I32(0), expected_value.clone()], std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -126,7 +126,10 @@ fn iload_2() -> Result<()> {
     let function = create_function("(III)I", &instructions)?;
     let expected_value = Value::I32(42);
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(0), expected_value.clone()])?
+        .execute(
+            &[Value::I32(0), Value::I32(0), expected_value.clone()],
+            std::ptr::null(),
+        )?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -138,12 +141,15 @@ fn iload_3() -> Result<()> {
     let function = create_function("(IIII)I", &instructions)?;
     let expected_value = Value::I32(42);
     let value = function
-        .execute(vec![
-            Value::I32(0),
-            Value::I32(0),
-            Value::I32(0),
-            expected_value.clone(),
-        ])?
+        .execute(
+            &[
+                Value::I32(0),
+                Value::I32(0),
+                Value::I32(0),
+                expected_value.clone(),
+            ],
+            std::ptr::null(),
+        )?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -159,7 +165,7 @@ fn istore() -> Result<()> {
     ];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -174,7 +180,7 @@ fn istore_w() -> Result<()> {
     ];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -189,7 +195,7 @@ fn istore_0() -> Result<()> {
     ];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -204,7 +210,7 @@ fn istore_1() -> Result<()> {
     ];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -219,7 +225,7 @@ fn istore_2() -> Result<()> {
     ];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -234,7 +240,7 @@ fn istore_3() -> Result<()> {
     ];
     let function = create_function("()I", &instructions)?;
     let expected_value = Value::I32(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -253,7 +259,7 @@ fn iaload_iastore() -> Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())
 }
@@ -268,7 +274,7 @@ fn iadd() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(1), Value::I32(2)])?
+        .execute(&[Value::I32(1), Value::I32(2)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(3));
     Ok(())
@@ -284,7 +290,7 @@ fn isub() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(2), Value::I32(1)])?
+        .execute(&[Value::I32(2), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())
@@ -300,7 +306,7 @@ fn imul() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(2), Value::I32(3)])?
+        .execute(&[Value::I32(2), Value::I32(3)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(6));
     Ok(())
@@ -316,7 +322,7 @@ fn idiv() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(6), Value::I32(3)])?
+        .execute(&[Value::I32(6), Value::I32(3)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(2));
     Ok(())
@@ -332,7 +338,7 @@ fn irem() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(5), Value::I32(2)])?
+        .execute(&[Value::I32(5), Value::I32(2)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())
@@ -346,7 +352,9 @@ fn ineg() -> Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("(I)I", &instructions)?;
-    let value = function.execute(vec![Value::I32(3)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(3)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(-3));
     Ok(())
 }
@@ -361,7 +369,7 @@ fn ishl() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(2), Value::I32(1)])?
+        .execute(&[Value::I32(2), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(4));
     Ok(())
@@ -377,7 +385,7 @@ fn ishr() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(8), Value::I32(1)])?
+        .execute(&[Value::I32(8), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(4));
     Ok(())
@@ -393,7 +401,7 @@ fn iushr() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(8), Value::I32(1)])?
+        .execute(&[Value::I32(8), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(4));
     Ok(())
@@ -409,7 +417,7 @@ fn iand() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(3), Value::I32(2)])?
+        .execute(&[Value::I32(3), Value::I32(2)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(2));
     Ok(())
@@ -425,7 +433,7 @@ fn ior() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(3), Value::I32(2)])?
+        .execute(&[Value::I32(3), Value::I32(2)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(3));
     Ok(())
@@ -441,7 +449,7 @@ fn ixor() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(3), Value::I32(2)])?
+        .execute(&[Value::I32(3), Value::I32(2)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())
@@ -455,7 +463,9 @@ fn iinc() -> Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("(I)I", &instructions)?;
-    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(2));
     Ok(())
 }
@@ -468,7 +478,9 @@ fn iinc_w() -> Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("(I)I", &instructions)?;
-    let value = function.execute(vec![Value::I32(1)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(2));
     Ok(())
 }
@@ -479,7 +491,7 @@ fn ireturn() -> Result<()> {
     let function = create_function("(I)I", &instructions)?;
     let expected_value = Value::I32(42);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -495,7 +507,9 @@ fn imul_square() -> Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("(I)I", &instructions)?;
-    let value = function.execute(vec![Value::I32(7)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(7)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(49));
     Ok(())
 }

@@ -88,6 +88,19 @@ impl LocalVariables {
         self.get_type(function_builder, types::F64, index)
     }
 
+    /// Get an object reference (pointer) from the local variables.
+    ///
+    /// # Errors
+    ///
+    /// if the local variable at the given index was not found or if the value is not a pointer.
+    pub fn get_object(
+        &self,
+        function_builder: &mut FunctionBuilder,
+        index: usize,
+    ) -> Result<Value> {
+        self.get_type(function_builder, types::I64, index)
+    }
+
     /// Set a value in the local variables.
     ///
     /// # Errors
@@ -184,6 +197,20 @@ impl LocalVariables {
         value: Value,
     ) -> Result<()> {
         self.set_type(function_builder, index, types::F64, value)
+    }
+
+    /// Set an object reference (pointer) in the local variables.
+    ///
+    /// # Errors
+    ///
+    /// if the index is out of bounds or if the value is not a pointer.
+    pub fn set_object(
+        &mut self,
+        function_builder: &mut FunctionBuilder,
+        index: usize,
+        value: Value,
+    ) -> Result<()> {
+        self.set_type(function_builder, index, types::I64, value)
     }
 }
 

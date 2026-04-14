@@ -6,7 +6,9 @@ use ristretto_jit::{Result, Value};
 fn i2l() -> Result<()> {
     let instructions = vec![Instruction::Iload_0, Instruction::I2l, Instruction::Lreturn];
     let function = create_function("(I)J", &instructions)?;
-    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I64(42));
     Ok(())
 }
@@ -15,7 +17,9 @@ fn i2l() -> Result<()> {
 fn i2f() -> Result<()> {
     let instructions = vec![Instruction::Iload_0, Instruction::I2f, Instruction::Freturn];
     let function = create_function("(I)F", &instructions)?;
-    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::F32(42.0));
     Ok(())
 }
@@ -24,7 +28,9 @@ fn i2f() -> Result<()> {
 fn i2d() -> Result<()> {
     let instructions = vec![Instruction::Iload_0, Instruction::I2d, Instruction::Dreturn];
     let function = create_function("(I)D", &instructions)?;
-    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::F64(42.0));
     Ok(())
 }
@@ -33,7 +39,9 @@ fn i2d() -> Result<()> {
 fn l2i() -> Result<()> {
     let instructions = vec![Instruction::Lload_0, Instruction::L2i, Instruction::Ireturn];
     let function = create_function("(J)I", &instructions)?;
-    let value = function.execute(vec![Value::I64(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I64(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())
 }
@@ -42,7 +50,9 @@ fn l2i() -> Result<()> {
 fn l2f() -> Result<()> {
     let instructions = vec![Instruction::Lload_0, Instruction::L2f, Instruction::Freturn];
     let function = create_function("(J)F", &instructions)?;
-    let value = function.execute(vec![Value::I64(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I64(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::F32(42.0));
     Ok(())
 }
@@ -51,7 +61,9 @@ fn l2f() -> Result<()> {
 fn l2d() -> Result<()> {
     let instructions = vec![Instruction::Lload_0, Instruction::L2d, Instruction::Dreturn];
     let function = create_function("(J)D", &instructions)?;
-    let value = function.execute(vec![Value::I64(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I64(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::F64(42.0));
     Ok(())
 }
@@ -60,7 +72,9 @@ fn l2d() -> Result<()> {
 fn f2i() -> Result<()> {
     let instructions = vec![Instruction::Fload_0, Instruction::F2i, Instruction::Ireturn];
     let function = create_function("(F)I", &instructions)?;
-    let value = function.execute(vec![Value::F32(42.0)])?.expect("value");
+    let value = function
+        .execute(&[Value::F32(42.0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())
 }
@@ -69,7 +83,9 @@ fn f2i() -> Result<()> {
 fn f2l() -> Result<()> {
     let instructions = vec![Instruction::Fload_0, Instruction::F2l, Instruction::Lreturn];
     let function = create_function("(F)J", &instructions)?;
-    let value = function.execute(vec![Value::F32(42.0)])?.expect("value");
+    let value = function
+        .execute(&[Value::F32(42.0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I64(42));
     Ok(())
 }
@@ -78,7 +94,9 @@ fn f2l() -> Result<()> {
 fn f2d() -> Result<()> {
     let instructions = vec![Instruction::Fload_0, Instruction::F2d, Instruction::Dreturn];
     let function = create_function("(F)D", &instructions)?;
-    let value = function.execute(vec![Value::F32(42.0)])?.expect("value");
+    let value = function
+        .execute(&[Value::F32(42.0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::F64(42.0));
     Ok(())
 }
@@ -87,7 +105,9 @@ fn f2d() -> Result<()> {
 fn d2i() -> Result<()> {
     let instructions = vec![Instruction::Dload_0, Instruction::D2i, Instruction::Ireturn];
     let function = create_function("(D)I", &instructions)?;
-    let value = function.execute(vec![Value::F64(42.0)])?.expect("value");
+    let value = function
+        .execute(&[Value::F64(42.0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())
 }
@@ -96,7 +116,9 @@ fn d2i() -> Result<()> {
 fn d2l() -> Result<()> {
     let instructions = vec![Instruction::Dload_0, Instruction::D2l, Instruction::Lreturn];
     let function = create_function("(D)J", &instructions)?;
-    let value = function.execute(vec![Value::F64(42.0)])?.expect("value");
+    let value = function
+        .execute(&[Value::F64(42.0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I64(42));
     Ok(())
 }
@@ -105,7 +127,9 @@ fn d2l() -> Result<()> {
 fn d2f() -> Result<()> {
     let instructions = vec![Instruction::Dload_0, Instruction::D2f, Instruction::Freturn];
     let function = create_function("(D)F", &instructions)?;
-    let value = function.execute(vec![Value::F64(42.0)])?.expect("value");
+    let value = function
+        .execute(&[Value::F64(42.0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::F32(42.0));
     Ok(())
 }
@@ -114,7 +138,9 @@ fn d2f() -> Result<()> {
 fn i2b() -> Result<()> {
     let instructions = vec![Instruction::Iload_0, Instruction::I2b, Instruction::Ireturn];
     let function = create_function("(I)Z", &instructions)?;
-    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())
 }
@@ -123,7 +149,9 @@ fn i2b() -> Result<()> {
 fn i2c() -> Result<()> {
     let instructions = vec![Instruction::Iload_0, Instruction::I2c, Instruction::Ireturn];
     let function = create_function("(I)C", &instructions)?;
-    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())
 }
@@ -132,7 +160,9 @@ fn i2c() -> Result<()> {
 fn i2s() -> Result<()> {
     let instructions = vec![Instruction::Iload_0, Instruction::I2s, Instruction::Ireturn];
     let function = create_function("(I)S", &instructions)?;
-    let value = function.execute(vec![Value::I32(42)])?.expect("value");
+    let value = function
+        .execute(&[Value::I32(42)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())
 }

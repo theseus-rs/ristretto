@@ -15,11 +15,11 @@ fn math_max() -> Result<()> {
     ];
     let function = create_function("(II)I", &instructions)?;
     let value = function
-        .execute(vec![Value::I32(3), Value::I32(42)])?
+        .execute(&[Value::I32(3), Value::I32(42)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(42));
     let value = function
-        .execute(vec![Value::I32(42), Value::I32(3)])?
+        .execute(&[Value::I32(42), Value::I32(3)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())

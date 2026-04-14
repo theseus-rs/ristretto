@@ -103,9 +103,11 @@ fn math_multiply_high() -> Result<()> {
     let test_method = &class_file.methods[0];
 
     let compiler = Compiler::new()?;
-    let function = compiler.compile(&class_file, test_method)?;
-    let arguments = vec![Value::I64(32_767), Value::I64(9_223_372_036_854_775_807)];
-    let value = function.execute(arguments)?.expect("value");
+    let function = compiler.compile(&class_file, test_method, &[])?;
+    let arguments = [Value::I64(32_767), Value::I64(9_223_372_036_854_775_807)];
+    let value = function
+        .execute(&arguments, std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I64(16_383));
     Ok(())
 }

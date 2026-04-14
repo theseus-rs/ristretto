@@ -1,7 +1,7 @@
-use crate::instruction::object::{aload, astore};
+use crate::instruction::object::{array_load, array_store};
 use crate::operand_stack::OperandStack;
+use crate::runtime_helpers::RuntimeHelpers;
 use cranelift::frontend::FunctionBuilder;
-use cranelift::prelude::types;
 
 /// # References
 ///
@@ -9,9 +9,11 @@ use cranelift::prelude::types;
 pub(crate) fn caload(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
+    helpers: &RuntimeHelpers,
 ) -> crate::Result<()> {
-    // char is 2 bytes, zero extended to int
-    aload(function_builder, stack, types::I16, 2, false, true)
+    let value = array_load(function_builder, stack, helpers.caload)?;
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// # References
@@ -20,6 +22,8 @@ pub(crate) fn caload(
 pub(crate) fn castore(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
+    helpers: &RuntimeHelpers,
 ) -> crate::Result<()> {
-    astore(function_builder, stack, types::I16, 2)
+    let value = stack.pop_int(function_builder)?;
+    array_store(function_builder, stack, helpers.castore, value)
 }

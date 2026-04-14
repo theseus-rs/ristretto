@@ -15,10 +15,12 @@ fn double_is_nan() -> Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("(D)Z", &instructions)?;
-    let value = function.execute(vec![Value::F64(42.1)])?.expect("value");
+    let value = function
+        .execute(&[Value::F64(42.1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
     let value = function
-        .execute(vec![Value::F64(f64::NAN)])?
+        .execute(&[Value::F64(f64::NAN)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())

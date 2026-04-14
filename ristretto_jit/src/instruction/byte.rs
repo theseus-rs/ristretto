@@ -1,7 +1,7 @@
-use crate::instruction::object::{aload, astore};
+use crate::instruction::object::{array_load, array_store};
 use crate::operand_stack::OperandStack;
+use crate::runtime_helpers::RuntimeHelpers;
 use cranelift::frontend::FunctionBuilder;
-use cranelift::prelude::types;
 
 /// # References
 ///
@@ -9,9 +9,11 @@ use cranelift::prelude::types;
 pub(crate) fn baload(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
+    helpers: &RuntimeHelpers,
 ) -> crate::Result<()> {
-    // byte/boolean is 1 byte, sign extended to int
-    aload(function_builder, stack, types::I8, 1, true, false)
+    let value = array_load(function_builder, stack, helpers.baload)?;
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// # References
@@ -20,6 +22,8 @@ pub(crate) fn baload(
 pub(crate) fn bastore(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
+    helpers: &RuntimeHelpers,
 ) -> crate::Result<()> {
-    astore(function_builder, stack, types::I8, 1)
+    let value = stack.pop_int(function_builder)?;
+    array_store(function_builder, stack, helpers.bastore, value)
 }

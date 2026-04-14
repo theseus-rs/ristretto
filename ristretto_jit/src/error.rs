@@ -21,6 +21,7 @@ pub enum Error {
     #[error(transparent)]
     ClassFileError(#[from] ristretto_classfile::Error),
     /// A compilation error occurred generating the code
+    #[cfg(not(target_family = "wasm"))]
     #[error(transparent)]
     CodegenError(#[from] cranelift::codegen::CodegenError),
     /// Internal error
@@ -42,6 +43,7 @@ pub enum Error {
     #[error("Invalid value; expected {expected}, found {actual}")]
     InvalidValue { expected: i8, actual: i8 },
     /// A module error occurred
+    #[cfg(not(target_family = "wasm"))]
     #[error(transparent)]
     ModuleError(#[from] cranelift::module::ModuleError),
     /// An error occurred while trying to convert a number

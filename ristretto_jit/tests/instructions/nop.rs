@@ -6,7 +6,7 @@ use ristretto_jit::Result;
 fn nop() -> Result<()> {
     let instructions = vec![Instruction::Nop, Instruction::Return];
     let function = create_function("()V", &instructions)?;
-    let value = function.execute(vec![])?;
+    let value = function.execute(&[], std::ptr::null())?;
     assert_eq!(value, None);
     Ok(())
 }
