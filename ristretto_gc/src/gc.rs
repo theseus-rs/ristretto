@@ -173,6 +173,50 @@ impl<T> Gc<T> {
         ptr::addr_of!(**self)
     }
 
+    /// Returns the raw pointer as an `i64` value suitable for passing through JIT-compiled code.
+    ///
+    /// The caller must ensure that the `Gc` outlives the usage of this pointer value.
+    #[must_use]
+    pub fn as_ptr_i64(&self) -> i64 {
+        self.as_ptr() as i64
+    }
+
+    /// Constructs a `Gc<T>` from a raw pointer.
+    ///
+    /// # Safety
+    ///
+    /// The pointer must have been obtained from `Gc::as_ptr()` on a still live `Gc<T>`.
+    /// The original `Gc` (or the GC root keeping the allocation alive) must still be valid.
+    /// This does not create a new allocation or register with the garbage collector.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the pointer is null.
+    #[must_use]
+    pub unsafe fn from_raw(ptr: *const T) -> Self {
+        Self {
+            ptr: NonNull::new(ptr.cast_mut()).expect("Gc::from_raw received null pointer"),
+            phantom: PhantomData,
+        }
+    }
+
+    /// Constructs a `Gc<T>` from a raw pointer encoded as an `i64`.
+    ///
+    /// This is the inverse of casting `Gc::as_ptr()` to `i64`. The pointer must have been
+    /// obtained from a still live `Gc<T>`. This is intended for JIT interop where pointers
+    /// are passed through compiled code as integer values.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the pointer is null (0).
+    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    #[must_use]
+    pub fn from_raw_i64(ptr: i64) -> Self {
+        let raw = ptr as usize as *const T;
+        // Safety: The caller guarantees this pointer came from Gc::as_ptr() on a live Gc<T>.
+        unsafe { Self::from_raw(raw) }
+    }
+
     /// Makes a mutable reference into the given `Gc`.
     ///
     /// # Safety

@@ -10,7 +10,7 @@ fn monitorenter() -> Result<()> {
         Instruction::Return,
     ];
     let function = create_function("()V", &instructions)?;
-    let value = function.execute(vec![])?;
+    let value = function.execute(&[], std::ptr::null())?;
     assert_eq!(value, None);
     Ok(())
 }
@@ -23,7 +23,7 @@ fn monitorexit() -> Result<()> {
         Instruction::Return,
     ];
     let function = create_function("()V", &instructions)?;
-    let value = function.execute(vec![])?;
+    let value = function.execute(&[], std::ptr::null())?;
     assert_eq!(value, None);
     Ok(())
 }

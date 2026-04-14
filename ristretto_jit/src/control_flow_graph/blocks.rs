@@ -312,8 +312,7 @@ pub(crate) fn create_block_with_parameters(
         let block = function_builder.create_block();
 
         if let Some(stack_types) = stack_states.get(&address) {
-            let stack_types = stack_types.to_vec();
-            append_block_params(function_builder, block, &stack_types);
+            append_block_params(function_builder, block, stack_types.as_slice());
         }
 
         block

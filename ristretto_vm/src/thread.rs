@@ -883,7 +883,11 @@ impl Thread {
             let result = rust_method(thread, parameters).await;
             (result, false)
         } else if let Some(jit_method) = jit_method {
-            let result = jit::execute(&jit_method, method, parameters);
+            let gc = vm.garbage_collector();
+            let Some(thread) = self.thread.upgrade() else {
+                return Err(InternalError("Call stack is not available".to_string()));
+            };
+            let result = jit::execute(&jit_method, &parameters, gc, &vm, &thread);
             (result, false)
         } else if method.is_native() {
             // Release synchronized monitor before returning error
@@ -930,21 +934,19 @@ impl Thread {
         }
 
         if event_enabled!(Level::DEBUG) {
-            let result = match &result {
+            let result_str = match &result {
                 Ok(Some(value)) => {
-                    let value = value.to_string();
-                    if value.len() > 100 {
-                        format!("{}...", &value.as_str()[..97])
+                    let s = value.to_string();
+                    if s.len() > 100 {
+                        format!("{}...", &s[..97])
                     } else {
-                        value
+                        s
                     }
                 }
                 Ok(None) => "void".to_string(),
-                Err(error) => {
-                    format!("[ERROR] {error}")
-                }
+                Err(error) => format!("[ERROR] {error}"),
             };
-            debug!("result: {class_name}.{method_name}{method_descriptor}: {result}");
+            debug!("result: {class_name}.{method_name}{method_descriptor}: {result_str}");
         }
 
         if frame_added {

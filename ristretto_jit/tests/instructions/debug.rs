@@ -6,7 +6,7 @@ use ristretto_jit::Result;
 fn breakpoint() -> Result<()> {
     let instructions = vec![Instruction::Breakpoint, Instruction::Return];
     let function = create_function("()V", &instructions)?;
-    let value = function.execute(vec![])?;
+    let value = function.execute(&[], std::ptr::null())?;
     assert_eq!(value, None);
     Ok(())
 }
@@ -15,7 +15,7 @@ fn breakpoint() -> Result<()> {
 fn impdep1() -> Result<()> {
     let instructions = vec![Instruction::Impdep1, Instruction::Return];
     let function = create_function("()V", &instructions)?;
-    let value = function.execute(vec![])?;
+    let value = function.execute(&[], std::ptr::null())?;
     assert_eq!(value, None);
     Ok(())
 }
@@ -24,7 +24,7 @@ fn impdep1() -> Result<()> {
 fn impdep2() -> Result<()> {
     let instructions = vec![Instruction::Impdep2, Instruction::Return];
     let function = create_function("()V", &instructions)?;
-    let value = function.execute(vec![])?;
+    let value = function.execute(&[], std::ptr::null())?;
     assert_eq!(value, None);
     Ok(())
 }

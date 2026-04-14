@@ -14,8 +14,10 @@ fn compile_hash_code() -> Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("(J)I", &instructions)?;
-    let arguments = vec![Value::I64(9_223_372_036_854_775_807)];
-    let value = function.execute(arguments)?.expect("value");
+    let arguments = [Value::I64(9_223_372_036_854_775_807)];
+    let value = function
+        .execute(&arguments, std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(-2_147_483_648));
     Ok(())
 }

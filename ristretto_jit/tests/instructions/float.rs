@@ -7,7 +7,7 @@ fn fconst_0() -> Result<()> {
     let instructions = vec![Instruction::Fconst_0, Instruction::Freturn];
     let function = create_function("()F", &instructions)?;
     let expected_value = Value::F32(0.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -17,7 +17,7 @@ fn fconst_1() -> Result<()> {
     let instructions = vec![Instruction::Fconst_1, Instruction::Freturn];
     let function = create_function("()F", &instructions)?;
     let expected_value = Value::F32(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -27,7 +27,7 @@ fn fconst_2() -> Result<()> {
     let instructions = vec![Instruction::Fconst_2, Instruction::Freturn];
     let function = create_function("()F", &instructions)?;
     let expected_value = Value::F32(2.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -38,7 +38,7 @@ fn fload() -> Result<()> {
     let function = create_function("(F)F", &instructions)?;
     let expected_value = Value::F32(42.1);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -50,7 +50,7 @@ fn fload_w() -> Result<()> {
     let function = create_function("(F)F", &instructions)?;
     let expected_value = Value::F32(42.1);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -62,7 +62,7 @@ fn fload_0() -> Result<()> {
     let function = create_function("(F)F", &instructions)?;
     let expected_value = Value::F32(42.1);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -74,7 +74,7 @@ fn fload_1() -> Result<()> {
     let function = create_function("(IF)F", &instructions)?;
     let expected_value = Value::F32(42.1);
     let value = function
-        .execute(vec![Value::I32(0), expected_value.clone()])?
+        .execute(&[Value::I32(0), expected_value.clone()], std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -86,7 +86,10 @@ fn fload_2() -> Result<()> {
     let function = create_function("(IIF)F", &instructions)?;
     let expected_value = Value::F32(42.1);
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(0), expected_value.clone()])?
+        .execute(
+            &[Value::I32(0), Value::I32(0), expected_value.clone()],
+            std::ptr::null(),
+        )?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -98,12 +101,15 @@ fn fload_3() -> Result<()> {
     let function = create_function("(IIIF)F", &instructions)?;
     let expected_value = Value::F32(42.1);
     let value = function
-        .execute(vec![
-            Value::I32(0),
-            Value::I32(0),
-            Value::I32(0),
-            expected_value.clone(),
-        ])?
+        .execute(
+            &[
+                Value::I32(0),
+                Value::I32(0),
+                Value::I32(0),
+                expected_value.clone(),
+            ],
+            std::ptr::null(),
+        )?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -119,7 +125,7 @@ fn fstore() -> Result<()> {
     ];
     let function = create_function("()F", &instructions)?;
     let expected_value = Value::F32(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -134,7 +140,7 @@ fn fstore_w() -> Result<()> {
     ];
     let function = create_function("()F", &instructions)?;
     let expected_value = Value::F32(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -149,7 +155,7 @@ fn fstore_0() -> Result<()> {
     ];
     let function = create_function("()F", &instructions)?;
     let expected_value = Value::F32(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -164,7 +170,7 @@ fn fstore_1() -> Result<()> {
     ];
     let function = create_function("()F", &instructions)?;
     let expected_value = Value::F32(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -179,7 +185,7 @@ fn fstore_2() -> Result<()> {
     ];
     let function = create_function("()F", &instructions)?;
     let expected_value = Value::F32(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -194,7 +200,7 @@ fn fstore_3() -> Result<()> {
     ];
     let function = create_function("()F", &instructions)?;
     let expected_value = Value::F32(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -213,7 +219,7 @@ fn faload_fastore() -> Result<()> {
         Instruction::Freturn,
     ];
     let function = create_function("()F", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::F32(1.0));
     Ok(())
 }
@@ -228,7 +234,7 @@ fn fadd() -> Result<()> {
     ];
     let function = create_function("(FF)F", &instructions)?;
     let value = function
-        .execute(vec![Value::F32(1.0), Value::F32(2.0)])?
+        .execute(&[Value::F32(1.0), Value::F32(2.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::F32(3.0));
     Ok(())
@@ -244,7 +250,7 @@ fn fsub() -> Result<()> {
     ];
     let function = create_function("(FF)F", &instructions)?;
     let value = function
-        .execute(vec![Value::F32(2.0), Value::F32(1.0)])?
+        .execute(&[Value::F32(2.0), Value::F32(1.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::F32(1.0));
     Ok(())
@@ -260,7 +266,7 @@ fn fmul() -> Result<()> {
     ];
     let function = create_function("(FF)F", &instructions)?;
     let value = function
-        .execute(vec![Value::F32(2.0), Value::F32(3.0)])?
+        .execute(&[Value::F32(2.0), Value::F32(3.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::F32(6.0));
     Ok(())
@@ -276,7 +282,7 @@ fn fdiv() -> Result<()> {
     ];
     let function = create_function("(FF)F", &instructions)?;
     let value = function
-        .execute(vec![Value::F32(6.0), Value::F32(3.0)])?
+        .execute(&[Value::F32(6.0), Value::F32(3.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::F32(2.0));
     Ok(())
@@ -292,7 +298,7 @@ fn frem() -> Result<()> {
     ];
     let function = create_function("(FF)F", &instructions)?;
     let value = function
-        .execute(vec![Value::F32(5.0), Value::F32(2.0)])?
+        .execute(&[Value::F32(5.0), Value::F32(2.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::F32(1.0));
     Ok(())
@@ -306,7 +312,9 @@ fn fneg() -> Result<()> {
         Instruction::Freturn,
     ];
     let function = create_function("(F)F", &instructions)?;
-    let value = function.execute(vec![Value::F32(3.0)])?.expect("value");
+    let value = function
+        .execute(&[Value::F32(3.0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::F32(-3.0));
     Ok(())
 }
@@ -323,31 +331,31 @@ fn fcmpl() -> Result<()> {
 
     // 0 if values are equal
     let value = function
-        .execute(vec![Value::F32(0.0), Value::F32(0.0)])?
+        .execute(&[Value::F32(0.0), Value::F32(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(0));
 
     // 1 if first value is greater than second
     let value = function
-        .execute(vec![Value::F32(1.0), Value::F32(0.0)])?
+        .execute(&[Value::F32(1.0), Value::F32(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // -1 if first value is lesser than the second
     let value = function
-        .execute(vec![Value::F32(0.0), Value::F32(1.0)])?
+        .execute(&[Value::F32(0.0), Value::F32(1.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     // -1 if first value is NaN
     let value = function
-        .execute(vec![Value::F32(f32::NAN), Value::F32(0.0)])?
+        .execute(&[Value::F32(f32::NAN), Value::F32(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     // -1 if second value is NaN
     let value = function
-        .execute(vec![Value::F32(0.0), Value::F32(f32::NAN)])?
+        .execute(&[Value::F32(0.0), Value::F32(f32::NAN)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(-1));
     Ok(())
@@ -365,31 +373,31 @@ fn fcmpg() -> Result<()> {
 
     // 0 if values are equal
     let value = function
-        .execute(vec![Value::F32(0.0), Value::F32(0.0)])?
+        .execute(&[Value::F32(0.0), Value::F32(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(0));
 
     // 1 if first value is greater than second
     let value = function
-        .execute(vec![Value::F32(1.0), Value::F32(0.0)])?
+        .execute(&[Value::F32(1.0), Value::F32(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // -1 if first value is lesser than the second
     let value = function
-        .execute(vec![Value::F32(0.0), Value::F32(1.0)])?
+        .execute(&[Value::F32(0.0), Value::F32(1.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     // 1 if first value is NaN
     let value = function
-        .execute(vec![Value::F32(f32::NAN), Value::F32(0.0)])?
+        .execute(&[Value::F32(f32::NAN), Value::F32(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // 1 if second value is NaN
     let value = function
-        .execute(vec![Value::F32(0.0), Value::F32(f32::NAN)])?
+        .execute(&[Value::F32(0.0), Value::F32(f32::NAN)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())
@@ -401,7 +409,7 @@ fn freturn() -> Result<()> {
     let function = create_function("(F)F", &instructions)?;
     let expected_value = Value::F32(42.1);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())

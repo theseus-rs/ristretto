@@ -12,7 +12,7 @@ fn ldc_integer() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function_with_constant_pool(constant_pool, "()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())
 }
@@ -26,7 +26,7 @@ fn ldc_float() -> ristretto_jit::Result<()> {
         Instruction::Freturn,
     ];
     let function = create_function_with_constant_pool(constant_pool, "()F", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::F32(42.1));
     Ok(())
 }
@@ -78,7 +78,7 @@ fn ldc_w_integer() -> ristretto_jit::Result<()> {
     let constant_index = constant_pool.add_integer(42)?;
     let instructions = vec![Instruction::Ldc_w(constant_index), Instruction::Ireturn];
     let function = create_function_with_constant_pool(constant_pool, "()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(42));
     Ok(())
 }
@@ -89,7 +89,7 @@ fn ldc_w_float() -> ristretto_jit::Result<()> {
     let constant_index = constant_pool.add_float(42.1)?;
     let instructions = vec![Instruction::Ldc_w(constant_index), Instruction::Freturn];
     let function = create_function_with_constant_pool(constant_pool, "()F", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::F32(42.1));
     Ok(())
 }
@@ -132,7 +132,7 @@ fn ldc2_w_long() -> ristretto_jit::Result<()> {
     let constant_index = constant_pool.add_long(42)?;
     let instructions = vec![Instruction::Ldc2_w(constant_index), Instruction::Lreturn];
     let function = create_function_with_constant_pool(constant_pool, "()J", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I64(42));
     Ok(())
 }
@@ -143,7 +143,7 @@ fn ldc2_w_double() -> ristretto_jit::Result<()> {
     let constant_index = constant_pool.add_double(42.1)?;
     let instructions = vec![Instruction::Ldc2_w(constant_index), Instruction::Dreturn];
     let function = create_function_with_constant_pool(constant_pool, "()D", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::F64(42.1));
     Ok(())
 }

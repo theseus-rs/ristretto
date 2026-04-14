@@ -461,6 +461,150 @@ pub(crate) fn if_icmple(
 
 /// # References
 ///
+/// - [JVMS §6.5.if_acmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond)
+pub(crate) fn if_acmpeq(
+    function_builder: &mut FunctionBuilder,
+    blocks: &AHashMap<usize, Block>,
+    stack: &mut OperandStack,
+    program_counter: usize,
+    address: u16,
+) -> Result<()> {
+    let value2 = stack.pop()?;
+    let value1 = stack.pop()?;
+    let address = usize::from(address);
+
+    let then_block = blocks
+        .get(&address)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+    let else_address = program_counter
+        .checked_add(1)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+    let else_block = blocks
+        .get(&else_address)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+
+    let condition_value = function_builder.ins().icmp(IntCC::Equal, value1, value2);
+    let block_arguments = stack.as_block_arguments();
+    function_builder.ins().brif(
+        condition_value,
+        *then_block,
+        &block_arguments,
+        *else_block,
+        &block_arguments,
+    );
+    Ok(())
+}
+
+/// # References
+///
+/// - [JVMS §6.5.if_acmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond)
+pub(crate) fn if_acmpne(
+    function_builder: &mut FunctionBuilder,
+    blocks: &AHashMap<usize, Block>,
+    stack: &mut OperandStack,
+    program_counter: usize,
+    address: u16,
+) -> Result<()> {
+    let value2 = stack.pop()?;
+    let value1 = stack.pop()?;
+    let address = usize::from(address);
+
+    let then_block = blocks
+        .get(&address)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+    let else_address = program_counter
+        .checked_add(1)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+    let else_block = blocks
+        .get(&else_address)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+
+    let condition_value = function_builder.ins().icmp(IntCC::NotEqual, value1, value2);
+    let block_arguments = stack.as_block_arguments();
+    function_builder.ins().brif(
+        condition_value,
+        *then_block,
+        &block_arguments,
+        *else_block,
+        &block_arguments,
+    );
+    Ok(())
+}
+
+/// # References
+///
+/// - [JVMS §6.5.ifnull](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnull)
+pub(crate) fn ifnull(
+    function_builder: &mut FunctionBuilder,
+    blocks: &AHashMap<usize, Block>,
+    stack: &mut OperandStack,
+    program_counter: usize,
+    address: u16,
+) -> Result<()> {
+    let value = stack.pop()?;
+    let address = usize::from(address);
+
+    let then_block = blocks
+        .get(&address)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+    let else_address = program_counter
+        .checked_add(1)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+    let else_block = blocks
+        .get(&else_address)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+
+    let null = function_builder.ins().iconst(types::I64, 0);
+    let condition_value = function_builder.ins().icmp(IntCC::Equal, value, null);
+    let block_arguments = stack.as_block_arguments();
+    function_builder.ins().brif(
+        condition_value,
+        *then_block,
+        &block_arguments,
+        *else_block,
+        &block_arguments,
+    );
+    Ok(())
+}
+
+/// # References
+///
+/// - [JVMS §6.5.ifnonnull](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnonnull)
+pub(crate) fn ifnonnull(
+    function_builder: &mut FunctionBuilder,
+    blocks: &AHashMap<usize, Block>,
+    stack: &mut OperandStack,
+    program_counter: usize,
+    address: u16,
+) -> Result<()> {
+    let value = stack.pop()?;
+    let address = usize::from(address);
+
+    let then_block = blocks
+        .get(&address)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+    let else_address = program_counter
+        .checked_add(1)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+    let else_block = blocks
+        .get(&else_address)
+        .ok_or_else(|| InvalidBlockAddress(address))?;
+
+    let null = function_builder.ins().iconst(types::I64, 0);
+    let condition_value = function_builder.ins().icmp(IntCC::NotEqual, value, null);
+    let block_arguments = stack.as_block_arguments();
+    function_builder.ins().brif(
+        condition_value,
+        *then_block,
+        &block_arguments,
+        *else_block,
+        &block_arguments,
+    );
+    Ok(())
+}
+
+/// # References
+///
 /// - [JVMS §6.5.goto](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto)
 pub(crate) fn goto(
     function_builder: &mut FunctionBuilder,

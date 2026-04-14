@@ -6,6 +6,7 @@ pub(crate) const I32: i8 = 1;
 pub(crate) const I64: i8 = 2;
 pub(crate) const F32: i8 = 3;
 pub(crate) const F64: i8 = 4;
+pub(crate) const PTR: i8 = 5;
 
 /// A struct that can be used as a union type that can hold different types of values.  This is used
 /// to represent values passed to / from native JIT compiled functions.
@@ -43,6 +44,10 @@ impl From<crate::Value> for JitValue {
             crate::Value::I64(value) => JitValue::from(value),
             crate::Value::F32(value) => JitValue::from(value),
             crate::Value::F64(value) => JitValue::from(value),
+            crate::Value::Ptr(value) => JitValue {
+                discriminant: PTR,
+                value,
+            },
         }
     }
 }
@@ -68,6 +73,7 @@ impl TryInto<crate::Value> for JitValue {
             I64 => crate::Value::I64(self.try_into()?),
             F32 => crate::Value::F32(self.try_into()?),
             F64 => crate::Value::F64(self.try_into()?),
+            PTR => crate::Value::Ptr(self.value),
             _ => {
                 return Err(InternalError(format!(
                     "Invalid discriminant {}",

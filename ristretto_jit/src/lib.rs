@@ -31,15 +31,21 @@
 #![allow(unsafe_code)]
 #[cfg(not(target_family = "wasm"))]
 mod compiler;
+#[cfg(not(target_family = "wasm"))]
 mod control_flow_graph;
 mod error;
 mod function;
 #[cfg(not(target_family = "wasm"))]
 mod instruction;
 mod jit_value;
+#[cfg(not(target_family = "wasm"))]
 mod local_type;
+#[cfg(not(target_family = "wasm"))]
 mod local_variables;
+#[cfg(not(target_family = "wasm"))]
 mod operand_stack;
+#[cfg(not(target_family = "wasm"))]
+mod runtime_helpers;
 #[cfg(test)]
 mod test;
 mod value;

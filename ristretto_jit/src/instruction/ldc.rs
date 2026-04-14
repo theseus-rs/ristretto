@@ -114,7 +114,8 @@ mod tests {
 
     #[test]
     fn test_load_constant_error() -> Result<()> {
-        let jit_module = Compiler::jit_module()?;
+        let compiler = Compiler::new()?;
+        let jit_module = compiler.jit_module(&[]);
         let mut module_context = jit_module.make_context();
         let mut function_context = FunctionBuilderContext::new();
         let mut function_builder =
@@ -131,7 +132,8 @@ mod tests {
 
     #[test]
     fn test_ldc2_w_constant_error() -> Result<()> {
-        let jit_module = Compiler::jit_module()?;
+        let compiler = Compiler::new()?;
+        let jit_module = compiler.jit_module(&[]);
         let mut module_context = jit_module.make_context();
         let mut function_context = FunctionBuilderContext::new();
         let mut function_builder =

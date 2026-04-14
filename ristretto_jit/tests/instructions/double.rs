@@ -7,7 +7,7 @@ fn dconst_0() -> Result<()> {
     let instructions = vec![Instruction::Dconst_0, Instruction::Dreturn];
     let function = create_function("()D", &instructions)?;
     let expected_value = Value::F64(0.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -17,7 +17,7 @@ fn dconst_1() -> Result<()> {
     let instructions = vec![Instruction::Dconst_1, Instruction::Dreturn];
     let function = create_function("()D", &instructions)?;
     let expected_value = Value::F64(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -28,7 +28,7 @@ fn dload() -> Result<()> {
     let function = create_function("(D)D", &instructions)?;
     let expected_value = Value::F64(42.1);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -40,7 +40,7 @@ fn dload_w() -> Result<()> {
     let function = create_function("(D)D", &instructions)?;
     let expected_value = Value::F64(42.1);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -52,7 +52,7 @@ fn dload_0() -> Result<()> {
     let function = create_function("(D)D", &instructions)?;
     let expected_value = Value::F64(42.1);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -64,7 +64,7 @@ fn dload_1() -> Result<()> {
     let function = create_function("(ID)D", &instructions)?;
     let expected_value = Value::F64(42.1);
     let value = function
-        .execute(vec![Value::I32(0), expected_value.clone()])?
+        .execute(&[Value::I32(0), expected_value.clone()], std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -76,7 +76,10 @@ fn dload_2() -> Result<()> {
     let function = create_function("(IID)D", &instructions)?;
     let expected_value = Value::F64(42.1);
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(0), expected_value.clone()])?
+        .execute(
+            &[Value::I32(0), Value::I32(0), expected_value.clone()],
+            std::ptr::null(),
+        )?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -88,12 +91,15 @@ fn dload_3() -> Result<()> {
     let function = create_function("(IIID)D", &instructions)?;
     let expected_value = Value::F64(42.1);
     let value = function
-        .execute(vec![
-            Value::I32(0),
-            Value::I32(0),
-            Value::I32(0),
-            expected_value.clone(),
-        ])?
+        .execute(
+            &[
+                Value::I32(0),
+                Value::I32(0),
+                Value::I32(0),
+                expected_value.clone(),
+            ],
+            std::ptr::null(),
+        )?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -109,7 +115,7 @@ fn dstore() -> Result<()> {
     ];
     let function = create_function("()D", &instructions)?;
     let expected_value = Value::F64(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -124,7 +130,7 @@ fn dstore_w() -> Result<()> {
     ];
     let function = create_function("()D", &instructions)?;
     let expected_value = Value::F64(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -139,7 +145,7 @@ fn dstore_0() -> Result<()> {
     ];
     let function = create_function("()D", &instructions)?;
     let expected_value = Value::F64(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -154,7 +160,7 @@ fn dstore_1() -> Result<()> {
     ];
     let function = create_function("()D", &instructions)?;
     let expected_value = Value::F64(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -169,7 +175,7 @@ fn dstore_2() -> Result<()> {
     ];
     let function = create_function("()D", &instructions)?;
     let expected_value = Value::F64(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -184,7 +190,7 @@ fn dstore_3() -> Result<()> {
     ];
     let function = create_function("()D", &instructions)?;
     let expected_value = Value::F64(1.0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -203,7 +209,7 @@ fn daload_dastore() -> Result<()> {
         Instruction::Dreturn,
     ];
     let function = create_function("()D", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::F64(1.0));
     Ok(())
 }
@@ -218,7 +224,7 @@ fn dadd() -> Result<()> {
     ];
     let function = create_function("(DD)D", &instructions)?;
     let value = function
-        .execute(vec![Value::F64(1.0), Value::F64(2.0)])?
+        .execute(&[Value::F64(1.0), Value::F64(2.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::F64(3.0));
     Ok(())
@@ -234,7 +240,7 @@ fn dsub() -> Result<()> {
     ];
     let function = create_function("(DD)D", &instructions)?;
     let value = function
-        .execute(vec![Value::F64(2.0), Value::F64(1.0)])?
+        .execute(&[Value::F64(2.0), Value::F64(1.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::F64(1.0));
     Ok(())
@@ -250,7 +256,7 @@ fn dmul() -> Result<()> {
     ];
     let function = create_function("(DD)D", &instructions)?;
     let value = function
-        .execute(vec![Value::F64(2.0), Value::F64(3.0)])?
+        .execute(&[Value::F64(2.0), Value::F64(3.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::F64(6.0));
     Ok(())
@@ -266,7 +272,7 @@ fn ddiv() -> Result<()> {
     ];
     let function = create_function("(DD)D", &instructions)?;
     let value = function
-        .execute(vec![Value::F64(6.0), Value::F64(3.0)])?
+        .execute(&[Value::F64(6.0), Value::F64(3.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::F64(2.0));
     Ok(())
@@ -282,7 +288,7 @@ fn drem() -> Result<()> {
     ];
     let function = create_function("(DD)D", &instructions)?;
     let value = function
-        .execute(vec![Value::F64(5.0), Value::F64(2.0)])?
+        .execute(&[Value::F64(5.0), Value::F64(2.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::F64(1.0));
     Ok(())
@@ -296,7 +302,9 @@ fn dneg() -> Result<()> {
         Instruction::Dreturn,
     ];
     let function = create_function("(D)D", &instructions)?;
-    let value = function.execute(vec![Value::F64(3.0)])?.expect("value");
+    let value = function
+        .execute(&[Value::F64(3.0)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::F64(-3.0));
     Ok(())
 }
@@ -313,31 +321,31 @@ fn dcmpl() -> Result<()> {
 
     // 0 if values are equal
     let value = function
-        .execute(vec![Value::F64(0.0), Value::F64(0.0)])?
+        .execute(&[Value::F64(0.0), Value::F64(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(0));
 
     // 1 if first value is greater than second
     let value = function
-        .execute(vec![Value::F64(1.0), Value::F64(0.0)])?
+        .execute(&[Value::F64(1.0), Value::F64(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // -1 if first value is lesser than the second
     let value = function
-        .execute(vec![Value::F64(0.0), Value::F64(1.0)])?
+        .execute(&[Value::F64(0.0), Value::F64(1.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     // -1 if first value is NaN
     let value = function
-        .execute(vec![Value::F64(f64::NAN), Value::F64(0.0)])?
+        .execute(&[Value::F64(f64::NAN), Value::F64(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     // -1 if second value is NaN
     let value = function
-        .execute(vec![Value::F64(0.0), Value::F64(f64::NAN)])?
+        .execute(&[Value::F64(0.0), Value::F64(f64::NAN)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(-1));
     Ok(())
@@ -355,31 +363,31 @@ fn dcmpg() -> Result<()> {
 
     // 0 if values are equal
     let value = function
-        .execute(vec![Value::F64(0.0), Value::F64(0.0)])?
+        .execute(&[Value::F64(0.0), Value::F64(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(0));
 
     // 1 if first value is greater than second
     let value = function
-        .execute(vec![Value::F64(1.0), Value::F64(0.0)])?
+        .execute(&[Value::F64(1.0), Value::F64(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // -1 if first value is lesser than the second
     let value = function
-        .execute(vec![Value::F64(0.0), Value::F64(1.0)])?
+        .execute(&[Value::F64(0.0), Value::F64(1.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(-1));
 
     // 1 if first value is NaN
     let value = function
-        .execute(vec![Value::F64(f64::NAN), Value::F64(0.0)])?
+        .execute(&[Value::F64(f64::NAN), Value::F64(0.0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // 1 if second value is NaN
     let value = function
-        .execute(vec![Value::F64(0.0), Value::F64(f64::NAN)])?
+        .execute(&[Value::F64(0.0), Value::F64(f64::NAN)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())
@@ -391,7 +399,7 @@ fn dreturn() -> Result<()> {
     let function = create_function("(D)D", &instructions)?;
     let expected_value = Value::F64(42.1);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())

@@ -15,10 +15,12 @@ fn float_is_nan() -> Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("(F)Z", &instructions)?;
-    let value = function.execute(vec![Value::F32(42.1)])?.expect("value");
+    let value = function
+        .execute(&[Value::F32(42.1)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I32(0));
     let value = function
-        .execute(vec![Value::F32(f32::NAN)])?
+        .execute(&[Value::F32(f32::NAN)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())

@@ -1,33 +1,38 @@
 use crate::Error::{
-    InternalError, InvalidBlockAddress, UnsupportedInstruction, UnsupportedMethod,
-    UnsupportedTargetISA, UnsupportedType,
+    InternalError, InvalidBlockAddress, UnsupportedInstruction, UnsupportedTargetISA,
+    UnsupportedType,
 };
 use crate::control_flow_graph::InstructionControlFlow;
 use crate::function::Function;
 use crate::instruction::{
-    arraylength, baload, bastore, bipush, breakpoint, caload, castore, d2f, d2i, d2l, dadd, daload,
-    dastore, dcmpg, dcmpl, dconst_0, dconst_1, ddiv, dload, dload_0, dload_1, dload_2, dload_3,
-    dload_w, dmul, dneg, drem, dreturn, dstore, dstore_0, dstore_1, dstore_2, dstore_3, dstore_w,
-    dsub, dup, dup_x1, dup_x2, dup2, dup2_x1, dup2_x2, f2d, f2i, f2l, fadd, faload, fastore, fcmpg,
-    fcmpl, fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1, fload_2, fload_3, fload_w,
-    fmul, fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2, fstore_3, fstore_w, fsub,
-    goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iaload, iand, iastore, iconst_0, iconst_1,
-    iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv, if_icmpeq, if_icmpge, if_icmpgt,
-    if_icmple, if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, iinc, iinc_w, iload,
-    iload_0, iload_1, iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, ior, irem, ireturn,
-    ishl, ishr, istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr, ixor, jsr,
-    jsr_w, l2d, l2f, l2i, ladd, laload, land, lastore, lcmp, lconst_0, lconst_1, ldc, ldc_w,
-    ldc2_w, ldiv, lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lookupswitch,
-    lor, lrem, lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub,
-    lushr, lxor, monitorenter, monitorexit, newarray, nop, pop, pop2, ret, ret_w, r#return, saload,
+    aaload, aastore, aconst_null, aload_ref, aload_ref_0, aload_ref_1, aload_ref_2, aload_ref_3,
+    aload_ref_w, areturn, arraylength, astore_ref, astore_ref_0, astore_ref_1, astore_ref_2,
+    astore_ref_3, astore_ref_w, baload, bastore, bipush, breakpoint, caload, castore, d2f, d2i,
+    d2l, dadd, daload, dastore, dcmpg, dcmpl, dconst_0, dconst_1, ddiv, dload, dload_0, dload_1,
+    dload_2, dload_3, dload_w, dmul, dneg, drem, dreturn, dstore, dstore_0, dstore_1, dstore_2,
+    dstore_3, dstore_w, dsub, dup, dup_x1, dup_x2, dup2, dup2_x1, dup2_x2, f2d, f2i, f2l, fadd,
+    faload, fastore, fcmpg, fcmpl, fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1,
+    fload_2, fload_3, fload_w, fmul, fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2,
+    fstore_3, fstore_w, fsub, goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iaload, iand,
+    iastore, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv,
+    if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple, if_icmplt, if_icmpne, ifeq,
+    ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, iinc, iinc_w, iload, iload_0, iload_1,
+    iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, ior, irem, ireturn, ishl, ishr,
+    istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr, ixor, jsr, jsr_w, l2d,
+    l2f, l2i, ladd, laload, land, lastore, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w, ldiv,
+    lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lookupswitch, lor, lrem,
+    lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr,
+    lxor, monitorenter, monitorexit, newarray, nop, pop, pop2, ret, ret_w, r#return, saload,
     sastore, sipush, swap, tableswitch, wide,
 };
 use crate::local_type::LocalType;
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
+use crate::runtime_helpers::RuntimeHelpers;
 use crate::{JitValue, Result, control_flow_graph};
 use ahash::AHashMap;
-use cranelift::codegen::ir::{FuncRef, UserFuncName};
+use cranelift::codegen::ir::UserFuncName;
+use cranelift::codegen::isa::OwnedTargetIsa;
 use cranelift::codegen::settings::Flags;
 use cranelift::jit::{JITBuilder, JITModule};
 use cranelift::module::{Linkage, Module, default_libcall_names};
@@ -38,6 +43,7 @@ use ristretto_classfile::{
 };
 use std::fmt::Debug;
 use std::mem;
+use std::sync::Arc;
 
 #[cfg(debug_assertions)]
 const ENABLE_VERIFIER: &str = "true";
@@ -45,8 +51,18 @@ const ENABLE_VERIFIER: &str = "true";
 const ENABLE_VERIFIER: &str = "false";
 
 /// Java Virtual Machine (JVM) bytecode to native code compiler.
-#[derive(Clone, Debug)]
-pub struct Compiler {}
+#[derive(Clone)]
+pub struct Compiler {
+    target_isa: OwnedTargetIsa,
+}
+
+impl Debug for Compiler {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Compiler")
+            .field("target_isa", &self.target_isa.to_string())
+            .finish()
+    }
+}
 
 impl Compiler {
     /// Creates a new instance of the compiler for the host machine.
@@ -56,12 +72,6 @@ impl Compiler {
     /// - If the target ISA is not supported
     /// - If the target ISA cannot be created
     pub fn new() -> Result<Self> {
-        let compiler = Compiler {};
-        Ok(compiler)
-    }
-
-    /// Creates a new JIT module for the compiler.
-    pub(crate) fn jit_module() -> Result<JITModule> {
         let isa_builder = cranelift::native::builder().map_err(UnsupportedTargetISA)?;
         let mut flag_builder = settings::builder();
         let settings = [("opt_level", "speed"), ("enable_verifier", ENABLE_VERIFIER)];
@@ -74,9 +84,34 @@ impl Compiler {
         }
         let flags = Flags::new(flag_builder);
         let target_isa = isa_builder.finish(flags)?;
-        let jit_builder = JITBuilder::with_isa(target_isa, default_libcall_names());
-        let jit_module = JITModule::new(jit_builder);
-        Ok(jit_module)
+        Ok(Compiler { target_isa })
+    }
+
+    /// Creates a new JIT module for the compiler using the cached target ISA.
+    pub(crate) fn jit_module(&self, symbols: &[(&str, *const u8)]) -> JITModule {
+        let mut jit_builder =
+            JITBuilder::with_isa(Arc::clone(&self.target_isa), default_libcall_names());
+        for &(name, ptr) in symbols {
+            jit_builder.symbol(name, ptr);
+        }
+        JITModule::new(jit_builder)
+    }
+
+    /// Returns true if the method can potentially be JIT compiled.
+    /// This performs a fast scan of the method's bytecode instructions to check
+    /// for unsupported opcodes without doing any expensive compilation work.
+    #[must_use]
+    pub fn can_compile(method: &Method) -> bool {
+        let Some(instructions) = method.attributes.iter().find_map(|attribute| {
+            if let Attribute::Code { code, .. } = attribute {
+                Some(code)
+            } else {
+                None
+            }
+        }) else {
+            return false;
+        };
+        Self::first_unsupported_instruction(instructions).is_none()
     }
 
     /// Compiles the given bytecode into native code.
@@ -85,17 +120,12 @@ impl Compiler {
     ///
     /// if the Java byte code cannot be compiled to native code
     #[expect(clippy::too_many_lines)]
-    pub fn compile(&self, class_file: &ClassFile, method: &Method) -> Result<Function> {
-        let mut jit_module = Self::jit_module()?;
-        let constant_pool = &class_file.constant_pool;
-        let class_name = class_file.class_name()?;
-        let method_name = constant_pool.try_get_utf8(method.name_index)?;
-        let method_descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
-        if !method.access_flags.contains(MethodAccessFlags::STATIC) && method_name != "<init>" {
-            return Err(UnsupportedMethod(format!(
-                "Unable to compile method that is not <init> or static: {class_name}.{method_name}{method_descriptor}"
-            )));
-        }
+    pub fn compile(
+        &self,
+        class_file: &ClassFile,
+        method: &Method,
+        symbols: &[(&str, *const u8)],
+    ) -> Result<Function> {
         let Some((max_stack, instructions, exception_table)) =
             method.attributes.iter().find_map(|attribute| {
                 if let Attribute::Code {
@@ -114,6 +144,17 @@ impl Compiler {
             return Err(InternalError("No Code attribute found".to_string()));
         };
 
+        if let Some(instruction) = Self::first_unsupported_instruction(instructions) {
+            return Err(UnsupportedInstruction(instruction.clone()));
+        }
+
+        let constant_pool = &class_file.constant_pool;
+        let method_descriptor = constant_pool.try_get_utf8(method.descriptor_index)?;
+        let is_static = method.access_flags.contains(MethodAccessFlags::STATIC);
+        let mut jit_module = self.jit_module(symbols);
+        let class_name = class_file.class_name()?;
+        let method_name = constant_pool.try_get_utf8(method.name_index)?;
+
         let class_name_str = class_name.to_str_lossy();
         let method_name_str = method_name.to_str_lossy();
         let function_name = Self::function_name(&class_name_str, &method_name_str);
@@ -124,20 +165,11 @@ impl Compiler {
         module_context.func.signature = signature;
         module_context.func.name = UserFuncName::user(0, function.as_u32());
 
-        // Declare malloc
-        let mut malloc_signature = jit_module.make_signature();
-        malloc_signature.params.push(AbiParam::new(types::I64)); // size
-        malloc_signature
-            .returns
-            .push(AbiParam::new(jit_module.target_config().pointer_type())); // pointer
-        let malloc_id =
-            jit_module.declare_function("malloc", Linkage::Import, &malloc_signature)?;
-
         let mut function_context = FunctionBuilderContext::new();
         let mut function_builder =
             FunctionBuilder::new(&mut module_context.func, &mut function_context);
 
-        let malloc = jit_module.declare_func_in_func(malloc_id, function_builder.func);
+        let helpers = RuntimeHelpers::declare(&mut jit_module, &mut function_builder)?;
 
         let (entry_block, blocks) = control_flow_graph::get_blocks(
             &mut function_builder,
@@ -145,13 +177,10 @@ impl Compiler {
             instructions,
             exception_table,
         )?;
-        let mut block_indexes = blocks.keys().copied().collect::<Vec<_>>();
-        block_indexes.sort_unstable();
-
         // Use the entry block for function setup (entry_block cannot be jumped to)
         function_builder.switch_to_block(entry_block);
         function_builder.append_block_params_for_function_params(entry_block);
-        let (arguments_pointer, _arguments_length_pointer, return_pointer) =
+        let (arguments_pointer, _arguments_length_pointer, return_pointer, context_pointer) =
             Self::function_pointers(&mut function_builder, entry_block)?;
 
         let mut locals = Self::locals(
@@ -159,6 +188,7 @@ impl Compiler {
             method_descriptor,
             instructions,
             arguments_pointer,
+            is_static,
         )?;
 
         // Get the block for address 0 (may be entry_block or a separate loop body block)
@@ -202,7 +232,8 @@ impl Compiler {
                 &mut stack,
                 program_counter,
                 return_pointer,
-                malloc,
+                context_pointer,
+                &helpers,
                 instruction,
             )?;
 
@@ -221,7 +252,8 @@ impl Compiler {
 
         let code = jit_module.get_finalized_function(function);
         let function = unsafe {
-            let function: fn(*const JitValue, usize, *mut JitValue) = mem::transmute(code);
+            let function: fn(*const JitValue, usize, *mut JitValue, *const u8) =
+                mem::transmute(code);
             Function::new(function)
         };
         Ok(function)
@@ -241,11 +273,11 @@ impl Compiler {
     /// Creates a new signature from the method descriptor.
     fn signature(jit_module: &JITModule) -> Signature {
         let mut signature = jit_module.make_signature();
-        let arguments_type = jit_module.target_config().pointer_type();
-        signature.params.push(AbiParam::new(arguments_type)); // pointer to array
+        let pointer_type = jit_module.target_config().pointer_type();
+        signature.params.push(AbiParam::new(pointer_type)); // pointer to JitValue array
         signature.params.push(AbiParam::new(types::I64)); // length of array
-        let return_type = jit_module.target_config().pointer_type();
-        signature.params.push(AbiParam::new(return_type));
+        signature.params.push(AbiParam::new(pointer_type)); // return value pointer
+        signature.params.push(AbiParam::new(pointer_type)); // runtime context pointer
         signature
     }
 
@@ -257,8 +289,11 @@ impl Compiler {
     fn function_pointers(
         function_builder: &mut FunctionBuilder,
         block: Block,
-    ) -> Result<(Value, Value, Value)> {
+    ) -> Result<(Value, Value, Value, Value)> {
         let mut params = function_builder.block_params(block).to_vec();
+        let Some(context_pointer) = params.pop() else {
+            return Err(InternalError("undefined context pointer".to_string()));
+        };
         let Some(return_pointer) = params.pop() else {
             return Err(InternalError("undefined return pointer".to_string()));
         };
@@ -273,7 +308,12 @@ impl Compiler {
         if !params.is_empty() {
             return Err(InternalError("unexpected function parameters".to_string()));
         }
-        Ok((arguments_pointer, arguments_length, return_pointer))
+        Ok((
+            arguments_pointer,
+            arguments_length,
+            return_pointer,
+            context_pointer,
+        ))
     }
 
     /// Creates a new locals array for the function.
@@ -286,22 +326,39 @@ impl Compiler {
         descriptor: &JavaStr,
         instructions: &[Instruction],
         arguments_pointer: Value,
+        is_static: bool,
     ) -> Result<LocalVariables> {
         let size_of = i64::try_from(size_of::<JitValue>())
             .map_err(|error| InternalError(format!("{error:?}")))?;
         let struct_size = function_builder.ins().iconst(types::I64, size_of);
         let mut local_types = Vec::new();
 
+        // For non-static methods, local variable 0 is `this` (an object reference).
+        // It is passed as the first JIT argument but is NOT part of the method descriptor.
+        let arg_offset = usize::from(!is_static);
+        if !is_static {
+            let index = function_builder.ins().iconst(types::I64, 0);
+            let offset = function_builder.ins().imul(index, struct_size);
+            let address = function_builder.ins().iadd(arguments_pointer, offset);
+            let native_type = Self::native_object_type();
+            let variable = function_builder.declare_var(native_type);
+            local_types.push(native_type);
+            let value = function_builder
+                .ins()
+                .load(native_type, MemFlags::trusted(), address, 8);
+            function_builder.def_var(variable, value);
+        }
+
         let (parameter_types, _return_type) = FieldType::parse_method_descriptor(descriptor)?;
         for (index, parameter_type) in parameter_types.iter().enumerate() {
-            let index =
-                i64::try_from(index).map_err(|error| InternalError(format!("{error:?}")))?;
-            let index = function_builder.ins().iconst(types::I64, index);
+            let arg_index = i64::try_from(index + arg_offset)
+                .map_err(|error| InternalError(format!("{error:?}")))?;
+            let index = function_builder.ins().iconst(types::I64, arg_index);
             let offset = function_builder.ins().imul(index, struct_size);
             let address = function_builder.ins().iadd(arguments_pointer, offset);
 
             // Ignore the discriminant
-            let native_type = Self::native_type(parameter_type)?;
+            let native_type = Self::native_type(parameter_type);
             let variable = function_builder.declare_var(native_type);
             local_types.push(native_type);
             let value = function_builder
@@ -342,7 +399,7 @@ impl Compiler {
             let Some((index, field_type)) = instruction.local_type()? else {
                 continue;
             };
-            let native_type = Self::native_type(&field_type)?;
+            let native_type = Self::native_type(&field_type);
             // If the index is greater than the current length of the types, we need to
             // extend the vector with default values until we reach the index.
             while index >= local_types.len() {
@@ -386,11 +443,7 @@ impl Compiler {
     }
 
     /// Creates a new native type from the given field type.
-    ///
-    /// # Errors
-    ///
-    /// If the field type is not supported
-    fn native_type(field_type: &FieldType) -> Result<Type> {
+    fn native_type(field_type: &FieldType) -> Type {
         match field_type {
             FieldType::Base(
                 BaseType::Boolean
@@ -398,12 +451,231 @@ impl Compiler {
                 | BaseType::Char
                 | BaseType::Int
                 | BaseType::Short,
-            ) => Ok(types::I32),
-            FieldType::Base(BaseType::Double) => Ok(types::F64),
-            FieldType::Base(BaseType::Float) => Ok(types::F32),
-            FieldType::Base(BaseType::Long) => Ok(types::I64),
-            _ => Err(UnsupportedType(field_type.to_string())),
+            ) => types::I32,
+            FieldType::Base(BaseType::Double) => types::F64,
+            FieldType::Base(BaseType::Float) => types::F32,
+            FieldType::Base(BaseType::Long) => types::I64,
+            FieldType::Object(_) | FieldType::Array(_) => Self::native_object_type(),
         }
+    }
+
+    /// Returns the native type for object and array field types.
+    /// This is used for local variables that hold object references.
+    fn native_object_type() -> Type {
+        types::I64
+    }
+
+    /// Returns the first unsupported instruction in the list, or `None` if all are supported.
+    /// This is used for fast-fail before creating the expensive JIT module.
+    #[expect(clippy::too_many_lines)]
+    fn first_unsupported_instruction(instructions: &[Instruction]) -> Option<&Instruction> {
+        instructions.iter().find(|instruction| {
+            !matches!(
+                instruction,
+                Instruction::Nop
+                    | Instruction::Aconst_null
+                    | Instruction::Iconst_m1
+                    | Instruction::Iconst_0
+                    | Instruction::Iconst_1
+                    | Instruction::Iconst_2
+                    | Instruction::Iconst_3
+                    | Instruction::Iconst_4
+                    | Instruction::Iconst_5
+                    | Instruction::Lconst_0
+                    | Instruction::Lconst_1
+                    | Instruction::Fconst_0
+                    | Instruction::Fconst_1
+                    | Instruction::Fconst_2
+                    | Instruction::Dconst_0
+                    | Instruction::Dconst_1
+                    | Instruction::Bipush(..)
+                    | Instruction::Sipush(..)
+                    | Instruction::Ldc(..)
+                    | Instruction::Ldc_w(..)
+                    | Instruction::Ldc2_w(..)
+                    | Instruction::Iload(..)
+                    | Instruction::Lload(..)
+                    | Instruction::Fload(..)
+                    | Instruction::Dload(..)
+                    | Instruction::Aload(..)
+                    | Instruction::Iload_0
+                    | Instruction::Iload_1
+                    | Instruction::Iload_2
+                    | Instruction::Iload_3
+                    | Instruction::Lload_0
+                    | Instruction::Lload_1
+                    | Instruction::Lload_2
+                    | Instruction::Lload_3
+                    | Instruction::Fload_0
+                    | Instruction::Fload_1
+                    | Instruction::Fload_2
+                    | Instruction::Fload_3
+                    | Instruction::Dload_0
+                    | Instruction::Dload_1
+                    | Instruction::Dload_2
+                    | Instruction::Dload_3
+                    | Instruction::Aload_0
+                    | Instruction::Aload_1
+                    | Instruction::Aload_2
+                    | Instruction::Aload_3
+                    | Instruction::Iaload
+                    | Instruction::Laload
+                    | Instruction::Faload
+                    | Instruction::Daload
+                    | Instruction::Aaload
+                    | Instruction::Baload
+                    | Instruction::Caload
+                    | Instruction::Saload
+                    | Instruction::Istore(..)
+                    | Instruction::Lstore(..)
+                    | Instruction::Fstore(..)
+                    | Instruction::Dstore(..)
+                    | Instruction::Astore(..)
+                    | Instruction::Istore_0
+                    | Instruction::Istore_1
+                    | Instruction::Istore_2
+                    | Instruction::Istore_3
+                    | Instruction::Lstore_0
+                    | Instruction::Lstore_1
+                    | Instruction::Lstore_2
+                    | Instruction::Lstore_3
+                    | Instruction::Fstore_0
+                    | Instruction::Fstore_1
+                    | Instruction::Fstore_2
+                    | Instruction::Fstore_3
+                    | Instruction::Dstore_0
+                    | Instruction::Dstore_1
+                    | Instruction::Dstore_2
+                    | Instruction::Dstore_3
+                    | Instruction::Astore_0
+                    | Instruction::Astore_1
+                    | Instruction::Astore_2
+                    | Instruction::Astore_3
+                    | Instruction::Iastore
+                    | Instruction::Lastore
+                    | Instruction::Fastore
+                    | Instruction::Dastore
+                    | Instruction::Aastore
+                    | Instruction::Bastore
+                    | Instruction::Castore
+                    | Instruction::Sastore
+                    | Instruction::Pop
+                    | Instruction::Pop2
+                    | Instruction::Dup
+                    | Instruction::Dup_x1
+                    | Instruction::Dup_x2
+                    | Instruction::Dup2
+                    | Instruction::Dup2_x1
+                    | Instruction::Dup2_x2
+                    | Instruction::Swap
+                    | Instruction::Iadd
+                    | Instruction::Ladd
+                    | Instruction::Fadd
+                    | Instruction::Dadd
+                    | Instruction::Isub
+                    | Instruction::Lsub
+                    | Instruction::Fsub
+                    | Instruction::Dsub
+                    | Instruction::Imul
+                    | Instruction::Lmul
+                    | Instruction::Fmul
+                    | Instruction::Dmul
+                    | Instruction::Idiv
+                    | Instruction::Ldiv
+                    | Instruction::Fdiv
+                    | Instruction::Ddiv
+                    | Instruction::Irem
+                    | Instruction::Lrem
+                    | Instruction::Frem
+                    | Instruction::Drem
+                    | Instruction::Ineg
+                    | Instruction::Lneg
+                    | Instruction::Fneg
+                    | Instruction::Dneg
+                    | Instruction::Ishl
+                    | Instruction::Lshl
+                    | Instruction::Ishr
+                    | Instruction::Lshr
+                    | Instruction::Iushr
+                    | Instruction::Lushr
+                    | Instruction::Iand
+                    | Instruction::Land
+                    | Instruction::Ior
+                    | Instruction::Lor
+                    | Instruction::Ixor
+                    | Instruction::Lxor
+                    | Instruction::Iinc(..)
+                    | Instruction::I2l
+                    | Instruction::I2f
+                    | Instruction::I2d
+                    | Instruction::L2i
+                    | Instruction::L2f
+                    | Instruction::L2d
+                    | Instruction::F2i
+                    | Instruction::F2l
+                    | Instruction::F2d
+                    | Instruction::D2i
+                    | Instruction::D2l
+                    | Instruction::D2f
+                    | Instruction::I2b
+                    | Instruction::I2c
+                    | Instruction::I2s
+                    | Instruction::Lcmp
+                    | Instruction::Fcmpl
+                    | Instruction::Fcmpg
+                    | Instruction::Dcmpl
+                    | Instruction::Dcmpg
+                    | Instruction::Ifeq(..)
+                    | Instruction::Ifne(..)
+                    | Instruction::Iflt(..)
+                    | Instruction::Ifge(..)
+                    | Instruction::Ifgt(..)
+                    | Instruction::Ifle(..)
+                    | Instruction::If_icmpeq(..)
+                    | Instruction::If_icmpne(..)
+                    | Instruction::If_icmplt(..)
+                    | Instruction::If_icmpge(..)
+                    | Instruction::If_icmpgt(..)
+                    | Instruction::If_icmple(..)
+                    | Instruction::If_acmpeq(..)
+                    | Instruction::If_acmpne(..)
+                    | Instruction::Goto(..)
+                    | Instruction::Jsr(..)
+                    | Instruction::Ret(..)
+                    | Instruction::Tableswitch(..)
+                    | Instruction::Lookupswitch(..)
+                    | Instruction::Ireturn
+                    | Instruction::Lreturn
+                    | Instruction::Freturn
+                    | Instruction::Dreturn
+                    | Instruction::Areturn
+                    | Instruction::Return
+                    | Instruction::Newarray(..)
+                    | Instruction::Arraylength
+                    | Instruction::Monitorenter
+                    | Instruction::Monitorexit
+                    | Instruction::Wide
+                    | Instruction::Ifnull(..)
+                    | Instruction::Ifnonnull(..)
+                    | Instruction::Goto_w(..)
+                    | Instruction::Jsr_w(..)
+                    | Instruction::Breakpoint
+                    | Instruction::Impdep1
+                    | Instruction::Impdep2
+                    | Instruction::Iload_w(..)
+                    | Instruction::Lload_w(..)
+                    | Instruction::Fload_w(..)
+                    | Instruction::Dload_w(..)
+                    | Instruction::Aload_w(..)
+                    | Instruction::Istore_w(..)
+                    | Instruction::Lstore_w(..)
+                    | Instruction::Fstore_w(..)
+                    | Instruction::Dstore_w(..)
+                    | Instruction::Astore_w(..)
+                    | Instruction::Iinc_w(..)
+                    | Instruction::Ret_w(..)
+            )
+        })
     }
 
     #[expect(clippy::too_many_arguments)]
@@ -416,12 +688,13 @@ impl Compiler {
         stack: &mut OperandStack,
         program_counter: usize,
         return_pointer: Value,
-        malloc: FuncRef,
+        context_pointer: Value,
+        helpers: &RuntimeHelpers,
         instruction: &Instruction,
     ) -> Result<()> {
         match instruction {
             Instruction::Nop => nop(),
-            // Instruction::Aconst_null => aconst_null(stack),
+            Instruction::Aconst_null => aconst_null(function_builder, stack)?,
             Instruction::Iconst_m1 => iconst_m1(function_builder, stack)?,
             Instruction::Iconst_0 => iconst_0(function_builder, stack)?,
             Instruction::Iconst_1 => iconst_1(function_builder, stack)?,
@@ -449,7 +722,7 @@ impl Compiler {
             Instruction::Lload(index) => lload(function_builder, locals, stack, *index)?,
             Instruction::Fload(index) => fload(function_builder, locals, stack, *index)?,
             Instruction::Dload(index) => dload(function_builder, locals, stack, *index)?,
-            // Instruction::Aload(index) => aload(locals, stack, *index),
+            Instruction::Aload(index) => aload_ref(function_builder, locals, stack, *index)?,
             Instruction::Iload_0 => iload_0(function_builder, locals, stack)?,
             Instruction::Iload_1 => iload_1(function_builder, locals, stack)?,
             Instruction::Iload_2 => iload_2(function_builder, locals, stack)?,
@@ -466,23 +739,23 @@ impl Compiler {
             Instruction::Dload_1 => dload_1(function_builder, locals, stack)?,
             Instruction::Dload_2 => dload_2(function_builder, locals, stack)?,
             Instruction::Dload_3 => dload_3(function_builder, locals, stack)?,
-            // Instruction::Aload_0 => aload_0(locals, stack),
-            // Instruction::Aload_1 => aload_1(locals, stack),
-            // Instruction::Aload_2 => aload_2(locals, stack),
-            // Instruction::Aload_3 => aload_3(locals, stack),
-            Instruction::Iaload => iaload(function_builder, stack)?,
-            Instruction::Laload => laload(function_builder, stack)?,
-            Instruction::Faload => faload(function_builder, stack)?,
-            Instruction::Daload => daload(function_builder, stack)?,
-            // Instruction::Aaload => aaload(stack),
-            Instruction::Baload => baload(function_builder, stack)?,
-            Instruction::Caload => caload(function_builder, stack)?,
-            Instruction::Saload => saload(function_builder, stack)?,
+            Instruction::Aload_0 => aload_ref_0(function_builder, locals, stack)?,
+            Instruction::Aload_1 => aload_ref_1(function_builder, locals, stack)?,
+            Instruction::Aload_2 => aload_ref_2(function_builder, locals, stack)?,
+            Instruction::Aload_3 => aload_ref_3(function_builder, locals, stack)?,
+            Instruction::Iaload => iaload(function_builder, stack, helpers)?,
+            Instruction::Laload => laload(function_builder, stack, helpers)?,
+            Instruction::Faload => faload(function_builder, stack, helpers)?,
+            Instruction::Daload => daload(function_builder, stack, helpers)?,
+            Instruction::Aaload => aaload(function_builder, stack, helpers)?,
+            Instruction::Baload => baload(function_builder, stack, helpers)?,
+            Instruction::Caload => caload(function_builder, stack, helpers)?,
+            Instruction::Saload => saload(function_builder, stack, helpers)?,
             Instruction::Istore(index) => istore(function_builder, locals, stack, *index)?,
             Instruction::Lstore(index) => lstore(function_builder, locals, stack, *index)?,
             Instruction::Fstore(index) => fstore(function_builder, locals, stack, *index)?,
             Instruction::Dstore(index) => dstore(function_builder, locals, stack, *index)?,
-            // Instruction::Astore(index) => astore(locals, locals, stack, *index)?,
+            Instruction::Astore(index) => astore_ref(function_builder, locals, stack, *index)?,
             Instruction::Istore_0 => istore_0(function_builder, locals, stack)?,
             Instruction::Istore_1 => istore_1(function_builder, locals, stack)?,
             Instruction::Istore_2 => istore_2(function_builder, locals, stack)?,
@@ -499,18 +772,18 @@ impl Compiler {
             Instruction::Dstore_1 => dstore_1(function_builder, locals, stack)?,
             Instruction::Dstore_2 => dstore_2(function_builder, locals, stack)?,
             Instruction::Dstore_3 => dstore_3(function_builder, locals, stack)?,
-            // Instruction::Astore_0 => astore_0(locals, locals, locals, stack),
-            // Instruction::Astore_1 => astore_1(locals, locals, locals, stack),
-            // Instruction::Astore_2 => astore_2(locals, locals, locals, stack),
-            // Instruction::Astore_3 => astore_3(locals, locals, locals, stack),
-            Instruction::Iastore => iastore(function_builder, stack)?,
-            Instruction::Lastore => lastore(function_builder, stack)?,
-            Instruction::Fastore => fastore(function_builder, stack)?,
-            Instruction::Dastore => dastore(function_builder, stack)?,
-            // Instruction::Aastore => aastore(stack),
-            Instruction::Bastore => bastore(function_builder, stack)?,
-            Instruction::Castore => castore(function_builder, stack)?,
-            Instruction::Sastore => sastore(function_builder, stack)?,
+            Instruction::Astore_0 => astore_ref_0(function_builder, locals, stack)?,
+            Instruction::Astore_1 => astore_ref_1(function_builder, locals, stack)?,
+            Instruction::Astore_2 => astore_ref_2(function_builder, locals, stack)?,
+            Instruction::Astore_3 => astore_ref_3(function_builder, locals, stack)?,
+            Instruction::Iastore => iastore(function_builder, stack, helpers)?,
+            Instruction::Lastore => lastore(function_builder, stack, helpers)?,
+            Instruction::Fastore => fastore(function_builder, stack, helpers)?,
+            Instruction::Dastore => dastore(function_builder, stack, helpers)?,
+            Instruction::Aastore => aastore(function_builder, stack, helpers)?,
+            Instruction::Bastore => bastore(function_builder, stack, helpers)?,
+            Instruction::Castore => castore(function_builder, stack, helpers)?,
+            Instruction::Sastore => sastore(function_builder, stack, helpers)?,
             Instruction::Pop => pop(stack)?,
             Instruction::Pop2 => pop2(function_builder, stack)?,
             Instruction::Dup => dup(stack)?,
@@ -615,8 +888,12 @@ impl Compiler {
             Instruction::If_icmple(address) => {
                 if_icmple(function_builder, blocks, stack, program_counter, *address)?;
             }
-            // Instruction::If_acmpeq(address) => if_acmpeq(stack, *address),
-            // Instruction::If_acmpne(address) => if_acmpne(stack, *address),
+            Instruction::If_acmpeq(address) => {
+                if_acmpeq(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::If_acmpne(address) => {
+                if_acmpne(function_builder, blocks, stack, program_counter, *address)?;
+            }
             Instruction::Goto(address) => goto(function_builder, blocks, stack, *address)?,
             Instruction::Jsr(address) => {
                 jsr(function_builder, blocks, stack, program_counter, *address)?;
@@ -640,7 +917,7 @@ impl Compiler {
             Instruction::Lreturn => lreturn(function_builder, stack, return_pointer)?,
             Instruction::Freturn => freturn(function_builder, stack, return_pointer)?,
             Instruction::Dreturn => dreturn(function_builder, stack, return_pointer)?,
-            // Instruction::Areturn => areturn(stack),
+            Instruction::Areturn => areturn(function_builder, stack, return_pointer)?,
             Instruction::Return => r#return(function_builder, stack, return_pointer),
             // Instruction::Getstatic(index) => getstatic(self, stack, *index).await,
             // Instruction::Putstatic(index) => putstatic(self, stack, *index).await,
@@ -655,10 +932,16 @@ impl Compiler {
             // Instruction::Invokedynamic(index) => invokedynamic(self, stack, *index).await,
             // Instruction::New(index) => new(self, stack, *index).await,
             Instruction::Newarray(array_type) => {
-                newarray(function_builder, stack, array_type, malloc)?;
+                newarray(
+                    function_builder,
+                    stack,
+                    array_type,
+                    context_pointer,
+                    helpers,
+                )?;
             }
             // Instruction::Anewarray(index) => anewarray(self, stack, *index).await,
-            Instruction::Arraylength => arraylength(function_builder, stack)?,
+            Instruction::Arraylength => arraylength(function_builder, stack, helpers)?,
             // Instruction::Athrow => athrow(stack).await,
             // Instruction::Checkcast(class_index) => checkcast(self, stack, *class_index).await,
             // Instruction::Instanceof(class_index) => instanceof(self, stack, *class_index).await,
@@ -668,8 +951,12 @@ impl Compiler {
             // Instruction::Multianewarray(index, dimensions) => {
             //     multianewarray(self, stack, *index, *dimensions).await
             // }
-            // Instruction::Ifnull(address) => ifnull(stack, *address),
-            // Instruction::Ifnonnull(address) => ifnonnull(stack, *address),
+            Instruction::Ifnull(address) => {
+                ifnull(function_builder, blocks, stack, program_counter, *address)?;
+            }
+            Instruction::Ifnonnull(address) => {
+                ifnonnull(function_builder, blocks, stack, program_counter, *address)?;
+            }
             Instruction::Goto_w(address) => goto_w(function_builder, blocks, stack, *address)?,
             Instruction::Jsr_w(address) => {
                 jsr_w(function_builder, blocks, stack, program_counter, *address)?;
@@ -682,12 +969,12 @@ impl Compiler {
             Instruction::Lload_w(index) => lload_w(function_builder, locals, stack, *index)?,
             Instruction::Fload_w(index) => fload_w(function_builder, locals, stack, *index)?,
             Instruction::Dload_w(index) => dload_w(function_builder, locals, stack, *index)?,
-            // Instruction::Aload_w(index) => aload_w(locals, stack, *index),
+            Instruction::Aload_w(index) => aload_ref_w(function_builder, locals, stack, *index)?,
             Instruction::Istore_w(index) => istore_w(function_builder, locals, stack, *index)?,
             Instruction::Lstore_w(index) => lstore_w(function_builder, locals, stack, *index)?,
             Instruction::Fstore_w(index) => fstore_w(function_builder, locals, stack, *index)?,
             Instruction::Dstore_w(index) => dstore_w(function_builder, locals, stack, *index)?,
-            // Instruction::Astore_w(index) => astore_w(locals, stack, *index),
+            Instruction::Astore_w(index) => astore_ref_w(function_builder, locals, stack, *index)?,
             Instruction::Iinc_w(index, constant) => {
                 iinc_w(function_builder, locals, *index, *constant)?;
             }
@@ -720,7 +1007,7 @@ mod tests {
     }
 
     #[test]
-    fn test_native_type_int() -> Result<()> {
+    fn test_native_type_int() {
         for base_type in [
             BaseType::Boolean,
             BaseType::Byte,
@@ -729,45 +1016,43 @@ mod tests {
             BaseType::Short,
         ] {
             assert_eq!(
-                Compiler::native_type(&FieldType::Base(base_type))?,
+                Compiler::native_type(&FieldType::Base(base_type)),
                 types::I32
             );
         }
-        Ok(())
     }
 
     #[test]
-    fn test_native_type_double() -> Result<()> {
+    fn test_native_type_double() {
         assert_eq!(
-            Compiler::native_type(&FieldType::Base(BaseType::Double))?,
+            Compiler::native_type(&FieldType::Base(BaseType::Double)),
             types::F64
         );
-        Ok(())
     }
 
     #[test]
-    fn test_native_type_float() -> Result<()> {
+    fn test_native_type_float() {
         assert_eq!(
-            Compiler::native_type(&FieldType::Base(BaseType::Float))?,
+            Compiler::native_type(&FieldType::Base(BaseType::Float)),
             types::F32
         );
-        Ok(())
     }
 
     #[test]
-    fn test_native_type_long() -> Result<()> {
+    fn test_native_type_long() {
         assert_eq!(
-            Compiler::native_type(&FieldType::Base(BaseType::Long))?,
+            Compiler::native_type(&FieldType::Base(BaseType::Long)),
             types::I64
         );
-        Ok(())
     }
 
     #[test]
     fn test_native_type_object() {
         let class_name = JavaString::from("java/lang/Object");
-        let result = Compiler::native_type(&FieldType::Object(class_name));
-        assert!(matches!(result, Err(UnsupportedType(_))));
+        assert_eq!(
+            Compiler::native_type(&FieldType::Object(class_name)),
+            types::I64
+        );
     }
 
     #[test]
@@ -780,37 +1065,47 @@ mod tests {
             BaseType::Short,
         ] {
             let field_type = FieldType::Base(base_type);
-            let result = Compiler::native_type(&FieldType::Array(Box::new(field_type)));
-            assert!(matches!(result, Err(UnsupportedType(_))));
+            assert_eq!(
+                Compiler::native_type(&FieldType::Array(Box::new(field_type))),
+                types::I64
+            );
         }
     }
 
     #[test]
     fn test_native_type_array_double() {
         let field_type = FieldType::Base(BaseType::Double);
-        let result = Compiler::native_type(&FieldType::Array(Box::new(field_type)));
-        assert!(matches!(result, Err(UnsupportedType(_))));
+        assert_eq!(
+            Compiler::native_type(&FieldType::Array(Box::new(field_type))),
+            types::I64
+        );
     }
 
     #[test]
     fn test_native_type_array_float() {
         let field_type = FieldType::Base(BaseType::Float);
-        let result = Compiler::native_type(&FieldType::Array(Box::new(field_type)));
-        assert!(matches!(result, Err(UnsupportedType(_))));
+        assert_eq!(
+            Compiler::native_type(&FieldType::Array(Box::new(field_type))),
+            types::I64
+        );
     }
 
     #[test]
     fn test_native_type_array_long() {
         let field_type = FieldType::Base(BaseType::Long);
-        let result = Compiler::native_type(&FieldType::Array(Box::new(field_type)));
-        assert!(matches!(result, Err(UnsupportedType(_))));
+        assert_eq!(
+            Compiler::native_type(&FieldType::Array(Box::new(field_type))),
+            types::I64
+        );
     }
 
     #[test]
     fn test_native_type_array_object() {
         let class_name = JavaString::from("java/lang/Object");
         let field_type = FieldType::Object(class_name);
-        let result = Compiler::native_type(&FieldType::Array(Box::new(field_type)));
-        assert!(matches!(result, Err(UnsupportedType(_))));
+        assert_eq!(
+            Compiler::native_type(&FieldType::Array(Box::new(field_type))),
+            types::I64
+        );
     }
 }

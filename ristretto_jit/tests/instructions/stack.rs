@@ -11,7 +11,7 @@ fn pop() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())
 }
@@ -26,7 +26,7 @@ fn pop2_category_1() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(2));
     Ok(())
 }
@@ -39,7 +39,7 @@ fn pop2_category_2() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(2));
     Ok(())
 }
@@ -54,7 +54,7 @@ fn dup() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())
 }
@@ -69,7 +69,7 @@ fn dup_x1() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())
 }
@@ -86,7 +86,7 @@ fn dup_x2_category_1() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())
 }
@@ -101,7 +101,7 @@ fn dup_x2_category_2() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())
 }
@@ -117,7 +117,7 @@ fn dup2_category_1() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(3));
     Ok(())
 }
@@ -131,7 +131,7 @@ fn dup2_category_2() -> ristretto_jit::Result<()> {
         Instruction::Lreturn,
     ];
     let function = create_function("()J", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I64(2));
     Ok(())
 }
@@ -149,7 +149,7 @@ fn dup2_x1_category_1() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(3));
     Ok(())
 }
@@ -165,7 +165,7 @@ fn dup2_x1_category_2() -> ristretto_jit::Result<()> {
         Instruction::Lreturn,
     ];
     let function = create_function("()J", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I64(1));
     Ok(())
 }
@@ -186,7 +186,7 @@ fn dup2_x2_value1_category_1_value3_category_1() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(13));
     Ok(())
 }
@@ -202,7 +202,7 @@ fn dup2_x2_value1_category_1_value3_category_2() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(3));
     Ok(())
 }
@@ -220,7 +220,7 @@ fn dup2_x2_value1_category_2_value2_category_1() -> ristretto_jit::Result<()> {
         Instruction::Lreturn,
     ];
     let function = create_function("()J", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I64(1));
     Ok(())
 }
@@ -235,7 +235,7 @@ fn dup2_x2_value1_category_2_value2_category_2() -> ristretto_jit::Result<()> {
         Instruction::Lreturn,
     ];
     let function = create_function("()J", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I64(1));
     Ok(())
 }
@@ -249,7 +249,7 @@ fn swap() -> ristretto_jit::Result<()> {
         Instruction::Ireturn,
     ];
     let function = create_function("()I", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I32(1));
     Ok(())
 }

@@ -76,6 +76,15 @@ impl OperandStack {
         self.push_type(function_builder, types::F64, value)
     }
 
+    /// Push an object reference (pointer) onto the operand stack.
+    pub fn push_object(
+        &mut self,
+        function_builder: &mut FunctionBuilder,
+        value: Value,
+    ) -> Result<()> {
+        self.push_type(function_builder, types::I64, value)
+    }
+
     /// Pops a value from the stack.
     pub fn pop(&mut self) -> Result<Value> {
         let Some(value) = self.stack.pop() else {
@@ -118,6 +127,11 @@ impl OperandStack {
     /// Pop a double from the operand stack.
     pub fn pop_double(&mut self, function_builder: &mut FunctionBuilder) -> Result<Value> {
         self.pop_type(function_builder, types::F64)
+    }
+
+    /// Pop an object reference (pointer) from the operand stack.
+    pub fn pop_object(&mut self, function_builder: &mut FunctionBuilder) -> Result<Value> {
+        self.pop_type(function_builder, types::I64)
     }
 
     /// Returns the number of values on the stack.

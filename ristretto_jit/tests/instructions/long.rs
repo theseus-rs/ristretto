@@ -7,7 +7,7 @@ fn lconst_0() -> Result<()> {
     let instructions = vec![Instruction::Lconst_0, Instruction::Lreturn];
     let function = create_function("()J", &instructions)?;
     let expected_value = Value::I64(0);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -17,7 +17,7 @@ fn lconst_1() -> Result<()> {
     let instructions = vec![Instruction::Lconst_1, Instruction::Lreturn];
     let function = create_function("()J", &instructions)?;
     let expected_value = Value::I64(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -28,7 +28,7 @@ fn lload() -> Result<()> {
     let function = create_function("(J)J", &instructions)?;
     let expected_value = Value::I64(42);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -40,7 +40,7 @@ fn lload_w() -> Result<()> {
     let function = create_function("(J)J", &instructions)?;
     let expected_value = Value::I64(42);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -52,7 +52,7 @@ fn lload_0() -> Result<()> {
     let function = create_function("(J)J", &instructions)?;
     let expected_value = Value::I64(42);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -64,7 +64,7 @@ fn lload_1() -> Result<()> {
     let function = create_function("(IJ)J", &instructions)?;
     let expected_value = Value::I64(42);
     let value = function
-        .execute(vec![Value::I32(0), expected_value.clone()])?
+        .execute(&[Value::I32(0), expected_value.clone()], std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -76,7 +76,10 @@ fn lload_2() -> Result<()> {
     let function = create_function("(IIJ)J", &instructions)?;
     let expected_value = Value::I64(42);
     let value = function
-        .execute(vec![Value::I32(0), Value::I32(0), expected_value.clone()])?
+        .execute(
+            &[Value::I32(0), Value::I32(0), expected_value.clone()],
+            std::ptr::null(),
+        )?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -88,12 +91,15 @@ fn lload_3() -> Result<()> {
     let function = create_function("(IIIJ)J", &instructions)?;
     let expected_value = Value::I64(42);
     let value = function
-        .execute(vec![
-            Value::I32(0),
-            Value::I32(0),
-            Value::I32(0),
-            expected_value.clone(),
-        ])?
+        .execute(
+            &[
+                Value::I32(0),
+                Value::I32(0),
+                Value::I32(0),
+                expected_value.clone(),
+            ],
+            std::ptr::null(),
+        )?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())
@@ -109,7 +115,7 @@ fn lstore() -> Result<()> {
     ];
     let function = create_function("()J", &instructions)?;
     let expected_value = Value::I64(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -124,7 +130,7 @@ fn lstore_w() -> Result<()> {
     ];
     let function = create_function("()J", &instructions)?;
     let expected_value = Value::I64(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -139,7 +145,7 @@ fn lstore_0() -> Result<()> {
     ];
     let function = create_function("()J", &instructions)?;
     let expected_value = Value::I64(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -154,7 +160,7 @@ fn lstore_1() -> Result<()> {
     ];
     let function = create_function("()J", &instructions)?;
     let expected_value = Value::I64(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -169,7 +175,7 @@ fn lstore_2() -> Result<()> {
     ];
     let function = create_function("()J", &instructions)?;
     let expected_value = Value::I64(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -184,7 +190,7 @@ fn lstore_3() -> Result<()> {
     ];
     let function = create_function("()J", &instructions)?;
     let expected_value = Value::I64(1);
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, expected_value);
     Ok(())
 }
@@ -203,7 +209,7 @@ fn laload_lastore() -> Result<()> {
         Instruction::Lreturn,
     ];
     let function = create_function("()J", &instructions)?;
-    let value = function.execute(vec![])?.expect("value");
+    let value = function.execute(&[], std::ptr::null())?.expect("value");
     assert_eq!(value, Value::I64(1));
     Ok(())
 }
@@ -218,7 +224,7 @@ fn ladd() -> Result<()> {
     ];
     let function = create_function("(JJ)J", &instructions)?;
     let value = function
-        .execute(vec![Value::I64(1), Value::I64(2)])?
+        .execute(&[Value::I64(1), Value::I64(2)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I64(3));
     Ok(())
@@ -234,7 +240,7 @@ fn lsub() -> Result<()> {
     ];
     let function = create_function("(JJ)J", &instructions)?;
     let value = function
-        .execute(vec![Value::I64(2), Value::I64(1)])?
+        .execute(&[Value::I64(2), Value::I64(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I64(1));
     Ok(())
@@ -250,7 +256,7 @@ fn lmul() -> Result<()> {
     ];
     let function = create_function("(JJ)J", &instructions)?;
     let value = function
-        .execute(vec![Value::I64(2), Value::I64(3)])?
+        .execute(&[Value::I64(2), Value::I64(3)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I64(6));
     Ok(())
@@ -266,7 +272,7 @@ fn ldiv() -> Result<()> {
     ];
     let function = create_function("(JJ)J", &instructions)?;
     let value = function
-        .execute(vec![Value::I64(6), Value::I64(3)])?
+        .execute(&[Value::I64(6), Value::I64(3)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I64(2));
     Ok(())
@@ -282,7 +288,7 @@ fn lrem() -> Result<()> {
     ];
     let function = create_function("(JJ)J", &instructions)?;
     let value = function
-        .execute(vec![Value::I64(5), Value::I64(2)])?
+        .execute(&[Value::I64(5), Value::I64(2)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I64(1));
     Ok(())
@@ -296,7 +302,9 @@ fn lneg() -> Result<()> {
         Instruction::Lreturn,
     ];
     let function = create_function("(J)J", &instructions)?;
-    let value = function.execute(vec![Value::I64(3)])?.expect("value");
+    let value = function
+        .execute(&[Value::I64(3)], std::ptr::null())?
+        .expect("value");
     assert_eq!(value, Value::I64(-3));
     Ok(())
 }
@@ -311,7 +319,7 @@ fn lshl() -> Result<()> {
     ];
     let function = create_function("(JI)J", &instructions)?;
     let value = function
-        .execute(vec![Value::I64(2), Value::I32(1)])?
+        .execute(&[Value::I64(2), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I64(4));
     Ok(())
@@ -327,7 +335,7 @@ fn lshr() -> Result<()> {
     ];
     let function = create_function("(JI)J", &instructions)?;
     let value = function
-        .execute(vec![Value::I64(8), Value::I32(1)])?
+        .execute(&[Value::I64(8), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I64(4));
     Ok(())
@@ -343,7 +351,7 @@ fn lushr() -> Result<()> {
     ];
     let function = create_function("(JI)J", &instructions)?;
     let value = function
-        .execute(vec![Value::I64(8), Value::I32(1)])?
+        .execute(&[Value::I64(8), Value::I32(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I64(4));
     Ok(())
@@ -359,7 +367,7 @@ fn land() -> Result<()> {
     ];
     let function = create_function("(JJ)J", &instructions)?;
     let value = function
-        .execute(vec![Value::I64(3), Value::I64(2)])?
+        .execute(&[Value::I64(3), Value::I64(2)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I64(2));
     Ok(())
@@ -375,7 +383,7 @@ fn lor() -> Result<()> {
     ];
     let function = create_function("(JJ)J", &instructions)?;
     let value = function
-        .execute(vec![Value::I64(3), Value::I64(2)])?
+        .execute(&[Value::I64(3), Value::I64(2)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I64(3));
     Ok(())
@@ -391,7 +399,7 @@ fn lxor() -> Result<()> {
     ];
     let function = create_function("(JJ)J", &instructions)?;
     let value = function
-        .execute(vec![Value::I64(3), Value::I64(2)])?
+        .execute(&[Value::I64(3), Value::I64(2)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I64(1));
     Ok(())
@@ -409,19 +417,19 @@ fn lcmp() -> Result<()> {
 
     // 0 if values are equal
     let value = function
-        .execute(vec![Value::I64(0), Value::I64(0)])?
+        .execute(&[Value::I64(0), Value::I64(0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(0));
 
     // 1 if first value is greater than the second
     let value = function
-        .execute(vec![Value::I64(1), Value::I64(0)])?
+        .execute(&[Value::I64(1), Value::I64(0)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(1));
 
     // -1 if first value is lesser than the second
     let value = function
-        .execute(vec![Value::I64(0), Value::I64(1)])?
+        .execute(&[Value::I64(0), Value::I64(1)], std::ptr::null())?
         .expect("value");
     assert_eq!(value, Value::I32(-1));
     Ok(())
@@ -433,7 +441,7 @@ fn lreturn() -> Result<()> {
     let function = create_function("(J)J", &instructions)?;
     let expected_value = Value::I64(42);
     let value = function
-        .execute(vec![expected_value.clone()])?
+        .execute(std::slice::from_ref(&expected_value), std::ptr::null())?
         .expect("value");
     assert_eq!(value, expected_value);
     Ok(())

@@ -4,6 +4,9 @@ pub enum Value {
     I64(i64),
     F32(f32),
     F64(f64),
+    /// Raw pointer to a GC-managed object reference (`Gc<RwLock<Reference>>`).
+    /// A value of 0 represents null.
+    Ptr(i64),
 }
 
 impl From<i32> for Value {

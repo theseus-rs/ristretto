@@ -51,6 +51,7 @@ mod intrinsic_methods;
 pub use intrinsic_methods::IntrinsicMethod;
 mod java_object;
 mod jit;
+mod jit_runtime_helpers;
 mod local_variables;
 mod method_ref_cache;
 mod module_system;

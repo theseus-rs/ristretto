@@ -1,6 +1,7 @@
-use crate::instruction::object::{aload, astore};
+use crate::instruction::object::{array_load, array_store};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
+use crate::runtime_helpers::RuntimeHelpers;
 use crate::{Result, jit_value};
 use cranelift::codegen::ir::Value;
 use cranelift::prelude::{FunctionBuilder, InstBuilder, MemFlags, types};
@@ -241,8 +242,11 @@ pub(crate) fn istore_3(
 pub(crate) fn iaload(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
+    helpers: &RuntimeHelpers,
 ) -> Result<()> {
-    aload(function_builder, stack, types::I32, 4, false, false)
+    let value = array_load(function_builder, stack, helpers.iaload)?;
+    stack.push_int(function_builder, value)?;
+    Ok(())
 }
 
 /// # References
@@ -250,8 +254,10 @@ pub(crate) fn iaload(
 pub(crate) fn iastore(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
+    helpers: &RuntimeHelpers,
 ) -> Result<()> {
-    astore(function_builder, stack, types::I32, 4)
+    let value = stack.pop_int(function_builder)?;
+    array_store(function_builder, stack, helpers.iastore, value)
 }
 
 /// # References
