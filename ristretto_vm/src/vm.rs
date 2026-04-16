@@ -49,8 +49,6 @@ pub struct VM {
     module_system: ModuleSystem,
     /// The root class loader
     class_loader: Arc<RwLock<Arc<ClassLoader>>>,
-    /// The garbage collector for the VM.
-    garbage_collector: Arc<GarbageCollector>,
     /// The main class name
     main_class: Option<String>,
     /// The Java home directory
@@ -92,6 +90,33 @@ pub struct VM {
     method_ref_cache: MethodRefCache,
     /// The monitor registry for object monitors.
     monitor_registry: MonitorRegistry,
+    /// The garbage collector for the VM. Declared last so it drops after all other VM resources
+    /// when the default drop order applies. The explicit `Drop` impl below also calls `stop()`
+    /// before any fields are dropped, making this ordering defense-in-depth rather than the
+    /// sole correctness mechanism.
+    garbage_collector: Arc<GarbageCollector>,
+}
+
+impl Drop for VM {
+    fn drop(&mut self) {
+        // Abort all spawned thread tasks (especially daemon threads) before the GC
+        // cleans up objects. Daemon tasks hold Gc<T> pointers to GC managed memory;
+        // if the GC frees those objects first, the task cancellation code would access
+        // freed memory (use after free).
+        #[cfg(not(target_family = "wasm"))]
+        if let Some(handles) = self.thread_handles.try_write_sync() {
+            for handle in handles.values() {
+                if let Some(jh) = &handle.join_handle {
+                    jh.abort();
+                }
+            }
+        }
+
+        // Stop the GC collector thread and clean up remaining objects.
+        if let Err(error) = self.garbage_collector.stop() {
+            warn!("Failed to stop garbage collector: {error}");
+        }
+    }
 }
 
 /// VM
@@ -447,20 +472,11 @@ impl VM {
         self.initialize_primordial_thread().await?;
         startup_trace!("[vm] primordial thread");
 
-        // Load the java.lang.ref.Reference class explicitly so that the class initializer calls
-        // SharedSecrets.setJavaLangRefAccess(...) at the appropriate time in the JVM initialization
-        // process.
         let _ = self.class("java.lang.ref.Reference").await?;
 
-        // Load java.lang.reflect.AccessibleObject early so that its static initializer calls
-        // SharedSecrets.setJavaLangReflectAccess(...) before any reflection operations are performed.
-        // This is required because ReflectionFactory's constructor calls getJavaLangReflectAccess().
         let _ = self.class("java.lang.reflect.AccessibleObject").await?;
         startup_trace!("[vm] accessible object initialized");
 
-        // Load java.lang.invoke.MethodHandleNatives to initialize the method handle subsystem.
-        // This sets SharedSecrets.setJavaLangInvokeAccess() which is required for reflective
-        // field access in Java 21+ (Field.get() uses method handles internally).
         if self.java_class_file_version >= JAVA_21 {
             let _ = self.class("java.lang.invoke.MethodHandleNatives").await?;
             startup_trace!("[vm] method handle natives initialized");
@@ -502,11 +518,6 @@ impl VM {
                 .await?;
             startup_trace!("[vm] init phase 3");
 
-            // After phase 3, ClassLoaders is fully initialized. Register the boot layer
-            // with class loaders so ServiceLoader can find providers via ModuleLayer.layers(cl).
-            // Only do this when full module resolution was performed at startup (i.e., there
-            // are resolved modules). For simple classpath apps using the lightweight fast path,
-            // ModuleBootstrap.boot() handles lazy resolution and the boot layer is already set.
             if !self.module_system.resolved_configuration().is_empty() {
                 self.register_boot_layer_with_loaders().await;
                 startup_trace!("[vm] boot layer registered with loaders");

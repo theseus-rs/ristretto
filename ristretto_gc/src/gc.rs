@@ -23,6 +23,22 @@ pub struct Gc<T> {
 }
 
 impl<T> Gc<T> {
+    /// Heap-allocates `data`, records the allocation with the collector, and returns
+    /// a `Gc<T>` wrapping the raw pointer along with the pointer and size needed
+    /// for subsequent registration.
+    fn allocate(collector: &GarbageCollector, data: T) -> (Self, *mut T, usize) {
+        let ptr = Box::into_raw(Box::new(data));
+        let size = size_of::<T>();
+        collector.record_allocation(size);
+
+        let gc_ptr = NonNull::new(ptr).expect("Box::into_raw returned null pointer");
+        let gc = Self {
+            ptr: gc_ptr,
+            phantom: PhantomData,
+        };
+        (gc, ptr, size)
+    }
+
     /// Constructs a new `Gc<T>` and registers it as a root.
     ///
     /// This returns a `GcRootGuard<T>` which ensures the object is rooted.
@@ -60,6 +76,10 @@ impl<T> Gc<T> {
 
     /// Constructs a new `Gc<T>` with a specific garbage collector and registers it as a root.
     ///
+    /// The root is registered **before** the object is added to the GC's tracking map.
+    /// This prevents a race condition where a concurrent GC cycle could unmark and sweep
+    /// the object before its root is visible.
+    ///
     /// # Panics
     ///
     /// Panics if the collector fails to create a root guard.
@@ -67,10 +87,17 @@ impl<T> Gc<T> {
     where
         T: Send + Sync + Trace,
     {
-        let gc = unsafe { Self::with_collector_unrooted(collector, data) };
-        collector
+        let (gc, ptr, size) = Self::allocate(collector, data);
+
+        // Register root BEFORE registering object to prevent race with GC cycle.
+        // If the root exists first, any GC cycle will find the root during marking.
+        // The object isn't in the tracking map yet, so it can't be swept.
+        let root_guard = collector
             .create_root_guard(gc)
-            .expect("failed to create root guard")
+            .expect("failed to create root guard");
+
+        collector.register_object::<T>(ptr, size);
+        root_guard
     }
 
     /// Constructs a new `Gc<T>` with a specific garbage collector without rooting it.
@@ -86,27 +113,16 @@ impl<T> Gc<T> {
     where
         T: Send + Sync,
     {
-        let boxed = Box::new(data);
-        let ptr = Box::into_raw(boxed);
-
-        // Record allocation with the collector
-        let size = size_of::<T>();
-        collector.record_allocation(size);
-
-        let gc_ptr = NonNull::new(ptr).expect("Box::into_raw returned null pointer");
-        let gc = Self {
-            ptr: gc_ptr,
-            phantom: PhantomData,
-        };
-
-        // Register the heap allocated data pointer (not the Gc wrapper)
-        // This matches what the root registration uses: root.ptr.as_ptr()
+        let (gc, ptr, size) = Self::allocate(collector, data);
         collector.register_object::<T>(ptr, size);
-
         gc
     }
 
     /// Constructs a new `Gc<T>` with a specific garbage collector and finalization support.
+    ///
+    /// The root is registered **before** the object is added to the GC's tracking map.
+    /// This prevents a race condition where a concurrent GC cycle could unmark and sweep
+    /// the object before its root is visible.
     ///
     /// # Panics
     ///
@@ -115,10 +131,15 @@ impl<T> Gc<T> {
     where
         T: Send + Sync + Finalize + Trace,
     {
-        let gc = unsafe { Self::with_collector_and_finalizer_unrooted(collector, data) };
-        collector
+        let (gc, ptr, size) = Self::allocate(collector, data);
+
+        // Register root BEFORE registering object (same rationale as with_collector)
+        let root_guard = collector
             .create_root_guard(gc)
-            .expect("failed to create root guard")
+            .expect("failed to create root guard");
+
+        collector.register_object_with_finalizer::<T>(ptr, size);
+        root_guard
     }
 
     /// Constructs a new `Gc<T>` with a specific garbage collector and finalization support without
@@ -138,23 +159,8 @@ impl<T> Gc<T> {
     where
         T: Send + Sync + Finalize,
     {
-        let boxed = Box::new(data);
-        let ptr = Box::into_raw(boxed);
-
-        // Record allocation with the collector
-        let size = size_of::<T>();
-        collector.record_allocation(size);
-
-        let gc_ptr = NonNull::new(ptr).expect("Box::into_raw returned null pointer");
-        let gc = Self {
-            ptr: gc_ptr,
-            phantom: PhantomData,
-        };
-
-        // Register the heap allocated data pointer (not the Gc wrapper)
-        // This matches what the root registration uses: root.ptr.as_ptr()
+        let (gc, ptr, size) = Self::allocate(collector, data);
         collector.register_object_with_finalizer::<T>(ptr, size);
-
         gc
     }
 

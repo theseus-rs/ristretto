@@ -1,14 +1,19 @@
 //! Object metadata and pointer management for garbage collection.
 
+use crate::Finalize;
 use crate::finalizer::FinalizerFn;
 use crate::pointers::SafePtr;
-use crate::{Finalize, Gc};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tracing::warn;
 
 /// Type-safe drop function for garbage-collected objects
 type DropFn = Option<Box<dyn FnOnce() + Send + Sync>>;
+
+/// New objects start marked (`true`) so they survive any in-flight GC cycle at allocation time.
+/// This is called "allocation-color-black" in GC literature. Changing this to `false` would
+/// cause use-after-free when objects are allocated concurrently with a collection cycle.
+const INITIAL_MARK_STATE: bool = true;
 
 /// Metadata for tracking garbage-collected objects
 ///
@@ -18,6 +23,11 @@ pub(crate) struct ObjectMetadata {
     ptr: SafePtr,
     size: usize,
     marked: AtomicBool,
+    /// Tracks whether this object was ever marked as reachable during a GC mark phase.
+    /// Objects that were never reachable from roots (e.g., VM internal objects held only
+    /// by Rust containers like `ClassLoader`) are never swept. Only objects that were
+    /// previously traceable from a root and subsequently became unreachable are collected.
+    was_ever_marked: AtomicBool,
     drop_fn: Mutex<DropFn>,
     finalizer: Mutex<Option<FinalizerFn>>,
 }
@@ -25,23 +35,21 @@ pub(crate) struct ObjectMetadata {
 impl ObjectMetadata {
     /// Creates a new `ObjectMetadata` instance for a `Gc<T>`.
     pub(crate) fn new_for_gc<T: Send + Sync>(ptr: SafePtr, size: usize) -> Self {
-        // Create a type-safe drop function that properly deallocates the Gc<T>
-        // Convert raw pointer to usize for thread safety
-        let ptr_addr = ptr.as_ptr::<Gc<T>>() as usize;
+        // Create a type safe drop function that properly deallocates the T data.
+        // The pointer was created via Box::into_raw(Box::new(data: T)), so we reconstruct
+        // Box<T> to run T::drop and deallocate.
+        let ptr_addr = ptr.0;
         let drop_fn: DropFn = Some(Box::new(move || {
             // Safety: This is safe because:
-            // 1. The pointer was originally created from Box::into_raw
+            // 1. The pointer was originally created from Box::into_raw on a Box<T>
             // 2. We're only calling this once during sweep phase
             // 3. The object is unreachable so no other references exist
             // 4. This closure can only be called once due to Option::take()
             unsafe {
                 if ptr_addr != 0 {
-                    let raw_ptr = ptr_addr as *mut Gc<T>;
-                    // Add safety check before dereferencing
+                    let raw_ptr = ptr_addr as *mut T;
                     if !raw_ptr.is_null() {
                         let _boxed = Box::from_raw(raw_ptr);
-                        // The Box destructor will properly call T's Drop implementation
-                        // and deallocate the memory
                     }
                 }
             }
@@ -50,7 +58,8 @@ impl ObjectMetadata {
         Self {
             ptr,
             size,
-            marked: AtomicBool::new(false),
+            marked: AtomicBool::new(INITIAL_MARK_STATE),
+            was_ever_marked: AtomicBool::new(false),
             drop_fn: Mutex::new(drop_fn),
             finalizer: Mutex::new(None), // No finalizer by default
         }
@@ -61,49 +70,33 @@ impl ObjectMetadata {
         ptr: SafePtr,
         size: usize,
     ) -> Self {
-        // Create a type-safe drop function that properly deallocates the Gc<T>
-        let ptr_addr = ptr.as_ptr::<Gc<T>>() as usize;
-        let drop_fn: DropFn = Some(Box::new(move ||
-            // Safety: This is safe because:
-            // 1. The pointer was originally created from Box::into_raw
-            // 2. We're only calling this once during sweep phase
-            // 3. The object is unreachable so no other references exist
-            // 4. This closure can only be called once due to Option::take()
+        // Create a type-safe drop function that properly deallocates the T data.
+        let ptr_addr = ptr.0;
+        let drop_fn: DropFn = Some(Box::new(move || {
+            // Safety: Same as new_for_gc;  pointer from Box::into_raw(Box::new(data: T))
             unsafe {
                 if ptr_addr != 0 {
-                    let raw_ptr = ptr_addr as *mut Gc<T>;
+                    let raw_ptr = ptr_addr as *mut T;
                     if !raw_ptr.is_null() {
                         let _boxed = Box::from_raw(raw_ptr);
                     }
                 }
-            }));
-
-        // Create finalizer for objects that implement Finalize
-        let finalizer: Option<FinalizerFn> = if ptr_addr != 0 {
-            let raw_ptr = ptr_addr as *const Gc<T>;
-            if raw_ptr.is_null() {
-                None
-            } else {
-                // Safety: This is safe because:
-                // 1. raw_ptr points to a valid Gc<T> during object creation
-                // 2. We're only taking the address of the data field, not dereferencing
-                // 3. The data field offset is guaranteed by Rust's memory layout
-                let data_ptr_addr = &raw const (*raw_ptr) as usize;
-                Some(Box::new(move ||
-                    // Safety: This is safe because:
-                    // 1. The pointer was valid when the finalizer was created
-                    // 2. We're in the finalization phase before object deallocation
-                    // 3. The object implements Finalize so the method exists
-                    // 4. We check for null pointer before dereferencing
-                    unsafe {
-                        if data_ptr_addr != 0 {
-                            let data_ptr = data_ptr_addr as *const T;
-                            if !data_ptr.is_null() {
-                                (*data_ptr).finalize();
-                            }
-                        }
-                    }))
             }
+        }));
+
+        // Create finalizer for objects that implement Finalize.
+        // The pointer points directly to T data, so we can call T::finalize() on it.
+        let finalizer: Option<FinalizerFn> = if ptr_addr != 0 {
+            Some(Box::new(move || {
+                // Safety: The pointer was valid when the finalizer was created and we're in
+                // the finalization phase before object deallocation.
+                unsafe {
+                    let data_ptr = ptr_addr as *const T;
+                    if !data_ptr.is_null() {
+                        (*data_ptr).finalize();
+                    }
+                }
+            }))
         } else {
             None
         };
@@ -111,7 +104,8 @@ impl ObjectMetadata {
         Self {
             ptr,
             size,
-            marked: AtomicBool::new(false),
+            marked: AtomicBool::new(INITIAL_MARK_STATE),
+            was_ever_marked: AtomicBool::new(false),
             drop_fn: Mutex::new(drop_fn),
             finalizer: Mutex::new(finalizer),
         }
@@ -135,7 +129,13 @@ impl ObjectMetadata {
     /// Marks the object as reachable.
     /// Returns true if this call actually marked the object.
     pub(crate) fn mark(&self) -> bool {
+        self.was_ever_marked.store(true, Ordering::Release);
         !self.marked.swap(true, Ordering::AcqRel)
+    }
+
+    /// Returns whether this object was ever marked as reachable during a GC mark phase.
+    pub(crate) fn was_ever_marked(&self) -> bool {
+        self.was_ever_marked.load(Ordering::Acquire)
     }
 
     /// Unmarks the object.
@@ -144,41 +144,70 @@ impl ObjectMetadata {
     }
 
     /// Drops the object using the type-safe drop function. This first calls the finalizer (if any),
-    /// then properly calls the destructor and deallocate s memory. Can only be called once;
-    /// subsequent calls are no-ops.
+    /// then properly calls the destructor and deallocates memory. Can only be called once;
+    /// subsequent calls are no-ops (guarded by `Option::take()` inside the closures).
+    ///
+    /// # Caller contract
+    ///
+    /// This must only be called after the `ObjectMetadata` has been **removed** from the shared
+    /// `objects` `DashMap`, giving the caller exclusive ownership. Because the metadata is no
+    /// longer visible to any other thread, no concurrent re-mark race is possible and no
+    /// atomic guard is needed here.
     pub(crate) fn drop_object(&self) {
-        // Use atomic operations to ensure this can only be called once and prevent race conditions
-        // during concurrent access
-        if !self.marked.swap(true, Ordering::AcqRel) {
-            // Object was already marked for deletion or is being deleted
-            return;
-        }
+        self.run_drop_closures();
+    }
 
-        // First, run the finalizer if present
-        if let Ok(mut finalizer_guard) = self.finalizer.try_lock()
-            && let Some(finalizer) = finalizer_guard.take()
-        {
-            // Execute finalizer in a safe context
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                finalizer();
-            }))
-            .unwrap_or_else(|_| {
-                warn!("Finalizer panicked during object cleanup");
-            });
+    /// Runs only the finalizer closure if present. `take()`-guarded so it executes at most once.
+    /// Used in shutdown phase 1: all finalizers run while every object's memory is still valid,
+    /// so finalizers may safely access other GC managed objects.
+    ///
+    /// Uses `try_lock` to avoid deadlocking on a poisoned mutex from a prior panic.
+    pub(crate) fn run_finalizer(&self) {
+        match self.finalizer.try_lock() {
+            Ok(mut guard) => {
+                if let Some(finalizer) = guard.take() {
+                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        finalizer();
+                    }))
+                    .unwrap_or_else(|_| {
+                        warn!("Finalizer panicked during object cleanup");
+                    });
+                }
+            }
+            Err(_) => {
+                warn!("Failed to acquire finalizer lock during object cleanup; finalizer skipped");
+            }
         }
+    }
 
-        // Then, drop the object with additional safety checks
-        if let Ok(mut drop_fn_guard) = self.drop_fn.try_lock()
-            && let Some(drop_fn) = drop_fn_guard.take()
-        {
-            // Execute drop function in a safe context
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                drop_fn();
-            }))
-            .unwrap_or_else(|_| {
-                warn!("Drop function panicked during object cleanup");
-            });
+    /// Runs only the drop/deallocation closure if present. `take()`-guarded so it executes at
+    /// most once. Used in shutdown phase 2: after all finalizers have run, drop closures
+    /// deallocate object memory.
+    ///
+    /// Uses `try_lock` to avoid deadlocking on a poisoned mutex from a prior panic.
+    pub(crate) fn run_drop_fn(&self) {
+        match self.drop_fn.try_lock() {
+            Ok(mut guard) => {
+                if let Some(drop_fn) = guard.take() {
+                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        drop_fn();
+                    }))
+                    .unwrap_or_else(|_| {
+                        warn!("Drop function panicked during object cleanup");
+                    });
+                }
+            }
+            Err(_) => {
+                warn!("Failed to acquire drop_fn lock during object cleanup; drop skipped");
+            }
         }
+    }
+
+    /// Runs the finalizer and drop closures sequentially. Each closure is `take()`-guarded so
+    /// it runs at most once.
+    fn run_drop_closures(&self) {
+        self.run_finalizer();
+        self.run_drop_fn();
     }
 }
 
@@ -189,6 +218,7 @@ impl std::fmt::Debug for ObjectMetadata {
             .field("ptr", &self.ptr)
             .field("size", &self.size)
             .field("marked", &self.is_marked())
+            .field("was_ever_marked", &self.was_ever_marked())
             .finish()
     }
 }

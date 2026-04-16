@@ -48,6 +48,15 @@ enum GcPhase {
 /// 2. Concurrent Mark: Mark reachable objects concurrently with mutator
 /// 3. Final Mark: Brief pause to handle objects modified during concurrent marking
 /// 4. Concurrent Sweep: Reclaim unmarked objects concurrently
+///
+/// # Shutdown Behavior
+///
+/// When the collector is dropped, it stops the background thread and runs destructors
+/// for all remaining tracked objects via a two-phase cleanup: finalizers run first
+/// (while all objects are still alive), then drop closures deallocate memory. This ensures
+/// `Drop` and `Finalize` implementations execute during shutdown. Callers that embed
+/// the collector (e.g. a VM) must ensure the collector field is declared **last** so
+/// all other resources drop before the collector runs its cleanup.
 #[derive(Debug)]
 pub struct GarbageCollector {
     this: Weak<Self>,
@@ -142,8 +151,7 @@ impl GarbageCollector {
         // Store the raw pointer without casting to ensure type information is preserved
         let safe_ptr = SafePtr::from_ptr(ptr);
 
-        // Create type safe metadata that knows how to properly drop the Gc<T>
-        // Here T is the inner type, so we create a dropper for Gc<T>
+        // Create type-safe metadata that knows how to properly drop the T data
         let metadata = ObjectMetadata::new_for_gc::<T>(safe_ptr, size);
 
         trace!("registering object at {:#x} with size {size}", safe_ptr.0);
@@ -177,12 +185,11 @@ impl GarbageCollector {
         if collector_thread.is_some() {
             return;
         }
-        let Some(collector) = self.this.upgrade() else {
-            error!("Failed to upgrade Weak reference to GarbageCollector");
-            return;
-        };
 
-        let collector = Arc::clone(&collector);
+        // Use a Weak reference to avoid a reference cycle: if the thread held
+        // Arc<GarbageCollector>, Drop::drop() could never fire because the
+        // thread's Arc would keep the refcount above zero.
+        let weak_collector = self.this.clone();
         let stats = Arc::clone(&self.statistics);
         let roots = Arc::clone(&self.roots);
         let objects = Arc::clone(&self.objects);
@@ -195,7 +202,7 @@ impl GarbageCollector {
 
         let handle = thread::spawn(move || {
             Self::collector_thread_main(
-                &collector,
+                &weak_collector,
                 &stats,
                 &roots,
                 &phase,
@@ -242,10 +249,19 @@ impl GarbageCollector {
         cvar.notify_one();
         drop(triggered);
 
-        // Wait for thread to finish
-        handle
-            .join()
-            .map_err(|_| Error::SyncError("Failed to join collector thread".to_string()))?;
+        // Wait for thread to finish, unless we ARE the collector thread.
+        // This can happen when the collector thread holds the last Arc<GarbageCollector>
+        // (from upgrading a Weak during a collection cycle) and drops it, triggering
+        // Drop::drop() on the collector thread itself. In that case, the thread will
+        // exit naturally once this function returns and the remaining stack unwinds;
+        // the detached JoinHandle is dropped without joining.
+        if handle.thread().id() != thread::current().id() {
+            handle
+                .join()
+                .map_err(|_| Error::SyncError("Failed to join collector thread".to_string()))?;
+        }
+
+        self.cleanup_remaining_objects();
         debug!("collector stopped");
         Ok(())
     }
@@ -253,7 +269,73 @@ impl GarbageCollector {
     /// Stops the background collector thread (no-op on wasm).
     #[cfg(target_family = "wasm")]
     pub fn stop(&self) -> Result<()> {
+        self.cleanup_remaining_objects();
         Ok(())
+    }
+
+    /// Removes all remaining objects from tracking, runs their destructors, and frees memory.
+    /// Must only be called after the collector thread has been stopped.
+    ///
+    /// Uses a two-phase approach to ensure safe destructor ordering:
+    /// 1. **Remove + Finalizer phase**: removes all objects from the tracking map (releasing
+    ///    `DashMap` shard locks), then runs all finalizers while every object's memory is still
+    ///    valid so finalizers may safely read other GC-managed data.
+    /// 2. **Drop phase**: runs drop closures to deallocate memory.
+    ///
+    /// Objects are removed from the map before any destructors run so that finalizers cannot
+    /// deadlock on `DashMap` shard locks.
+    ///
+    /// Safe to call multiple times: both `run_finalizer()` and `run_drop_fn()` use
+    /// `Option::take()` guards, so closures run at most once.
+    fn cleanup_remaining_objects(&self) {
+        // Fail-fast in debug builds to catch bugs during development.
+        debug_assert!(
+            !self.collection_active.load(Ordering::Acquire),
+            "cleanup_remaining_objects called while a collection cycle is still active"
+        );
+        // Fail-safe in release builds: warn and skip rather than risk double-free / UB.
+        if self.collection_active.load(Ordering::Acquire) {
+            warn!(
+                "cleanup_remaining_objects called while a collection cycle is still active; \
+                 skipping to avoid double-free"
+            );
+            return;
+        }
+        let keys: Vec<SafePtr> = self.objects.iter().map(|entry| *entry.key()).collect();
+
+        // Remove all objects from the tracking map first so no DashMap shard locks are
+        // held while destructors execute. This prevents deadlocks if a finalizer
+        // interacts with the collector (e.g. looking up other objects).
+        let mut removed: Vec<ObjectMetadata> = Vec::with_capacity(keys.len());
+        for key in keys {
+            if let Some((_, metadata)) = self.objects.remove(&key) {
+                removed.push(metadata);
+            }
+        }
+
+        // Phase 1: Run all finalizers while every object's memory is still valid.
+        // Finalizers may safely read other GC managed objects because no drop
+        // closures have executed yet.
+        for metadata in &removed {
+            metadata.run_finalizer();
+        }
+
+        // Phase 2: Run drop closures to deallocate memory.
+        let mut bytes_freed = 0;
+        let mut objects_freed = 0;
+        for metadata in removed {
+            bytes_freed += metadata.size();
+            objects_freed += 1;
+            metadata.run_drop_fn();
+        }
+        if objects_freed > 0 {
+            self.bytes_allocated
+                .fetch_sub(bytes_freed, Ordering::Relaxed);
+            debug!(
+                "cleanup freed {} remaining objects ({} bytes)",
+                objects_freed, bytes_freed
+            );
+        }
     }
 
     /// Triggers a garbage collection cycle. This is non-blocking and will wake up the background
@@ -308,7 +390,19 @@ impl GarbageCollector {
 
         self.roots.insert(root_id, gc_trace_ptr);
 
-        // Ensure the insertion is visible to other threads before proceeding
+        // Ensure the root insertion is globally visible before register_object() adds
+        // the object to the tracking map. Without this fence, the compiler or CPU could
+        // reorder the `roots.insert` past the subsequent `objects.insert`, allowing the
+        // GC thread to observe the object (eligible for sweep) before seeing the root
+        // that keeps it alive.
+        //
+        // Synchronization chain: roots.insert -> this fence -> objects.insert (releases
+        // DashMap shard lock) -> GC thread acquires DashMap shard lock on objects (Acquire)
+        // -> GC thread sees both the object and all prior writes, including the root.
+        //
+        // We use SeqCst for defense-in-depth: this path is infrequent (only during
+        // allocation) and the stronger ordering removes any doubt about cross-map
+        // visibility on weakly-ordered architectures.
         std::sync::atomic::fence(Ordering::SeqCst);
 
         trace!("adding root {:#x} with id {root_id}", gc_ptr as usize);
@@ -334,6 +428,9 @@ impl GarbageCollector {
     /// Used by `GcRootGuard` to clean up when dropped.
     pub fn remove_root_by_id(&self, root_id: usize) {
         if let Some((_id, gc_trace_ptr)) = self.roots.remove(&root_id) {
+            // Ensure root removal is visible to other threads before any dependent
+            // operations (symmetric with the SeqCst fence in add_root).
+            std::sync::atomic::fence(Ordering::Release);
             let ptr = gc_trace_ptr.as_raw_ptr() as usize;
             trace!("removed root {ptr:#x} with id {root_id}");
         }
@@ -370,8 +467,11 @@ impl GarbageCollector {
         if let Ok(mut queue) = self.mark_queue.try_lock() {
             queue.push_back(TracePtr::new(obj));
         }
-        // If we can't get the lock immediately, it's okay to skip the object will be traced in the
-        // next collection cycle
+        // If we can't acquire the lock immediately, the object is skipped for *this* cycle.
+        // This is a liveness property, not a safety property: the object won't be prematurely
+        // collected (allocation-color-black keeps new objects alive), but its reachable
+        // subgraph may remain unmarked until the next collection cycle, increasing floating
+        // garbage temporarily.
     }
 
     /// Checks if an object is already marked to avoid infinite loops during tracing. Used by
@@ -479,7 +579,7 @@ impl GarbageCollector {
     #[cfg(not(target_family = "wasm"))]
     #[expect(clippy::too_many_arguments)]
     fn collector_thread_main(
-        collector: &GarbageCollector,
+        weak_collector: &Weak<GarbageCollector>,
         stats: &Arc<RwLock<Statistics>>,
         roots: &Arc<DashMap<usize, TracePtr>>,
         phase: &Arc<RwLock<GcPhase>>,
@@ -528,9 +628,13 @@ impl GarbageCollector {
             }
 
             if wait_result {
-                // Perform garbage collection cycle
+                // If the collector has been dropped, exit the thread.
+                let Some(collector) = weak_collector.upgrade() else {
+                    debug!("collector dropped, exiting collector thread");
+                    break;
+                };
                 Self::perform_collection_cycle(
-                    collector,
+                    &collector,
                     stats,
                     roots,
                     phase,
@@ -577,11 +681,10 @@ impl GarbageCollector {
         Self::concurrent_mark_phase(collector, phase, mark_queue, objects);
 
         // Phase 3: Final Mark; handle any objects modified during concurrent marking
-        Self::final_mark_phase(phase, mark_queue, objects);
+        Self::final_mark_phase(collector, phase, roots, mark_queue, objects);
 
-        // Phase 4: Concurrent Sweep; reclaim unmarked objects
-        let (bytes_freed, objects_swept) =
-            Self::concurrent_sweep_phase(collector, phase, objects, bytes_allocated);
+        // Phase 4: Concurrent Sweep; free unmarked objects
+        Self::concurrent_sweep_phase(phase, objects, bytes_allocated, stats);
 
         // Update phase back to idle
         if let Ok(mut phase_guard) = phase.write() {
@@ -593,16 +696,11 @@ impl GarbageCollector {
         let duration = start_time.elapsed();
         if let Ok(mut stats_guard) = stats.write() {
             stats_guard.collections_completed += 1;
-            stats_guard.bytes_freed += bytes_freed;
-            stats_guard.objects_swept += objects_swept;
             stats_guard.last_collection_duration = Some(duration);
             stats_guard.total_collection_time += duration;
         }
 
-        debug!(
-            "garbage collection cycle completed in {:?}, freed {} objects ({} bytes)",
-            duration, objects_swept, bytes_freed
-        );
+        debug!("garbage collection cycle completed in {duration:?}");
     }
 
     /// Phase 1: Initial mark; mark all root objects
@@ -728,8 +826,14 @@ impl GarbageCollector {
     }
 
     /// Phase 3: Final mark; handle objects modified during concurrent marking
+    ///
+    /// Re-scans roots to catch any roots registered after the initial mark phase
+    /// (e.g. objects allocated during concurrent marking). Then processes remaining
+    /// mark queue items.
     fn final_mark_phase(
+        collector: &GarbageCollector,
         phase: &Arc<RwLock<GcPhase>>,
+        roots: &Arc<DashMap<usize, TracePtr>>,
         mark_queue: &Arc<Mutex<VecDeque<TracePtr>>>,
         objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
     ) {
@@ -740,8 +844,33 @@ impl GarbageCollector {
 
         trace!("Final mark phase started");
 
-        // Process any remaining objects in the mark queue that were added during concurrent marking
         let mut final_processed = 0;
+
+        // Re-scan roots to catch any roots added after the initial mark phase queued
+        // the original root set. If a new object was allocated and rooted during
+        // concurrent marking, its root won't have been in the initial mark's snapshot.
+        // Without this re-scan, such objects survive (allocation-color-black) but their
+        // children might not be traced, potentially leaving a reachable subgraph unmarked.
+        //
+        // Snapshot root TracePtr values first so we don't hold DashMap shard locks
+        // during `trace()`.  Holding a shard read lock while `trace()` acquires a
+        // `RwLock<Reference>` read lock can deadlock with a mutator thread that holds
+        // the same `RwLock` write lock and tries to insert into the same DashMap shard.
+        let root_snapshot: Vec<TracePtr> =
+            roots.iter().map(|entry| entry.value().clone()).collect();
+        for gc_trace_ptr in &root_snapshot {
+            let ptr = SafePtr::from_ptr(gc_trace_ptr.as_raw_ptr());
+            let should_trace = objects.get(&ptr).is_some_and(|metadata| metadata.mark());
+            if should_trace {
+                final_processed += 1;
+                unsafe {
+                    gc_trace_ptr.trace(collector);
+                }
+            }
+        }
+
+        // Process any remaining objects in the mark queue that were added during
+        // concurrent marking or from the root re-scan above
         loop {
             let next_object = {
                 if let Ok(mut queue) = mark_queue.lock() {
@@ -756,10 +885,14 @@ impl GarbageCollector {
             };
 
             let ptr = SafePtr::from_ptr(gc_trace_ptr.as_raw_ptr());
-            if let Some(metadata) = objects.get(&ptr)
-                && metadata.mark()
-            {
+            // Release the objects shard lock before calling trace() to avoid
+            // the same lock-ordering deadlock as in the root re-scan above.
+            let should_trace = objects.get(&ptr).is_some_and(|metadata| metadata.mark());
+            if should_trace {
                 final_processed += 1;
+                unsafe {
+                    gc_trace_ptr.trace(collector);
+                }
             }
         }
 
@@ -769,110 +902,85 @@ impl GarbageCollector {
         );
     }
 
-    /// Phase 4: Concurrent sweep; reclaim unmarked objects
+    /// Phase 4: Concurrent sweep; reclaim unmarked objects.
+    ///
+    /// Objects that were not marked during the mark phases are unreachable and safe to free.
+    /// Objects start with `marked = true` (allocation-color-black), so any object allocated
+    /// during this cycle will survive. Only objects that existed before the cycle began and
+    /// were not reached from any root are swept.
+    ///
+    /// Sweep proceeds in two steps per object:
+    /// 1. Remove from the tracking map (releases `DashMap` shard locks)
+    /// 2. Run finalizer then drop closure
     fn concurrent_sweep_phase(
-        collector: &GarbageCollector,
         phase: &Arc<RwLock<GcPhase>>,
         objects: &Arc<DashMap<SafePtr, ObjectMetadata>>,
         bytes_allocated: &Arc<AtomicUsize>,
-    ) -> (usize, usize) {
-        #[cfg(target_family = "wasm")]
-        let _ = &collector;
-        // Set phase to concurrent sweep
+        stats: &Arc<RwLock<Statistics>>,
+    ) {
         if let Ok(mut phase_guard) = phase.write() {
             *phase_guard = GcPhase::ConcurrentSweep;
         }
 
         trace!("Concurrent sweep phase started");
 
-        let mut bytes_freed = 0;
-        let mut objects_freed = 0;
+        // Collect keys of objects that are unmarked AND were previously reachable.
+        // Objects that were never marked as reachable during any GC mark phase are
+        // owned by non-GC containers (e.g., ClassLoader, StringPool) and must not
+        // be swept; their lifetime is managed by Rust ownership, not GC tracing.
+        let unmarked_keys: Vec<SafePtr> = objects
+            .iter()
+            .filter(|entry| {
+                let metadata = entry.value();
+                !metadata.is_marked() && metadata.was_ever_marked()
+            })
+            .map(|entry| *entry.key())
+            .collect();
 
-        // Collect unmarked objects for removal
-        let to_remove: Vec<(SafePtr, ObjectMetadata)> = {
-            let number_of_objects = objects.len();
-            #[cfg(not(target_family = "wasm"))]
-            {
-                let configuration = &collector.configuration;
-                if number_of_objects > configuration.parallel_threshold {
-                    debug!("sweeping {number_of_objects} objects (parallel)");
-                    collector.thread_pool.install(|| {
-                        objects
-                            .par_iter()
-                            .filter_map(|entry| {
-                                let metadata = entry.value();
-                                if metadata.is_marked() {
-                                    None // Keep marked objects
-                                } else {
-                                    Some((
-                                        *entry.key(),
-                                        ObjectMetadata::new_for_gc::<u8>(
-                                            *entry.key(),
-                                            metadata.size(),
-                                        ),
-                                    ))
-                                }
-                            })
-                            .collect()
-                    })
-                } else {
-                    debug!("sweeping {number_of_objects} objects (sequential)");
-                    objects
-                        .iter()
-                        .filter_map(|entry| {
-                            let metadata = entry.value();
-                            if metadata.is_marked() {
-                                None // Keep marked objects
-                            } else {
-                                Some((
-                                    *entry.key(),
-                                    ObjectMetadata::new_for_gc::<u8>(*entry.key(), metadata.size()),
-                                ))
-                            }
-                        })
-                        .collect()
-                }
-            }
-            #[cfg(target_family = "wasm")]
-            {
-                debug!("sweeping {number_of_objects} objects (sequential)");
-                objects
-                    .iter()
-                    .filter_map(|entry| {
-                        let metadata = entry.value();
-                        if metadata.is_marked() {
-                            None // Keep marked objects
-                        } else {
-                            Some((
-                                *entry.key(),
-                                ObjectMetadata::new_for_gc::<u8>(*entry.key(), metadata.size()),
-                            ))
-                        }
-                    })
-                    .collect()
-            }
-        };
+        let mut swept_objects = 0;
+        let mut swept_bytes = 0;
 
-        // Remove unmarked objects
-        for (ptr, _metadata) in to_remove {
-            if let Some((_, removed_metadata)) = objects.remove(&ptr) {
-                bytes_freed += removed_metadata.size();
-                objects_freed += 1;
-
-                // Call the drop function to properly deallocate the object
-                removed_metadata.drop_object();
+        // Remove unmarked objects from the map and collect them for destruction
+        let mut to_destroy: Vec<ObjectMetadata> = Vec::with_capacity(unmarked_keys.len());
+        for key in &unmarked_keys {
+            if let Some((_, metadata)) = objects.remove(key) {
+                // Double-check the object is still unmarked after removal.
+                // A concurrent mutator could have rooted/marked it between our
+                // snapshot and removal, but this is impossible because:
+                // 1. We're in the sweep phase (after final mark)
+                // 2. New allocations start marked=true and won't appear in unmarked_keys
+                // 3. Existing objects can't become marked after final mark
+                swept_bytes += metadata.size();
+                swept_objects += 1;
+                to_destroy.push(metadata);
             }
         }
 
-        // Update bytes allocated to reflect freed memory
-        bytes_allocated.fetch_sub(bytes_freed, Ordering::Relaxed);
+        // Run finalizers first (while all other objects' memory is still valid)
+        for metadata in &to_destroy {
+            metadata.run_finalizer();
+        }
 
-        trace!(
-            "Concurrent sweep phase completed, freed {} objects ({} bytes)",
-            objects_freed, bytes_freed
-        );
+        // Then run drop closures to deallocate memory
+        for metadata in to_destroy {
+            metadata.run_drop_fn();
+        }
 
-        (bytes_freed, objects_freed)
+        if swept_objects > 0 {
+            bytes_allocated.fetch_sub(swept_bytes, Ordering::Relaxed);
+            debug!("swept {swept_objects} objects ({swept_bytes} bytes)");
+        }
+
+        if let Ok(mut stats_guard) = stats.write() {
+            stats_guard.objects_swept += swept_objects;
+            stats_guard.bytes_freed += swept_bytes;
+        }
+
+        // Reset the allocation counter so the threshold isn't hit on every subsequent
+        // allocation. The counter only drives heuristic scheduling of the next cycle.
+        bytes_allocated.store(0, Ordering::Relaxed);
+
+        trace!("Concurrent sweep phase completed, swept {swept_objects} objects");
     }
 }
 

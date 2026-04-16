@@ -560,34 +560,6 @@ pub async fn start_0<T: Thread + 'static>(
     #[cfg(not(target_family = "wasm"))]
     {
         let join_handle = tokio::spawn(async move {
-            // Use a RAII guard to ensure cleanup happens even if the thread panics
-            struct ThreadCleanup {
-                thread_object: Value,
-            }
-
-            impl Drop for ThreadCleanup {
-                fn drop(&mut self) {
-                    // Set thread status to TERMINATED and eetop to 0 after execution
-                    if let Err(error) =
-                        set_thread_status(&self.thread_object, ThreadState::TERMINATED)
-                    {
-                        error!("Failed to set thread status to TERMINATED: {error}");
-                    }
-                    if let Ok(mut thread_obj) = self.thread_object.as_object_mut() {
-                        let result = thread_obj.set_value("eetop", Value::Long(0));
-                        if let Err(error) = result {
-                            error!("Failed to set eetop to 0: {error}");
-                        }
-                    } else {
-                        error!("Failed to get mutable reference for thread object cleanup");
-                    }
-                }
-            }
-
-            let cleanup = ThreadCleanup {
-                thread_object: thread_object.clone(),
-            };
-
             let result = spawn_thread
                 .execute(&thread_class, &run_method, &[thread_value])
                 .await;
@@ -615,11 +587,23 @@ pub async fn start_0<T: Thread + 'static>(
                 }
             }
 
-            // Explicitly drop the cleanup guard to set TERMINATED + eetop=0 before we notify
-            // waiting threads (Thread.join() callers).
-            drop(cleanup);
+            // Set thread status to TERMINATED and eetop to 0 after execution.
+            // This is done inline (not via a RAII guard) because when the tokio
+            // runtime shuts down and cancels daemon tasks, the GC may have already
+            // freed the objects these Values point to. A RAII guard would attempt
+            // to acquire locks on freed memory during task cancellation, causing
+            // undefined behavior (manifesting as a deadlock).
+            if let Err(error) = set_thread_status(&thread_object, ThreadState::TERMINATED) {
+                error!("Failed to set thread status to TERMINATED: {error}");
+            }
+            if let Ok(mut thread_obj) = thread_object.as_object_mut() {
+                let result = thread_obj.set_value("eetop", Value::Long(0));
+                if let Err(error) = result {
+                    error!("Failed to set eetop to 0: {error}");
+                }
+            }
 
-            // Per theJVM specification, Thread.exit() calls notifyAll() on the Thread object so
+            // Per the JVM specification, Thread.exit() calls notifyAll() on the Thread object so
             // that Thread.join() callers are woken up via the monitor. We must acquire the monitor
             // before notifying to prevent a race where the join() caller checks isAlive() (true),
             // then the thread dies and notifies before wait() is called, causing a lost
