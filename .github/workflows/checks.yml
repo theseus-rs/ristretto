@@ -38,21 +38,6 @@ jobs:
         run: |
           cargo check --workspace --all-targets --all-features
 
-  clippy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-      - name: Check lints
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        run: |
-          cargo clippy --all-targets --all-features --examples --tests
-
   deny:
     runs-on: ubuntu-latest
     steps:

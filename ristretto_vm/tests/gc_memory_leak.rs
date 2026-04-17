@@ -120,7 +120,7 @@ fn get_rss_bytes() -> usize {
         use std::mem::{size_of, zeroed};
 
         #[repr(C)]
-        #[allow(non_snake_case, non_camel_case_types)]
+        #[expect(non_snake_case)]
         struct PROCESS_MEMORY_COUNTERS {
             cb: u32,
             PageFaultCount: u32,
@@ -134,7 +134,8 @@ fn get_rss_bytes() -> usize {
             PeakPagefileUsage: usize,
         }
 
-        extern "system" {
+        #[expect(unsafe_code)]
+        unsafe extern "system" {
             fn GetCurrentProcess() -> *mut std::ffi::c_void;
             fn K32GetProcessMemoryInfo(
                 process: *mut std::ffi::c_void,
@@ -143,10 +144,11 @@ fn get_rss_bytes() -> usize {
             ) -> i32;
         }
 
+        #[expect(unsafe_code)]
         unsafe {
             let mut pmc: PROCESS_MEMORY_COUNTERS = zeroed();
-            pmc.cb = size_of::<PROCESS_MEMORY_COUNTERS>() as u32;
-            if K32GetProcessMemoryInfo(GetCurrentProcess(), &mut pmc, pmc.cb) != 0 {
+            pmc.cb = u32::try_from(size_of::<PROCESS_MEMORY_COUNTERS>()).unwrap_or(0);
+            if K32GetProcessMemoryInfo(GetCurrentProcess(), &raw mut pmc, pmc.cb) != 0 {
                 pmc.WorkingSetSize
             } else {
                 0
