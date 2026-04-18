@@ -40,7 +40,7 @@ mod win32 {
 #[async_method]
 pub async fn fork_and_exec<T: Thread + 'static>(
     thread: Arc<T>,
-    #[cfg_attr(target_family = "wasm", allow(unused_mut))] mut parameters: Parameters,
+    #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     #[cfg(not(target_family = "wasm"))]
     {

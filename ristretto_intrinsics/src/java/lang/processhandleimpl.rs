@@ -22,7 +22,7 @@ use sysinfo::{Pid, ProcessesToUpdate, Signal, System};
 #[async_method]
 pub async fn destroy_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    #[cfg_attr(target_family = "wasm", allow(unused_mut))] mut parameters: Parameters,
+    #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     #[cfg(not(target_family = "wasm"))]
     {
@@ -80,11 +80,11 @@ pub async fn get_current_pid_0<T: Thread + 'static>(
     "java/lang/ProcessHandleImpl.getProcessPids0(J[J[J[J)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[expect(clippy::similar_names)]
+#[cfg_attr(not(target_family = "wasm"), expect(clippy::similar_names))]
 #[async_method]
 pub async fn get_process_pids_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    #[cfg_attr(target_family = "wasm", allow(unused_mut))] mut parameters: Parameters,
+    #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     #[cfg(not(target_family = "wasm"))]
     {
@@ -187,7 +187,7 @@ pub async fn init_native<T: Thread + 'static>(
 #[async_method]
 pub async fn is_alive_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    #[cfg_attr(target_family = "wasm", allow(unused_mut))] mut parameters: Parameters,
+    #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     #[cfg(not(target_family = "wasm"))]
     {
@@ -222,7 +222,7 @@ pub async fn is_alive_0<T: Thread + 'static>(
 #[async_method]
 pub async fn parent_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    #[cfg_attr(target_family = "wasm", allow(unused_mut))] mut parameters: Parameters,
+    #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     #[cfg(not(target_family = "wasm"))]
     {
@@ -261,7 +261,7 @@ pub async fn parent_0<T: Thread + 'static>(
 #[async_method]
 pub async fn wait_for_process_exit_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    #[cfg_attr(target_family = "wasm", allow(unused_mut))] mut parameters: Parameters,
+    #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     #[cfg(not(target_family = "wasm"))]
     {

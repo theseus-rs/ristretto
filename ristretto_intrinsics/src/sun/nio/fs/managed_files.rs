@@ -58,7 +58,7 @@ pub(crate) async fn open(
     let fd;
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
     {
-        fd = raw_file_descriptor(&path.to_string(), resource_manager)
+        fd = raw_file_descriptor(path, resource_manager)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
     }
     #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
@@ -84,7 +84,10 @@ pub(crate) async fn read(
     fd: i64,
     buf: &mut [u8],
 ) -> std::io::Result<usize> {
-    #[cfg_attr(target_family = "wasm", allow(unused_mut))]
+    #[cfg_attr(
+        all(target_family = "wasm", not(target_os = "wasi")),
+        expect(unused_mut)
+    )]
     let mut file_handle = file_handles
         .get_mut(&fd)
         .await
@@ -116,7 +119,10 @@ pub(crate) async fn write(
     fd: i64,
     buf: &[u8],
 ) -> std::io::Result<usize> {
-    #[cfg_attr(target_family = "wasm", allow(unused_mut))]
+    #[cfg_attr(
+        all(target_family = "wasm", not(target_os = "wasi")),
+        expect(unused_mut)
+    )]
     let mut file_handle = file_handles
         .get_mut(&fd)
         .await
@@ -181,7 +187,10 @@ pub(crate) async fn seek(
     fd: i64,
     pos: std::io::SeekFrom,
 ) -> std::io::Result<u64> {
-    #[cfg_attr(target_family = "wasm", allow(unused_mut))]
+    #[cfg_attr(
+        all(target_family = "wasm", not(target_os = "wasi")),
+        expect(unused_mut)
+    )]
     let mut file_handle = file_handles
         .get_mut(&fd)
         .await
@@ -341,6 +350,10 @@ pub(crate) async fn try_clone(
     Ok(new_fd)
 }
 
+#[cfg_attr(
+    all(target_family = "wasm", not(target_os = "wasi")),
+    expect(clippy::unused_async)
+)]
 pub(crate) async fn read_at(
     file_handles: &HandleManager<i64, FileHandle>,
     fd: i64,
@@ -405,6 +418,10 @@ pub(crate) async fn read_at(
     }
 }
 
+#[cfg_attr(
+    all(target_family = "wasm", not(target_os = "wasi")),
+    expect(clippy::unused_async)
+)]
 pub(crate) async fn write_at(
     file_handles: &HandleManager<i64, FileHandle>,
     fd: i64,
@@ -465,10 +482,18 @@ pub(crate) async fn write_at(
     }
 }
 
+#[cfg_attr(
+    all(target_family = "wasm", not(target_os = "wasi")),
+    expect(clippy::unused_async)
+)]
 pub(crate) async fn readv(
     file_handles: &HandleManager<i64, FileHandle>,
     fd: i64,
-    #[cfg_attr(target_family = "wasm", allow(unused_mut))] mut chunks: Vec<Vec<u8>>,
+    #[cfg_attr(
+        all(target_family = "wasm", not(target_os = "wasi")),
+        expect(unused_mut)
+    )]
+    mut chunks: Vec<Vec<u8>>,
 ) -> std::io::Result<(usize, Vec<Vec<u8>>)> {
     #[cfg(not(target_family = "wasm"))]
     {
@@ -517,6 +542,10 @@ pub(crate) async fn readv(
     }
 }
 
+#[cfg_attr(
+    all(target_family = "wasm", not(target_os = "wasi")),
+    expect(clippy::unused_async)
+)]
 pub(crate) async fn writev(
     file_handles: &HandleManager<i64, FileHandle>,
     fd: i64,
@@ -563,6 +592,7 @@ pub(crate) async fn writev(
     }
 }
 
+#[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
 pub(crate) async fn lock(
     file_handles: &HandleManager<i64, FileHandle>,
     fd: i64,
@@ -607,6 +637,7 @@ pub(crate) async fn lock(
     }
 }
 
+#[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
 pub(crate) async fn unlock(
     file_handles: &HandleManager<i64, FileHandle>,
     fd: i64,

@@ -182,7 +182,9 @@ pub async fn invoke_0<T: Thread + 'static>(
                     let caller_display = if caller.is_empty() {
                         // For unnamed modules, include the identity hash code
                         if caller_module_hash != 0 {
-                            format!("unnamed module @{:x}", caller_module_hash & 0xFFFF_FFFF)
+                            #[cfg_attr(target_pointer_width = "32", expect(clippy::identity_op))]
+                            let hash_low = caller_module_hash & 0xFFFF_FFFF;
+                            format!("unnamed module @{hash_low:x}")
                         } else {
                             "unnamed module".to_string()
                         }

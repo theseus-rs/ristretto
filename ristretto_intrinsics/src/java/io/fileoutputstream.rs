@@ -91,7 +91,6 @@ pub async fn open_0<T: Thread + 'static>(
                 OpenOptions::new()
                     .create(true)
                     .read(false)
-                    .write(true)
                     .append(true)
                     .open(&path)
             } else {

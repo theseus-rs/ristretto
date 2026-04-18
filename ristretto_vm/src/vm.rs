@@ -1059,7 +1059,13 @@ impl VM {
     }
 
     /// Wait for all non-daemon threads to complete (WASM version; no-op).
+    ///
+    /// # Errors
+    ///
+    /// This implementation never returns an error; the `Result` is kept for signature
+    /// consistency with the non-wasm implementation.
     #[cfg(target_family = "wasm")]
+    #[expect(clippy::unused_async)]
     pub async fn wait_for_non_daemon_threads(&self) -> Result<()> {
         // WASM uses spawn_local which doesn't support joining
         Ok(())

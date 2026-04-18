@@ -65,22 +65,22 @@ jobs:
           targets: ${{ matrix.target }}
           toolchain: stable
 
-      # - name: Run clippy
-      #   if: ${{ matrix.platform == 'wasm32-unknown' }}
-      #   env:
-      #     CARGO_TERM_COLOR: always
-      #     RUSTFLAGS: --cfg getrandom_backend="wasm_js"
-      #   run: |
-      #     rustup target install ${{ matrix.target }}
-      #     cargo clippy --workspace --all-targets --target ${{ matrix.target }} -- -D warnings
+      - name: Run clippy
+        if: ${{ matrix.platform == 'wasm32-unknown' }}
+        env:
+          CARGO_TERM_COLOR: always
+          RUSTFLAGS: --cfg getrandom_backend="wasm_js"
+        run: |
+          rustup target install ${{ matrix.target }}
+          cargo clippy --workspace --target ${{ matrix.target }} -- -D warnings
 
       - name: Run clippy
-        if: ${{ matrix.platform != 'wasm32-unknown' && matrix.platform != 'wasm32-wasi' }}
+        if: ${{ matrix.platform != 'wasm32-unknown' }}
         env:
           CARGO_TERM_COLOR: always
         run: |
           rustup target install ${{ matrix.target }}
-          cargo clippy --workspace --all-targets --all-features --target ${{ matrix.target }} -- -D warnings
+          cargo clippy --workspace --target ${{ matrix.target }} -- -D warnings
 
       - name: Build
         if: ${{ matrix.platform == 'wasm32-unknown' }}

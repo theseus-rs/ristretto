@@ -209,14 +209,17 @@ mod platform {
 /// WASM-specific implementations (no filesystem access).
 #[cfg(target_family = "wasm")]
 mod platform {
+    #[expect(clippy::unused_async)]
     pub async fn chmod(_filename: &str, _permission: i32) -> i32 {
         -1
     }
 
+    #[expect(clippy::unused_async)]
     pub async fn lock_file(_filename: &str, _permission: i32, _shared: bool) -> [i32; 2] {
         [0, -1]
     }
 
+    #[expect(clippy::unused_async)]
     pub async fn unlock_file(_fd: i32) -> i32 {
         -1
     }

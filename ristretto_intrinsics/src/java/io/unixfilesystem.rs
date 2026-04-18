@@ -374,11 +374,13 @@ pub async fn get_last_modified_time_0<T: Thread + 'static>(
     {
         let path = PathBuf::from(&path);
         last_modified = match std::fs::metadata(&path) {
-            Ok(metadata) => metadata
-                .modified()?
-                .duration_since(std::time::UNIX_EPOCH)
-                .map_err(|error| RuntimeException(error.to_string()))?
-                .as_millis() as i64,
+            Ok(metadata) => i64::try_from(
+                metadata
+                    .modified()?
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_err(|error| RuntimeException(error.to_string()))?
+                    .as_millis(),
+            )?,
             Err(_) => 0,
         };
     }
@@ -439,7 +441,7 @@ pub async fn get_length_0<T: Thread + 'static>(
     {
         let path = PathBuf::from(&path);
         let metadata = std::fs::metadata(&path)?;
-        length = metadata.len() as i64;
+        length = i64::try_from(metadata.len())?;
     }
 
     #[cfg(not(target_family = "wasm"))]
@@ -578,17 +580,16 @@ pub async fn list_0<T: Thread + 'static>(
 
         #[cfg(target_os = "wasi")]
         {
-            let read_directory = match std::fs::read_dir(&path) {
-                Ok(directory) => directory,
-                Err(_) => return Ok(Some(Value::Object(None))),
+            let Ok(read_directory) = std::fs::read_dir(&path) else {
+                return Ok(Some(Value::Object(None)));
             };
 
             for entry in read_directory {
-                if let Ok(entry) = entry {
-                    if let Some(name) = entry.file_name().to_str() {
-                        let entry_name = name.to_string().to_object(&thread).await?;
-                        path_entries.push(entry_name);
-                    }
+                if let Ok(entry) = entry
+                    && let Some(name) = entry.file_name().to_str()
+                {
+                    let entry_name = name.to_string().to_object(&thread).await?;
+                    path_entries.push(entry_name);
                 }
             }
         }
