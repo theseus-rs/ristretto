@@ -164,6 +164,7 @@ impl Compiler {
     ///
     /// When batch compilation is enabled, methods are queued for background compilation and this
     /// function returns `None` immediately. Subsequent calls return the compiled function once ready.
+    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
     pub async fn compile(
         &self,
         class: &Arc<Class>,
@@ -193,7 +194,7 @@ impl Compiler {
         // Batch compilation is not supported on wasm
         #[cfg(target_family = "wasm")]
         {
-            return Ok(self.compile_method_sync(class, method, key));
+            Ok(self.compile_method_sync(class, method, key))
         }
 
         #[cfg(not(target_family = "wasm"))]

@@ -421,8 +421,9 @@ pub async fn set_scoped_value_cache<T: Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.sleep(J)V", LessThanOrEqual(JAVA_17))]
 #[async_method]
+#[cfg_attr(target_family = "wasm", expect(clippy::needless_pass_by_value))]
 pub async fn sleep<T: Thread + 'static>(
-    #[cfg_attr(target_family = "wasm", allow(unused_variables))] thread: Arc<T>,
+    #[cfg_attr(target_family = "wasm", expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let millis = parameters.pop_long()?;
@@ -462,8 +463,9 @@ pub async fn sleep_0<T: Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.sleepNanos0(J)V", GreaterThanOrEqual(JAVA_25))]
 #[async_method]
+#[cfg_attr(target_family = "wasm", expect(clippy::needless_pass_by_value))]
 pub async fn sleep_nanos_0<T: Thread + 'static>(
-    #[cfg_attr(target_family = "wasm", allow(unused_variables))] thread: Arc<T>,
+    #[cfg_attr(target_family = "wasm", expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let nanos = parameters.pop_long()?;
@@ -504,7 +506,7 @@ pub async fn start_0<T: Thread + 'static>(
     // First, get the VM to generate a unique internal thread ID
     let vm = thread.vm()?;
 
-    #[cfg_attr(target_family = "wasm", allow(unused_variables))]
+    #[cfg_attr(target_family = "wasm", expect(unused_variables))]
     let (thread_class, internal_thread_id, is_daemon) = {
         let mut thread_object = thread_object.as_object_mut()?;
         let thread_class = thread_object.class().clone();

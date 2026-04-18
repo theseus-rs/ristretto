@@ -36,6 +36,7 @@ impl Directory {
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
+    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
         let name = name.as_ref();
         let parts = name.split('.').collect::<Vec<_>>();
@@ -73,7 +74,7 @@ impl Directory {
     #[expect(clippy::unused_async)]
     pub async fn class_names(&self) -> Result<Vec<String>> {
         let path = self.path.clone();
-        #[cfg_attr(target_family = "wasm", allow(unused_mut))]
+        #[cfg_attr(target_family = "wasm", expect(unused_mut))]
         let mut classes = Vec::new();
         #[cfg(not(target_family = "wasm"))]
         for entry in WalkDir::new(path)

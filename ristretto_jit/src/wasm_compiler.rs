@@ -9,6 +9,11 @@ pub struct Compiler {}
 
 impl Compiler {
     /// Creates a new instance of the compiler for the host machine.
+    ///
+    /// # Errors
+    ///
+    /// This function currently never returns an error, but the signature is kept consistent
+    /// with the non-wasm compiler implementation.
     pub fn new() -> Result<Self> {
         Ok(Compiler {})
     }

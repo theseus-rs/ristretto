@@ -526,6 +526,7 @@ impl ModuleSystem {
 
     /// Creates a lightweight configuration by scanning jimage for package-to-module mapping
     /// only, without full module resolution. This is much faster than full resolution.
+    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
     async fn create_lightweight_configuration(
         configuration: &Configuration,
         jimage_path: &Path,
