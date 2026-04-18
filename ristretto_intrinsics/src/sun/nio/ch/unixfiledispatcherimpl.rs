@@ -1,4 +1,5 @@
 use crate::java::io::socketfiledescriptor::get_fd;
+use crate::java::nio::mapped_regions::{MapMode, MappedRegion, MappedRegions};
 use crate::sun::nio::fs::managed_files;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_21, JAVA_25};
@@ -147,7 +148,7 @@ pub async fn map_0<T: Thread + 'static>(
     let _is_sync = parameters.pop_int()? != 0;
     let length = parameters.pop_long()?;
     let position = parameters.pop_long()?;
-    let _prot = parameters.pop_int()?;
+    let prot = parameters.pop_int()?;
     let fd_value = parameters.pop()?;
     let fd = i64::from(get_fd(&fd_value)?);
     let vm = thread.vm()?;
@@ -167,8 +168,21 @@ pub async fn map_0<T: Thread + 'static>(
     let _ = managed_files::read(file_handles, fd, &mut buf)
         .await
         .map_err(|e| InternalError(format!("map0: {e}")))?;
-    let address = vm.native_memory().allocate(len);
-    vm.native_memory().write_bytes(address, &buf);
+    let address = vm.native_memory().allocate(len.max(1));
+    if len > 0 {
+        vm.native_memory().write_bytes(address, &buf);
+    }
+    let mode = MapMode::from_int(prot).unwrap_or(MapMode::ReadOnly);
+    let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
+    regions.insert(
+        address,
+        MappedRegion {
+            fd,
+            position,
+            length: len,
+            mode,
+        },
+    );
     Ok(Some(Value::Long(address)))
 }
 
@@ -457,6 +471,8 @@ pub async fn unmap_0<T: Thread + 'static>(
     let _size = parameters.pop_long()?;
     let address = parameters.pop_long()?;
     let vm = thread.vm()?;
+    let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
+    regions.remove(address);
     vm.native_memory().free(address);
     Ok(Some(Value::Int(0)))
 }
