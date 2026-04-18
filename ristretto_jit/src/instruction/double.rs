@@ -1,3 +1,4 @@
+use crate::instruction::ThrowContext;
 use crate::instruction::object::{array_load, array_store};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
@@ -203,8 +204,17 @@ pub(crate) fn daload(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     helpers: &RuntimeHelpers,
+    context_pointer: Value,
+    throw_context: &ThrowContext<'_>,
 ) -> Result<()> {
-    let value = array_load(function_builder, stack, helpers.daload)?;
+    let value = array_load(
+        function_builder,
+        stack,
+        helpers,
+        context_pointer,
+        throw_context,
+        helpers.daload,
+    )?;
     stack.push_double(function_builder, value)?;
     Ok(())
 }
@@ -216,9 +226,19 @@ pub(crate) fn dastore(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     helpers: &RuntimeHelpers,
+    context_pointer: Value,
+    throw_context: &ThrowContext<'_>,
 ) -> Result<()> {
     let value = stack.pop_double(function_builder)?;
-    array_store(function_builder, stack, helpers.dastore, value)
+    array_store(
+        function_builder,
+        stack,
+        helpers,
+        context_pointer,
+        throw_context,
+        helpers.dastore,
+        value,
+    )
 }
 
 /// # References

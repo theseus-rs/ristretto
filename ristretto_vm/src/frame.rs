@@ -186,6 +186,13 @@ impl Frame {
         self.program_counter.load(Ordering::Relaxed)
     }
 
+    /// Set the current program counter in this frame.
+    #[inline]
+    pub fn set_program_counter(&self, program_counter: usize) {
+        self.program_counter
+            .store(program_counter, Ordering::Relaxed);
+    }
+
     /// Execute the method in this frame
     ///
     /// # Overview

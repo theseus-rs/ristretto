@@ -302,10 +302,25 @@ impl VM {
 
     /// Creates the JIT compiler.
     fn create_compiler(configuration: &Configuration) -> Option<Compiler> {
-        Compiler::new(
+        let compiler = Compiler::new(
             configuration.batch_compilation(),
             configuration.interpreted(),
-        )
+        );
+        if compiler.is_some()
+            && let Ok(handle) = tokio::runtime::Handle::try_current()
+        {
+            // The JIT relies on `tokio::task::block_in_place` to bridge native helper
+            // callbacks back into async class loading; that requires a multi-thread runtime.
+            // See `ristretto_vm::jit_runtime_helpers::run_async`.
+            if !matches!(
+                handle.runtime_flavor(),
+                tokio::runtime::RuntimeFlavor::MultiThread
+            ) {
+                warn!("JIT requires a multi-thread tokio runtime; falling back to interpreter");
+                return None;
+            }
+        }
+        compiler
     }
 
     /// Create a new VM with the default configuration

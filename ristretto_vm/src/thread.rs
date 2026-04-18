@@ -834,6 +834,7 @@ impl Thread {
     /// # Errors
     ///
     /// if the method cannot be invoked.
+    #[expect(clippy::too_many_lines)]
     pub async fn execute(
         &self,
         class: &Arc<Class>,
@@ -887,8 +888,13 @@ impl Thread {
             let Some(thread) = self.thread.upgrade() else {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
-            let result = jit::execute(&jit_method, &parameters, gc, &vm, &thread);
-            (result, false)
+            let frame = Arc::new(Frame::new(&self.thread, class, method));
+            {
+                let mut frames = self.frames.write().await;
+                frames.push(frame.clone());
+            }
+            let result = jit::execute(&jit_method, &parameters, gc, &vm, &thread, class);
+            (result, true)
         } else if method.is_native() {
             // Release synchronized monitor before returning error
             if let Some(ref monitor) = sync_monitor {
