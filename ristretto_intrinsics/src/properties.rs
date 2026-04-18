@@ -58,12 +58,7 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     let major_java_version = class_file_version.java();
     let major_class_version = class_file_version.major();
     let minor_class_version = class_file_version.minor();
-    let locale = sys_locale::get_locale().unwrap_or_else(|| String::from("en-US"));
-    let locale_parts = locale.split('-').collect::<Vec<&str>>();
-    let language = locale_parts.first().copied().unwrap_or("en");
-    let country = locale_parts.get(1).copied().unwrap_or("");
-    let language_owned = language.to_string();
-    let country_owned = country.to_string();
+    let (language_owned, country_owned) = detect_default_locale();
 
     properties.insert("file.encoding", "UTF-8".into());
     properties.insert("file.separator", MAIN_SEPARATOR_STR.into());
@@ -290,5 +285,126 @@ fn code_page_to_charset(code_page: u32) -> Cow<'static, str> {
     match code_page {
         65001 => Cow::Borrowed("UTF-8"),
         _ => Cow::Owned(format!("Cp{code_page}")),
+    }
+}
+
+/// Detects the host default locale and returns it as a `(language, country)` pair, mirroring the
+/// behavior of `OpenJDK`'s `java_props_md.c`.
+///
+/// Lookup order is platform specific to match how `OpenJDK` reads the host locale:
+/// - **macOS**: prefer `sys_locale::get_locale()` (which queries Core Foundation's
+///   `CFLocaleCopyCurrent`, the same API `OpenJDK` uses on macOS), then fall back to env vars.
+/// - **Other Unix (Linux, BSD)**: prefer env vars (`LC_ALL` -> `LC_MESSAGES` -> `LANG`) which
+///   matches what `setlocale()` would return, then fall back to `sys_locale::get_locale()`.
+/// - **Windows / WASM**: use `sys_locale::get_locale()` (which uses platform-native APIs).
+///
+/// The raw locale string `language[_COUNTRY][.encoding][@variant]` is then parsed by stripping the
+/// encoding (`.UTF-8`) and variant (`@euro`) suffixes. The C/POSIX locale is mapped to language
+/// `"en"` with no country, matching `OpenJDK`'s `mapLookup(language_names, ...)` behavior on Linux.
+///
+/// The returned language is lowercased and the country is uppercased to match `java.util.Locale`
+/// conventions.
+pub(crate) fn detect_default_locale() -> (String, String) {
+    let env_locale = || {
+        env::var("LC_ALL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| env::var("LC_MESSAGES").ok().filter(|s| !s.is_empty()))
+            .or_else(|| env::var("LANG").ok().filter(|s| !s.is_empty()))
+    };
+
+    let raw = if cfg!(target_os = "macos") {
+        sys_locale::get_locale().or_else(env_locale)
+    } else {
+        env_locale().or_else(sys_locale::get_locale)
+    }
+    .unwrap_or_else(|| "en_US".to_string());
+
+    parse_posix_locale(&raw)
+}
+
+/// Parses a POSIX-style locale string of the form `language[_COUNTRY][.encoding][@variant]` (or
+/// the dash-separated BCP 47 form `language-COUNTRY` returned by `sys_locale` on some platforms)
+/// into a `(language, country)` pair, applying the same C/POSIX -> `en` mapping that `OpenJDK` uses.
+fn parse_posix_locale(raw: &str) -> (String, String) {
+    // Strip "@variant" and ".encoding" suffixes.
+    let without_variant = raw.split('@').next().unwrap_or("");
+    let without_encoding = without_variant.split('.').next().unwrap_or("");
+
+    // sys_locale returns BCP 47 form ("en-US"); environment variables use POSIX form ("en_US").
+    // Normalize to '_' so a single split handles both.
+    let normalized = without_encoding.replace('-', "_");
+    let mut parts = normalized.splitn(2, '_');
+    let language = parts.next().unwrap_or("");
+    let country = parts.next().unwrap_or("");
+
+    // OpenJDK maps the POSIX "C" / "POSIX" locale (and an empty/missing locale) to "en".
+    if language.is_empty()
+        || language.eq_ignore_ascii_case("C")
+        || language.eq_ignore_ascii_case("POSIX")
+    {
+        return ("en".to_string(), String::new());
+    }
+
+    (language.to_lowercase(), country.to_uppercase())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_posix_locale;
+
+    #[test]
+    fn parses_full_posix_locale() {
+        assert_eq!(
+            parse_posix_locale("en_US.UTF-8"),
+            ("en".to_string(), "US".to_string())
+        );
+    }
+
+    #[test]
+    fn parses_bcp47_locale() {
+        assert_eq!(
+            parse_posix_locale("en-US"),
+            ("en".to_string(), "US".to_string())
+        );
+    }
+
+    #[test]
+    fn strips_modifier_and_encoding() {
+        assert_eq!(
+            parse_posix_locale("de_DE.UTF-8@euro"),
+            ("de".to_string(), "DE".to_string())
+        );
+    }
+
+    #[test]
+    fn maps_c_locale_to_en() {
+        assert_eq!(parse_posix_locale("C"), ("en".to_string(), String::new()));
+        assert_eq!(
+            parse_posix_locale("C.UTF-8"),
+            ("en".to_string(), String::new())
+        );
+        assert_eq!(
+            parse_posix_locale("POSIX"),
+            ("en".to_string(), String::new())
+        );
+    }
+
+    #[test]
+    fn maps_empty_locale_to_en() {
+        assert_eq!(parse_posix_locale(""), ("en".to_string(), String::new()));
+    }
+
+    #[test]
+    fn lowercases_language_and_uppercases_country() {
+        assert_eq!(
+            parse_posix_locale("FR_fr"),
+            ("fr".to_string(), "FR".to_string())
+        );
+    }
+
+    #[test]
+    fn handles_language_without_country() {
+        assert_eq!(parse_posix_locale("ja"), ("ja".to_string(), String::new()));
     }
 }

@@ -44,8 +44,7 @@ pub async fn canonicalize_with_prefix_0<T: Thread + 'static>(
     #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
     {
         let path = std::path::Path::new(&prefix).join(&path);
-        let canonicalized_path = path.canonicalize()?;
-        canonical_path = canonicalized_path.to_string_lossy().to_string();
+        canonical_path = unixfilesystem::canonicalize_best_effort(&path);
     }
 
     let canonical = canonical_path.to_object(&thread).await?;

@@ -65,6 +65,23 @@ jobs:
           targets: ${{ matrix.target }}
           toolchain: stable
 
+      # - name: Run clippy
+      #   if: ${{ matrix.platform == 'wasm32-unknown' }}
+      #   env:
+      #     CARGO_TERM_COLOR: always
+      #     RUSTFLAGS: --cfg getrandom_backend="wasm_js"
+      #   run: |
+      #     rustup target install ${{ matrix.target }}
+      #     cargo clippy --workspace --all-targets --target ${{ matrix.target }} -- -D warnings
+
+      - name: Run clippy
+        if: ${{ matrix.platform != 'wasm32-unknown' && matrix.platform != 'wasm32-wasi' }}
+        env:
+          CARGO_TERM_COLOR: always
+        run: |
+          rustup target install ${{ matrix.target }}
+          cargo clippy --workspace --all-targets --all-features --target ${{ matrix.target }} -- -D warnings
+
       - name: Build
         if: ${{ matrix.platform == 'wasm32-unknown' }}
         env:
@@ -78,7 +95,7 @@ jobs:
           cargo build --workspace --target ${{ matrix.target }}
 
       - name: Build
-        if: ${{ matrix.platform != 'macos-arm' && matrix.platform != 'wasm32-unknown' }}
+        if: ${{ matrix.platform == 'macos-x64' || matrix.platform != 'wasm32-wasi' }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -89,7 +106,7 @@ jobs:
           cargo build --workspace --target ${{ matrix.target }}
 
       - name: Tests
-        if: ${{ matrix.platform == '<disabled>' }}
+        if: ${{ startsWith(matrix.platform, 'linux') }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

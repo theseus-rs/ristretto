@@ -108,10 +108,13 @@ pub async fn get_default_locale<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    println!("DEBUG: get_default_locale called");
     let _cat = parameters.pop_int()?;
-    let locale = sys_locale::get_locale().unwrap_or_else(|| String::from("en-US"));
-    let locale = locale.replace('-', "_");
+    let (language, country) = crate::properties::detect_default_locale();
+    let locale = if country.is_empty() {
+        language
+    } else {
+        format!("{language}_{country}")
+    };
     Ok(Some(locale.to_object(&thread).await?))
 }
 

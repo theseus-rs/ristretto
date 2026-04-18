@@ -63,12 +63,50 @@ pub async fn canonicalize_0<T: Thread + 'static>(
     #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
     {
         let path = PathBuf::from(&path);
-        let canonicalized_path = path.canonicalize()?;
-        canonical_path = canonicalized_path.to_string_lossy().to_string();
+        canonical_path = canonicalize_best_effort(&path);
     }
 
     let canonical = canonical_path.to_object(&thread).await?;
     Ok(Some(canonical))
+}
+
+/// Canonicalize a path, even when it (or some of its ancestors) do not exist.
+///
+/// This mirrors the behavior of `java.io.File#getCanonicalPath()`, which resolves symlinks for
+/// the longest existing prefix and then normalizes the remaining components without requiring
+/// them to exist on disk.
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+pub(crate) fn canonicalize_best_effort(path: &Path) -> String {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir().map_or_else(|_| path.to_path_buf(), |cwd| cwd.join(path))
+    };
+
+    let mut existing = absolute.clone();
+    let mut trailing: Vec<std::ffi::OsString> = Vec::new();
+    while !existing.as_os_str().is_empty() && !existing.exists() {
+        let file_name = match existing.file_name() {
+            Some(name) => name.to_os_string(),
+            None => break,
+        };
+        trailing.push(file_name);
+        if !existing.pop() {
+            break;
+        }
+    }
+
+    let base = existing.canonicalize().unwrap_or_else(|_| existing.clone());
+    let mut result = base;
+    for component in trailing.into_iter().rev() {
+        if component == std::ffi::OsStr::new("..") {
+            result.pop();
+        } else if component != std::ffi::OsStr::new(".") {
+            result.push(component);
+        }
+    }
+
+    result.to_string_lossy().to_string()
 }
 
 #[intrinsic_method(

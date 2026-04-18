@@ -267,6 +267,11 @@ impl GarbageCollector {
     }
 
     /// Stops the background collector thread (no-op on wasm).
+    ///
+    /// # Errors
+    ///
+    /// This implementation never returns an error; the result type matches the
+    /// non-wasm signature for API consistency.
     #[cfg(target_family = "wasm")]
     pub fn stop(&self) -> Result<()> {
         self.cleanup_remaining_objects();
