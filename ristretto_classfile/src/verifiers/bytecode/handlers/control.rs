@@ -737,7 +737,7 @@ mod tests {
             offsets: vec![10, 20, 30],
         };
         let handled = dispatch_control(
-            &Instruction::Tableswitch(tableswitch),
+            &Instruction::Tableswitch(Box::new(tableswitch)),
             &mut frame,
             None,
             52,
@@ -758,7 +758,7 @@ mod tests {
             pairs: IndexMap::from([(0, 10)]),
         };
         let handled = dispatch_control(
-            &Instruction::Lookupswitch(lookupswitch),
+            &Instruction::Lookupswitch(Box::new(lookupswitch)),
             &mut frame,
             None,
             52,

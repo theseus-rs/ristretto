@@ -600,17 +600,19 @@ impl Frame {
             Instruction::Goto(address) => goto(*address).map(InstructionResult::Sync),
             Instruction::Jsr(address) => jsr(stack, *address).map(InstructionResult::Sync),
             Instruction::Ret(index) => ret(locals, *index).map(InstructionResult::Sync),
-            Instruction::Tableswitch(TableSwitch {
-                default,
-                low,
-                high,
-                offsets,
-            }) => {
+            Instruction::Tableswitch(table_switch) => {
+                let TableSwitch {
+                    default,
+                    low,
+                    high,
+                    offsets,
+                } = table_switch.as_ref();
                 let program_counter = self.program_counter.load(Ordering::Relaxed);
                 tableswitch(stack, program_counter, *default, *low, *high, offsets)
                     .map(InstructionResult::Sync)
             }
-            Instruction::Lookupswitch(LookupSwitch { default, pairs }) => {
+            Instruction::Lookupswitch(lookup_switch) => {
+                let LookupSwitch { default, pairs } = lookup_switch.as_ref();
                 let program_counter = self.program_counter.load(Ordering::Relaxed);
                 lookupswitch(stack, program_counter, *default, pairs).map(InstructionResult::Sync)
             }
