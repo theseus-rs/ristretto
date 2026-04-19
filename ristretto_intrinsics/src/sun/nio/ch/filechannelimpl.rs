@@ -84,7 +84,7 @@ pub async fn map_0_0<T: Thread + 'static>(
     let position = parameters.pop_long()?;
     let prot = parameters.pop_int()?;
     // The instance method receives `this` (the FileChannelImpl) which holds the FileDescriptor;
-    // OpenJDK's native takes (prot, position, length) — `this` is passed as JNIEnv self. In our
+    // OpenJDK's native takes (prot, position, length);`this` is passed as JNIEnv self. In our
     // intrinsic ABI the receiver is on the stack; the caller however passes the FileDescriptor
     // explicitly via reflection elsewhere. To stay compatible with the OpenJDK signature, the
     // surrounding Java glue calls these natives with `this` already discarded; the

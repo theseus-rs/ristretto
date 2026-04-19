@@ -1,3 +1,4 @@
+use crate::instruction::ThrowContext;
 use crate::instruction::object::{array_load, array_store};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
@@ -215,8 +216,17 @@ pub(crate) fn faload(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     helpers: &RuntimeHelpers,
+    context_pointer: Value,
+    throw_context: &ThrowContext<'_>,
 ) -> Result<()> {
-    let value = array_load(function_builder, stack, helpers.faload)?;
+    let value = array_load(
+        function_builder,
+        stack,
+        helpers,
+        context_pointer,
+        throw_context,
+        helpers.faload,
+    )?;
     stack.push_float(function_builder, value)?;
     Ok(())
 }
@@ -228,9 +238,19 @@ pub(crate) fn fastore(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     helpers: &RuntimeHelpers,
+    context_pointer: Value,
+    throw_context: &ThrowContext<'_>,
 ) -> Result<()> {
     let value = stack.pop_float(function_builder)?;
-    array_store(function_builder, stack, helpers.fastore, value)
+    array_store(
+        function_builder,
+        stack,
+        helpers,
+        context_pointer,
+        throw_context,
+        helpers.fastore,
+        value,
+    )
 }
 
 /// # References

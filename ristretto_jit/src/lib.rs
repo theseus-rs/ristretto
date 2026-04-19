@@ -23,10 +23,8 @@
 //!
 //! Current limitations include:
 //!
-//! - Only static methods and constructors (`<init>`) are supported
-//! - Limited object-oriented features (no instance method compilation yet)
-//! - No garbage collection integration
-//! - Exception handling is not fully implemented
+//! - Method invocation instructions (`invokestatic`, `invokevirtual`, `invokespecial`,
+//!   `invokeinterface`, `invokedynamic`) are not yet supported
 
 #![allow(unsafe_code)]
 #[cfg(not(target_family = "wasm"))]

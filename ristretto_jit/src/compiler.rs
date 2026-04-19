@@ -4,26 +4,28 @@ use crate::Error::{
 };
 use crate::control_flow_graph::InstructionControlFlow;
 use crate::function::Function;
+use crate::instruction::ThrowContext;
 use crate::instruction::{
     aaload, aastore, aconst_null, aload_ref, aload_ref_0, aload_ref_1, aload_ref_2, aload_ref_3,
-    aload_ref_w, areturn, arraylength, astore_ref, astore_ref_0, astore_ref_1, astore_ref_2,
-    astore_ref_3, astore_ref_w, baload, bastore, bipush, breakpoint, caload, castore, d2f, d2i,
-    d2l, dadd, daload, dastore, dcmpg, dcmpl, dconst_0, dconst_1, ddiv, dload, dload_0, dload_1,
-    dload_2, dload_3, dload_w, dmul, dneg, drem, dreturn, dstore, dstore_0, dstore_1, dstore_2,
-    dstore_3, dstore_w, dsub, dup, dup_x1, dup_x2, dup2, dup2_x1, dup2_x2, f2d, f2i, f2l, fadd,
-    faload, fastore, fcmpg, fcmpl, fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1,
-    fload_2, fload_3, fload_w, fmul, fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2,
-    fstore_3, fstore_w, fsub, goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iaload, iand,
-    iastore, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv,
-    if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple, if_icmplt, if_icmpne, ifeq,
-    ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, iinc, iinc_w, iload, iload_0, iload_1,
-    iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, ior, irem, ireturn, ishl, ishr,
-    istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr, ixor, jsr, jsr_w, l2d,
-    l2f, l2i, ladd, laload, land, lastore, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w, ldiv,
-    lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lookupswitch, lor, lrem,
-    lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr,
-    lxor, monitorenter, monitorexit, newarray, nop, pop, pop2, ret, ret_w, r#return, saload,
-    sastore, sipush, swap, tableswitch, wide,
+    aload_ref_w, anewarray, areturn, arraylength, astore_ref, astore_ref_0, astore_ref_1,
+    astore_ref_2, astore_ref_3, astore_ref_w, athrow, baload, bastore, bipush, breakpoint, caload,
+    castore, checkcast, d2f, d2i, d2l, dadd, daload, dastore, dcmpg, dcmpl, dconst_0, dconst_1,
+    ddiv, dload, dload_0, dload_1, dload_2, dload_3, dload_w, dmul, dneg, drem, dreturn, dstore,
+    dstore_0, dstore_1, dstore_2, dstore_3, dstore_w, dsub, dup, dup_x1, dup_x2, dup2, dup2_x1,
+    dup2_x2, emit_exception_return, f2d, f2i, f2l, fadd, faload, fastore, fcmpg, fcmpl, fconst_0,
+    fconst_1, fconst_2, fdiv, fload, fload_0, fload_1, fload_2, fload_3, fload_w, fmul, fneg, frem,
+    freturn, fstore, fstore_0, fstore_1, fstore_2, fstore_3, fstore_w, fsub, getfield, getstatic,
+    goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iaload, iand, iastore, iconst_0, iconst_1,
+    iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv, if_acmpeq, if_acmpne, if_icmpeq,
+    if_icmpge, if_icmpgt, if_icmple, if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne,
+    ifnonnull, ifnull, iinc, iinc_w, iload, iload_0, iload_1, iload_2, iload_3, iload_w, impdep1,
+    impdep2, imul, ineg, instanceof, ior, irem, ireturn, ishl, ishr, istore, istore_0, istore_1,
+    istore_2, istore_3, istore_w, isub, iushr, ixor, jsr, jsr_w, l2d, l2f, l2i, ladd, laload, land,
+    lastore, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w, ldiv, lload, lload_0, lload_1, lload_2,
+    lload_3, lload_w, lmul, lneg, lookupswitch, lor, lrem, lreturn, lshl, lshr, lstore, lstore_0,
+    lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr, lxor, monitorenter, monitorexit,
+    multianewarray, new_object, newarray, nop, pop, pop2, putfield, putstatic, ret, ret_w,
+    r#return, saload, sastore, sipush, swap, tableswitch, wide,
 };
 use crate::local_type::LocalType;
 use crate::local_variables::LocalVariables;
@@ -37,7 +39,7 @@ use cranelift::codegen::settings::Flags;
 use cranelift::jit::{JITBuilder, JITModule};
 use cranelift::module::{Linkage, Module, default_libcall_names};
 use cranelift::prelude::*;
-use ristretto_classfile::attributes::{Attribute, Instruction};
+use ristretto_classfile::attributes::{Attribute, ExceptionTableEntry, Instruction};
 use ristretto_classfile::{
     BaseType, ClassFile, ConstantPool, FieldType, JavaStr, Method, MethodAccessFlags,
 };
@@ -100,17 +102,43 @@ impl Compiler {
     /// Returns true if the method can potentially be JIT compiled.
     /// This performs a fast scan of the method's bytecode instructions to check
     /// for unsupported opcodes without doing any expensive compilation work.
+    ///
+    /// Methods with non-empty exception tables are currently rejected. The
+    /// exception-handler dispatch codegen (in `instruction::exception` and
+    /// `populate_dispatch_block`) is implemented and unit-tested via the synthetic
+    /// `athrow_caught_by_catch_all_handler` test, but enabling it for production
+    /// methods exposes unrelated JIT gaps:
+    ///
+    /// - `monitorenter`/`monitorexit` are no-ops in the JIT (see
+    ///   `instruction/monitor.rs`); compiler-generated try/finally blocks for
+    ///   `synchronized` methods would silently lose synchronization semantics.
+    /// - Array `iaload`/`aaload`/`arraylength` NPEs from JIT-compiled methods
+    ///   currently report the wrong extended message (the receiver name is
+    ///   substituted instead of the array name).
+    ///
+    /// Once those gaps are closed, this guard can be removed in favor of the
+    /// dispatch path being exercised by integration tests.
     #[must_use]
     pub fn can_compile(method: &Method) -> bool {
-        let Some(instructions) = method.attributes.iter().find_map(|attribute| {
-            if let Attribute::Code { code, .. } = attribute {
-                Some(code)
-            } else {
-                None
-            }
-        }) else {
+        let Some((instructions, exception_table)) =
+            method.attributes.iter().find_map(|attribute| {
+                if let Attribute::Code {
+                    code,
+                    exception_table,
+                    ..
+                } = attribute
+                {
+                    Some((code, exception_table))
+                } else {
+                    None
+                }
+            })
+        else {
             return false;
         };
+        if !exception_table.is_empty() {
+            return false;
+        }
         Self::first_unsupported_instruction(instructions).is_none()
     }
 
@@ -194,6 +222,11 @@ impl Compiler {
         // Get the block for address 0 (may be entry_block or a separate loop body block)
         let block_zero = *blocks.get(&0).ok_or_else(|| InvalidBlockAddress(0))?;
 
+        // Shared exception return block. All instructions that can throw branch here on a
+        // pending exception. The block body writes a NONE discriminant to the return pointer
+        // and returns.
+        let exception_block = function_builder.create_block();
+
         // If entry_block and block_zero are different, we need to jump from entry to block_zero
         // This happens when there are backward jumps to address 0
         if entry_block != block_zero {
@@ -234,6 +267,8 @@ impl Compiler {
                 return_pointer,
                 context_pointer,
                 &helpers,
+                exception_block,
+                exception_table,
                 instruction,
             )?;
 
@@ -242,6 +277,11 @@ impl Compiler {
                 block_is_terminated = true;
             }
         }
+
+        // Emit the shared exception return block body: write NONE to the return pointer
+        // and return from the function. This block has no parameters.
+        function_builder.switch_to_block(exception_block);
+        emit_exception_return(&mut function_builder, return_pointer);
 
         function_builder.seal_all_blocks();
         function_builder.finalize();
@@ -467,213 +507,29 @@ impl Compiler {
 
     /// Returns the first unsupported instruction in the list, or `None` if all are supported.
     /// This is used for fast-fail before creating the expensive JIT module.
-    #[expect(clippy::too_many_lines)]
+    ///
+    /// # Scope of the JIT today
+    ///
+    /// All `Invoke*` opcodes are rejected here. Combined with the `exception_table.is_empty()`
+    /// guard in [`Self::can_compile`], this means production JIT-eligible methods are limited
+    /// to leaf, exception-table-free arithmetic / control-flow / array / field-access code.
+    ///
+    /// A consequence is that the exception-handler dispatch infrastructure built on top of
+    /// `pending_exception` (in `instruction::exception` and `populate_dispatch_block`) is
+    /// reachable from production methods only through `athrow`, NPE, `ArrayStoreException`,
+    /// and `<clinit>` failures from field/array helpers;never through propagation across a
+    /// JIT call site or into a JIT catch handler. The dispatch logic is therefore exercised
+    /// primarily by the synthetic `athrow_caught_by_catch_all_handler` codegen test until
+    /// `Invoke*` lowering and the gating items listed in [`Self::can_compile`] land.
     fn first_unsupported_instruction(instructions: &[Instruction]) -> Option<&Instruction> {
         instructions.iter().find(|instruction| {
-            !matches!(
+            matches!(
                 instruction,
-                Instruction::Nop
-                    | Instruction::Aconst_null
-                    | Instruction::Iconst_m1
-                    | Instruction::Iconst_0
-                    | Instruction::Iconst_1
-                    | Instruction::Iconst_2
-                    | Instruction::Iconst_3
-                    | Instruction::Iconst_4
-                    | Instruction::Iconst_5
-                    | Instruction::Lconst_0
-                    | Instruction::Lconst_1
-                    | Instruction::Fconst_0
-                    | Instruction::Fconst_1
-                    | Instruction::Fconst_2
-                    | Instruction::Dconst_0
-                    | Instruction::Dconst_1
-                    | Instruction::Bipush(..)
-                    | Instruction::Sipush(..)
-                    | Instruction::Ldc(..)
-                    | Instruction::Ldc_w(..)
-                    | Instruction::Ldc2_w(..)
-                    | Instruction::Iload(..)
-                    | Instruction::Lload(..)
-                    | Instruction::Fload(..)
-                    | Instruction::Dload(..)
-                    | Instruction::Aload(..)
-                    | Instruction::Iload_0
-                    | Instruction::Iload_1
-                    | Instruction::Iload_2
-                    | Instruction::Iload_3
-                    | Instruction::Lload_0
-                    | Instruction::Lload_1
-                    | Instruction::Lload_2
-                    | Instruction::Lload_3
-                    | Instruction::Fload_0
-                    | Instruction::Fload_1
-                    | Instruction::Fload_2
-                    | Instruction::Fload_3
-                    | Instruction::Dload_0
-                    | Instruction::Dload_1
-                    | Instruction::Dload_2
-                    | Instruction::Dload_3
-                    | Instruction::Aload_0
-                    | Instruction::Aload_1
-                    | Instruction::Aload_2
-                    | Instruction::Aload_3
-                    | Instruction::Iaload
-                    | Instruction::Laload
-                    | Instruction::Faload
-                    | Instruction::Daload
-                    | Instruction::Aaload
-                    | Instruction::Baload
-                    | Instruction::Caload
-                    | Instruction::Saload
-                    | Instruction::Istore(..)
-                    | Instruction::Lstore(..)
-                    | Instruction::Fstore(..)
-                    | Instruction::Dstore(..)
-                    | Instruction::Astore(..)
-                    | Instruction::Istore_0
-                    | Instruction::Istore_1
-                    | Instruction::Istore_2
-                    | Instruction::Istore_3
-                    | Instruction::Lstore_0
-                    | Instruction::Lstore_1
-                    | Instruction::Lstore_2
-                    | Instruction::Lstore_3
-                    | Instruction::Fstore_0
-                    | Instruction::Fstore_1
-                    | Instruction::Fstore_2
-                    | Instruction::Fstore_3
-                    | Instruction::Dstore_0
-                    | Instruction::Dstore_1
-                    | Instruction::Dstore_2
-                    | Instruction::Dstore_3
-                    | Instruction::Astore_0
-                    | Instruction::Astore_1
-                    | Instruction::Astore_2
-                    | Instruction::Astore_3
-                    | Instruction::Iastore
-                    | Instruction::Lastore
-                    | Instruction::Fastore
-                    | Instruction::Dastore
-                    | Instruction::Aastore
-                    | Instruction::Bastore
-                    | Instruction::Castore
-                    | Instruction::Sastore
-                    | Instruction::Pop
-                    | Instruction::Pop2
-                    | Instruction::Dup
-                    | Instruction::Dup_x1
-                    | Instruction::Dup_x2
-                    | Instruction::Dup2
-                    | Instruction::Dup2_x1
-                    | Instruction::Dup2_x2
-                    | Instruction::Swap
-                    | Instruction::Iadd
-                    | Instruction::Ladd
-                    | Instruction::Fadd
-                    | Instruction::Dadd
-                    | Instruction::Isub
-                    | Instruction::Lsub
-                    | Instruction::Fsub
-                    | Instruction::Dsub
-                    | Instruction::Imul
-                    | Instruction::Lmul
-                    | Instruction::Fmul
-                    | Instruction::Dmul
-                    | Instruction::Idiv
-                    | Instruction::Ldiv
-                    | Instruction::Fdiv
-                    | Instruction::Ddiv
-                    | Instruction::Irem
-                    | Instruction::Lrem
-                    | Instruction::Frem
-                    | Instruction::Drem
-                    | Instruction::Ineg
-                    | Instruction::Lneg
-                    | Instruction::Fneg
-                    | Instruction::Dneg
-                    | Instruction::Ishl
-                    | Instruction::Lshl
-                    | Instruction::Ishr
-                    | Instruction::Lshr
-                    | Instruction::Iushr
-                    | Instruction::Lushr
-                    | Instruction::Iand
-                    | Instruction::Land
-                    | Instruction::Ior
-                    | Instruction::Lor
-                    | Instruction::Ixor
-                    | Instruction::Lxor
-                    | Instruction::Iinc(..)
-                    | Instruction::I2l
-                    | Instruction::I2f
-                    | Instruction::I2d
-                    | Instruction::L2i
-                    | Instruction::L2f
-                    | Instruction::L2d
-                    | Instruction::F2i
-                    | Instruction::F2l
-                    | Instruction::F2d
-                    | Instruction::D2i
-                    | Instruction::D2l
-                    | Instruction::D2f
-                    | Instruction::I2b
-                    | Instruction::I2c
-                    | Instruction::I2s
-                    | Instruction::Lcmp
-                    | Instruction::Fcmpl
-                    | Instruction::Fcmpg
-                    | Instruction::Dcmpl
-                    | Instruction::Dcmpg
-                    | Instruction::Ifeq(..)
-                    | Instruction::Ifne(..)
-                    | Instruction::Iflt(..)
-                    | Instruction::Ifge(..)
-                    | Instruction::Ifgt(..)
-                    | Instruction::Ifle(..)
-                    | Instruction::If_icmpeq(..)
-                    | Instruction::If_icmpne(..)
-                    | Instruction::If_icmplt(..)
-                    | Instruction::If_icmpge(..)
-                    | Instruction::If_icmpgt(..)
-                    | Instruction::If_icmple(..)
-                    | Instruction::If_acmpeq(..)
-                    | Instruction::If_acmpne(..)
-                    | Instruction::Goto(..)
-                    | Instruction::Jsr(..)
-                    | Instruction::Ret(..)
-                    | Instruction::Tableswitch(..)
-                    | Instruction::Lookupswitch(..)
-                    | Instruction::Ireturn
-                    | Instruction::Lreturn
-                    | Instruction::Freturn
-                    | Instruction::Dreturn
-                    | Instruction::Areturn
-                    | Instruction::Return
-                    | Instruction::Newarray(..)
-                    | Instruction::Arraylength
-                    | Instruction::Monitorenter
-                    | Instruction::Monitorexit
-                    | Instruction::Wide
-                    | Instruction::Ifnull(..)
-                    | Instruction::Ifnonnull(..)
-                    | Instruction::Goto_w(..)
-                    | Instruction::Jsr_w(..)
-                    | Instruction::Breakpoint
-                    | Instruction::Impdep1
-                    | Instruction::Impdep2
-                    | Instruction::Iload_w(..)
-                    | Instruction::Lload_w(..)
-                    | Instruction::Fload_w(..)
-                    | Instruction::Dload_w(..)
-                    | Instruction::Aload_w(..)
-                    | Instruction::Istore_w(..)
-                    | Instruction::Lstore_w(..)
-                    | Instruction::Fstore_w(..)
-                    | Instruction::Dstore_w(..)
-                    | Instruction::Astore_w(..)
-                    | Instruction::Iinc_w(..)
-                    | Instruction::Ret_w(..)
+                Instruction::Invokevirtual(..)
+                    | Instruction::Invokespecial(..)
+                    | Instruction::Invokestatic(..)
+                    | Instruction::Invokeinterface(..)
+                    | Instruction::Invokedynamic(..)
             )
         })
     }
@@ -690,8 +546,17 @@ impl Compiler {
         return_pointer: Value,
         context_pointer: Value,
         helpers: &RuntimeHelpers,
+        exception_block: Block,
+        exception_table: &[ExceptionTableEntry],
         instruction: &Instruction,
     ) -> Result<()> {
+        let throw_context = ThrowContext {
+            exception_block,
+            blocks,
+            exception_table,
+            program_counter,
+        };
+        let throw_context = &throw_context;
         match instruction {
             Instruction::Nop => nop(),
             Instruction::Aconst_null => aconst_null(function_builder, stack)?,
@@ -743,14 +608,62 @@ impl Compiler {
             Instruction::Aload_1 => aload_ref_1(function_builder, locals, stack)?,
             Instruction::Aload_2 => aload_ref_2(function_builder, locals, stack)?,
             Instruction::Aload_3 => aload_ref_3(function_builder, locals, stack)?,
-            Instruction::Iaload => iaload(function_builder, stack, helpers)?,
-            Instruction::Laload => laload(function_builder, stack, helpers)?,
-            Instruction::Faload => faload(function_builder, stack, helpers)?,
-            Instruction::Daload => daload(function_builder, stack, helpers)?,
-            Instruction::Aaload => aaload(function_builder, stack, helpers)?,
-            Instruction::Baload => baload(function_builder, stack, helpers)?,
-            Instruction::Caload => caload(function_builder, stack, helpers)?,
-            Instruction::Saload => saload(function_builder, stack, helpers)?,
+            Instruction::Iaload => iaload(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Laload => laload(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Faload => faload(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Daload => daload(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Aaload => aaload(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Baload => baload(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Caload => caload(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Saload => saload(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
             Instruction::Istore(index) => istore(function_builder, locals, stack, *index)?,
             Instruction::Lstore(index) => lstore(function_builder, locals, stack, *index)?,
             Instruction::Fstore(index) => fstore(function_builder, locals, stack, *index)?,
@@ -776,14 +689,62 @@ impl Compiler {
             Instruction::Astore_1 => astore_ref_1(function_builder, locals, stack)?,
             Instruction::Astore_2 => astore_ref_2(function_builder, locals, stack)?,
             Instruction::Astore_3 => astore_ref_3(function_builder, locals, stack)?,
-            Instruction::Iastore => iastore(function_builder, stack, helpers)?,
-            Instruction::Lastore => lastore(function_builder, stack, helpers)?,
-            Instruction::Fastore => fastore(function_builder, stack, helpers)?,
-            Instruction::Dastore => dastore(function_builder, stack, helpers)?,
-            Instruction::Aastore => aastore(function_builder, stack, helpers)?,
-            Instruction::Bastore => bastore(function_builder, stack, helpers)?,
-            Instruction::Castore => castore(function_builder, stack, helpers)?,
-            Instruction::Sastore => sastore(function_builder, stack, helpers)?,
+            Instruction::Iastore => iastore(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Lastore => lastore(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Fastore => fastore(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Dastore => dastore(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Aastore => aastore(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Bastore => bastore(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Castore => castore(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Sastore => sastore(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
             Instruction::Pop => pop(stack)?,
             Instruction::Pop2 => pop2(function_builder, stack)?,
             Instruction::Dup => dup(stack)?,
@@ -919,18 +880,50 @@ impl Compiler {
             Instruction::Dreturn => dreturn(function_builder, stack, return_pointer)?,
             Instruction::Areturn => areturn(function_builder, stack, return_pointer)?,
             Instruction::Return => r#return(function_builder, stack, return_pointer),
-            // Instruction::Getstatic(index) => getstatic(self, stack, *index).await,
-            // Instruction::Putstatic(index) => putstatic(self, stack, *index).await,
-            // Instruction::Getfield(index) => getfield(stack, &self.class, *index),
-            // Instruction::Putfield(index) => putfield(stack, &self.class, *index),
-            // Instruction::Invokevirtual(index) => invokevirtual(self, stack, *index).await,
-            // Instruction::Invokespecial(index) => invokespecial(self, stack, *index).await,
-            // Instruction::Invokestatic(index) => invokestatic(self, stack, *index).await,
-            // Instruction::Invokeinterface(index, count) => {
-            //     invokeinterface(self, stack, *index, *count).await
-            // }
-            // Instruction::Invokedynamic(index) => invokedynamic(self, stack, *index).await,
-            // Instruction::New(index) => new(self, stack, *index).await,
+            Instruction::Getstatic(index) => getstatic(
+                constant_pool,
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+                *index,
+            )?,
+            Instruction::Putstatic(index) => putstatic(
+                constant_pool,
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+                *index,
+            )?,
+            Instruction::Getfield(index) => getfield(
+                constant_pool,
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+                *index,
+            )?,
+            Instruction::Putfield(index) => putfield(
+                constant_pool,
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+                *index,
+            )?,
+            Instruction::New(index) => new_object(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+                *index,
+            )?,
             Instruction::Newarray(array_type) => {
                 newarray(
                     function_builder,
@@ -940,17 +933,56 @@ impl Compiler {
                     helpers,
                 )?;
             }
-            // Instruction::Anewarray(index) => anewarray(self, stack, *index).await,
-            Instruction::Arraylength => arraylength(function_builder, stack, helpers)?,
-            // Instruction::Athrow => athrow(stack).await,
-            // Instruction::Checkcast(class_index) => checkcast(self, stack, *class_index).await,
-            // Instruction::Instanceof(class_index) => instanceof(self, stack, *class_index).await,
+            Instruction::Anewarray(index) => anewarray(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+                *index,
+            )?,
+            Instruction::Arraylength => arraylength(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Athrow => athrow(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+            )?,
+            Instruction::Checkcast(class_index) => checkcast(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+                *class_index,
+            )?,
+            Instruction::Instanceof(class_index) => instanceof(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+                *class_index,
+            )?,
             Instruction::Monitorenter => monitorenter(stack)?,
             Instruction::Monitorexit => monitorexit(stack)?,
             Instruction::Wide => wide()?,
-            // Instruction::Multianewarray(index, dimensions) => {
-            //     multianewarray(self, stack, *index, *dimensions).await
-            // }
+            Instruction::Multianewarray(index, dimensions) => multianewarray(
+                function_builder,
+                stack,
+                helpers,
+                context_pointer,
+                throw_context,
+                *index,
+                *dimensions,
+            )?,
             Instruction::Ifnull(address) => {
                 ifnull(function_builder, blocks, stack, program_counter, *address)?;
             }

@@ -163,10 +163,10 @@ fn test_unreachable_objects_freed_at_shutdown() {
         "mark cycle must complete"
     );
 
-    // Drop root — object becomes unreachable
+    // Drop root;object becomes unreachable
     drop(gc_obj);
 
-    // Second collection — sweep frees the now-unreachable object
+    // Second collection;sweep frees the now-unreachable object
     collector.collect();
 
     assert!(
@@ -263,7 +263,7 @@ fn test_finalizer_called_on_correct_type() {
         "mark cycle must complete"
     );
 
-    // Drop root — object becomes unreachable
+    // Drop root;object becomes unreachable
     drop(gc_obj);
 
     // Second collection; sweep should finalize then drop the unreachable object
@@ -880,7 +880,7 @@ fn test_sweep_actively_frees_memory() {
             "mark cycle must complete (collection {total_collections})"
         );
 
-        // Drop all roots — objects become unreachable
+        // Drop all roots;objects become unreachable
         drop(objects);
 
         // GC again: objects are unmarked + was_ever_marked -> swept
@@ -918,7 +918,7 @@ fn test_sweep_actively_frees_memory() {
     // The GC should have swept the vast majority of the 1000 objects.
     // Allow a generous margin for timing variability across CI runners (slow ARM, macOS
     // virtualization, contended Linux runners, etc.). The key invariant under test is that
-    // sweep is actively freeing memory during collection — not at shutdown — so even ~50%
+    // sweep is actively freeing memory during collection;not at shutdown;so even ~50%
     // demonstrates that. We pick 600 (60%) as a comfortable lower bound.
     let freed = drop_count.load(Ordering::Relaxed);
     assert!(

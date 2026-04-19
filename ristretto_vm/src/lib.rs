@@ -17,6 +17,16 @@
 //! - Basic JIT compilation capabilities
 //! - Type safe concurrent, mark-sweep garbage collector
 //!
+//! ## Runtime requirements
+//!
+//! The JIT subsystem requires a multi-thread `tokio` runtime (e.g.
+//! `#[tokio::main(flavor = "multi_thread")]` or
+//! `tokio::runtime::Builder::new_multi_thread()`). This is because JIT-emitted helper
+//! functions are invoked from native code and must bridge back into async class loading via
+//! `tokio::task::block_in_place`, which is only valid on a multi-thread runtime. If the VM is
+//! constructed under a current-thread runtime, the JIT is automatically disabled and a warning
+//! is emitted; the VM falls back to the interpreter.
+//!
 //! ## Examples
 //!
 //! ```rust,no_run
@@ -39,7 +49,7 @@
 //! # }
 //! ```
 
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 
 mod assignable;
 mod call_site_cache;

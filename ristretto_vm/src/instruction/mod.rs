@@ -44,6 +44,7 @@ mod convert;
 mod debug;
 mod double;
 mod exception;
+pub(crate) use exception::convert_error_to_throwable;
 mod field;
 mod float;
 mod integer;

@@ -7,7 +7,7 @@ use rayon::ThreadPoolBuilder;
 #[cfg(not(target_family = "wasm"))]
 use rayon::prelude::*;
 use ristretto_classloader::{Class, Method, Value};
-use ristretto_gc::GarbageCollector;
+use ristretto_gc::{GarbageCollector, Gc};
 use ristretto_jit::Function;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
@@ -392,6 +392,7 @@ pub(crate) fn execute(
     gc: &GarbageCollector,
     vm: &Arc<VM>,
     thread: &Arc<Thread>,
+    class: &Arc<Class>,
 ) -> Result<Option<Value>> {
     // Stack-allocate conversion buffer for typical method arities (0-8 params)
     let mut stack_buf: [ristretto_jit::Value; 8] = [const { ristretto_jit::Value::I32(0) }; 8];
@@ -409,17 +410,38 @@ pub(crate) fn execute(
     } else {
         // Fall back to Vec for unusually large parameter lists
         let vec = convert_parameters(parameters)?;
-        // We need to return a reference, so use the heap path via function.execute directly
-        let runtime_context = RuntimeContext::new(gc, vm, thread);
+        let runtime_context = RuntimeContext::new(gc, vm, thread, class)?;
         let context = runtime_context.as_ptr();
         let result = function.execute(&vec, context)?;
-        return Ok(result.map(|v| convert_to_vm(&v)));
+        return finish_execute(&runtime_context, result);
     };
 
-    let runtime_context = RuntimeContext::new(gc, vm, thread);
+    let runtime_context = RuntimeContext::new(gc, vm, thread, class)?;
     let context = runtime_context.as_ptr();
     let result = function.execute(arguments, context)?;
-    Ok(result.map(|v| convert_to_vm(&v)))
+    finish_execute(&runtime_context, result)
+}
+
+/// Converts the raw JIT result to a VM value, surfacing any pending exception
+/// stored in the runtime context as `Err(Throwable(..))`.
+///
+/// Uses `take_pending_exception_into` so the throwable's GC root is held alive across the
+/// `Gc::from_raw_i64` reconstruction and the construction of the `Err(Throwable(..))`
+/// `Value`;only after this function's local exit does the helper release the root, by
+/// which time the returned `Err` already owns a `Value::Object(Some(Gc))` referenced by
+/// the surrounding stack frame.
+fn finish_execute(
+    runtime_context: &RuntimeContext,
+    result: Option<ristretto_jit::Value>,
+) -> Result<Option<Value>> {
+    runtime_context.take_pending_exception_into(|pending| {
+        if pending != 0 {
+            let gc_ref: Gc<parking_lot::RwLock<ristretto_classloader::Reference>> =
+                Gc::from_raw_i64(pending);
+            return Err(crate::Error::Throwable(Value::Object(Some(gc_ref))));
+        }
+        Ok(result.map(|v| convert_to_vm(&v)))
+    })
 }
 
 /// Converts a vector of VM values to a vector of JIT values for passing to a JIT-compiled function.

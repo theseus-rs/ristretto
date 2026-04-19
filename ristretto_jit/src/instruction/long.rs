@@ -1,3 +1,4 @@
+use crate::instruction::ThrowContext;
 use crate::instruction::object::{array_load, array_store};
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
@@ -188,8 +189,17 @@ pub(crate) fn laload(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     helpers: &RuntimeHelpers,
+    context_pointer: Value,
+    throw_context: &ThrowContext<'_>,
 ) -> Result<()> {
-    let value = array_load(function_builder, stack, helpers.laload)?;
+    let value = array_load(
+        function_builder,
+        stack,
+        helpers,
+        context_pointer,
+        throw_context,
+        helpers.laload,
+    )?;
     stack.push_long(function_builder, value)?;
     Ok(())
 }
@@ -200,9 +210,19 @@ pub(crate) fn lastore(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     helpers: &RuntimeHelpers,
+    context_pointer: Value,
+    throw_context: &ThrowContext<'_>,
 ) -> Result<()> {
     let value = stack.pop_long(function_builder)?;
-    array_store(function_builder, stack, helpers.lastore, value)
+    array_store(
+        function_builder,
+        stack,
+        helpers,
+        context_pointer,
+        throw_context,
+        helpers.lastore,
+        value,
+    )
 }
 
 /// # References

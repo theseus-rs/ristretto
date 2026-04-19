@@ -27,7 +27,7 @@ impl Trace for FinalizableData {
 
 impl Finalize for FinalizableData {
     fn finalize(&self) {
-        // intentionally empty — measures overhead of the finalizer path
+        // intentionally empty;measures overhead of the finalizer path
     }
 }
 
@@ -62,7 +62,7 @@ fn bench_collector() -> Arc<GarbageCollector> {
     GarbageCollector::with_config(
         ConfigurationBuilder::new()
             .threads(1)
-            .allocation_threshold(64 * 1024 * 1024) // 64 MB — avoid auto-collection
+            .allocation_threshold(64 * 1024 * 1024) // 64 MB;avoid auto-collection
             .build(),
     )
 }

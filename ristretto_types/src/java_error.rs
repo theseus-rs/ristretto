@@ -25,6 +25,12 @@ pub enum JavaError {
     /// - [ArrayIndexOutOfBoundsException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/ArrayIndexOutOfBoundsException.html)
     #[error("Index {index} out of bounds for length {length}")]
     ArrayIndexOutOfBoundsException { index: i32, length: usize },
+    /// `ArrayStoreException`
+    ///
+    /// # References
+    /// - [ArrayStoreException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/ArrayStoreException.html)
+    #[error("{0}")]
+    ArrayStoreException(String),
     /// `BindException`
     ///
     /// # References
@@ -258,6 +264,7 @@ impl JavaError {
             JavaError::NoClassDefFoundError(_) => "java.lang.NoClassDefFoundError",
             JavaError::NoSuchFieldError(_) => "java.lang.NoSuchFieldError",
             JavaError::NoSuchMethodError(_) => "java.lang.NoSuchMethodError",
+            JavaError::ArrayStoreException(_) => "java.lang.ArrayStoreException",
             JavaError::NegativeArraySizeException(_) => "java.lang.NegativeArraySizeException",
             JavaError::NullPointerException(_) => "java.lang.NullPointerException",
             JavaError::RuntimeException(_) => "java.lang.RuntimeException",
@@ -315,6 +322,13 @@ mod tests {
             "java.lang.ArrayIndexOutOfBoundsException"
         );
         assert_eq!(error.message(), "Index 5 out of bounds for length 3");
+    }
+
+    #[test]
+    fn test_array_store_exception() {
+        let error = JavaError::ArrayStoreException("java.lang.String".to_string());
+        assert_eq!(error.class_name(), "java.lang.ArrayStoreException");
+        assert_eq!(error.message(), "java.lang.String");
     }
 
     #[test]

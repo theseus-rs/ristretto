@@ -1,4 +1,5 @@
 use crate::Result;
+use crate::instruction::{ThrowContext, emit_bci, emit_null_check, emit_pending_exception_check};
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
 use cranelift::codegen::ir::Value;
@@ -45,12 +46,30 @@ pub(crate) fn arraylength(
     function_builder: &mut FunctionBuilder,
     stack: &mut OperandStack,
     helpers: &RuntimeHelpers,
+    context_pointer: Value,
+    throw_context: &ThrowContext<'_>,
 ) -> Result<()> {
     let array_ref = stack.pop_object(function_builder)?;
+    emit_null_check(
+        function_builder,
+        stack,
+        helpers,
+        context_pointer,
+        throw_context,
+        array_ref,
+    )?;
+    let bci = emit_bci(function_builder, throw_context);
     let call = function_builder
         .ins()
-        .call(helpers.arraylength, &[array_ref]);
+        .call(helpers.arraylength, &[context_pointer, bci, array_ref]);
     let length = function_builder.inst_results(call)[0];
+    emit_pending_exception_check(
+        function_builder,
+        stack,
+        helpers,
+        context_pointer,
+        throw_context,
+    )?;
     stack.push_int(function_builder, length)?;
     Ok(())
 }

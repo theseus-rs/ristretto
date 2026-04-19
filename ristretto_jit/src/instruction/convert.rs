@@ -139,9 +139,8 @@ pub(crate) fn i2b(function_builder: &mut FunctionBuilder, stack: &mut OperandSta
 /// - [JVMS §6.5.i2c](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.i2c)
 pub(crate) fn i2c(function_builder: &mut FunctionBuilder, stack: &mut OperandStack) -> Result<()> {
     let value = stack.pop_int(function_builder)?;
-    // TODO: verify i2c unsigned conversion
     let value = function_builder.ins().ireduce(types::I16, value);
-    let value = function_builder.ins().sextend(types::I32, value);
+    let value = function_builder.ins().uextend(types::I32, value);
     stack.push_int(function_builder, value)?;
     Ok(())
 }
