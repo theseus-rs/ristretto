@@ -9,33 +9,93 @@ use indexmap::IndexMap;
 use std::fmt;
 use std::io::Cursor;
 
-/// Separate structure for the `tableseitch` instruction to limit the size of the `Instruction`
+/// Separate structure for the `tableswitch` instruction to limit the size of the `Instruction`
 /// enum.
+///
+/// # Ristretto vs JVM Specification
+///
+/// In the JVM specification, `default` and each entry in `offsets` are signed 32-bit byte offsets
+/// relative to the byte position of the `tableswitch` instruction itself (after alignment padding).
+///
+/// In Ristretto, these fields store **relative logical instruction indices**: the signed difference
+/// between the target instruction's index and the `tableswitch` instruction's own index in the
+/// `Vec<Instruction>`.
 ///
 /// # References
 ///
 /// - [JVMS §6.5.tableswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch)
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TableSwitch {
+    /// Default branch target as a relative logical instruction index (target index minus this
+    /// instruction's index). The JVM spec stores this as a signed byte offset.
     pub default: i32,
     pub low: i32,
     pub high: i32,
+    /// Branch targets as relative logical instruction indices (each target index minus this
+    /// instruction's index). The JVM spec stores these as signed byte offsets.
     pub offsets: Vec<i32>,
 }
 
 /// Separate structure for the `lookupswitch` instruction to limit the size of the `Instruction`
 /// enum.
 ///
+/// # Ristretto vs JVM Specification
+///
+/// In the JVM specification, `default` and the offset of each match-offset pair are signed 32-bit
+/// byte offsets relative to the byte position of the `lookupswitch` instruction itself (after
+/// alignment padding).
+///
+/// In Ristretto, these fields store **relative logical instruction indices**: the signed difference
+/// between the target instruction's index and the `lookupswitch` instruction's own index in the
+/// `Vec<Instruction>`.
+///
 /// # References
 ///
 /// - [JVMS §6.5.lookupswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch)
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LookupSwitch {
+    /// Default branch target as a relative logical instruction index (target index minus this
+    /// instruction's index). The JVM spec stores this as a signed byte offset.
     pub default: i32,
+    /// Match-offset pairs where each offset is a relative logical instruction index (target index
+    /// minus this instruction's index). The JVM spec stores these offsets as signed byte offsets.
     pub pairs: IndexMap<i32, i32>,
 }
 
-/// Implementation of `Instruction`.
+/// A single JVM bytecode instruction.
+///
+/// `Instruction` is the in-memory representation of one operation found in the `Code` attribute of
+/// a method. Every JVM opcode listed in JVMS §6.5 has exactly one corresponding variant. The
+/// mapping from a variant back to its opcode byte is exposed by [`Instruction::code`].
+///
+/// # Ristretto vs JVM Specification
+///
+/// The variant set and naming follow the JVM specification closely, with two intentional
+/// representational differences chosen to make in-memory analysis easier:
+///
+/// 1. **Branch targets are logical instruction indices, not byte offsets.**
+///    The JVM specification stores branch and switch targets as signed byte offsets relative to the
+///    start of the originating instruction. Ristretto stores them as indices into the surrounding
+///    `Vec<Instruction>`:
+///
+///    - Short branch instructions (`Ifeq`, `Ifne`, `Iflt`, `Ifge`, `Ifgt`, `Ifle`, `If_icmpeq`,
+///      `If_icmpne`, `If_icmplt`, `If_icmpge`, `If_icmpgt`, `If_icmple`, `If_acmpeq`, `If_acmpne`,
+///      `Goto`, `Jsr`, `Ifnull`, `Ifnonnull`) carry the **absolute** target index as `u16`.
+///    - Wide branch instructions (`Goto_w`, `Jsr_w`) carry the **signed difference** between the
+///      target index and this instruction's own index as `i32`, allowing forward and backward
+///      jumps that exceed `u16::MAX` to round-trip through the table.
+///    - Switch instructions ([`TableSwitch`], [`LookupSwitch`]) store every offset as a **signed
+///      relative instruction index** (target index minus this instruction's index).
+///
+/// 2. **The `wide` prefix is folded into dedicated variants.** The JVM specification defines a
+///    standalone `wide` opcode (`0xc4`) that prefixes another instruction to widen its operand
+///    from one byte to two. Ristretto exposes the wide forms as first-class variants suffixed with
+///    `_w` ([`Iload_w`](Self::Iload_w), [`Lload_w`](Self::Lload_w), [`Fload_w`](Self::Fload_w),
+///    [`Dload_w`](Self::Dload_w), [`Aload_w`](Self::Aload_w), [`Istore_w`](Self::Istore_w),
+///    [`Lstore_w`](Self::Lstore_w), [`Fstore_w`](Self::Fstore_w), [`Dstore_w`](Self::Dstore_w),
+///    [`Astore_w`](Self::Astore_w), [`Ret_w`](Self::Ret_w), [`Iinc_w`](Self::Iinc_w)). Encoding
+///    these variants in `to_bytes` correctly emits the `wide` prefix; decoding in `from_bytes`
+///    consumes it. There is no `Wide` variant.
 ///
 /// # References
 ///
@@ -655,66 +715,178 @@ pub enum Instruction {
     /// # References
     /// - [JVMS §6.5.dcmp_op](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.dcmp_op)
     Dcmpg,
+    /// Branch if integer comparison with zero succeeds (`value == 0`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Ifeq(u16),
+    /// Branch if integer comparison with zero succeeds (`value != 0`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Ifne(u16),
+    /// Branch if integer comparison with zero succeeds (`value < 0`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Iflt(u16),
+    /// Branch if integer comparison with zero succeeds (`value >= 0`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Ifge(u16),
+    /// Branch if integer comparison with zero succeeds (`value > 0`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Ifgt(u16),
+    /// Branch if integer comparison with zero succeeds (`value <= 0`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_cond)
     Ifle(u16),
+    /// Branch if two integers compare equal (`value1 == value2`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmpeq(u16),
+    /// Branch if two integers compare not equal (`value1 != value2`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmpne(u16),
+    /// Branch if two integers compare less than (`value1 < value2`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmplt(u16),
+    /// Branch if two integers compare greater than or equal (`value1 >= value2`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmpge(u16),
+    /// Branch if two integers compare greater than (`value1 > value2`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmpgt(u16),
+    /// Branch if two integers compare less than or equal (`value1 <= value2`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_icmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_icmp_cond)
     If_icmple(u16),
+    /// Branch if two reference values compare equal (`value1 == value2`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_acmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond)
     If_acmpeq(u16),
+    /// Branch if two reference values compare not equal (`value1 != value2`).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.if_acmp_cond](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.if_acmp_cond)
     If_acmpne(u16),
+    /// Branch unconditionally to a target instruction.
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.goto](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto)
     Goto(u16),
+    /// Jump to a subroutine and push the return address.
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the subroutine target as a signed 16-bit byte offset relative
+    /// to the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.jsr](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr)
@@ -723,14 +895,32 @@ pub enum Instruction {
     /// # References
     /// - [JVMS §6.5.ret](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ret)
     Ret(u8),
+    /// Access jump table by index and jump.
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification stores `default` and each entry in `TableSwitch::offsets` as signed
+    /// 32-bit byte offsets relative to the byte position of this instruction (after alignment
+    /// padding). In Ristretto these are **relative logical instruction indices**: the signed
+    /// difference between the target instruction's index and this instruction's own index in the
+    /// `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.tableswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.tableswitch)
-    Tableswitch(TableSwitch),
+    Tableswitch(Box<TableSwitch>),
+    /// Access jump table by key match and jump.
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification stores `default` and each offset in `LookupSwitch::pairs` as signed
+    /// 32-bit byte offsets relative to the byte position of this instruction (after alignment
+    /// padding). In Ristretto these are **relative logical instruction indices**: the signed
+    /// difference between the target instruction's index and this instruction's own index in the
+    /// `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.lookupswitch](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.lookupswitch)
-    Lookupswitch(LookupSwitch),
+    Lookupswitch(Box<LookupSwitch>),
     ///
     /// # References
     /// - [JVMS §6.5.ireturn](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ireturn)
@@ -838,18 +1028,46 @@ pub enum Instruction {
     /// # References
     /// - [JVMS §6.5.multianewarray](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.multianewarray)
     Multianewarray(u16, u8),
+    /// Branch if reference is `null`.
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.ifnull](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnull)
     Ifnull(u16),
+    /// Branch if reference is not `null`.
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 16-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `u16` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.ifnonnull](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.ifnonnull)
     Ifnonnull(u16),
+    /// Branch unconditionally to a target instruction (wide index).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the branch target as a signed 32-bit byte offset relative to
+    /// the start of this instruction. In Ristretto the `i32` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.goto_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.goto_w)
     Goto_w(i32),
+    /// Jump to a subroutine and push the return address (wide index).
+    ///
+    /// # Ristretto vs JVM Specification
+    ///
+    /// The JVM specification encodes the subroutine target as a signed 32-bit byte offset relative
+    /// to the start of this instruction. In Ristretto the `i32` parameter is an **absolute logical
+    /// instruction index**; the index of the target instruction in the `Vec<Instruction>`.
     ///
     /// # References
     /// - [JVMS §6.5.jsr_w](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.jsr_w)
@@ -1665,7 +1883,7 @@ impl Instruction {
                     high,
                     offsets,
                 };
-                Instruction::Tableswitch(table_switch)
+                Instruction::Tableswitch(Box::new(table_switch))
             }
             171 => {
                 let position = u32::try_from(bytes.position())?;
@@ -1682,7 +1900,7 @@ impl Instruction {
                     pairs.insert(match_, offset);
                 }
                 let lookup_switch = LookupSwitch { default, pairs };
-                Instruction::Lookupswitch(lookup_switch)
+                Instruction::Lookupswitch(Box::new(lookup_switch))
             }
             172 => Instruction::Ireturn,
             173 => Instruction::Lreturn,
@@ -5010,12 +5228,12 @@ mod test {
 
     #[test]
     fn test_tableswitch() -> Result<()> {
-        let instruction = Instruction::Tableswitch(TableSwitch {
+        let instruction = Instruction::Tableswitch(Box::new(TableSwitch {
             default: 42,
             low: 1,
             high: 2,
             offsets: vec![3, 4],
-        });
+        }));
         let code = 170;
         let expected_bytes = [
             170, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4,
@@ -5039,10 +5257,10 @@ mod test {
 
     #[test]
     fn test_lookupswitch() -> Result<()> {
-        let instruction = Instruction::Lookupswitch(LookupSwitch {
+        let instruction = Instruction::Lookupswitch(Box::new(LookupSwitch {
             default: 42,
             pairs: IndexMap::from([(1, 2)]),
-        });
+        }));
         let code = 171;
         let expected_bytes = [
             171, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 2,

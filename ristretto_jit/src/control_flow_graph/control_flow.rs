@@ -87,16 +87,16 @@ mod tests {
             Instruction::Goto_w(0),
             Instruction::Jsr(0),
             Instruction::Jsr_w(0),
-            Instruction::Tableswitch(TableSwitch {
+            Instruction::Tableswitch(Box::new(TableSwitch {
                 default: 0,
                 low: 0,
                 high: 0,
                 offsets: vec![0],
-            }),
-            Instruction::Lookupswitch(LookupSwitch {
+            })),
+            Instruction::Lookupswitch(Box::new(LookupSwitch {
                 default: 0,
                 pairs: IndexMap::new(),
-            }),
+            })),
             Instruction::Ret(0),
             Instruction::Ret_w(0),
             Instruction::Return,

@@ -370,12 +370,12 @@ mod test {
         // Tableswitch at index 0, with targets as relative offsets
         // low=0, high=2 means 3 offsets in the table
         let code = vec![
-            Instruction::Tableswitch(TableSwitch {
+            Instruction::Tableswitch(Box::new(TableSwitch {
                 default: 4, // Relative: 0 + 4 = 4
                 low: 0,
                 high: 2,
                 offsets: vec![1, 2, 3], // Relative: 0+1=1, 0+2=2, 0+3=3
-            }), // Index 0
+            })), // Index 0
             Instruction::Nop,    // Index 1; target
             Instruction::Nop,    // Index 2; target
             Instruction::Nop,    // Index 3; target
@@ -392,12 +392,12 @@ mod test {
         let class_file = ClassFile::default();
         let method = get_dummy_method();
         let code = vec![
-            Instruction::Tableswitch(TableSwitch {
+            Instruction::Tableswitch(Box::new(TableSwitch {
                 default: 100, // Invalid: 0 + 100 = 100 (out of bounds)
                 low: 0,
                 high: 0,
                 offsets: vec![1],
-            }),
+            })),
             Instruction::Return,
         ];
 
@@ -411,12 +411,12 @@ mod test {
         let class_file = ClassFile::default();
         let method = get_dummy_method();
         let code = vec![
-            Instruction::Tableswitch(TableSwitch {
+            Instruction::Tableswitch(Box::new(TableSwitch {
                 default: 1,
                 low: 0,
                 high: 0,
                 offsets: vec![50], // Invalid: 0 + 50 = 50 (out of bounds)
-            }),
+            })),
             Instruction::Return,
         ];
 
@@ -436,10 +436,10 @@ mod test {
         pairs.insert(2, 2); // match 2 -> offset 2
 
         let code = vec![
-            Instruction::Lookupswitch(LookupSwitch {
+            Instruction::Lookupswitch(Box::new(LookupSwitch {
                 default: 3, // Relative: 0 + 3 = 3
                 pairs,
-            }), // Index 0
+            })), // Index 0
             Instruction::Nop,    // Index 1; target for match 1
             Instruction::Nop,    // Index 2; target for match 2
             Instruction::Return, // Index 3; default target
@@ -457,10 +457,10 @@ mod test {
         let method = get_dummy_method();
 
         let code = vec![
-            Instruction::Lookupswitch(LookupSwitch {
+            Instruction::Lookupswitch(Box::new(LookupSwitch {
                 default: 100, // Invalid: 0 + 100 = 100 (out of bounds)
                 pairs: IndexMap::new(),
-            }),
+            })),
             Instruction::Return,
         ];
 
@@ -479,7 +479,7 @@ mod test {
         pairs.insert(1, 50); // Invalid: 0 + 50 = 50 (out of bounds)
 
         let code = vec![
-            Instruction::Lookupswitch(LookupSwitch { default: 1, pairs }),
+            Instruction::Lookupswitch(Box::new(LookupSwitch { default: 1, pairs })),
             Instruction::Return,
         ];
 

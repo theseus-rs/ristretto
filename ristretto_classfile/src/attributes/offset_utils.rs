@@ -6,7 +6,7 @@
 //! often beneficial to convert these to logical offsets, i.e., the index of the target instruction
 //! in a sequence of instructions. This module handles this two-way conversion.
 //!
-//! The `instructions_from_bytes` function reads bytecode and performs the conversionfrom byte
+//! The `instructions_from_bytes` function reads bytecode and performs the conversion from byte
 //! offsets to logical instruction indices.
 //!
 //! The `instructions_to_bytes` function takes a list of instructions with logical offsets and
@@ -326,12 +326,12 @@ mod tests {
 
     #[test]
     fn test_to_bytes_invalid_table_switch_default_offset() {
-        let instructions = vec![Instruction::Tableswitch(TableSwitch {
+        let instructions = vec![Instruction::Tableswitch(Box::new(TableSwitch {
             default: 42,
             low: 0,
             high: 0,
             offsets: vec![],
-        })];
+        }))];
         let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
@@ -340,12 +340,12 @@ mod tests {
     fn test_to_bytes_invalid_table_switch_offset() {
         let instructions = vec![
             Instruction::Nop,
-            Instruction::Tableswitch(TableSwitch {
+            Instruction::Tableswitch(Box::new(TableSwitch {
                 default: 0,
                 low: 0,
                 high: 0,
                 offsets: vec![42],
-            }),
+            })),
         ];
         let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
@@ -353,10 +353,10 @@ mod tests {
 
     #[test]
     fn test_to_bytes_invalid_lookup_switch_default_offset() {
-        let instructions = vec![Instruction::Lookupswitch(LookupSwitch {
+        let instructions = vec![Instruction::Lookupswitch(Box::new(LookupSwitch {
             default: 42,
             pairs: IndexMap::new(),
-        })];
+        }))];
         let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
     }
@@ -365,10 +365,10 @@ mod tests {
     fn test_to_bytes_invalid_lookup_switch_pairs_offset() {
         let instructions = vec![
             Instruction::Nop,
-            Instruction::Lookupswitch(LookupSwitch {
+            Instruction::Lookupswitch(Box::new(LookupSwitch {
                 default: 0,
                 pairs: IndexMap::from([(0, 42)]),
-            }),
+            })),
         ];
         let result = instructions_to_bytes(&instructions);
         assert!(matches!(result, Err(InvalidInstructionOffset(_))));
@@ -577,12 +577,12 @@ mod tests {
 
     #[test]
     fn test_tableswitch() -> Result<()> {
-        let instruction = Instruction::Tableswitch(TableSwitch {
+        let instruction = Instruction::Tableswitch(Box::new(TableSwitch {
             default: 3,
             low: 3,
             high: 4,
             offsets: vec![1, 2],
-        });
+        }));
         let expected_bytes = [
             instruction.code(),
             0,
@@ -630,12 +630,12 @@ mod tests {
 
     #[test]
     fn test_tableswitch_backward() -> Result<()> {
-        let instruction = Instruction::Tableswitch(TableSwitch {
+        let instruction = Instruction::Tableswitch(Box::new(TableSwitch {
             default: -1,
             low: 3,
             high: 3,
             offsets: vec![0],
-        });
+        }));
         let expected_bytes = [
             Instruction::Nop.code(),
             instruction.code(),
@@ -671,12 +671,12 @@ mod tests {
 
     #[test]
     fn test_tableswitch_backward_offset() -> Result<()> {
-        let instruction = Instruction::Tableswitch(TableSwitch {
+        let instruction = Instruction::Tableswitch(Box::new(TableSwitch {
             default: 0,
             low: 3,
             high: 3,
             offsets: vec![-1],
-        });
+        }));
         let expected_bytes = [
             Instruction::Nop.code(),
             instruction.code(),
@@ -712,10 +712,10 @@ mod tests {
 
     #[test]
     fn test_lookupswitch() -> Result<()> {
-        let instruction = Instruction::Lookupswitch(LookupSwitch {
+        let instruction = Instruction::Lookupswitch(Box::new(LookupSwitch {
             default: 3,
             pairs: IndexMap::from([(1, 2)]),
-        });
+        }));
         let expected_bytes = [
             instruction.code(),
             0,
@@ -759,10 +759,10 @@ mod tests {
 
     #[test]
     fn test_lookupswitch_backward() -> Result<()> {
-        let instruction = Instruction::Lookupswitch(LookupSwitch {
+        let instruction = Instruction::Lookupswitch(Box::new(LookupSwitch {
             default: -1,
             pairs: IndexMap::new(),
-        });
+        }));
         let expected_bytes = [
             Instruction::Nop.code(),
             instruction.code(),
@@ -790,10 +790,10 @@ mod tests {
 
     #[test]
     fn test_lookupswitch_backward_pair() -> Result<()> {
-        let instruction = Instruction::Lookupswitch(LookupSwitch {
+        let instruction = Instruction::Lookupswitch(Box::new(LookupSwitch {
             default: 0,
             pairs: IndexMap::from([(1, -1)]),
-        });
+        }));
         let expected_bytes = [
             Instruction::Nop.code(),
             instruction.code(),

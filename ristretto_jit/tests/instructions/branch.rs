@@ -401,12 +401,12 @@ fn jsr_w_and_ret_w() -> Result<()> {
 fn tableswitch() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
-        Instruction::Tableswitch(TableSwitch {
+        Instruction::Tableswitch(Box::new(TableSwitch {
             default: 7,
             low: 0,
             high: 2,
             offsets: vec![1, 3, 5],
-        }),
+        })),
         Instruction::Iconst_0,
         Instruction::Ireturn,
         Instruction::Iconst_1,
@@ -467,12 +467,12 @@ fn tableswitch_negative_offset() -> Result<()> {
         Instruction::Ireturn,  // 2: return 0
         Instruction::Nop,      // 3: padding (unreachable)
         Instruction::Iload_0,  // 4: load input for switch
-        Instruction::Tableswitch(TableSwitch {
+        Instruction::Tableswitch(Box::new(TableSwitch {
             default: 3, // forward to instruction 8 (5 + 3)
             low: 0,
             high: 1,
             offsets: vec![-4, 3], // case 0: backward to instruction 1 (5 + (-4) = 1), case 1: forward to instruction 8
-        }), // 5: switch
+        })), // 5: switch
         Instruction::Nop,      // 6: padding
         Instruction::Nop,      // 7: padding
         Instruction::Iconst_1, // 8: default/case 1; push 1
@@ -511,12 +511,12 @@ fn tableswitch_negative_default_offset() -> Result<()> {
         Instruction::Ireturn,   // 2: return -1
         Instruction::Nop,       // 3: padding (unreachable)
         Instruction::Iload_0,   // 4: load input for switch
-        Instruction::Tableswitch(TableSwitch {
+        Instruction::Tableswitch(Box::new(TableSwitch {
             default: -4, // backward to instruction 1 (5 + (-4) = 1)
             low: 0,
             high: 0,
             offsets: vec![3], // case 0: forward to instruction 8 (5 + 3)
-        }), // 5: switch
+        })), // 5: switch
         Instruction::Nop,       // 6: padding
         Instruction::Nop,       // 7: padding
         Instruction::Iconst_0,  // 8: case 0 result; push 0
@@ -543,10 +543,10 @@ fn tableswitch_negative_default_offset() -> Result<()> {
 fn test_lookupswitch() -> Result<()> {
     let instructions = vec![
         Instruction::Iload_0,
-        Instruction::Lookupswitch(LookupSwitch {
+        Instruction::Lookupswitch(Box::new(LookupSwitch {
             default: 7,
             pairs: IndexMap::from_iter([(0, 1), (1, 3), (2, 5)]),
-        }),
+        })),
         Instruction::Iconst_0,
         Instruction::Ireturn,
         Instruction::Iconst_1,
@@ -607,13 +607,13 @@ fn lookupswitch_negative_offset() -> Result<()> {
         Instruction::Ireturn,  // 2: return 0
         Instruction::Nop,      // 3: padding (unreachable)
         Instruction::Iload_0,  // 4: load input for switch
-        Instruction::Lookupswitch(LookupSwitch {
+        Instruction::Lookupswitch(Box::new(LookupSwitch {
             default: 3, // forward to instruction 8 (5 + 3)
             pairs: IndexMap::from_iter([
                 (42, -4), // case 42: backward to instruction 1 (5 + (-4) = 1)
                 (100, 3), // case 100: forward to instruction 8
             ]),
-        }), // 5: switch
+        })), // 5: switch
         Instruction::Nop,      // 6: padding
         Instruction::Nop,      // 7: padding
         Instruction::Iconst_1, // 8: default/case 100 result; push 1
@@ -652,12 +652,12 @@ fn lookupswitch_negative_default_offset() -> Result<()> {
         Instruction::Ireturn,   // 2: return -1
         Instruction::Nop,       // 3: padding (unreachable)
         Instruction::Iload_0,   // 4: load input for switch
-        Instruction::Lookupswitch(LookupSwitch {
+        Instruction::Lookupswitch(Box::new(LookupSwitch {
             default: -4, // backward to instruction 1 (5 + (-4) = 1)
             pairs: IndexMap::from_iter([
                 (42, 3), // case 42: forward to instruction 8 (5 + 3)
             ]),
-        }), // 5: switch
+        })), // 5: switch
         Instruction::Nop,       // 6: padding
         Instruction::Nop,       // 7: padding
         Instruction::Iconst_0,  // 8: case 42 result; push 0

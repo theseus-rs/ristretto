@@ -2052,16 +2052,16 @@ mod tests {
     #[test]
     fn test_simulate_switch_instructions() -> Result<()> {
         let instructions = vec![
-            Instruction::Tableswitch(TableSwitch {
+            Instruction::Tableswitch(Box::new(TableSwitch {
                 default: 3,
                 low: 1,
                 high: 2,
                 offsets: vec![1; 2],
-            }),
-            Instruction::Lookupswitch(LookupSwitch {
+            })),
+            Instruction::Lookupswitch(Box::new(LookupSwitch {
                 default: 3,
                 pairs: IndexMap::new(),
-            }),
+            })),
         ];
         for instruction in instructions {
             let mut stack = TypeStack::new();
