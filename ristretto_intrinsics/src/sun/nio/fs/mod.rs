@@ -1,5 +1,8 @@
 pub mod bsdfilesystem;
 pub mod bsdnativedispatcher;
+pub(crate) mod common;
+#[cfg(target_os = "linux")]
+pub mod linuxnativedispatcher;
 #[cfg(target_os = "macos")]
 pub mod macosxnativedispatcher;
 pub(crate) mod managed_files;
