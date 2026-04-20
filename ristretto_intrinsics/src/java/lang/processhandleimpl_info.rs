@@ -61,7 +61,7 @@ pub async fn info_0<T: Thread + 'static>(
     #[cfg(target_family = "wasm")]
     {
         let _ = (thread, parameters);
-        Err(JavaError::UnsatisfiedLinkError(
+        Err(JavaError::UnsupportedOperationException(
             "java.lang.ProcessHandleImpl$Info.info0(J)V".to_string(),
         )
         .into())

@@ -126,7 +126,7 @@ pub async fn fork_and_exec<T: Thread + 'static>(
     #[cfg(target_family = "wasm")]
     {
         let _ = (thread, parameters);
-        Err(JavaError::UnsatisfiedLinkError(
+        Err(JavaError::UnsupportedOperationException(
             "java.lang.ProcessImpl.forkAndExec(I[B[B[BI[BI[B[IZ)I".to_string(),
         )
         .into())

@@ -46,7 +46,7 @@ pub async fn destroy_0<T: Thread + 'static>(
     #[cfg(target_family = "wasm")]
     {
         let _ = parameters;
-        Err(JavaError::UnsatisfiedLinkError(
+        Err(JavaError::UnsupportedOperationException(
             "java.lang.ProcessHandleImpl.destroy0(JJZ)Z".to_string(),
         )
         .into())
@@ -69,7 +69,7 @@ pub async fn get_current_pid_0<T: Thread + 'static>(
     }
     #[cfg(target_family = "wasm")]
     {
-        Err(JavaError::UnsatisfiedLinkError(
+        Err(JavaError::UnsupportedOperationException(
             "java.lang.ProcessHandleImpl.getCurrentPid0()J".to_string(),
         )
         .into())
@@ -161,7 +161,7 @@ pub async fn get_process_pids_0<T: Thread + 'static>(
     #[cfg(target_family = "wasm")]
     {
         let _ = parameters;
-        Err(JavaError::UnsatisfiedLinkError(
+        Err(JavaError::UnsupportedOperationException(
             "java.lang.ProcessHandleImpl.getProcessPids0(J[J[J[J)I".to_string(),
         )
         .into())
@@ -208,10 +208,10 @@ pub async fn is_alive_0<T: Thread + 'static>(
     #[cfg(target_family = "wasm")]
     {
         let _ = parameters;
-        Err(
-            JavaError::UnsatisfiedLinkError("java.lang.ProcessHandleImpl.isAlive0(J)J".to_string())
-                .into(),
+        Err(JavaError::UnsupportedOperationException(
+            "java.lang.ProcessHandleImpl.isAlive0(J)J".to_string(),
         )
+        .into())
     }
 }
 
@@ -247,10 +247,10 @@ pub async fn parent_0<T: Thread + 'static>(
     #[cfg(target_family = "wasm")]
     {
         let _ = parameters;
-        Err(
-            JavaError::UnsatisfiedLinkError("java.lang.ProcessHandleImpl.parent0(JJ)J".to_string())
-                .into(),
+        Err(JavaError::UnsupportedOperationException(
+            "java.lang.ProcessHandleImpl.parent0(JJ)J".to_string(),
         )
+        .into())
     }
 }
 
@@ -289,7 +289,7 @@ pub async fn wait_for_process_exit_0<T: Thread + 'static>(
     #[cfg(target_family = "wasm")]
     {
         let _ = parameters;
-        Err(JavaError::UnsatisfiedLinkError(
+        Err(JavaError::UnsupportedOperationException(
             "java.lang.ProcessHandleImpl.waitForProcessExit0(JZ)I".to_string(),
         )
         .into())
