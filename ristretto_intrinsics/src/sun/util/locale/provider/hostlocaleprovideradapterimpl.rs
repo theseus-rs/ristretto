@@ -1,3 +1,5 @@
+#[cfg(not(target_os = "linux"))]
+use crate::locale::detect_default_locale;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::JAVA_11;
 #[cfg(target_os = "macos")]
@@ -132,11 +134,10 @@ pub async fn get_default_locale<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let _cat = parameters.pop_int()?;
-    let (language, country) = crate::properties::detect_default_locale();
-    let locale = if country.is_empty() {
-        language
-    } else {
-        format!("{language}_{country}")
+    let (language, country) = detect_default_locale();
+    let locale = match country {
+        Some(country) if !country.is_empty() => format!("{language}_{country}"),
+        _ => language,
     };
     Ok(Some(locale.to_object(&thread).await?))
 }

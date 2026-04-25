@@ -8,9 +8,9 @@ use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
 use std::num::NonZero;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, LazyLock};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
-use tokio::sync::Mutex;
+use tokio::sync::Mutex as AsyncMutex;
 use tracing::metadata::LevelFilter;
 use tracing::{debug, error, info, trace};
 use tracing_subscriber::{EnvFilter, fmt};
@@ -25,6 +25,14 @@ const TEST_CLASS_NAME: &str = "Test";
 const TEST_FILE: &str = "Test.java";
 const IGNORE_FILE: &str = "ignore.txt";
 
+/// A single failure observed while running the compatibility test suite.
+#[derive(Debug, Clone)]
+struct Failure {
+    test_name: String,
+    test_type: String,
+    message: String,
+}
+
 #[test]
 fn compatibility_tests() -> Result<()> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -38,7 +46,7 @@ fn compatibility_tests() -> Result<()> {
     compile_tests(&java_home, &tests_root_dir, &test_dirs)?;
 
     let passed = AtomicUsize::new(0);
-    let failed = AtomicUsize::new(0);
+    let failures: Arc<Mutex<Vec<Failure>>> = Arc::new(Mutex::new(Vec::new()));
 
     let num_threads = (std::thread::available_parallelism()
         .map(NonZero::get)
@@ -53,71 +61,115 @@ fn compatibility_tests() -> Result<()> {
 
     pool.install(|| {
         test_dirs.par_iter().for_each(|test_dir| {
-            let test_name = test_dir.to_string_lossy().to_string();
-            let test_dir = tests_root_dir.join(test_dir);
-
-            if !TEST_FILTER.is_match(&test_name) {
-                return;
-            }
-
-            // Determine if the test should be ignored
-            let ignore_file = test_dir.join(IGNORE_FILE);
-            if ignore_file.exists() {
-                debug!("Ignoring test {test_name}");
-                return;
-            }
-
-            info!("Running test {test_name}");
-
-            if let Ok((expected_duration, expected_output)) =
-                expected_output(&java_home, &tests_root_dir, &test_dir)
-            {
-                if test_vm(
-                    &java_version,
-                    &test_name,
-                    &test_dir,
-                    true,
-                    &expected_duration,
-                    &expected_output,
-                )
-                .is_ok()
-                {
-                    passed.fetch_add(1, Ordering::Relaxed);
-                } else {
-                    failed.fetch_add(1, Ordering::Relaxed);
-                }
-                if test_vm(
-                    &java_version,
-                    &test_name,
-                    &test_dir,
-                    false,
-                    &expected_duration,
-                    &expected_output,
-                )
-                .is_ok()
-                {
-                    passed.fetch_add(1, Ordering::Relaxed);
-                } else {
-                    failed.fetch_add(1, Ordering::Relaxed);
-                }
-            } else {
-                // If we can't get expected output, count both tests as failed
-                failed.fetch_add(2, Ordering::Relaxed);
-            }
+            run_compatibility_test(
+                &java_version,
+                &java_home,
+                &tests_root_dir,
+                test_dir,
+                &passed,
+                &failures,
+            );
         });
     });
 
     let passed_count = passed.load(Ordering::Relaxed);
-    let failed_count = failed.load(Ordering::Relaxed);
+    let failures = std::mem::take(&mut *failures.lock().expect("failures lock"));
+    let failed_count = failures.len();
 
     info!("Tests: {}", passed_count + failed_count);
     if failed_count > 0 {
         error!("Tests failed: {failed_count}");
+        error!("=== Compatibility test failures ===");
+        for (index, failure) in failures.iter().enumerate() {
+            error!(
+                "[{}/{}] ({}) {}: {}",
+                index + 1,
+                failed_count,
+                failure.test_type,
+                failure.test_name,
+                failure.message
+            );
+        }
+        error!("=== End of failures ({failed_count} total) ===");
     } else {
         info!("All tests passed");
     }
-    assert_eq!(failed_count, 0);
+    assert_eq!(
+        failed_count, 0,
+        "{failed_count} compatibility test(s) failed"
+    );
     Ok(())
+}
+
+/// Runs a single compatibility test (both interpreted and JIT) and records the outcome.
+fn run_compatibility_test(
+    java_version: &str,
+    java_home: &Path,
+    tests_root_dir: &Path,
+    test_dir: &Path,
+    passed: &AtomicUsize,
+    failures: &Mutex<Vec<Failure>>,
+) {
+    let test_name = test_dir.to_string_lossy().to_string();
+    let test_dir = tests_root_dir.join(test_dir);
+
+    if !TEST_FILTER.is_match(&test_name) {
+        return;
+    }
+
+    // Determine if the test should be ignored
+    let ignore_file = test_dir.join(IGNORE_FILE);
+    if ignore_file.exists() {
+        debug!("Ignoring test {test_name}");
+        return;
+    }
+
+    info!("Running test {test_name}");
+
+    let record = |result: Result<(), Failure>| match result {
+        Ok(()) => {
+            passed.fetch_add(1, Ordering::Relaxed);
+        }
+        Err(failure) => {
+            failures.lock().expect("failures lock").push(failure);
+        }
+    };
+
+    match expected_output(java_home, tests_root_dir, &test_dir) {
+        Ok((expected_duration, expected_output)) => {
+            record(test_vm(
+                java_version,
+                &test_name,
+                &test_dir,
+                true,
+                &expected_duration,
+                &expected_output,
+            ));
+            record(test_vm(
+                java_version,
+                &test_name,
+                &test_dir,
+                false,
+                &expected_duration,
+                &expected_output,
+            ));
+        }
+        Err(error) => {
+            let message = format!("Failed to obtain expected output: {error:?}");
+            error!("{test_name}: {message}");
+            let mut guard = failures.lock().expect("failures lock");
+            guard.push(Failure {
+                test_name: test_name.clone(),
+                test_type: "int".to_string(),
+                message: message.clone(),
+            });
+            guard.push(Failure {
+                test_name,
+                test_type: "jit".to_string(),
+                message,
+            });
+        }
+    }
 }
 
 /// Initializes the tracing subscriber for logging.
@@ -257,7 +309,7 @@ fn test_vm(
     interpreted: bool,
     expected_duration: &Duration,
     expected_output: &str,
-) -> Result<()> {
+) -> Result<(), Failure> {
     let test_type = if interpreted { "int" } else { "jit" };
     // Spawn a thread with a larger stack to handle deeply nested async calls that occur during
     // method handle invocations and invokedynamic resolution
@@ -293,6 +345,13 @@ fn test_vm(
         .expect("Failed to spawn test thread")
         .join()
         .expect("Test thread panicked");
+
+    let make_failure = |message: String| Failure {
+        test_name: test_name.to_string(),
+        test_type: test_type.to_string(),
+        message,
+    };
+
     match result {
         Ok(Ok((duration, output))) => {
             if expected_output == output {
@@ -304,16 +363,16 @@ fn test_vm(
                 let error_message =
                     format!("Output mismatch: expected {expected_output}, actual {output}");
                 error!("Failed ({test_type}) {test_name}: {error_message}");
-                Err(InternalError(error_message))
+                Err(make_failure(error_message))
             }
         }
         Ok(Err(error)) => {
             error!("Failed ({test_type}) {test_name}: {error:?}");
-            Err(error)
+            Err(make_failure(format!("{error:?}")))
         }
         Err(error) => {
             error!("Panic ({test_type}) {test_name}: {error:?}");
-            Err(InternalError(format!("{error:?}")))
+            Err(make_failure(format!("panic: {error:?}")))
         }
     }
 }
@@ -327,8 +386,8 @@ async fn run_test(
 ) -> Result<(Duration, String)> {
     let start_time = Instant::now();
     let class_path = ClassPath::from(&[test_dir]);
-    let stdout = Arc::new(Mutex::new(Vec::new()));
-    let stderr = Arc::new(Mutex::new(Vec::new()));
+    let stdout = Arc::new(AsyncMutex::new(Vec::new()));
+    let stderr = Arc::new(AsyncMutex::new(Vec::new()));
 
     // Create a garbage collector configured to use only one thread
     let gc_config = GcConfigurationBuilder::new().threads(1).build();

@@ -104,7 +104,7 @@ pub(crate) async fn get_runtime_archive_for(
 pub(crate) fn host_os_arch() -> (&'static str, &'static str) {
     match consts::OS {
         "macos" => {
-            if consts::ARCH == "x64" {
+            if consts::ARCH == "x86_64" {
                 ("macos", "x64")
             } else {
                 ("macos", "aarch64")
@@ -341,5 +341,22 @@ mod tests {
         assert_eq!(8, parse_major_version("8.472.08.1"));
         assert_eq!(0, parse_major_version(""));
         assert_eq!(0, parse_major_version("a"));
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn test_host_os_arch_returns_supported_tuple() {
+        let (os, arch) = host_os_arch();
+        assert!(
+            matches!(os, "macos" | "windows" | "linux" | "alpine-linux"),
+            "unexpected os {os}"
+        );
+        assert!(
+            matches!(arch, "x64" | "x86" | "aarch64"),
+            "unexpected arch {arch}"
+        );
+        if os == "macos" && consts::ARCH == "x86_64" {
+            assert_eq!(arch, "x64", "Intel Mac must map to x64");
+        }
     }
 }

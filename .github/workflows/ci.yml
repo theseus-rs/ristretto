@@ -95,7 +95,7 @@ jobs:
           cargo build --workspace --target ${{ matrix.target }}
 
       - name: Build
-        if: ${{ matrix.platform == 'macos-x64' || matrix.platform != 'wasm32-wasi' }}
+        if: ${{ matrix.platform == 'wasm32-wasi' || startsWith(matrix.platform, 'windows')}}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -106,7 +106,7 @@ jobs:
           cargo build --workspace --target ${{ matrix.target }}
 
       - name: Tests
-        if: ${{ startsWith(matrix.platform, 'linux') }}
+        if: ${{ startsWith(matrix.platform, 'linux') || matrix.platform == 'macos-x64' }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
