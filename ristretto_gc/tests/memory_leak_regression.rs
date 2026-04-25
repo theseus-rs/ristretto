@@ -833,15 +833,31 @@ fn test_sweep_actively_frees_memory() {
     let collector = GarbageCollector::with_config(config);
     collector.start();
 
+    let collect_and_wait = |label: &str| {
+        let started_before = collector
+            .statistics()
+            .expect("statistics")
+            .collections_started;
+        collector.collect();
+        assert!(
+            wait_for_condition(TIMEOUT, POLL, || {
+                let stats = collector.statistics().expect("statistics");
+                // A fresh cycle must have started after our snapshot AND completed.
+                stats.collections_started > started_before
+                    && stats.collections_completed >= stats.collections_started
+            }),
+            "{label}: a fresh GC cycle must start and complete (started_before={started_before})"
+        );
+    };
+
     let drop_count = Arc::new(AtomicUsize::new(0));
-    let mut total_collections = 0usize;
 
     // Allocate 10 batches of 100 short-lived objects.
     // For each batch:
     //   1. Run GC while rooted -> marks them (sets was_ever_marked)
     //   2. Drop roots
     //   3. Run GC again -> sweeps the now-unreachable objects
-    for _batch in 0..10 {
+    for batch in 0..10 {
         let objects: Vec<_> = (0u8..100)
             .map(|i| {
                 #[derive(Debug)]
@@ -867,69 +883,43 @@ fn test_sweep_actively_frees_memory() {
             })
             .collect();
 
-        // GC while rooted: marks objects as reachable (was_ever_marked = true)
-        total_collections += 1;
-        collector.collect();
-        assert!(
-            wait_for_condition(TIMEOUT, POLL, || {
-                collector
-                    .statistics()
-                    .map(|s| s.collections_completed >= total_collections)
-                    .unwrap_or(false)
-            }),
-            "mark cycle must complete (collection {total_collections})"
-        );
+        // GC while rooted: marks objects as reachable (sets was_ever_marked = true)
+        collect_and_wait(&format!("batch {batch} mark cycle"));
 
-        // Drop all roots;objects become unreachable
+        // Drop all roots; objects become unreachable
         drop(objects);
 
         // GC again: objects are unmarked + was_ever_marked -> swept
-        total_collections += 1;
-        collector.collect();
-        assert!(
-            wait_for_condition(TIMEOUT, POLL, || {
-                collector
-                    .statistics()
-                    .map(|s| s.collections_completed >= total_collections)
-                    .unwrap_or(false)
-            }),
-            "sweep cycle must complete (collection {total_collections})"
-        );
+        collect_and_wait(&format!("batch {batch} sweep cycle"));
     }
 
-    // Run several final collections to sweep objects that survived due to allocation-color-black
-    // (objects allocated during an in-flight cycle start marked=true, needing another cycle).
-    // Use multiple cycles plus a small wait between to give the collector thread enough time
-    // to process the queue under heavily loaded CI runners.
-    for _ in 0..5 {
-        total_collections += 1;
-        collector.collect();
-        assert!(
-            wait_for_condition(TIMEOUT, POLL, || {
-                collector
-                    .statistics()
-                    .map(|s| s.collections_completed >= total_collections)
-                    .unwrap_or(false)
-            }),
-            "final collection cycle must complete"
-        );
+    // Run additional collections to sweep objects that survived due to
+    // allocation-color-black (objects allocated during an in-flight cycle start
+    // marked=true, needing another full cycle to become eligible for sweep). Loop
+    // deterministically: keep running fresh cycles until every allocated object has
+    // been freed, rather than relying on a fixed iteration count that is sensitive
+    // to CI timing.
+    const TOTAL_ALLOCATED: usize = 1000;
+    const MAX_FINAL_CYCLES: usize = 50;
+    let mut final_cycles = 0usize;
+    while drop_count.load(Ordering::Relaxed) < TOTAL_ALLOCATED && final_cycles < MAX_FINAL_CYCLES {
+        final_cycles += 1;
+        collect_and_wait(&format!("final cycle {final_cycles}"));
     }
 
-    // The GC should have swept the vast majority of the 1000 objects.
-    // Allow a generous margin for timing variability across CI runners (slow ARM, macOS
-    // virtualization, contended Linux runners, etc.). The key invariant under test is that
-    // sweep is actively freeing memory during collection;not at shutdown;so even ~50%
-    // demonstrates that. We pick 600 (60%) as a comfortable lower bound.
+    // The key invariant under test is that sweep is actively freeing memory during
+    // collection (not at shutdown). Every object allocated by this test must have
+    // been freed by sweep.
     let freed = drop_count.load(Ordering::Relaxed);
-    assert!(
-        freed >= 600,
-        "sweep must actively free objects during collection; expected >=600, got {freed}"
+    assert_eq!(
+        freed, TOTAL_ALLOCATED,
+        "sweep must actively free all allocated objects during collection; got {freed}/{TOTAL_ALLOCATED} after {final_cycles} final cycles"
     );
 
     let stats = collector.statistics().expect("statistics");
     assert!(
-        stats.objects_swept >= 600,
-        "statistics must reflect swept objects; got {}",
+        stats.objects_swept >= TOTAL_ALLOCATED,
+        "statistics must reflect swept objects; got {}, expected >= {TOTAL_ALLOCATED}",
         stats.objects_swept
     );
 }
