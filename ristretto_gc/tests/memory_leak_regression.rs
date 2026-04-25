@@ -826,6 +826,9 @@ fn test_rooted_cyclic_graph_partial_unroot() {
 fn test_sweep_actively_frees_memory() {
     use ristretto_gc::Configuration;
 
+    const TOTAL_ALLOCATED: usize = 1000;
+    const MAX_FINAL_CYCLES: usize = 50;
+
     let config = Configuration {
         allocation_threshold: 1024, // Low threshold to trigger frequent collections
         ..Default::default()
@@ -899,8 +902,6 @@ fn test_sweep_actively_frees_memory() {
     // deterministically: keep running fresh cycles until every allocated object has
     // been freed, rather than relying on a fixed iteration count that is sensitive
     // to CI timing.
-    const TOTAL_ALLOCATED: usize = 1000;
-    const MAX_FINAL_CYCLES: usize = 50;
     let mut final_cycles = 0usize;
     while drop_count.load(Ordering::Relaxed) < TOTAL_ALLOCATED && final_cycles < MAX_FINAL_CYCLES {
         final_cycles += 1;
