@@ -197,6 +197,41 @@ impl FieldType {
         }
     }
 
+    /// Returns the number of operand-stack / local-variable slots a value of
+    /// this type occupies, per [JVMS §2.6.1] and [JVMS §2.6.2].
+    ///
+    /// `long` and `double` are category 2 values and occupy two slots; every
+    /// other field type (including object and array references) is a category
+    /// 1 value and occupies a single slot.
+    ///
+    /// [JVMS §2.6.1]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.1
+    /// [JVMS §2.6.2]: https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.2
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use ristretto_classfile::{BaseType, FieldType, JavaString};
+    ///
+    /// assert_eq!(FieldType::Base(BaseType::Int).slot_count(), 1);
+    /// assert_eq!(FieldType::Base(BaseType::Long).slot_count(), 2);
+    /// assert_eq!(FieldType::Base(BaseType::Double).slot_count(), 2);
+    /// assert_eq!(
+    ///     FieldType::Object(JavaString::from("java/lang/Object")).slot_count(),
+    ///     1
+    /// );
+    /// assert_eq!(
+    ///     FieldType::Array(Box::new(FieldType::Base(BaseType::Long))).slot_count(),
+    ///     1
+    /// );
+    /// ```
+    #[must_use]
+    pub const fn slot_count(&self) -> u8 {
+        match self {
+            FieldType::Base(BaseType::Long | BaseType::Double) => 2,
+            _ => 1,
+        }
+    }
+
     /// Parse a field descriptor string and return the corresponding `FieldType`.
     ///
     /// # Errors

@@ -3,11 +3,37 @@ use crate::attributes::ArrayType;
 use crate::byte_reader::ByteReader;
 use crate::error::Error::InvalidInstruction;
 use crate::error::Result;
+use crate::java_string::JavaStr;
 use crate::{ConstantPool, FieldType};
 use byteorder::{BigEndian, WriteBytesExt};
 use indexmap::IndexMap;
 use std::fmt;
 use std::io::Cursor;
+
+/// Compute the operand-stack delta for an `invoke*` instruction given the
+/// method descriptor referenced by its constant-pool entry.
+///
+/// Per JVMS 2.6.2 / 6.5.invoke*:
+/// * each parameter pops [`FieldType::slot_count`] slots,
+/// * if `has_receiver` is `true` an additional reference slot (the `this`
+///   pointer) is popped,
+/// * if the method has a return type its [`FieldType::slot_count`] slots are
+///   pushed back onto the operand stack.
+///
+/// # Errors
+///
+/// Returns an error if the descriptor cannot be parsed.
+fn invoke_stack_delta(descriptor: &JavaStr, has_receiver: bool) -> Result<i16> {
+    let (parameters, return_type) = FieldType::parse_method_descriptor(descriptor)?;
+    let mut delta: i16 = if has_receiver { -1 } else { 0 };
+    for parameter in &parameters {
+        delta -= i16::from(parameter.slot_count());
+    }
+    if let Some(return_type) = return_type {
+        delta += i16::from(return_type.slot_count());
+    }
+    Ok(delta)
+}
 
 /// Separate structure for the `tableswitch` instruction to limit the size of the `Instruction`
 /// enum.
@@ -1570,33 +1596,30 @@ impl Instruction {
             }
             Instruction::Invokevirtual(method_index)
             | Instruction::Invokespecial(method_index)
-            | Instruction::Invokestatic(method_index)
-            | Instruction::Invokedynamic(method_index) => {
-                let (_class_index, name_and_type_index) = constant_pool.try_get_method_ref(*method_index)?;
+            | Instruction::Invokestatic(method_index) => {
+                let (_class_index, name_and_type_index) =
+                    constant_pool.try_get_method_ref(*method_index)?;
                 let (_name_index, descriptor_index) =
                     constant_pool.try_get_name_and_type(*name_and_type_index)?;
                 let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-                let (parameters, _return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
-                let delta = -i16::try_from(parameters.len())?;
-
-                if matches!(self, Instruction::Invokestatic(..))
-                    || matches!(self, Instruction::Invokedynamic(..)) {
-                    delta
-                } else {
-                    // Subtract 1 for the object reference 
-                    delta.saturating_sub(1)
-                }
+                let has_receiver = !matches!(self, Instruction::Invokestatic(..));
+                invoke_stack_delta(method_descriptor, has_receiver)?
+            }
+            Instruction::Invokedynamic(invoke_dynamic_index) => {
+                let (_bootstrap, name_and_type_index) =
+                    constant_pool.try_get_invoke_dynamic(*invoke_dynamic_index)?;
+                let (_name_index, descriptor_index) =
+                    constant_pool.try_get_name_and_type(*name_and_type_index)?;
+                let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
+                invoke_stack_delta(method_descriptor, false)?
             }
             Instruction::Invokeinterface(method_index, ..) => {
-                let (_class_index, name_and_type_index) = constant_pool.try_get_interface_method_ref(*method_index)?;
+                let (_class_index, name_and_type_index) =
+                    constant_pool.try_get_interface_method_ref(*method_index)?;
                 let (_name_index, descriptor_index) =
                     constant_pool.try_get_name_and_type(*name_and_type_index)?;
                 let method_descriptor = constant_pool.try_get_utf8(*descriptor_index)?;
-                let (parameters, _return_type) = FieldType::parse_method_descriptor(method_descriptor)?;
-                let delta = -i16::try_from(parameters.len())?;
-
-                // Subtract 1 for the object reference
-                delta.saturating_sub(1)
+                invoke_stack_delta(method_descriptor, true)?
             }
             _ => 0,
         };
@@ -5467,7 +5490,7 @@ mod test {
             "invokevirtual #6 // Method Foo.x(IJ)V",
             Instruction::Invokevirtual(method_index).to_formatted_string(&constant_pool)?
         );
-        assert_eq!(-3, instruction.stack_delta(&constant_pool)?);
+        assert_eq!(-4, instruction.stack_delta(&constant_pool)?);
         assert_eq!(None, instruction.max_locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
@@ -5486,7 +5509,7 @@ mod test {
             "invokespecial #6 // Method Foo.x(IJ)V",
             Instruction::Invokespecial(method_index).to_formatted_string(&constant_pool)?
         );
-        assert_eq!(-3, instruction.stack_delta(&constant_pool)?);
+        assert_eq!(-4, instruction.stack_delta(&constant_pool)?);
         assert_eq!(None, instruction.max_locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
@@ -5505,7 +5528,7 @@ mod test {
             "invokestatic #6 // Method Foo.x(IJ)V",
             Instruction::Invokestatic(method_index).to_formatted_string(&constant_pool)?
         );
-        assert_eq!(-2, instruction.stack_delta(&constant_pool)?);
+        assert_eq!(-3, instruction.stack_delta(&constant_pool)?);
         assert_eq!(None, instruction.max_locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
@@ -5524,7 +5547,7 @@ mod test {
             "invokeinterface #6, 1 // Interface method Foo.x(IJ)V",
             Instruction::Invokeinterface(method_index, 1).to_formatted_string(&constant_pool)?
         );
-        assert_eq!(-3, instruction.stack_delta(&constant_pool)?);
+        assert_eq!(-4, instruction.stack_delta(&constant_pool)?);
         assert_eq!(None, instruction.max_locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
     }
@@ -5541,20 +5564,64 @@ mod test {
     #[test]
     fn test_invokedynamic() -> Result<()> {
         let mut constant_pool = ConstantPool::new();
-        let class_index = constant_pool.add_class("Foo")?;
-        let method_index = constant_pool.add_method_ref(class_index, "x", "(IJ)V")?;
+        let method_index = constant_pool.add_invoke_dynamic(0, "x", "(IJ)V")?;
         let instruction = Instruction::Invokedynamic(method_index);
         let code = 186;
-        let expected_bytes = [code, 0, 6, 0, 0];
+        let [hi, lo] = method_index.to_be_bytes();
+        let expected_bytes = [code, hi, lo, 0, 0];
 
-        assert_eq!("invokedynamic #6", instruction.to_string());
         assert_eq!(
-            "invokedynamic #6 // Method Foo.x(IJ)V",
-            Instruction::Invokedynamic(method_index).to_formatted_string(&constant_pool)?
+            format!("invokedynamic #{method_index}"),
+            instruction.to_string()
         );
-        assert_eq!(-2, instruction.stack_delta(&constant_pool)?);
+        assert_eq!(
+            format!("invokedynamic #{method_index} // InvokeDynamic #0:x:(IJ)V"),
+            instruction.to_formatted_string(&constant_pool)?
+        );
+        assert_eq!(-3, instruction.stack_delta(&constant_pool)?);
         assert_eq!(None, instruction.max_locals_index()?);
         test_instruction(&instruction, &expected_bytes, code)
+    }
+
+    #[test]
+    fn test_invoke_stack_delta_long_double_return() -> Result<()> {
+        let mut constant_pool = ConstantPool::new();
+        let class_index = constant_pool.add_class("Foo")?;
+
+        // Static method returning a long: pops 1 int param, pushes 2 (long)
+        let method_index = constant_pool.add_method_ref(class_index, "j", "(I)J")?;
+        let instruction = Instruction::Invokestatic(method_index);
+        assert_eq!(1, instruction.stack_delta(&constant_pool)?);
+
+        // Virtual method returning a double: pops receiver + 1 int, pushes 2 (double)
+        let method_index = constant_pool.add_method_ref(class_index, "d", "(I)D")?;
+        let instruction = Instruction::Invokevirtual(method_index);
+        assert_eq!(0, instruction.stack_delta(&constant_pool)?);
+
+        // Static method with a double parameter and reference return: pops 2 (double), pushes 1
+        let method_index =
+            constant_pool.add_method_ref(class_index, "s", "(D)Ljava/lang/String;")?;
+        let instruction = Instruction::Invokestatic(method_index);
+        assert_eq!(-1, instruction.stack_delta(&constant_pool)?);
+
+        // Static method with no parameters returning a reference: pushes 1
+        let method_index =
+            constant_pool.add_method_ref(class_index, "o", "()Ljava/lang/Object;")?;
+        let instruction = Instruction::Invokestatic(method_index);
+        assert_eq!(1, instruction.stack_delta(&constant_pool)?);
+
+        // Interface method with a double parameter returning a long: pops receiver + 2 (double),
+        // pushes 2 (long)
+        let method_index = constant_pool.add_interface_method_ref(class_index, "i", "(D)J")?;
+        let instruction = Instruction::Invokeinterface(method_index, 1);
+        assert_eq!(-1, instruction.stack_delta(&constant_pool)?);
+
+        // Invokedynamic returning a double with long parameter: pops 2 (long), pushes 2 (double)
+        let invoke_dynamic_index = constant_pool.add_invoke_dynamic(0, "y", "(J)D")?;
+        let instruction = Instruction::Invokedynamic(invoke_dynamic_index);
+        assert_eq!(0, instruction.stack_delta(&constant_pool)?);
+
+        Ok(())
     }
 
     #[test]
