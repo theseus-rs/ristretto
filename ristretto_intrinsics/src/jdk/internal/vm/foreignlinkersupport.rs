@@ -22,7 +22,6 @@ pub async fn is_supported_0<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -31,6 +30,9 @@ mod tests {
     async fn test_is_supported_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = is_supported_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.vm.ForeignLinkerSupport.isSupported0()Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

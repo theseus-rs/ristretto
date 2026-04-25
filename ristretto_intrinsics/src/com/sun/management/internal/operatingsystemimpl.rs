@@ -83,7 +83,7 @@ pub async fn get_free_swap_space_size_0<T: Thread + 'static>(
     )
     .into())
 }
-
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getHostConfiguredCpuCount0()I",
     GreaterThanOrEqual(JAVA_11)
@@ -98,7 +98,7 @@ pub async fn get_host_configured_cpu_count_0<T: Thread + 'static>(
     )
     .into())
 }
-
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getHostOnlineCpuCount0()I",
     GreaterThanOrEqual(JAVA_11)
@@ -113,7 +113,7 @@ pub async fn get_host_online_cpu_count_0<T: Thread + 'static>(
     )
     .into())
 }
-
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getHostTotalCpuTicks0()J",
     GreaterThanOrEqual(JAVA_11)
@@ -128,7 +128,7 @@ pub async fn get_host_total_cpu_ticks_0<T: Thread + 'static>(
     )
     .into())
 }
-
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getMaxFileDescriptorCount0()J",
     GreaterThanOrEqual(JAVA_11)
@@ -143,7 +143,7 @@ pub async fn get_max_file_descriptor_count_0<T: Thread + 'static>(
     )
     .into())
 }
-
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getOpenFileDescriptorCount0()J",
     GreaterThanOrEqual(JAVA_11)
@@ -189,7 +189,7 @@ pub async fn get_process_cpu_time_0<T: Thread + 'static>(
     )
     .into())
 }
-
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getSingleCpuLoad0(I)D",
     GreaterThanOrEqual(JAVA_11)
@@ -197,8 +197,9 @@ pub async fn get_process_cpu_time_0<T: Thread + 'static>(
 #[async_method]
 pub async fn get_single_cpu_load_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _cpu_num = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.sun.management.internal.OperatingSystemImpl.getSingleCpuLoad0(I)D".to_string(),
     )
@@ -278,7 +279,7 @@ pub async fn initialize_0<T: Thread + 'static>(
     Ok(None)
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_family = "unix"))]
 mod tests {
     use super::*;
 
@@ -286,119 +287,170 @@ mod tests {
     async fn test_get_committed_virtual_memory_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_committed_virtual_memory_size_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getCommittedVirtualMemorySize0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_cpu_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_cpu_load_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getCpuLoad0()D",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_free_physical_memory_size_0() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_free_physical_memory_size_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getFreePhysicalMemorySize0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_free_memory_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_free_memory_size_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getFreeMemorySize0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_free_swap_space_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_free_swap_space_size_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getFreeSwapSpaceSize0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_host_configured_cpu_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_host_configured_cpu_count_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getHostConfiguredCpuCount0()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_host_online_cpu_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_host_online_cpu_count_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getHostOnlineCpuCount0()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_host_total_cpu_ticks_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_host_total_cpu_ticks_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getHostTotalCpuTicks0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_max_file_descriptor_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_max_file_descriptor_count_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getMaxFileDescriptorCount0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_open_file_descriptor_count_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_open_file_descriptor_count_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getOpenFileDescriptorCount0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_process_cpu_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_process_cpu_load_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getProcessCpuLoad0()D",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_process_cpu_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_process_cpu_time_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getProcessCpuTime0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_single_cpu_load_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_single_cpu_load_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_single_cpu_load_0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getSingleCpuLoad0(I)D",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_system_cpu_load_0() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_system_cpu_load_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getSystemCpuLoad0()D",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_total_memory_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_total_memory_size_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getTotalMemorySize0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_total_physical_memory_size_0() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_total_physical_memory_size_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getTotalPhysicalMemorySize0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_total_swap_space_size_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_total_swap_space_size_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.management.internal.OperatingSystemImpl.getTotalSwapSpaceSize0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

@@ -15,8 +15,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn activate_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg1 = parameters.pop_reference()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.tracing.dtrace.JVM.activate0(Ljava/lang/String;[Lsun/tracing/dtrace/DTraceProvider;)J"
             .to_string(),
@@ -31,8 +33,13 @@ pub async fn activate_0<T: Thread + 'static>(
 #[async_method]
 pub async fn define_class_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg4 = parameters.pop_int()?;
+    let _arg3 = parameters.pop_int()?;
+    let _arg2 = parameters.pop_reference()?;
+    let _arg1 = parameters.pop_reference()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.tracing.dtrace.JVM.defineClass0(Ljava/lang/ClassLoader;Ljava/lang/String;[BII)Ljava/lang/Class;".to_string()).into())
 }
 
@@ -40,8 +47,9 @@ pub async fn define_class_0<T: Thread + 'static>(
 #[async_method]
 pub async fn dispose_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _activation_handle = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun.tracing.dtrace.JVM.dispose0(J)".to_string()).into())
 }
 
@@ -52,8 +60,9 @@ pub async fn dispose_0<T: Thread + 'static>(
 #[async_method]
 pub async fn is_enabled_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _m = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.tracing.dtrace.JVM.isEnabled0(Ljava/lang/reflect/Method;)Z".to_string(),
     )
@@ -71,7 +80,6 @@ pub async fn is_supported_0<T: Thread + 'static>(
             .into(),
     )
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,35 +87,64 @@ mod tests {
     #[tokio::test]
     async fn test_activate_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = activate_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = activate_0(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.tracing.dtrace.JVM.activate0(Ljava/lang/String;[Lsun/tracing/dtrace/DTraceProvider;)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_define_class_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = define_class_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = define_class_0(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Object(None),
+                Value::Int(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.tracing.dtrace.JVM.defineClass0(Ljava/lang/ClassLoader;Ljava/lang/String;[BII)Ljava/lang/Class;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_dispose_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = dispose_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = dispose_0(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.tracing.dtrace.JVM.dispose0(J)",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_is_enabled_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = is_enabled_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = is_enabled_0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.tracing.dtrace.JVM.isEnabled0(Ljava/lang/reflect/Method;)Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_is_supported_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = is_supported_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.tracing.dtrace.JVM.isSupported0()Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -96,8 +96,9 @@ pub async fn run_finalization_0<T: Thread + 'static>(
 #[async_method]
 pub async fn trace_instructions<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _on = parameters.pop_bool()?;
     Err(
         JavaError::UnsatisfiedLinkError("java.lang.Runtime.traceInstructions(Z)V".to_string())
             .into(),
@@ -108,8 +109,9 @@ pub async fn trace_instructions<T: Thread + 'static>(
 #[async_method]
 pub async fn trace_method_calls<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _on = parameters.pop_bool()?;
     Err(
         JavaError::UnsatisfiedLinkError("java.lang.Runtime.traceMethodCalls(Z)V".to_string())
             .into(),
@@ -190,15 +192,21 @@ mod tests {
     #[tokio::test]
     async fn test_trace_instructions() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = trace_instructions(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = trace_instructions(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "java.lang.Runtime.traceInstructions(Z)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_trace_method_calls() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = trace_method_calls(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = trace_method_calls(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "java.lang.Runtime.traceMethodCalls(Z)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

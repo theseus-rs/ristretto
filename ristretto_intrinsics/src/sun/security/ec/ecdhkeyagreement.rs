@@ -12,14 +12,16 @@ use std::sync::Arc;
 #[async_method]
 pub async fn derive_key<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _encoded_params = parameters.pop_reference()?;
+    let _w = parameters.pop_reference()?;
+    let _s = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.security.ec.ECDHKeyAgreement.deriveKey([B[B[B)[B".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -27,7 +29,18 @@ mod tests {
     #[tokio::test]
     async fn test_derive_key() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = derive_key(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = derive_key(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Object(None),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.security.ec.ECDHKeyAgreement.deriveKey([B[B[B)[B",
+            result.unwrap_err().to_string()
+        );
     }
 }

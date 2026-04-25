@@ -11,8 +11,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn finalize_impl<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _p_data = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("java.awt.Cursor.finalizeImpl(J)V".to_string()).into())
 }
 
@@ -32,8 +33,11 @@ mod tests {
     #[tokio::test]
     async fn test_finalize_impl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = finalize_impl(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = finalize_impl(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "java.awt.Cursor.finalizeImpl(J)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

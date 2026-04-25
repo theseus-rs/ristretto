@@ -15,8 +15,12 @@ use std::sync::Arc;
 #[async_method]
 pub async fn create_native_drop_target_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg3 = parameters.pop_long()?;
+    let _arg2 = parameters.pop_reference()?;
+    let _arg1 = parameters.pop_reference()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;Ljava/awt/peer/ComponentPeer;J)J".to_string()).into())
 }
 
@@ -27,8 +31,11 @@ pub async fn create_native_drop_target_0<T: Thread + 'static>(
 #[async_method]
 pub async fn create_native_drop_target_1<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _jnativepeer = parameters.pop_long()?;
+    let _jcomponent = parameters.pop_reference()?;
+    let _jdroptarget = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J".to_string()).into())
 }
 
@@ -36,14 +43,14 @@ pub async fn create_native_drop_target_1<T: Thread + 'static>(
 #[async_method]
 pub async fn release_native_drop_target<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _native_drop_target = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.lwawt.macosx.CDropTarget.releaseNativeDropTarget(J)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -51,21 +58,48 @@ mod tests {
     #[tokio::test]
     async fn test_create_native_drop_target_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = create_native_drop_target_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = create_native_drop_target_0(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Object(None),
+                Value::Long(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.lwawt.macosx.CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;Ljava/awt/peer/ComponentPeer;J)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_create_native_drop_target_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create_native_drop_target_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = create_native_drop_target_1(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Long(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.lwawt.macosx.CDropTarget.createNativeDropTarget(Ljava/awt/dnd/DropTarget;Ljava/awt/Component;J)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_release_native_drop_target() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = release_native_drop_target(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            release_native_drop_target(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.lwawt.macosx.CDropTarget.releaseNativeDropTarget(J)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

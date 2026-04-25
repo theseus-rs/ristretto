@@ -23,14 +23,14 @@ pub async fn init_ids<T: Thread + 'static>(
 #[async_method]
 pub async fn native_set_source<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _peer = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "java.awt.AWTEvent.nativeSetSource(Ljava/awt/peer/ComponentPeer;)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -46,7 +46,10 @@ mod tests {
     #[tokio::test]
     async fn test_native_set_source() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_set_source(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = native_set_source(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java.awt.AWTEvent.nativeSetSource(Ljava/awt/peer/ComponentPeer;)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

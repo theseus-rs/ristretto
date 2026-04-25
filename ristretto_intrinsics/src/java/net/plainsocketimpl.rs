@@ -1,15 +1,29 @@
+#[cfg(target_os = "windows")]
+use ristretto_classfile::VersionSpecification::Between;
+#[cfg(not(target_os = "windows"))]
 use ristretto_classfile::VersionSpecification::{Equal, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
-use ristretto_classloader::{Reference, Value};
+#[cfg(not(target_os = "windows"))]
+use ristretto_classloader::Reference;
+use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+#[cfg(not(target_os = "windows"))]
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
-use ristretto_types::handles::{SocketHandle, SocketType};
-use ristretto_types::{JavaError, Parameters, Result, VM};
+#[cfg(not(target_os = "windows"))]
+use ristretto_types::VM;
+#[cfg(not(target_os = "windows"))]
+use ristretto_types::handles::SocketHandle;
+use ristretto_types::handles::SocketType;
+use ristretto_types::{JavaError, Parameters, Result};
+#[cfg(not(target_os = "windows"))]
 use socket2::{Domain, Protocol, SockAddr, Type};
-use std::net::{Ipv4Addr, Shutdown, SocketAddrV4};
+use std::net::Ipv4Addr;
+#[cfg(not(target_os = "windows"))]
+use std::net::{Shutdown, SocketAddrV4};
 use std::sync::Arc;
+#[cfg(not(target_os = "windows"))]
 use std::time::Duration;
 
 /// Create a `socket2::Socket` from a `SocketType` for option operations.
@@ -86,6 +100,7 @@ fn get_int_from_object(value: &Value) -> Result<i32> {
     Ok(obj.value("value")?.as_i32()?)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainSocketImpl.initProto()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn init_proto<T: Thread + 'static>(
@@ -95,12 +110,13 @@ pub async fn init_proto<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.socketAccept(Ljava/net/SocketImpl;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[expect(clippy::too_many_lines)]
 #[async_method]
+#[expect(clippy::too_many_lines)]
 pub async fn socket_accept<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -295,6 +311,7 @@ pub async fn socket_accept<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.socketAvailable()I",
     LessThanOrEqual(JAVA_17)
@@ -308,6 +325,7 @@ pub async fn socket_available<T: Thread + 'static>(
     Ok(Some(Value::Int(0)))
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.socketBind(Ljava/net/InetAddress;I)V",
     LessThanOrEqual(JAVA_17)
@@ -372,6 +390,7 @@ pub async fn socket_bind<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainSocketImpl.socketClose0(Z)V", LessThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn socket_close_0<T: Thread + 'static>(
@@ -389,6 +408,7 @@ pub async fn socket_close_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.socketConnect(Ljava/net/InetAddress;II)V",
     LessThanOrEqual(JAVA_17)
@@ -490,6 +510,7 @@ pub async fn socket_connect<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainSocketImpl.socketCreate(Z)V", LessThanOrEqual(JAVA_11))]
 #[async_method]
 pub async fn socket_create_0<T: Thread + 'static>(
@@ -517,6 +538,7 @@ pub async fn socket_create_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainSocketImpl.socketCreate(ZZ)V", Equal(JAVA_17))]
 #[async_method]
 pub async fn socket_create_1<T: Thread + 'static>(
@@ -555,6 +577,7 @@ pub async fn socket_create_1<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.socketGetOption(ILjava/lang/Object;)I",
     LessThanOrEqual(JAVA_17)
@@ -626,6 +649,7 @@ pub async fn socket_get_option<T: Thread + 'static>(
     Ok(Some(Value::Int(value)))
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainSocketImpl.socketListen(I)V", LessThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn socket_listen<T: Thread + 'static>(
@@ -669,6 +693,7 @@ pub async fn socket_listen<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.socketSendUrgentData(I)V",
     LessThanOrEqual(JAVA_17)
@@ -727,6 +752,7 @@ pub async fn socket_send_urgent_data<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.socketSetOption0(IZLjava/lang/Object;)V",
     LessThanOrEqual(JAVA_17)
@@ -808,6 +834,7 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.socketShutdown(I)V",
     LessThanOrEqual(JAVA_17)
@@ -848,10 +875,541 @@ pub async fn socket_shutdown<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.accept0(I[Ljava/net/InetSocketAddress;)I",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn accept0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _isaa = parameters.pop_reference()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.accept0(I[Ljava/net/InetSocketAddress;)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.available0(I)I", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn available0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.available0(I)I".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.bind0(ILjava/net/InetAddress;IZ)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn bind0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _excl_bind = parameters.pop_bool()?;
+    let _port = parameters.pop_int()?;
+    let _ia_obj = parameters.pop_reference()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.bind0(ILjava/net/InetAddress;IZ)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.close0(I)V", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn close0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.close0(I)V".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.configureBlocking(IZ)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn configure_blocking<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _blocking = parameters.pop_bool()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.configureBlocking(IZ)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.connect0(ILjava/net/InetAddress;I)I",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn connect0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _port = parameters.pop_int()?;
+    let _ia_obj = parameters.pop_reference()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.connect0(ILjava/net/InetAddress;I)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.getIntOption(II)I",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn get_int_option<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _cmd = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.getIntOption(II)I".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.initIDs()V", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn init_ids<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.initIDs()V".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.listen0(II)V", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn listen0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _backlog = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.listen0(II)V".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.localAddress(ILjava/net/InetAddressContainer;)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn local_address<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _ia_container_obj = parameters.pop_reference()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.localAddress(ILjava/net/InetAddressContainer;)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.localPort0(I)I", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn local_port0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.localPort0(I)I".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.sendOOB(II)V", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn send_oob<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _data = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.sendOOB(II)V".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.setIntOption(III)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn set_int_option<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _value = parameters.pop_int()?;
+    let _cmd = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.setIntOption(III)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.setSoTimeout0(II)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn set_so_timeout0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _timeout = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.setSoTimeout0(II)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.shutdown0(II)V", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn shutdown0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _howto = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.shutdown0(II)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.socket0(Z)I", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn socket0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _stream = parameters.pop_bool()?;
+    Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.socket0(Z)I".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.waitForConnect(II)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn wait_for_connect<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _timeout = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.waitForConnect(II)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.waitForNewConnection(II)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn wait_for_new_connection<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _timeout = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.waitForNewConnection(II)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.accept0(I[Ljava/net/InetSocketAddress;)I",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn accept0_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _isaa = parameters.pop_reference()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.accept0(I[Ljava/net/InetSocketAddress;)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.available0(I)I", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn available0_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.available0(I)I".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.bind0(ILjava/net/InetAddress;IZ)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn bind0_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _excl_bind = parameters.pop_bool()?;
+    let _port = parameters.pop_int()?;
+    let _ia_obj = parameters.pop_reference()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.bind0(ILjava/net/InetAddress;IZ)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.close0(I)V", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn close0_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.close0(I)V".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.configureBlocking(IZ)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn configure_blocking_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _blocking = parameters.pop_bool()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.configureBlocking(IZ)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.connect0(ILjava/net/InetAddress;I)I",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn connect0_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _port = parameters.pop_int()?;
+    let _ia_obj = parameters.pop_reference()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.connect0(ILjava/net/InetAddress;I)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.getIntOption(II)I",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn get_int_option_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _cmd = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.getIntOption(II)I".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.initIDs()V", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn init_ids_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.initIDs()V".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.listen0(II)V", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn listen0_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _backlog = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.listen0(II)V".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.localAddress(ILjava/net/InetAddressContainer;)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn local_address_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _ia_container_obj = parameters.pop_reference()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.localAddress(ILjava/net/InetAddressContainer;)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.localPort0(I)I", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn local_port0_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.localPort0(I)I".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.sendOOB(II)V", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn send_oob_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _data = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.sendOOB(II)V".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.setIntOption(III)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn set_int_option_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _value = parameters.pop_int()?;
+    let _cmd = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.setIntOption(III)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.setSoTimeout0(II)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn set_so_timeout0_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _timeout = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.setSoTimeout0(II)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.shutdown0(II)V", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn shutdown0_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _howto = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.shutdown0(II)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/net/PlainSocketImpl.socket0(Z)I", Between(JAVA_11, JAVA_17))]
+#[async_method]
+pub async fn socket0_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _stream = parameters.pop_bool()?;
+    Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.socket0(Z)I".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.waitForConnect(II)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn wait_for_connect_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _timeout = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.waitForConnect(II)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/net/PlainSocketImpl.waitForNewConnection(II)V",
+    Between(JAVA_11, JAVA_17)
+)]
+#[async_method]
+pub async fn wait_for_new_connection_windows_v11_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _timeout = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/net/PlainSocketImpl.waitForNewConnection(II)V".to_string(),
+    )
+    .into())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_init_proto() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
@@ -860,6 +1418,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_accept() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -867,6 +1426,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_available() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -874,6 +1434,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_bind() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -881,6 +1442,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_close_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -888,6 +1450,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_connect() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -895,6 +1458,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_create_0() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
@@ -902,6 +1466,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_create_1() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -909,6 +1474,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_get_option() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -916,6 +1482,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_listen() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -923,6 +1490,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_send_urgent_data() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -930,6 +1498,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_set_option_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -937,10 +1506,494 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "windows"))]
     #[tokio::test]
     async fn test_socket_shutdown() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = socket_shutdown(thread, Parameters::default()).await;
         assert!(result.is_err());
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_accept0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = accept0(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.accept0(I[Ljava/net/InetSocketAddress;)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_available0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = available0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.available0(I)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_bind0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = bind0(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Object(None),
+                Value::Int(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.bind0(ILjava/net/InetAddress;IZ)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = close0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.close0(I)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_configure_blocking() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = configure_blocking(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::from(false)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.configureBlocking(IZ)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_connect0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = connect0(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Object(None), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.connect0(ILjava/net/InetAddress;I)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_get_int_option() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            get_int_option(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.getIntOption(II)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_init_ids() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = init_ids(thread, Parameters::default()).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.initIDs()V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_listen0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = listen0(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.listen0(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_local_address() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = local_address(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.localAddress(ILjava/net/InetAddressContainer;)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_local_port0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = local_port0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.localPort0(I)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_send_oob() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = send_oob(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.sendOOB(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_set_int_option() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set_int_option(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.setIntOption(III)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_set_so_timeout0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            set_so_timeout0(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.setSoTimeout0(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_shutdown0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = shutdown0(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.shutdown0(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_socket0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = socket0(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.socket0(Z)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_wait_for_connect() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            wait_for_connect(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.waitForConnect(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_wait_for_new_connection() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            wait_for_new_connection(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]))
+                .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.waitForNewConnection(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_accept0_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = accept0_windows_v11_v17(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.accept0(I[Ljava/net/InetSocketAddress;)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_available0_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = available0_windows_v11_v17(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.available0(I)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_bind0_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = bind0_windows_v11_v17(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Object(None),
+                Value::Int(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.bind0(ILjava/net/InetAddress;IZ)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close0_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = close0_windows_v11_v17(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.close0(I)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_configure_blocking_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = configure_blocking_windows_v11_v17(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::from(false)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.configureBlocking(IZ)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_connect0_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = connect0_windows_v11_v17(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Object(None), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.connect0(ILjava/net/InetAddress;I)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_get_int_option_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = get_int_option_windows_v11_v17(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.getIntOption(II)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_init_ids_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = init_ids_windows_v11_v17(thread, Parameters::default()).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.initIDs()V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_listen0_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            listen0_windows_v11_v17(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]))
+                .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.listen0(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_local_address_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = local_address_windows_v11_v17(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.localAddress(ILjava/net/InetAddressContainer;)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_local_port0_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            local_port0_windows_v11_v17(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.localPort0(I)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_send_oob_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            send_oob_windows_v11_v17(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]))
+                .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.sendOOB(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_set_int_option_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set_int_option_windows_v11_v17(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.setIntOption(III)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_set_so_timeout0_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set_so_timeout0_windows_v11_v17(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.setSoTimeout0(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_shutdown0_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            shutdown0_windows_v11_v17(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]))
+                .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.shutdown0(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_socket0_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            socket0_windows_v11_v17(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.socket0(Z)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_wait_for_connect_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = wait_for_connect_windows_v11_v17(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.waitForConnect(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_wait_for_new_connection_windows_v11_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = wait_for_new_connection_windows_v11_v17(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "java/net/PlainSocketImpl.waitForNewConnection(II)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

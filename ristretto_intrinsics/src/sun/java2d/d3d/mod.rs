@@ -1,0 +1,12 @@
+#[cfg(target_os = "windows")]
+pub mod d3dgraphicsdevice;
+#[cfg(target_os = "windows")]
+pub mod d3dmaskfill;
+#[cfg(target_os = "windows")]
+pub mod d3drenderer;
+#[cfg(target_os = "windows")]
+pub mod d3drenderqueue;
+#[cfg(target_os = "windows")]
+pub mod d3dsurfacedata;
+#[cfg(target_os = "windows")]
+pub mod d3dtextrenderer;

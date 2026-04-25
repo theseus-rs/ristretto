@@ -18,7 +18,6 @@ pub async fn get_window_background_color<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -27,6 +26,9 @@ mod tests {
     async fn test_get_window_background_color() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_window_background_color(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.apple.laf.AquaNativeResources.getWindowBackgroundColor()J",
+            result.unwrap_err().to_string()
+        );
     }
 }

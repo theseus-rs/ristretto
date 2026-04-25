@@ -14,11 +14,11 @@ use std::sync::Arc;
 #[async_method]
 pub async fn acquire_default_native_creds<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _e_types = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.security.krb5.Credentials.acquireDefaultNativeCreds([I)Lsun/security/krb5/Credentials;".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -26,7 +26,11 @@ mod tests {
     #[tokio::test]
     async fn test_acquire_default_native_creds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = acquire_default_native_creds(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            acquire_default_native_creds(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.security.krb5.Credentials.acquireDefaultNativeCreds([I)Lsun/security/krb5/Credentials;",
+            result.unwrap_err().to_string()
+        );
     }
 }

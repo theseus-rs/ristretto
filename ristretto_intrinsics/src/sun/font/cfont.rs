@@ -12,8 +12,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn create_native_font<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _style = parameters.pop_int()?;
+    let _native_font_name = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.font.CFont.createNativeFont(Ljava/lang/String;I)J".to_string(),
     )
@@ -24,8 +26,9 @@ pub async fn create_native_font<T: Thread + 'static>(
 #[async_method]
 pub async fn dispose_native_font<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _native_font_ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun.font.CFont.disposeNativeFont(J)V".to_string()).into())
 }
 
@@ -33,8 +36,9 @@ pub async fn dispose_native_font<T: Thread + 'static>(
 #[async_method]
 pub async fn get_cg_font_ptr_native<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun.font.CFont.getCGFontPtrNative(J)J".to_string()).into())
 }
 
@@ -42,8 +46,10 @@ pub async fn get_cg_font_ptr_native<T: Thread + 'static>(
 #[async_method]
 pub async fn get_cascade_list<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _list_of_string = parameters.pop_reference()?;
+    let _native_font_ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.font.CFont.getCascadeList(JLjava/util/ArrayList;)V".to_string(),
     )
@@ -57,8 +63,9 @@ pub async fn get_cascade_list<T: Thread + 'static>(
 #[async_method]
 pub async fn get_layout_table_cache_native<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_long()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.font.CFont.getLayoutTableCacheNative(J)J".to_string())
             .into(),
@@ -69,8 +76,10 @@ pub async fn get_layout_table_cache_native<T: Thread + 'static>(
 #[async_method]
 pub async fn get_table_bytes_native<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _tag = parameters.pop_int()?;
+    let _native_font_ptr = parameters.pop_long()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.font.CFont.getTableBytesNative(JI)[B".to_string())
             .into(),
@@ -81,8 +90,9 @@ pub async fn get_table_bytes_native<T: Thread + 'static>(
 #[async_method]
 pub async fn get_weight_native<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _native_font_ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun.font.CFont.getWeightNative(J)F".to_string()).into())
 }
 
@@ -90,11 +100,11 @@ pub async fn get_weight_native<T: Thread + 'static>(
 #[async_method]
 pub async fn get_width_native<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _native_font_ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun.font.CFont.getWidthNative(J)F".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -102,56 +112,91 @@ mod tests {
     #[tokio::test]
     async fn test_create_native_font() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create_native_font(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = create_native_font(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.font.CFont.createNativeFont(Ljava/lang/String;I)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_dispose_native_font() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dispose_native_font(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = dispose_native_font(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.font.CFont.disposeNativeFont(J)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_cg_font_ptr_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_cg_font_ptr_native(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_cg_font_ptr_native(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.font.CFont.getCGFontPtrNative(J)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_cascade_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_cascade_list(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_cascade_list(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.font.CFont.getCascadeList(JLjava/util/ArrayList;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_layout_table_cache_native() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = get_layout_table_cache_native(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            get_layout_table_cache_native(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.font.CFont.getLayoutTableCacheNative(J)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_table_bytes_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_table_bytes_native(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            get_table_bytes_native(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]))
+                .await;
+        assert_eq!(
+            "sun.font.CFont.getTableBytesNative(JI)[B",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_weight_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_weight_native(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_weight_native(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.font.CFont.getWeightNative(J)F",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_width_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_width_native(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_width_native(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.font.CFont.getWidthNative(J)F",
+            result.unwrap_err().to_string()
+        );
     }
 }

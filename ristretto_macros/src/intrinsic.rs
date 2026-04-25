@@ -36,7 +36,9 @@ pub(crate) fn process(attributes: TokenStream, item: TokenStream) -> TokenStream
     let constant_name = signature_lit
         .value()
         .replace(['/', '$', '.', '(', ')', ';', '['], "_");
-    let registration_ident = format_ident!("_{constant_name}_INTRINSIC_DATA");
+    let fn_name_str = fn_name.to_string();
+    let fn_name_clean = fn_name_str.strip_prefix("r#").unwrap_or(&fn_name_str);
+    let registration_ident = format_ident!("_{constant_name}_{fn_name_clean}_INTRINSIC_DATA");
 
     let intrinsic_name_expr = quote! { #signature_lit };
 

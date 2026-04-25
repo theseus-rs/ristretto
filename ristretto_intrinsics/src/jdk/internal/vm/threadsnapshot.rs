@@ -17,14 +17,13 @@ pub async fn create<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _thread_param = parameters.pop_reference()?;
+    let _thread = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.vm.ThreadSnapshot.create(Ljava/lang/Thread;)Ljdk/internal/vm/ThreadSnapshot;"
             .to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -32,8 +31,10 @@ mod tests {
     #[tokio::test]
     async fn test_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let parameters = Parameters::new(vec![Value::Object(None)]);
-        let result = create(thread, parameters).await;
-        assert!(result.is_err());
+        let result = create(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "jdk.internal.vm.ThreadSnapshot.create(Ljava/lang/Thread;)Ljdk/internal/vm/ThreadSnapshot;",
+            result.unwrap_err().to_string()
+        );
     }
 }

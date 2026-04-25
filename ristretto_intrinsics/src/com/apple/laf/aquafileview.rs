@@ -14,8 +14,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn get_native_display_name<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _is_directory = parameters.pop_bool()?;
+    let _path_bytes = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.apple.laf.AquaFileView.getNativeDisplayName([BZ)Ljava/lang/String;".to_string(),
     )
@@ -26,8 +28,10 @@ pub async fn get_native_display_name<T: Thread + 'static>(
 #[async_method]
 pub async fn get_native_ls_info<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _is_directory = parameters.pop_bool()?;
+    let _path_bytes = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.apple.laf.AquaFileView.getNativeLSInfo([BZ)I".to_string(),
     )
@@ -56,8 +60,10 @@ pub async fn get_native_machine_name<T: Thread + 'static>(
 #[async_method]
 pub async fn get_native_path_for_resolved_alias<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _is_directory = parameters.pop_bool()?;
+    let _absolute_path = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.apple.laf.AquaFileView.getNativePathForResolvedAlias([BZ)Ljava/lang/String;"
             .to_string(),
@@ -79,7 +85,6 @@ pub async fn get_native_path_to_shared_jdk_bundle<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,35 +92,62 @@ mod tests {
     #[tokio::test]
     async fn test_get_native_display_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_native_display_name(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_native_display_name(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::from(false)]),
+        )
+        .await;
+        assert_eq!(
+            "com.apple.laf.AquaFileView.getNativeDisplayName([BZ)Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_native_ls_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_native_ls_info(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_native_ls_info(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::from(false)]),
+        )
+        .await;
+        assert_eq!(
+            "com.apple.laf.AquaFileView.getNativeLSInfo([BZ)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_native_machine_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_native_machine_name(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.apple.laf.AquaFileView.getNativeMachineName()Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_native_path_for_resolved_alias() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_native_path_for_resolved_alias(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_native_path_for_resolved_alias(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::from(false)]),
+        )
+        .await;
+        assert_eq!(
+            "com.apple.laf.AquaFileView.getNativePathForResolvedAlias([BZ)Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_native_path_to_shared_jdk_bundle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_native_path_to_shared_jdk_bundle(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.apple.laf.AquaFileView.getNativePathToSharedJDKBundle()Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 }

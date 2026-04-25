@@ -1,3 +1,4 @@
+use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classfile::{JAVA_8, JAVA_11};
 use ristretto_classloader::{Reference, Value};
@@ -47,7 +48,7 @@ pub async fn check_connect_0<T: Thread + 'static>(
 
 #[intrinsic_method(
     "sun/nio/ch/SocketChannelImpl.checkConnect(Ljava/io/FileDescriptor;Z)I",
-    LessThanOrEqual(JAVA_11)
+    Equal(JAVA_11)
 )]
 #[async_method]
 pub async fn check_connect_1<T: Thread + 'static>(

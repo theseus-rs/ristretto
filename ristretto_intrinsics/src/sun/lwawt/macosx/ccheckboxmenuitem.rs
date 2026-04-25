@@ -11,8 +11,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn native_set_is_checkbox<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _model_ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.lwawt.macosx.CCheckboxMenuItem.nativeSetIsCheckbox(J)V".to_string(),
     )
@@ -23,14 +24,15 @@ pub async fn native_set_is_checkbox<T: Thread + 'static>(
 #[async_method]
 pub async fn native_set_state<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _state = parameters.pop_bool()?;
+    let _model_ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.lwawt.macosx.CCheckboxMenuItem.nativeSetState(JZ)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -38,14 +40,24 @@ mod tests {
     #[tokio::test]
     async fn test_native_set_is_checkbox() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_set_is_checkbox(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = native_set_is_checkbox(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.lwawt.macosx.CCheckboxMenuItem.nativeSetIsCheckbox(J)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_native_set_state() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_set_state(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = native_set_state(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::from(false)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.lwawt.macosx.CCheckboxMenuItem.nativeSetState(JZ)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

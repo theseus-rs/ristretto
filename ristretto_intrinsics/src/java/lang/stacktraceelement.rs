@@ -20,8 +20,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn init_stack_trace_element<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _sfi = parameters.pop_reference()?;
+    let _element = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("java.lang.StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V".to_string()).into())
 }
 
@@ -303,8 +305,15 @@ mod tests {
     #[tokio::test]
     async fn test_init_stack_trace_element() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_stack_trace_element(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = init_stack_trace_element(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "java.lang.StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

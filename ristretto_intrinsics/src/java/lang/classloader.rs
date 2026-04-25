@@ -376,7 +376,7 @@ pub async fn find_loaded_class_0<T: Thread + 'static>(
 
 #[intrinsic_method(
     "java/lang/ClassLoader.initSystemClassLoader()Ljava/lang/ClassLoader;",
-    Any
+    LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
 pub async fn init_system_class_loader<T: Thread + 'static>(

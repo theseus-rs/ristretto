@@ -12,14 +12,16 @@ use std::sync::Arc;
 #[async_method]
 pub async fn poll<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _timeout = parameters.pop_int()?;
+    let _numfds = parameters.pop_int()?;
+    let _poll_address = parameters.pop_long()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.nio.ch.PollSelectorImpl.poll(JII)I".to_string())
             .into(),
     )
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -27,7 +29,14 @@ mod tests {
     #[tokio::test]
     async fn test_poll() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = poll(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = poll(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.nio.ch.PollSelectorImpl.poll(JII)I",
+            result.unwrap_err().to_string()
+        );
     }
 }

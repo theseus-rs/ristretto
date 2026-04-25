@@ -110,6 +110,38 @@ impl MethodRegistry {
         self.methods
     }
 
+    /// Returns the set of intrinsic method signatures that *would* be registered for the given
+    /// Java major version on the given target OS, regardless of the host platform on which the
+    /// VM was compiled.
+    ///
+    /// This is intended for cross OS introspection from tests; the slice is plain string data
+    /// (no function pointers) so it is always populated, including for OSes the current host is
+    /// not actually compiled for.
+    ///
+    /// `os` accepts `"macos"`, `"linux"`, or `"windows"`. Any other value yields an empty slice.
+    #[cfg(test)]
+    #[must_use]
+    pub fn signatures_for_os(version: &Version, os: &str) -> &'static [&'static str] {
+        match (version.major(), os) {
+            (69.., "macos") => intrinsics::JAVA_25_MACOS_SIGNATURES,
+            (69.., "linux") => intrinsics::JAVA_25_LINUX_SIGNATURES,
+            (69.., "windows") => intrinsics::JAVA_25_WINDOWS_SIGNATURES,
+            (65.., "macos") => intrinsics::JAVA_21_MACOS_SIGNATURES,
+            (65.., "linux") => intrinsics::JAVA_21_LINUX_SIGNATURES,
+            (65.., "windows") => intrinsics::JAVA_21_WINDOWS_SIGNATURES,
+            (61.., "macos") => intrinsics::JAVA_17_MACOS_SIGNATURES,
+            (61.., "linux") => intrinsics::JAVA_17_LINUX_SIGNATURES,
+            (61.., "windows") => intrinsics::JAVA_17_WINDOWS_SIGNATURES,
+            (55.., "macos") => intrinsics::JAVA_11_MACOS_SIGNATURES,
+            (55.., "linux") => intrinsics::JAVA_11_LINUX_SIGNATURES,
+            (55.., "windows") => intrinsics::JAVA_11_WINDOWS_SIGNATURES,
+            (_, "macos") => intrinsics::JAVA_8_MACOS_SIGNATURES,
+            (_, "linux") => intrinsics::JAVA_8_LINUX_SIGNATURES,
+            (_, "windows") => intrinsics::JAVA_8_WINDOWS_SIGNATURES,
+            _ => &[],
+        }
+    }
+
     /// Looks up a intrinsic method implementation by its fully qualified signature.
     ///
     /// This method attempts to find an intrinsic method implementation by its Java class name,
@@ -188,10 +220,10 @@ mod tests {
         Ok(())
     }
 
-    /// Get all the intrinsic methods for a given Java runtime.
-    async fn get_intrinsic_methods(version: &str) -> Result<Vec<String>> {
+    /// Get all the intrinsic methods for a given Java runtime targeting the specified OS / arch.
+    async fn get_intrinsic_methods(version: &str, os: &str, arch: &str) -> Result<Vec<String>> {
         let (_java_home, _java_version, class_loader) =
-            runtime::version_class_loader(version).await?;
+            runtime::version_class_loader_for_os(version, os, arch).await?;
         let class_path = class_loader.class_path();
         let class_names = class_path.class_names().await?;
         let mut intrinsic_methods = Vec::new();
@@ -218,50 +250,52 @@ mod tests {
         Ok(intrinsic_methods)
     }
 
-    /// Get all the methods for a given Java version.
-    fn get_registry_methods(version: &str) -> Result<Vec<String>> {
+    /// Get all the methods registered for a given Java version on the given target OS,
+    /// regardless of the host platform.
+    fn get_registry_methods(version: &str, os: &str) -> Result<Vec<String>> {
         let version_major = version.split_once('.').unwrap_or_default().0;
         let java_major_version: u16 = version_major.parse()?;
-        let version = Version::from(java_major_version + vm::CLASS_FILE_MAJOR_VERSION_OFFSET, 0)?;
-        let method_registry = MethodRegistry::new(&version);
-        let mut registry_methods = method_registry
-            .methods()
-            .keys()
-            .map(ToString::to_string)
-            .collect::<Vec<String>>();
+        let class_file_version =
+            Version::from(java_major_version + vm::CLASS_FILE_MAJOR_VERSION_OFFSET, 0)?;
+        let mut registry_methods: Vec<String> =
+            MethodRegistry::signatures_for_os(&class_file_version, os)
+                .iter()
+                .map(|s| (*s).to_string())
+                .collect();
         registry_methods.sort();
         Ok(registry_methods)
     }
 
-    /// Verify that all the intrinsic methods are registered for a given runtime
-    fn test_runtime(version: &str) -> Result<()> {
-        #[cfg(target_os = "macos")]
+    /// Verify that all the intrinsic methods are registered for a given runtime targeting the
+    /// specified OS / architecture.
+    fn test_runtime(version: &str, os: &str, arch: &str) -> Result<()> {
         let intrinsic_methods = {
             let runtime = tokio::runtime::Runtime::new()?;
-            runtime.block_on(get_intrinsic_methods(version))?
+            runtime.block_on(get_intrinsic_methods(version, os, arch))?
         };
-        let registry_methods = get_registry_methods(version)?;
+        let registry_methods = get_registry_methods(version, os)?;
 
         // Parse Java major version to conditionally include methods
         let version_major: u16 = version.split_once('.').unwrap_or_default().0.parse()?;
 
-        // Required methods for ristretto; some are version-specific
+        // Required methods for ristretto; some are version-specific or OS-specific
         let mut required_methods = vec![
             "java/lang/System.allowSecurityManager()Z".to_string(),
             "java/lang/System.getSecurityManager()Ljava/lang/SecurityManager;".to_string(),
             "java/lang/System.setSecurityManager(Ljava/lang/SecurityManager;)V".to_string(),
             "jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;".to_string(),
         ];
+        // Ristretto-specific intrinsic needed to mask ACC_SUPER from class modifiers; the
+        // JDK exposes this as a non-native method in Java 25+, but we still require the
+        // intrinsic dispatch.
+        if version_major >= 25 {
+            required_methods.push("java/lang/Class.getModifiers()I".to_string());
+        }
         // initSystemClassLoader is only a native method in Java 8 and earlier
         if version_major <= 8 {
             required_methods.push(
                 "java/lang/ClassLoader.initSystemClassLoader()Ljava/lang/ClassLoader;".to_string(),
             );
-        }
-        #[cfg(target_os = "windows")]
-        {
-            required_methods.push("java/io/WinNTFileSystem.initIDs()V".to_string());
-            required_methods.push("sun/io/Win32ErrorMode.setErrorMode(J)J".to_string());
         }
 
         let missing_required_methods = required_methods
@@ -269,42 +303,37 @@ mod tests {
             .filter(|method| !registry_methods.contains(method))
             .cloned()
             .collect::<Vec<String>>();
-        #[cfg(target_os = "macos")]
         let missing_methods = intrinsic_methods
             .iter()
             .filter(|method| !registry_methods.contains(method))
             .cloned()
             .collect::<Vec<String>>();
-        // Disable the check for extra methods for now as the OS intrinsic methods are not excluded
-        // from the registry methods.
-        // let extra_methods = registry_methods
-        //     .iter()
-        //     .filter(|method| {
-        //         !intrinsic_methods.contains(method) && !required_methods.contains(method)
-        //     })
-        //     .cloned()
-        //     .collect::<Vec<String>>();
-        let extra_methods = Vec::<String>::new();
+        let extra_methods = registry_methods
+            .iter()
+            .filter(|method| {
+                !intrinsic_methods.contains(method) && !required_methods.contains(method)
+            })
+            .cloned()
+            .collect::<Vec<String>>();
 
         let mut errors = Vec::new();
         if !missing_required_methods.is_empty() {
             errors.push(format!(
-                "Missing required methods {}:\n{}\n",
+                "[{os}-{arch}] Missing required methods {}:\n{}\n",
                 missing_required_methods.len(),
                 missing_required_methods.join("\n"),
             ));
         }
-        #[cfg(target_os = "macos")]
         if !missing_methods.is_empty() {
             errors.push(format!(
-                "Missing methods {}:\n{}\n",
+                "[{os}-{arch}] Missing methods {}:\n{}\n",
                 missing_methods.len(),
                 missing_methods.join("\n"),
             ));
         }
         if !extra_methods.is_empty() {
             errors.push(format!(
-                "Extra methods {}:\n{}\n",
+                "[{os}-{arch}] Extra methods {}:\n{}\n",
                 extra_methods.len(),
                 extra_methods.join("\n"),
             ));
@@ -315,27 +344,77 @@ mod tests {
     }
 
     #[test]
-    fn test_runtime_v8() -> Result<()> {
-        test_runtime(JAVA_8_VERSION)
+    fn test_runtime_v8_linux() -> Result<()> {
+        test_runtime(JAVA_8_VERSION, "linux", "x64")
     }
 
     #[test]
-    fn test_runtime_v11() -> Result<()> {
-        test_runtime(JAVA_11_VERSION)
+    fn test_runtime_v8_macos() -> Result<()> {
+        test_runtime(JAVA_8_VERSION, "macos", "aarch64")
     }
 
     #[test]
-    fn test_runtime_v17() -> Result<()> {
-        test_runtime(JAVA_17_VERSION)
+    fn test_runtime_v8_windows() -> Result<()> {
+        test_runtime(JAVA_8_VERSION, "windows", "x64")
     }
 
     #[test]
-    fn test_runtime_v21() -> Result<()> {
-        test_runtime(JAVA_21_VERSION)
+    fn test_runtime_v11_linux() -> Result<()> {
+        test_runtime(JAVA_11_VERSION, "linux", "x64")
     }
 
     #[test]
-    fn test_runtime_v25() -> Result<()> {
-        test_runtime(JAVA_25_VERSION)
+    fn test_runtime_v11_macos() -> Result<()> {
+        test_runtime(JAVA_11_VERSION, "macos", "aarch64")
+    }
+
+    #[test]
+    fn test_runtime_v11_windows() -> Result<()> {
+        test_runtime(JAVA_11_VERSION, "windows", "x64")
+    }
+
+    #[test]
+    fn test_runtime_v17_linux() -> Result<()> {
+        test_runtime(JAVA_17_VERSION, "linux", "x64")
+    }
+
+    #[test]
+    fn test_runtime_v17_macos() -> Result<()> {
+        test_runtime(JAVA_17_VERSION, "macos", "aarch64")
+    }
+
+    #[test]
+    fn test_runtime_v17_windows() -> Result<()> {
+        test_runtime(JAVA_17_VERSION, "windows", "x64")
+    }
+
+    #[test]
+    fn test_runtime_v21_linux() -> Result<()> {
+        test_runtime(JAVA_21_VERSION, "linux", "x64")
+    }
+
+    #[test]
+    fn test_runtime_v21_macos() -> Result<()> {
+        test_runtime(JAVA_21_VERSION, "macos", "aarch64")
+    }
+
+    #[test]
+    fn test_runtime_v21_windows() -> Result<()> {
+        test_runtime(JAVA_21_VERSION, "windows", "x64")
+    }
+
+    #[test]
+    fn test_runtime_v25_linux() -> Result<()> {
+        test_runtime(JAVA_25_VERSION, "linux", "x64")
+    }
+
+    #[test]
+    fn test_runtime_v25_macos() -> Result<()> {
+        test_runtime(JAVA_25_VERSION, "macos", "aarch64")
+    }
+
+    #[test]
+    fn test_runtime_v25_windows() -> Result<()> {
+        test_runtime(JAVA_25_VERSION, "windows", "x64")
     }
 }

@@ -23,15 +23,23 @@ pub async fn init_ids<T: Thread + 'static>(
 #[async_method]
 pub async fn parse_image<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _cmh = parameters.pop_reference()?;
+    let _raslineh = parameters.pop_reference()?;
+    let _blockh = parameters.pop_reference()?;
+    let _init_code_size = parameters.pop_int()?;
+    let _interlace = parameters.pop_bool()?;
+    let _height = parameters.pop_int()?;
+    let _width = parameters.pop_int()?;
+    let _rely = parameters.pop_int()?;
+    let _relx = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.awt.image.GifImageDecoder.parseImage(IIIIZI[B[BLjava/awt/image/IndexColorModel;)Z"
             .to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -47,7 +55,24 @@ mod tests {
     #[tokio::test]
     async fn test_parse_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = parse_image(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = parse_image(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::from(false),
+                Value::Int(0),
+                Value::Object(None),
+                Value::Object(None),
+                Value::Object(None),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.awt.image.GifImageDecoder.parseImage(IIIIZI[B[BLjava/awt/image/IndexColorModel;)Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

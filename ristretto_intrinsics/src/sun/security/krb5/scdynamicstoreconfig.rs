@@ -53,7 +53,6 @@ pub async fn install_notification_callback<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,20 +61,29 @@ mod tests {
     async fn test_get_kerberos_config_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = get_kerberos_config_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.security.krb5.SCDynamicStoreConfig.getKerberosConfig()Ljava/util/Hashtable;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_kerberos_config_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_kerberos_config_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.security.krb5.SCDynamicStoreConfig.getKerberosConfig()Ljava/util/List;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_install_notification_callback() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = install_notification_callback(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.security.krb5.SCDynamicStoreConfig.installNotificationCallback()V",
+            result.unwrap_err().to_string()
+        );
     }
 }

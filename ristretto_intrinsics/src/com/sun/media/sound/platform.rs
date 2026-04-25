@@ -30,8 +30,9 @@ pub async fn n_get_extra_libraries<T: Thread + 'static>(
 #[async_method]
 pub async fn n_get_library_for_feature<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _feature = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.sun.media.sound.Platform.nGetLibraryForFeature(I)I".to_string(),
     )
@@ -59,7 +60,6 @@ pub async fn n_is_signed_8<T: Thread + 'static>(
             .into(),
     )
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,14 +68,20 @@ mod tests {
     async fn test_n_get_extra_libraries() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = n_get_extra_libraries(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.media.sound.Platform.nGetExtraLibraries()Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_n_get_library_for_feature() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = n_get_library_for_feature(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = n_get_library_for_feature(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "com.sun.media.sound.Platform.nGetLibraryForFeature(I)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
@@ -91,6 +97,9 @@ mod tests {
     async fn test_n_is_signed_8() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = n_is_signed_8(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.media.sound.Platform.nIsSigned8()Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

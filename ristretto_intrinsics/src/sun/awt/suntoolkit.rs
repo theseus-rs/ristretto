@@ -18,7 +18,6 @@ pub async fn close_splash_screen<T: Thread + 'static>(
             .into(),
     )
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -27,6 +26,9 @@ mod tests {
     async fn test_close_splash_screen() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = close_splash_screen(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.awt.SunToolkit.closeSplashScreen()V",
+            result.unwrap_err().to_string()
+        );
     }
 }

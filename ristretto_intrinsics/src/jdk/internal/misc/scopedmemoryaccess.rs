@@ -15,8 +15,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn close_scope_0_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg1 = parameters.pop_reference()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/misc/ScopedMemoryAccess$Scope;Ljdk/internal/misc/ScopedMemoryAccess$Scope$ScopedAccessError;)Z".to_string()).into())
 }
 
@@ -27,8 +29,9 @@ pub async fn close_scope_0_0<T: Thread + 'static>(
 #[async_method]
 pub async fn close_scope_0_1<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _session = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;)Z".to_string()).into())
 }
 
@@ -39,8 +42,10 @@ pub async fn close_scope_0_1<T: Thread + 'static>(
 #[async_method]
 pub async fn close_scope_0_2<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg1 = parameters.pop_reference()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;Ljdk/internal/misc/ScopedMemoryAccess$ScopedAccessError;)V".to_string()).into())
 }
 
@@ -63,22 +68,39 @@ mod tests {
     #[tokio::test]
     async fn test_close_scope_0_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = close_scope_0_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = close_scope_0_0(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/misc/ScopedMemoryAccess$Scope;Ljdk/internal/misc/ScopedMemoryAccess$Scope$ScopedAccessError;)Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_close_scope_0_1() {
         let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
-        let result = close_scope_0_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = close_scope_0_1(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;)Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_close_scope_0_2() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close_scope_0_2(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = close_scope_0_2(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.misc.ScopedMemoryAccess.closeScope0(Ljdk/internal/foreign/MemorySessionImpl;Ljdk/internal/misc/ScopedMemoryAccess$ScopedAccessError;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

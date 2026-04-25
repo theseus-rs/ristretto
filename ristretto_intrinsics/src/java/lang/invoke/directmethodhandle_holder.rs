@@ -1,10 +1,5 @@
-//! Intrinsic methods for `java.lang.invoke.DirectMethodHandle$Holder`.
-//!
-//! These methods are used for direct method invocation and field access in the JVM.
-
-use super::methodhandle::dispatch_holder_method;
 use ristretto_classfile::JAVA_11;
-use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual};
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -13,477 +8,69 @@ use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
-/// Helper function for holder method implementations.
-/// Dispatches the method call through the `LambdaForm` interpreter.
-async fn holder_method_stub<T: Thread + 'static>(
-    thread: Arc<T>,
-    method_name: &str,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    let arguments: Vec<Value> = parameters.into_vec();
-    let result = dispatch_holder_method(thread, method_name, arguments).await?;
-    Ok(Some(result))
-}
-
 #[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getBoolean(Ljava/lang/Object;)I",
+    "java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_boolean_0<T: Thread + 'static>(
+pub async fn get_reference<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getBoolean(Ljava/lang/Object;)I".to_string(),
-    )
-    .into())
+    let _arg0 = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
 
 #[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getBoolean(Ljava/lang/Object;Ljava/lang/Object;)I",
+    "java/lang/invoke/DirectMethodHandle$Holder.invokeInterface([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_boolean_1<T: Thread + 'static>(
+pub async fn invoke_interface<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getBoolean(Ljava/lang/Object;Ljava/lang/Object;)I".to_string()).into())
+    let _arg0 = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeInterface([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
 
 #[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getBooleanVolatile(Ljava/lang/Object;)I",
+    "java/lang/invoke/DirectMethodHandle$Holder.invokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_boolean_volatile_0<T: Thread + 'static>(
+pub async fn invoke_special<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getBooleanVolatile(Ljava/lang/Object;)I"
-            .to_string(),
-    )
-    .into())
+    let _arg0 = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
 
 #[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getBooleanVolatile(Ljava/lang/Object;Ljava/lang/Object;)I",
+    "java/lang/invoke/DirectMethodHandle$Holder.invokeStatic([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_boolean_volatile_1<T: Thread + 'static>(
+pub async fn invoke_static<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getBooleanVolatile(Ljava/lang/Object;Ljava/lang/Object;)I".to_string()).into())
+    let _arg0 = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeStatic([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
 
 #[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getByte(Ljava/lang/Object;)I",
+    "java/lang/invoke/DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_byte_0<T: Thread + 'static>(
+pub async fn invoke_virtual<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getByte(Ljava/lang/Object;)I".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getByte(Ljava/lang/Object;Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_byte_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getByte(Ljava/lang/Object;Ljava/lang/Object;)I"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getByteVolatile(Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_byte_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getByteVolatile(Ljava/lang/Object;)I"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getByteVolatile(Ljava/lang/Object;Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_byte_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getByteVolatile(Ljava/lang/Object;Ljava/lang/Object;)I".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getChar(Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_char_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getChar(Ljava/lang/Object;)I".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getChar(Ljava/lang/Object;Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_char_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getChar(Ljava/lang/Object;Ljava/lang/Object;)I"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getCharVolatile(Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_char_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getCharVolatile(Ljava/lang/Object;)I"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getCharVolatile(Ljava/lang/Object;Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_char_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getCharVolatile(Ljava/lang/Object;Ljava/lang/Object;)I".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getDouble(Ljava/lang/Object;)D",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_double_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getDouble(Ljava/lang/Object;)D".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getDouble(Ljava/lang/Object;Ljava/lang/Object;)D",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_double_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getDouble(Ljava/lang/Object;Ljava/lang/Object;)D".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getDoubleVolatile(Ljava/lang/Object;)D",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_double_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getDoubleVolatile(Ljava/lang/Object;)D"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getDoubleVolatile(Ljava/lang/Object;Ljava/lang/Object;)D",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_double_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getDoubleVolatile(Ljava/lang/Object;Ljava/lang/Object;)D".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getFloat(Ljava/lang/Object;)F",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_float_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getFloat(Ljava/lang/Object;)F".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getFloat(Ljava/lang/Object;Ljava/lang/Object;)F",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_float_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getFloat(Ljava/lang/Object;Ljava/lang/Object;)F".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getFloatVolatile(Ljava/lang/Object;)F",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_float_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getFloatVolatile(Ljava/lang/Object;)F"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getFloatVolatile(Ljava/lang/Object;Ljava/lang/Object;)F",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_float_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getFloatVolatile(Ljava/lang/Object;Ljava/lang/Object;)F".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getInt(Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_int_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getInt(Ljava/lang/Object;)I".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getInt(Ljava/lang/Object;Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_int_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getInt(Ljava/lang/Object;Ljava/lang/Object;)I"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getIntVolatile(Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_int_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getIntVolatile(Ljava/lang/Object;)I"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getIntVolatile(Ljava/lang/Object;Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_int_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getIntVolatile(Ljava/lang/Object;Ljava/lang/Object;)I".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getLong(Ljava/lang/Object;)J",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_long_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getLong(Ljava/lang/Object;)J".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getLong(Ljava/lang/Object;Ljava/lang/Object;)J",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_long_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getLong(Ljava/lang/Object;Ljava/lang/Object;)J"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getLongVolatile(Ljava/lang/Object;)J",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_long_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getLongVolatile(Ljava/lang/Object;)J"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getLongVolatile(Ljava/lang/Object;Ljava/lang/Object;)J",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_long_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getLongVolatile(Ljava/lang/Object;Ljava/lang/Object;)J".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getObject(Ljava/lang/Object;)Ljava/lang/Object;",
-    Equal(JAVA_11)
-)]
-#[async_method]
-pub async fn get_object_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getObject(Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getObject(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-    Equal(JAVA_11)
-)]
-#[async_method]
-pub async fn get_object_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getObject(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getObjectVolatile(Ljava/lang/Object;)Ljava/lang/Object;",
-    Equal(JAVA_11)
-)]
-#[async_method]
-pub async fn get_object_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getObjectVolatile(Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getObjectVolatile(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-    Equal(JAVA_11)
-)]
-#[async_method]
-pub async fn get_object_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getObjectVolatile(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getReference(Ljava/lang/Object;)Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_reference_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getReference(Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
+    let _arg0 = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
 
 #[intrinsic_method(
@@ -491,1320 +78,169 @@ pub async fn get_reference_0<T: Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_reference_1<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    holder_method_stub(thread, "getReference", parameters).await
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getReference(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_reference_2<T: Thread + 'static>(
+pub async fn get_reference_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getReference(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getReferenceVolatile(Ljava/lang/Object;)Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_reference_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getReferenceVolatile(Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getReferenceVolatile(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_reference_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getReferenceVolatile(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getShort(Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_short_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getShort(Ljava/lang/Object;)I".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getShort(Ljava/lang/Object;Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_short_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getShort(Ljava/lang/Object;Ljava/lang/Object;)I".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getShortVolatile(Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_short_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.getShortVolatile(Ljava/lang/Object;)I"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.getShortVolatile(Ljava/lang/Object;Ljava/lang/Object;)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_short_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.getShortVolatile(Ljava/lang/Object;Ljava/lang/Object;)I".to_string()).into())
+    let _arg0 = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
 
 #[intrinsic_method(
     "java/lang/invoke/DirectMethodHandle$Holder.invokeInterface([Ljava/lang/Object;)Ljava/lang/Object;",
-    Any
+    GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn invoke_interface<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
+pub async fn invoke_interface_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    holder_method_stub(thread, "invokeInterface", parameters).await
+    let _arg0 = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeInterface([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
 
 #[intrinsic_method(
     "java/lang/invoke/DirectMethodHandle$Holder.invokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;",
-    Any
+    GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn invoke_special<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
+pub async fn invoke_special_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    holder_method_stub(thread, "invokeSpecial", parameters).await
+    let _arg0 = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
 
 #[intrinsic_method(
     "java/lang/invoke/DirectMethodHandle$Holder.invokeStatic([Ljava/lang/Object;)Ljava/lang/Object;",
-    Any
+    GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn invoke_static<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
+pub async fn invoke_static_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    holder_method_stub(thread, "invokeStatic", parameters).await
+    let _arg0 = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeStatic([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
 
 #[intrinsic_method(
     "java/lang/invoke/DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;",
-    Any
-)]
-#[async_method]
-pub async fn invoke_virtual<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    holder_method_stub(thread, "invokeVirtual", parameters).await
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.newInvokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;",
-    Any
-)]
-#[async_method]
-pub async fn new_invoke_special<T: Thread + 'static>(
-    thread: Arc<T>,
-    parameters: Parameters,
-) -> Result<Option<Value>> {
-    holder_method_stub(thread, "newInvokeSpecial", parameters).await
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putBoolean(Ljava/lang/Object;I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn put_boolean_0<T: Thread + 'static>(
+pub async fn invoke_virtual_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putBoolean(Ljava/lang/Object;I)V".to_string(),
-    )
-    .into())
+    let _arg0 = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putBoolean(Ljava/lang/Object;Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_boolean_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putBoolean(Ljava/lang/Object;Ljava/lang/Object;I)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putBooleanVolatile(Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_boolean_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putBooleanVolatile(Ljava/lang/Object;I)V"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putBooleanVolatile(Ljava/lang/Object;Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_boolean_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putBooleanVolatile(Ljava/lang/Object;Ljava/lang/Object;I)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putByte(Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_byte_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putByte(Ljava/lang/Object;I)V".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putByte(Ljava/lang/Object;Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_byte_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putByte(Ljava/lang/Object;Ljava/lang/Object;I)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putByteVolatile(Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_byte_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putByteVolatile(Ljava/lang/Object;I)V"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putByteVolatile(Ljava/lang/Object;Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_byte_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putByteVolatile(Ljava/lang/Object;Ljava/lang/Object;I)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putChar(Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_char_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putChar(Ljava/lang/Object;I)V".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putChar(Ljava/lang/Object;Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_char_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putChar(Ljava/lang/Object;Ljava/lang/Object;I)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putCharVolatile(Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_char_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putCharVolatile(Ljava/lang/Object;I)V"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putCharVolatile(Ljava/lang/Object;Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_char_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putCharVolatile(Ljava/lang/Object;Ljava/lang/Object;I)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putDouble(Ljava/lang/Object;D)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_double_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putDouble(Ljava/lang/Object;D)V".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putDouble(Ljava/lang/Object;Ljava/lang/Object;D)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_double_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putDouble(Ljava/lang/Object;Ljava/lang/Object;D)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putDoubleVolatile(Ljava/lang/Object;D)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_double_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putDoubleVolatile(Ljava/lang/Object;D)V"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putDoubleVolatile(Ljava/lang/Object;Ljava/lang/Object;D)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_double_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putDoubleVolatile(Ljava/lang/Object;Ljava/lang/Object;D)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putFloat(Ljava/lang/Object;F)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_float_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putFloat(Ljava/lang/Object;F)V".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putFloat(Ljava/lang/Object;Ljava/lang/Object;F)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_float_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putFloat(Ljava/lang/Object;Ljava/lang/Object;F)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putFloatVolatile(Ljava/lang/Object;F)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_float_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putFloatVolatile(Ljava/lang/Object;F)V"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putFloatVolatile(Ljava/lang/Object;Ljava/lang/Object;F)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_float_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putFloatVolatile(Ljava/lang/Object;Ljava/lang/Object;F)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putInt(Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_int_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putInt(Ljava/lang/Object;I)V".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putInt(Ljava/lang/Object;Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_int_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putInt(Ljava/lang/Object;Ljava/lang/Object;I)V"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putIntVolatile(Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_int_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putIntVolatile(Ljava/lang/Object;I)V"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putIntVolatile(Ljava/lang/Object;Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_int_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putIntVolatile(Ljava/lang/Object;Ljava/lang/Object;I)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putLong(Ljava/lang/Object;J)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_long_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putLong(Ljava/lang/Object;J)V".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putLong(Ljava/lang/Object;Ljava/lang/Object;J)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_long_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putLong(Ljava/lang/Object;Ljava/lang/Object;J)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putLongVolatile(Ljava/lang/Object;J)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_long_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putLongVolatile(Ljava/lang/Object;J)V"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putLongVolatile(Ljava/lang/Object;Ljava/lang/Object;J)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_long_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putLongVolatile(Ljava/lang/Object;Ljava/lang/Object;J)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putObject(Ljava/lang/Object;Ljava/lang/Object;)V",
-    Equal(JAVA_11)
-)]
-#[async_method]
-pub async fn put_object_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putObject(Ljava/lang/Object;Ljava/lang/Object;)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putObject(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V",
-    Equal(JAVA_11)
-)]
-#[async_method]
-pub async fn put_object_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putObject(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putObjectVolatile(Ljava/lang/Object;Ljava/lang/Object;)V",
-    Equal(JAVA_11)
-)]
-#[async_method]
-pub async fn put_object_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putObjectVolatile(Ljava/lang/Object;Ljava/lang/Object;)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putObjectVolatile(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V",
-    Equal(JAVA_11)
-)]
-#[async_method]
-pub async fn put_object_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putObjectVolatile(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putReference(Ljava/lang/Object;Ljava/lang/Object;)V",
-    Equal(JAVA_11)
-)]
-#[async_method]
-pub async fn put_reference_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putReference(Ljava/lang/Object;Ljava/lang/Object;)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putReference(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_reference_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putReference(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putReferenceVolatile(Ljava/lang/Object;Ljava/lang/Object;)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_reference_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putReferenceVolatile(Ljava/lang/Object;Ljava/lang/Object;)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putReferenceVolatile(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_reference_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putReferenceVolatile(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putShort(Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_short_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putShort(Ljava/lang/Object;I)V".to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putShort(Ljava/lang/Object;Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_short_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putShort(Ljava/lang/Object;Ljava/lang/Object;I)V".to_string()).into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putShortVolatile(Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_short_volatile_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java.lang.invoke.DirectMethodHandle$Holder.putShortVolatile(Ljava/lang/Object;I)V"
-            .to_string(),
-    )
-    .into())
-}
-
-#[intrinsic_method(
-    "java/lang/invoke/DirectMethodHandle$Holder.putShortVolatile(Ljava/lang/Object;Ljava/lang/Object;I)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn put_short_volatile_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.DirectMethodHandle$Holder.putShortVolatile(Ljava/lang/Object;Ljava/lang/Object;I)V".to_string()).into())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_get_boolean_0() {
+    async fn test_get_reference() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_boolean_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_reference(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
-    async fn test_get_boolean_1() {
+    async fn test_invoke_interface() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_boolean_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = invoke_interface(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java/lang/invoke/DirectMethodHandle$Holder.invokeInterface([Ljava/lang/Object;)Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
-    async fn test_get_boolean_volatile_0() {
+    async fn test_invoke_special() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_boolean_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = invoke_special(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java/lang/invoke/DirectMethodHandle$Holder.invokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
-    async fn test_get_boolean_volatile_1() {
+    async fn test_invoke_static() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_boolean_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = invoke_static(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java/lang/invoke/DirectMethodHandle$Holder.invokeStatic([Ljava/lang/Object;)Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
-    async fn test_get_byte_0() {
+    async fn test_invoke_virtual() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_byte_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = invoke_virtual(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java/lang/invoke/DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
-    async fn test_get_byte_1() {
+    async fn test_get_reference_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_byte_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_reference_ge_v11(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java/lang/invoke/DirectMethodHandle$Holder.getReference([Ljava/lang/Object;)Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
-    async fn test_get_byte_volatile_0() {
+    async fn test_invoke_interface_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_byte_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            invoke_interface_ge_v11(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java/lang/invoke/DirectMethodHandle$Holder.invokeInterface([Ljava/lang/Object;)Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
-    async fn test_get_byte_volatile_1() {
+    async fn test_invoke_special_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_byte_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            invoke_special_ge_v11(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java/lang/invoke/DirectMethodHandle$Holder.invokeSpecial([Ljava/lang/Object;)Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
-    async fn test_get_char_0() {
+    async fn test_invoke_static_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_char_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = invoke_static_ge_v11(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java/lang/invoke/DirectMethodHandle$Holder.invokeStatic([Ljava/lang/Object;)Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
-    async fn test_get_char_1() {
+    async fn test_invoke_virtual_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_char_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_char_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_char_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_char_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_char_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_double_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_double_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_double_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_double_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_double_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_double_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_double_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_double_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_float_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_float_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_float_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_float_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_float_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_float_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_float_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_float_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_int_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_int_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_int_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_int_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_int_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_int_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_int_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_int_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_long_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_long_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_long_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_long_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_long_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_long_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_long_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_long_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_object_0() {
-        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = get_object_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_object_1() {
-        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = get_object_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_object_volatile_0() {
-        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = get_object_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_object_volatile_1() {
-        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = get_object_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_reference_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_reference_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_reference_1_requires_method_handle() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_reference_1(thread, Parameters::default()).await;
-        // With no arguments, dispatch_holder_method should return an error
-        assert!(matches!(
-            result,
-            Err(ristretto_types::Error::InternalError(_))
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_get_reference_2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_reference_2(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_reference_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_reference_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_reference_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_reference_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_short_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_short_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_short_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_short_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_short_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_short_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_get_short_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_short_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_invoke_interface_requires_method_handle() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = invoke_interface(thread, Parameters::default()).await;
-        // With no arguments, dispatch_holder_method should return an error
-        assert!(matches!(
-            result,
-            Err(ristretto_types::Error::InternalError(_))
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_invoke_special_requires_method_handle() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = invoke_special(thread, Parameters::default()).await;
-        // With no arguments, dispatch_holder_method should return an error
-        assert!(matches!(
-            result,
-            Err(ristretto_types::Error::InternalError(_))
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_invoke_static_requires_method_handle() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = invoke_static(thread, Parameters::default()).await;
-        // With no arguments, dispatch_holder_method should return an error
-        assert!(matches!(
-            result,
-            Err(ristretto_types::Error::InternalError(_))
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_invoke_virtual_requires_method_handle() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = invoke_virtual(thread, Parameters::default()).await;
-        // With no arguments, dispatch_holder_method should return an error
-        assert!(matches!(
-            result,
-            Err(ristretto_types::Error::InternalError(_))
-        ));
-    }
-
-    #[tokio::test]
-    async fn test_put_boolean_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_boolean_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_boolean_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_boolean_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_boolean_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_boolean_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_boolean_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_boolean_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_byte_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_byte_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_byte_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_byte_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_byte_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_byte_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_byte_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_byte_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_char_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_char_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_char_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_char_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_char_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_char_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_char_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_char_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_double_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_double_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_double_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_double_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_double_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_double_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_double_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_double_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_float_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_float_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_float_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_float_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_float_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_float_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_float_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_float_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_int_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_int_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_int_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_int_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_int_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_int_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_int_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_int_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_long_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_long_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_long_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_long_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_long_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_long_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_long_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_long_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_object_0() {
-        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = put_object_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_object_1() {
-        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = put_object_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_object_volatile_0() {
-        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = put_object_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_object_volatile_1() {
-        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = put_object_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_reference_0() {
-        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = put_reference_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_reference_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_reference_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_reference_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_reference_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_reference_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_reference_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_short_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_short_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_short_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_short_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_short_volatile_0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_short_volatile_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_put_short_volatile_1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = put_short_volatile_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            invoke_virtual_ge_v11(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java/lang/invoke/DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 }

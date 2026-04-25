@@ -14,11 +14,18 @@ use std::sync::Arc;
 #[async_method]
 pub async fn native_run_file_dialog<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _file = parameters.pop_reference()?;
+    let _directory = parameters.pop_reference()?;
+    let _has_filter = parameters.pop_bool()?;
+    let _choose_directories = parameters.pop_bool()?;
+    let _navigate_apps = parameters.pop_bool()?;
+    let _multiple_mode = parameters.pop_bool()?;
+    let _mode = parameters.pop_int()?;
+    let _title = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CFileDialog.nativeRunFileDialog(Ljava/lang/String;IZZZZLjava/lang/String;Ljava/lang/String;)[Ljava/lang/String;".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -26,7 +33,23 @@ mod tests {
     #[tokio::test]
     async fn test_native_run_file_dialog() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_run_file_dialog(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = native_run_file_dialog(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Int(0),
+                Value::from(false),
+                Value::from(false),
+                Value::from(false),
+                Value::from(false),
+                Value::Object(None),
+                Value::Object(None),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.lwawt.macosx.CFileDialog.nativeRunFileDialog(Ljava/lang/String;IZZZZLjava/lang/String;Ljava/lang/String;)[Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 }

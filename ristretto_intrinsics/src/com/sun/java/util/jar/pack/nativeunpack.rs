@@ -30,8 +30,9 @@ pub async fn finish<T: Thread + 'static>(
 #[async_method]
 pub async fn get_next_file<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _p_parts = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.sun.java.util.jar.pack.NativeUnpack.getNextFile([Ljava/lang/Object;)Z".to_string(),
     )
@@ -45,8 +46,9 @@ pub async fn get_next_file<T: Thread + 'static>(
 #[async_method]
 pub async fn get_option<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _p_prop = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.sun.java.util.jar.pack.NativeUnpack.getOption(Ljava/lang/String;)Ljava/lang/String;"
             .to_string(),
@@ -88,8 +90,10 @@ pub async fn init_ids<T: Thread + 'static>(
 #[async_method]
 pub async fn set_option<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _p_value = parameters.pop_reference()?;
+    let _p_prop = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.sun.java.util.jar.pack.NativeUnpack.setOption(Ljava/lang/String;Ljava/lang/String;)Z"
             .to_string(),
@@ -104,14 +108,15 @@ pub async fn set_option<T: Thread + 'static>(
 #[async_method]
 pub async fn start<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _offset = parameters.pop_long()?;
+    let _buf = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.sun.java.util.jar.pack.NativeUnpack.start(Ljava/nio/ByteBuffer;J)J".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,28 +125,40 @@ mod tests {
     async fn test_finish() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = finish(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.java.util.jar.pack.NativeUnpack.finish()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_next_file() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = get_next_file(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_next_file(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "com.sun.java.util.jar.pack.NativeUnpack.getNextFile([Ljava/lang/Object;)Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_option() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = get_option(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_option(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "com.sun.java.util.jar.pack.NativeUnpack.getOption(Ljava/lang/String;)Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_unused_input() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let result = get_unused_input(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.java.util.jar.pack.NativeUnpack.getUnusedInput()Ljava/nio/ByteBuffer;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
@@ -155,14 +172,28 @@ mod tests {
     #[tokio::test]
     async fn test_set_option() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = set_option(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = set_option(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "com.sun.java.util.jar.pack.NativeUnpack.setOption(Ljava/lang/String;Ljava/lang/String;)Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_start() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = start(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = start(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "com.sun.java.util.jar.pack.NativeUnpack.start(Ljava/nio/ByteBuffer;J)J",
+            result.unwrap_err().to_string()
+        );
     }
 }

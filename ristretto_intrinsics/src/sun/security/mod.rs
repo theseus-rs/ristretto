@@ -1,5 +1,9 @@
 pub mod ec;
 pub mod jgss;
 pub mod krb5;
+#[cfg(target_os = "windows")]
+pub mod mscapi;
 pub mod pkcs11;
+#[cfg(target_os = "windows")]
+pub mod provider;
 pub mod smartcardio;

@@ -15,8 +15,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn fill_point_with_coords<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _point = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.awt.DefaultMouseInfoPeer.fillPointWithCoords(Ljava/awt/Point;)I".to_string(),
     )
@@ -30,14 +31,14 @@ pub async fn fill_point_with_coords<T: Thread + 'static>(
 #[async_method]
 pub async fn is_window_under_mouse<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _w = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.awt.DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -45,14 +46,22 @@ mod tests {
     #[tokio::test]
     async fn test_fill_point_with_coords() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = fill_point_with_coords(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            fill_point_with_coords(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.awt.DefaultMouseInfoPeer.fillPointWithCoords(Ljava/awt/Point;)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_is_window_under_mouse() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = is_window_under_mouse(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            is_window_under_mouse(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.awt.DefaultMouseInfoPeer.isWindowUnderMouse(Ljava/awt/Window;)Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

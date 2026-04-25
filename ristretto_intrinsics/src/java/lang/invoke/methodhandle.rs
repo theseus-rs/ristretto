@@ -1,6 +1,7 @@
 use crate::java::lang::invoke::methodhandlenatives::MemberNameFlags;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::ReferenceKind;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
-use ristretto_classfile::{JAVA_11, ReferenceKind};
 use ristretto_classloader::{Class, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -1381,7 +1382,7 @@ pub async fn link_to_interface<T: Thread + 'static>(
 
 #[intrinsic_method(
     "java/lang/invoke/MethodHandle.linkToNative([Ljava/lang/Object;)Ljava/lang/Object;",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn link_to_native<T: Thread + 'static>(

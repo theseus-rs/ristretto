@@ -15,8 +15,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn execute_diagnostic_command<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.management.DiagnosticCommandImpl.executeDiagnosticCommand(Ljava/lang/String;)Ljava/lang/String;".to_string()).into())
 }
 
@@ -27,8 +28,9 @@ pub async fn execute_diagnostic_command<T: Thread + 'static>(
 #[async_method]
 pub async fn get_diagnostic_command_info<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.management.DiagnosticCommandImpl.getDiagnosticCommandInfo([Ljava/lang/String;)[Lsun/management/DiagnosticCommandInfo;".to_string()).into())
 }
 
@@ -55,14 +57,14 @@ pub async fn get_diagnostic_commands<T: Thread + 'static>(
 #[async_method]
 pub async fn set_notification_enabled<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _enabled = parameters.pop_bool()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.management.DiagnosticCommandImpl.setNotificationEnabled(Z)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,28 +72,43 @@ mod tests {
     #[tokio::test]
     async fn test_execute_diagnostic_command() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = execute_diagnostic_command(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            execute_diagnostic_command(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.management.DiagnosticCommandImpl.executeDiagnosticCommand(Ljava/lang/String;)Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_diagnostic_command_info() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = get_diagnostic_command_info(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            get_diagnostic_command_info(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.management.DiagnosticCommandImpl.getDiagnosticCommandInfo([Ljava/lang/String;)[Lsun/management/DiagnosticCommandInfo;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_diagnostic_commands() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = get_diagnostic_commands(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.DiagnosticCommandImpl.getDiagnosticCommands()[Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_set_notification_enabled() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = set_notification_enabled(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            set_notification_enabled(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "sun.management.DiagnosticCommandImpl.setNotificationEnabled(Z)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

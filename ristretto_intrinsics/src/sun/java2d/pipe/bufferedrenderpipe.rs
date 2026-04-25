@@ -14,11 +14,18 @@ use std::sync::Arc;
 #[async_method]
 pub async fn fill_spans<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _transy = parameters.pop_int()?;
+    let _transx = parameters.pop_int()?;
+    let _iterator = parameters.pop_long()?;
+    let _si = parameters.pop_reference()?;
+    let _limit = parameters.pop_int()?;
+    let _pos = parameters.pop_int()?;
+    let _buf = parameters.pop_long()?;
+    let _rq = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.pipe.BufferedRenderPipe.fillSpans(Lsun/java2d/pipe/RenderQueue;JIILsun/java2d/pipe/SpanIterator;JII)I".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -26,7 +33,23 @@ mod tests {
     #[tokio::test]
     async fn test_fill_spans() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fill_spans(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = fill_spans(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Long(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Object(None),
+                Value::Long(0),
+                Value::Int(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.java2d.pipe.BufferedRenderPipe.fillSpans(Lsun/java2d/pipe/RenderQueue;JIILsun/java2d/pipe/SpanIterator;JII)I",
+            result.unwrap_err().to_string()
+        );
     }
 }

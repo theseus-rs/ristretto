@@ -378,7 +378,6 @@ pub async fn is_thread_cpu_time_enabled<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -387,209 +386,299 @@ mod tests {
     async fn test_get_available_processors() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_available_processors(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getAvailableProcessors()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_class_initialization_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_class_initialization_time(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getClassInitializationTime()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_class_loading_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_class_loading_time(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getClassLoadingTime()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_class_verification_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_class_verification_time(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getClassVerificationTime()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_daemon_thread_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_daemon_thread_count(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getDaemonThreadCount()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_initialized_class_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_initialized_class_count(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getInitializedClassCount()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_live_thread_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_live_thread_count(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getLiveThreadCount()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_loaded_class_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_loaded_class_size(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getLoadedClassSize()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_method_data_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_method_data_size(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getMethodDataSize()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_peak_thread_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_peak_thread_count(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getPeakThreadCount()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_process_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_process_id(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getProcessId()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_safepoint_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_safepoint_count(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getSafepointCount()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_safepoint_sync_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_safepoint_sync_time(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getSafepointSyncTime()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_startup_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_startup_time(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getStartupTime()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_total_application_non_stopped_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_total_application_non_stopped_time(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getTotalApplicationNonStoppedTime()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_total_class_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_total_class_count(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getTotalClassCount()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_total_compile_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_total_compile_time(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getTotalCompileTime()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_total_safepoint_time() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_total_safepoint_time(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getTotalSafepointTime()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_total_thread_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_total_thread_count(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getTotalThreadCount()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_unloaded_class_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_unloaded_class_count(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getUnloadedClassCount()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_unloaded_class_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_unloaded_class_size(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getUnloadedClassSize()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_uptime_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_uptime_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getUptime0()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_verbose_class() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_verbose_class(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getVerboseClass()Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_verbose_gc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_verbose_gc(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getVerboseGC()Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_version_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_version_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getVersion0()Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_vm_arguments_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_vm_arguments_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.getVmArguments0()[Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_init_optional_support_fields() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = init_optional_support_fields(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.initOptionalSupportFields()V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_is_thread_allocated_memory_enabled() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = is_thread_allocated_memory_enabled(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.isThreadAllocatedMemoryEnabled()Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_is_thread_contention_monitoring_enabled() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = is_thread_contention_monitoring_enabled(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.isThreadContentionMonitoringEnabled()Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_is_thread_cpu_time_enabled() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = is_thread_cpu_time_enabled(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.VMManagementImpl.isThreadCpuTimeEnabled()Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

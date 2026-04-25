@@ -11,8 +11,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn get_glyph_image<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _glyph_code = parameters.pop_int()?;
+    let _p_scaler_context = parameters.pop_long()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.font.NullFontScaler.getGlyphImage(JI)J".to_string())
             .into(),
@@ -30,7 +32,6 @@ pub async fn get_null_scaler_context<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -38,14 +39,21 @@ mod tests {
     #[tokio::test]
     async fn test_get_glyph_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_glyph_image(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            get_glyph_image(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+        assert_eq!(
+            "sun.font.NullFontScaler.getGlyphImage(JI)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_null_scaler_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_null_scaler_context(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.font.NullFontScaler.getNullScalerContext()J",
+            result.unwrap_err().to_string()
+        );
     }
 }

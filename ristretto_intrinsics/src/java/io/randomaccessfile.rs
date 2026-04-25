@@ -4,6 +4,7 @@ use crate::java::io::filedescriptor::file_descriptor_from_java_object;
 use crate::java::io::filedescriptor::raw_file_descriptor;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::JAVA_11;
+use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_17};
 use ristretto_classloader::{Reference, Value};
@@ -101,7 +102,7 @@ pub async fn length<T: Thread + 'static>(
     length_0(thread, parameters).await
 }
 
-#[intrinsic_method("java/io/RandomAccessFile.length0()J", GreaterThanOrEqual(JAVA_17))]
+#[intrinsic_method("java/io/RandomAccessFile.length0()J", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
 pub async fn length_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -306,7 +307,7 @@ pub async fn read_bytes<T: Thread + 'static>(
 
 #[intrinsic_method(
     "java/io/RandomAccessFile.readBytes0([BII)I",
-    GreaterThanOrEqual(JAVA_17)
+    GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
 pub async fn read_bytes_0<T: Thread + 'static>(
@@ -420,7 +421,7 @@ pub async fn set_length<T: Thread + 'static>(
     set_length_0(thread, parameters).await
 }
 
-#[intrinsic_method("java/io/RandomAccessFile.setLength0(J)V", GreaterThanOrEqual(JAVA_17))]
+#[intrinsic_method("java/io/RandomAccessFile.setLength0(J)V", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
 pub async fn set_length_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -492,7 +493,7 @@ pub async fn write_bytes<T: Thread + 'static>(
 
 #[intrinsic_method(
     "java/io/RandomAccessFile.writeBytes0([BII)V",
-    GreaterThanOrEqual(JAVA_17)
+    GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
 pub async fn write_bytes_0<T: Thread + 'static>(

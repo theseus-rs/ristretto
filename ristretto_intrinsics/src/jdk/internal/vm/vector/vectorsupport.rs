@@ -15,8 +15,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn get_max_lane_count<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.vm.vector.VectorSupport.getMaxLaneCount(Ljava/lang/Class;)I".to_string(),
     )
@@ -52,7 +53,6 @@ pub async fn get_cpu_features<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,21 +60,30 @@ mod tests {
     #[tokio::test]
     async fn test_get_max_lane_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_max_lane_count(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_max_lane_count(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "jdk.internal.vm.vector.VectorSupport.getMaxLaneCount(Ljava/lang/Class;)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_register_natives() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = register_natives(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.vm.vector.VectorSupport.registerNatives()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_cpu_features() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_cpu_features(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.vm.vector.VectorSupport.getCPUFeatures()Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -15,8 +15,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn deregister_display_reconfiguration<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _context = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.awt.CGraphicsEnvironment.deregisterDisplayReconfiguration(J)V".to_string(),
     )
@@ -70,7 +71,6 @@ pub async fn register_display_reconfiguration<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -78,35 +78,51 @@ mod tests {
     #[tokio::test]
     async fn test_deregister_display_reconfiguration() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = deregister_display_reconfiguration(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            deregister_display_reconfiguration(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.awt.CGraphicsEnvironment.deregisterDisplayReconfiguration(J)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_display_i_ds() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_display_i_ds(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.awt.CGraphicsEnvironment.getDisplayIDs()[I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_main_display_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_main_display_id(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.awt.CGraphicsEnvironment.getMainDisplayID()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_init_cocoa() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = init_cocoa(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.awt.CGraphicsEnvironment.initCocoa()V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_register_display_reconfiguration() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = register_display_reconfiguration(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.awt.CGraphicsEnvironment.registerDisplayReconfiguration()J",
+            result.unwrap_err().to_string()
+        );
     }
 }

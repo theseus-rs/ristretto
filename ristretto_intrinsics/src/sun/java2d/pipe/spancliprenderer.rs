@@ -14,8 +14,13 @@ use std::sync::Arc;
 #[async_method]
 pub async fn erase_tile<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _band = parameters.pop_reference()?;
+    let _tsize = parameters.pop_int()?;
+    let _offset = parameters.pop_int()?;
+    let _alpha = parameters.pop_reference()?;
+    let _ri = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.pipe.SpanClipRenderer.eraseTile(Lsun/java2d/pipe/RegionIterator;[BII[I)V"
             .to_string(),
@@ -30,8 +35,13 @@ pub async fn erase_tile<T: Thread + 'static>(
 #[async_method]
 pub async fn fill_tile<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _band = parameters.pop_reference()?;
+    let _tsize = parameters.pop_int()?;
+    let _offset = parameters.pop_int()?;
+    let _alpha = parameters.pop_reference()?;
+    let _ri = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.pipe.SpanClipRenderer.fillTile(Lsun/java2d/pipe/RegionIterator;[BII[I)V"
             .to_string(),
@@ -58,15 +68,41 @@ mod tests {
     #[tokio::test]
     async fn test_erase_tile() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = erase_tile(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = erase_tile(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Object(None),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.java2d.pipe.SpanClipRenderer.eraseTile(Lsun/java2d/pipe/RegionIterator;[BII[I)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_fill_tile() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fill_tile(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = fill_tile(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Object(None),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.java2d.pipe.SpanClipRenderer.fillTile(Lsun/java2d/pipe/RegionIterator;[BII[I)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

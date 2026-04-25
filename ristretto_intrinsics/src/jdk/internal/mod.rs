@@ -8,6 +8,7 @@ pub mod misc;
 pub mod module;
 pub mod org;
 pub mod perf;
+pub mod platform;
 pub mod reflect;
 pub mod util;
 pub mod vm;

@@ -30,14 +30,14 @@ pub async fn init_ops<T: Thread + 'static>(
 #[async_method]
 pub async fn set_current_glyph<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _img_ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.font.ColorGlyphSurfaceData.setCurrentGlyph(J)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -46,13 +46,19 @@ mod tests {
     async fn test_init_ops() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = init_ops(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.font.ColorGlyphSurfaceData.initOps()V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_set_current_glyph() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_current_glyph(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = set_current_glyph(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.font.ColorGlyphSurfaceData.setCurrentGlyph(J)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -15,14 +15,15 @@ use std::sync::Arc;
 #[async_method]
 pub async fn find_entry_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _name = parameters.pop_reference()?;
+    let _handle = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.loader.NativeLibrary.findEntry0(JLjava/lang/String;)J".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -30,7 +31,14 @@ mod tests {
     #[tokio::test]
     async fn test_find_entry_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = find_entry_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = find_entry_0(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.loader.NativeLibrary.findEntry0(JLjava/lang/String;)J",
+            result.unwrap_err().to_string()
+        );
     }
 }

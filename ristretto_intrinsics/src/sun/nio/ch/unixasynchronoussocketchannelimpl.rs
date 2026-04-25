@@ -11,14 +11,14 @@ use std::sync::Arc;
 #[async_method]
 pub async fn check_connect<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _fd_val = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.nio.ch.UnixAsynchronousSocketChannelImpl.checkConnect(I)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -26,7 +26,10 @@ mod tests {
     #[tokio::test]
     async fn test_check_connect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = check_connect(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = check_connect(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun.nio.ch.UnixAsynchronousSocketChannelImpl.checkConnect(I)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

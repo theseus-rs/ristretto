@@ -1,5 +1,5 @@
 use ristretto_classfile::JAVA_8;
-use ristretto_classfile::VersionSpecification::LessThanOrEqual;
+use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -7,7 +7,7 @@ use ristretto_types::{Parameters, Result, Thread};
 use std::sync::Arc;
 use sysinfo::{Pid, ProcessesToUpdate, Signal, System};
 
-#[intrinsic_method("java/lang/UNIXProcess.destroyProcess(IZ)V", LessThanOrEqual(JAVA_8))]
+#[intrinsic_method("java/lang/UNIXProcess.destroyProcess(IZ)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn destroy_process<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -31,10 +31,7 @@ pub async fn destroy_process<T: Thread + 'static>(
 /// Delegates to `ProcessImpl.forkAndExec` which contains the primary implementation.
 /// In Java 8 and earlier, `UNIXProcess` was the process class on Unix platforms; both share
 /// the same parameter layout.
-#[intrinsic_method(
-    "java/lang/UNIXProcess.forkAndExec(I[B[B[BI[BI[B[IZ)I",
-    LessThanOrEqual(JAVA_8)
-)]
+#[intrinsic_method("java/lang/UNIXProcess.forkAndExec(I[B[B[BI[BI[B[IZ)I", Equal(JAVA_8))]
 #[async_method]
 pub async fn fork_and_exec<T: Thread + 'static>(
     thread: Arc<T>,
@@ -43,7 +40,7 @@ pub async fn fork_and_exec<T: Thread + 'static>(
     super::processimpl::fork_and_exec(thread, parameters).await
 }
 
-#[intrinsic_method("java/lang/UNIXProcess.init()V", LessThanOrEqual(JAVA_8))]
+#[intrinsic_method("java/lang/UNIXProcess.init()V", Equal(JAVA_8))]
 #[async_method]
 pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -52,10 +49,7 @@ pub async fn init<T: Thread + 'static>(
     Ok(None)
 }
 
-#[intrinsic_method(
-    "java/lang/UNIXProcess.waitForProcessExit(I)I",
-    LessThanOrEqual(JAVA_8)
-)]
+#[intrinsic_method("java/lang/UNIXProcess.waitForProcessExit(I)I", Equal(JAVA_8))]
 #[async_method]
 pub async fn wait_for_process_exit<T: Thread + 'static>(
     _thread: Arc<T>,

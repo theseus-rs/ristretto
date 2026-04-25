@@ -1,15 +1,27 @@
+#[cfg(not(target_family = "wasm"))]
 use ristretto_classfile::VersionSpecification::Any;
+#[cfg(target_family = "unix")]
 use ristretto_classfile::mutf8;
+#[cfg(target_family = "unix")]
 use ristretto_classloader::Reference;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_classloader::Value;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_macros::async_method;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_macros::intrinsic_method;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_types::Thread;
+#[cfg(target_family = "unix")]
 use ristretto_types::VM;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_types::{Parameters, Result};
+#[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
+#[cfg(target_family = "unix")]
 use zerocopy::transmute_ref;
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method("java/lang/ProcessEnvironment.environ()[[B", Any)]
 #[async_method]
 pub async fn environ<T: Thread + 'static>(

@@ -15,8 +15,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn generate_adapter<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _layout = parameters.pop_reference()?;
+    let _abi = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.foreign.abi.ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J".to_string()).into())
 }
 
@@ -27,8 +29,10 @@ pub async fn generate_adapter<T: Thread + 'static>(
 #[async_method]
 pub async fn invoke_native<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _buff = parameters.pop_long()?;
+    let _adapter_stub = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.foreign.abi.ProgrammableInvoker.invokeNative(JJ)V".to_string(),
     )
@@ -54,15 +58,29 @@ mod tests {
     #[tokio::test]
     async fn test_generate_adapter() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = generate_adapter(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = generate_adapter(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.foreign.abi.ProgrammableInvoker.generateAdapter(Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/BufferLayout;)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_invoke_native() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = invoke_native(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = invoke_native(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.foreign.abi.ProgrammableInvoker.invokeNative(JJ)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

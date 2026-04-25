@@ -18,7 +18,6 @@ pub async fn show_dialog<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -27,6 +26,9 @@ mod tests {
     async fn test_show_dialog() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = show_dialog(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.lwawt.macosx.CPrinterJobDialog.showDialog()Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

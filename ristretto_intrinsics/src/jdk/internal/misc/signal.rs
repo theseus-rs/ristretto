@@ -76,11 +76,11 @@ pub async fn handle_0<T: Thread + 'static>(
 #[async_method]
 pub async fn raise_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _sig = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.Signal.raise0(I)V".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -110,7 +110,10 @@ mod tests {
     #[tokio::test]
     async fn test_raise_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = raise_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = raise_0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "jdk.internal.misc.Signal.raise0(I)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

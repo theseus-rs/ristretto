@@ -23,14 +23,15 @@ pub async fn init_ids<T: Thread + 'static>(
 #[async_method]
 pub async fn read_image<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _buf = parameters.pop_reference()?;
+    let _is = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.awt.image.JPEGImageDecoder.readImage(Ljava/io/InputStream;[B)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -46,7 +47,14 @@ mod tests {
     #[tokio::test]
     async fn test_read_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = read_image(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = read_image(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.awt.image.JPEGImageDecoder.readImage(Ljava/io/InputStream;[B)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -15,8 +15,11 @@ use std::sync::Arc;
 #[async_method]
 pub async fn accept_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _isaa = parameters.pop_reference()?;
+    let _newfd = parameters.pop_reference()?;
+    let _ssfd = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.UnixAsynchronousServerSocketChannelImpl.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I".to_string()).into())
 }
 
@@ -39,8 +42,19 @@ mod tests {
     #[tokio::test]
     async fn test_accept_0() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = accept_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = accept_0(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Object(None),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.nio.ch.UnixAsynchronousServerSocketChannelImpl.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

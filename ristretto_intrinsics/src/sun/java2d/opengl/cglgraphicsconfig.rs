@@ -30,8 +30,11 @@ pub async fn get_cgl_config_info_0<T: Thread + 'static>(
 #[async_method]
 pub async fn get_cgl_config_info_1<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _swap_interval = parameters.pop_int()?;
+    let _visualnum = parameters.pop_int()?;
+    let _display_id = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo(III)J".to_string(),
     )
@@ -42,8 +45,9 @@ pub async fn get_cgl_config_info_1<T: Thread + 'static>(
 #[async_method]
 pub async fn get_ogl_capabilities<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _config_info = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.opengl.CGLGraphicsConfig.getOGLCapabilities(J)I".to_string(),
     )
@@ -73,7 +77,6 @@ pub async fn native_get_max_texture_size<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,34 +85,53 @@ mod tests {
     async fn test_get_cgl_config_info_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_cgl_config_info_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_cgl_config_info_1() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = get_cgl_config_info_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_cgl_config_info_1(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo(III)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_ogl_capabilities() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_ogl_capabilities(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_ogl_capabilities(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.java2d.opengl.CGLGraphicsConfig.getOGLCapabilities(J)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_init_cgl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = init_cgl(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.java2d.opengl.CGLGraphicsConfig.initCGL()Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_native_get_max_texture_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = native_get_max_texture_size(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.java2d.opengl.CGLGraphicsConfig.nativeGetMaxTextureSize()I",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -18,7 +18,6 @@ pub async fn get_memory_pools_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun.management.MemoryManagerImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -27,6 +26,9 @@ mod tests {
     async fn test_get_memory_pools_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_memory_pools_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.MemoryManagerImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;",
+            result.unwrap_err().to_string()
+        );
     }
 }

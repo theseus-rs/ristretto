@@ -12,8 +12,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn interrupt<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.nio.ch.PollArrayWrapper.interrupt(I)V".to_string())
             .into(),
@@ -24,14 +25,16 @@ pub async fn interrupt<T: Thread + 'static>(
 #[async_method]
 pub async fn poll_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _timeout = parameters.pop_long()?;
+    let _numfds = parameters.pop_int()?;
+    let _poll_address = parameters.pop_long()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.nio.ch.PollArrayWrapper.poll0(JIJ)I".to_string())
             .into(),
     )
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -39,14 +42,24 @@ mod tests {
     #[tokio::test]
     async fn test_interrupt() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = interrupt(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = interrupt(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun.nio.ch.PollArrayWrapper.interrupt(I)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_poll_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = poll_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = poll_0(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Int(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.nio.ch.PollArrayWrapper.poll0(JIJ)I",
+            result.unwrap_err().to_string()
+        );
     }
 }

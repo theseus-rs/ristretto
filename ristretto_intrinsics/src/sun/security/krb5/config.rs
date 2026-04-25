@@ -14,14 +14,14 @@ use std::sync::Arc;
 #[async_method]
 pub async fn get_windows_directory<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _is_system = parameters.pop_bool()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.security.krb5.Config.getWindowsDirectory(Z)Ljava/lang/String;".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -29,7 +29,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_windows_directory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_windows_directory(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_windows_directory(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "sun.security.krb5.Config.getWindowsDirectory(Z)Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 }
