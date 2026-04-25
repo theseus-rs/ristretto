@@ -725,7 +725,7 @@ mod tests {
 
     async fn java8_string_class() -> Result<Arc<Class>> {
         let (_java_home, _java_version, class_loader) =
-            runtime::version_class_loader("8.472.08.1").await?;
+            runtime::version_class_loader("8.492.09.1").await?;
         class_loader
             .load(JavaStr::try_from_str("java.lang.String")?)
             .await

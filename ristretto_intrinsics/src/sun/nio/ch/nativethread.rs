@@ -1,7 +1,7 @@
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
-use ristretto_classfile::{JAVA_17, JAVA_25};
+use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -57,7 +57,7 @@ pub async fn signal_0<T: Thread + 'static>(
 
 #[intrinsic_method(
     "sun/nio/ch/NativeThread.supportPendingSignals0()Z",
-    GreaterThanOrEqual(JAVA_25)
+    GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
 pub async fn support_pending_signals_0<T: Thread + 'static>(

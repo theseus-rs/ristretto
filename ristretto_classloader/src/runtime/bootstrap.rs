@@ -20,19 +20,19 @@ use tracing::{debug, warn};
 pub const DEFAULT_JAVA_VERSION: &str = JAVA_25_VERSION;
 
 /// Java 8 LTS version
-pub const JAVA_8_VERSION: &str = "8.482.08.1";
+pub const JAVA_8_VERSION: &str = "8.492.09.1";
 
 /// Java 11 LTS version
-pub const JAVA_11_VERSION: &str = "11.0.30.7.1";
+pub const JAVA_11_VERSION: &str = "11.0.31.11.1";
 
 /// Java 17 LTS version
-pub const JAVA_17_VERSION: &str = "17.0.18.9.1";
+pub const JAVA_17_VERSION: &str = "17.0.19.10.1";
 
 /// Java 21 LTS version
-pub const JAVA_21_VERSION: &str = "21.0.10.7.1";
+pub const JAVA_21_VERSION: &str = "21.0.11.10.1";
 
 /// Java 25 LTS version (also the default)
-pub const JAVA_25_VERSION: &str = "25.0.2.10.1";
+pub const JAVA_25_VERSION: &str = "25.0.3.9.1";
 
 /// Array of all supported Java LTS versions for iteration in tests
 pub const ALL_LTS_VERSIONS: &[&str] = &[
