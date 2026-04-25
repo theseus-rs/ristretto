@@ -237,6 +237,16 @@ pub async fn get_entry<T: Thread + 'static>(
     Ok(Some(Value::Long(entry_handle)))
 }
 
+#[intrinsic_method("java/util/zip/ZipFile.getEntry(J[B)J", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_entry_no_add_slash<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    parameters.push_int(0);
+    get_entry(thread, parameters).await
+}
+
 #[intrinsic_method("java/util/zip/ZipFile.getEntryBytes(JI)[B", LessThanOrEqual(JAVA_8))]
 #[async_method]
 pub async fn get_entry_bytes<T: Thread + 'static>(

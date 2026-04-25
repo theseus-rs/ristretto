@@ -1,6 +1,6 @@
 #[cfg(not(target_family = "wasm"))]
 use console::Term;
-use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
@@ -51,6 +51,15 @@ pub async fn istty<T: Thread + 'static>(
     }
 }
 
+#[intrinsic_method("java/io/Console.ttyStatus()I", GreaterThanOrEqual(JAVA_21))]
+#[async_method]
+pub async fn tty_status<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::from(0i32)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,6 +84,16 @@ mod tests {
             .await?
             .expect("encoding");
         assert!(value.is_null());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_tty_status() -> Result<()> {
+        let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
+        let value = tty_status(thread, Parameters::default())
+            .await?
+            .expect("tty_status");
+        assert_eq!(0, value.as_i32()?);
         Ok(())
     }
 
