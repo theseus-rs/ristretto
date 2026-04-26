@@ -6,3 +6,6 @@ rustflags = ["-C", "link-arg=/STACK:8388608"]
 
 [target.wasm32-unknown-unknown]
 rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
+
+[target.wasm32-wasip1]
+rustflags = ["-C", "link-arg=-zstack-size=8388608"]

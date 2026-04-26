@@ -1,8 +1,8 @@
 use crate::Error::{InvalidOperand, OperandStackOverflow, OperandStackUnderflow};
 use crate::Result;
-use parking_lot::RwLock;
 use ristretto_classloader::{Reference, Value};
 use ristretto_gc::Gc;
+use ristretto_gc::sync::RwLock;
 use std::fmt::Display;
 
 /// Operand stack for the Ristretto VM
@@ -315,11 +315,11 @@ mod tests {
 
     #[test]
     fn test_pop_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let mut stack = OperandStack::with_max_size(2);
         let object = Reference::from(vec![42i8]);
         stack.push_object(None)?;
-        let wrapped_object =
-            Gc::new(&GarbageCollector::new(), RwLock::new(object.clone())).clone_gc();
+        let wrapped_object = Gc::new(&collector, RwLock::new(object.clone())).clone_gc();
         stack.push_object(Some(wrapped_object))?;
         let popped = stack.pop_object()?;
         assert!(popped.is_some());

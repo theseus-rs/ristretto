@@ -53,7 +53,10 @@ pub async fn get_local_host_name<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
+    #[cfg(not(target_family = "wasm"))]
     let hostname = whoami::hostname().map_err(|error| InternalError(error.to_string()))?;
+    #[cfg(target_family = "wasm")]
+    let hostname = String::from("localhost");
     let string_value = thread.intern_string(&hostname).await?;
     Ok(Some(string_value))
 }

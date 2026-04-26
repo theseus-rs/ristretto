@@ -40,7 +40,7 @@ impl<T> From<PoisonError<T>> for Error {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
 

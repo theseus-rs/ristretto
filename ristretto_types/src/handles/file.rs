@@ -98,10 +98,14 @@ impl TryInto<tokio::fs::File> for FileHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(not(target_family = "wasm"))]
     use crate::Result;
+    #[cfg(not(target_family = "wasm"))]
     use tempfile::NamedTempFile;
+    #[cfg(not(target_family = "wasm"))]
     use tokio::fs::File;
 
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_file_handle_from_file_and_append() -> Result<()> {
         let tmp = NamedTempFile::new().expect("temp file");
@@ -112,6 +116,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_file_handle_from_file_and_append_true() -> Result<()> {
         let tmp = NamedTempFile::new().expect("temp file");
@@ -122,6 +127,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_file_handle_from_file_and_mode() -> Result<()> {
         let tmp = NamedTempFile::new().expect("temp file");
@@ -133,6 +139,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_file_handle_from_file_and_mode_read_only() -> Result<()> {
         let tmp = NamedTempFile::new().expect("temp file");
@@ -142,6 +149,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_file_handle_try_into_file() -> Result<()> {
         let tmp = NamedTempFile::new().expect("temp file");

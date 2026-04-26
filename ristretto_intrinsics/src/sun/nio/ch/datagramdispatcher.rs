@@ -297,7 +297,7 @@ pub async fn writev_0<T: Thread + 'static>(
     Ok(Some(Value::Long(n as i64)))
 }
 
-#[cfg(all(test, target_family = "unix"))]
+#[cfg(all(test, target_family = "unix", not(target_family = "wasm")))]
 mod tests {
     use super::*;
 

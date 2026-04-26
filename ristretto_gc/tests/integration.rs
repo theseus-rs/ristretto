@@ -1,6 +1,7 @@
 //! Integration and edge case tests
 //!
 //! Tests complex scenarios, edge cases, and integration between different components.
+#![cfg(not(target_family = "wasm"))]
 
 use ristretto_gc::{Configuration, GarbageCollector, Gc, GcRootGuard, Result, Trace};
 use std::collections::{HashMap, HashSet};

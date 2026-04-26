@@ -1,10 +1,10 @@
 use crate::java::lang::class::get_class;
-use parking_lot::RwLock;
 use ristretto_classfile::VerifyMode;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11, JavaStr};
 use ristretto_classloader::{Class, Reference, Value};
 use ristretto_gc::Gc;
+use ristretto_gc::sync::RwLock;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError::{

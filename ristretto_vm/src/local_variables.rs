@@ -1,8 +1,8 @@
 use crate::Error::{InvalidLocalVariable, InvalidLocalVariableIndex};
 use crate::Result;
-use parking_lot::RwLock;
 use ristretto_classloader::{Reference, Value};
 use ristretto_gc::Gc;
+use ristretto_gc::sync::RwLock;
 use std::fmt::Display;
 
 /// Represents the local variables in a frame.

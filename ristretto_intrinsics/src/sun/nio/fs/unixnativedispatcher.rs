@@ -2362,7 +2362,7 @@ pub async fn write_0<T: Thread + 'static>(
     }
 }
 
-#[cfg(all(test, target_family = "unix"))]
+#[cfg(all(test, target_family = "unix", not(target_family = "wasm")))]
 mod tests {
     use super::*;
     use zerocopy::transmute_ref;

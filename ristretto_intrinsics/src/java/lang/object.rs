@@ -136,7 +136,7 @@ pub async fn hash_code<T: Thread + 'static>(
         return Err(InternalError("no object reference defined".to_string()));
     };
     let guard = reference.read();
-    let hash_code = guard.hash_code();
+    let hash_code = guard.hash_code() as u64;
     #[expect(clippy::cast_possible_truncation)]
     let hash_code = (hash_code ^ (hash_code >> 32)) as u32;
     let hash_code: i32 = zerocopy::transmute!(hash_code);

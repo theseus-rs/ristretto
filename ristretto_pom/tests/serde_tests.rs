@@ -1,3 +1,4 @@
+#![cfg(not(target_family = "wasm"))]
 //! Serialization and deserialization tests for all types.
 
 use ristretto_pom::Project;

@@ -60,7 +60,7 @@ pub async fn tty_status<T: Thread + 'static>(
     Ok(Some(Value::from(0i32)))
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
 

@@ -1,3 +1,5 @@
+#![cfg(not(target_family = "wasm"))]
+
 use ristretto_classloader::{
     JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION, JAVA_21_VERSION, JAVA_25_VERSION, JavaStr,
     Result, runtime,

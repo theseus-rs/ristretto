@@ -62,7 +62,7 @@ pub async fn cleanup_close_0<T: Thread + 'static>(
     Ok(None)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
     use crate::java::io::filedescriptor::raw_file_descriptor;

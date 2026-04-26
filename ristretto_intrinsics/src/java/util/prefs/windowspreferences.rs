@@ -551,6 +551,7 @@ pub async fn windows_reg_close_key_windows_v8_v1<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegCreateKeyEx(I[B)[I",
     Equal(JAVA_8)
@@ -568,6 +569,7 @@ pub async fn windows_reg_create_key_ex_windows_v8_v1<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegDeleteKey(I[B)I",
     Equal(JAVA_8)
@@ -585,6 +587,7 @@ pub async fn windows_reg_delete_key_windows_v8_v1<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegDeleteValue(I[B)I",
     Equal(JAVA_8)
@@ -602,6 +605,7 @@ pub async fn windows_reg_delete_value_windows_v8_v1<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegEnumKeyEx(III)[B",
     Equal(JAVA_8)
@@ -620,6 +624,7 @@ pub async fn windows_reg_enum_key_ex_windows_v8_v1<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegEnumValue(III)[B",
     Equal(JAVA_8)
@@ -638,6 +643,7 @@ pub async fn windows_reg_enum_value_windows_v8_v1<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegFlushKey(I)I",
     Equal(JAVA_8)
@@ -654,6 +660,7 @@ pub async fn windows_reg_flush_key_windows_v8_v1<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegOpenKey(I[BI)[I",
     Equal(JAVA_8)
@@ -672,6 +679,7 @@ pub async fn windows_reg_open_key_windows_v8_v1<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegQueryInfoKey(I)[I",
     Equal(JAVA_8)
@@ -688,6 +696,7 @@ pub async fn windows_reg_query_info_key_windows_v8_v1<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegQueryValueEx(I[B)[B",
     Equal(JAVA_8)
@@ -705,6 +714,7 @@ pub async fn windows_reg_query_value_ex_windows_v8_v1<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegSetValueEx(I[B[B)I",
     Equal(JAVA_8)
@@ -723,6 +733,7 @@ pub async fn windows_reg_set_value_ex_windows_v8_v1<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegCloseKey(I)I",
     Equal(JAVA_8)
@@ -739,6 +750,7 @@ pub async fn windows_reg_close_key_windows_v8_v2<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegCreateKeyEx(I[B)[I",
     Equal(JAVA_8)
@@ -756,6 +768,7 @@ pub async fn windows_reg_create_key_ex_windows_v8_v2<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegDeleteKey(I[B)I",
     Equal(JAVA_8)
@@ -773,6 +786,7 @@ pub async fn windows_reg_delete_key_windows_v8_v2<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegDeleteValue(I[B)I",
     Equal(JAVA_8)
@@ -790,6 +804,7 @@ pub async fn windows_reg_delete_value_windows_v8_v2<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegEnumKeyEx(III)[B",
     Equal(JAVA_8)
@@ -808,6 +823,7 @@ pub async fn windows_reg_enum_key_ex_windows_v8_v2<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegEnumValue(III)[B",
     Equal(JAVA_8)
@@ -826,6 +842,7 @@ pub async fn windows_reg_enum_value_windows_v8_v2<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegFlushKey(I)I",
     Equal(JAVA_8)
@@ -842,6 +859,7 @@ pub async fn windows_reg_flush_key_windows_v8_v2<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegOpenKey(I[BI)[I",
     Equal(JAVA_8)
@@ -860,6 +878,7 @@ pub async fn windows_reg_open_key_windows_v8_v2<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegQueryInfoKey(I)[I",
     Equal(JAVA_8)
@@ -876,6 +895,7 @@ pub async fn windows_reg_query_info_key_windows_v8_v2<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegQueryValueEx(I[B)[B",
     Equal(JAVA_8)
@@ -893,6 +913,7 @@ pub async fn windows_reg_query_value_ex_windows_v8_v2<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegSetValueEx(I[B[B)I",
     Equal(JAVA_8)

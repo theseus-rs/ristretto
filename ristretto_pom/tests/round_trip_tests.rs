@@ -1,3 +1,4 @@
+#![cfg(not(target_family = "wasm"))]
 use ristretto_pom::{DependencyScope, Project, Result};
 use std::fs;
 use std::io::Write;
