@@ -1,7 +1,7 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
 #[cfg(not(target_family = "wasm"))]
 use crate::JavaError::StackOverflowError;
-use crate::JavaError::{RuntimeException, VerifyError};
+use crate::JavaError::{RuntimeException, UnsatisfiedLinkError, VerifyError};
 use crate::Parameters;
 use crate::RustValue;
 use crate::configuration::VerifyMode;
@@ -12,7 +12,6 @@ use crate::{Frame, Result, VM, jit};
 use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{FieldAccessFlags, FieldType, JavaStr, MethodAccessFlags};
-use ristretto_classloader::Error::MethodNotFound;
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
 use ristretto_intrinsics::get_monitor_id;
 use ristretto_macros::async_method;
@@ -900,11 +899,9 @@ impl Thread {
             if let Some(ref monitor) = sync_monitor {
                 let _ = monitor.release(self.id);
             }
-            return Err(MethodNotFound {
-                class_name: class_name.to_string(),
-                method_name: method_name.to_string(),
-                method_descriptor: method_descriptor.to_string(),
-            }
+            return Err(UnsatisfiedLinkError(format!(
+                "'{class_name}.{method_name}{method_descriptor}'"
+            ))
             .into());
         } else {
             // Check for native stack overflow before creating a new frame
