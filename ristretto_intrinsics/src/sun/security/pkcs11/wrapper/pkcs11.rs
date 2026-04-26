@@ -1138,6 +1138,7 @@ pub async fn initialize_library<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -90,6 +90,7 @@ pub async fn release_native_drag_source<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

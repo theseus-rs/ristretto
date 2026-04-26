@@ -71,6 +71,7 @@ pub async fn register_display_reconfiguration<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

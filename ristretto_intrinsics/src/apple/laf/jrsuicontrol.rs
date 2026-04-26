@@ -224,6 +224,7 @@ pub async fn sync_changes<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

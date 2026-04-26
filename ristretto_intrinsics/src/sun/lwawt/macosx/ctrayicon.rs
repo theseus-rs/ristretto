@@ -107,6 +107,7 @@ pub async fn set_native_image_1<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

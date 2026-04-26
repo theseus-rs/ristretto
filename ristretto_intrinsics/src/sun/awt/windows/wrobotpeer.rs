@@ -116,6 +116,7 @@ pub async fn mouse_wheel<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

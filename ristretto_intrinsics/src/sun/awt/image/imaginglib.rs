@@ -109,6 +109,7 @@ pub async fn transform_raster<T: Thread + 'static>(
     let _src = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.awt.image.ImagingLib.transformRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;[DI)I".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

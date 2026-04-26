@@ -27,6 +27,7 @@ pub async fn init_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/ch/FileKey.init(Ljava/io/FileDescriptor;[J)V", Equal(JAVA_25))]
 #[async_method]
@@ -65,6 +66,7 @@ pub async fn init<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/nio/ch/FileKey.init(Ljava/io/FileDescriptor;[I)V", Equal(JAVA_25))]
 #[async_method]
@@ -79,6 +81,7 @@ pub async fn init_windows_v25<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

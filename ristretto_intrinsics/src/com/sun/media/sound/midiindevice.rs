@@ -84,6 +84,7 @@ pub async fn n_stop<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

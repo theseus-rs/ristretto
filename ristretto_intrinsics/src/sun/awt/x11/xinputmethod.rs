@@ -57,6 +57,7 @@ pub async fn set_xicfocus_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

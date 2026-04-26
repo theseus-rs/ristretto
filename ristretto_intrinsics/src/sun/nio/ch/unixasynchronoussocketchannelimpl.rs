@@ -19,6 +19,7 @@ pub async fn check_connect<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

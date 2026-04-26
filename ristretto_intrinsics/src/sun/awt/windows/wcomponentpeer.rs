@@ -320,6 +320,7 @@ pub async fn update_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -139,6 +139,7 @@ pub async fn native_set_display_mode<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

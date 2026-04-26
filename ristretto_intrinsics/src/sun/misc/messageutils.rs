@@ -39,6 +39,7 @@ pub async fn to_stdout<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

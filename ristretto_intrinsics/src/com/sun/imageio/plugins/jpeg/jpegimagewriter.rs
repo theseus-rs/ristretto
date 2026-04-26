@@ -141,6 +141,7 @@ pub async fn write_tables<T: Thread + 'static>(
     let _struct_pointer = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("com.sun.imageio.plugins.jpeg.JPEGImageWriter.writeTables(J[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

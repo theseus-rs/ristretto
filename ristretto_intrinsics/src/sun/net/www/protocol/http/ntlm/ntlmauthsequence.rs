@@ -50,6 +50,7 @@ pub async fn init_first<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

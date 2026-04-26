@@ -21,6 +21,7 @@ pub async fn handle_0<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -22,6 +22,7 @@ pub async fn get_windows_directory<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

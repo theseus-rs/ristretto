@@ -131,6 +131,7 @@ pub async fn remote_desktop_mouse_wheel_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

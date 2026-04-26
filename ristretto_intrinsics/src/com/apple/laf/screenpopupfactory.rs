@@ -23,6 +23,7 @@ pub async fn get_heavy_weight_popup<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com.apple.laf.ScreenPopupFactory._getHeavyWeightPopup(Ljava/awt/Component;Ljava/awt/Component;II)Ljavax/swing/Popup;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

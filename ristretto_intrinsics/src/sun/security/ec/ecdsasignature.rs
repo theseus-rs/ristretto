@@ -46,6 +46,7 @@ pub async fn verify_signed_digest<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -18,6 +18,7 @@ pub async fn get_ogl_id_string<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

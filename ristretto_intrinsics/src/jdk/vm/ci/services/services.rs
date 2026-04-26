@@ -23,6 +23,7 @@ pub async fn read_system_properties_info<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

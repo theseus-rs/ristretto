@@ -31,6 +31,7 @@ pub async fn n_new_direct_audio_device_info<T: Thread + 'static>(
     let _device_index = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("com.sun.media.sound.DirectAudioDeviceProvider.nNewDirectAudioDeviceInfo(I)Lcom/sun/media/sound/DirectAudioDeviceProvider$DirectAudioDeviceInfo;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -129,6 +129,7 @@ pub async fn synthesize_wm_activate<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

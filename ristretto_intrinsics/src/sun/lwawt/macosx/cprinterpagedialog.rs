@@ -18,6 +18,7 @@ pub async fn show_dialog<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

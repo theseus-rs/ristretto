@@ -39,6 +39,7 @@ pub async fn init_agent_properties<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

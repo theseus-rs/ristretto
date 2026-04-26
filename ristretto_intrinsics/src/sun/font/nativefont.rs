@@ -106,6 +106,7 @@ pub async fn have_bitmap_fonts<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/font/NativeFont.countGlyphs([BI)I", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -117,6 +118,7 @@ pub async fn count_glyphs_linux_ge_v11<T: Thread + 'static>(
     let _platform_name_bytes = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/font/NativeFont.countGlyphs([BI)I".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/font/NativeFont.fontExists([B)Z", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -127,6 +129,7 @@ pub async fn font_exists_linux_ge_v11<T: Thread + 'static>(
     let _xlfd = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/font/NativeFont.fontExists([B)Z".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/font/NativeFont.getFontMetrics(J)Lsun/font/StrikeMetrics;",
@@ -143,6 +146,7 @@ pub async fn get_font_metrics_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/font/NativeFont.getGlyphAdvance(JI)F",
@@ -160,6 +164,7 @@ pub async fn get_glyph_advance_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/font/NativeFont.getGlyphImage(JI)J", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -174,6 +179,7 @@ pub async fn get_glyph_image_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/font/NativeFont.getGlyphImageNoDefault(JI)J",
@@ -191,6 +197,7 @@ pub async fn get_glyph_image_no_default_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/font/NativeFont.haveBitmapFonts([B)Z",
@@ -207,6 +214,7 @@ pub async fn have_bitmap_fonts_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

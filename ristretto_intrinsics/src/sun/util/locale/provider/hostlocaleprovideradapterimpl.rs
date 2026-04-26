@@ -414,6 +414,7 @@ pub async fn get_calendar_data_value<T: Thread + 'static>(
     let _jlangtag = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDataValue(Ljava/lang/String;I)I".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;III)[Ljava/lang/String;",
@@ -430,6 +431,7 @@ pub async fn get_calendar_display_strings_windows_ge_v11_v1<T: Thread + 'static>
     let _jlangtag = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;III)[Ljava/lang/String;".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)I",
@@ -447,6 +449,7 @@ pub async fn get_calendar_id_windows_v1<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDateTimePattern(IILjava/lang/String;)Ljava/lang/String;",
@@ -462,6 +465,7 @@ pub async fn get_date_time_pattern<T: Thread + 'static>(
     let _date_style = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDateTimePattern(IILjava/lang/String;)Ljava/lang/String;".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getNumberPattern(ILjava/lang/String;)Ljava/lang/String;",
@@ -476,6 +480,7 @@ pub async fn get_number_pattern<T: Thread + 'static>(
     let _number_style = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getNumberPattern(ILjava/lang/String;)Ljava/lang/String;".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.initialize()Z",
@@ -491,6 +496,7 @@ pub async fn initialize<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.isNativeDigit(Ljava/lang/String;)Z",
@@ -508,6 +514,7 @@ pub async fn is_native_digit<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDataValue(Ljava/lang/String;I)I",
@@ -522,6 +529,7 @@ pub async fn get_calendar_data_value_windows<T: Thread + 'static>(
     let _jlangtag = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDataValue(Ljava/lang/String;I)I".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;III)[Ljava/lang/String;",
@@ -538,6 +546,7 @@ pub async fn get_calendar_display_strings_windows_ge_v11_v2<T: Thread + 'static>
     let _jlangtag = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;III)[Ljava/lang/String;".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)I",
@@ -555,6 +564,7 @@ pub async fn get_calendar_id_windows_v2<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDateTimePattern(IILjava/lang/String;)Ljava/lang/String;",
@@ -570,6 +580,7 @@ pub async fn get_date_time_pattern_windows<T: Thread + 'static>(
     let _date_style = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDateTimePattern(IILjava/lang/String;)Ljava/lang/String;".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getNumberPattern(ILjava/lang/String;)Ljava/lang/String;",
@@ -584,6 +595,7 @@ pub async fn get_number_pattern_windows<T: Thread + 'static>(
     let _number_style = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getNumberPattern(ILjava/lang/String;)Ljava/lang/String;".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.initialize()Z",
@@ -599,6 +611,7 @@ pub async fn initialize_windows<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/util/locale/provider/HostLocaleProviderAdapterImpl.isNativeDigit(Ljava/lang/String;)Z",
@@ -616,6 +629,7 @@ pub async fn is_native_digit_windows<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(all(test, not(target_os = "linux")))]
 mod tests {
     use super::*;

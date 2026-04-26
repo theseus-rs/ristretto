@@ -22,6 +22,7 @@ pub async fn free_stg_medium<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

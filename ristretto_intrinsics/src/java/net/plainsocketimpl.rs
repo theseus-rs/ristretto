@@ -892,6 +892,7 @@ pub async fn accept0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.available0(I)I", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -905,6 +906,7 @@ pub async fn available0<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.bind0(ILjava/net/InetAddress;IZ)V",
@@ -924,6 +926,7 @@ pub async fn bind0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.close0(I)V", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -934,6 +937,7 @@ pub async fn close0<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.close0(I)V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.configureBlocking(IZ)V",
@@ -951,6 +955,7 @@ pub async fn configure_blocking<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.connect0(ILjava/net/InetAddress;I)I",
@@ -969,6 +974,7 @@ pub async fn connect0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.getIntOption(II)I",
@@ -986,6 +992,7 @@ pub async fn get_int_option<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.initIDs()V", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -995,6 +1002,7 @@ pub async fn init_ids<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.initIDs()V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.listen0(II)V", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1006,6 +1014,7 @@ pub async fn listen0<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.listen0(II)V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.localAddress(ILjava/net/InetAddressContainer;)V",
@@ -1023,6 +1032,7 @@ pub async fn local_address<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.localPort0(I)I", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1036,6 +1046,7 @@ pub async fn local_port0<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.sendOOB(II)V", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1047,6 +1058,7 @@ pub async fn send_oob<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.sendOOB(II)V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.setIntOption(III)V",
@@ -1065,6 +1077,7 @@ pub async fn set_int_option<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.setSoTimeout0(II)V",
@@ -1082,6 +1095,7 @@ pub async fn set_so_timeout0<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.shutdown0(II)V", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1096,6 +1110,7 @@ pub async fn shutdown0<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.socket0(Z)I", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1106,6 +1121,7 @@ pub async fn socket0<T: Thread + 'static>(
     let _stream = parameters.pop_bool()?;
     Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.socket0(Z)I".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.waitForConnect(II)V",
@@ -1123,6 +1139,7 @@ pub async fn wait_for_connect<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.waitForNewConnection(II)V",
@@ -1140,6 +1157,7 @@ pub async fn wait_for_new_connection<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.accept0(I[Ljava/net/InetSocketAddress;)I",
@@ -1157,6 +1175,7 @@ pub async fn accept0_windows_v11_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.available0(I)I", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1170,6 +1189,7 @@ pub async fn available0_windows_v11_v17<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.bind0(ILjava/net/InetAddress;IZ)V",
@@ -1189,6 +1209,7 @@ pub async fn bind0_windows_v11_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.close0(I)V", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1199,6 +1220,7 @@ pub async fn close0_windows_v11_v17<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.close0(I)V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.configureBlocking(IZ)V",
@@ -1216,6 +1238,7 @@ pub async fn configure_blocking_windows_v11_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.connect0(ILjava/net/InetAddress;I)I",
@@ -1234,6 +1257,7 @@ pub async fn connect0_windows_v11_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.getIntOption(II)I",
@@ -1251,6 +1275,7 @@ pub async fn get_int_option_windows_v11_v17<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.initIDs()V", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1260,6 +1285,7 @@ pub async fn init_ids_windows_v11_v17<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.initIDs()V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.listen0(II)V", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1271,6 +1297,7 @@ pub async fn listen0_windows_v11_v17<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.listen0(II)V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.localAddress(ILjava/net/InetAddressContainer;)V",
@@ -1288,6 +1315,7 @@ pub async fn local_address_windows_v11_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.localPort0(I)I", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1301,6 +1329,7 @@ pub async fn local_port0_windows_v11_v17<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.sendOOB(II)V", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1312,6 +1341,7 @@ pub async fn send_oob_windows_v11_v17<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.sendOOB(II)V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.setIntOption(III)V",
@@ -1330,6 +1360,7 @@ pub async fn set_int_option_windows_v11_v17<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.setSoTimeout0(II)V",
@@ -1347,6 +1378,7 @@ pub async fn set_so_timeout0_windows_v11_v17<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.shutdown0(II)V", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1361,6 +1393,7 @@ pub async fn shutdown0_windows_v11_v17<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/net/PlainSocketImpl.socket0(Z)I", Between(JAVA_11, JAVA_17))]
 #[async_method]
@@ -1371,6 +1404,7 @@ pub async fn socket0_windows_v11_v17<T: Thread + 'static>(
     let _stream = parameters.pop_bool()?;
     Err(JavaError::UnsatisfiedLinkError("java/net/PlainSocketImpl.socket0(Z)I".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.waitForConnect(II)V",
@@ -1388,6 +1422,7 @@ pub async fn wait_for_connect_windows_v11_v17<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/net/PlainSocketImpl.waitForNewConnection(II)V",
@@ -1405,6 +1440,7 @@ pub async fn wait_for_new_connection_windows_v11_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

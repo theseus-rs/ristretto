@@ -24,6 +24,7 @@ pub async fn embed_msi<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

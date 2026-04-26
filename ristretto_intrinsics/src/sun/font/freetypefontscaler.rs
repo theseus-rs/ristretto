@@ -284,6 +284,7 @@ pub async fn init_native_scaler<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

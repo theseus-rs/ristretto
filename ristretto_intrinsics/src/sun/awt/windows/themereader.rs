@@ -299,6 +299,7 @@ pub async fn set_window_theme<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -91,6 +91,7 @@ pub async fn sizeof_epoll_event<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

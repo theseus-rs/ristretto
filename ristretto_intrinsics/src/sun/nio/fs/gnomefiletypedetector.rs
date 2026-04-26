@@ -60,6 +60,7 @@ pub async fn probe_using_gnome_vfs<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

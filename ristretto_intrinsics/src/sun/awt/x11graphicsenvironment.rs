@@ -150,6 +150,7 @@ pub async fn p_running_xinerama<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsEnvironment.initNativeData()V",
@@ -165,6 +166,7 @@ pub async fn init_native_data<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsEnvironment.checkShmExt()I",
@@ -180,6 +182,7 @@ pub async fn check_shm_ext_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsEnvironment.getDefaultScreenNum()I",
@@ -195,6 +198,7 @@ pub async fn get_default_screen_num_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsEnvironment.getDisplayString()Ljava/lang/String;",
@@ -210,6 +214,7 @@ pub async fn get_display_string_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsEnvironment.getNumScreens()I",
@@ -225,6 +230,7 @@ pub async fn get_num_screens_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsEnvironment.getXineramaCenterPoint()Ljava/awt/Point;",
@@ -240,6 +246,7 @@ pub async fn get_xinerama_center_point_linux_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsEnvironment.initDisplay(Z)V",
@@ -256,6 +263,7 @@ pub async fn init_display_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsEnvironment.initGLX()Z",
@@ -271,6 +279,7 @@ pub async fn init_glx_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsEnvironment.initNativeData()V",
@@ -286,6 +295,7 @@ pub async fn init_native_data_linux_ge_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsEnvironment.initXRender(ZZ)Z",
@@ -303,6 +313,7 @@ pub async fn init_xrender_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsEnvironment.pRunningXinerama()Z",
@@ -318,6 +329,7 @@ pub async fn p_running_xinerama_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

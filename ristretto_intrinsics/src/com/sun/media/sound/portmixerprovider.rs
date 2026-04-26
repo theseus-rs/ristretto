@@ -31,6 +31,7 @@ pub async fn n_new_port_mixer_info<T: Thread + 'static>(
     let _mixer_index = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("com.sun.media.sound.PortMixerProvider.nNewPortMixerInfo(I)Lcom/sun/media/sound/PortMixerProvider$PortMixerInfo;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

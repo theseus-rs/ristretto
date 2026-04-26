@@ -222,6 +222,7 @@ pub async fn set_native_method_prefixes<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

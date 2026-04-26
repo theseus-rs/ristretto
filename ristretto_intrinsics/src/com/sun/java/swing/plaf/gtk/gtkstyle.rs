@@ -92,6 +92,7 @@ pub async fn native_get_y_thickness<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKStyle.nativeGetClassValue(ILjava/lang/String;)Ljava/lang/Object;",
@@ -106,6 +107,7 @@ pub async fn native_get_class_value_linux_ge_v11<T: Thread + 'static>(
     let _widget_type = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("com/sun/java/swing/plaf/gtk/GTKStyle.nativeGetClassValue(ILjava/lang/String;)Ljava/lang/Object;".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKStyle.nativeGetColorForState(III)I",
@@ -124,6 +126,7 @@ pub async fn native_get_color_for_state_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKStyle.nativeGetPangoFontName(I)Ljava/lang/String;",
@@ -141,6 +144,7 @@ pub async fn native_get_pango_font_name_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKStyle.nativeGetXThickness(I)I",
@@ -157,6 +161,7 @@ pub async fn native_get_xthickness_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKStyle.nativeGetYThickness(I)I",
@@ -173,6 +178,7 @@ pub async fn native_get_ythickness_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

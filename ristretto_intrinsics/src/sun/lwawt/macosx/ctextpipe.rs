@@ -86,6 +86,7 @@ pub async fn do_unicodes<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

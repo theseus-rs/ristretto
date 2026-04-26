@@ -37,6 +37,7 @@ pub async fn update_window_accel_impl<T: Thread + 'static>(
     let _p_data = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/opengl/WGLSurfaceData.updateWindowAccelImpl(JLsun/awt/windows/WComponentPeer;II)Z".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

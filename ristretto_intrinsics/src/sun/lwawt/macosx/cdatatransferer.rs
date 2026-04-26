@@ -55,6 +55,7 @@ pub async fn register_format_with_pasteboard<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

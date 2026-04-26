@@ -20,6 +20,7 @@ pub async fn flush_buffer<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

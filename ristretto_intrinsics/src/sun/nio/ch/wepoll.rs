@@ -73,6 +73,7 @@ pub async fn wait<T: Thread + 'static>(
     let _h = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/WEPoll.wait(JJII)I".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

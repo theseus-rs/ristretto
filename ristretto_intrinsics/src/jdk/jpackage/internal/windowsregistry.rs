@@ -87,6 +87,7 @@ pub async fn read_dword_value<T: Thread + 'static>(
     let _key = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("jdk/jpackage/internal/WindowsRegistry.readDwordValue(ILjava/lang/String;Ljava/lang/String;I)I".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -289,6 +289,7 @@ pub async fn zoom<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

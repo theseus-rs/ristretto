@@ -127,6 +127,7 @@ pub async fn x11input_method_lookup_string<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

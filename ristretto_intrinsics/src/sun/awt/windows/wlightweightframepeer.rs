@@ -19,6 +19,7 @@ pub async fn override_native_handle<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

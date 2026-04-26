@@ -45,6 +45,7 @@ pub async fn rasterize_trapezoids_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

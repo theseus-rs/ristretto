@@ -159,6 +159,7 @@ pub async fn needs_class_init_barrier_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

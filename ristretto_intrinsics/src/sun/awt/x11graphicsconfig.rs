@@ -181,6 +181,7 @@ pub async fn swap_buffers<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsConfig.createBackBuffer(JI)J",
@@ -198,6 +199,7 @@ pub async fn create_back_buffer_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsConfig.destroyBackBuffer(J)V",
@@ -214,6 +216,7 @@ pub async fn destroy_back_buffer_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/X11GraphicsConfig.dispose(J)V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -224,6 +227,7 @@ pub async fn dispose_linux_ge_v11<T: Thread + 'static>(
     let _x11_config_data = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11GraphicsConfig.dispose(J)V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsConfig.getNumColors()I",
@@ -239,6 +243,7 @@ pub async fn get_num_colors_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsConfig.getXResolution(I)D",
@@ -255,6 +260,7 @@ pub async fn get_xresolution_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsConfig.getYResolution(I)D",
@@ -271,6 +277,7 @@ pub async fn get_yresolution_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/X11GraphicsConfig.init(II)V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -282,6 +289,7 @@ pub async fn init_linux_ge_v11<T: Thread + 'static>(
     let _visual_num = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11GraphicsConfig.init(II)V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/X11GraphicsConfig.initIDs()V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -291,6 +299,7 @@ pub async fn init_ids_linux_ge_v11<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11GraphicsConfig.initIDs()V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsConfig.isTranslucencyCapable(J)Z",
@@ -307,6 +316,7 @@ pub async fn is_translucency_capable_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsConfig.makeColorModel()Ljava/awt/image/ColorModel;",
@@ -322,6 +332,7 @@ pub async fn make_color_model_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsConfig.pGetBounds(I)Ljava/awt/Rectangle;",
@@ -338,6 +349,7 @@ pub async fn p_get_bounds_linux_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsConfig.swapBuffers(JI)V",
@@ -355,6 +367,7 @@ pub async fn swap_buffers_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

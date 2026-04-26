@@ -89,6 +89,7 @@ pub async fn update_progress<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

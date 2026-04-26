@@ -53,6 +53,7 @@ pub async fn install_notification_callback<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

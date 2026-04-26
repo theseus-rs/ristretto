@@ -472,6 +472,7 @@ pub async fn sizeof_cif<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

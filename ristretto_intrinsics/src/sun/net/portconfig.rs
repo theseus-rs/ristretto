@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 #[cfg(target_os = "windows")]
 use ristretto_classfile::JAVA_8;
 #[cfg(not(target_os = "windows"))]

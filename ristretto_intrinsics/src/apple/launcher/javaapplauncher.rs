@@ -38,6 +38,7 @@ pub async fn native_invoke_non_public<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("apple.launcher.JavaAppLauncher.nativeInvokeNonPublic(Ljava/lang/Class;Ljava/lang/reflect/Method;[Ljava/lang/String;)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

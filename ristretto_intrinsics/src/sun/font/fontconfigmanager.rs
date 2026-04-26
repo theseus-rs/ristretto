@@ -60,6 +60,7 @@ pub async fn get_font_config_version<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/font/FontConfigManager.getFontConfig(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V",
@@ -76,6 +77,7 @@ pub async fn get_font_config_linux_ge_v11<T: Thread + 'static>(
     let _locale_str = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/font/FontConfigManager.getFontConfig(Ljava/lang/String;Lsun/font/FontConfigManager$FontConfigInfo;[Lsun/font/FontConfigManager$FcCompFont;Z)V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/font/FontConfigManager.getFontConfigAASettings(Ljava/lang/String;Ljava/lang/String;)I",
@@ -94,6 +96,7 @@ pub async fn get_font_config_aasettings_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/font/FontConfigManager.getFontConfigVersion()I",
@@ -109,6 +112,7 @@ pub async fn get_font_config_version_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

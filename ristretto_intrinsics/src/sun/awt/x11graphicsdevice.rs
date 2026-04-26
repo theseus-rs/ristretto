@@ -243,6 +243,7 @@ pub async fn reset_native_data<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.getNativeScaleFactor(I)D",
@@ -259,6 +260,7 @@ pub async fn get_native_scale_factor<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.initXrandrExtension(Z)Z",
@@ -275,6 +277,7 @@ pub async fn init_xrandr_extension_linux_ge_v17_v1<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.pGetBounds(I)Ljava/awt/Rectangle;",
@@ -291,6 +294,7 @@ pub async fn p_get_bounds<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.configDisplayMode(IIII)V",
@@ -310,6 +314,7 @@ pub async fn config_display_mode_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.enterFullScreenExclusive(J)V",
@@ -326,6 +331,7 @@ pub async fn enter_full_screen_exclusive_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.enumDisplayModes(ILjava/util/ArrayList;)V",
@@ -343,6 +349,7 @@ pub async fn enum_display_modes_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.exitFullScreenExclusive(J)V",
@@ -359,6 +366,7 @@ pub async fn exit_full_screen_exclusive_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.getConfigColormap(II)I",
@@ -376,6 +384,7 @@ pub async fn get_config_colormap_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.getConfigDepth(II)I",
@@ -393,6 +402,7 @@ pub async fn get_config_depth_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.getConfigVisualId(II)I",
@@ -410,6 +420,7 @@ pub async fn get_config_visual_id_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.getCurrentDisplayMode(I)Ljava/awt/DisplayMode;",
@@ -426,6 +437,7 @@ pub async fn get_current_display_mode_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/X11GraphicsDevice.getDisplay()J", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -438,6 +450,7 @@ pub async fn get_display_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.getDoubleBufferVisuals(I)V",
@@ -454,6 +467,7 @@ pub async fn get_double_buffer_visuals_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.getNativeScaleFactor(I)D",
@@ -470,6 +484,7 @@ pub async fn get_native_scale_factor_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.getNumConfigs(I)I",
@@ -486,6 +501,7 @@ pub async fn get_num_configs_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/X11GraphicsDevice.initIDs()V", Equal(JAVA_11))]
 #[async_method]
@@ -495,6 +511,7 @@ pub async fn init_ids_linux_v11<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11GraphicsDevice.initIDs()V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/X11GraphicsDevice.initXrandrExtension()Z", Equal(JAVA_11))]
 #[async_method]
@@ -507,6 +524,7 @@ pub async fn init_xrandr_extension_linux_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.initXrandrExtension(Z)Z",
@@ -523,6 +541,7 @@ pub async fn init_xrandr_extension_linux_ge_v17_v2<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.isDBESupported()Z",
@@ -538,6 +557,7 @@ pub async fn is_dbesupported_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/X11GraphicsDevice.pGetBounds(I)Ljava/awt/Rectangle;",
@@ -554,6 +574,7 @@ pub async fn p_get_bounds_linux_ge_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/X11GraphicsDevice.resetNativeData(I)V", Equal(JAVA_11))]
 #[async_method]
@@ -567,6 +588,7 @@ pub async fn reset_native_data_linux_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

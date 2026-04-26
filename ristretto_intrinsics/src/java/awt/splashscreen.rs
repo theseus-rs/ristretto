@@ -123,6 +123,7 @@ pub async fn update<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

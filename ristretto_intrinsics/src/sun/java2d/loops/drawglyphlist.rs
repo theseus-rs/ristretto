@@ -39,6 +39,7 @@ pub async fn draw_glyph_list_1<T: Thread + 'static>(
     let _sg2d = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.DrawGlyphList.DrawGlyphList(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Lsun/font/GlyphList;II)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -31,6 +31,7 @@ pub async fn role_key<T: Thread + 'static>(
     let _a_role = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CAccessibility.roleKey(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

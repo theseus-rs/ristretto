@@ -18,6 +18,7 @@ pub async fn close_splash_screen<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

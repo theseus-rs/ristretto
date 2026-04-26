@@ -85,6 +85,7 @@ pub async fn get_native_path_to_shared_jdk_bundle<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

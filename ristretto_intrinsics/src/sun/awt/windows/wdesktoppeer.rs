@@ -73,6 +73,7 @@ pub async fn set_sudden_termination_enabled<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

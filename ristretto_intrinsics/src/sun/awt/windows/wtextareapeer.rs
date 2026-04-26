@@ -39,6 +39,7 @@ pub async fn replace_range<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

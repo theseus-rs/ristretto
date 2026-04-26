@@ -18,6 +18,7 @@ pub async fn get_window_background_color<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

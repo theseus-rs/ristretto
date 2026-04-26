@@ -48,6 +48,7 @@ pub async fn start_print_raw_data<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

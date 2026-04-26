@@ -53,6 +53,7 @@ pub async fn get_cpu_features<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

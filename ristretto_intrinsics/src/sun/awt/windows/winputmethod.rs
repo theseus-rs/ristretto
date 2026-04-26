@@ -231,6 +231,7 @@ pub async fn set_status_window_visible<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

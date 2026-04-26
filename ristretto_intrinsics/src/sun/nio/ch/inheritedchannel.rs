@@ -166,6 +166,7 @@ pub async fn unix_peer_address_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

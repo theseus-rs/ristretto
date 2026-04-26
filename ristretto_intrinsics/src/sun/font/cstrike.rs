@@ -119,6 +119,7 @@ pub async fn get_native_glyph_outline<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

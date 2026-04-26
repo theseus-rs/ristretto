@@ -48,6 +48,7 @@ pub async fn set_c_tracing_on_3<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -178,6 +178,7 @@ pub async fn value_changed<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

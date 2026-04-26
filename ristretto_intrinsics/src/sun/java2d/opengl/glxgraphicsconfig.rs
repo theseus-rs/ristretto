@@ -61,6 +61,7 @@ pub async fn init_config<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/opengl/GLXGraphicsConfig.getGLXConfigInfo(II)J",
@@ -78,6 +79,7 @@ pub async fn get_glxconfig_info_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/opengl/GLXGraphicsConfig.getOGLCapabilities(J)I",
@@ -94,6 +96,7 @@ pub async fn get_oglcapabilities_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/opengl/GLXGraphicsConfig.initConfig(JJ)V",
@@ -111,6 +114,7 @@ pub async fn init_config_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

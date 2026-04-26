@@ -22,6 +22,7 @@ pub async fn native_generate_seed<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

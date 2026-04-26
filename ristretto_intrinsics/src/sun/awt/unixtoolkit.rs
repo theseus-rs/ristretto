@@ -116,6 +116,7 @@ pub async fn unload_gtk<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun.awt.UNIXToolkit.unload_gtk()Z".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/UNIXToolkit.check_gtk(I)Z", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -126,6 +127,7 @@ pub async fn check_gtk_linux_ge_v11<T: Thread + 'static>(
     let _version = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/UNIXToolkit.check_gtk(I)Z".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/UNIXToolkit.get_gtk_version()I", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -138,6 +140,7 @@ pub async fn get_gtk_version_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/UNIXToolkit.gtkCheckVersionImpl(III)Z",
@@ -156,6 +159,7 @@ pub async fn gtk_check_version_impl_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/UNIXToolkit.load_gtk(IZ)Z", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -167,6 +171,7 @@ pub async fn load_gtk_linux_ge_v11<T: Thread + 'static>(
     let _version = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/UNIXToolkit.load_gtk(IZ)Z".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/UNIXToolkit.load_gtk_icon(Ljava/lang/String;)Z",
@@ -183,6 +188,7 @@ pub async fn load_gtk_icon_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/UNIXToolkit.load_stock_icon(ILjava/lang/String;IILjava/lang/String;)Z",
@@ -203,6 +209,7 @@ pub async fn load_stock_icon_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/UNIXToolkit.nativeSync()V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -212,6 +219,7 @@ pub async fn native_sync_linux_ge_v11<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/UNIXToolkit.nativeSync()V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/awt/UNIXToolkit.unload_gtk()Z", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -221,6 +229,7 @@ pub async fn unload_gtk_linux_ge_v11<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/UNIXToolkit.unload_gtk()Z".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

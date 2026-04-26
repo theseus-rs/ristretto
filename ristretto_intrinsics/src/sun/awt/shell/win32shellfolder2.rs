@@ -556,6 +556,7 @@ pub async fn release_pidl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -71,6 +71,7 @@ pub async fn try_load_metal_library<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

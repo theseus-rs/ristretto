@@ -38,6 +38,7 @@ pub async fn mask_blit<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRMaskBlit.maskBlit(JJIIIIIIIII[B)V",
@@ -65,6 +66,7 @@ pub async fn mask_blit_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

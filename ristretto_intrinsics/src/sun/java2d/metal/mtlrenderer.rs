@@ -28,6 +28,7 @@ pub async fn draw_poly<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

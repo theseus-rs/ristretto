@@ -55,6 +55,7 @@ pub async fn get_num_gc_ext_attributes<T: Thread + 'static>(
     let _gc = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com.sun.management.internal.GcInfoBuilder.getNumGcExtAttributes(Ljava/lang/management/GarbageCollectorMXBean;)I".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

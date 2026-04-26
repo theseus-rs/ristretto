@@ -26,6 +26,7 @@ pub async fn native_run_file_dialog<T: Thread + 'static>(
     let _title = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CFileDialog.nativeRunFileDialog(Ljava/lang/String;IZZZZLjava/lang/String;Ljava/lang/String;)[Ljava/lang/String;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

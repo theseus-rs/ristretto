@@ -29,6 +29,7 @@ pub async fn blit_bg<T: Thread + 'static>(
     let _src = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.blitBg.BlitBg(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIIII)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

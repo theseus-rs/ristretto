@@ -107,6 +107,7 @@ pub async fn validate<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

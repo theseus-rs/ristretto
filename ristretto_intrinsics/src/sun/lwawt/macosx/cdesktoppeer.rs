@@ -39,6 +39,7 @@ pub async fn ls_open_uri<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

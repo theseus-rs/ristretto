@@ -159,6 +159,7 @@ pub async fn is_d3_davailable_on_device_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

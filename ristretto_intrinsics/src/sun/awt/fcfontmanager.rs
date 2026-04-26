@@ -28,6 +28,7 @@ pub async fn get_font_path_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/awt/FcFontManager.getFontPathNative(ZZ)Ljava/lang/String;",
@@ -45,6 +46,7 @@ pub async fn get_font_path_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

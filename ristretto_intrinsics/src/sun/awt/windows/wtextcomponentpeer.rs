@@ -92,6 +92,7 @@ pub async fn set_text<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

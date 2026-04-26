@@ -24,6 +24,7 @@ pub async fn get_short_path<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

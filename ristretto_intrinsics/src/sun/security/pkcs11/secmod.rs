@@ -94,6 +94,7 @@ pub async fn nss_version_check<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -27,6 +27,7 @@ pub async fn free_native_scaler_context<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/font/NativeStrikeDisposer.freeNativeScalerContext(J)V",
@@ -43,6 +44,7 @@ pub async fn free_native_scaler_context_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

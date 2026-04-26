@@ -322,6 +322,7 @@ pub async fn socket_native_set_option<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

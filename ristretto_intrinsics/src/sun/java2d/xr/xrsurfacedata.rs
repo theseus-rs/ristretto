@@ -73,6 +73,7 @@ pub async fn init_xr_picture<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRSurfaceData.XRInitSurface(IIIJI)V",
@@ -93,6 +94,7 @@ pub async fn xrinit_surface_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRSurfaceData.freeXSDOPicture(J)V",
@@ -109,6 +111,7 @@ pub async fn free_xsdopicture_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/java2d/xr/XRSurfaceData.initIDs()V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -121,6 +124,7 @@ pub async fn init_ids_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRSurfaceData.initXRPicture(JI)V",
@@ -138,6 +142,7 @@ pub async fn init_xrpicture_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

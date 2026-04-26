@@ -25,6 +25,7 @@ pub async fn poll0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

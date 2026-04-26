@@ -20,6 +20,7 @@ pub async fn native_cf_release<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

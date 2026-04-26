@@ -51,6 +51,7 @@ pub async fn to_front<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

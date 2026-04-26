@@ -46,6 +46,7 @@ pub async fn encrypt_decrypt<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

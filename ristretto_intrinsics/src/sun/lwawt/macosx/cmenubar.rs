@@ -46,6 +46,7 @@ pub async fn native_set_help_menu<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

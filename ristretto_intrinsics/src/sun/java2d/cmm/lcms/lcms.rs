@@ -248,6 +248,7 @@ pub async fn set_tag_data_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

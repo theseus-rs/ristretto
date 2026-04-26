@@ -86,6 +86,7 @@ pub async fn turnoff_status_window<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

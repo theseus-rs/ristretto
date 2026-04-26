@@ -217,6 +217,7 @@ pub async fn stop_awt_run_loop<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

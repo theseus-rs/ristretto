@@ -83,6 +83,7 @@ pub async fn update_native_icon<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

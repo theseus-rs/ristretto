@@ -47,6 +47,7 @@ pub async fn set_wakeup_socket0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -18,6 +18,7 @@ pub async fn get_memory_pools_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun.management.MemoryManagerImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

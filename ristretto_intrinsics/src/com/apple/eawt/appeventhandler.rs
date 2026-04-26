@@ -50,6 +50,7 @@ pub async fn native_reply_to_app_should_terminate<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

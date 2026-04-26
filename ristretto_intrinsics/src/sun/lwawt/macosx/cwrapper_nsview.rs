@@ -94,6 +94,7 @@ pub async fn window<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

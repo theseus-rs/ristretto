@@ -209,6 +209,7 @@ pub async fn native_set_ns_image_size<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

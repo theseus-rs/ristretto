@@ -23,6 +23,7 @@ pub async fn get_default_color<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

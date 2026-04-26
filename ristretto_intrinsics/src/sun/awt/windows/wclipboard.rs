@@ -137,6 +137,7 @@ pub async fn register_clipboard_viewer<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

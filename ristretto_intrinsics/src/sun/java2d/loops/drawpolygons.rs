@@ -27,6 +27,7 @@ pub async fn draw_polygons<T: Thread + 'static>(
     let _sg2d = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.DrawPolygons.DrawPolygons(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;[I[I[IIIIZ)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

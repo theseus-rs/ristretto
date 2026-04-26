@@ -64,6 +64,7 @@ pub async fn notify_remote_printer_change<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

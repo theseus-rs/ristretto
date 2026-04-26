@@ -42,6 +42,7 @@ pub async fn get_impersonation_token_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("com/sun/security/auth/module/NTSystem.getCurrent(Z)V", Equal(JAVA_8))]
 #[async_method]
@@ -55,6 +56,7 @@ pub async fn get_current_windows_v8<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "com/sun/security/auth/module/NTSystem.getImpersonationToken0()J",
@@ -70,6 +72,7 @@ pub async fn get_impersonation_token0_windows_v8<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

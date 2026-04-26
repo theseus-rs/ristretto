@@ -128,6 +128,7 @@ pub async fn update_max_item_width<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

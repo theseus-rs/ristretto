@@ -19,6 +19,7 @@ pub async fn acquire_default_native_creds<T: Thread + 'static>(
     let _e_types = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.security.krb5.Credentials.acquireDefaultNativeCreds([I)Lsun/security/krb5/Credentials;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

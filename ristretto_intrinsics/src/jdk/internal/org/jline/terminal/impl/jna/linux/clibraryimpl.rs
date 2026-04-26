@@ -95,6 +95,7 @@ pub async fn ttyname_r<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

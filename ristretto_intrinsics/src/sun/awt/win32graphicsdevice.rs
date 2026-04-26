@@ -232,6 +232,7 @@ pub async fn set_native_scale<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

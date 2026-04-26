@@ -47,6 +47,7 @@ pub async fn socketpair<T: Thread + 'static>(
     let _sv = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueuePort.socketpair([I)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

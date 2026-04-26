@@ -350,6 +350,7 @@ pub async fn sync_native_queue<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

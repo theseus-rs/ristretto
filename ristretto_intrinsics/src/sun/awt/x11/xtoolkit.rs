@@ -117,6 +117,7 @@ pub async fn wakeup_poll<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XToolkit.wakeup_poll()V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

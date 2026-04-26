@@ -48,6 +48,7 @@ pub async fn get_key_type<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

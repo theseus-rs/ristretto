@@ -51,6 +51,7 @@ pub async fn native_set_menu_state<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -75,6 +75,7 @@ pub async fn register_font_with_platform<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -38,6 +38,7 @@ pub async fn init_raster<T: Thread + 'static>(
     let _array = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.awt.image.BufImgSurfaceData.initRaster(Ljava/lang/Object;IIIIIILjava/awt/image/IndexColorModel;)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -97,6 +97,7 @@ pub async fn scan_keychain_1<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

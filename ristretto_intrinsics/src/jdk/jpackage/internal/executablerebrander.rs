@@ -85,6 +85,7 @@ pub async fn version_swap<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
