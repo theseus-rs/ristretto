@@ -15,8 +15,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn free_upcall_stub_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _addr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.foreign.abi.UpcallStubs.freeUpcallStub0(J)Z".to_string(),
     )
@@ -42,8 +43,11 @@ mod tests {
     #[tokio::test]
     async fn test_free_upcall_stub_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = free_upcall_stub_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = free_upcall_stub_0(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "jdk.internal.foreign.abi.UpcallStubs.freeUpcallStub0(J)Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

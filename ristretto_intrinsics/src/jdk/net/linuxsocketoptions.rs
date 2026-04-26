@@ -1,8 +1,12 @@
+#[cfg(not(target_family = "wasm"))]
+use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+#[cfg(target_os = "linux")]
+use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -60,9 +64,10 @@ pub async fn get_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     Ok(Some(Value::Int(75)))
 }
 
+#[cfg(target_os = "linux")]
 #[intrinsic_method(
     "jdk/net/LinuxSocketOptions.getTcpKeepAliveProbes0(I)I",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn get_tcp_keep_alive_probes_0<T: Thread + 'static>(
@@ -153,9 +158,10 @@ pub async fn set_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_os = "linux")]
 #[intrinsic_method(
     "jdk/net/LinuxSocketOptions.setTcpKeepAliveProbes0(II)V",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn set_tcp_keep_alive_probes_0<T: Thread + 'static>(
@@ -181,9 +187,10 @@ pub async fn set_tcp_keep_alive_time_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_os = "linux")]
 #[intrinsic_method(
     "jdk/net/LinuxSocketOptions.incomingNapiIdSupported0()Z",
-    GreaterThanOrEqual(JAVA_21)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn incoming_napi_id_supported_0<T: Thread + 'static>(
@@ -193,9 +200,10 @@ pub async fn incoming_napi_id_supported_0<T: Thread + 'static>(
     Ok(Some(Value::from(false)))
 }
 
+#[cfg(target_os = "linux")]
 #[intrinsic_method(
     "jdk/net/LinuxSocketOptions.getIncomingNapiId0(I)I",
-    GreaterThanOrEqual(JAVA_21)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn get_incoming_napi_id_0<T: Thread + 'static>(
@@ -206,6 +214,100 @@ pub async fn get_incoming_napi_id_0<T: Thread + 'static>(
     Ok(Some(Value::Int(0)))
 }
 
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "jdk/net/LinuxSocketOptions.getTcpkeepAliveProbes0(I)I",
+    Equal(JAVA_11)
+)]
+#[async_method]
+pub async fn get_tcpkeep_alive_probes0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk/net/LinuxSocketOptions.getTcpkeepAliveProbes0(I)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "jdk/net/LinuxSocketOptions.setTcpkeepAliveProbes0(II)V",
+    Equal(JAVA_11)
+)]
+#[async_method]
+pub async fn set_tcpkeep_alive_probes0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _optval = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk/net/LinuxSocketOptions.setTcpkeepAliveProbes0(II)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method("jdk/net/LinuxSocketOptions.getIncomingNapiId0(I)I", Equal(JAVA_17))]
+#[async_method]
+pub async fn get_incoming_napi_id0_linux_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk/net/LinuxSocketOptions.getIncomingNapiId0(I)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "jdk/net/LinuxSocketOptions.getTcpkeepAliveProbes0(I)I",
+    Equal(JAVA_11)
+)]
+#[async_method]
+pub async fn get_tcpkeep_alive_probes0_linux_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk/net/LinuxSocketOptions.getTcpkeepAliveProbes0(I)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "jdk/net/LinuxSocketOptions.incomingNapiIdSupported0()Z",
+    Equal(JAVA_17)
+)]
+#[async_method]
+pub async fn incoming_napi_id_supported0_linux_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk/net/LinuxSocketOptions.incomingNapiIdSupported0()Z".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "jdk/net/LinuxSocketOptions.setTcpkeepAliveProbes0(II)V",
+    Equal(JAVA_11)
+)]
+#[async_method]
+pub async fn set_tcpkeep_alive_probes0_linux_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _optval = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "jdk/net/LinuxSocketOptions.setTcpkeepAliveProbes0(II)V".to_string(),
+    )
+    .into())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -316,5 +418,79 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_incoming_napi_id_0(thread, Parameters::default()).await;
         assert!(result.is_err());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_get_tcpkeep_alive_probes0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = get_tcpkeep_alive_probes0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "jdk/net/LinuxSocketOptions.getTcpkeepAliveProbes0(I)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_set_tcpkeep_alive_probes0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            set_tcpkeep_alive_probes0(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]))
+                .await;
+        assert_eq!(
+            "jdk/net/LinuxSocketOptions.setTcpkeepAliveProbes0(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_get_incoming_napi_id0_linux_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            get_incoming_napi_id0_linux_v17(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "jdk/net/LinuxSocketOptions.getIncomingNapiId0(I)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_get_tcpkeep_alive_probes0_linux_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            get_tcpkeep_alive_probes0_linux_v11(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "jdk/net/LinuxSocketOptions.getTcpkeepAliveProbes0(I)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_incoming_napi_id_supported0_linux_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = incoming_napi_id_supported0_linux_v17(thread, Parameters::default()).await;
+        assert_eq!(
+            "jdk/net/LinuxSocketOptions.incomingNapiIdSupported0()Z",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_set_tcpkeep_alive_probes0_linux_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set_tcpkeep_alive_probes0_linux_v11(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "jdk/net/LinuxSocketOptions.setTcpkeepAliveProbes0(II)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

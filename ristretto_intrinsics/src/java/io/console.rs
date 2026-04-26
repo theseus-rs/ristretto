@@ -1,6 +1,6 @@
 #[cfg(not(target_family = "wasm"))]
 use console::Term;
-use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
+use ristretto_classfile::VersionSpecification::{GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
@@ -33,7 +33,7 @@ pub async fn encoding<T: Thread + 'static>(
     Ok(Some(Value::Object(None)))
 }
 
-#[intrinsic_method("java/io/Console.istty()Z", Any)]
+#[intrinsic_method("java/io/Console.istty()Z", LessThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn istty<T: Thread + 'static>(
     _thread: Arc<T>,

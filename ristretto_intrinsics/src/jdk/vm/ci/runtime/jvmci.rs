@@ -22,7 +22,6 @@ pub async fn initialize_runtime<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -31,6 +30,9 @@ mod tests {
     async fn test_initialize_runtime() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = initialize_runtime(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.vm.ci.runtime.JVMCI.initializeRuntime()Ljdk/vm/ci/runtime/JVMCIRuntime;",
+            result.unwrap_err().to_string()
+        );
     }
 }

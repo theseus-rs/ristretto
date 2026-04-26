@@ -23,14 +23,14 @@ pub async fn init_ids<T: Thread + 'static>(
 #[async_method]
 pub async fn is_opaque_gray<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _icm = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.SurfaceData.isOpaqueGray(Ljava/awt/image/IndexColorModel;)Z".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -46,7 +46,10 @@ mod tests {
     #[tokio::test]
     async fn test_is_opaque_gray() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_opaque_gray(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = is_opaque_gray(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.java2d.SurfaceData.isOpaqueGray(Ljava/awt/image/IndexColorModel;)Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

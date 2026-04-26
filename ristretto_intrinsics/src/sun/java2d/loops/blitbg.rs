@@ -14,11 +14,21 @@ use std::sync::Arc;
 #[async_method]
 pub async fn blit_bg<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _height = parameters.pop_int()?;
+    let _width = parameters.pop_int()?;
+    let _dsty = parameters.pop_int()?;
+    let _dstx = parameters.pop_int()?;
+    let _srcy = parameters.pop_int()?;
+    let _srcx = parameters.pop_int()?;
+    let _bg_color = parameters.pop_int()?;
+    let _clip = parameters.pop_reference()?;
+    let _comp = parameters.pop_reference()?;
+    let _dst = parameters.pop_reference()?;
+    let _src = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.blitBg.BlitBg(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIIII)V".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -26,7 +36,26 @@ mod tests {
     #[tokio::test]
     async fn test_blit_bg() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = blit_bg(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = blit_bg(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Object(None),
+                Value::Object(None),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.java2d.loops.blitBg.BlitBg(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIIII)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

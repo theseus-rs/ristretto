@@ -15,8 +15,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn create_context_from<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "apple.applescript.AppleScriptEngine.createContextFrom(Ljava/lang/Object;)J".to_string(),
     )
@@ -30,8 +31,9 @@ pub async fn create_context_from<T: Thread + 'static>(
 #[async_method]
 pub async fn create_object_from<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "apple.applescript.AppleScriptEngine.createObjectFrom(J)Ljava/lang/Object;".to_string(),
     )
@@ -45,8 +47,9 @@ pub async fn create_object_from<T: Thread + 'static>(
 #[async_method]
 pub async fn dispose_context<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "apple.applescript.AppleScriptEngine.disposeContext(J)V".to_string(),
     )
@@ -60,8 +63,10 @@ pub async fn dispose_context<T: Thread + 'static>(
 #[async_method]
 pub async fn eval_script<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg1 = parameters.pop_long()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "apple.applescript.AppleScriptEngine.evalScript(Ljava/lang/String;J)J".to_string(),
     )
@@ -75,8 +80,10 @@ pub async fn eval_script<T: Thread + 'static>(
 #[async_method]
 pub async fn eval_script_from_url<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg1 = parameters.pop_long()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "apple.applescript.AppleScriptEngine.evalScriptFromURL(Ljava/lang/String;J)J".to_string(),
     )
@@ -102,36 +109,59 @@ mod tests {
     #[tokio::test]
     async fn test_create_context_from() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = create_context_from(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = create_context_from(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "apple.applescript.AppleScriptEngine.createContextFrom(Ljava/lang/Object;)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_create_object_from() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = create_object_from(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = create_object_from(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "apple.applescript.AppleScriptEngine.createObjectFrom(J)Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_dispose_context() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = dispose_context(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = dispose_context(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "apple.applescript.AppleScriptEngine.disposeContext(J)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_eval_script() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = eval_script(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = eval_script(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "apple.applescript.AppleScriptEngine.evalScript(Ljava/lang/String;J)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_eval_script_from_url() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = eval_script_from_url(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = eval_script_from_url(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "apple.applescript.AppleScriptEngine.evalScriptFromURL(Ljava/lang/String;J)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

@@ -82,8 +82,10 @@ pub async fn reset_peak_usage_0<T: Thread + 'static>(
 #[async_method]
 pub async fn set_collection_threshold_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _new_threshold = parameters.pop_long()?;
+    let _current = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.management.MemoryPoolImpl.setCollectionThreshold0(JJ)V".to_string(),
     )
@@ -97,8 +99,9 @@ pub async fn set_collection_threshold_0<T: Thread + 'static>(
 #[async_method]
 pub async fn set_pool_collection_sensor<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _s = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.management.MemoryPoolImpl.setPoolCollectionSensor(Lsun/management/Sensor;)V"
             .to_string(),
@@ -113,8 +116,9 @@ pub async fn set_pool_collection_sensor<T: Thread + 'static>(
 #[async_method]
 pub async fn set_pool_usage_sensor<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _s = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.management.MemoryPoolImpl.setPoolUsageSensor(Lsun/management/Sensor;)V".to_string(),
     )
@@ -125,14 +129,15 @@ pub async fn set_pool_usage_sensor<T: Thread + 'static>(
 #[async_method]
 pub async fn set_usage_threshold_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _new_threshold = parameters.pop_long()?;
+    let _current = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.management.MemoryPoolImpl.setUsageThreshold0(JJ)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -141,62 +146,99 @@ mod tests {
     async fn test_get_collection_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_collection_usage_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.MemoryPoolImpl.getCollectionUsage0()Ljava/lang/management/MemoryUsage;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_memory_managers_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_memory_managers_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.MemoryPoolImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_peak_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_peak_usage_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.MemoryPoolImpl.getPeakUsage0()Ljava/lang/management/MemoryUsage;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_usage_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.MemoryPoolImpl.getUsage0()Ljava/lang/management/MemoryUsage;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_reset_peak_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = reset_peak_usage_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.MemoryPoolImpl.resetPeakUsage0()V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_set_collection_threshold_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_collection_threshold_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = set_collection_threshold_0(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.management.MemoryPoolImpl.setCollectionThreshold0(JJ)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_set_pool_collection_sensor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_pool_collection_sensor(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            set_pool_collection_sensor(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.management.MemoryPoolImpl.setPoolCollectionSensor(Lsun/management/Sensor;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_set_pool_usage_sensor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_pool_usage_sensor(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            set_pool_usage_sensor(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.management.MemoryPoolImpl.setPoolUsageSensor(Lsun/management/Sensor;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_set_usage_threshold_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_usage_threshold_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = set_usage_threshold_0(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.management.MemoryPoolImpl.setUsageThreshold0(JJ)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

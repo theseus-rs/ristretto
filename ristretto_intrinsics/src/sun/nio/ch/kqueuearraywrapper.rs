@@ -36,8 +36,9 @@ pub async fn init_struct_sizes<T: Thread + 'static>(
 #[async_method]
 pub async fn interrupt<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_int()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueueArrayWrapper.interrupt(I)V".to_string())
             .into(),
@@ -51,8 +52,12 @@ pub async fn interrupt<T: Thread + 'static>(
 #[async_method]
 pub async fn kevent_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg3 = parameters.pop_long()?;
+    let _arg2 = parameters.pop_int()?;
+    let _arg1 = parameters.pop_long()?;
+    let _arg0 = parameters.pop_int()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueueArrayWrapper.kevent0(IJIJ)I".to_string())
             .into(),
@@ -66,14 +71,17 @@ pub async fn kevent_0<T: Thread + 'static>(
 #[async_method]
 pub async fn register_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg3 = parameters.pop_int()?;
+    let _arg2 = parameters.pop_int()?;
+    let _arg1 = parameters.pop_int()?;
+    let _arg0 = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.nio.ch.KQueueArrayWrapper.register0(IIII)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,34 +90,67 @@ mod tests {
     async fn test_init() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = init(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.nio.ch.KQueueArrayWrapper.init()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_init_struct_sizes() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = init_struct_sizes(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.nio.ch.KQueueArrayWrapper.initStructSizes()V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_interrupt() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = interrupt(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = interrupt(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun.nio.ch.KQueueArrayWrapper.interrupt(I)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_kevent_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = kevent_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = kevent_0(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Long(0),
+                Value::Int(0),
+                Value::Long(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.nio.ch.KQueueArrayWrapper.kevent0(IJIJ)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_register_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = register_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = register_0(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.nio.ch.KQueueArrayWrapper.register0(IIII)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -11,8 +11,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn set_c_tracing_on_1<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _enabled = parameters.pop_bool()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.awt.DebugSettings.setCTracingOn(Z)V".to_string())
             .into(),
@@ -23,8 +24,10 @@ pub async fn set_c_tracing_on_1<T: Thread + 'static>(
 #[async_method]
 pub async fn set_c_tracing_on_2<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _file = parameters.pop_reference()?;
+    let _enabled = parameters.pop_bool()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.awt.DebugSettings.setCTracingOn(ZLjava/lang/String;)V".to_string(),
     )
@@ -35,14 +38,16 @@ pub async fn set_c_tracing_on_2<T: Thread + 'static>(
 #[async_method]
 pub async fn set_c_tracing_on_3<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _line = parameters.pop_int()?;
+    let _file = parameters.pop_reference()?;
+    let _enabled = parameters.pop_bool()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.awt.DebugSettings.setCTracingOn(ZLjava/lang/String;I)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -50,21 +55,38 @@ mod tests {
     #[tokio::test]
     async fn test_set_c_tracing_on_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_c_tracing_on_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = set_c_tracing_on_1(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "sun.awt.DebugSettings.setCTracingOn(Z)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_set_c_tracing_on_2() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_c_tracing_on_2(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = set_c_tracing_on_2(
+            thread,
+            Parameters::new(vec![Value::from(false), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.awt.DebugSettings.setCTracingOn(ZLjava/lang/String;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_set_c_tracing_on_3() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_c_tracing_on_3(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = set_c_tracing_on_3(
+            thread,
+            Parameters::new(vec![Value::from(false), Value::Object(None), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.awt.DebugSettings.setCTracingOn(ZLjava/lang/String;I)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

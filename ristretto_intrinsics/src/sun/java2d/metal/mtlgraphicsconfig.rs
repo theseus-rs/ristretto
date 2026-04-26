@@ -15,8 +15,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn get_mtl_config_info<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _mtl_shaders_lib = parameters.pop_reference()?;
+    let _display_id = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.metal.MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J".to_string(),
     )
@@ -60,14 +62,15 @@ pub async fn native_get_max_texture_size<T: Thread + 'static>(
 #[async_method]
 pub async fn try_load_metal_library<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _shaders_lib_name = parameters.pop_reference()?;
+    let _display_id = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.metal.MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,28 +78,48 @@ mod tests {
     #[tokio::test]
     async fn test_get_mtl_config_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_mtl_config_info(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_mtl_config_info(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.java2d.metal.MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_is_metal_framework_available() {
         let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result = is_metal_framework_available(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.java2d.metal.MTLGraphicsConfig.isMetalFrameworkAvailable()Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_native_get_max_texture_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = native_get_max_texture_size(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.java2d.metal.MTLGraphicsConfig.nativeGetMaxTextureSize()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_try_load_metal_library() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = try_load_metal_library(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = try_load_metal_library(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.java2d.metal.MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

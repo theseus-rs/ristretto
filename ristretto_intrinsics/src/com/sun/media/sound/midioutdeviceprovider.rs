@@ -14,8 +14,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn n_get_description<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _index = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.sun.media.sound.MidiOutDeviceProvider.nGetDescription(I)Ljava/lang/String;"
             .to_string(),
@@ -30,8 +31,9 @@ pub async fn n_get_description<T: Thread + 'static>(
 #[async_method]
 pub async fn n_get_name<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _index = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.sun.media.sound.MidiOutDeviceProvider.nGetName(I)Ljava/lang/String;".to_string(),
     )
@@ -57,8 +59,9 @@ pub async fn n_get_num_devices<T: Thread + 'static>(
 #[async_method]
 pub async fn n_get_vendor<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _index = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.sun.media.sound.MidiOutDeviceProvider.nGetVendor(I)Ljava/lang/String;".to_string(),
     )
@@ -72,14 +75,14 @@ pub async fn n_get_vendor<T: Thread + 'static>(
 #[async_method]
 pub async fn n_get_version<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _index = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.sun.media.sound.MidiOutDeviceProvider.nGetVersion(I)Ljava/lang/String;".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,35 +90,50 @@ mod tests {
     #[tokio::test]
     async fn test_n_get_description() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_get_description(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = n_get_description(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "com.sun.media.sound.MidiOutDeviceProvider.nGetDescription(I)Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_n_get_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_get_name(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = n_get_name(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "com.sun.media.sound.MidiOutDeviceProvider.nGetName(I)Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_n_get_num_devices() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = n_get_num_devices(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.media.sound.MidiOutDeviceProvider.nGetNumDevices()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_n_get_vendor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_get_vendor(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = n_get_vendor(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "com.sun.media.sound.MidiOutDeviceProvider.nGetVendor(I)Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_n_get_version() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_get_version(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = n_get_version(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "com.sun.media.sound.MidiOutDeviceProvider.nGetVersion(I)Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 }

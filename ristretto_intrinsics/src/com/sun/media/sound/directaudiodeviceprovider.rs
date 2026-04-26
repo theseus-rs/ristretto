@@ -26,11 +26,11 @@ pub async fn n_get_num_devices<T: Thread + 'static>(
 #[async_method]
 pub async fn n_new_direct_audio_device_info<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _device_index = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("com.sun.media.sound.DirectAudioDeviceProvider.nNewDirectAudioDeviceInfo(I)Lcom/sun/media/sound/DirectAudioDeviceProvider$DirectAudioDeviceInfo;".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -39,13 +39,20 @@ mod tests {
     async fn test_n_get_num_devices() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = n_get_num_devices(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.sun.media.sound.DirectAudioDeviceProvider.nGetNumDevices()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_n_new_direct_audio_device_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_new_direct_audio_device_info(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            n_new_direct_audio_device_info(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "com.sun.media.sound.DirectAudioDeviceProvider.nNewDirectAudioDeviceInfo(I)Lcom/sun/media/sound/DirectAudioDeviceProvider$DirectAudioDeviceInfo;",
+            result.unwrap_err().to_string()
+        );
     }
 }

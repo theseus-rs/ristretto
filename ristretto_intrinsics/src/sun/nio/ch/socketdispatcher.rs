@@ -1,10 +1,16 @@
 use crate::java::io::socketfiledescriptor::get_fd;
+#[cfg(target_os = "windows")]
+use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+#[cfg(target_os = "windows")]
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+#[cfg(target_os = "windows")]
+use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::native_memory::NativeMemory;
 use ristretto_types::{Parameters, Result, VM};
@@ -423,6 +429,168 @@ pub async fn writev_0<T: Thread + 'static>(
     }
 }
 
+#[cfg(target_os = "windows")]
+#[intrinsic_method("sun/nio/ch/SocketDispatcher.close0(I)V", GreaterThanOrEqual(JAVA_17))]
+#[async_method]
+pub async fn close0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("sun/nio/ch/SocketDispatcher.close0(I)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.close0(Ljava/io/FileDescriptor;)V",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn close0_windows_le_v11_v1<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/SocketDispatcher.close0(Ljava/io/FileDescriptor;)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.preClose0(Ljava/io/FileDescriptor;)V",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn pre_close0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/SocketDispatcher.preClose0(Ljava/io/FileDescriptor;)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("sun/nio/ch/SocketDispatcher.close0(I)V", GreaterThanOrEqual(JAVA_17))]
+#[async_method]
+pub async fn close0_windows_ge_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("sun/nio/ch/SocketDispatcher.close0(I)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.close0(Ljava/io/FileDescriptor;)V",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn close0_windows_le_v11_v2<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/SocketDispatcher.close0(Ljava/io/FileDescriptor;)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.preClose0(Ljava/io/FileDescriptor;)V",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn pre_close0_windows_le_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/SocketDispatcher.preClose0(Ljava/io/FileDescriptor;)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn read0_windows_le_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn readv0_windows_le_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I",
+    LessThanOrEqual(JAVA_17)
+)]
+#[async_method]
+pub async fn write0_windows_le_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J",
+    LessThanOrEqual(JAVA_17)
+)]
+#[async_method]
+pub async fn writev0_windows_le_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J".to_string(),
+    )
+    .into())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -453,5 +621,134 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = writev_0(thread, Parameters::default()).await;
         assert!(result.is_err());
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = close0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/SocketDispatcher.close0(I)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close0_windows_le_v11_v1() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            close0_windows_le_v11_v1(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun/nio/ch/SocketDispatcher.close0(Ljava/io/FileDescriptor;)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_pre_close0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = pre_close0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun/nio/ch/SocketDispatcher.preClose0(Ljava/io/FileDescriptor;)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close0_windows_ge_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = close0_windows_ge_v17(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/SocketDispatcher.close0(I)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close0_windows_le_v11_v2() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            close0_windows_le_v11_v2(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun/nio/ch/SocketDispatcher.close0(Ljava/io/FileDescriptor;)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_pre_close0_windows_le_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            pre_close0_windows_le_v11(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun/nio/ch/SocketDispatcher.preClose0(Ljava/io/FileDescriptor;)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_read0_windows_le_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = read0_windows_le_v11(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_readv0_windows_le_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = readv0_windows_le_v11(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_write0_windows_le_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = write0_windows_le_v17(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_writev0_windows_le_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = writev0_windows_le_v17(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J",
+            result.unwrap_err().to_string()
+        );
     }
 }

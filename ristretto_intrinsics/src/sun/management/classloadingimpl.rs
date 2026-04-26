@@ -11,14 +11,14 @@ use std::sync::Arc;
 #[async_method]
 pub async fn set_verbose_class<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _value = parameters.pop_bool()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.management.ClassLoadingImpl.setVerboseClass(Z)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -26,7 +26,10 @@ mod tests {
     #[tokio::test]
     async fn test_set_verbose_class() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_verbose_class(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = set_verbose_class(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "sun.management.ClassLoadingImpl.setVerboseClass(Z)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

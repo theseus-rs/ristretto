@@ -642,6 +642,7 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
         Ok(Reference::new_array(collector, class, elements))
     }
 }
+
 #[intrinsic_method(
     "java/lang/reflect/Array.newArray(Ljava/lang/Class;I)Ljava/lang/Object;",
     Any

@@ -11,8 +11,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn get_texture_id<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _p_data = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.opengl.OGLSurfaceData.getTextureID(J)I".to_string(),
     )
@@ -23,8 +24,9 @@ pub async fn get_texture_id<T: Thread + 'static>(
 #[async_method]
 pub async fn get_texture_target<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _p_data = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.opengl.OGLSurfaceData.getTextureTarget(J)I".to_string(),
     )
@@ -35,8 +37,14 @@ pub async fn get_texture_target<T: Thread + 'static>(
 #[async_method]
 pub async fn init_fb_object<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _height = parameters.pop_int()?;
+    let _width = parameters.pop_int()?;
+    let _tex_rect = parameters.pop_bool()?;
+    let _tex_non_pow2 = parameters.pop_bool()?;
+    let _is_opaque = parameters.pop_bool()?;
+    let _p_data = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.opengl.OGLSurfaceData.initFBObject(JZZZII)Z".to_string(),
     )
@@ -47,8 +55,9 @@ pub async fn init_fb_object<T: Thread + 'static>(
 #[async_method]
 pub async fn init_flip_backbuffer<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _p_data = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.opengl.OGLSurfaceData.initFlipBackbuffer(J)Z".to_string(),
     )
@@ -59,14 +68,19 @@ pub async fn init_flip_backbuffer<T: Thread + 'static>(
 #[async_method]
 pub async fn init_texture<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _height = parameters.pop_int()?;
+    let _width = parameters.pop_int()?;
+    let _tex_rect = parameters.pop_bool()?;
+    let _tex_non_pow2 = parameters.pop_bool()?;
+    let _is_opaque = parameters.pop_bool()?;
+    let _p_data = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.opengl.OGLSurfaceData.initTexture(JZZZII)Z".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -74,35 +88,72 @@ mod tests {
     #[tokio::test]
     async fn test_get_texture_id() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_texture_id(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_texture_id(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.java2d.opengl.OGLSurfaceData.getTextureID(J)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_texture_target() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_texture_target(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_texture_target(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.java2d.opengl.OGLSurfaceData.getTextureTarget(J)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_init_fb_object() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_fb_object(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = init_fb_object(
+            thread,
+            Parameters::new(vec![
+                Value::Long(0),
+                Value::from(false),
+                Value::from(false),
+                Value::from(false),
+                Value::Int(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.java2d.opengl.OGLSurfaceData.initFBObject(JZZZII)Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_init_flip_backbuffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_flip_backbuffer(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = init_flip_backbuffer(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun.java2d.opengl.OGLSurfaceData.initFlipBackbuffer(J)Z",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_init_texture() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_texture(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = init_texture(
+            thread,
+            Parameters::new(vec![
+                Value::Long(0),
+                Value::from(false),
+                Value::from(false),
+                Value::from(false),
+                Value::Int(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.java2d.opengl.OGLSurfaceData.initTexture(JZZZII)Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

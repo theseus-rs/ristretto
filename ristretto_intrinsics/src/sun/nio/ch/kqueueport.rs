@@ -12,8 +12,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn close_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueuePort.close0(I)V".to_string()).into())
 }
 
@@ -21,8 +22,9 @@ pub async fn close_0<T: Thread + 'static>(
 #[async_method]
 pub async fn drain_1<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueuePort.drain1(I)V".to_string()).into())
 }
 
@@ -30,8 +32,9 @@ pub async fn drain_1<T: Thread + 'static>(
 #[async_method]
 pub async fn interrupt<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueuePort.interrupt(I)V".to_string()).into())
 }
 
@@ -39,11 +42,11 @@ pub async fn interrupt<T: Thread + 'static>(
 #[async_method]
 pub async fn socketpair<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _sv = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueuePort.socketpair([I)V".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -51,28 +54,40 @@ mod tests {
     #[tokio::test]
     async fn test_close_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = close_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = close_0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun.nio.ch.KQueuePort.close0(I)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_drain_1() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = drain_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = drain_1(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun.nio.ch.KQueuePort.drain1(I)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_interrupt() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = interrupt(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = interrupt(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun.nio.ch.KQueuePort.interrupt(I)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_socketpair() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = socketpair(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = socketpair(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.nio.ch.KQueuePort.socketpair([I)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

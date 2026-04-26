@@ -1,4 +1,8 @@
 use ristretto_classfile::JAVA_8;
+#[cfg(target_os = "linux")]
+use ristretto_classfile::JAVA_11;
+#[cfg(target_os = "linux")]
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
@@ -7,7 +11,7 @@ use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
-#[cfg(not(unix))]
+#[cfg(any(target_os = "linux", not(unix)))]
 use ristretto_types::JavaError;
 
 #[cfg(unix)]
@@ -1018,6 +1022,275 @@ pub async fn socket_0<T: Thread + 'static>(
     }
 }
 
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/sctp/SctpNet.bindx(I[Ljava/net/InetAddress;IIZZ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn bindx_le_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _addrs = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/sctp/SctpNet.bindx(I[Ljava/net/InetAddress;IIZZ)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/ch/sctp/SctpNet.branch0(II)I", GreaterThanOrEqual(JAVA_11))]
+#[async_method]
+pub async fn branch0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _assoc_id = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.branch0(II)I".to_string()).into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/ch/sctp/SctpNet.close0(I)V", GreaterThanOrEqual(JAVA_11))]
+#[async_method]
+pub async fn close0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.close0(I)V".to_string()).into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/sctp/SctpNet.connect0(ILjava/net/InetAddress;I)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn connect0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _remote_port = parameters.pop_int()?;
+    let _remote = parameters.pop_reference()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/sctp/SctpNet.connect0(ILjava/net/InetAddress;I)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/sctp/SctpNet.getInitMsgOption0(I[I)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn get_init_msg_option0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _ret_vals = parameters.pop_reference()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/sctp/SctpNet.getInitMsgOption0(I[I)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/sctp/SctpNet.getIntOption0(II)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn get_int_option0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _opt = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.getIntOption0(II)I".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/sctp/SctpNet.getLocalAddresses0(I)[Ljava/net/SocketAddress;",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn get_local_addresses0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/sctp/SctpNet.getLocalAddresses0(I)[Ljava/net/SocketAddress;".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/sctp/SctpNet.getPrimAddrOption0(II)Ljava/net/SocketAddress;",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn get_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _assoc_id = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/sctp/SctpNet.getPrimAddrOption0(II)Ljava/net/SocketAddress;".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/sctp/SctpNet.getRemoteAddresses0(II)[Ljava/net/SocketAddress;",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn get_remote_addresses0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _assoc_id = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/sctp/SctpNet.getRemoteAddresses0(II)[Ljava/net/SocketAddress;".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/ch/sctp/SctpNet.init()V", GreaterThanOrEqual(JAVA_11))]
+#[async_method]
+pub async fn init_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.init()V".to_string()).into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/ch/sctp/SctpNet.listen0(II)V", GreaterThanOrEqual(JAVA_11))]
+#[async_method]
+pub async fn listen0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _backlog = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.listen0(II)V".to_string()).into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/ch/sctp/SctpNet.preClose0(I)V", GreaterThanOrEqual(JAVA_11))]
+#[async_method]
+pub async fn pre_close0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.preClose0(I)V".to_string()).into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/sctp/SctpNet.setInitMsgOption0(III)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn set_init_msg_option0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _arg2 = parameters.pop_int()?;
+    let _arg1 = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/sctp/SctpNet.setInitMsgOption0(III)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/sctp/SctpNet.setIntOption0(III)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn set_int_option0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _arg = parameters.pop_int()?;
+    let _opt = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.setIntOption0(III)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/sctp/SctpNet.setPeerPrimAddrOption0(IILjava/net/InetAddress;IZ)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn set_peer_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _prefer_i_pv6 = parameters.pop_bool()?;
+    let _port = parameters.pop_int()?;
+    let _ia = parameters.pop_reference()?;
+    let _assoc_id = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/sctp/SctpNet.setPeerPrimAddrOption0(IILjava/net/InetAddress;IZ)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/sctp/SctpNet.setPrimAddrOption0(IILjava/net/InetAddress;I)V",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn set_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _port = parameters.pop_int()?;
+    let _ia = parameters.pop_reference()?;
+    let _assoc_id = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/sctp/SctpNet.setPrimAddrOption0(IILjava/net/InetAddress;I)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/ch/sctp/SctpNet.shutdown0(II)V", GreaterThanOrEqual(JAVA_11))]
+#[async_method]
+pub async fn shutdown0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _assoc_id = parameters.pop_int()?;
+    let _fd = parameters.pop_int()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.shutdown0(II)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/ch/sctp/SctpNet.socket0(Z)I", GreaterThanOrEqual(JAVA_11))]
+#[async_method]
+pub async fn socket0_linux_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _one_to_one = parameters.pop_bool()?;
+    Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.socket0(Z)I".to_string()).into())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1171,5 +1444,255 @@ mod tests {
         }
         let _ = result?;
         Ok(())
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_bindx_le_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = bindx_le_v8(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.bindx(I[Ljava/net/InetAddress;IIZZ)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_branch0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            branch0_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.branch0(II)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_close0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = close0_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.close0(I)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_connect0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = connect0_linux_ge_v11(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Object(None), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.connect0(ILjava/net/InetAddress;I)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_get_init_msg_option0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = get_init_msg_option0_linux_ge_v11(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.getInitMsgOption0(I[I)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_get_int_option0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = get_int_option0_linux_ge_v11(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.getIntOption0(II)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_get_local_addresses0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            get_local_addresses0_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.getLocalAddresses0(I)[Ljava/net/SocketAddress;",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_get_prim_addr_option0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = get_prim_addr_option0_linux_ge_v11(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.getPrimAddrOption0(II)Ljava/net/SocketAddress;",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_get_remote_addresses0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = get_remote_addresses0_linux_ge_v11(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.getRemoteAddresses0(II)[Ljava/net/SocketAddress;",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_init_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = init_linux_ge_v11(thread, Parameters::default()).await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.init()V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_listen0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            listen0_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.listen0(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_pre_close0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = pre_close0_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.preClose0(I)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_set_init_msg_option0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set_init_msg_option0_linux_ge_v11(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.setInitMsgOption0(III)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_set_int_option0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set_int_option0_linux_ge_v11(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.setIntOption0(III)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_set_peer_prim_addr_option0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set_peer_prim_addr_option0_linux_ge_v11(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Int(0),
+                Value::Object(None),
+                Value::Int(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.setPeerPrimAddrOption0(IILjava/net/InetAddress;IZ)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_set_prim_addr_option0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set_prim_addr_option0_linux_ge_v11(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Int(0),
+                Value::Object(None),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.setPrimAddrOption0(IILjava/net/InetAddress;I)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_shutdown0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            shutdown0_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]))
+                .await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.shutdown0(II)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_socket0_linux_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = socket0_linux_ge_v11(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "sun/nio/ch/sctp/SctpNet.socket0(Z)I",
+            result.unwrap_err().to_string()
+        );
     }
 }

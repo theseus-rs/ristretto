@@ -1,7 +1,7 @@
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
 use crate::java::nio::mapped_regions::{MapMode, MappedRegion, MappedRegions};
 use crate::sun::nio::fs::managed_files;
-use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual, LessThanOrEqual};
+use ristretto_classfile::VersionSpecification::{Equal, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
@@ -121,10 +121,7 @@ pub async fn map_0_1<T: Thread + 'static>(
     Ok(Some(Value::Long(address)))
 }
 
-#[intrinsic_method(
-    "sun/nio/ch/FileChannelImpl.maxDirectTransferSize0()I",
-    GreaterThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileChannelImpl.maxDirectTransferSize0()I", Equal(JAVA_17))]
 #[async_method]
 pub async fn max_direct_transfer_size_0<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -169,7 +166,7 @@ pub async fn transfer_to_0<T: Thread + 'static>(
     )))
 }
 
-#[intrinsic_method("sun/nio/ch/FileChannelImpl.unmap0(JJ)I", Any)]
+#[intrinsic_method("sun/nio/ch/FileChannelImpl.unmap0(JJ)I", LessThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn unmap_0<T: Thread + 'static>(
     thread: Arc<T>,

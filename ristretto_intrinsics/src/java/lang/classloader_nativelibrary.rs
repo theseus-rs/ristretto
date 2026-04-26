@@ -1,5 +1,6 @@
+use ristretto_classfile::JAVA_8;
 use ristretto_classfile::JAVA_11;
-use ristretto_classfile::VersionSpecification::LessThanOrEqual;
+use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -9,7 +10,7 @@ use std::sync::Arc;
 
 #[intrinsic_method(
     "java/lang/ClassLoader$NativeLibrary.find(Ljava/lang/String;)J",
-    LessThanOrEqual(JAVA_11)
+    Equal(JAVA_8)
 )]
 #[async_method]
 pub async fn find<T: Thread + 'static>(
@@ -21,7 +22,7 @@ pub async fn find<T: Thread + 'static>(
 
 #[intrinsic_method(
     "java/lang/ClassLoader$NativeLibrary.findEntry(Ljava/lang/String;)J",
-    LessThanOrEqual(JAVA_11)
+    Equal(JAVA_11)
 )]
 #[async_method]
 pub async fn find_entry<T: Thread + 'static>(
@@ -33,7 +34,7 @@ pub async fn find_entry<T: Thread + 'static>(
 
 #[intrinsic_method(
     "java/lang/ClassLoader$NativeLibrary.load(Ljava/lang/String;Z)V",
-    LessThanOrEqual(JAVA_11)
+    Equal(JAVA_8)
 )]
 #[async_method]
 pub async fn load<T: Thread + 'static>(
@@ -53,7 +54,7 @@ pub async fn load<T: Thread + 'static>(
 
 #[intrinsic_method(
     "java/lang/ClassLoader$NativeLibrary.load0(Ljava/lang/String;ZZ)Z",
-    LessThanOrEqual(JAVA_11)
+    Equal(JAVA_11)
 )]
 #[async_method]
 pub async fn load_0<T: Thread + 'static>(
@@ -65,7 +66,7 @@ pub async fn load_0<T: Thread + 'static>(
 
 #[intrinsic_method(
     "java/lang/ClassLoader$NativeLibrary.unload(Ljava/lang/String;Z)V",
-    LessThanOrEqual(JAVA_11)
+    Equal(JAVA_8)
 )]
 #[async_method]
 pub async fn unload_0<T: Thread + 'static>(
@@ -77,7 +78,7 @@ pub async fn unload_0<T: Thread + 'static>(
 
 #[intrinsic_method(
     "java/lang/ClassLoader$NativeLibrary.unload(Ljava/lang/String;ZJ)V",
-    LessThanOrEqual(JAVA_11)
+    Equal(JAVA_11)
 )]
 #[async_method]
 pub async fn unload_1<T: Thread + 'static>(

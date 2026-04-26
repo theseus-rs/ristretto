@@ -31,7 +31,6 @@ pub async fn latest_user_defined_loader_0<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -48,6 +47,9 @@ mod tests {
     async fn test_latest_user_defined_loader_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = latest_user_defined_loader_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.misc.VM.latestUserDefinedLoader0()Ljava/lang/ClassLoader;",
+            result.unwrap_err().to_string()
+        );
     }
 }

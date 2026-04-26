@@ -1,5 +1,10 @@
+#[cfg(target_family = "unix")]
 pub mod xidgenerator;
+#[cfg(target_family = "unix")]
 pub mod xrbackendnative;
+#[cfg(target_family = "unix")]
 pub mod xrmaskblit;
+#[cfg(target_family = "unix")]
 pub mod xrmaskfill;
+#[cfg(target_family = "unix")]
 pub mod xrsurfacedata;

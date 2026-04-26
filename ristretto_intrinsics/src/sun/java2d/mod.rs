@@ -1,5 +1,8 @@
 pub mod cmm;
+#[cfg(target_os = "macos")]
 pub mod crenderer;
+#[cfg(target_os = "windows")]
+pub mod d3d;
 pub mod defaultdisposerrecord;
 pub mod disposer;
 pub mod jules;
@@ -11,5 +14,7 @@ pub mod opengl;
 pub mod osxoffscreensurfacedata;
 pub mod pipe;
 pub mod surfacedata;
+#[cfg(target_os = "windows")]
+pub mod windows;
 pub mod x11;
 pub mod xr;

@@ -1,4 +1,9 @@
+#[cfg(target_os = "windows")]
+use ristretto_classfile::JAVA_8;
+#[cfg(not(target_os = "windows"))]
 use ristretto_classfile::VersionSpecification::Any;
+#[cfg(target_os = "windows")]
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -6,6 +11,7 @@ use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
+#[cfg(not(target_os = "windows"))]
 #[intrinsic_method("sun/net/PortConfig.getLower0()I", Any)]
 #[async_method]
 pub async fn get_lower_0<T: Thread + 'static>(
@@ -15,6 +21,17 @@ pub async fn get_lower_0<T: Thread + 'static>(
     Ok(Some(Value::Int(49152)))
 }
 
+#[cfg(target_os = "windows")]
+#[intrinsic_method("sun/net/PortConfig.getLower0()I", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_lower_0_windows<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::Int(49152)))
+}
+
+#[cfg(not(target_os = "windows"))]
 #[intrinsic_method("sun/net/PortConfig.getUpper0()I", Any)]
 #[async_method]
 pub async fn get_upper_0<T: Thread + 'static>(
@@ -24,7 +41,17 @@ pub async fn get_upper_0<T: Thread + 'static>(
     Ok(Some(Value::Int(65535)))
 }
 
-#[cfg(test)]
+#[cfg(target_os = "windows")]
+#[intrinsic_method("sun/net/PortConfig.getUpper0()I", LessThanOrEqual(JAVA_8))]
+#[async_method]
+pub async fn get_upper_0_windows<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Ok(Some(Value::Int(65535)))
+}
+
+#[cfg(all(test, not(target_os = "windows")))]
 mod tests {
     use super::*;
 

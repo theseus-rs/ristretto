@@ -27,14 +27,15 @@ pub async fn register_natives<T: Thread + 'static>(
 #[async_method]
 pub async fn vm_storage_to_vm_reg<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _index = parameters.pop_int()?;
+    let _type_ = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.invoke.NativeEntryPoint.vmStorageToVMReg(II)J".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -50,7 +51,11 @@ mod tests {
     #[tokio::test]
     async fn test_vm_storage_to_vm_reg() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = vm_storage_to_vm_reg(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            vm_storage_to_vm_reg(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+        assert_eq!(
+            "jdk.internal.invoke.NativeEntryPoint.vmStorageToVMReg(II)J",
+            result.unwrap_err().to_string()
+        );
     }
 }

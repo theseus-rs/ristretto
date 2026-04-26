@@ -1,3 +1,7 @@
+#[cfg(target_os = "windows")]
+use ristretto_classfile::JAVA_8;
+#[cfg(target_os = "windows")]
+use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
@@ -5,6 +9,8 @@ use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
+#[cfg(target_os = "windows")]
+use ristretto_types::JavaError;
 use ristretto_types::JavaError::IoException;
 use ristretto_types::Parameters;
 use ristretto_types::Thread;
@@ -225,6 +231,26 @@ pub async fn sync_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/io/FileDescriptor.set(I)J", Equal(JAVA_8))]
+#[async_method]
+pub async fn set<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("java/io/FileDescriptor.set(I)J".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/io/FileDescriptor.set(I)J", Equal(JAVA_8))]
+#[async_method]
+pub async fn set_windows_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError("java/io/FileDescriptor.set(I)J".to_string()).into())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -249,5 +275,27 @@ mod tests {
         let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(None, result);
         Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_set() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "java/io/FileDescriptor.set(I)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_set_windows_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set_windows_v8(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "java/io/FileDescriptor.set(I)J",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -15,8 +15,11 @@ use std::sync::Arc;
 #[async_method]
 pub async fn generate_ec_key_pair<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _seed = parameters.pop_reference()?;
+    let _encoded_params = parameters.pop_reference()?;
+    let _key_size = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.security.ec.ECKeyPairGenerator.generateECKeyPair(I[B[B)[Ljava/lang/Object;"
             .to_string(),
@@ -31,14 +34,14 @@ pub async fn generate_ec_key_pair<T: Thread + 'static>(
 #[async_method]
 pub async fn is_curve_supported<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _encoded_params = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.security.ec.ECKeyPairGenerator.isCurveSupported([B)Z".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -46,14 +49,28 @@ mod tests {
     #[tokio::test]
     async fn test_generate_ec_key_pair() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = generate_ec_key_pair(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = generate_ec_key_pair(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Object(None),
+                Value::Object(None),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.security.ec.ECKeyPairGenerator.generateECKeyPair(I[B[B)[Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_is_curve_supported() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = is_curve_supported(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = is_curve_supported(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.security.ec.ECKeyPairGenerator.isCurveSupported([B)Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

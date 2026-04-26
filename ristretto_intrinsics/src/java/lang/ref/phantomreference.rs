@@ -1,6 +1,7 @@
 use crate::java::lang::r#ref::reference;
+use ristretto_classfile::JAVA_17;
 use ristretto_classfile::JAVA_25;
-use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -20,7 +21,10 @@ pub async fn clear_0<T: Thread + 'static>(
     reference::clear_0(thread, parameters).await
 }
 
-#[intrinsic_method("java/lang/ref/PhantomReference.refersTo0(Ljava/lang/Object;)Z", Any)]
+#[intrinsic_method(
+    "java/lang/ref/PhantomReference.refersTo0(Ljava/lang/Object;)Z",
+    GreaterThanOrEqual(JAVA_17)
+)]
 #[async_method]
 pub async fn refers_to_0<T: Thread + 'static>(
     thread: Arc<T>,

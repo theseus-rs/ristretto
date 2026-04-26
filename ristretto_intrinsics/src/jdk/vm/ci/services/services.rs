@@ -15,14 +15,14 @@ use std::sync::Arc;
 #[async_method]
 pub async fn read_system_properties_info<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _offsets = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.vm.ci.services.Services.readSystemPropertiesInfo([I)J".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -30,7 +30,11 @@ mod tests {
     #[tokio::test]
     async fn test_read_system_properties_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = read_system_properties_info(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            read_system_properties_info(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "jdk.vm.ci.services.Services.readSystemPropertiesInfo([I)J",
+            result.unwrap_err().to_string()
+        );
     }
 }

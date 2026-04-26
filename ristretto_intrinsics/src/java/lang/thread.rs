@@ -127,8 +127,9 @@ pub async fn current_thread<T: Thread + 'static>(
 #[async_method]
 pub async fn dump_threads<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _threads = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "java.lang.Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;"
             .to_string(),
@@ -317,8 +318,9 @@ pub async fn scoped_value_cache<T: Thread + 'static>(
 #[async_method]
 pub async fn set_current_thread<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _thread = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "java.lang.Thread.setCurrentThread(Ljava/lang/Thread;)V".to_string(),
     )
@@ -411,8 +413,9 @@ pub async fn set_priority_0<T: Thread + 'static>(
 #[async_method]
 pub async fn set_scoped_value_cache<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _cache = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "java.lang.Thread.setScopedValueCache([Ljava/lang/Object;)V".to_string(),
     )
@@ -794,8 +797,11 @@ mod tests {
     #[tokio::test]
     async fn test_dump_threads() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dump_threads(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = dump_threads(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java.lang.Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
@@ -813,7 +819,10 @@ mod tests {
     async fn test_find_scoped_value_bindings() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = find_scoped_value_bindings(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "java.lang.Thread.findScopedValueBindings()Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
@@ -829,7 +838,10 @@ mod tests {
     async fn test_get_stack_trace_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_stack_trace_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "java.lang.Thread.getStackTrace0()Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
@@ -911,14 +923,20 @@ mod tests {
     async fn test_scoped_value_cache() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = scoped_value_cache(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "java.lang.Thread.scopedValueCache()[Ljava/lang/Object;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_set_current_thread() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_current_thread(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = set_current_thread(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java.lang.Thread.setCurrentThread(Ljava/lang/Thread;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
@@ -936,8 +954,12 @@ mod tests {
     #[tokio::test]
     async fn test_set_scoped_value_cache() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_scoped_value_cache(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            set_scoped_value_cache(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "java.lang.Thread.setScopedValueCache([Ljava/lang/Object;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

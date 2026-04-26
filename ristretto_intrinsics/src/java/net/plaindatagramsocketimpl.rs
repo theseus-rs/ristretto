@@ -1,16 +1,29 @@
+#[cfg(not(target_os = "windows"))]
+use ristretto_classfile::VersionSpecification::Equal;
+#[cfg(not(target_os = "windows"))]
 use ristretto_classfile::VersionSpecification::{Between, LessThanOrEqual};
+#[cfg(not(target_os = "windows"))]
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
-use ristretto_classloader::{Reference, Value};
+#[cfg(not(target_os = "windows"))]
+use ristretto_classloader::Reference;
+use ristretto_classloader::Value;
+#[cfg(not(target_os = "windows"))]
 use ristretto_macros::async_method;
+#[cfg(not(target_os = "windows"))]
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+#[cfg(not(target_os = "windows"))]
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
+#[cfg(not(target_os = "windows"))]
 use ristretto_types::handles::{SocketHandle, SocketType};
 use ristretto_types::{Parameters, Result, VM};
-use socket2::{Domain, Protocol, SockAddr, Type};
+use socket2::SockAddr;
+#[cfg(not(target_os = "windows"))]
+use socket2::{Domain, Protocol, Type};
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::sync::Arc;
+#[cfg(not(target_os = "windows"))]
 use std::time::Duration;
 
 /// Java socket option IDs (from java.net.SocketOptions interface)
@@ -122,6 +135,7 @@ async fn send_datagram<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.bind0(ILjava/net/InetAddress;)V",
     LessThanOrEqual(JAVA_17)
@@ -166,6 +180,7 @@ pub async fn bind_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.connect0(Ljava/net/InetAddress;I)V",
     LessThanOrEqual(JAVA_17)
@@ -206,6 +221,7 @@ pub async fn connect_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.dataAvailable()I",
     LessThanOrEqual(JAVA_17)
@@ -219,6 +235,7 @@ pub async fn data_available<T: Thread + 'static>(
     Ok(Some(Value::Int(0)))
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.datagramSocketClose()V",
     LessThanOrEqual(JAVA_17)
@@ -238,6 +255,7 @@ pub async fn datagram_socket_close<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.datagramSocketCreate()V",
     LessThanOrEqual(JAVA_17)
@@ -262,6 +280,7 @@ pub async fn datagram_socket_create<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.disconnect0(I)V",
     LessThanOrEqual(JAVA_17)
@@ -276,6 +295,7 @@ pub async fn disconnect_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainDatagramSocketImpl.getTTL()B", LessThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn get_ttl<T: Thread + 'static>(
@@ -290,6 +310,7 @@ pub async fn get_ttl<T: Thread + 'static>(
     Ok(Some(byte_val))
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.getTimeToLive()I",
     LessThanOrEqual(JAVA_17)
@@ -317,6 +338,7 @@ pub async fn get_time_to_live<T: Thread + 'static>(
     Ok(Some(Value::Int(ttl as i32)))
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainDatagramSocketImpl.init()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn init<T: Thread + 'static>(
@@ -326,6 +348,7 @@ pub async fn init<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.join(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
     LessThanOrEqual(JAVA_17)
@@ -356,6 +379,7 @@ pub async fn join<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.leave(Ljava/net/InetAddress;Ljava/net/NetworkInterface;)V",
     LessThanOrEqual(JAVA_17)
@@ -386,6 +410,7 @@ pub async fn leave<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.peek(Ljava/net/InetAddress;)I",
     LessThanOrEqual(JAVA_17)
@@ -426,6 +451,7 @@ pub async fn peek<T: Thread + 'static>(
     Ok(Some(Value::Int(port)))
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.peekData(Ljava/net/DatagramPacket;)I",
     LessThanOrEqual(JAVA_17)
@@ -515,6 +541,7 @@ pub async fn peek_data<T: Thread + 'static>(
     Ok(Some(Value::Int(from_port)))
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.receive0(Ljava/net/DatagramPacket;)V",
     LessThanOrEqual(JAVA_17)
@@ -621,9 +648,10 @@ pub async fn receive_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.send(Ljava/net/DatagramPacket;)V",
-    LessThanOrEqual(JAVA_8)
+    Equal(JAVA_8)
 )]
 #[async_method]
 pub async fn send<T: Thread + 'static>(
@@ -633,6 +661,7 @@ pub async fn send<T: Thread + 'static>(
     send_datagram(thread, parameters).await
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.send0(Ljava/net/DatagramPacket;)V",
     Between(JAVA_11, JAVA_17)
@@ -645,6 +674,7 @@ pub async fn send_0<T: Thread + 'static>(
     send_datagram(thread, parameters).await
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.setTTL(B)V",
     LessThanOrEqual(JAVA_17)
@@ -673,6 +703,7 @@ pub async fn set_ttl<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.setTimeToLive(I)V",
     LessThanOrEqual(JAVA_17)
@@ -701,6 +732,7 @@ pub async fn set_time_to_live<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.socketGetOption(I)Ljava/lang/Object;",
     LessThanOrEqual(JAVA_17)
@@ -769,6 +801,7 @@ pub async fn socket_get_option<T: Thread + 'static>(
     Ok(Some(result))
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.socketSetOption0(ILjava/lang/Object;)V",
     LessThanOrEqual(JAVA_17)
@@ -839,7 +872,7 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
     Ok(None)
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_family = "unix"))]
 mod tests {
     use super::*;
 

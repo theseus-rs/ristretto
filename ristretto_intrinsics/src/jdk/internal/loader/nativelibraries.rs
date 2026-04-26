@@ -17,8 +17,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn find_entry_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg1 = parameters.pop_reference()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.loader.NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J".to_string()).into())
 }
 
@@ -84,7 +86,7 @@ pub async fn unload_0<T: Thread + 'static>(
 
 #[intrinsic_method(
     "jdk/internal/loader/NativeLibraries.unload(Ljava/lang/String;ZJ)V",
-    GreaterThanOrEqual(JAVA_17)
+    GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
 pub async fn unload_1<T: Thread + 'static>(
@@ -104,8 +106,15 @@ mod tests {
     #[tokio::test]
     async fn test_find_entry_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = find_entry_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = find_entry_0(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.loader.NativeLibraries.findEntry0(Ljdk/internal/loader/NativeLibraries$NativeLibraryImpl;Ljava/lang/String;)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

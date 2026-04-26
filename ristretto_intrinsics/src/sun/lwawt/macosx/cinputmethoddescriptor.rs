@@ -34,7 +34,6 @@ pub async fn native_init<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -43,13 +42,19 @@ mod tests {
     async fn test_native_get_available_locales() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = native_get_available_locales(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.lwawt.macosx.CInputMethodDescriptor.nativeGetAvailableLocales()Ljava/util/List;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_native_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = native_init(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.lwawt.macosx.CInputMethodDescriptor.nativeInit()V",
+            result.unwrap_err().to_string()
+        );
     }
 }

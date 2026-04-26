@@ -18,7 +18,6 @@ pub async fn should_use_scroll_to_click<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -27,6 +26,9 @@ mod tests {
     async fn test_should_use_scroll_to_click() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = should_use_scroll_to_click(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "apple.laf.JRSUIUtils$ScrollBar.shouldUseScrollToClick()Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

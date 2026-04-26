@@ -93,9 +93,14 @@ pub(crate) fn process(input: TokenStream) -> TokenStream {
         .unwrap_or_else(|error| panic!("Failed to get intrinsic methods: {error}"));
 
     let mut version_maps = Vec::new();
+    let mut signature_slices = Vec::new();
     for (version_name, version) in JAVA_VERSIONS {
         let map = generate_intrinsic_method_map(version_name, version, &intrinsic_methods);
         version_maps.push(map);
+        for os in OS_VARIANTS {
+            let slice = generate_signature_slice(version_name, version, os, &intrinsic_methods);
+            signature_slices.push(slice);
+        }
     }
 
     let output = quote! {
@@ -104,15 +109,20 @@ pub(crate) fn process(input: TokenStream) -> TokenStream {
         use ahash::AHashMap;
 
         #(#version_maps)*
+
+        #(#signature_slices)*
     };
 
     TokenStream::from(output)
 }
 
+/// Candidate OS targets used by the cross-OS introspection signature slices.
+const OS_VARIANTS: [&str; 3] = ["macos", "linux", "windows"];
+
 /// Retrieves intrinsic methods from the source path.
 fn get_intrinsic_methods(
     source_path: &PathBuf,
-) -> Result<AHashMap<String, IntrinsicMethodData>, Box<dyn std::error::Error>> {
+) -> Result<AHashMap<String, Vec<IntrinsicMethodData>>, Box<dyn std::error::Error>> {
     // First pass: collect cfg-gated module paths from mod.rs and lib.rs files.
     // Maps module path -> list of cfg condition strings.
     let mut cfg_gated_modules: AHashMap<String, Vec<String>> = AHashMap::default();
@@ -203,7 +213,7 @@ fn process_file_entry(
     source_path: &PathBuf,
     entry: &walkdir::DirEntry,
     cfg_gated_modules: &AHashMap<String, Vec<String>>,
-    intrinsic_methods: &mut AHashMap<String, IntrinsicMethodData>,
+    intrinsic_methods: &mut AHashMap<String, Vec<IntrinsicMethodData>>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let file_name = entry.file_name().to_string_lossy();
     if !file_name.ends_with(".rs") {
@@ -268,7 +278,7 @@ fn process_item(
     module: &str,
     item: &Item,
     module_cfg_conditions: &[String],
-    intrinsic_methods: &mut AHashMap<String, IntrinsicMethodData>,
+    intrinsic_methods: &mut AHashMap<String, Vec<IntrinsicMethodData>>,
 ) {
     if let Item::Fn(function) = item {
         let attribute = function
@@ -294,14 +304,14 @@ fn process_item(
             cfg_conditions.sort();
             cfg_conditions.dedup();
 
-            intrinsic_methods.insert(
-                signature,
-                IntrinsicMethodData {
+            intrinsic_methods
+                .entry(signature)
+                .or_default()
+                .push(IntrinsicMethodData {
                     function_name,
                     version_specification,
                     cfg_conditions,
-                },
-            );
+                });
         }
     }
 }
@@ -398,23 +408,25 @@ fn java_version(expression: Option<&Expr>) -> Version {
 fn generate_intrinsic_method_map(
     version_name: &str,
     version: &Version,
-    intrinsic_methods: &AHashMap<String, IntrinsicMethodData>,
+    intrinsic_methods: &AHashMap<String, Vec<IntrinsicMethodData>>,
 ) -> TokenStream2 {
     // Group entries by their cfg conditions (sorted for deterministic output)
     let mut groups: BTreeMap<Vec<String>, Vec<(String, String)>> = BTreeMap::new();
 
-    for (signature, data) in intrinsic_methods {
-        if !data.version_specification.matches(version) {
-            continue;
+    for (signature, datas) in intrinsic_methods {
+        for data in datas {
+            if !data.version_specification.matches(version) {
+                continue;
+            }
+            let function = format!(
+                "{}::<crate::thread::Thread> as IntrinsicMethod",
+                data.function_name
+            );
+            groups
+                .entry(data.cfg_conditions.clone())
+                .or_default()
+                .push((signature.clone(), function));
         }
-        let function = format!(
-            "{}::<crate::thread::Thread> as IntrinsicMethod",
-            data.function_name
-        );
-        groups
-            .entry(data.cfg_conditions.clone())
-            .or_default()
-            .push((signature.clone(), function));
     }
 
     // Sort entries within each group for deterministic output
@@ -472,5 +484,141 @@ fn generate_intrinsic_method_map(
                 #(#insert_blocks)*
                 map
             });
+    }
+}
+
+/// Generate a `pub(crate) static JAVA_<version>_<OS>_SIGNATURES: &[&str]` slice listing every
+/// intrinsic method signature that would be registered for the given Java version on the given
+/// OS, by evaluating each intrinsic's collected `cfg(...)` conditions as a boolean expression
+/// against the (`target_os`, `target_family`) hypothesis for that OS.
+///
+/// These slices are unconditionally compiled (the values are plain string literals, not
+/// function pointers) so they remain valid on every host and enable cross-OS introspection
+/// from tests without changing actual dispatch behavior.
+fn generate_signature_slice(
+    version_name: &str,
+    version: &Version,
+    os: &str,
+    intrinsic_methods: &AHashMap<String, Vec<IntrinsicMethodData>>,
+) -> TokenStream2 {
+    let mut signatures: Vec<String> = intrinsic_methods
+        .iter()
+        .filter(|(_, datas)| {
+            datas.iter().any(|data| {
+                data.version_specification.matches(version)
+                    && data
+                        .cfg_conditions
+                        .iter()
+                        .all(|condition| eval_cfg_condition(condition, os))
+            })
+        })
+        .map(|(signature, _)| signature.clone())
+        .collect();
+    signatures.sort();
+
+    let slice_ident = syn::Ident::new(
+        &format!("{version_name}_{}_SIGNATURES", os.to_uppercase()),
+        proc_macro2::Span::call_site(),
+    );
+    let entries: Vec<TokenStream2> = signatures.iter().map(|s| quote! { #s }).collect();
+
+    quote! {
+        #[cfg(test)]
+        pub(crate) static #slice_ident: &[&str] = &[
+            #(#entries,)*
+        ];
+    }
+}
+
+/// Evaluate the textual contents of a `#[cfg(...)]` condition (the `...` part) for a hypothetical
+/// target OS. Returns `true` if the condition would match for that OS.
+///
+/// Predicate handling:
+/// - `target_os = "X"` → `os == "X"`
+/// - `target_family = "windows"` → `os == "windows"`
+/// - `target_family = "unix"` → `os` ∈ {macos, linux, ...non-windows-non-wasm}
+/// - `target_family = "wasm"` → false (we never test for wasm here)
+/// - `unix` (predicate) → equivalent to `target_family = "unix"`
+/// - `windows` (predicate) → equivalent to `target_family = "windows"`
+/// - `target_endian = …`, `target_pointer_width = …`, `test` → assumed true (don't differentiate)
+/// - Combinators `any(...)`, `all(...)`, `not(...)` evaluated recursively.
+///
+/// Unknown predicates are conservatively treated as true so that a method is included in the
+/// signature slice unless its cfg explicitly excludes the target OS.
+fn eval_cfg_condition(condition: &str, os: &str) -> bool {
+    let wrapped = format!("cfg({condition})");
+    let Ok(expression) = syn::parse_str::<syn::Expr>(&wrapped) else {
+        return true;
+    };
+    let syn::Expr::Call(call) = expression else {
+        return true;
+    };
+    let Some(syn::Expr::Path(_)) = call.func.as_ref().into() else {
+        return true;
+    };
+    let Some(arg) = call.args.first() else {
+        return true;
+    };
+    eval_cfg_expr(arg, os)
+}
+
+fn eval_cfg_expr(expression: &syn::Expr, os: &str) -> bool {
+    match expression {
+        syn::Expr::Call(call) => {
+            let combinator = match call.func.as_ref() {
+                syn::Expr::Path(path) => path
+                    .path
+                    .get_ident()
+                    .map(ToString::to_string)
+                    .unwrap_or_default(),
+                _ => return true,
+            };
+            match combinator.as_str() {
+                "any" => call.args.iter().any(|argument| eval_cfg_expr(argument, os)),
+                "all" => call.args.iter().all(|argument| eval_cfg_expr(argument, os)),
+                "not" => call
+                    .args
+                    .first()
+                    .is_none_or(|argument| !eval_cfg_expr(argument, os)),
+                _ => true,
+            }
+        }
+        syn::Expr::Assign(assign) => {
+            let key = match assign.left.as_ref() {
+                syn::Expr::Path(path) => path
+                    .path
+                    .get_ident()
+                    .map(ToString::to_string)
+                    .unwrap_or_default(),
+                _ => return true,
+            };
+            let value = match assign.right.as_ref() {
+                syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(string),
+                    ..
+                }) => string.value(),
+                _ => return true,
+            };
+            eval_predicate(&key, Some(&value), os)
+        }
+        syn::Expr::Path(path) => {
+            let name = path
+                .path
+                .get_ident()
+                .map(ToString::to_string)
+                .unwrap_or_default();
+            eval_predicate(&name, None, os)
+        }
+        _ => true,
+    }
+}
+
+fn eval_predicate(name: &str, value: Option<&str>, os: &str) -> bool {
+    match (name, value) {
+        ("target_os", Some(target)) => os == target,
+        ("target_family", Some("windows")) | ("windows", None) => os == "windows",
+        ("target_family", Some("unix")) | ("unix", None) => os == "macos" || os == "linux",
+        ("target_family", Some(_)) => false,
+        _ => true,
     }
 }

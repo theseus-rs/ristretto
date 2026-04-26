@@ -1,5 +1,10 @@
+#[cfg(target_family = "unix")]
 pub mod x11pmblitbgloops;
+#[cfg(target_family = "unix")]
 pub mod x11pmblitloops;
+#[cfg(target_family = "unix")]
 pub mod x11renderer;
+#[cfg(target_family = "unix")]
 pub mod x11surfacedata;
+#[cfg(target_family = "unix")]
 pub mod xsurfacedata;

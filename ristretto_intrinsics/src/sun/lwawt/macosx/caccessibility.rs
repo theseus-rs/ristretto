@@ -26,11 +26,11 @@ pub async fn focus_changed<T: Thread + 'static>(
 #[async_method]
 pub async fn role_key<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _a_role = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CAccessibility.roleKey(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -39,13 +39,19 @@ mod tests {
     async fn test_focus_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = focus_changed(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.lwawt.macosx.CAccessibility.focusChanged()V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_role_key() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = role_key(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = role_key(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.lwawt.macosx.CAccessibility.roleKey(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 }

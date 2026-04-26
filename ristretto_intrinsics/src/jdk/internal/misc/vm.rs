@@ -134,35 +134,50 @@ mod tests {
     async fn test_get_runtime_arguments() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_runtime_arguments(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.misc.VM.getRuntimeArguments()[Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_getegid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = getegid(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.misc.VM.getegid()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_geteuid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = geteuid(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.misc.VM.geteuid()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_getgid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = getgid(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.misc.VM.getgid()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_getuid() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = getuid(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.misc.VM.getuid()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

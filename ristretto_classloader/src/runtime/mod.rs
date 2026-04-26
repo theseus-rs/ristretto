@@ -7,4 +7,4 @@ pub use bootstrap::{
     JAVA_21_VERSION, JAVA_25_VERSION, home_class_loader,
 };
 #[cfg(not(target_family = "wasm"))]
-pub use bootstrap::{default_class_loader, version_class_loader};
+pub use bootstrap::{default_class_loader, version_class_loader, version_class_loader_for_os};

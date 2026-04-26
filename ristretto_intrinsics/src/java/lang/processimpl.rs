@@ -1,14 +1,28 @@
+#[cfg(target_os = "windows")]
+use ristretto_classfile::JAVA_8;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_classfile::JAVA_11;
+#[cfg(target_os = "windows")]
+use ristretto_classfile::VersionSpecification::Any;
+#[cfg(target_os = "windows")]
+use ristretto_classfile::VersionSpecification::Equal;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_classloader::Reference;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_classloader::Value;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_macros::async_method;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_macros::intrinsic_method;
-#[cfg(target_family = "wasm")]
+#[cfg(target_os = "windows")]
 use ristretto_types::JavaError;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_types::Thread;
+#[cfg(not(target_family = "wasm"))]
 use ristretto_types::{Parameters, Result};
+#[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
 
 #[cfg(target_os = "windows")]
@@ -33,6 +47,7 @@ mod win32 {
 ///
 /// In Java 9+, `ProcessImpl` replaced `UNIXProcess` on Unix platforms. Both share the same
 /// parameter layout, so `UNIXProcess.forkAndExec` (≤ Java 8) delegates here as well.
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/lang/ProcessImpl.forkAndExec(I[B[B[BI[BI[B[IZ)I",
     GreaterThanOrEqual(JAVA_11)
@@ -286,6 +301,7 @@ fn split_null_terminated(bytes: &[i8]) -> Vec<String> {
     result
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method("java/lang/ProcessImpl.init()V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
 pub async fn init<T: Thread + 'static>(
@@ -297,7 +313,7 @@ pub async fn init<T: Thread + 'static>(
 
 /// Returns the Windows `STILL_ACTIVE` constant (259).
 #[cfg(target_os = "windows")]
-#[intrinsic_method("java/lang/ProcessImpl.getStillActive()I", GreaterThanOrEqual(JAVA_11))]
+#[intrinsic_method("java/lang/ProcessImpl.getStillActive()I", Any)]
 #[async_method]
 pub async fn get_still_active<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -312,7 +328,7 @@ pub async fn get_still_active<T: Thread + 'static>(
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/lang/ProcessImpl.create(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[JZ)J",
-    GreaterThanOrEqual(JAVA_11)
+    Any
 )]
 #[async_method]
 pub async fn create<T: Thread + 'static>(
@@ -400,10 +416,7 @@ pub async fn get_process_id_0<T: Thread + 'static>(
 
 /// Waits for a process to complete (blocking).
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/lang/ProcessImpl.waitForInterruptibly(J)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
+#[intrinsic_method("java/lang/ProcessImpl.waitForInterruptibly(J)V", Any)]
 #[async_method]
 pub async fn wait_for_interruptibly<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -420,10 +433,7 @@ pub async fn wait_for_interruptibly<T: Thread + 'static>(
 
 /// Waits for a process to complete with a timeout (blocking).
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/lang/ProcessImpl.waitForTimeoutInterruptibly(JJ)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
+#[intrinsic_method("java/lang/ProcessImpl.waitForTimeoutInterruptibly(JJ)V", Any)]
 #[async_method]
 pub async fn wait_for_timeout_interruptibly<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -443,10 +453,8 @@ pub async fn wait_for_timeout_interruptibly<T: Thread + 'static>(
 /// Gets the exit code of a process.
 #[cfg(target_os = "windows")]
 #[expect(clippy::cast_possible_wrap)]
-#[intrinsic_method(
-    "java/lang/ProcessImpl.getExitCodeProcess(J)I",
-    GreaterThanOrEqual(JAVA_11)
-)]
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/lang/ProcessImpl.getExitCodeProcess(J)I", Any)]
 #[async_method]
 pub async fn get_exit_code_process<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -460,10 +468,7 @@ pub async fn get_exit_code_process<T: Thread + 'static>(
 
 /// Checks if a process is still alive.
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/lang/ProcessImpl.isProcessAlive(J)Z",
-    GreaterThanOrEqual(JAVA_11)
-)]
+#[intrinsic_method("java/lang/ProcessImpl.isProcessAlive(J)Z", Any)]
 #[async_method]
 pub async fn is_process_alive<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -477,10 +482,7 @@ pub async fn is_process_alive<T: Thread + 'static>(
 
 /// Terminates a process.
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/lang/ProcessImpl.terminateProcess(J)V",
-    GreaterThanOrEqual(JAVA_11)
-)]
+#[intrinsic_method("java/lang/ProcessImpl.terminateProcess(J)V", Any)]
 #[async_method]
 pub async fn terminate_process<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -493,7 +495,7 @@ pub async fn terminate_process<T: Thread + 'static>(
 
 /// Closes a Windows handle.
 #[cfg(target_os = "windows")]
-#[intrinsic_method("java/lang/ProcessImpl.closeHandle(J)Z", GreaterThanOrEqual(JAVA_11))]
+#[intrinsic_method("java/lang/ProcessImpl.closeHandle(J)Z", Any)]
 #[async_method]
 pub async fn close_handle<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -506,10 +508,7 @@ pub async fn close_handle<T: Thread + 'static>(
 
 /// Opens a file for atomic append and returns a handle.
 #[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/lang/ProcessImpl.openForAtomicAppend(Ljava/lang/String;)J",
-    GreaterThanOrEqual(JAVA_11)
-)]
+#[intrinsic_method("java/lang/ProcessImpl.openForAtomicAppend(Ljava/lang/String;)J", Any)]
 #[async_method]
 pub async fn open_for_atomic_append<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -550,7 +549,135 @@ fn parse_windows_command_line(cmdstr: &str) -> (String, String) {
     }
 }
 
-#[cfg(test)]
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/lang/ProcessImpl.closeHandle(J)Z", Equal(JAVA_8))]
+#[async_method]
+pub async fn close_handle_windows_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _handle = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError("java/lang/ProcessImpl.closeHandle(J)Z".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/lang/ProcessImpl.create(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[JZ)J",
+    Equal(JAVA_8)
+)]
+#[async_method]
+pub async fn create_windows_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _redirect_error_stream = parameters.pop_bool()?;
+    let _std_handles = parameters.pop_reference()?;
+    let _dir = parameters.pop_reference()?;
+    let _env_block = parameters.pop_reference()?;
+    let _cmd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/lang/ProcessImpl.create(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[JZ)J"
+            .to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/lang/ProcessImpl.getExitCodeProcess(J)I", Equal(JAVA_8))]
+#[async_method]
+pub async fn get_exit_code_process_windows_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _handle = parameters.pop_long()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/lang/ProcessImpl.getExitCodeProcess(J)I".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/lang/ProcessImpl.getStillActive()I", Equal(JAVA_8))]
+#[async_method]
+pub async fn get_still_active_windows_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Err(
+        JavaError::UnsatisfiedLinkError("java/lang/ProcessImpl.getStillActive()I".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/lang/ProcessImpl.isProcessAlive(J)Z", Equal(JAVA_8))]
+#[async_method]
+pub async fn is_process_alive_windows_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _handle = parameters.pop_long()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/lang/ProcessImpl.isProcessAlive(J)Z".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/lang/ProcessImpl.openForAtomicAppend(Ljava/lang/String;)J",
+    Equal(JAVA_8)
+)]
+#[async_method]
+pub async fn open_for_atomic_append_windows_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _path = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/lang/ProcessImpl.openForAtomicAppend(Ljava/lang/String;)J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/lang/ProcessImpl.terminateProcess(J)V", Equal(JAVA_8))]
+#[async_method]
+pub async fn terminate_process_windows_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _handle = parameters.pop_long()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("java/lang/ProcessImpl.terminateProcess(J)V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("java/lang/ProcessImpl.waitForInterruptibly(J)V", Equal(JAVA_8))]
+#[async_method]
+pub async fn wait_for_interruptibly_windows_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _handle = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/lang/ProcessImpl.waitForInterruptibly(J)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "java/lang/ProcessImpl.waitForTimeoutInterruptibly(JJ)V",
+    Equal(JAVA_8)
+)]
+#[async_method]
+pub async fn wait_for_timeout_interruptibly_windows_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _timeout_millis = parameters.pop_long()?;
+    let _handle = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "java/lang/ProcessImpl.waitForTimeoutInterruptibly(JJ)V".to_string(),
+    )
+    .into())
+}
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
     use ristretto_gc::GarbageCollector;
@@ -646,6 +773,7 @@ mod tests {
         }
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_fork_and_exec_empty_params() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -653,6 +781,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_fork_and_exec() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
@@ -668,6 +797,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_fork_and_exec_with_env() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
@@ -689,6 +819,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_fork_and_exec_with_dir() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
@@ -711,6 +842,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_fork_and_exec_redirect_error_stream() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
@@ -727,6 +859,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_fork_and_exec_null_fds() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
@@ -743,6 +876,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
@@ -864,5 +998,124 @@ mod tests {
         );
         let result = extract_null_separated_strings(Some(&gc_ref));
         assert!(result.is_empty());
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close_handle_windows_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = close_handle_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "java/lang/ProcessImpl.closeHandle(J)Z",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_create_windows_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = create_windows_v8(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Object(None),
+                Value::Object(None),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "java/lang/ProcessImpl.create(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[JZ)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_get_exit_code_process_windows_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            get_exit_code_process_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "java/lang/ProcessImpl.getExitCodeProcess(J)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_get_still_active_windows_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = get_still_active_windows_v8(thread, Parameters::default()).await;
+        assert_eq!(
+            "java/lang/ProcessImpl.getStillActive()I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_is_process_alive_windows_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            is_process_alive_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "java/lang/ProcessImpl.isProcessAlive(J)Z",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_open_for_atomic_append_windows_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            open_for_atomic_append_windows_v8(thread, Parameters::new(vec![Value::Object(None)]))
+                .await;
+        assert_eq!(
+            "java/lang/ProcessImpl.openForAtomicAppend(Ljava/lang/String;)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_terminate_process_windows_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            terminate_process_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "java/lang/ProcessImpl.terminateProcess(J)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_wait_for_interruptibly_windows_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            wait_for_interruptibly_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "java/lang/ProcessImpl.waitForInterruptibly(J)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_wait_for_timeout_interruptibly_windows_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = wait_for_timeout_interruptibly_windows_v8(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "java/lang/ProcessImpl.waitForTimeoutInterruptibly(JJ)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

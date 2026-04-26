@@ -11,14 +11,14 @@ use std::sync::Arc;
 #[async_method]
 pub async fn get_ptr_for_constant<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _constant = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "apple.laf.JRSUIConstants.getPtrForConstant(I)J".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -26,7 +26,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_ptr_for_constant() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_ptr_for_constant(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_ptr_for_constant(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "apple.laf.JRSUIConstants.getPtrForConstant(I)J",
+            result.unwrap_err().to_string()
+        );
     }
 }

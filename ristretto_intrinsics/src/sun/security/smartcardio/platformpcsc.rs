@@ -14,14 +14,14 @@ use std::sync::Arc;
 #[async_method]
 pub async fn initialize<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _j_lib_name = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.security.smartcardio.PlatformPCSC.initialize(Ljava/lang/String;)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -29,7 +29,10 @@ mod tests {
     #[tokio::test]
     async fn test_initialize() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = initialize(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = initialize(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.security.smartcardio.PlatformPCSC.initialize(Ljava/lang/String;)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

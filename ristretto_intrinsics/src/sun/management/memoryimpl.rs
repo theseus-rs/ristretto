@@ -46,8 +46,9 @@ pub async fn get_memory_pools_0<T: Thread + 'static>(
 #[async_method]
 pub async fn get_memory_usage_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _heap = parameters.pop_bool()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.management.MemoryImpl.getMemoryUsage0(Z)Ljava/lang/management/MemoryUsage;"
             .to_string(),
@@ -59,14 +60,14 @@ pub async fn get_memory_usage_0<T: Thread + 'static>(
 #[async_method]
 pub async fn set_verbose_gc<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _value = parameters.pop_bool()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.management.MemoryImpl.setVerboseGC(Z)V".to_string())
             .into(),
     )
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,27 +76,39 @@ mod tests {
     async fn test_get_memory_managers_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_memory_managers_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.MemoryImpl.getMemoryManagers0()[Ljava/lang/management/MemoryManagerMXBean;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_memory_pools_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_memory_pools_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.management.MemoryImpl.getMemoryPools0()[Ljava/lang/management/MemoryPoolMXBean;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_memory_usage_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_memory_usage_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_memory_usage_0(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "sun.management.MemoryImpl.getMemoryUsage0(Z)Ljava/lang/management/MemoryUsage;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_set_verbose_gc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_verbose_gc(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = set_verbose_gc(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "sun.management.MemoryImpl.setVerboseGC(Z)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

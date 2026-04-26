@@ -117,22 +117,46 @@ pub async fn home_class_loader(java_home: &Path) -> Result<(PathBuf, String, Arc
 /// An error will be returned if the class loader cannot be created.
 #[cfg(not(target_family = "wasm"))]
 pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
+    let (os, arch) = util::host_os_arch();
+    version_class_loader_for_os(version, os, arch).await
+}
+
+/// Get a class loader for the given Java runtime version, targeting the specified OS and
+/// architecture. The archive is downloaded (if not already cached) and extracted under
+/// `~/.ristretto/<os>-<arch>/<version>` so distributions for different platforms
+/// do not collide with each other or with the host install.
+///
+/// `os` accepts `"macos"`, `"linux"`, `"alpine-linux"`, or `"windows"`. `arch` accepts `"x64"`,
+/// `"x86"`, or `"aarch64"`. This is intended for tests / tooling that need to inspect the JDK
+/// class library shipped for a non-host OS (for example, to verify intrinsic method coverage on
+/// every supported platform).
+///
+/// # Errors
+///
+/// An error will be returned if the class loader cannot be created.
+#[cfg(not(target_family = "wasm"))]
+pub async fn version_class_loader_for_os(
+    version: &str,
+    os: &str,
+    arch: &str,
+) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
     let mut version = version.to_string();
-    #[cfg(target_family = "wasm")]
-    let home_dir = env::current_dir().unwrap_or_default();
-    #[cfg(not(target_family = "wasm"))]
     let home_dir = env::home_dir().unwrap_or_else(|| env::current_dir().unwrap_or_default());
 
-    let base_path = home_dir.join(".ristretto");
+    let base_path = home_dir.join(".ristretto").join(format!("{os}-{arch}"));
     let mut installation_dir = base_path.join(&version);
     if !installation_dir.exists() {
-        let (extracted_version, file_name, archive) = util::get_runtime_archive(&version).await?;
+        let (extracted_version, file_name, archive) =
+            util::get_runtime_archive_for(&version, os, arch).await?;
         installation_dir = extract_archive(&version, &file_name, &archive, &base_path).await?;
         version = extracted_version;
     }
 
-    #[cfg(target_os = "macos")]
-    let installation_dir = installation_dir.join("Contents").join("Home");
+    let installation_dir = if os == "macos" {
+        installation_dir.join("Contents").join("Home")
+    } else {
+        installation_dir
+    };
 
     let class_path = get_class_path(&version, &installation_dir)?;
     let class_loader = ClassLoader::new("bootstrap", class_path);

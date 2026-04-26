@@ -15,14 +15,14 @@ use std::sync::Arc;
 #[async_method]
 pub async fn native_get_bounds<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.awt.CGraphicsConfig.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -30,7 +30,10 @@ mod tests {
     #[tokio::test]
     async fn test_native_get_bounds() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = native_get_bounds(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = native_get_bounds(thread, Parameters::new(vec![Value::Int(0)])).await;
+        assert_eq!(
+            "sun.awt.CGraphicsConfig.nativeGetBounds(I)Ljava/awt/geom/Rectangle2D;",
+            result.unwrap_err().to_string()
+        );
     }
 }

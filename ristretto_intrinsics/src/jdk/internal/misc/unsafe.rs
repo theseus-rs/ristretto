@@ -859,9 +859,10 @@ pub async fn define_class_0<T: Thread + 'static>(
     Ok(Some(class_object))
 }
 
+#[cfg(any())]
 #[intrinsic_method(
     "jdk/internal/misc/Unsafe.defineHiddenClass(Ljava/lang/String;[BIILjava/lang/ClassLoader;Ljava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",
-    GreaterThan(JAVA_11)
+    Any
 )]
 #[async_method]
 pub async fn define_hidden_class<T: Thread + 'static>(

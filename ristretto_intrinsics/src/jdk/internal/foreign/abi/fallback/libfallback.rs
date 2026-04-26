@@ -1,5 +1,6 @@
 use ristretto_classfile::JAVA_21;
-use ristretto_classfile::VersionSpecification::{GreaterThan, GreaterThanOrEqual, LessThanOrEqual};
+use ristretto_classfile::VersionSpecification::Equal;
+use ristretto_classfile::VersionSpecification::{GreaterThan, GreaterThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -45,8 +46,11 @@ pub async fn alignof_long_long<T: Thread + 'static>(
 #[async_method]
 pub async fn create_closure<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _jptrs = parameters.pop_reference()?;
+    let _upcall_data = parameters.pop_reference()?;
+    let _cif = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.foreign.abi.fallback.LibFallback.createClosure(JLjava/lang/Object;[J)I"
             .to_string(),
@@ -56,13 +60,19 @@ pub async fn create_closure<T: Thread + 'static>(
 
 #[intrinsic_method(
     "jdk/internal/foreign/abi/fallback/LibFallback.doDowncall(JJJJJI)V",
-    LessThanOrEqual(JAVA_21)
+    Equal(JAVA_21)
 )]
 #[async_method]
 pub async fn do_downcall_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _captured_state_mask = parameters.pop_int()?;
+    let _captured_state = parameters.pop_long()?;
+    let _avalues = parameters.pop_long()?;
+    let _rvalue = parameters.pop_long()?;
+    let _fn_ = parameters.pop_long()?;
+    let _cif = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJJI)V".to_string(),
     )
@@ -76,8 +86,17 @@ pub async fn do_downcall_0<T: Thread + 'static>(
 #[async_method]
 pub async fn do_downcall_1<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _num_args = parameters.pop_int()?;
+    let _heap_bases = parameters.pop_reference()?;
+    let _captured_state_mask = parameters.pop_int()?;
+    let _captured_state_offset = parameters.pop_long()?;
+    let _capture_state_heap_base = parameters.pop_reference()?;
+    let _avalues = parameters.pop_long()?;
+    let _rvalue = parameters.pop_long()?;
+    let _fn_ = parameters.pop_long()?;
+    let _cif = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJLjava/lang/Object;JI[Ljava/lang/Object;I)V".to_string()).into())
 }
 
@@ -103,8 +122,11 @@ pub async fn ffi_default_abi<T: Thread + 'static>(
 #[async_method]
 pub async fn ffi_get_struct_offsets<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _offsets = parameters.pop_long()?;
+    let _type_ = parameters.pop_long()?;
+    let _abi = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.foreign.abi.fallback.LibFallback.ffi_get_struct_offsets(IJJ)I".to_string(),
     )
@@ -118,8 +140,13 @@ pub async fn ffi_get_struct_offsets<T: Thread + 'static>(
 #[async_method]
 pub async fn ffi_prep_cif<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _atypes = parameters.pop_long()?;
+    let _rtype = parameters.pop_long()?;
+    let _nargs = parameters.pop_int()?;
+    let _abi = parameters.pop_int()?;
+    let _cif = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif(JIIJJ)I".to_string(),
     )
@@ -133,8 +160,14 @@ pub async fn ffi_prep_cif<T: Thread + 'static>(
 #[async_method]
 pub async fn ffi_prep_cif_var<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _atypes = parameters.pop_long()?;
+    let _rtype = parameters.pop_long()?;
+    let _ntotalargs = parameters.pop_int()?;
+    let _nfixedargs = parameters.pop_int()?;
+    let _abi = parameters.pop_int()?;
+    let _cif = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif_var(JIIIJJ)I".to_string(),
     )
@@ -403,8 +436,10 @@ pub async fn ffi_type_void<T: Thread + 'static>(
 #[async_method]
 pub async fn free_closure<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _global_target = parameters.pop_long()?;
+    let _closure_address = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.foreign.abi.fallback.LibFallback.freeClosure(JJ)V".to_string(),
     )
@@ -437,7 +472,6 @@ pub async fn sizeof_cif<T: Thread + 'static>(
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -446,112 +480,218 @@ mod tests {
     async fn test_alignof_double() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = alignof_double(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.alignof_double()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_alignof_long_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = alignof_long_long(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.alignof_long_long()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_create_closure() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create_closure(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = create_closure(
+            thread,
+            Parameters::new(vec![
+                Value::Long(0),
+                Value::Object(None),
+                Value::Object(None),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.createClosure(JLjava/lang/Object;[J)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_do_downcall_0() {
         let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
-        let result = do_downcall_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = do_downcall_0(
+            thread,
+            Parameters::new(vec![
+                Value::Long(0),
+                Value::Long(0),
+                Value::Long(0),
+                Value::Long(0),
+                Value::Long(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJJI)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_do_downcall_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = do_downcall_1(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = do_downcall_1(
+            thread,
+            Parameters::new(vec![
+                Value::Long(0),
+                Value::Long(0),
+                Value::Long(0),
+                Value::Long(0),
+                Value::Object(None),
+                Value::Long(0),
+                Value::Int(0),
+                Value::Object(None),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.doDowncall(JJJJLjava/lang/Object;JI[Ljava/lang/Object;I)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_ffi_default_abi() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = ffi_default_abi(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_default_abi()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_ffi_get_struct_offsets() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = ffi_get_struct_offsets(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = ffi_get_struct_offsets(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Long(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_get_struct_offsets(IJJ)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_ffi_prep_cif() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = ffi_prep_cif(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = ffi_prep_cif(
+            thread,
+            Parameters::new(vec![
+                Value::Long(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Long(0),
+                Value::Long(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif(JIIJJ)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_ffi_prep_cif_var() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = ffi_prep_cif_var(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = ffi_prep_cif_var(
+            thread,
+            Parameters::new(vec![
+                Value::Long(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Long(0),
+                Value::Long(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_prep_cif_var(JIIIJJ)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_ffi_sizeof_int() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = ffi_sizeof_int(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_int()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_ffi_sizeof_long() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = ffi_sizeof_long(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_long()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_ffi_sizeof_short() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = ffi_sizeof_short(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_short()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_ffi_sizeof_wchar() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = ffi_sizeof_wchar(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_sizeof_wchar()I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_ffi_type_double() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = ffi_type_double(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_double()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_ffi_type_float() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = ffi_type_float(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_float()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_ffi_type_pointer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = ffi_type_pointer(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_pointer()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
@@ -586,7 +726,10 @@ mod tests {
     async fn test_ffi_type_struct() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = ffi_type_struct(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_struct()S",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
@@ -621,14 +764,24 @@ mod tests {
     async fn test_ffi_type_void() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = ffi_type_void(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.ffi_type_void()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_free_closure() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = free_closure(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = free_closure(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.freeClosure(JJ)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
@@ -643,6 +796,9 @@ mod tests {
     async fn test_sizeof_cif() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = sizeof_cif(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.foreign.abi.fallback.LibFallback.sizeofCif()J",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -40,11 +40,29 @@ static USER_AGENT: LazyLock<String> = LazyLock::new(|| {
 /// the version requirement is a `*`, the latest LTS release supported by the runtime will be
 /// returned.
 ///
+/// The archive is downloaded for the host OS / architecture.
+///
 /// # Errors
 ///
 /// An error will be returned if the request fails or if the version requirement is not supported.
 #[cfg(not(target_family = "wasm"))]
 pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String, Vec<u8>)> {
+    let (os, arch) = host_os_arch();
+    get_runtime_archive_for(version, os, arch).await
+}
+
+/// Get a runtime archive for the given version requirement and explicit OS / architecture. This is
+/// the cross-OS variant of [`get_runtime_archive`].
+///
+/// # Errors
+///
+/// An error will be returned if the request fails or if the version requirement is not supported.
+#[cfg(not(target_family = "wasm"))]
+pub(crate) async fn get_runtime_archive_for(
+    version: &str,
+    os: &str,
+    arch: &str,
+) -> Result<(String, String, Vec<u8>)> {
     let version = if version == "*" {
         DEFAULT_MAJOR_VERSION.to_string()
     } else {
@@ -59,7 +77,7 @@ pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String
 
     let version_parts = version.chars().filter(|&c| c == '.').count() + 1;
     if major_version == 8 && version_parts == 4 || version_parts == 5 {
-        let (file_name, archive) = download_archive(version).await?;
+        let (file_name, archive) = download_archive_for(version, os, arch).await?;
         return Ok((version.to_string(), file_name, archive));
     }
 
@@ -67,7 +85,7 @@ pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String
     let release_versions = get_release_versions(major_version.as_str()).await?;
     for release_version in release_versions {
         if release_version.starts_with(version) {
-            match download_archive(release_version.as_str()).await {
+            match download_archive_for(release_version.as_str(), os, arch).await {
                 Ok((file_name, archive)) => {
                     return Ok((release_version, file_name, archive));
                 }
@@ -81,34 +99,22 @@ pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String
     Err(Error::UnsupportedVersion(version.to_string()))
 }
 
-/// Download a runtime archive for the given version.
-///
-/// # Errors
-///
-/// An error will be returned if the request fails
+/// Determine the corretto OS/arch tuple for the host platform.
 #[cfg(not(target_family = "wasm"))]
-async fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
-    let client = Client::new();
-    let mut headers = header::HeaderMap::new();
-    headers.insert(
-        header::USER_AGENT,
-        header::HeaderValue::from_static(&USER_AGENT),
-    );
-
-    let (os, arch, extension) = match consts::OS {
+pub(crate) fn host_os_arch() -> (&'static str, &'static str) {
+    match consts::OS {
         "macos" => {
-            if consts::ARCH == "aarch64" {
-                ("macosx", "aarch64", ".tar.gz")
+            if consts::ARCH == "x64" {
+                ("macos", "x64")
             } else {
-                ("macosx", "x64", ".tar.gz")
+                ("macos", "aarch64")
             }
         }
         "windows" => {
-            let major_version = parse_major_version(version);
-            if consts::ARCH == "x86" && major_version <= 11 {
-                ("windows", "x86", "-jdk.zip")
+            if consts::ARCH == "x86" {
+                ("windows", "x86")
             } else {
-                ("windows", "x64", "-jdk.zip")
+                ("windows", "x64")
             }
         }
         _ => {
@@ -119,14 +125,68 @@ async fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
                 "linux"
             };
             if consts::ARCH == "aarch64" {
-                (os, "aarch64", ".tar.gz")
+                (os, "aarch64")
             } else {
-                (os, "x64", ".tar.gz")
+                (os, "x64")
             }
+        }
+    }
+}
+
+/// Download a runtime archive for the given version targeting the host OS / architecture.
+///
+/// # Errors
+///
+/// An error will be returned if the request fails
+#[cfg(not(target_family = "wasm"))]
+async fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
+    let (os, arch) = host_os_arch();
+    download_archive_for(version, os, arch).await
+}
+
+/// Download a runtime archive for the given version targeting the specified OS / architecture.
+///
+/// `os` is one of `"macos"`, `"linux"`, `"alpine-linux"`, or `"windows"`. `arch` is one of
+/// `"x64"`, `"x86"`, or `"aarch64"`. Note that internally `"macos"` is mapped to corretto's
+/// `"macosx"` directory name.
+///
+/// # Errors
+///
+/// An error will be returned if the request fails
+#[cfg(not(target_family = "wasm"))]
+pub(crate) async fn download_archive_for(
+    version: &str,
+    os: &str,
+    arch: &str,
+) -> Result<(String, Vec<u8>)> {
+    let client = Client::new();
+    let mut headers = header::HeaderMap::new();
+    headers.insert(
+        header::USER_AGENT,
+        header::HeaderValue::from_static(&USER_AGENT),
+    );
+
+    let (corretto_os, corretto_arch, extension) = match os {
+        "macos" => {
+            let arch = if arch == "x64" { "x64" } else { "aarch64" };
+            ("macosx", arch, ".tar.gz")
+        }
+        "windows" => {
+            let major_version = parse_major_version(version);
+            let arch = if arch == "x86" && major_version <= 11 {
+                "x86"
+            } else {
+                "x64"
+            };
+            ("windows", arch, "-jdk.zip")
+        }
+        _ => {
+            let arch = if arch == "aarch64" { "aarch64" } else { "x64" };
+            (os, arch, ".tar.gz")
         }
     };
 
-    let file_name = format!("amazon-corretto-{version}-{os}-{arch}{extension}");
+    let file_name = format!("amazon-corretto-{version}-{corretto_os}-{corretto_arch}{extension}");
     let url = format!("https://corretto.aws/downloads/resources/{version}/{file_name}");
     debug!("Downloading archive: {url}");
     let response = client

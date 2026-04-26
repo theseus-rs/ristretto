@@ -30,11 +30,11 @@ pub async fn get_vm_temporary_directory<T: Thread + 'static>(
 #[async_method]
 pub async fn init_agent_properties<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _props = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.vm.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -43,13 +43,20 @@ mod tests {
     async fn test_get_vm_temporary_directory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_vm_temporary_directory(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "jdk.internal.vm.VMSupport.getVMTemporaryDirectory()Ljava/lang/String;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_init_agent_properties() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_agent_properties(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            init_agent_properties(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "jdk.internal.vm.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;",
+            result.unwrap_err().to_string()
+        );
     }
 }

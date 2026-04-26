@@ -1,15 +1,22 @@
 use crate::java::io::socketfiledescriptor::get_fd;
+#[cfg(not(target_os = "windows"))]
 use ristretto_classfile::JAVA_21;
-use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
-use ristretto_classloader::{Reference, Value};
+use ristretto_classfile::VersionSpecification::Any;
+#[cfg(not(target_os = "windows"))]
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+#[cfg(not(target_os = "windows"))]
+use ristretto_classloader::Reference;
+use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
+#[cfg(not(target_os = "windows"))]
 use ristretto_types::handles::{SocketHandle, SocketType};
 use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/nio/ch/DatagramDispatcher.dup0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V",
     GreaterThanOrEqual(JAVA_21)
@@ -290,7 +297,7 @@ pub async fn writev_0<T: Thread + 'static>(
     Ok(Some(Value::Long(n as i64)))
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_family = "unix"))]
 mod tests {
     use super::*;
 

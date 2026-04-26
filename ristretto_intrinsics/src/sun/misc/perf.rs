@@ -15,8 +15,11 @@ use std::sync::Arc;
 #[async_method]
 pub async fn attach<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg2 = parameters.pop_int()?;
+    let _arg1 = parameters.pop_int()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.misc.Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;".to_string(),
     )
@@ -30,8 +33,13 @@ pub async fn attach<T: Thread + 'static>(
 #[async_method]
 pub async fn create_byte_array<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg4 = parameters.pop_int()?;
+    let _arg3 = parameters.pop_reference()?;
+    let _arg2 = parameters.pop_int()?;
+    let _arg1 = parameters.pop_int()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.misc.Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;".to_string(),
     )
@@ -45,8 +53,12 @@ pub async fn create_byte_array<T: Thread + 'static>(
 #[async_method]
 pub async fn create_long<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg3 = parameters.pop_long()?;
+    let _arg2 = parameters.pop_int()?;
+    let _arg1 = parameters.pop_int()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.misc.Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;".to_string(),
     )
@@ -60,8 +72,9 @@ pub async fn create_long<T: Thread + 'static>(
 #[async_method]
 pub async fn detach<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _bb = parameters.pop_reference()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.misc.Perf.detach(Ljava/nio/ByteBuffer;)V".to_string())
             .into(),
@@ -102,43 +115,84 @@ mod tests {
     #[tokio::test]
     async fn test_attach() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = attach(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = attach(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.misc.Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_create_byte_array() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = create_byte_array(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = create_byte_array(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Object(None),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.misc.Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_create_long() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = create_long(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = create_long(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Long(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.misc.Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_detach() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = detach(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = detach(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.misc.Perf.detach(Ljava/nio/ByteBuffer;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_high_res_counter() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = high_res_counter(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.misc.Perf.highResCounter()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_high_res_frequency() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result = high_res_frequency(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.misc.Perf.highResFrequency()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

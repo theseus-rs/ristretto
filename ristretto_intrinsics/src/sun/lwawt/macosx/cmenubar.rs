@@ -23,8 +23,10 @@ pub async fn native_create_menu_bar<T: Thread + 'static>(
 #[async_method]
 pub async fn native_del_menu<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _index = parameters.pop_int()?;
+    let _menu_bar_ptr = parameters.pop_long()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CMenuBar.nativeDelMenu(JI)V".to_string())
             .into(),
@@ -35,14 +37,15 @@ pub async fn native_del_menu<T: Thread + 'static>(
 #[async_method]
 pub async fn native_set_help_menu<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _menu_ptr = parameters.pop_long()?;
+    let _menu_bar_ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.lwawt.macosx.CMenuBar.nativeSetHelpMenu(JJ)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -51,20 +54,34 @@ mod tests {
     async fn test_native_create_menu_bar() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = native_create_menu_bar(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.lwawt.macosx.CMenuBar.nativeCreateMenuBar()J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_native_del_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_del_menu(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            native_del_menu(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+        assert_eq!(
+            "sun.lwawt.macosx.CMenuBar.nativeDelMenu(JI)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_native_set_help_menu() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_set_help_menu(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = native_set_help_menu(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.lwawt.macosx.CMenuBar.nativeSetHelpMenu(JJ)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

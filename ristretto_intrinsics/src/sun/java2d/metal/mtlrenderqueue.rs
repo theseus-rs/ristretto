@@ -15,14 +15,15 @@ use std::sync::Arc;
 #[async_method]
 pub async fn flush_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _limit = parameters.pop_int()?;
+    let _buf = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.java2d.metal.MTLRenderQueue.flushBuffer(JI)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -30,7 +31,11 @@ mod tests {
     #[tokio::test]
     async fn test_flush_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = flush_buffer(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            flush_buffer(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+        assert_eq!(
+            "sun.java2d.metal.MTLRenderQueue.flushBuffer(JI)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

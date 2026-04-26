@@ -53,8 +53,9 @@ pub async fn native_open_help_viewer<T: Thread + 'static>(
 #[async_method]
 pub async fn native_request_activation<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _all_windows = parameters.pop_bool()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.apple.eawt._AppMiscHandlers.nativeRequestActivation(Z)V".to_string(),
     )
@@ -65,14 +66,14 @@ pub async fn native_request_activation<T: Thread + 'static>(
 #[async_method]
 pub async fn native_request_user_attention<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _critical = parameters.pop_bool()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.apple.eawt._AppMiscHandlers.nativeRequestUserAttention(Z)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -81,34 +82,51 @@ mod tests {
     async fn test_native_disable_sudden_termination() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = native_disable_sudden_termination(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.apple.eawt._AppMiscHandlers.nativeDisableSuddenTermination()V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_native_enable_sudden_termination() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = native_enable_sudden_termination(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.apple.eawt._AppMiscHandlers.nativeEnableSuddenTermination()V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_native_open_help_viewer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = native_open_help_viewer(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "com.apple.eawt._AppMiscHandlers.nativeOpenHelpViewer()V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_native_request_activation() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_request_activation(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            native_request_activation(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "com.apple.eawt._AppMiscHandlers.nativeRequestActivation(Z)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_native_request_user_attention() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_request_user_attention(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            native_request_user_attention(thread, Parameters::new(vec![Value::from(false)])).await;
+        assert_eq!(
+            "com.apple.eawt._AppMiscHandlers.nativeRequestUserAttention(Z)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -12,14 +12,15 @@ use std::sync::Arc;
 #[async_method]
 pub async fn handle_0<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _handler = parameters.pop_long()?;
+    let _number = parameters.pop_int()?;
     Err(
         JavaError::UnsatisfiedLinkError("sun.misc.NativeSignalHandler.handle0(IJ)V".to_string())
             .into(),
     )
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -27,7 +28,10 @@ mod tests {
     #[tokio::test]
     async fn test_handle_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = handle_0(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = handle_0(thread, Parameters::new(vec![Value::Int(0), Value::Long(0)])).await;
+        assert_eq!(
+            "sun.misc.NativeSignalHandler.handle0(IJ)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

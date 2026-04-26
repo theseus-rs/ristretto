@@ -1,13 +1,14 @@
 use crate::java::lang::class::get_class;
 use crate::jdk::internal::misc::r#unsafe::STATIC_FIELD_OFFSET_MASK;
 use bitflags::bitflags;
+use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::{
     Any, Between, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{
-    Constant, ConstantPool, FieldAccessFlags, FieldType, JAVA_8, JAVA_11, JAVA_17, JAVA_21,
-    JavaStr, MethodAccessFlags, ReferenceKind,
+    Constant, ConstantPool, FieldAccessFlags, FieldType, JAVA_8, JAVA_11, JAVA_17, JavaStr,
+    MethodAccessFlags, ReferenceKind,
 };
 use ristretto_classloader::Error::IllegalAccessError;
 use ristretto_classloader::{Class, Method, Reference, Value};
@@ -68,7 +69,7 @@ bitflags! {
 
 #[intrinsic_method(
     "java/lang/invoke/MethodHandleNatives.clearCallSiteContext(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V",
-    Between(JAVA_11, JAVA_21)
+    Between(JAVA_11, JAVA_17)
 )]
 #[async_method]
 pub async fn clear_call_site_context<T: Thread + 'static>(
@@ -1845,7 +1846,7 @@ pub async fn resolve_0<T: Thread + 'static>(
 
 #[intrinsic_method(
     "java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;Z)Ljava/lang/invoke/MemberName;",
-    Any
+    Equal(JAVA_11)
 )]
 #[async_method]
 pub async fn resolve_1<T: Thread + 'static>(

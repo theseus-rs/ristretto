@@ -14,11 +14,16 @@ use std::sync::Arc;
 #[async_method]
 pub async fn draw_rect<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _h = parameters.pop_int()?;
+    let _w = parameters.pop_int()?;
+    let _y1 = parameters.pop_int()?;
+    let _x1 = parameters.pop_int()?;
+    let _dest = parameters.pop_reference()?;
+    let _sg2d = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.DrawRect.DrawRect(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IIII)V".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -26,7 +31,21 @@ mod tests {
     #[tokio::test]
     async fn test_draw_rect() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = draw_rect(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = draw_rect(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.java2d.loops.DrawRect.DrawRect(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IIII)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -1133,7 +1133,7 @@ pub async fn get_primitive_class<T: Thread + 'static>(
 
 #[intrinsic_method(
     "java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;",
-    Any
+    LessThanOrEqual(JAVA_21)
 )]
 #[async_method]
 pub async fn get_protection_domain_0<T: Thread + 'static>(

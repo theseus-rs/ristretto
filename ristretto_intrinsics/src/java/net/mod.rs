@@ -1,6 +1,10 @@
 pub mod abstractplaindatagramsocketimpl;
 pub mod abstractplainsocketimpl;
 pub mod datagrampacket;
+#[cfg(target_os = "windows")]
+pub mod dualstackplaindatagramsocketimpl;
+#[cfg(target_os = "windows")]
+pub mod dualstackplainsocketimpl;
 pub mod inet4address;
 pub mod inet4addressimpl;
 pub mod inet6address;
@@ -17,3 +21,7 @@ pub mod socketcleanable;
 pub mod socketinputstream;
 #[cfg(not(target_family = "wasm"))]
 pub mod socketoutputstream;
+#[cfg(target_os = "windows")]
+pub mod twostacksplaindatagramsocketimpl;
+#[cfg(target_os = "windows")]
+pub mod twostacksplainsocketimpl;

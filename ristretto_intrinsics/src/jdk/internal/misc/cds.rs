@@ -17,8 +17,10 @@ use tracing::debug;
 #[async_method]
 pub async fn define_archived_modules<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _system_loader = parameters.pop_reference()?;
+    let _platform_loader = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V".to_string()).into())
 }
 
@@ -29,8 +31,9 @@ pub async fn define_archived_modules<T: Thread + 'static>(
 #[async_method]
 pub async fn dump_class_list<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _file_name = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.misc.CDS.dumpClassList(Ljava/lang/String;)V".to_string(),
     )
@@ -44,8 +47,9 @@ pub async fn dump_class_list<T: Thread + 'static>(
 #[async_method]
 pub async fn dump_dynamic_archive<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _archive_name = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.misc.CDS.dumpDynamicArchive(Ljava/lang/String;)V".to_string(),
     )
@@ -149,13 +153,12 @@ pub async fn needs_class_init_barrier_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _class = parameters.pop_reference()?;
+    let _c = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "jdk.internal.misc.CDS.needsClassInitBarrier0(Ljava/lang/Class;)Z".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,22 +167,35 @@ mod tests {
     #[tokio::test]
     async fn test_define_archived_modules() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = define_archived_modules(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = define_archived_modules(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.misc.CDS.defineArchivedModules(Ljava/lang/ClassLoader;Ljava/lang/ClassLoader;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_dump_class_list() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dump_class_list(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = dump_class_list(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "jdk.internal.misc.CDS.dumpClassList(Ljava/lang/String;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_dump_dynamic_archive() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dump_dynamic_archive(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = dump_dynamic_archive(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "jdk.internal.misc.CDS.dumpDynamicArchive(Ljava/lang/String;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
@@ -247,8 +263,11 @@ mod tests {
     #[tokio::test]
     async fn test_needs_class_init_barrier_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let parameters = Parameters::new(vec![Value::Object(None)]);
-        let result = needs_class_init_barrier_0(thread, parameters).await;
-        assert!(result.is_err());
+        let result =
+            needs_class_init_barrier_0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "jdk.internal.misc.CDS.needsClassInitBarrier0(Ljava/lang/Class;)Z",
+            result.unwrap_err().to_string()
+        );
     }
 }

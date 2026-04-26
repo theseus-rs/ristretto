@@ -1,46 +1,13 @@
-use bitflags::bitflags;
-#[cfg(not(target_family = "wasm"))]
-use filetime::{FileTime, set_file_mtime};
+use crate::java::io::filesystem;
+pub use crate::java::io::filesystem::{BooleanAttributeFlags, FileAccessMode};
 use ristretto_classfile::VersionSpecification::{
     Any, GreaterThan, GreaterThanOrEqual, LessThanOrEqual,
 };
 use ristretto_classfile::{JAVA_11, JAVA_17};
-use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
-use ristretto_macros::intrinsic_method;
-#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
-use ristretto_types::JavaError::RuntimeException;
-use ristretto_types::Parameters;
-use ristretto_types::Thread;
-use ristretto_types::VM;
-use ristretto_types::{JavaObject, Result};
-#[cfg(target_family = "unix")]
-use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use ristretto_classloader::Value;
+use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_types::{Parameters, Result, Thread};
 use std::sync::Arc;
-#[cfg(not(target_family = "wasm"))]
-use sysinfo::Disks;
-
-bitflags! {
-    /// Boolean Attribute Flags.
-    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-    pub struct BooleanAttributeFlags: i32 {
-        const EXISTS = 0x01;
-        const REGULAR = 0x02;
-        const DIRECTORY = 0x04;
-        const HIDDEN = 0x08;
-    }
-}
-
-bitflags! {
-    /// File access mode flags per java.io.FileSystem.
-    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-    pub struct FileAccessMode: i32 {
-        const EXECUTE = 0x01;
-        const WRITE = 0x02;
-        const READ = 0x04;
-    }
-}
 
 #[intrinsic_method(
     "java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;",
@@ -49,64 +16,9 @@ bitflags! {
 #[async_method]
 pub async fn canonicalize_0<T: Thread + 'static>(
     thread: Arc<T>,
-    mut parameters: Parameters,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let path = parameters.pop()?.as_string()?;
-    let canonical_path: String;
-
-    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-    {
-        // In WebAssembly, we cannot access the filesystem directly, so we return the path as is.
-        canonical_path = path;
-    }
-
-    #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
-    {
-        let path = PathBuf::from(&path);
-        canonical_path = canonicalize_best_effort(&path);
-    }
-
-    let canonical = canonical_path.to_object(&thread).await?;
-    Ok(Some(canonical))
-}
-
-/// Canonicalize a path, even when it (or some of its ancestors) do not exist.
-///
-/// This mirrors the behavior of `java.io.File#getCanonicalPath()`, which resolves symlinks for
-/// the longest existing prefix and then normalizes the remaining components without requiring
-/// them to exist on disk.
-#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
-pub(crate) fn canonicalize_best_effort(path: &Path) -> String {
-    let absolute = if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        std::env::current_dir().map_or_else(|_| path.to_path_buf(), |cwd| cwd.join(path))
-    };
-
-    let mut existing = absolute.clone();
-    let mut trailing: Vec<std::ffi::OsString> = Vec::new();
-    while !existing.as_os_str().is_empty() && !existing.exists() {
-        let file_name = match existing.file_name() {
-            Some(name) => name.to_os_string(),
-            None => break,
-        };
-        trailing.push(file_name);
-        if !existing.pop() {
-            break;
-        }
-    }
-
-    let base = existing.canonicalize().unwrap_or_else(|_| existing.clone());
-    let mut result = base;
-    for component in trailing.into_iter().rev() {
-        if component == std::ffi::OsStr::new("..") {
-            result.pop();
-        } else if component != std::ffi::OsStr::new(".") {
-            result.push(component);
-        }
-    }
-
-    result.to_string_lossy().to_string()
+    filesystem::canonicalize(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -118,7 +30,7 @@ pub async fn check_access<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    check_access_0(thread, parameters).await
+    filesystem::check_access(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -127,43 +39,10 @@ pub async fn check_access<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn check_access_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let access_mode = FileAccessMode::from_bits_truncate(parameters.pop_int()?);
-    let file = parameters.pop()?;
-    let file = file.as_object_ref()?;
-    let path = file.value("path")?.as_string()?;
-    let path = Path::new(&path);
-
-    let Ok(metadata) = path.metadata() else {
-        return Ok(Some(Value::from(false)));
-    };
-
-    #[cfg(target_family = "unix")]
-    let (can_read, can_write, can_execute) = {
-        let mode = metadata.permissions().mode();
-        // Check if any read bit is set (owner, group, or other)
-        let can_read = mode & 0o444 != 0;
-        // Check if any write bit is set
-        let can_write = mode & 0o222 != 0;
-        // Check if any execute bit is set
-        let can_execute = mode & 0o111 != 0;
-        (can_read, can_write, can_execute)
-    };
-    #[cfg(not(unix))]
-    let (can_read, can_write, can_execute) = {
-        let readonly = metadata.permissions().readonly();
-        // On non-Unix, use readonly flag for write permission
-        // and assume read/execute are always available
-        (true, !readonly, true)
-    };
-
-    let allowed = (!access_mode.contains(FileAccessMode::READ) || can_read)
-        && (!access_mode.contains(FileAccessMode::WRITE) || can_write)
-        && (!access_mode.contains(FileAccessMode::EXECUTE) || can_execute);
-
-    Ok(Some(Value::from(allowed)))
+    filesystem::check_access(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -175,7 +54,7 @@ pub async fn create_directory<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    create_directory_0(thread, parameters).await
+    filesystem::create_directory(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -184,35 +63,10 @@ pub async fn create_directory<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn create_directory_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop()?;
-    let path = {
-        let file = file.as_object_ref()?;
-        file.value("path")?.as_string()?
-    };
-    let created: bool;
-
-    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-    {
-        let _ = path;
-        created = false;
-    }
-
-    #[cfg(target_os = "wasi")]
-    {
-        let path = PathBuf::from(&path);
-        created = std::fs::create_dir(&path).is_ok();
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    {
-        let path = PathBuf::from(&path);
-        created = tokio::fs::create_dir(&path).await.is_ok();
-    }
-
-    Ok(Some(Value::from(created)))
+    filesystem::create_directory(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -224,7 +78,7 @@ pub async fn create_file_exclusively<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    create_file_exclusively_0(thread, parameters).await
+    filesystem::create_file_exclusively(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -233,107 +87,28 @@ pub async fn create_file_exclusively<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn create_file_exclusively_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let path = parameters.pop()?.as_string()?;
-    let created: bool;
-
-    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-    {
-        let _ = path;
-        created = false;
-    }
-
-    #[cfg(target_os = "wasi")]
-    {
-        created = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&path)
-            .is_ok();
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    {
-        created = tokio::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&path)
-            .await
-            .is_ok();
-    }
-
-    Ok(Some(Value::from(created)))
+    filesystem::create_file_exclusively(thread, parameters).await
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.delete0(Ljava/io/File;)Z", Any)]
 #[async_method]
 pub async fn delete_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop()?;
-    let path = {
-        let file = file.as_object_ref()?;
-        file.value("path")?.as_string()?
-    };
-    let deleted: bool;
-
-    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-    {
-        let _ = path;
-        deleted = false;
-    }
-
-    #[cfg(target_os = "wasi")]
-    {
-        let path = PathBuf::from(&path);
-        deleted = std::fs::remove_file(&path)
-            .or_else(|_| std::fs::remove_dir(&path))
-            .is_ok();
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    {
-        let path = PathBuf::from(&path);
-        deleted = tokio::fs::remove_file(&path)
-            .await
-            .or(tokio::fs::remove_dir(&path).await)
-            .is_ok();
-    }
-
-    Ok(Some(Value::from(deleted)))
+    filesystem::delete(thread, parameters).await
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.getBooleanAttributes0(Ljava/io/File;)I", Any)]
 #[async_method]
 pub async fn get_boolean_attributes_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop()?;
-    let file = file.as_object_ref()?;
-    let path = file.value("path")?.as_string()?;
-    let path = PathBuf::from(path);
-    let mut attributes = if path.exists() {
-        BooleanAttributeFlags::EXISTS
-    } else {
-        BooleanAttributeFlags::empty()
-    };
-    if path.is_file() {
-        attributes |= BooleanAttributeFlags::REGULAR;
-    }
-    if path.is_dir() {
-        attributes |= BooleanAttributeFlags::DIRECTORY;
-    }
-    if path
-        .file_name()
-        .is_some_and(|name| name.to_string_lossy().starts_with('.'))
-    {
-        attributes |= BooleanAttributeFlags::HIDDEN;
-    }
-    Ok(Some(Value::Int(attributes.bits())))
+    filesystem::get_boolean_attributes(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -345,7 +120,7 @@ pub async fn get_last_modified_time<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_last_modified_time_0(thread, parameters).await
+    filesystem::get_last_modified_time(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -354,53 +129,10 @@ pub async fn get_last_modified_time<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_last_modified_time_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop()?;
-    let path = {
-        let file = file.as_object_ref()?;
-        file.value("path")?.as_string()?
-    };
-    let last_modified: i64;
-
-    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-    {
-        let _ = path;
-        last_modified = 0;
-    }
-
-    #[cfg(target_os = "wasi")]
-    {
-        let path = PathBuf::from(&path);
-        last_modified = match std::fs::metadata(&path) {
-            Ok(metadata) => i64::try_from(
-                metadata
-                    .modified()?
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map_err(|error| RuntimeException(error.to_string()))?
-                    .as_millis(),
-            )?,
-            Err(_) => 0,
-        };
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    {
-        let path = PathBuf::from(&path);
-        last_modified = match tokio::fs::metadata(&path).await {
-            Ok(metadata) => i64::try_from(
-                metadata
-                    .modified()?
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map_err(|error| RuntimeException(error.to_string()))?
-                    .as_millis(),
-            )?,
-            Err(_) => 0,
-        };
-    }
-
-    Ok(Some(Value::Long(last_modified)))
+    filesystem::get_last_modified_time(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -412,7 +144,7 @@ pub async fn get_length<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_length_0(thread, parameters).await
+    filesystem::get_length(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -421,37 +153,10 @@ pub async fn get_length<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_length_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop()?;
-    let path = {
-        let file = file.as_object_ref()?;
-        file.value("path")?.as_string()?
-    };
-    let length: i64;
-
-    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-    {
-        let _ = path;
-        length = 0;
-    }
-
-    #[cfg(target_os = "wasi")]
-    {
-        let path = PathBuf::from(&path);
-        let metadata = std::fs::metadata(&path)?;
-        length = i64::try_from(metadata.len())?;
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    {
-        let path = PathBuf::from(&path);
-        let metadata = tokio::fs::metadata(&path).await?;
-        length = i64::try_from(metadata.len())?;
-    }
-
-    Ok(Some(Value::Long(length)))
+    filesystem::get_length(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -460,17 +165,10 @@ pub async fn get_length_0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_name_max_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _path = parameters.pop()?.as_string()?;
-
-    // The default on windows is 255 characters for the maximum filename length, but this can be
-    // extended to 32,767 characters when long paths are enabled.
-    // https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
-    let maximum_name_length = 255;
-
-    Ok(Some(Value::Long(maximum_name_length)))
+    filesystem::get_name_max(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -482,7 +180,7 @@ pub async fn get_space<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    get_space_0(thread, parameters).await
+    filesystem::get_space(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -491,43 +189,10 @@ pub async fn get_space<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_space_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let space_type = parameters.pop_int()?;
-    let file = parameters.pop()?;
-    let file = file.as_object_ref()?;
-    let path = file.value("path")?.as_string()?;
-    let path = PathBuf::from(path);
-    let result: i64;
-
-    #[cfg(target_family = "wasm")]
-    {
-        let _ = space_type;
-        let _ = path;
-        result = 0;
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    {
-        let disks = Disks::new_with_refreshed_list();
-        let disk = disks
-            .iter()
-            .find(|d| path.starts_with(d.mount_point()))
-            .or_else(|| disks.iter().find(|d| d.mount_point() == Path::new("/")));
-
-        result = if let Some(disk) = disk {
-            match space_type {
-                0 => i64::try_from(disk.total_space()).unwrap_or(i64::MAX), // 0: total
-                1 | 2 => i64::try_from(disk.available_space()).unwrap_or(i64::MAX), // 1: free | 2: usable
-                _ => 0,
-            }
-        } else {
-            0
-        };
-    }
-
-    Ok(Some(Value::Long(result)))
+    filesystem::get_space(thread, parameters).await
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.initIDs()V", Any)]
@@ -548,7 +213,7 @@ pub async fn list<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    list_0(thread, parameters).await
+    filesystem::list(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -558,103 +223,18 @@ pub async fn list<T: Thread + 'static>(
 #[async_method]
 pub async fn list_0<T: Thread + 'static>(
     thread: Arc<T>,
-    mut parameters: Parameters,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop()?;
-    let path = {
-        let file = file.as_object_ref()?;
-        file.value("path")?.as_string()?
-    };
-    let path = std::path::PathBuf::from(path);
-    let entries;
-
-    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-    {
-        let _ = path;
-        entries = Vec::<Value>::new();
-    }
-
-    #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
-    {
-        let mut path_entries = Vec::new();
-
-        #[cfg(target_os = "wasi")]
-        {
-            let Ok(read_directory) = std::fs::read_dir(&path) else {
-                return Ok(Some(Value::Object(None)));
-            };
-
-            for entry in read_directory {
-                if let Ok(entry) = entry
-                    && let Some(name) = entry.file_name().to_str()
-                {
-                    let entry_name = name.to_string().to_object(&thread).await?;
-                    path_entries.push(entry_name);
-                }
-            }
-        }
-
-        #[cfg(not(target_family = "wasm"))]
-        {
-            let Ok(read_directory) = tokio::fs::read_dir(&path).await else {
-                return Ok(Some(Value::Object(None)));
-            };
-            let mut directory = read_directory;
-            while let Ok(Some(entry)) = directory.next_entry().await {
-                if let Some(name) = entry.file_name().to_str() {
-                    let entry_name = name.to_string().to_object(&thread).await?;
-                    path_entries.push(entry_name);
-                }
-            }
-        }
-
-        entries = path_entries;
-    }
-
-    let class = thread.class("java.lang.String").await?;
-    let reference = Reference::try_from((class, entries))?;
-    let paths = Value::new_object(thread.vm()?.garbage_collector(), reference);
-    Ok(Some(paths))
+    filesystem::list(thread, parameters).await
 }
 
 #[intrinsic_method("java/io/UnixFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z", Any)]
 #[async_method]
 pub async fn rename_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let destination_file = parameters.pop()?;
-    let destination_path = {
-        let destination_file = destination_file.as_object_ref()?;
-        destination_file.value("path")?.as_string()?
-    };
-    let destination = std::path::PathBuf::from(destination_path);
-    let source_file = parameters.pop()?;
-    let source_path = {
-        let source_file = source_file.as_object_ref()?;
-        source_file.value("path")?.as_string()?
-    };
-    let source = std::path::PathBuf::from(source_path);
-    let success: bool;
-
-    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-    {
-        let _ = source;
-        let _ = destination;
-        success = false;
-    }
-
-    #[cfg(target_os = "wasi")]
-    {
-        success = std::fs::rename(&source, &destination).is_ok();
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    {
-        success = tokio::fs::rename(&source, &destination).await.is_ok();
-    }
-
-    Ok(Some(Value::from(success)))
+    filesystem::rename(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -666,7 +246,7 @@ pub async fn set_last_modified_time<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    set_last_modified_time_0(thread, parameters).await
+    filesystem::set_last_modified_time(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -675,32 +255,10 @@ pub async fn set_last_modified_time<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn set_last_modified_time_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let time = parameters.pop_long()?;
-    let file = parameters.pop()?;
-    let file = file.as_object_ref()?;
-    let path = file.value("path")?.as_string()?;
-    let path = PathBuf::from(path);
-    let modified: bool;
-
-    #[cfg(target_family = "wasm")]
-    {
-        let _ = time;
-        let _ = path;
-        modified = false;
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    {
-        let seconds = time.saturating_div(1000);
-        let nanoseconds = u32::try_from(time % 1000)?.saturating_mul(1_000_000);
-        let mtime = FileTime::from_unix_time(seconds, nanoseconds);
-        modified = set_file_mtime(&path, mtime).is_ok();
-    }
-
-    Ok(Some(Value::from(modified)))
+    filesystem::set_last_modified_time(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -712,7 +270,7 @@ pub async fn set_permission<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    set_permission_0(thread, parameters).await
+    filesystem::set_permission(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -721,94 +279,10 @@ pub async fn set_permission<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn set_permission_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let owner_only = parameters.pop_bool()?;
-    let enable = parameters.pop_bool()?;
-    let access = parameters.pop_int()?;
-    let file = parameters.pop()?;
-    let path = {
-        let file = file.as_object_ref()?;
-        file.value("path")?.as_string()?
-    };
-    let path = PathBuf::from(path);
-    let modified: bool;
-
-    #[cfg(target_family = "wasm")]
-    {
-        let _ = owner_only;
-        let _ = enable;
-        let _ = access;
-        let _ = path;
-        modified = false;
-    }
-
-    #[cfg(not(any(target_family = "wasm", target_family = "unix")))]
-    {
-        let _ = owner_only;
-        let metadata = tokio::fs::metadata(&path).await?;
-        let mut permissions = metadata.permissions();
-
-        match access {
-            1 => {
-                // write
-                permissions.set_readonly(!enable);
-                modified = tokio::fs::set_permissions(&path, permissions).await.is_ok();
-            }
-            0 | 2 => {
-                // read or execute
-                modified = true;
-            }
-            _ => modified = false,
-        }
-    }
-
-    #[cfg(target_family = "unix")]
-    {
-        let metadata = tokio::fs::metadata(&path).await?;
-        let mut permissions = metadata.permissions();
-        let mut mode = permissions.mode();
-
-        let (read_bit, write_bit, execute_bit) = if owner_only {
-            (0o400, 0o200, 0o100)
-        } else {
-            (0o444, 0o222, 0o111)
-        };
-
-        match access {
-            0 => {
-                // read
-                if enable {
-                    mode |= read_bit;
-                } else {
-                    mode &= !read_bit;
-                }
-            }
-            1 => {
-                // write
-                if enable {
-                    mode |= write_bit;
-                } else {
-                    mode &= !write_bit;
-                }
-            }
-            2 => {
-                // execute
-                if enable {
-                    mode |= execute_bit;
-                } else {
-                    mode &= !execute_bit;
-                }
-            }
-            _ => return Ok(Some(Value::from(false))),
-        }
-
-        permissions.set_mode(mode);
-        modified = tokio::fs::set_permissions(&path, permissions).await.is_ok();
-    }
-
-    Ok(Some(Value::from(modified)))
+    filesystem::set_permission(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -820,7 +294,7 @@ pub async fn set_read_only<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    set_read_only_0(thread, parameters).await
+    filesystem::set_read_only(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -829,45 +303,18 @@ pub async fn set_read_only<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn set_read_only_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file = parameters.pop()?;
-    let path = {
-        let file = file.as_object_ref()?;
-        file.value("path")?.as_string()?
-    };
-    let path = std::path::PathBuf::from(path);
-    let modified: bool;
-
-    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-    {
-        let _ = path;
-        modified = false;
-    }
-
-    #[cfg(target_os = "wasi")]
-    {
-        let metadata = std::fs::metadata(&path)?;
-        let mut permissions = metadata.permissions();
-        permissions.set_readonly(true);
-        modified = std::fs::set_permissions(&path, permissions).is_ok();
-    }
-
-    #[cfg(not(target_family = "wasm"))]
-    {
-        let metadata = tokio::fs::metadata(&path).await?;
-        let mut permissions = metadata.permissions();
-        permissions.set_readonly(true);
-        modified = tokio::fs::set_permissions(&path, permissions).await.is_ok();
-    }
-
-    Ok(Some(Value::from(modified)))
+    filesystem::set_read_only(thread, parameters).await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ristretto_types::JavaError::RuntimeException;
+    use ristretto_types::JavaObject;
+    use std::path::Path;
     use tempfile::NamedTempFile;
 
     async fn create_file<T: Thread + 'static>(

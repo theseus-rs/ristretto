@@ -30,5 +30,6 @@ pub mod system;
 pub mod thread;
 pub mod throwable;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(target_family = "unix")]
 pub mod unixprocess;
 pub mod virtualthread;

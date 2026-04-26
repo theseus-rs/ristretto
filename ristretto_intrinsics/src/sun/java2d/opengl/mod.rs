@@ -1,7 +1,12 @@
+#[cfg(target_os = "macos")]
 pub mod cglgraphicsconfig;
+#[cfg(target_os = "macos")]
 pub mod cgllayer;
+#[cfg(target_os = "macos")]
 pub mod cglsurfacedata;
+#[cfg(target_family = "unix")]
 pub mod glxgraphicsconfig;
+#[cfg(target_family = "unix")]
 pub mod glxsurfacedata;
 pub mod oglcontext;
 pub mod oglmaskfill;
@@ -9,3 +14,7 @@ pub mod oglrenderer;
 pub mod oglrenderqueue;
 pub mod oglsurfacedata;
 pub mod ogltextrenderer;
+#[cfg(target_os = "windows")]
+pub mod wglgraphicsconfig;
+#[cfg(target_os = "windows")]
+pub mod wglsurfacedata;

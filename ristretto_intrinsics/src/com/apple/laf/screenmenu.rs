@@ -14,8 +14,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn add_menu_listeners<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _native_menu = parameters.pop_long()?;
+    let _listener = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.apple.laf.ScreenMenu.addMenuListeners(Lcom/apple/laf/ScreenMenu;J)J".to_string(),
     )
@@ -26,14 +28,14 @@ pub async fn add_menu_listeners<T: Thread + 'static>(
 #[async_method]
 pub async fn remove_menu_listeners<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _model_ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError(
         "com.apple.laf.ScreenMenu.removeMenuListeners(J)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -41,14 +43,24 @@ mod tests {
     #[tokio::test]
     async fn test_add_menu_listeners() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = add_menu_listeners(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = add_menu_listeners(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "com.apple.laf.ScreenMenu.addMenuListeners(Lcom/apple/laf/ScreenMenu;J)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_remove_menu_listeners() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = remove_menu_listeners(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = remove_menu_listeners(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "com.apple.laf.ScreenMenu.removeMenuListeners(J)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

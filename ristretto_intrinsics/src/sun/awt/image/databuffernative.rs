@@ -14,8 +14,11 @@ use std::sync::Arc;
 #[async_method]
 pub async fn get_elem<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _s_data = parameters.pop_reference()?;
+    let _y = parameters.pop_int()?;
+    let _x = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.awt.image.DataBufferNative.getElem(IILsun/java2d/SurfaceData;)I".to_string(),
     )
@@ -29,14 +32,17 @@ pub async fn get_elem<T: Thread + 'static>(
 #[async_method]
 pub async fn set_elem<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _s_data = parameters.pop_reference()?;
+    let _val = parameters.pop_int()?;
+    let _y = parameters.pop_int()?;
+    let _x = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.awt.image.DataBufferNative.setElem(IIILsun/java2d/SurfaceData;)V".to_string(),
     )
     .into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -44,14 +50,33 @@ mod tests {
     #[tokio::test]
     async fn test_get_elem() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_elem(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_elem(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.awt.image.DataBufferNative.getElem(IILsun/java2d/SurfaceData;)I",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_set_elem() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_elem(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = set_elem(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Object(None),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.awt.image.DataBufferNative.setElem(IIILsun/java2d/SurfaceData;)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -15,8 +15,13 @@ use std::sync::Arc;
 #[async_method]
 pub async fn make_upcall_stub<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg4 = parameters.pop_long()?;
+    let _arg3 = parameters.pop_bool()?;
+    let _arg2 = parameters.pop_reference()?;
+    let _arg1 = parameters.pop_reference()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.foreign.abi.UpcallLinker.makeUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/UpcallLinker$CallRegs;ZJ)J".to_string()).into())
 }
 
@@ -39,8 +44,21 @@ mod tests {
     #[tokio::test]
     async fn test_make_upcall_stub() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = make_upcall_stub(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = make_upcall_stub(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Object(None),
+                Value::from(false),
+                Value::Long(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "jdk.internal.foreign.abi.UpcallLinker.makeUpcallStub(Ljava/lang/invoke/MethodHandle;Ljdk/internal/foreign/abi/ABIDescriptor;Ljdk/internal/foreign/abi/UpcallLinker$CallRegs;ZJ)J",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

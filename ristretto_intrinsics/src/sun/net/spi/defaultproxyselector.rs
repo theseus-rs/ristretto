@@ -15,8 +15,10 @@ use std::sync::Arc;
 #[async_method]
 pub async fn get_system_proxies<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _host = parameters.pop_reference()?;
+    let _proto = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.net.spi.DefaultProxySelector.getSystemProxies(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;".to_string()).into())
 }
 
@@ -27,8 +29,10 @@ pub async fn get_system_proxies<T: Thread + 'static>(
 #[async_method]
 pub async fn get_system_proxy<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _arg1 = parameters.pop_reference()?;
+    let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.net.spi.DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;".to_string()).into())
 }
 
@@ -48,15 +52,29 @@ mod tests {
     #[tokio::test]
     async fn test_get_system_proxies() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_system_proxies(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_system_proxies(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.net.spi.DefaultProxySelector.getSystemProxies(Ljava/lang/String;Ljava/lang/String;)[Ljava/net/Proxy;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_get_system_proxy() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = get_system_proxy(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = get_system_proxy(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun.net.spi.DefaultProxySelector.getSystemProxy(Ljava/lang/String;Ljava/lang/String;)Ljava/net/Proxy;",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]

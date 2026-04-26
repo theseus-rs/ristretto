@@ -11,8 +11,9 @@ use std::sync::Arc;
 #[async_method]
 pub async fn load_native_dir_fonts<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _filename = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError(
         "sun.font.CFontManager.loadNativeDirFonts(Ljava/lang/String;)V".to_string(),
     )
@@ -30,7 +31,6 @@ pub async fn load_native_fonts<T: Thread + 'static>(
             .into(),
     )
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -38,14 +38,21 @@ mod tests {
     #[tokio::test]
     async fn test_load_native_dir_fonts() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = load_native_dir_fonts(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result =
+            load_native_dir_fonts(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun.font.CFontManager.loadNativeDirFonts(Ljava/lang/String;)V",
+            result.unwrap_err().to_string()
+        );
     }
 
     #[tokio::test]
     async fn test_load_native_fonts() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = load_native_fonts(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        assert_eq!(
+            "sun.font.CFontManager.loadNativeFonts()V",
+            result.unwrap_err().to_string()
+        );
     }
 }

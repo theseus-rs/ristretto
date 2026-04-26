@@ -1,9 +1,15 @@
+use ristretto_classfile::JAVA_17;
 use ristretto_classfile::JAVA_21;
+use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::VersionSpecification::{Equal, LessThanOrEqual};
+use ristretto_classfile::{JAVA_8, JAVA_11};
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+#[cfg(target_os = "linux")]
+use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
@@ -36,10 +42,8 @@ unsafe fn cstr_field_to_bytes(ptr: *const libc::c_char) -> Vec<u8> {
 /// The native version caches `jfieldID`s used to populate `UnixMountEntry` instances and
 /// performs no other initialization. There is nothing equivalent for the intrinsic
 /// implementation, so this is a no-op.
-#[intrinsic_method(
-    "sun/nio/fs/LinuxNativeDispatcher.init()V",
-    GreaterThanOrEqual(JAVA_21)
-)]
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.init()V", Any)]
 #[async_method]
 pub async fn init<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -53,10 +57,8 @@ pub async fn init<T: Thread + 'static>(
 /// Opens the mount table file specified by `pathAddress` using the mode specified by
 /// `typeAddress` (both addresses point to NUL-terminated strings in native memory) and
 /// returns a `FILE *` cast to `long`. Throws a `UnixException` on failure.
-#[intrinsic_method(
-    "sun/nio/fs/LinuxNativeDispatcher.setmntent0(JJ)J",
-    GreaterThanOrEqual(JAVA_21)
-)]
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.setmntent0(JJ)J", Any)]
 #[async_method]
 pub async fn setmntent_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -96,9 +98,10 @@ pub async fn setmntent_0<T: Thread + 'static>(
 /// scratch buffer allocated by the JDK for `getmntent_r`; the intrinsic does not need it.
 /// Returns 0 on success or -1 at end-of-file. The native version returns -1 on out-of-memory
 /// when allocating Java byte arrays as well, but that does not apply to the intrinsic.
+#[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/fs/LinuxNativeDispatcher.getmntent0(JLsun/nio/fs/UnixMountEntry;JI)I",
-    GreaterThanOrEqual(JAVA_21)
+    Any
 )]
 #[async_method]
 pub async fn getmntent_0<T: Thread + 'static>(
@@ -176,10 +179,8 @@ fn unsafe_zeroed_mntent() -> libc::mntent {
 /// `LinuxNativeDispatcher.endmntent(J)V`
 ///
 /// Closes the mount file previously opened with `setmntent0`.
-#[intrinsic_method(
-    "sun/nio/fs/LinuxNativeDispatcher.endmntent(J)V",
-    GreaterThanOrEqual(JAVA_21)
-)]
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.endmntent(J)V", Any)]
 #[async_method]
 pub async fn endmntent<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -250,6 +251,242 @@ pub async fn direct_copy_0<T: Thread + 'static>(
     Ok(Some(Value::Int(IO_STATUS_UNSUPPORTED)))
 }
 
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn fgetxattr0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _value_len = parameters.pop_int()?;
+    let _value_adddress = parameters.pop_long()?;
+    let _name_address = parameters.pop_long()?;
+    let _filedes = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn flistxattr<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _size = parameters.pop_int()?;
+    let _list_address = parameters.pop_long()?;
+    let _filedes = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn fremovexattr0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _name_address = parameters.pop_long()?;
+    let _filedes = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn fsetxattr0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _value_len = parameters.pop_int()?;
+    let _value_adddress = parameters.pop_long()?;
+    let _name_address = parameters.pop_long()?;
+    let _filedes = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I", Equal(JAVA_8))]
+#[async_method]
+pub async fn getlinelen<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _stream = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/fs/LinuxNativeDispatcher.endmntent(J)V",
+    LessThanOrEqual(JAVA_17)
+)]
+#[async_method]
+pub async fn endmntent_linux_le_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _stream = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.endmntent(J)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn fgetxattr0_linux_le_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _value_len = parameters.pop_int()?;
+    let _value_adddress = parameters.pop_long()?;
+    let _name_address = parameters.pop_long()?;
+    let _filedes = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn flistxattr_linux_le_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _size = parameters.pop_int()?;
+    let _list_address = parameters.pop_long()?;
+    let _filedes = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn fremovexattr0_linux_le_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _name_address = parameters.pop_long()?;
+    let _filedes = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V",
+    LessThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn fsetxattr0_linux_le_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _value_len = parameters.pop_int()?;
+    let _value_adddress = parameters.pop_long()?;
+    let _name_address = parameters.pop_long()?;
+    let _filedes = parameters.pop_int()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I", Equal(JAVA_8))]
+#[async_method]
+pub async fn getlinelen_linux_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _stream = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/fs/LinuxNativeDispatcher.getmntent0(JLsun/nio/fs/UnixMountEntry;JI)I",
+    LessThanOrEqual(JAVA_17)
+)]
+#[async_method]
+pub async fn getmntent0_linux_le_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _buf_len = parameters.pop_int()?;
+    let _buffer = parameters.pop_long()?;
+    let _entry = parameters.pop_reference()?;
+    let _fp = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.getmntent0(JLsun/nio/fs/UnixMountEntry;JI)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.init()V", LessThanOrEqual(JAVA_17))]
+#[async_method]
+pub async fn init_linux_le_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Err(
+        JavaError::UnsatisfiedLinkError("sun/nio/fs/LinuxNativeDispatcher.init()V".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/fs/LinuxNativeDispatcher.setmntent0(JJ)J",
+    LessThanOrEqual(JAVA_17)
+)]
+#[async_method]
+pub async fn setmntent0_linux_le_v17<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _type_address = parameters.pop_long()?;
+    let _path_address = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/fs/LinuxNativeDispatcher.setmntent0(JJ)J".to_string(),
+    )
+    .into())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -431,5 +668,221 @@ mod tests {
 
         std::fs::remove_file(&path).ok();
         std::fs::remove_dir(&dir).ok();
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_fgetxattr0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = fgetxattr0(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Long(0),
+                Value::Long(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_flistxattr() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = flistxattr(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Long(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_fremovexattr0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            fremovexattr0(thread, Parameters::new(vec![Value::Int(0), Value::Long(0)])).await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_fsetxattr0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = fsetxattr0(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Long(0),
+                Value::Long(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_getlinelen() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = getlinelen(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_endmntent_linux_le_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = endmntent_linux_le_v17(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.endmntent(J)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_fgetxattr0_linux_le_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = fgetxattr0_linux_le_v11(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Long(0),
+                Value::Long(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_flistxattr_linux_le_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = flistxattr_linux_le_v11(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Long(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_fremovexattr0_linux_le_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = fremovexattr0_linux_le_v11(
+            thread,
+            Parameters::new(vec![Value::Int(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_fsetxattr0_linux_le_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = fsetxattr0_linux_le_v11(
+            thread,
+            Parameters::new(vec![
+                Value::Int(0),
+                Value::Long(0),
+                Value::Long(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_getlinelen_linux_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = getlinelen_linux_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_getmntent0_linux_le_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = getmntent0_linux_le_v17(
+            thread,
+            Parameters::new(vec![
+                Value::Long(0),
+                Value::Object(None),
+                Value::Long(0),
+                Value::Int(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.getmntent0(JLsun/nio/fs/UnixMountEntry;JI)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_init_linux_le_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = init_linux_le_v17(thread, Parameters::default()).await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.init()V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_setmntent0_linux_le_v17() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = setmntent0_linux_le_v17(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/fs/LinuxNativeDispatcher.setmntent0(JJ)J",
+            result.unwrap_err().to_string()
+        );
     }
 }

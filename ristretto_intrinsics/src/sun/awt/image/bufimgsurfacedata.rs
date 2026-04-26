@@ -26,11 +26,18 @@ pub async fn init_ids<T: Thread + 'static>(
 #[async_method]
 pub async fn init_raster<T: Thread + 'static>(
     _thread: Arc<T>,
-    _parameters: Parameters,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _icm = parameters.pop_reference()?;
+    let _scan_str = parameters.pop_int()?;
+    let _pix_str = parameters.pop_int()?;
+    let _height = parameters.pop_int()?;
+    let _width = parameters.pop_int()?;
+    let _bitoffset = parameters.pop_int()?;
+    let _offset = parameters.pop_int()?;
+    let _array = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.awt.image.BufImgSurfaceData.initRaster(Ljava/lang/Object;IIIIIILjava/awt/image/IndexColorModel;)V".to_string()).into())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -46,7 +53,23 @@ mod tests {
     #[tokio::test]
     async fn test_init_raster() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_raster(thread, Parameters::default()).await;
-        assert!(result.is_err());
+        let result = init_raster(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Int(0),
+                Value::Object(None),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun.awt.image.BufImgSurfaceData.initRaster(Ljava/lang/Object;IIIIIILjava/awt/image/IndexColorModel;)V",
+            result.unwrap_err().to_string()
+        );
     }
 }

@@ -1,19 +1,34 @@
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
 use crate::sun::nio::fs::managed_files;
-use ristretto_classfile::VersionSpecification::{
-    Any, Between, Equal, GreaterThanOrEqual, LessThanOrEqual,
-};
-use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
-use ristretto_classloader::{Reference, Value};
+#[cfg(target_os = "windows")]
+use ristretto_classfile::JAVA_8;
+#[cfg(not(target_family = "wasm"))]
+use ristretto_classfile::JAVA_11;
+#[cfg(target_os = "windows")]
+use ristretto_classfile::JAVA_25;
+#[cfg(not(target_os = "linux"))]
+use ristretto_classfile::VersionSpecification::Any;
+#[cfg(target_family = "unix")]
+use ristretto_classfile::VersionSpecification::Between;
+#[cfg(not(target_family = "wasm"))]
+use ristretto_classfile::VersionSpecification::Equal;
+use ristretto_classfile::VersionSpecification::{GreaterThanOrEqual, LessThanOrEqual};
+use ristretto_classfile::{JAVA_17, JAVA_21};
+#[cfg(target_family = "unix")]
+use ristretto_classloader::Reference;
+use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::io::SeekFrom;
 use std::sync::Arc;
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/nio/ch/FileDispatcherImpl.canTransferToFromOverlappedMap0()Z",
     Equal(JAVA_17)
@@ -51,6 +66,7 @@ pub async fn close_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/nio/ch/FileDispatcherImpl.closeIntFD(I)V",
     LessThanOrEqual(JAVA_17)
@@ -68,6 +84,7 @@ pub async fn close_int_fd<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/nio/ch/FileDispatcherImpl.dup0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;)V",
     Equal(JAVA_17)
@@ -99,6 +116,7 @@ pub async fn dup_0<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(not(target_os = "linux"))]
 #[intrinsic_method(
     "sun/nio/ch/FileDispatcherImpl.force0(Ljava/io/FileDescriptor;Z)I",
     Any
@@ -125,6 +143,34 @@ pub async fn force_0<T: Thread + 'static>(
     Ok(Some(Value::Int(0)))
 }
 
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.force0(Ljava/io/FileDescriptor;Z)I",
+    LessThanOrEqual(JAVA_17)
+)]
+#[async_method]
+pub async fn force_0_linux<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let metadata_only = parameters.pop_int()? != 0;
+    let fd_value = parameters.pop()?;
+    let vm = thread.vm()?;
+    let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
+    let file_handles = vm.file_handles();
+    if metadata_only {
+        managed_files::sync_data(file_handles, fd)
+            .await
+            .map_err(|e| InternalError(format!("force0: {e}")))?;
+    } else {
+        managed_files::sync_all(file_handles, fd)
+            .await
+            .map_err(|e| InternalError(format!("force0: {e}")))?;
+    }
+    Ok(Some(Value::Int(0)))
+}
+
+#[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/ch/FileDispatcherImpl.init()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn init<T: Thread + 'static>(
@@ -134,6 +180,7 @@ pub async fn init<T: Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/FileDispatcherImpl.init0()V", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
 pub async fn init_0<T: Thread + 'static>(
@@ -167,6 +214,7 @@ pub async fn lock_0<T: Thread + 'static>(
     Ok(Some(Value::Int(value)))
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/nio/ch/FileDispatcherImpl.preClose0(Ljava/io/FileDescriptor;)V",
     LessThanOrEqual(JAVA_17)
@@ -392,6 +440,7 @@ pub async fn seek_0<T: Thread + 'static>(
     Ok(Some(Value::Long(i64::try_from(result)?)))
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/nio/ch/FileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;)I",
     Between(JAVA_11, JAVA_17)
@@ -457,6 +506,7 @@ pub async fn truncate_0<T: Thread + 'static>(
     Ok(Some(Value::Int(0)))
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/nio/ch/FileDispatcherImpl.write0(Ljava/io/FileDescriptor;JI)I",
     LessThanOrEqual(JAVA_17)
@@ -486,6 +536,7 @@ pub async fn write_0<T: Thread + 'static>(
     }
 }
 
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/nio/ch/FileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JI)J",
     LessThanOrEqual(JAVA_17)
@@ -530,10 +581,585 @@ pub async fn writev_0<T: Thread + 'static>(
     Ok(Some(Value::Long(i64::try_from(n)?)))
 }
 
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.allocationGranularity0()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn allocation_granularity0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.allocationGranularity0()J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I",
+    Equal(JAVA_25)
+)]
+#[async_method]
+pub async fn available0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.closeByHandle(J)V", Equal(JAVA_8))]
+#[async_method]
+pub async fn close_by_handle<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.closeByHandle(J)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.duplicateHandle(J)J", Any)]
+#[async_method]
+pub async fn duplicate_handle<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _handle = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.duplicateHandle(J)J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z",
+    Equal(JAVA_25)
+)]
+#[async_method]
+pub async fn is_other0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn map0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _map_sync = parameters.pop_bool()?;
+    let _len = parameters.pop_long()?;
+    let _off = parameters.pop_long()?;
+    let _prot = parameters.pop_int()?;
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.maxDirectTransferSize0()I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn max_direct_transfer_size0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.maxDirectTransferSize0()I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;Ljava/nio/CharBuffer;)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn set_direct0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _buffer = parameters.pop_reference()?;
+    let _fd_obj = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;Ljava/nio/CharBuffer;)I"
+            .to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.transferFrom0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;JJZ)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn transfer_from0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _append = parameters.pop_bool()?;
+    let _count = parameters.pop_long()?;
+    let _position = parameters.pop_long()?;
+    let _dst_fdo = parameters.pop_reference()?;
+    let _src_fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/FileDispatcherImpl.transferFrom0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;JJZ)J".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.unmap0(JJ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn unmap0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _len = parameters.pop_long()?;
+    let _address = parameters.pop_long()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("sun/nio/ch/FileDispatcherImpl.unmap0(JJ)I".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.write0(Ljava/io/FileDescriptor;JIZ)I",
+    Any
+)]
+#[async_method]
+pub async fn write0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _append = parameters.pop_bool()?;
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.write0(Ljava/io/FileDescriptor;JIZ)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JIZ)J",
+    Any
+)]
+#[async_method]
+pub async fn writev0<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _append = parameters.pop_bool()?;
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JIZ)J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.allocationGranularity0()J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn allocation_granularity0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.allocationGranularity0()J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I",
+    Equal(JAVA_25)
+)]
+#[async_method]
+pub async fn available0_windows_v25<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.close0(Ljava/io/FileDescriptor;)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn close0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.close0(Ljava/io/FileDescriptor;)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.closeByHandle(J)V", Equal(JAVA_8))]
+#[async_method]
+pub async fn close_by_handle_windows_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _arg0 = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.closeByHandle(J)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.duplicateHandle(J)J", Any)]
+#[async_method]
+pub async fn duplicate_handle_windows<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _handle = parameters.pop_long()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.duplicateHandle(J)J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z",
+    Equal(JAVA_25)
+)]
+#[async_method]
+pub async fn is_other0_windows_v25<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn lock0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _shared = parameters.pop_bool()?;
+    let _size = parameters.pop_long()?;
+    let _pos = parameters.pop_long()?;
+    let _blocking = parameters.pop_bool()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn map0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _map_sync = parameters.pop_bool()?;
+    let _len = parameters.pop_long()?;
+    let _off = parameters.pop_long()?;
+    let _prot = parameters.pop_int()?;
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.maxDirectTransferSize0()I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn max_direct_transfer_size0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.maxDirectTransferSize0()I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn pread0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _position = parameters.pop_long()?;
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.pwrite0(Ljava/io/FileDescriptor;JIJ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn pwrite0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _position = parameters.pop_long()?;
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.pwrite0(Ljava/io/FileDescriptor;JIJ)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn read0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.readv0(Ljava/io/FileDescriptor;JI)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn readv0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.readv0(Ljava/io/FileDescriptor;JI)J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn release0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _size = parameters.pop_long()?;
+    let _pos = parameters.pop_long()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn seek0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _size = parameters.pop_long()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;Ljava/nio/CharBuffer;)I",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn set_direct0_windows_ge_v11<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _buffer = parameters.pop_reference()?;
+    let _fd_obj = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;Ljava/nio/CharBuffer;)I"
+            .to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn size0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "linux")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.transferFrom0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;JJZ)J",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn transfer_from0_linux_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _append = parameters.pop_bool()?;
+    let _count = parameters.pop_long()?;
+    let _position = parameters.pop_long()?;
+    let _dst_fdo = parameters.pop_reference()?;
+    let _src_fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/FileDispatcherImpl.transferFrom0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;JJZ)J".to_string()).into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn truncate0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _size = parameters.pop_long()?;
+    let _fd = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.unmap0(JJ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn unmap0_windows_ge_v21<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _len = parameters.pop_long()?;
+    let _address = parameters.pop_long()?;
+    Err(
+        JavaError::UnsatisfiedLinkError("sun/nio/ch/FileDispatcherImpl.unmap0(JJ)I".to_string())
+            .into(),
+    )
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.write0(Ljava/io/FileDescriptor;JIZ)I",
+    Any
+)]
+#[async_method]
+pub async fn write0_windows<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _append = parameters.pop_bool()?;
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.write0(Ljava/io/FileDescriptor;JIZ)I".to_string(),
+    )
+    .into())
+}
+#[cfg(target_os = "windows")]
+#[intrinsic_method(
+    "sun/nio/ch/FileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JIZ)J",
+    Any
+)]
+#[async_method]
+pub async fn writev0_windows<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let _append = parameters.pop_bool()?;
+    let _len = parameters.pop_int()?;
+    let _address = parameters.pop_long()?;
+    let _fdo = parameters.pop_reference()?;
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun/nio/ch/FileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JIZ)J".to_string(),
+    )
+    .into())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_can_transfer_to_from_overlapped_map_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -548,6 +1174,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_close_int_fd() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -556,6 +1183,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_dup_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -563,6 +1191,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(not(target_os = "linux"))]
     #[tokio::test]
     async fn test_force_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
@@ -570,6 +1199,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
@@ -578,6 +1208,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(target_os = "linux")]
     #[tokio::test]
     async fn test_init_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
@@ -593,6 +1224,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_pre_close_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -642,6 +1274,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_set_direct_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -672,6 +1305,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_write_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
@@ -679,10 +1313,529 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(target_family = "unix")]
     #[tokio::test]
     async fn test_writev_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = writev_0(thread, Parameters::default()).await;
         assert!(result.is_err());
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_allocation_granularity0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = allocation_granularity0(thread, Parameters::default()).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.allocationGranularity0()J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_available0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = available0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close_by_handle() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = close_by_handle(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.closeByHandle(J)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_duplicate_handle() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = duplicate_handle(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.duplicateHandle(J)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_is_other0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = is_other0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_map0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = map0(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Int(0),
+                Value::Long(0),
+                Value::Long(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_max_direct_transfer_size0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = max_direct_transfer_size0(thread, Parameters::default()).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.maxDirectTransferSize0()I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_set_direct0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set_direct0(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;Ljava/nio/CharBuffer;)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_transfer_from0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = transfer_from0(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Long(0),
+                Value::Long(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.transferFrom0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;JJZ)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_unmap0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = unmap0(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.unmap0(JJ)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_write0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = write0(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Long(0),
+                Value::Int(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.write0(Ljava/io/FileDescriptor;JIZ)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_writev0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = writev0(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Long(0),
+                Value::Int(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JIZ)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_allocation_granularity0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = allocation_granularity0_windows_ge_v21(thread, Parameters::default()).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.allocationGranularity0()J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_available0_windows_v25() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            available0_windows_v25(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.available0(Ljava/io/FileDescriptor;)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            close0_windows_ge_v21(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.close0(Ljava/io/FileDescriptor;)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close_by_handle_windows_v8() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            close_by_handle_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.closeByHandle(J)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_duplicate_handle_windows() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = duplicate_handle_windows(thread, Parameters::new(vec![Value::Long(0)])).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.duplicateHandle(J)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_is_other0_windows_v25() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result =
+            is_other0_windows_v25(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.isOther0(Ljava/io/FileDescriptor;)Z",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_lock0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = lock0_windows_ge_v21(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::from(false),
+                Value::Long(0),
+                Value::Long(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_map0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = map0_windows_ge_v21(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Int(0),
+                Value::Long(0),
+                Value::Long(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.map0(Ljava/io/FileDescriptor;IJJZ)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_max_direct_transfer_size0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = max_direct_transfer_size0_windows_ge_v21(thread, Parameters::default()).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.maxDirectTransferSize0()I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_pread0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = pread0_windows_ge_v21(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Long(0),
+                Value::Int(0),
+                Value::Long(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_pwrite0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = pwrite0_windows_ge_v21(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Long(0),
+                Value::Int(0),
+                Value::Long(0),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.pwrite0(Ljava/io/FileDescriptor;JIJ)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_read0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = read0_windows_ge_v21(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_readv0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = readv0_windows_ge_v21(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0), Value::Int(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.readv0(Ljava/io/FileDescriptor;JI)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_release0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = release0_windows_ge_v21(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_seek0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = seek0_windows_ge_v21(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_set_direct0_windows_ge_v11() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = set_direct0_windows_ge_v11(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Object(None)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.setDirect0(Ljava/io/FileDescriptor;Ljava/nio/CharBuffer;)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_size0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = size0_windows_ge_v21(thread, Parameters::new(vec![Value::Object(None)])).await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_transfer_from0_linux_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = transfer_from0_linux_ge_v21(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Object(None),
+                Value::Long(0),
+                Value::Long(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.transferFrom0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;JJZ)J",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_truncate0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = truncate0_windows_ge_v21(
+            thread,
+            Parameters::new(vec![Value::Object(None), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_unmap0_windows_ge_v21() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = unmap0_windows_ge_v21(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Long(0)]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.unmap0(JJ)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_write0_windows() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = write0_windows(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Long(0),
+                Value::Int(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.write0(Ljava/io/FileDescriptor;JIZ)I",
+            result.unwrap_err().to_string()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_writev0_windows() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = writev0_windows(
+            thread,
+            Parameters::new(vec![
+                Value::Object(None),
+                Value::Long(0),
+                Value::Int(0),
+                Value::from(false),
+            ]),
+        )
+        .await;
+        assert_eq!(
+            "sun/nio/ch/FileDispatcherImpl.writev0(Ljava/io/FileDescriptor;JIZ)J",
+            result.unwrap_err().to_string()
+        );
     }
 }

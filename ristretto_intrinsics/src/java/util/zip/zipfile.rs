@@ -164,7 +164,9 @@ pub async fn get_comment_bytes<T: Thread + 'static>(
     Ok(Some(Value::new_object(gc, reference)))
 }
 
-#[intrinsic_method("java/util/zip/ZipFile.getEntry(J[BZ)J", LessThanOrEqual(JAVA_8))]
+// Note: `getEntry(J[BZ)J` is not registered as an intrinsic because it is not present as a native
+// method in the supported JDK distributions; the public entry point is `getEntry(J[B)J` which
+// dispatches to this helper.
 #[async_method]
 pub async fn get_entry<T: Thread + 'static>(
     thread: Arc<T>,

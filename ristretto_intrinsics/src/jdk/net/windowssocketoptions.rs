@@ -1,14 +1,17 @@
+#[cfg(not(target_os = "windows"))]
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "jdk/net/WindowsSocketOptions.getIpDontFragment0(IZ)Z",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
 pub async fn get_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
@@ -20,9 +23,10 @@ pub async fn get_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
     Ok(Some(Value::from(false)))
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "jdk/net/WindowsSocketOptions.getTcpKeepAliveIntvl0(I)I",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn get_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
@@ -33,9 +37,10 @@ pub async fn get_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
     Ok(Some(Value::Int(1)))
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "jdk/net/WindowsSocketOptions.getTcpKeepAliveProbes0(I)I",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn get_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
@@ -46,9 +51,10 @@ pub async fn get_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
     Ok(Some(Value::Int(10)))
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "jdk/net/WindowsSocketOptions.getTcpKeepAliveTime0(I)I",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn get_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
@@ -59,9 +65,10 @@ pub async fn get_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
     Ok(Some(Value::Int(7200)))
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "jdk/net/WindowsSocketOptions.keepAliveOptionsSupported0()Z",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn keep_alive_options_supported_0<T: ristretto_types::Thread + 'static>(
@@ -71,9 +78,10 @@ pub async fn keep_alive_options_supported_0<T: ristretto_types::Thread + 'static
     Ok(Some(Value::from(true)))
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "jdk/net/WindowsSocketOptions.setIpDontFragment0(IZZ)V",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
 pub async fn set_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
@@ -86,9 +94,10 @@ pub async fn set_ip_dont_fragment_0<T: ristretto_types::Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "jdk/net/WindowsSocketOptions.setTcpKeepAliveIntvl0(II)V",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn set_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
@@ -100,9 +109,10 @@ pub async fn set_tcp_keep_alive_intvl_0<T: ristretto_types::Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "jdk/net/WindowsSocketOptions.setTcpKeepAliveProbes0(II)V",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn set_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
@@ -114,9 +124,10 @@ pub async fn set_tcp_keep_alive_probes_0<T: ristretto_types::Thread + 'static>(
     Ok(None)
 }
 
+#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "jdk/net/WindowsSocketOptions.setTcpKeepAliveTime0(II)V",
-    GreaterThanOrEqual(JAVA_11)
+    GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
 pub async fn set_tcp_keep_alive_time_0<T: ristretto_types::Thread + 'static>(
