@@ -132,6 +132,7 @@ pub async fn set_invalid<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/XSurfaceData.XCreateGC(J)J",
@@ -148,6 +149,7 @@ pub async fn xcreate_gc_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/XSurfaceData.XResetClip(J)V",
@@ -164,6 +166,7 @@ pub async fn xreset_clip_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/XSurfaceData.XSetClip(JIIIILsun/java2d/pipe/Region;)V",
@@ -185,6 +188,7 @@ pub async fn xset_clip_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/XSurfaceData.XSetGraphicsExposures(JZ)V",
@@ -202,6 +206,7 @@ pub async fn xset_graphics_exposures_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/XSurfaceData.flushNativeSurface()V",
@@ -217,6 +222,7 @@ pub async fn flush_native_surface_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/XSurfaceData.initOps(Lsun/awt/X11ComponentPeer;Lsun/awt/X11GraphicsConfig;I)V",
@@ -232,6 +238,7 @@ pub async fn init_ops_linux_ge_v11<T: Thread + 'static>(
     let _peer = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/x11/XSurfaceData.initOps(Lsun/awt/X11ComponentPeer;Lsun/awt/X11GraphicsConfig;I)V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/XSurfaceData.isDrawableValid()Z",
@@ -247,6 +254,7 @@ pub async fn is_drawable_valid_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/XSurfaceData.setInvalid()V",
@@ -262,6 +270,7 @@ pub async fn set_invalid_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

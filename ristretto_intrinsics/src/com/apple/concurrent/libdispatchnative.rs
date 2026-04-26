@@ -122,6 +122,7 @@ pub async fn native_release_queue<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

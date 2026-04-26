@@ -23,6 +23,7 @@ pub async fn draw_path<T: Thread + 'static>(
     let _sg2d = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.DrawPath.DrawPath(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IILjava/awt/geom/Path2D$Float;)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -27,6 +27,7 @@ pub async fn draw_glyph_list<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -22,6 +22,7 @@ pub async fn derive_key<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

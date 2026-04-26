@@ -78,6 +78,7 @@ pub async fn native_set_dock_menu<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

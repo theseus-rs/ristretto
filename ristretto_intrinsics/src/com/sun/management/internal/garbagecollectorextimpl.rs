@@ -21,6 +21,7 @@ pub async fn set_notification_enabled<T: Thread + 'static>(
     let _gc = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com.sun.management.internal.GarbageCollectorExtImpl.setNotificationEnabled(Lcom/sun/management/GarbageCollectorMXBean;Z)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

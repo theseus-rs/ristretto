@@ -37,6 +37,7 @@ pub async fn get_data<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

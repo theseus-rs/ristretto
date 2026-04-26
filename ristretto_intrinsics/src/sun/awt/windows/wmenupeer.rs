@@ -58,6 +58,7 @@ pub async fn del_item<T: Thread + 'static>(
     let _index = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WMenuPeer.delItem(I)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -20,6 +20,7 @@ pub async fn invoke_native_dispose<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

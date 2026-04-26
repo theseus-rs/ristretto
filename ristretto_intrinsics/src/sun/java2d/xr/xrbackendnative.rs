@@ -572,6 +572,7 @@ pub async fn set_picture_repeat<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.GCRectanglesNative(IJ[II)V",
@@ -591,6 +592,7 @@ pub async fn gcrectangles_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.XRAddGlyphsNative(I[JI[BI)V",
@@ -611,6 +613,7 @@ pub async fn xradd_glyphs_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.XRCreateLinearGradientPaintNative([F[SIIIIII)I",
@@ -634,6 +637,7 @@ pub async fn xrcreate_linear_gradient_paint_native_linux_ge_v11<T: Thread + 'sta
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.XRCreateRadialGradientPaintNative([F[SIIIIII)I",
@@ -657,6 +661,7 @@ pub async fn xrcreate_radial_gradient_paint_native_linux_ge_v11<T: Thread + 'sta
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.XRFreeGlyphsNative(I[II)V",
@@ -675,6 +680,7 @@ pub async fn xrfree_glyphs_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.XRSetClipNative(JIIIILsun/java2d/pipe/Region;Z)V",
@@ -698,6 +704,7 @@ pub async fn xrset_clip_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.XRSetTransformNative(IIIIIII)V",
@@ -720,6 +727,7 @@ pub async fn xrset_transform_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.XRenderCompositeTextNative(IIIIIJ[I[III)V",
@@ -745,6 +753,7 @@ pub async fn xrender_composite_text_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.XRenderCreateGlyphSetNative(J)I",
@@ -761,6 +770,7 @@ pub async fn xrender_create_glyph_set_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.XRenderRectanglesNative(IBSSSS[II)V",
@@ -784,6 +794,7 @@ pub async fn xrender_rectangles_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.copyArea(IIJIIIIII)V",
@@ -808,6 +819,7 @@ pub async fn copy_area_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.createGC(I)J",
@@ -824,6 +836,7 @@ pub async fn create_gc_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.createPictureNative(IJ)I",
@@ -841,6 +854,7 @@ pub async fn create_picture_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.createPixmap(IIII)I",
@@ -860,6 +874,7 @@ pub async fn create_pixmap_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.freeGC(J)V",
@@ -876,6 +891,7 @@ pub async fn free_gc_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.freePicture(I)V",
@@ -892,6 +908,7 @@ pub async fn free_picture_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.freePixmap(I)V",
@@ -908,6 +925,7 @@ pub async fn free_pixmap_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.initIDs()V",
@@ -923,6 +941,7 @@ pub async fn init_ids_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.padBlitNative(BIIIIIIIIIIIIIIIIIII)V",
@@ -958,6 +977,7 @@ pub async fn pad_blit_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.putMaskNative(IJ[BIIIIIIIIFJ)V",
@@ -986,6 +1006,7 @@ pub async fn put_mask_native_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.renderComposite(BIIIIIIIIIII)V",
@@ -1013,6 +1034,7 @@ pub async fn render_composite_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.renderRectangle(IBSSSSIIII)V",
@@ -1038,6 +1060,7 @@ pub async fn render_rectangle_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.setFilter(II)V",
@@ -1055,6 +1078,7 @@ pub async fn set_filter_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.setGCExposures(JZ)V",
@@ -1072,6 +1096,7 @@ pub async fn set_gcexposures_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.setGCForeground(JI)V",
@@ -1089,6 +1114,7 @@ pub async fn set_gcforeground_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.setGCMode(JZ)V",
@@ -1106,6 +1132,7 @@ pub async fn set_gcmode_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRBackendNative.setPictureRepeat(II)V",
@@ -1123,6 +1150,7 @@ pub async fn set_picture_repeat_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

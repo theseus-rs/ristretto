@@ -247,6 +247,7 @@ pub async fn wait_for_new_connection<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

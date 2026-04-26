@@ -122,6 +122,7 @@ pub async fn verify_signed_hash<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -264,6 +264,7 @@ pub async fn do_shape<T: Thread + 'static>(
     let _s_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIRenderer.doShape(Lsun/java2d/windows/GDIWindowSurfaceData;Lsun/java2d/pipe/Region;Ljava/awt/Composite;IIILjava/awt/geom/Path2D$Float;Z)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

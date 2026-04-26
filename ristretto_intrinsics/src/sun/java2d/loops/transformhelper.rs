@@ -36,6 +36,7 @@ pub async fn transform<T: Thread + 'static>(
     let _output = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.TransformHelper.Transform(Lsun/java2d/loops/MaskBlit;Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;Ljava/awt/geom/AffineTransform;IIIIIIIII[III)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

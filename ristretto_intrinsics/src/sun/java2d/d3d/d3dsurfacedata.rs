@@ -121,6 +121,7 @@ pub async fn update_window_accel_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

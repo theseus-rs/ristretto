@@ -147,6 +147,7 @@ pub async fn setup<T: Thread + 'static>(
     let _number_of_buttons = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XRobotPeer.setup(I[I)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

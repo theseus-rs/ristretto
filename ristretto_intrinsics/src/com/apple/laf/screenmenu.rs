@@ -36,6 +36,7 @@ pub async fn remove_menu_listeners<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -270,6 +270,7 @@ pub async fn fgetxattr0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I",
@@ -288,6 +289,7 @@ pub async fn flistxattr<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V",
@@ -305,6 +307,7 @@ pub async fn fremovexattr0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V",
@@ -324,6 +327,7 @@ pub async fn fsetxattr0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I", Equal(JAVA_8))]
 #[async_method]
@@ -337,6 +341,7 @@ pub async fn getlinelen<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/fs/LinuxNativeDispatcher.endmntent(J)V",
@@ -353,6 +358,7 @@ pub async fn endmntent_linux_le_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I",
@@ -372,6 +378,7 @@ pub async fn fgetxattr0_linux_le_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I",
@@ -390,6 +397,7 @@ pub async fn flistxattr_linux_le_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V",
@@ -407,6 +415,7 @@ pub async fn fremovexattr0_linux_le_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V",
@@ -426,6 +435,7 @@ pub async fn fsetxattr0_linux_le_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I", Equal(JAVA_8))]
 #[async_method]
@@ -439,6 +449,7 @@ pub async fn getlinelen_linux_v8<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/fs/LinuxNativeDispatcher.getmntent0(JLsun/nio/fs/UnixMountEntry;JI)I",
@@ -458,6 +469,7 @@ pub async fn getmntent0_linux_le_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.init()V", LessThanOrEqual(JAVA_17))]
 #[async_method]
@@ -470,6 +482,7 @@ pub async fn init_linux_le_v17<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/fs/LinuxNativeDispatcher.setmntent0(JJ)J",
@@ -487,6 +500,7 @@ pub async fn setmntent0_linux_le_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

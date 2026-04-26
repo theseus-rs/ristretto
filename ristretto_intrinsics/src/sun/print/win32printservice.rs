@@ -197,6 +197,7 @@ pub async fn get_printer_port<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -41,6 +41,7 @@ pub async fn register_native_loops<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

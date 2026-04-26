@@ -373,6 +373,7 @@ pub async fn update_window_impl<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

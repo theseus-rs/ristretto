@@ -627,6 +627,7 @@ pub async fn validate_paper<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

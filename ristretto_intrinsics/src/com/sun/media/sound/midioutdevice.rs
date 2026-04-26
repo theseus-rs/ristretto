@@ -76,6 +76,7 @@ pub async fn n_send_short_message<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

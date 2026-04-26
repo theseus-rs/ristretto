@@ -81,6 +81,7 @@ pub async fn raise_0<T: Thread + 'static>(
     let _sig = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.misc.Signal.raise0(I)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -2102,6 +2102,7 @@ pub async fn memcpy<T: Thread + 'static>(
     let _dest_ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.memcpy(JJJ)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

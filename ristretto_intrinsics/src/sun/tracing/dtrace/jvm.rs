@@ -80,6 +80,7 @@ pub async fn is_supported_0<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

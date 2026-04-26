@@ -65,6 +65,7 @@ pub async fn supports_optimized_upcalls<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

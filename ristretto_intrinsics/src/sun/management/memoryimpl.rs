@@ -68,6 +68,7 @@ pub async fn set_verbose_gc<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

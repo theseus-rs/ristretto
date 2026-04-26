@@ -47,6 +47,7 @@ pub async fn get_cursor_width<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -96,6 +96,7 @@ pub async fn select<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

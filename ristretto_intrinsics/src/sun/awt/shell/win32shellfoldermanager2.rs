@@ -29,6 +29,7 @@ pub async fn uninitialize_com<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

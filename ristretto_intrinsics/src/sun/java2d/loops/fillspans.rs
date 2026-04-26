@@ -23,6 +23,7 @@ pub async fn fill_spans<T: Thread + 'static>(
     let _sg2d = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.FillSpans.FillSpans(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IJLsun/java2d/pipe/SpanIterator;)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

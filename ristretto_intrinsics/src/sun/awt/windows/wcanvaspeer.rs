@@ -35,6 +35,7 @@ pub async fn set_native_background_erase<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

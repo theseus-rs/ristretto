@@ -23,6 +23,7 @@ pub async fn native_get_bounds<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

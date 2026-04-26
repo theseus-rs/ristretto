@@ -26,6 +26,7 @@ pub async fn get_local_hostname<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

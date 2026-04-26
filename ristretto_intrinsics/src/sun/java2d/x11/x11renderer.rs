@@ -316,6 +316,7 @@ pub async fn dev_copy_area<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XDoPath(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V",
@@ -335,6 +336,7 @@ pub async fn xdo_path_linux_ge_v11<T: Thread + 'static>(
     let _sg2d = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/x11/X11Renderer.XDoPath(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XDrawArc(JJIIIIII)V",
@@ -358,6 +360,7 @@ pub async fn xdraw_arc_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XDrawLine(JJIIII)V",
@@ -379,6 +382,7 @@ pub async fn xdraw_line_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XDrawOval(JJIIII)V",
@@ -400,6 +404,7 @@ pub async fn xdraw_oval_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XDrawPoly(JJII[I[IIZ)V",
@@ -423,6 +428,7 @@ pub async fn xdraw_poly_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XDrawRect(JJIIII)V",
@@ -444,6 +450,7 @@ pub async fn xdraw_rect_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XDrawRoundRect(JJIIIIII)V",
@@ -467,6 +474,7 @@ pub async fn xdraw_round_rect_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XFillArc(JJIIIIII)V",
@@ -490,6 +498,7 @@ pub async fn xfill_arc_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XFillOval(JJIIII)V",
@@ -511,6 +520,7 @@ pub async fn xfill_oval_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XFillPoly(JJII[I[II)V",
@@ -533,6 +543,7 @@ pub async fn xfill_poly_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XFillRect(JJIIII)V",
@@ -554,6 +565,7 @@ pub async fn xfill_rect_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XFillRoundRect(JJIIIIII)V",
@@ -577,6 +589,7 @@ pub async fn xfill_round_rect_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.XFillSpans(JJLsun/java2d/pipe/SpanIterator;JII)V",
@@ -598,6 +611,7 @@ pub async fn xfill_spans_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11Renderer.devCopyArea(JJIIIIII)V",
@@ -621,6 +635,7 @@ pub async fn dev_copy_area_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

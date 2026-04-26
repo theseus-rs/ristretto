@@ -40,6 +40,7 @@ pub async fn parse_image<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

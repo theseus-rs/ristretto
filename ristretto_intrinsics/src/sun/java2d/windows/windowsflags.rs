@@ -18,6 +18,7 @@ pub async fn init_native_flags<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

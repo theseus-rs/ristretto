@@ -31,6 +31,7 @@ pub async fn do_draw_glyph_list<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/font/X11TextRenderer.doDrawGlyphList(JJLsun/java2d/pipe/Region;Lsun/font/GlyphList;)V",
@@ -51,6 +52,7 @@ pub async fn do_draw_glyph_list_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

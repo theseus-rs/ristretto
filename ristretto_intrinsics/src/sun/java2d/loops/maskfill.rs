@@ -72,6 +72,7 @@ pub async fn mask_fill<T: Thread + 'static>(
     let _sg2d = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.MaskFill.MaskFill(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;Ljava/awt/Composite;IIII[BII)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

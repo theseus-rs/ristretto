@@ -133,6 +133,7 @@ pub async fn set_string_value<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

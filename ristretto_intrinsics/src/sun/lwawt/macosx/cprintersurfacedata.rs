@@ -35,6 +35,7 @@ pub async fn init_ops<T: Thread + 'static>(
     let _ns_ref = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun.lwawt.macosx.CPrinterSurfaceData.initOps(JLjava/nio/ByteBuffer;[Ljava/lang/Object;II)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

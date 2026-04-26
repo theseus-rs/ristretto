@@ -378,6 +378,7 @@ pub async fn is_thread_cpu_time_enabled<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -72,6 +72,7 @@ pub async fn tesselate_stroke_native<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

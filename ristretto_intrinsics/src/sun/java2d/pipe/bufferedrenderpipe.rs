@@ -26,6 +26,7 @@ pub async fn fill_spans<T: Thread + 'static>(
     let _rq = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.pipe.BufferedRenderPipe.fillSpans(Lsun/java2d/pipe/RenderQueue;JIILsun/java2d/pipe/SpanIterator;JII)I".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

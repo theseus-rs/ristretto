@@ -39,6 +39,7 @@ pub async fn is_window_under_mouse<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

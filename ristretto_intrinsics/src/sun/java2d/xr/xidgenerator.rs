@@ -25,6 +25,7 @@ pub async fn buffer_x_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XIDGenerator.bufferXIDs([II)V",
@@ -42,6 +43,7 @@ pub async fn buffer_xids_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

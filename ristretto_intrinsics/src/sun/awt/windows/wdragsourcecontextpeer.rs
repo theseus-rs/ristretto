@@ -62,6 +62,7 @@ pub async fn set_native_cursor<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

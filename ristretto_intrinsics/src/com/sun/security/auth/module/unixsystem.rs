@@ -24,6 +24,7 @@ pub async fn get_unix_info<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "com/sun/security/auth/module/UnixSystem.getUnixInfo()V",
@@ -39,6 +40,7 @@ pub async fn get_unix_info_windows_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

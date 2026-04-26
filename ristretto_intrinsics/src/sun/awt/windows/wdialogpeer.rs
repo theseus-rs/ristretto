@@ -57,6 +57,7 @@ pub async fn show_modal<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

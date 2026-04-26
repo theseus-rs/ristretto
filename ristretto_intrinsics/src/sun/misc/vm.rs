@@ -31,6 +31,7 @@ pub async fn latest_user_defined_loader_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

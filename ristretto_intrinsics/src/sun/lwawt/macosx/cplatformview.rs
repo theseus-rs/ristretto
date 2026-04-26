@@ -80,6 +80,7 @@ pub async fn native_set_auto_resizable<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

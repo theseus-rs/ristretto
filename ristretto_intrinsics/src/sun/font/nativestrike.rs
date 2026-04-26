@@ -54,6 +54,7 @@ pub async fn get_max_glyph<T: Thread + 'static>(
     let _p_scaler_context = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun.font.NativeStrike.getMaxGlyph(J)I".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/font/NativeStrike.createNullScalerContext()J",
@@ -69,6 +70,7 @@ pub async fn create_null_scaler_context_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/font/NativeStrike.createScalerContext([BID)J",
@@ -87,6 +89,7 @@ pub async fn create_scaler_context_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/font/NativeStrike.getMaxGlyph(J)I", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -97,6 +100,7 @@ pub async fn get_max_glyph_linux_ge_v11<T: Thread + 'static>(
     let _p_scaler_context = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/font/NativeStrike.getMaxGlyph(J)I".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

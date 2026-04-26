@@ -442,6 +442,7 @@ pub async fn close0<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/nio/ch/SocketDispatcher.close0(Ljava/io/FileDescriptor;)V",
@@ -458,6 +459,7 @@ pub async fn close0_windows_le_v11_v1<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/nio/ch/SocketDispatcher.preClose0(Ljava/io/FileDescriptor;)V",
@@ -474,6 +476,7 @@ pub async fn pre_close0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/nio/ch/SocketDispatcher.close0(I)V", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
@@ -487,6 +490,7 @@ pub async fn close0_windows_ge_v17<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/nio/ch/SocketDispatcher.close0(Ljava/io/FileDescriptor;)V",
@@ -503,6 +507,7 @@ pub async fn close0_windows_le_v11_v2<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/nio/ch/SocketDispatcher.preClose0(Ljava/io/FileDescriptor;)V",
@@ -519,6 +524,7 @@ pub async fn pre_close0_windows_le_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/nio/ch/SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I",
@@ -537,6 +543,7 @@ pub async fn read0_windows_le_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/nio/ch/SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J",
@@ -555,6 +562,7 @@ pub async fn readv0_windows_le_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/nio/ch/SocketDispatcher.write0(Ljava/io/FileDescriptor;JI)I",
@@ -573,6 +581,7 @@ pub async fn write0_windows_le_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/nio/ch/SocketDispatcher.writev0(Ljava/io/FileDescriptor;JI)J",
@@ -591,6 +600,7 @@ pub async fn writev0_windows_le_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

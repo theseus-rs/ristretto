@@ -9,8 +9,6 @@ use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-#[cfg(target_os = "windows")]
-use ristretto_types::JavaError;
 use ristretto_types::JavaError::IoException;
 use ristretto_types::Parameters;
 use ristretto_types::Thread;
@@ -234,23 +232,27 @@ pub async fn sync_0<T: Thread + 'static>(
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/io/FileDescriptor.set(I)J", Equal(JAVA_8))]
 #[async_method]
+#[expect(unsafe_code)]
 pub async fn set<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError("java/io/FileDescriptor.set(I)J".to_string()).into())
+    use windows_sys::Win32::System::Console::{
+        GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
+    };
+
+    let fd = parameters.pop_int()?;
+    let std_handle = match fd {
+        0 => STD_INPUT_HANDLE,
+        1 => STD_OUTPUT_HANDLE,
+        2 => STD_ERROR_HANDLE,
+        _ => return Ok(Some(Value::Long(-1))),
+    };
+    // SAFETY: `GetStdHandle` is safe to call with a valid standard handle identifier.
+    let handle = unsafe { GetStdHandle(std_handle) };
+    Ok(Some(Value::Long(handle as i64)))
 }
-#[cfg(target_os = "windows")]
-#[intrinsic_method("java/io/FileDescriptor.set(I)J", Equal(JAVA_8))]
-#[async_method]
-pub async fn set_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError("java/io/FileDescriptor.set(I)J".to_string()).into())
-}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -279,23 +281,16 @@ mod tests {
 
     #[cfg(target_os = "windows")]
     #[tokio::test]
-    async fn test_set() {
+    async fn test_set() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set(thread, Parameters::new(vec![Value::Int(0)])).await;
-        assert_eq!(
-            "java/io/FileDescriptor.set(I)J",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_set_windows_v8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_windows_v8(thread, Parameters::new(vec![Value::Int(0)])).await;
-        assert_eq!(
-            "java/io/FileDescriptor.set(I)J",
-            result.unwrap_err().to_string()
-        );
+        let result = set(thread.clone(), Parameters::new(vec![Value::Int(0)])).await?;
+        assert!(matches!(result, Some(Value::Long(_))));
+        let result = set(thread.clone(), Parameters::new(vec![Value::Int(1)])).await?;
+        assert!(matches!(result, Some(Value::Long(_))));
+        let result = set(thread.clone(), Parameters::new(vec![Value::Int(2)])).await?;
+        assert!(matches!(result, Some(Value::Long(_))));
+        let result = set(thread, Parameters::new(vec![Value::Int(99)])).await?;
+        assert_eq!(Some(Value::Long(-1)), result);
+        Ok(())
     }
 }

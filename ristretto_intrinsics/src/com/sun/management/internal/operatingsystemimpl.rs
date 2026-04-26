@@ -83,6 +83,7 @@ pub async fn get_free_swap_space_size_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getHostConfiguredCpuCount0()I",
@@ -98,6 +99,7 @@ pub async fn get_host_configured_cpu_count_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getHostOnlineCpuCount0()I",
@@ -113,6 +115,7 @@ pub async fn get_host_online_cpu_count_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getHostTotalCpuTicks0()J",
@@ -128,6 +131,7 @@ pub async fn get_host_total_cpu_ticks_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getMaxFileDescriptorCount0()J",
@@ -143,6 +147,7 @@ pub async fn get_max_file_descriptor_count_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getOpenFileDescriptorCount0()J",
@@ -189,6 +194,7 @@ pub async fn get_process_cpu_time_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "com/sun/management/internal/OperatingSystemImpl.getSingleCpuLoad0(I)D",

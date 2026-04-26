@@ -43,6 +43,7 @@ pub async fn check_permissions<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.close(I)V",
@@ -59,6 +60,7 @@ pub async fn close<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.connect(ILjava/lang/String;)V",
@@ -76,6 +78,7 @@ pub async fn connect<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "macos")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.createAttachFile0(Ljava/lang/String;)V",
@@ -92,6 +95,7 @@ pub async fn create_attach_file_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "macos")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.getTempDir()Ljava/lang/String;",
@@ -107,6 +111,7 @@ pub async fn get_temp_dir<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.read(I[BII)I",
@@ -126,6 +131,7 @@ pub async fn read<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.sendQuitTo(I)V",
@@ -142,6 +148,7 @@ pub async fn send_quit_to<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "macos")]
 #[intrinsic_method("sun/tools/attach/VirtualMachineImpl.sendQuitTo(I)V", Equal(JAVA_11))]
 #[async_method]
@@ -155,6 +162,7 @@ pub async fn send_quit_to_macos<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.socket()I",
@@ -170,6 +178,7 @@ pub async fn socket<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.write(I[BII)V",
@@ -189,6 +198,7 @@ pub async fn write<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "macos")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.checkCatchesAndSendQuitTo(IZ)Z",
@@ -206,6 +216,7 @@ pub async fn check_catches_and_send_quit_to<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.closePipe(J)V",
@@ -222,6 +233,7 @@ pub async fn close_pipe<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.closeProcess(J)V",
@@ -238,6 +250,7 @@ pub async fn close_process<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.connectPipe(J)V",
@@ -254,6 +267,7 @@ pub async fn connect_pipe<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.createPipe(ILjava/lang/String;)J",
@@ -271,6 +285,7 @@ pub async fn create_pipe<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.createPipe(Ljava/lang/String;)J",
@@ -287,6 +302,7 @@ pub async fn create_pipe_windows_v11_v21_v1<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.enqueue(J[BILjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
@@ -305,6 +321,7 @@ pub async fn enqueue<T: Thread + 'static>(
     let _handle = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/tools/attach/VirtualMachineImpl.enqueue(J[BILjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.enqueue(J[BLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
@@ -322,6 +339,7 @@ pub async fn enqueue_windows_v11_v21_v1<T: Thread + 'static>(
     let _handle = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/tools/attach/VirtualMachineImpl.enqueue(J[BLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.generateStub()[B",
@@ -337,6 +355,7 @@ pub async fn generate_stub<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.init()V",
@@ -352,6 +371,7 @@ pub async fn init<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.openProcess(I)J",
@@ -368,6 +388,7 @@ pub async fn open_process<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.readPipe(J[BII)I",
@@ -387,6 +408,7 @@ pub async fn read_pipe<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.writePipe(J[BII)V",
@@ -406,6 +428,7 @@ pub async fn write_pipe<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.closePipe(J)V",
@@ -422,6 +445,7 @@ pub async fn close_pipe_windows_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.closeProcess(J)V",
@@ -438,6 +462,7 @@ pub async fn close_process_windows_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.connectPipe(J)V",
@@ -454,6 +479,7 @@ pub async fn connect_pipe_windows_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.createPipe(ILjava/lang/String;)J",
@@ -471,6 +497,7 @@ pub async fn create_pipe_windows_v25<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.createPipe(Ljava/lang/String;)J",
@@ -487,6 +514,7 @@ pub async fn create_pipe_windows_v11_v21_v2<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.enqueue(J[BILjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
@@ -505,6 +533,7 @@ pub async fn enqueue_windows_v25<T: Thread + 'static>(
     let _handle = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/tools/attach/VirtualMachineImpl.enqueue(J[BILjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.enqueue(J[BLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
@@ -522,6 +551,7 @@ pub async fn enqueue_windows_v11_v21_v2<T: Thread + 'static>(
     let _handle = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/tools/attach/VirtualMachineImpl.enqueue(J[BLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V".to_string()).into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.generateStub()[B",
@@ -537,6 +567,7 @@ pub async fn generate_stub_windows_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.init()V",
@@ -552,6 +583,7 @@ pub async fn init_windows_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.openProcess(I)J",
@@ -568,6 +600,7 @@ pub async fn open_process_windows_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.readPipe(J[BII)I",
@@ -587,6 +620,7 @@ pub async fn read_pipe_windows_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/tools/attach/VirtualMachineImpl.writePipe(J[BII)V",
@@ -606,6 +640,7 @@ pub async fn write_pipe_windows_v25<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

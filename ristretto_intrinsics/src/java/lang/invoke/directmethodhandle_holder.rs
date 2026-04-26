@@ -137,6 +137,7 @@ pub async fn invoke_virtual_ge_v11<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("java/lang/invoke/DirectMethodHandle$Holder.invokeVirtual([Ljava/lang/Object;)Ljava/lang/Object;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

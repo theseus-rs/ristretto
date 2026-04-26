@@ -37,6 +37,7 @@ pub async fn is_trusted_site_available<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

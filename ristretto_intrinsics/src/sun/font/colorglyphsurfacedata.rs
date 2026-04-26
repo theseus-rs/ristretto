@@ -38,6 +38,7 @@ pub async fn set_current_glyph<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

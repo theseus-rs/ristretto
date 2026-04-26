@@ -49,6 +49,7 @@ pub async fn set_native_focus_owner<T: Thread + 'static>(
     let _comp_peer = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WKeyboardFocusManagerPeer.setNativeFocusOwner(Ljava/awt/peer/ComponentPeer;)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -111,6 +111,7 @@ pub async fn set_native_locale<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -19,6 +19,7 @@ pub async fn get_ptr_for_constant<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -463,6 +463,7 @@ pub async fn native_switch_theme<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.nativeFinishPainting([III)I",
@@ -481,6 +482,7 @@ pub async fn native_finish_painting_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.nativeSetRangeValue(IDDDD)V",
@@ -501,6 +503,7 @@ pub async fn native_set_range_value_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.nativeStartPainting(II)V",
@@ -518,6 +521,7 @@ pub async fn native_start_painting_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_get_gtk_setting(I)Ljava/lang/Object;",
@@ -535,6 +539,7 @@ pub async fn native_get_gtk_setting_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_arrow(IIILjava/lang/String;IIIII)V",
@@ -560,6 +565,7 @@ pub async fn native_paint_arrow_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_background(IIIIII)V",
@@ -581,6 +587,7 @@ pub async fn native_paint_background_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_box(IIILjava/lang/String;IIIIII)V",
@@ -607,6 +614,7 @@ pub async fn native_paint_box_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_box_gap(IIILjava/lang/String;IIIIIII)V",
@@ -634,6 +642,7 @@ pub async fn native_paint_box_gap_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_check(IILjava/lang/String;IIII)V",
@@ -657,6 +666,7 @@ pub async fn native_paint_check_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_expander(IILjava/lang/String;IIIII)V",
@@ -681,6 +691,7 @@ pub async fn native_paint_expander_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_extension(IIILjava/lang/String;IIIII)V",
@@ -706,6 +717,7 @@ pub async fn native_paint_extension_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_flat_box(IIILjava/lang/String;IIIIZ)V",
@@ -731,6 +743,7 @@ pub async fn native_paint_flat_box_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_focus(IILjava/lang/String;IIII)V",
@@ -754,6 +767,7 @@ pub async fn native_paint_focus_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_handle(IIILjava/lang/String;IIIII)V",
@@ -779,6 +793,7 @@ pub async fn native_paint_handle_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_hline(IILjava/lang/String;IIII)V",
@@ -802,6 +817,7 @@ pub async fn native_paint_hline_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_option(IILjava/lang/String;IIII)V",
@@ -825,6 +841,7 @@ pub async fn native_paint_option_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_shadow(IIILjava/lang/String;IIIIII)V",
@@ -851,6 +868,7 @@ pub async fn native_paint_shadow_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_slider(IIILjava/lang/String;IIIIIZ)V",
@@ -877,6 +895,7 @@ pub async fn native_paint_slider_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_paint_vline(IILjava/lang/String;IIII)V",
@@ -900,6 +919,7 @@ pub async fn native_paint_vline_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "com/sun/java/swing/plaf/gtk/GTKEngine.native_switch_theme()V",
@@ -915,6 +935,7 @@ pub async fn native_switch_theme_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

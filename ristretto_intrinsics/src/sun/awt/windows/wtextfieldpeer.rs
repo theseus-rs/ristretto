@@ -34,6 +34,7 @@ pub async fn set_echo_char<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

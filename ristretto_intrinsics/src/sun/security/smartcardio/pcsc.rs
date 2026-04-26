@@ -160,6 +160,7 @@ pub async fn s_card_transmit<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

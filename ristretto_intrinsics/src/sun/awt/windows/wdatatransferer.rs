@@ -86,6 +86,7 @@ pub async fn register_clipboard_format<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

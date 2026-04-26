@@ -1039,6 +1039,7 @@ pub async fn bindx_le_v8<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.branch0(II)I", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -1050,6 +1051,7 @@ pub async fn branch0_linux_ge_v11<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.branch0(II)I".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.close0(I)V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -1060,6 +1062,7 @@ pub async fn close0_linux_ge_v11<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.close0(I)V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/ch/sctp/SctpNet.connect0(ILjava/net/InetAddress;I)I",
@@ -1078,6 +1081,7 @@ pub async fn connect0_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/ch/sctp/SctpNet.getInitMsgOption0(I[I)V",
@@ -1095,6 +1099,7 @@ pub async fn get_init_msg_option0_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/ch/sctp/SctpNet.getIntOption0(II)I",
@@ -1112,6 +1117,7 @@ pub async fn get_int_option0_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/ch/sctp/SctpNet.getLocalAddresses0(I)[Ljava/net/SocketAddress;",
@@ -1128,6 +1134,7 @@ pub async fn get_local_addresses0_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/ch/sctp/SctpNet.getPrimAddrOption0(II)Ljava/net/SocketAddress;",
@@ -1145,6 +1152,7 @@ pub async fn get_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/ch/sctp/SctpNet.getRemoteAddresses0(II)[Ljava/net/SocketAddress;",
@@ -1162,6 +1170,7 @@ pub async fn get_remote_addresses0_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.init()V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -1171,6 +1180,7 @@ pub async fn init_linux_ge_v11<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.init()V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.listen0(II)V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -1182,6 +1192,7 @@ pub async fn listen0_linux_ge_v11<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.listen0(II)V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.preClose0(I)V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -1192,6 +1203,7 @@ pub async fn pre_close0_linux_ge_v11<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.preClose0(I)V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/ch/sctp/SctpNet.setInitMsgOption0(III)V",
@@ -1210,6 +1222,7 @@ pub async fn set_init_msg_option0_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/ch/sctp/SctpNet.setIntOption0(III)V",
@@ -1228,6 +1241,7 @@ pub async fn set_int_option0_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/ch/sctp/SctpNet.setPeerPrimAddrOption0(IILjava/net/InetAddress;IZ)V",
@@ -1248,6 +1262,7 @@ pub async fn set_peer_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/nio/ch/sctp/SctpNet.setPrimAddrOption0(IILjava/net/InetAddress;I)V",
@@ -1267,6 +1282,7 @@ pub async fn set_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.shutdown0(II)V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -1281,6 +1297,7 @@ pub async fn shutdown0_linux_ge_v11<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.socket0(Z)I", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
@@ -1291,6 +1308,7 @@ pub async fn socket0_linux_ge_v11<T: Thread + 'static>(
     let _one_to_one = parameters.pop_bool()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/sctp/SctpNet.socket0(Z)I".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

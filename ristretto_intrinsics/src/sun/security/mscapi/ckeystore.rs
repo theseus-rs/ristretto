@@ -129,6 +129,7 @@ pub async fn store_private_key<T: Thread + 'static>(
     let _alg = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/security/mscapi/CKeyStore.storePrivateKey(Ljava/lang/String;[BLjava/lang/String;I)Lsun/security/mscapi/CPrivateKey;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

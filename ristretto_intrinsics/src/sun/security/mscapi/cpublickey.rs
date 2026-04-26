@@ -24,6 +24,7 @@ pub async fn get_public_key_blob<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

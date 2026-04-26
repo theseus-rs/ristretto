@@ -163,6 +163,7 @@ pub async fn get_native_resource_from_bundle<T: Thread + 'static>(
     let _java_resource_name = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("com.apple.eio.FileManager.getNativeResourceFromBundle(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -35,6 +35,7 @@ pub async fn init_agent_properties<T: Thread + 'static>(
     let _props = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.vm.VMSupport.initAgentProperties(Ljava/util/Properties;)Ljava/util/Properties;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

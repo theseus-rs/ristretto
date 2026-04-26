@@ -101,6 +101,7 @@ pub async fn shape<T: Thread + 'static>(
     let _font2_d = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.font.SunLayoutEngine.shape(Lsun/font/Font2D;Lsun/font/FontStrike;F[FJ[CLsun/font/GlyphLayout$GVData;IIIILjava/awt/geom/Point2D$Float;II)Z".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

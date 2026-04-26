@@ -176,6 +176,7 @@ pub async fn socket_shutdown<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

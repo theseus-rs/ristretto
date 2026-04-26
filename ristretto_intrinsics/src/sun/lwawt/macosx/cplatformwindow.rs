@@ -367,6 +367,7 @@ pub async fn native_synthesize_mouse_entered_exited_events_2<T: Thread + 'static
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -42,6 +42,7 @@ pub async fn is_curve_supported<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

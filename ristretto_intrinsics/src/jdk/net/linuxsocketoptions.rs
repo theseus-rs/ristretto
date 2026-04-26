@@ -230,6 +230,7 @@ pub async fn get_tcpkeep_alive_probes0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "jdk/net/LinuxSocketOptions.setTcpkeepAliveProbes0(II)V",
@@ -247,6 +248,7 @@ pub async fn set_tcpkeep_alive_probes0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method("jdk/net/LinuxSocketOptions.getIncomingNapiId0(I)I", Equal(JAVA_17))]
 #[async_method]
@@ -260,6 +262,7 @@ pub async fn get_incoming_napi_id0_linux_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "jdk/net/LinuxSocketOptions.getTcpkeepAliveProbes0(I)I",
@@ -276,6 +279,7 @@ pub async fn get_tcpkeep_alive_probes0_linux_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "jdk/net/LinuxSocketOptions.incomingNapiIdSupported0()Z",
@@ -291,6 +295,7 @@ pub async fn incoming_napi_id_supported0_linux_v17<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "jdk/net/LinuxSocketOptions.setTcpkeepAliveProbes0(II)V",
@@ -308,6 +313,7 @@ pub async fn set_tcpkeep_alive_probes0_linux_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -31,6 +31,7 @@ pub async fn load_native_fonts<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

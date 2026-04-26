@@ -31,6 +31,7 @@ pub async fn mask_blit<T: Thread + 'static>(
     let _src = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.MaskBlit.MaskBlit(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Ljava/awt/Composite;Lsun/java2d/pipe/Region;IIIIII[BII)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

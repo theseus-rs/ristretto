@@ -33,6 +33,7 @@ pub async fn end_native_focus<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -111,6 +111,7 @@ pub async fn write0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

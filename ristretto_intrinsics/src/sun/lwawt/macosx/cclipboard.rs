@@ -95,6 +95,7 @@ pub async fn write_file_objects<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

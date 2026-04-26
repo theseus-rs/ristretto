@@ -73,6 +73,7 @@ pub async fn is_vista_os<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

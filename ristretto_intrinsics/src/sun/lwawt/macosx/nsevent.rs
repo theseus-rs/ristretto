@@ -110,6 +110,7 @@ pub async fn ns_to_java_mouse_modifiers<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

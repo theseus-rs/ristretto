@@ -34,6 +34,7 @@ pub async fn fallback_domain_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/net/dns/ResolverConfigurationImpl.localDomain0()Ljava/lang/String;",
@@ -49,6 +50,7 @@ pub async fn local_domain_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/net/dns/ResolverConfigurationImpl.init0()V", Any)]
 #[async_method]
@@ -61,6 +63,7 @@ pub async fn init0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/net/dns/ResolverConfigurationImpl.loadDNSconfig0()V", Any)]
 #[async_method]
@@ -73,6 +76,7 @@ pub async fn load_dnsconfig0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/net/dns/ResolverConfigurationImpl.notifyAddrChange0()I", Any)]
 #[async_method]
@@ -85,6 +89,7 @@ pub async fn notify_addr_change0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/net/dns/ResolverConfigurationImpl.init0()V", Any)]
 #[async_method]
@@ -97,6 +102,7 @@ pub async fn init0_windows<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/net/dns/ResolverConfigurationImpl.loadDNSconfig0()V", Any)]
 #[async_method]
@@ -109,6 +115,7 @@ pub async fn load_dnsconfig0_windows<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/net/dns/ResolverConfigurationImpl.notifyAddrChange0()I", Any)]
 #[async_method]
@@ -121,6 +128,7 @@ pub async fn notify_addr_change0_windows<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(all(test, any(target_family = "unix", target_os = "windows")))]
 mod tests {
     use super::*;

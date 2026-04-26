@@ -25,6 +25,7 @@ pub async fn set0<T: Thread + 'static>(
     let _efd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EventFD.set0(I)I".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

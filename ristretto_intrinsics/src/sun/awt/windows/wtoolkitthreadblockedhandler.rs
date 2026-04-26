@@ -21,6 +21,7 @@ pub async fn start_secondary_event_loop<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

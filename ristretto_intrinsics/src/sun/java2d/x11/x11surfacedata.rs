@@ -121,6 +121,7 @@ pub async fn is_shm_pm_available<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11SurfaceData.initIDs(Ljava/lang/Class;)V",
@@ -137,6 +138,7 @@ pub async fn init_ids_linux_ge_v11_v1<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11SurfaceData.XSetCopyMode(J)V",
@@ -153,6 +155,7 @@ pub async fn xset_copy_mode_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11SurfaceData.XSetForeground(JI)V",
@@ -170,6 +173,7 @@ pub async fn xset_foreground_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11SurfaceData.XSetXorMode(J)V",
@@ -186,6 +190,7 @@ pub async fn xset_xor_mode_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11SurfaceData.initIDs(Ljava/lang/Class;)V",
@@ -202,6 +207,7 @@ pub async fn init_ids_linux_ge_v11_v2<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11SurfaceData.initSurface(IIIJ)V",
@@ -221,6 +227,7 @@ pub async fn init_surface_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11SurfaceData.isShmPMAvailable()Z",
@@ -236,6 +243,7 @@ pub async fn is_shm_pmavailable_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

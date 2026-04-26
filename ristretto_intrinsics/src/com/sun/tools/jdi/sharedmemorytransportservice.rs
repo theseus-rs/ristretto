@@ -100,6 +100,7 @@ pub async fn stop_listening0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

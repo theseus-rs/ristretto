@@ -35,6 +35,7 @@ pub async fn native_chars_to_glyphs<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

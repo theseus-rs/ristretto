@@ -234,6 +234,7 @@ pub async fn socket_set_int_option<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

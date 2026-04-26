@@ -77,6 +77,7 @@ pub async fn native_get_max_texture_size<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

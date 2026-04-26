@@ -36,6 +36,7 @@ pub async fn vm_storage_to_vm_reg<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -240,6 +240,7 @@ pub async fn n_write<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

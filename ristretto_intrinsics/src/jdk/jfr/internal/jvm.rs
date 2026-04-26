@@ -1220,6 +1220,7 @@ pub async fn set_method_trace_filters<T: Thread + 'static>(
     let _arg0 = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("jdk.jfr.internal.JVM.setMethodTraceFilters([Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/String;[I)[J".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

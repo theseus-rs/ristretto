@@ -29,6 +29,7 @@ pub async fn init<T: Thread + 'static>(
     let _gtk_version = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XDesktopPeer.init(IZ)Z".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

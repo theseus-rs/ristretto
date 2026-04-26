@@ -32,6 +32,7 @@ pub async fn remove_glyph_info_from_cache<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

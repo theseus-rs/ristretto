@@ -25,6 +25,7 @@ pub async fn create_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun.net.sdp.SdpSupport.create0()I".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -79,6 +79,7 @@ pub async fn send0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

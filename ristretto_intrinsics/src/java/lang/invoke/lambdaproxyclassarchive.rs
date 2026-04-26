@@ -44,6 +44,7 @@ pub async fn find_from_archive<T: Thread + 'static>(
     let _caller = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("java.lang.invoke.LambdaProxyClassArchive.findFromArchive(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MemberName;Ljava/lang/invoke/MethodType;)Ljava/lang/Class;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

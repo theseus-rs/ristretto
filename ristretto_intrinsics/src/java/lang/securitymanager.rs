@@ -83,6 +83,7 @@ pub async fn get_class_context<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

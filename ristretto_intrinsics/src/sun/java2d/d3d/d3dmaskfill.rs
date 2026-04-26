@@ -26,6 +26,7 @@ pub async fn mask_fill<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

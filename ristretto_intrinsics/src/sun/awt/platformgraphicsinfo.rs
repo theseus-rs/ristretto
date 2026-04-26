@@ -36,6 +36,7 @@ pub async fn is_in_aqua_session<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/awt/PlatformGraphicsInfo.hasDisplays0()Z", Equal(JAVA_25))]
 #[async_method]
@@ -48,6 +49,7 @@ pub async fn has_displays0<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/awt/PlatformGraphicsInfo.hasDisplays0()Z", Equal(JAVA_25))]
 #[async_method]
@@ -60,6 +62,7 @@ pub async fn has_displays0_windows_v25<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
 mod tests {
     use super::*;

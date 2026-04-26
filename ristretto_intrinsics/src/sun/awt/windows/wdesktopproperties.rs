@@ -55,6 +55,7 @@ pub async fn play_windows_sound<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

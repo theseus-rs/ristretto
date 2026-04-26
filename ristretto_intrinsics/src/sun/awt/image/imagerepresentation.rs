@@ -61,6 +61,7 @@ pub async fn set_icm_pixels<T: Thread + 'static>(
     let _x = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun.awt.image.ImageRepresentation.setICMpixels(IIII[I[BIILsun/awt/image/IntegerComponentRaster;)Z".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

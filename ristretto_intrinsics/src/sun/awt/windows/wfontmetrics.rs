@@ -66,6 +66,7 @@ pub async fn string_width<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

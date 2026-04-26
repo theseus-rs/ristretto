@@ -25,6 +25,7 @@ pub async fn is_access_user_only_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/management/FileSystemImpl.init0()V", Equal(JAVA_8))]
 #[async_method]
@@ -37,6 +38,7 @@ pub async fn init0<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/management/FileSystemImpl.isSecuritySupported0(Ljava/lang/String;)Z",
@@ -53,6 +55,7 @@ pub async fn is_security_supported0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method("sun/management/FileSystemImpl.init0()V", Equal(JAVA_8))]
 #[async_method]
@@ -65,6 +68,7 @@ pub async fn init0_windows_v8<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "sun/management/FileSystemImpl.isSecuritySupported0(Ljava/lang/String;)Z",
@@ -81,6 +85,7 @@ pub async fn is_security_supported0_windows_v8<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

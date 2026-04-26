@@ -35,6 +35,7 @@ pub async fn mask_fill<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/xr/XRMaskFill.maskFill(JIIIIIII[B)V",
@@ -59,6 +60,7 @@ pub async fn mask_fill_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

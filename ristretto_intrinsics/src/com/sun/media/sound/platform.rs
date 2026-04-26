@@ -60,6 +60,7 @@ pub async fn n_is_signed_8<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

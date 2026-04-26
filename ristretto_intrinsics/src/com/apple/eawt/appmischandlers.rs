@@ -74,6 +74,7 @@ pub async fn native_request_user_attention<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

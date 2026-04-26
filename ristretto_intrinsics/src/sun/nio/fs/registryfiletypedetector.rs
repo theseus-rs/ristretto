@@ -23,6 +23,7 @@ pub async fn query_string_value<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

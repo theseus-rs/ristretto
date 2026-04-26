@@ -61,6 +61,7 @@ pub async fn set_notification_enabled<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

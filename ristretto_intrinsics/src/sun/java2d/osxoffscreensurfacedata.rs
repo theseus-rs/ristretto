@@ -131,6 +131,7 @@ pub async fn xor_surface_pixels<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

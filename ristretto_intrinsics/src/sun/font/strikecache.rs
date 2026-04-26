@@ -92,6 +92,7 @@ pub async fn get_invisible_glyph_ptr<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -186,6 +186,7 @@ pub async fn set_source<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

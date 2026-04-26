@@ -54,6 +54,7 @@ pub async fn invalidate_sd<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -18,6 +18,7 @@ pub async fn init_ids<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

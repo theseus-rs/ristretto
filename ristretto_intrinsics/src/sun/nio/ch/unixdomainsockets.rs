@@ -93,6 +93,7 @@ pub async fn socket_0<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

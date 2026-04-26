@@ -116,6 +116,7 @@ pub async fn native_get_screen_pixels_1<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

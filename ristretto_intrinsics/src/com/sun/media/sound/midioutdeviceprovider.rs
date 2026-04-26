@@ -83,6 +83,7 @@ pub async fn n_get_version<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

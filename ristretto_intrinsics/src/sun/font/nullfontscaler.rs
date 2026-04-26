@@ -32,6 +32,7 @@ pub async fn get_null_scaler_context<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

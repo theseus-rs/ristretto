@@ -58,6 +58,7 @@ pub async fn read_bytes<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

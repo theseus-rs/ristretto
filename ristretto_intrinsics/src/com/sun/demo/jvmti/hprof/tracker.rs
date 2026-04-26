@@ -79,6 +79,7 @@ pub async fn native_return_site<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

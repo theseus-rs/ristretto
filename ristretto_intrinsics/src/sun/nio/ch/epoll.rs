@@ -95,6 +95,7 @@ pub async fn wait<T: Thread + 'static>(
     let _epfd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPoll.wait(IJII)I".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

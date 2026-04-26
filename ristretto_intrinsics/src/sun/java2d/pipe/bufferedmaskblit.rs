@@ -37,6 +37,7 @@ pub async fn enqueue_tile<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

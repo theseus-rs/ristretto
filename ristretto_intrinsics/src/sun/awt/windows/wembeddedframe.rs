@@ -66,6 +66,7 @@ pub async fn print_band<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

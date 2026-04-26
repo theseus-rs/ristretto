@@ -83,6 +83,7 @@ pub async fn unpin<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("jdk.internal.vm.Continuation.unpin()V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

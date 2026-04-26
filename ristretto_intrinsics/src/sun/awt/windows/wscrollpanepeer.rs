@@ -106,6 +106,7 @@ pub async fn set_spans<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

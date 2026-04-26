@@ -115,6 +115,7 @@ pub async fn register_0<T: Thread + 'static>(
     let _kqfd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.KQueue.register(IIII)I".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

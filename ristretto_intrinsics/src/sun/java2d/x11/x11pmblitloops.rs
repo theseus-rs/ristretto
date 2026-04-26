@@ -51,6 +51,7 @@ pub async fn update_bitmask<T: Thread + 'static>(
     let _src = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.x11.X11PMBlitLoops.updateBitmask(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11PMBlitLoops.nativeBlit(JJJLsun/java2d/pipe/Region;IIIIII)V",
@@ -76,6 +77,7 @@ pub async fn native_blit_linux_ge_v11<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/x11/X11PMBlitLoops.updateBitmask(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V",
@@ -91,6 +93,7 @@ pub async fn update_bitmask_linux_ge_v11<T: Thread + 'static>(
     let _src = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/x11/X11PMBlitLoops.updateBitmask(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Z)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

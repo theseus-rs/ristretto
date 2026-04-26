@@ -36,6 +36,7 @@ pub async fn get_bounds_private<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

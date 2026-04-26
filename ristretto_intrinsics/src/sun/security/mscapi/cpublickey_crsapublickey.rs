@@ -38,6 +38,7 @@ pub async fn get_modulus<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

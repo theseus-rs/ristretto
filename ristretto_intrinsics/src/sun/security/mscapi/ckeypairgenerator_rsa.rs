@@ -22,6 +22,7 @@ pub async fn generate_ckey_pair<T: Thread + 'static>(
     let _alg = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/security/mscapi/CKeyPairGenerator$RSA.generateCKeyPair(Ljava/lang/String;ILjava/lang/String;)Lsun/security/mscapi/CKeyPair;".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

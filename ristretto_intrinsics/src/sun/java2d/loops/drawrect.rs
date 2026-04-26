@@ -24,6 +24,7 @@ pub async fn draw_rect<T: Thread + 'static>(
     let _sg2d = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.DrawRect.DrawRect(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;IIII)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

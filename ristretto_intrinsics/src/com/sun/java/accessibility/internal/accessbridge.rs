@@ -416,6 +416,7 @@ pub async fn send_debug_string<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -28,6 +28,7 @@ pub async fn draw_parallelogram<T: Thread + 'static>(
     let _sg = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.loops.DrawParallelogram.DrawParallelogram(Lsun/java2d/SunGraphics2D;Lsun/java2d/SurfaceData;DDDDDDDD)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

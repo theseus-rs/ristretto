@@ -81,6 +81,7 @@ pub async fn post_queued_completion_status<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

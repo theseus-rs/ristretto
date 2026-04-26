@@ -51,6 +51,7 @@ pub async fn release_native_drop_target<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

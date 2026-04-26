@@ -31,6 +31,7 @@ pub async fn native_blit<T: Thread + 'static>(
     let _src_data = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/windows/GDIBlitLoops.nativeBlit(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;Lsun/java2d/pipe/Region;IIIIIIIIIZ)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

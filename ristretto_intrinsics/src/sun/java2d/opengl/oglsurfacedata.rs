@@ -81,6 +81,7 @@ pub async fn init_texture<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

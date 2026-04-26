@@ -38,6 +38,7 @@ pub async fn unload_0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

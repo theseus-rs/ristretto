@@ -34,6 +34,7 @@ pub async fn create_menu<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

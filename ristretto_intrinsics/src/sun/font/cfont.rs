@@ -105,6 +105,7 @@ pub async fn get_width_native<T: Thread + 'static>(
     let _native_font_ptr = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun.font.CFont.getWidthNative(J)F".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

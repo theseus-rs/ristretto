@@ -18,6 +18,7 @@ pub async fn should_use_scroll_to_click<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

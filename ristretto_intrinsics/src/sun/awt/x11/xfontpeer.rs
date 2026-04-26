@@ -16,6 +16,7 @@ pub async fn init_ids<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XFontPeer.initIDs()V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

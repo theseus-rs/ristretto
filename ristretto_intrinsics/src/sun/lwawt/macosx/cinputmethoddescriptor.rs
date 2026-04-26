@@ -34,6 +34,7 @@ pub async fn native_init<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

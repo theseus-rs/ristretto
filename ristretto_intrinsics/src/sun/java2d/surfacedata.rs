@@ -31,6 +31,7 @@ pub async fn is_opaque_gray<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

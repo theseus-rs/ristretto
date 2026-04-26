@@ -26,6 +26,7 @@ pub async fn init_ops<T: Thread + 'static>(
     let _gc = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun.java2d.opengl.GLXSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;Lsun/awt/X11ComponentPeer;J)V".to_string()).into())
 }
+
 #[cfg(target_os = "linux")]
 #[intrinsic_method(
     "sun/java2d/opengl/GLXSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;Lsun/awt/X11ComponentPeer;J)V",
@@ -41,6 +42,7 @@ pub async fn init_ops_linux_ge_v11<T: Thread + 'static>(
     let _gc = parameters.pop_reference()?;
     Err(JavaError::UnsatisfiedLinkError("sun/java2d/opengl/GLXSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;Lsun/awt/X11ComponentPeer;J)V".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

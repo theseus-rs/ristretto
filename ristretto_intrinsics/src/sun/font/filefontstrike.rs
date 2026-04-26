@@ -38,6 +38,7 @@ pub async fn init_native<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun.font.FileFontStrike.initNative()Z".to_string()).into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

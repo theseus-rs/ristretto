@@ -33,6 +33,7 @@ pub async fn native_show_popup_menu<T: Thread + 'static>(
     )
     .into())
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
