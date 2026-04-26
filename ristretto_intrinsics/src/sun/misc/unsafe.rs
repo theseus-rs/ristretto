@@ -1008,7 +1008,8 @@ mod tests {
     async fn test_address_size() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
         let result = address_size(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Int(8)));
+        let pointer_size = i32::try_from(REFERENCE_SIZE)?;
+        assert_eq!(result, Some(Value::Int(pointer_size)));
         Ok(())
     }
 

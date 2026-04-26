@@ -314,7 +314,7 @@ pub async fn set_tcpkeep_alive_probes0_linux_v11<T: Thread + 'static>(
     .into())
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
 

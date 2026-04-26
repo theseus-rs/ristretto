@@ -1,6 +1,7 @@
 //! Garbage collector functionality tests
 //!
 //! Tests collector configuration, statistics, collection cycles, and performance monitoring.
+#![cfg(not(target_family = "wasm"))]
 
 use ristretto_gc::{Configuration, GarbageCollector, Gc, Result, Trace};
 use std::sync::Mutex;

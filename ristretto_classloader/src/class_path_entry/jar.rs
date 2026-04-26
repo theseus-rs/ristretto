@@ -301,7 +301,7 @@ impl Clone for Jar {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(all(target_family = "wasm", target_os = "unknown"))))]
 mod tests {
     use super::*;
     use crate::Error::ClassFileError;
@@ -309,6 +309,11 @@ mod tests {
     use std::io::Write;
     use std::path::PathBuf;
     use zip::write::SimpleFileOptions;
+
+    fn make_tempdir() -> std::io::Result<tempfile::TempDir> {
+        ristretto_test_util::init_wasi_tempdir();
+        tempfile::tempdir()
+    }
 
     #[test]
     fn test_new() {
@@ -409,7 +414,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_bad_class_file() -> Result<()> {
-        let temp_dir = tempfile::tempdir()?;
+        let temp_dir = make_tempdir()?;
 
         // Create a jar with a bad class file
         let jar_path = temp_dir.path().join("invalid.jar");
@@ -427,7 +432,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_invalid_class_file() -> Result<()> {
-        let temp_dir = tempfile::tempdir()?;
+        let temp_dir = make_tempdir()?;
 
         // Create an invalid class file
         let class_file = ClassFile {

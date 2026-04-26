@@ -22,12 +22,12 @@ use crate::Configuration;
 use crate::JavaError::{IllegalAccessError, InaccessibleObjectException};
 use crate::Result;
 use ahash::{AHashMap, AHashSet};
-use parking_lot::RwLock;
 use ristretto_classloader::Value;
 use ristretto_classloader::module::{
     AccessCheck, ModuleFinder, ModuleFinderChain, ModulePathFinder, ModuleSource,
     ResolvedConfiguration, Resolver, SystemModuleFinder,
 };
+use ristretto_gc::sync::RwLock;
 use ristretto_types::ModuleAccess;
 use std::path::{Path, PathBuf};
 use tracing::debug;

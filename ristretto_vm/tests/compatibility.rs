@@ -1,10 +1,15 @@
+#![cfg_attr(target_family = "wasm", allow(unused_imports, dead_code))]
+
+#[cfg(not(target_family = "wasm"))]
 use rayon::ThreadPoolBuilder;
+#[cfg(not(target_family = "wasm"))]
 use rayon::prelude::*;
 use regex::Regex;
 use ristretto_classloader::{DEFAULT_JAVA_VERSION, runtime};
 use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
 use ristretto_vm::Error::InternalError;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
+#[cfg(not(target_family = "wasm"))]
 use std::num::NonZero;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -33,6 +38,7 @@ struct Failure {
     message: String,
 }
 
+#[cfg(not(target_family = "wasm"))]
 #[test]
 fn compatibility_tests() -> Result<()> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -98,6 +104,7 @@ fn compatibility_tests() -> Result<()> {
 }
 
 /// Runs a single compatibility test (both interpreted and JIT) and records the outcome.
+#[cfg(not(target_family = "wasm"))]
 fn run_compatibility_test(
     java_version: &str,
     java_home: &Path,
@@ -170,6 +177,7 @@ fn run_compatibility_test(
 }
 
 /// Initializes the tracing subscriber for logging.
+#[cfg(not(target_family = "wasm"))]
 fn initialize_tracing() {
     let format = tracing_subscriber::fmt::format()
         .with_level(true)
@@ -193,6 +201,7 @@ fn initialize_tracing() {
 
 /// Collects directories of all tests to run.  A test is a directory that contains a
 /// `Test.java` file.
+#[cfg(not(target_family = "wasm"))]
 fn collect_test_dirs(tests_root_dir: &PathBuf) -> Result<Vec<PathBuf>> {
     let mut test_paths = Vec::new();
     for entry in walkdir::WalkDir::new(tests_root_dir) {
@@ -208,6 +217,7 @@ fn collect_test_dirs(tests_root_dir: &PathBuf) -> Result<Vec<PathBuf>> {
 }
 
 /// Gets the VM directory for the Java runtime.
+#[cfg(not(target_family = "wasm"))]
 fn java_home(java_version: &str) -> Result<PathBuf> {
     let runtime =
         tokio::runtime::Runtime::new().map_err(|error| InternalError(error.to_string()))?;
@@ -217,6 +227,7 @@ fn java_home(java_version: &str) -> Result<PathBuf> {
 }
 
 /// Compiles the tests in the test directories.
+#[cfg(not(target_family = "wasm"))]
 fn compile_tests(java_home: &Path, tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<()> {
     test_dirs
         .par_iter()
@@ -225,6 +236,7 @@ fn compile_tests(java_home: &Path, tests_root_dir: &Path, test_dirs: &[PathBuf])
 }
 
 /// Compiles a test directory by running `javac` on the `Test.java` file.
+#[cfg(not(target_family = "wasm"))]
 fn compile_test(java_home: &Path, tests_root_dir: &Path, test_dir: &PathBuf) -> Result<()> {
     let test_name = test_dir.to_string_lossy().to_string();
     let test_dir = tests_root_dir.join(test_dir);
@@ -266,6 +278,7 @@ fn compile_test(java_home: &Path, tests_root_dir: &Path, test_dir: &PathBuf) -> 
 }
 
 /// Compiles a test directory by running `javac` on the `Test.java` file.
+#[cfg(not(target_family = "wasm"))]
 fn expected_output(
     java_home: &Path,
     tests_root_dir: &Path,
@@ -299,6 +312,7 @@ fn expected_output(
 }
 
 /// Tests the VM by running the `Test` class in the specified test directory.
+#[cfg(not(target_family = "wasm"))]
 fn test_vm(
     java_version: &str,
     test_name: &str,
@@ -375,6 +389,7 @@ fn test_vm(
 }
 
 /// Runs the test by creating a VM and invoking the `Test` class.
+#[cfg(not(target_family = "wasm"))]
 async fn run_test(
     java_version: &str,
     test_name: &str,
@@ -433,4 +448,21 @@ async fn run_test(
         )));
     }
     Ok((start_time.elapsed(), stdout))
+}
+
+#[cfg(target_family = "wasm")]
+#[test]
+fn compatibility_tests() {
+    // The compatibility suite drives `javac`/`java` via std::process::Command and
+    // dispatches per-test work through rayon's thread pool. Neither subprocess
+    // creation nor multi-threaded execution is supported by wasmtime/WASI today,
+    // so on wasm we simply exercise the imports and exit successfully.
+    let _ = (
+        TEST_CLASS_NAME,
+        TEST_FILE,
+        IGNORE_FILE,
+        &*TEST_FILTER,
+        DEFAULT_JAVA_VERSION,
+    );
+    info!("compatibility_tests skipped on wasm: subprocess/threading unsupported");
 }

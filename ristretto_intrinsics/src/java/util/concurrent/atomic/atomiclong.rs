@@ -41,7 +41,19 @@ mod tests {
     async fn test_vm_supports_cs_8() -> Result<()> {
         let (_vm, thread) = crate::test::java21_thread().await?;
         let value = vm_supports_cs_8(thread, Parameters::default()).await?;
-        assert_eq!(value, Some(Value::from(true)));
+        let expected = matches!(
+            ARCH,
+            "x86_64"
+                | "aarch64"
+                | "loongarch64"
+                | "mips64"
+                | "mips64r6"
+                | "powerpc64"
+                | "riscv64"
+                | "sparc64"
+                | "s390x"
+        );
+        assert_eq!(value, Some(Value::from(expected)));
         Ok(())
     }
 }

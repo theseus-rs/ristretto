@@ -1,7 +1,7 @@
 use crate::Error::InvalidValueType;
 use crate::reference::Reference;
 use crate::{Class, Object, Result};
-use parking_lot::{
+use ristretto_gc::sync::{
     MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
 };
 use ristretto_gc::{GarbageCollector, Gc};
@@ -775,16 +775,15 @@ mod tests {
     use crate::Reference;
     use crate::{Class, Object, runtime};
     use ristretto_classfile::JavaStr;
-    use ristretto_gc::GarbageCollector;
     use std::hash::DefaultHasher;
     use std::sync::Arc;
 
-    fn test_ref(reference: impl Into<Reference>) -> Value {
-        Value::new_object(&GarbageCollector::new(), reference.into())
+    fn test_ref(collector: &GarbageCollector, reference: impl Into<Reference>) -> Value {
+        Value::new_object(collector, reference.into())
     }
 
-    fn test_opt_ref(reference: Option<Reference>) -> Value {
-        Value::new_opt_object(&GarbageCollector::new(), reference)
+    fn test_opt_ref(collector: &GarbageCollector, reference: Option<Reference>) -> Value {
+        Value::new_opt_object(collector, reference)
     }
 
     fn test_value(value: impl Into<Value>) -> Value {
@@ -830,6 +829,7 @@ mod tests {
 
     #[test]
     fn test_object_format() {
+        let collector = GarbageCollector::new();
         let value = Value::Object(None);
         assert_eq!("Object(null)", value.to_string());
         assert!(value.is_null());
@@ -837,32 +837,35 @@ mod tests {
         assert!(!value.is_category_2());
         assert_eq!(
             "byte[1, 2, 3]",
-            format!("{}", test_ref(vec![1i8, 2i8, 3i8]))
+            format!("{}", test_ref(&collector, vec![1i8, 2i8, 3i8]))
         );
     }
 
     #[test]
     fn test_is_null() {
+        let collector = GarbageCollector::new();
         let value = Value::Object(None);
         assert!(value.is_null());
 
-        let value = test_ref(Reference::from(vec![1i8, 2i8, 3i8]));
+        let value = test_ref(&collector, Reference::from(vec![1i8, 2i8, 3i8]));
         assert!(!value.is_null());
     }
 
     #[test]
     fn test_is_object() {
+        let collector = GarbageCollector::new();
         let value = Value::Object(None);
         assert!(!value.is_object());
 
-        let value = test_ref(Reference::from(vec![1i8, 2i8, 3i8]));
+        let value = test_ref(&collector, Reference::from(vec![1i8, 2i8, 3i8]));
         assert!(value.is_object());
     }
 
     #[test]
     fn test_as_reference() -> Result<()> {
+        let collector = GarbageCollector::new();
         let reference = Reference::from(vec![1i8, 2i8, 3i8]);
-        let value = test_ref(reference);
+        let value = test_ref(&collector, reference);
         let reference = value.as_reference()?;
         let array = reference.as_byte_vec_ref()?;
         assert_eq!(array, vec![1, 2, 3]);
@@ -877,6 +880,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_string_format() -> Result<()> {
+        let collector = GarbageCollector::new();
         let (_java_home, _java_version, class_loader) = runtime::default_class_loader().await?;
         let class = class_loader
             .load(JavaStr::try_from_str("java.lang.String")?)
@@ -884,10 +888,10 @@ mod tests {
         let mut object = Object::new(class)?;
         let bytes = "foo".as_bytes();
         let string_bytes: &[i8] = zerocopy::transmute_ref!(bytes);
-        let string_value = test_ref(string_bytes.to_vec());
+        let string_value = test_ref(&collector, string_bytes.to_vec());
         assert!(!string_value.is_null());
         object.set_value("value", string_value)?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         assert_eq!("String(\"foo\")", value.to_string());
         let value = value.as_string()?;
         assert_eq!("foo".to_string(), value);
@@ -910,7 +914,8 @@ mod tests {
 
     #[test]
     fn test_clone() -> Result<()> {
-        let value = test_ref(vec![1i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![1i32]);
         let clone = value.clone();
         assert_eq!(value, clone);
 
@@ -1011,10 +1016,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_hash_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class_name = "java.lang.Object";
         let class = load_class(class_name).await?;
-        let value1 = test_ref(Object::new(class.clone())?);
-        let value2 = test_ref(Object::new(class.clone())?);
+        let value1 = test_ref(&collector, Object::new(class.clone())?);
+        let value2 = test_ref(&collector, Object::new(class.clone())?);
 
         let mut hasher = DefaultHasher::new();
         value1.hash(&mut hasher);
@@ -1039,9 +1045,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_eq_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class_name = "java.lang.Object";
         let class = load_class(class_name).await?;
-        let value = test_ref(Object::new(class)?);
+        let value = test_ref(&collector, Object::new(class)?);
         assert_eq!(Value::Object(None), Value::Object(None));
         assert_eq!(value, value);
         assert_ne!(Value::Object(None), value);
@@ -1050,10 +1057,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_eq_recursive_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class_name = "java.util.concurrent.atomic.AtomicReference";
         let class = load_class(class_name).await?;
         let object = Object::new(class)?;
-        let value1 = test_ref(object);
+        let value1 = test_ref(&collector, object);
         let mut object = value1.as_object_mut()?;
         object.set_value("value", value1.clone())?;
         let value2 = value1.clone();
@@ -1164,112 +1172,161 @@ mod tests {
 
     #[test]
     fn test_from_vec_bool() {
-        let value = test_ref(Reference::from(vec![true, false]));
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![true, false]));
         assert_eq!(
-            test_ref(Reference::BooleanArray(vec![1i8, 0i8].into_boxed_slice())),
+            test_ref(
+                &collector,
+                Reference::BooleanArray(vec![1i8, 0i8].into_boxed_slice())
+            ),
             value
         );
     }
 
     #[test]
     fn test_from_vec_i8() {
-        let value = test_ref(Reference::from(vec![1i8, 2i8]));
-        assert_eq!(test_ref(Reference::from(vec![1i8, 2i8])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1i8, 2i8]));
+        assert_eq!(test_ref(&collector, Reference::from(vec![1i8, 2i8])), value);
     }
 
     #[test]
     fn test_from_vec_u8() {
-        let value = test_ref(Reference::from(vec![1u8, 2u8]));
-        assert_eq!(test_ref(Reference::from(vec![1i8, 2i8])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1u8, 2u8]));
+        assert_eq!(test_ref(&collector, Reference::from(vec![1i8, 2i8])), value);
     }
 
     #[test]
     fn test_from_vec_char() {
-        let value = test_ref(Reference::from(vec!['a', 'b']));
-        assert_eq!(test_ref(Reference::from(vec!['a', 'b'])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec!['a', 'b']));
+        assert_eq!(test_ref(&collector, Reference::from(vec!['a', 'b'])), value);
     }
 
     #[test]
     fn test_from_vec_i16() {
-        let value = test_ref(Reference::from(vec![1i16, 2i16]));
-        assert_eq!(test_ref(Reference::from(vec![1i16, 2i16])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1i16, 2i16]));
+        assert_eq!(
+            test_ref(&collector, Reference::from(vec![1i16, 2i16])),
+            value
+        );
     }
 
     #[test]
     fn test_from_vec_u16() {
-        let value = test_ref(Reference::from(vec![1u16, 2u16]));
-        assert_eq!(test_ref(Reference::from(vec![1i16, 2i16])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1u16, 2u16]));
+        assert_eq!(
+            test_ref(&collector, Reference::from(vec![1i16, 2i16])),
+            value
+        );
     }
 
     #[test]
     fn test_from_vec_i32() {
-        let value = test_ref(Reference::from(vec![1i32, 2i32]));
-        assert_eq!(test_ref(Reference::from(vec![1i32, 2i32])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1i32, 2i32]));
+        assert_eq!(
+            test_ref(&collector, Reference::from(vec![1i32, 2i32])),
+            value
+        );
     }
 
     #[test]
     fn test_from_vec_u32() {
-        let value = test_ref(Reference::from(vec![1u32, 2u32]));
-        assert_eq!(test_ref(Reference::from(vec![1i32, 2i32])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1u32, 2u32]));
+        assert_eq!(
+            test_ref(&collector, Reference::from(vec![1i32, 2i32])),
+            value
+        );
     }
 
     #[test]
     fn test_from_vec_i64() {
-        let value = test_ref(Reference::from(vec![1i64, 2i64]));
-        assert_eq!(test_ref(Reference::from(vec![1i64, 2i64])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1i64, 2i64]));
+        assert_eq!(
+            test_ref(&collector, Reference::from(vec![1i64, 2i64])),
+            value
+        );
     }
 
     #[test]
     fn test_from_vec_u64() {
-        let value = test_ref(Reference::from(vec![1u64, 2u64]));
-        assert_eq!(test_ref(Reference::from(vec![1i64, 2i64])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1u64, 2u64]));
+        assert_eq!(
+            test_ref(&collector, Reference::from(vec![1i64, 2i64])),
+            value
+        );
     }
 
     #[test]
     fn test_from_vec_isize() {
-        let value = test_ref(Reference::from(vec![1isize, 2isize]));
-        assert_eq!(test_ref(Reference::from(vec![1i64, 2i64])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1isize, 2isize]));
+        assert_eq!(
+            test_ref(&collector, Reference::from(vec![1i64, 2i64])),
+            value
+        );
     }
 
     #[test]
     fn test_from_vec_usize() {
-        let value = test_ref(Reference::from(vec![1usize, 2usize]));
-        assert_eq!(test_ref(Reference::from(vec![1i64, 2i64])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1usize, 2usize]));
+        assert_eq!(
+            test_ref(&collector, Reference::from(vec![1i64, 2i64])),
+            value
+        );
     }
 
     #[test]
     fn test_from_vec_f32() {
-        let value = test_ref(Reference::from(vec![1.1f32, 2.2f32]));
-        assert_eq!(test_ref(Reference::from(vec![1.1f32, 2.2f32])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1.1f32, 2.2f32]));
+        assert_eq!(
+            test_ref(&collector, Reference::from(vec![1.1f32, 2.2f32])),
+            value
+        );
     }
 
     #[test]
     fn test_from_vec_f64() {
-        let value = test_ref(Reference::from(vec![1.1f64, 2.2f64]));
-        assert_eq!(test_ref(Reference::from(vec![1.1f64, 2.2f64])), value);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![1.1f64, 2.2f64]));
+        assert_eq!(
+            test_ref(&collector, Reference::from(vec![1.1f64, 2.2f64])),
+            value
+        );
     }
 
     #[tokio::test]
     async fn test_from_class_vec() -> Result<()> {
+        let collector = GarbageCollector::new();
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let original_value = vec![Value::Object(None)];
         let reference = Reference::try_from((original_class.clone(), original_value.clone()))?;
-        let value = test_ref(reference);
+        let value = test_ref(&collector, reference);
         assert!(matches!(value, Value::Object(Some(_))));
         Ok(())
     }
 
     #[tokio::test]
     async fn test_try_from_class_vec() -> Result<()> {
+        let collector = GarbageCollector::new();
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java.lang.Integer";
         let class = load_class(class_name).await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let original_values = vec![value];
         let reference = Reference::try_from((original_class.clone(), original_values.clone()))?;
-        let value = test_ref(reference);
+        let value = test_ref(&collector, reference);
         assert!(matches!(value, Value::Object(Some(_))));
         Ok(())
     }
@@ -1286,29 +1343,32 @@ mod tests {
 
     #[tokio::test]
     async fn test_from_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("[Ljava/lang/Object;").await?;
         let object = Object::new(class)?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         assert!(matches!(value, Value::Object(Some(_))));
         Ok(())
     }
 
     #[tokio::test]
     async fn test_from_reference() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("[Ljava/lang/Object;").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object);
-        let value = test_ref(reference);
+        let value = test_ref(&collector, reference);
         assert!(matches!(value, Value::Object(Some(_))));
         Ok(())
     }
 
     #[tokio::test]
     async fn test_from_option_reference() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("[Ljava/lang/Object;").await?;
         let object = Object::new(class)?;
         let reference = Reference::from(object);
-        let value = test_opt_ref(Some(reference));
+        let value = test_opt_ref(&collector, Some(reference));
         assert!(matches!(value, Value::Object(Some(_))));
         Ok(())
     }
@@ -1322,10 +1382,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_bool_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Boolean").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(1))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_bool()?;
         assert!(value);
         Ok(())
@@ -1340,10 +1401,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_char_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Character").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_char()?;
         assert_eq!('*', value);
         Ok(())
@@ -1358,10 +1420,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_i8_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Byte").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_i8()?;
         assert_eq!(42, value);
         Ok(())
@@ -1376,10 +1439,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_u8_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Byte").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_u8()?;
         assert_eq!(42, value);
         Ok(())
@@ -1394,10 +1458,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_i16_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Short").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_i16()?;
         assert_eq!(42, value);
         Ok(())
@@ -1412,10 +1477,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_u16_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Short").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_u16()?;
         assert_eq!(42, value);
         Ok(())
@@ -1430,10 +1496,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_i32_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Integer").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_i32()?;
         assert_eq!(42, value);
         Ok(())
@@ -1448,10 +1515,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_u32_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Integer").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Int(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_u32()?;
         assert_eq!(42, value);
         Ok(())
@@ -1466,10 +1534,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_i64_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Long").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_i64()?;
         assert_eq!(42, value);
         Ok(())
@@ -1484,10 +1553,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_u64_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Long").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_u64()?;
         assert_eq!(42, value);
         Ok(())
@@ -1502,10 +1572,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_isize_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Long").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_isize()?;
         assert_eq!(42, value);
         Ok(())
@@ -1520,10 +1591,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_usize_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Long").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Long(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_usize()?;
         assert_eq!(42, value);
         Ok(())
@@ -1531,10 +1603,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_f32() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Float").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Float(42.1))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_f32()?;
         let value = value - 42.1f32;
         assert!(value.abs() < 0.1f32);
@@ -1559,10 +1632,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_f64_object() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Double").await?;
         let mut object = Object::new(class)?;
         object.set_value("value", Value::Double(42.1))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let value = value.as_f64()?;
         let value = value - 42.1f64;
         assert!(value.abs() < 0.1f64);
@@ -1571,15 +1645,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_vec_value() -> Result<()> {
+        let collector = GarbageCollector::new();
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let class_name = "java/lang/Integer";
         let class = load_class(class_name).await?;
         let mut object = Object::new(class.clone())?;
         object.set_value("value", Value::Int(42))?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let original_values = vec![value];
         let reference = Reference::try_from((original_class.clone(), original_values.clone()))?;
-        let value = test_ref(reference);
+        let value = test_ref(&collector, reference);
         let values: Vec<Value> = value.try_into()?;
         assert_eq!(original_values, values);
         Ok(())
@@ -1587,22 +1662,25 @@ mod tests {
 
     #[test]
     fn test_as_byte_vec_ref() -> Result<()> {
+        let collector = GarbageCollector::new();
         let original_value = vec![42i8];
-        let value = test_ref(original_value.clone());
+        let value = test_ref(&collector, original_value.clone());
         assert_eq!(original_value, value.as_byte_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_byte_vec_ref_error() {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         let result = value.as_byte_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_byte_vec_mut() -> Result<()> {
-        let value = test_ref(vec![42i8]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i8]);
         {
             let mut mutable_value = value.as_byte_vec_mut()?;
             mutable_value[0] = 3i8;
@@ -1613,29 +1691,33 @@ mod tests {
 
     #[test]
     fn test_as_byte_vec_mut_error() {
+        let collector = GarbageCollector::new();
         let original_value = vec![42i32];
-        let value = test_ref(original_value.clone());
+        let value = test_ref(&collector, original_value.clone());
         let result = value.as_byte_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_char_vec_ref() -> Result<()> {
-        let value = test_ref(vec!['*']);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec!['*']);
         assert_eq!(vec![42u16], value.as_char_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_char_vec_ref_error() {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         let result = value.as_char_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_char_vec_mut() -> Result<()> {
-        let value = test_ref(vec!['*']);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec!['*']);
         {
             let mut mutable_value = value.as_char_vec_mut()?;
             mutable_value[0] = 50u16;
@@ -1646,29 +1728,33 @@ mod tests {
 
     #[test]
     fn test_as_char_vec_mut_error() {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         let result = value.as_char_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_short_vec_ref() -> Result<()> {
+        let collector = GarbageCollector::new();
         let original_value = vec![42i16];
-        let value = test_ref(original_value.clone());
+        let value = test_ref(&collector, original_value.clone());
         assert_eq!(original_value, value.as_short_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_short_vec_ref_error() {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         let result = value.as_short_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_short_vec_mut() -> Result<()> {
-        let value = test_ref(vec![42i16]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i16]);
         {
             let mut mutable_value = value.as_short_vec_mut()?;
             mutable_value[0] = 3i16;
@@ -1679,29 +1765,33 @@ mod tests {
 
     #[test]
     fn test_as_short_vec_mut_error() {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         let result = value.as_short_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_int_vec_ref() -> Result<()> {
+        let collector = GarbageCollector::new();
         let original_value = vec![42i32];
-        let value = test_ref(original_value.clone());
+        let value = test_ref(&collector, original_value.clone());
         assert_eq!(original_value, value.as_int_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_int_vec_ref_error() {
-        let value = test_ref(vec![42i8]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i8]);
         let result = value.as_int_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_int_vec_mut() -> Result<()> {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         {
             let mut mutable_value = value.as_int_vec_mut()?;
             mutable_value[0] = 3i32;
@@ -1712,29 +1802,33 @@ mod tests {
 
     #[test]
     fn test_as_int_vec_mut_error() {
-        let value = test_ref(vec![42i8]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i8]);
         let result = value.as_int_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_long_vec_ref() -> Result<()> {
+        let collector = GarbageCollector::new();
         let original_value = vec![42i64];
-        let value = test_ref(original_value.clone());
+        let value = test_ref(&collector, original_value.clone());
         assert_eq!(original_value, value.as_long_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_long_vec_ref_error() {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         let result = value.as_long_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_long_vec_mut() -> Result<()> {
-        let value = test_ref(vec![42i64]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i64]);
         {
             let mut mutable_value = value.as_long_vec_mut()?;
             mutable_value[0] = 3i64;
@@ -1745,29 +1839,33 @@ mod tests {
 
     #[test]
     fn test_as_long_vec_mut_error() {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         let result = value.as_long_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_float_vec_ref() -> Result<()> {
+        let collector = GarbageCollector::new();
         let original_value = vec![42.1f32];
-        let value = test_ref(original_value.clone());
+        let value = test_ref(&collector, original_value.clone());
         assert_eq!(original_value, value.as_float_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_float_vec_ref_error() {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         let result = value.as_float_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_float_vec_mut() -> Result<()> {
-        let value = test_ref(vec![42.1f32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42.1f32]);
         {
             let mut mutable_value = value.as_float_vec_mut()?;
             mutable_value[0] = 3.45f32;
@@ -1778,29 +1876,33 @@ mod tests {
 
     #[test]
     fn test_as_float_vec_mut_error() {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         let result = value.as_float_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_double_vec_ref() -> Result<()> {
+        let collector = GarbageCollector::new();
         let original_value = vec![42.1f64];
-        let value = test_ref(original_value.clone());
+        let value = test_ref(&collector, original_value.clone());
         assert_eq!(original_value, value.as_double_vec_ref()?.to_vec());
         Ok(())
     }
 
     #[test]
     fn test_as_double_vec_ref_error() {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         let result = value.as_double_vec_ref();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[test]
     fn test_as_double_vec_mut() -> Result<()> {
-        let value = test_ref(vec![42.1f64]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42.1f64]);
         {
             let mut mutable_value = value.as_double_vec_mut()?;
             mutable_value[0] = 3.45f64;
@@ -1811,18 +1913,20 @@ mod tests {
 
     #[test]
     fn test_as_double_vec_mut_error() {
-        let value = test_ref(vec![42i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![42i32]);
         let result = value.as_double_vec_mut();
         assert!(matches!(result, Err(InvalidValueType(_))));
     }
 
     #[tokio::test]
     async fn test_as_class_vec_ref() -> Result<()> {
+        let collector = GarbageCollector::new();
         let original_class = load_class("[Ljava/lang/Object;").await?;
         let original_value = vec![Value::Object(None)];
         let values = vec![Value::Object(None)];
         let reference = Reference::try_from((original_class.clone(), values))?;
-        let value = test_ref(reference);
+        let value = test_ref(&collector, reference);
         let (class, value) = value.as_class_vec_ref()?;
         assert_eq!(original_class, class);
         assert_eq!(original_value, value.to_vec());
@@ -1831,10 +1935,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_class_vec_mut() -> Result<()> {
+        let collector = GarbageCollector::new();
         let object_class = load_class("[Ljava/lang/Object;").await?;
         let values = vec![Value::Object(None)];
         let reference = Reference::try_from((object_class.clone(), values))?;
-        let value = test_ref(reference);
+        let value = test_ref(&collector, reference);
         {
             let (_class, mut mutable_reference) = value.as_class_vec_mut()?;
             mutable_reference[0] = Value::Int(42);
@@ -1846,9 +1951,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_object_ref() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
-        let value = test_ref(object.clone());
+        let value = test_ref(&collector, object.clone());
         let result = value.as_object_ref()?.clone();
         assert_eq!(object, result);
         assert_eq!("java/lang/Object", object.class().name());
@@ -1857,9 +1963,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_object_mut() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Integer").await?;
         let object = Object::new(class)?;
-        let value = test_ref(object.clone());
+        let value = test_ref(&collector, object.clone());
         let mut result = value.as_object_mut()?;
         result.set_value("value", Value::Int(42))?;
         Ok(())
@@ -1868,12 +1975,13 @@ mod tests {
     #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
     async fn test_as_string() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.String").await?;
         let mut object = Object::new(class)?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
-        let string_value = test_ref(string_bytes);
+        let string_value = test_ref(&collector, string_bytes);
         object.set_value("value", string_value)?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let result = value.as_string()?;
         assert_eq!("foo".to_string(), result);
         Ok(())
@@ -1883,7 +1991,8 @@ mod tests {
 
     #[test]
     fn test_as_bytes_byte_array() -> Result<()> {
-        let value = test_ref(vec![1i8, 2i8, 3i8, 4i8]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![1i8, 2i8, 3i8, 4i8]);
         let bytes = value.as_bytes()?;
         assert_eq!(bytes.len(), 4);
         assert_eq!(&*bytes, &[1u8, 2u8, 3u8, 4u8]);
@@ -1892,7 +2001,8 @@ mod tests {
 
     #[test]
     fn test_as_bytes_int_array() -> Result<()> {
-        let value = test_ref(vec![0x0102_0304i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![0x0102_0304i32]);
         let bytes = value.as_bytes()?;
         assert_eq!(bytes.len(), 4);
         Ok(())
@@ -1900,7 +2010,8 @@ mod tests {
 
     #[test]
     fn test_as_bytes_long_array() -> Result<()> {
-        let value = test_ref(vec![1i64, 2i64]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![1i64, 2i64]);
         let bytes = value.as_bytes()?;
         assert_eq!(bytes.len(), 16); // 2 longs * 8 bytes each
         Ok(())
@@ -1908,7 +2019,8 @@ mod tests {
 
     #[test]
     fn test_as_bytes_float_array() -> Result<()> {
-        let value = test_ref(vec![1.0f32, 2.0f32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![1.0f32, 2.0f32]);
         let bytes = value.as_bytes()?;
         assert_eq!(bytes.len(), 8); // 2 floats * 4 bytes each
         Ok(())
@@ -1916,7 +2028,8 @@ mod tests {
 
     #[test]
     fn test_as_bytes_double_array() -> Result<()> {
-        let value = test_ref(vec![1.0f64]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![1.0f64]);
         let bytes = value.as_bytes()?;
         assert_eq!(bytes.len(), 8);
         Ok(())
@@ -1924,7 +2037,8 @@ mod tests {
 
     #[test]
     fn test_as_bytes_empty_array() -> Result<()> {
-        let value = test_ref(Vec::<i32>::new());
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Vec::<i32>::new());
         let bytes = value.as_bytes()?;
         assert!(bytes.is_empty());
         Ok(())
@@ -1946,9 +2060,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_bytes_object_error() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let result = value.as_bytes();
         assert!(result.is_err());
         Ok(())
@@ -1956,10 +2071,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_bytes_object_array_error() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("[Ljava/lang/Object;").await?;
         let values = vec![Value::Object(None)];
         let reference = Reference::try_from((class, values))?;
-        let value = test_ref(reference);
+        let value = test_ref(&collector, reference);
         let result = value.as_bytes();
         assert!(result.is_err());
         Ok(())
@@ -1967,7 +2083,8 @@ mod tests {
 
     #[test]
     fn test_as_bytes_mut_byte_array() -> Result<()> {
-        let value = test_ref(vec![1i8, 2i8, 3i8, 4i8]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![1i8, 2i8, 3i8, 4i8]);
         {
             let mut bytes = value.as_bytes_mut()?;
             bytes[0] = 10;
@@ -1981,7 +2098,8 @@ mod tests {
 
     #[test]
     fn test_as_bytes_mut_int_array() -> Result<()> {
-        let value = test_ref(vec![0i32]);
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, vec![0i32]);
         {
             let mut bytes = value.as_bytes_mut()?;
             bytes.fill(0xFF);
@@ -1993,7 +2111,8 @@ mod tests {
 
     #[test]
     fn test_as_bytes_mut_long_array() -> Result<()> {
-        let value = test_ref(Reference::from(vec![0i64]));
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![0i64]));
         {
             let mut bytes = value.as_bytes_mut()?;
             bytes.fill(0xFF);
@@ -2005,7 +2124,8 @@ mod tests {
 
     #[test]
     fn test_as_bytes_mut_float_array() -> Result<()> {
-        let value = test_ref(Reference::from(vec![0.0f32]));
+        let collector = GarbageCollector::new();
+        let value = test_ref(&collector, Reference::from(vec![0.0f32]));
         {
             let mut bytes = value.as_bytes_mut()?;
             bytes.copy_from_slice(&1.0f32.to_ne_bytes());
@@ -2031,9 +2151,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_bytes_mut_object_error() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.Object").await?;
         let object = Object::new(class)?;
-        let value = test_ref(object);
+        let value = test_ref(&collector, object);
         let result = value.as_bytes_mut();
         assert!(result.is_err());
         Ok(())
@@ -2041,11 +2162,12 @@ mod tests {
 
     #[test]
     fn test_as_bytes_roundtrip() -> Result<()> {
+        let collector = GarbageCollector::new();
         let original = vec![1i32, 2i32, 3i32, 4i32];
-        let value = test_ref(Reference::from(original.clone()));
+        let value = test_ref(&collector, Reference::from(original.clone()));
         let bytes = value.as_bytes()?.to_vec();
 
-        let new_value = test_ref(Reference::from(vec![0i32; 4]));
+        let new_value = test_ref(&collector, Reference::from(vec![0i32; 4]));
         {
             let mut new_bytes = new_value.as_bytes_mut()?;
             new_bytes.copy_from_slice(&bytes);

@@ -1,3 +1,9 @@
+[target.riscv64gc-unknown-linux-gnu]
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get install --assume-yes gcc-riscv64-linux-gnu",
+]
+
 [target.riscv64gc-unknown-linux-gnu.env]
 passthrough = [
     "PKG_CONFIG_ALLOW_CROSS=1",
@@ -6,6 +12,10 @@ passthrough = [
 
 [target.s390x-unknown-linux-gnu]
 image = "ghcr.io/cross-rs/s390x-unknown-linux-gnu:edge"
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get install --assume-yes gcc-s390x-linux-gnu",
+]
 
 [target.s390x-unknown-linux-gnu.env]
 passthrough = [

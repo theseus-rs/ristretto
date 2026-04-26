@@ -1,3 +1,4 @@
+#![cfg(not(target_family = "wasm"))]
 #![allow(unsafe_code)]
 
 use ristretto_gc::{GarbageCollector, Gc, Result, Trace};

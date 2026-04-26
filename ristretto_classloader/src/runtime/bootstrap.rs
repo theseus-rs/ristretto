@@ -1,18 +1,18 @@
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use crate::Error;
 use crate::runtime::util;
 use crate::{Class, ClassLoader, ClassPath, Result};
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use flate2::bufread::GzDecoder;
 use ristretto_classfile::Error::IoError;
 use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Weak};
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use std::{env, io};
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use tar::Archive;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use tracing::{debug, warn};
 
 /// The default Java version used by the class loader. This is the version that will be used if no
@@ -57,9 +57,54 @@ const PRIMITIVE_CLASS_ACCESS_FLAGS: ClassAccessFlags = ClassAccessFlags::from_bi
 /// # Errors
 ///
 /// An error will be returned if the class loader cannot be created.
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 pub async fn default_class_loader() -> Result<(PathBuf, String, Arc<ClassLoader>)> {
     version_class_loader(DEFAULT_JAVA_VERSION).await
+}
+
+/// `wasm32-unknown-unknown` cannot perform I/O. The JDK home must be supplied via
+/// `RISTRETTO_JDK_<MAJOR>_HOME`, `RISTRETTO_JDKS_DIR`, or `RISTRETTO_JDK_HOME`.
+///
+/// # Errors
+///
+/// Returns an error if no environment variable resolves to a valid JDK home.
+#[cfg(all(target_family = "wasm", target_os = "unknown"))]
+pub async fn default_class_loader() -> Result<(PathBuf, String, Arc<ClassLoader>)> {
+    version_class_loader(DEFAULT_JAVA_VERSION).await
+}
+
+/// `wasm32-unknown-unknown` implementation of `version_class_loader`. Networking and on-demand JDK
+/// downloads are not available, so the JDK must be supplied via one of the following environment
+/// variables (checked in order):
+///
+/// 1. `RISTRETTO_JDK_<MAJOR>_HOME` — points directly at the JDK home for the requested major
+///    version (e.g. `RISTRETTO_JDK_25_HOME=/jdks/25`).
+/// 2. `RISTRETTO_JDKS_DIR` — points at a directory containing one entry per full version string
+///    (e.g. `<dir>/25.0.3.9.1`).
+/// 3. `RISTRETTO_JDK_HOME` — generic fallback pointing at any JDK.
+///
+/// # Errors
+///
+/// Returns an error if none of the environment variables resolve to a valid JDK home or the JDK
+/// cannot be loaded.
+#[cfg(all(target_family = "wasm", target_os = "unknown"))]
+pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
+    let major = version.split('.').next().unwrap_or(version);
+    let env_key = format!("RISTRETTO_JDK_{major}_HOME");
+    if let Ok(path) = std::env::var(&env_key) {
+        return home_class_loader(Path::new(&path)).await;
+    }
+    if let Ok(dir) = std::env::var("RISTRETTO_JDKS_DIR") {
+        let path = Path::new(&dir).join(version);
+        return home_class_loader(&path).await;
+    }
+    if let Ok(path) = std::env::var("RISTRETTO_JDK_HOME") {
+        return home_class_loader(Path::new(&path)).await;
+    }
+    Err(IoError(format!(
+        "JDK not found for version {version}; set {env_key}, RISTRETTO_JDKS_DIR, or RISTRETTO_JDK_HOME"
+    ))
+    .into())
 }
 
 /// Get a class loader for the given Java home.
@@ -115,10 +160,23 @@ pub async fn home_class_loader(java_home: &Path) -> Result<(PathBuf, String, Arc
 /// # Errors
 ///
 /// An error will be returned if the class loader cannot be created.
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
     let (os, arch) = util::host_os_arch();
     version_class_loader_for_os(version, os, arch).await
+}
+
+/// Resolve the home directory used to cache JDK downloads. On native targets this is the user's
+/// `$HOME`. On wasi we fall back to the current directory because wasi does not expose a real home
+/// directory.
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+fn cache_home_dir() -> PathBuf {
+    if let Ok(value) = env::var("HOME")
+        && !value.is_empty()
+    {
+        return PathBuf::from(value);
+    }
+    env::current_dir().unwrap_or_default()
 }
 
 /// Get a class loader for the given Java runtime version, targeting the specified OS and
@@ -134,14 +192,18 @@ pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Arc
 /// # Errors
 ///
 /// An error will be returned if the class loader cannot be created.
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 pub async fn version_class_loader_for_os(
     version: &str,
     os: &str,
     arch: &str,
 ) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
+    if let Some(result) = try_env_class_loader(version).await? {
+        return Ok(result);
+    }
+
     let mut version = version.to_string();
-    let home_dir = env::home_dir().unwrap_or_else(|| env::current_dir().unwrap_or_default());
+    let home_dir = cache_home_dir();
 
     let base_path = home_dir.join(".ristretto").join(format!("{os}-{arch}"));
     let mut installation_dir = base_path.join(&version);
@@ -162,6 +224,36 @@ pub async fn version_class_loader_for_os(
     let class_loader = ClassLoader::new("bootstrap", class_path);
     register_primitives(&class_loader).await?;
     Ok((installation_dir, version, class_loader))
+}
+
+/// If `RISTRETTO_JDK_<MAJOR>_HOME`, `RISTRETTO_JDKS_DIR`, or `RISTRETTO_JDK_HOME` is set, use it
+/// instead of downloading a JDK. This lets users (and CI) point at a pre-installed runtime to
+/// avoid network access.
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+async fn try_env_class_loader(
+    version: &str,
+) -> Result<Option<(PathBuf, String, Arc<ClassLoader>)>> {
+    let major = version.split('.').next().unwrap_or(version);
+    let env_key = format!("RISTRETTO_JDK_{major}_HOME");
+    if let Ok(path) = env::var(&env_key)
+        && !path.is_empty()
+    {
+        return home_class_loader(Path::new(&path)).await.map(Some);
+    }
+    if let Ok(dir) = env::var("RISTRETTO_JDKS_DIR")
+        && !dir.is_empty()
+    {
+        let path = Path::new(&dir).join(version);
+        if path.exists() {
+            return home_class_loader(&path).await.map(Some);
+        }
+    }
+    if let Ok(path) = env::var("RISTRETTO_JDK_HOME")
+        && !path.is_empty()
+    {
+        return home_class_loader(Path::new(&path)).await.map(Some);
+    }
+    Ok(None)
 }
 
 /// Register all primitive classes in the class loader.
@@ -236,7 +328,9 @@ fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
 /// # Errors
 ///
 /// An error will be returned if the archive cannot be extracted.
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+#[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+#[expect(clippy::too_many_lines)]
 async fn extract_archive(
     version: &str,
     file_name: &str,
@@ -284,9 +378,28 @@ async fn extract_archive(
                 }
             }
         }
-        #[cfg(not(windows))]
+        #[cfg(all(not(windows), not(target_family = "wasm")))]
         {
             tar.unpack(extract_dir.clone())?;
+        }
+        #[cfg(target_family = "wasm")]
+        {
+            use std::io::Read;
+            for entry in tar.entries()? {
+                let mut entry = entry?;
+                let path = extract_dir.join(entry.path()?);
+                let kind = entry.header().entry_type();
+                if kind.is_dir() {
+                    std::fs::create_dir_all(&path)?;
+                } else if kind.is_file() {
+                    if let Some(parent) = path.parent() {
+                        std::fs::create_dir_all(parent)?;
+                    }
+                    let mut buf = Vec::new();
+                    entry.read_to_end(&mut buf)?;
+                    std::fs::write(&path, buf)?;
+                }
+            }
         }
     }
 
@@ -346,7 +459,7 @@ async fn extract_archive(
     Ok(installation_dir)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(all(target_family = "wasm", target_os = "unknown"))))]
 mod tests {
     use super::*;
     use ristretto_classfile::JavaStr;

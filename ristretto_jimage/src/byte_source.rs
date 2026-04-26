@@ -156,9 +156,14 @@ mod tests {
     use std::io::Write;
     use tempfile::NamedTempFile;
 
+    fn make_named_tempfile() -> std::io::Result<NamedTempFile> {
+        ristretto_test_util::init_wasi_tempdir();
+        NamedTempFile::new()
+    }
+
     #[test]
     fn test_byte_source_type() -> Result<()> {
-        let mut temp_file = NamedTempFile::new()?;
+        let mut temp_file = make_named_tempfile()?;
         let data = b"Hello, world!";
         temp_file.write_all(data)?;
         temp_file.flush()?;
@@ -184,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_byte_source_file_get_bytes() -> Result<()> {
-        let mut temp_file = NamedTempFile::new()?;
+        let mut temp_file = make_named_tempfile()?;
         let data = b"Hello, world!";
         temp_file.write_all(data)?;
         temp_file.flush()?;
@@ -200,7 +205,7 @@ mod tests {
     #[cfg(not(target_family = "wasm"))]
     #[test]
     fn test_byte_source_mmap_get_bytes() -> Result<()> {
-        let mut temp_file = NamedTempFile::new()?;
+        let mut temp_file = make_named_tempfile()?;
         let data = b"Hello, world!";
         temp_file.write_all(data)?;
         temp_file.flush()?;
@@ -223,7 +228,7 @@ mod tests {
 
     #[test]
     fn test_byte_source_file_get_bytes_to_null() -> Result<()> {
-        let mut temp_file = NamedTempFile::new()?;
+        let mut temp_file = make_named_tempfile()?;
         let data = b"Hello\0world!";
         temp_file.write_all(data)?;
         temp_file.flush()?;
@@ -238,7 +243,7 @@ mod tests {
     #[cfg(not(target_family = "wasm"))]
     #[test]
     fn test_byte_source_mmap_get_bytes_to_null() -> Result<()> {
-        let mut temp_file = NamedTempFile::new()?;
+        let mut temp_file = make_named_tempfile()?;
         let data = b"Hello\0world!";
         temp_file.write_all(data)?;
         temp_file.flush()?;

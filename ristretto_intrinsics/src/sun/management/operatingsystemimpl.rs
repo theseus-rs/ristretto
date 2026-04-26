@@ -239,7 +239,7 @@ pub async fn initialize_0<T: Thread + 'static>(
     Ok(None)
 }
 
-#[cfg(all(test, target_family = "unix"))]
+#[cfg(all(test, target_family = "unix", not(target_family = "wasm")))]
 mod tests {
     use super::*;
 

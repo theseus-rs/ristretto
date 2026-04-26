@@ -44,7 +44,7 @@ mod local_variables;
 mod operand_stack;
 #[cfg(not(target_family = "wasm"))]
 mod runtime_helpers;
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod test;
 mod value;
 #[cfg(target_family = "wasm")]

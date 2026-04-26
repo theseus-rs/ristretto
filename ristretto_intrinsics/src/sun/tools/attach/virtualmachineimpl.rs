@@ -641,7 +641,7 @@ pub async fn write_pipe_windows_v25<T: Thread + 'static>(
     .into())
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
 

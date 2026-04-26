@@ -1,8 +1,8 @@
 use flate2::{Decompress, FlushDecompress};
-use parking_lot::RwLock;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
+use ristretto_gc::sync::RwLock;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;

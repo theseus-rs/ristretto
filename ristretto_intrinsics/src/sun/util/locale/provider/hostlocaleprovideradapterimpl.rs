@@ -422,7 +422,7 @@ pub async fn get_calendar_data_value<T: Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[async_method]
-pub async fn get_calendar_display_strings_windows_ge_v11_v1<T: Thread + 'static>(
+pub async fn get_calendar_display_strings_windows<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -439,7 +439,7 @@ pub async fn get_calendar_display_strings_windows_ge_v11_v1<T: Thread + 'static>
     Any
 )]
 #[async_method]
-pub async fn get_calendar_id_windows_v1<T: Thread + 'static>(
+pub async fn get_calendar_id_windows<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -516,122 +516,7 @@ pub async fn is_native_digit<T: Thread + 'static>(
     .into())
 }
 
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDataValue(Ljava/lang/String;I)I",
-    Any
-)]
-#[async_method]
-pub async fn get_calendar_data_value_windows<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _type_ = parameters.pop_int()?;
-    let _jlangtag = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDataValue(Ljava/lang/String;I)I".to_string()).into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;III)[Ljava/lang/String;",
-    GreaterThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn get_calendar_display_strings_windows_ge_v11_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _style = parameters.pop_int()?;
-    let _field = parameters.pop_int()?;
-    let _calid = parameters.pop_int()?;
-    let _jlangtag = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;III)[Ljava/lang/String;".to_string()).into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)I",
-    Any
-)]
-#[async_method]
-pub async fn get_calendar_id_windows_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _jlangtag = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)I"
-            .to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDateTimePattern(IILjava/lang/String;)Ljava/lang/String;",
-    Any
-)]
-#[async_method]
-pub async fn get_date_time_pattern_windows<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _jlangtag = parameters.pop_reference()?;
-    let _time_style = parameters.pop_int()?;
-    let _date_style = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDateTimePattern(IILjava/lang/String;)Ljava/lang/String;".to_string()).into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getNumberPattern(ILjava/lang/String;)Ljava/lang/String;",
-    Any
-)]
-#[async_method]
-pub async fn get_number_pattern_windows<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _jlangtag = parameters.pop_reference()?;
-    let _number_style = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError("sun/util/locale/provider/HostLocaleProviderAdapterImpl.getNumberPattern(ILjava/lang/String;)Ljava/lang/String;".to_string()).into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/util/locale/provider/HostLocaleProviderAdapterImpl.initialize()Z",
-    Any
-)]
-#[async_method]
-pub async fn initialize_windows<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/util/locale/provider/HostLocaleProviderAdapterImpl.initialize()Z".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "sun/util/locale/provider/HostLocaleProviderAdapterImpl.isNativeDigit(Ljava/lang/String;)Z",
-    Any
-)]
-#[async_method]
-pub async fn is_native_digit_windows<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _jlangtag = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/util/locale/provider/HostLocaleProviderAdapterImpl.isNativeDigit(Ljava/lang/String;)Z"
-            .to_string(),
-    )
-    .into())
-}
-
-#[cfg(all(test, not(target_os = "linux")))]
+#[cfg(all(test, not(target_os = "linux"), not(target_family = "wasm")))]
 mod tests {
     use super::*;
 
@@ -841,9 +726,9 @@ mod tests {
 
     #[cfg(target_os = "windows")]
     #[tokio::test]
-    async fn test_get_calendar_display_strings_windows_ge_v11_v1() {
+    async fn test_get_calendar_display_strings_windows() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_calendar_display_strings_windows_ge_v11_v1(
+        let result = get_calendar_display_strings_windows(
             thread,
             Parameters::new(vec![
                 Value::Object(None),
@@ -861,10 +746,10 @@ mod tests {
 
     #[cfg(target_os = "windows")]
     #[tokio::test]
-    async fn test_get_calendar_id_windows_v1() {
+    async fn test_get_calendar_id_windows() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            get_calendar_id_windows_v1(thread, Parameters::new(vec![Value::Object(None)])).await;
+            get_calendar_id_windows(thread, Parameters::new(vec![Value::Object(None)])).await;
         assert_eq!(
             "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -917,106 +802,6 @@ mod tests {
     async fn test_is_native_digit() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = is_native_digit(thread, Parameters::new(vec![Value::Object(None)])).await;
-        assert_eq!(
-            "sun/util/locale/provider/HostLocaleProviderAdapterImpl.isNativeDigit(Ljava/lang/String;)Z",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_get_calendar_data_value_windows() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_calendar_data_value_windows(
-            thread,
-            Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
-        assert_eq!(
-            "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDataValue(Ljava/lang/String;I)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_get_calendar_display_strings_windows_ge_v11_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_calendar_display_strings_windows_ge_v11_v2(
-            thread,
-            Parameters::new(vec![
-                Value::Object(None),
-                Value::Int(0),
-                Value::Int(0),
-                Value::Int(0),
-            ]),
-        )
-        .await;
-        assert_eq!(
-            "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarDisplayStrings(Ljava/lang/String;III)[Ljava/lang/String;",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_get_calendar_id_windows_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            get_calendar_id_windows_v2(thread, Parameters::new(vec![Value::Object(None)])).await;
-        assert_eq!(
-            "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getCalendarID(Ljava/lang/String;)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_get_date_time_pattern_windows() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_date_time_pattern_windows(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getDateTimePattern(IILjava/lang/String;)Ljava/lang/String;",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_get_number_pattern_windows() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_number_pattern_windows(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "sun/util/locale/provider/HostLocaleProviderAdapterImpl.getNumberPattern(ILjava/lang/String;)Ljava/lang/String;",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_initialize_windows() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = initialize_windows(thread, Parameters::default()).await;
-        assert_eq!(
-            "sun/util/locale/provider/HostLocaleProviderAdapterImpl.initialize()Z",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_is_native_digit_windows() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            is_native_digit_windows(thread, Parameters::new(vec![Value::Object(None)])).await;
         assert_eq!(
             "sun/util/locale/provider/HostLocaleProviderAdapterImpl.isNativeDigit(Ljava/lang/String;)Z",
             result.unwrap_err().to_string()

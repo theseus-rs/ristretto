@@ -160,7 +160,10 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let result = free_memory(thread, Parameters::default()).await?;
         let free_memory = result.unwrap_or(Value::Long(0)).as_i64()?;
+        #[cfg(not(target_family = "wasm"))]
         assert!(free_memory >= 1);
+        #[cfg(target_family = "wasm")]
+        assert_eq!(free_memory, 0);
         Ok(())
     }
 
@@ -214,7 +217,10 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let result = total_memory(thread, Parameters::default()).await?;
         let total_memory = result.unwrap_or(Value::Long(0)).as_i64()?;
+        #[cfg(not(target_family = "wasm"))]
         assert!(total_memory >= 1);
+        #[cfg(target_family = "wasm")]
+        assert_eq!(total_memory, 0);
         Ok(())
     }
 }

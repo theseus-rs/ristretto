@@ -1,3 +1,4 @@
+#![cfg(not(target_family = "wasm"))]
 use ristretto_pom::{Project, Result};
 use std::io::Write;
 use tempfile::NamedTempFile;

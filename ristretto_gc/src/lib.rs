@@ -19,6 +19,7 @@ mod gc;
 mod metadata;
 mod pointers;
 mod root_guard;
+pub mod sync;
 
 pub use collector::{GarbageCollector, Trace};
 pub use config::{Configuration, ConfigurationBuilder, Statistics};

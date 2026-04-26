@@ -80,7 +80,7 @@ pub async fn init_ids<T: Thread + 'static>(
     Ok(None)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
     use ristretto_classloader::Object;

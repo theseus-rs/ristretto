@@ -1,6 +1,6 @@
 use crate::Error::InternalError;
 use crate::Result;
-use parking_lot::RwLock;
+use ristretto_gc::sync::RwLock;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::fmt;

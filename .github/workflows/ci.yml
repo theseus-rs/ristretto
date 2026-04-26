@@ -65,7 +65,7 @@ jobs:
             target: wasm32-unknown-unknown
           - platform: wasm32-wasi
             os: ubuntu-latest
-            target: wasm32-wasip1-threads
+            target: wasm32-wasip2
 
     steps:
       - name: Checkout source code
@@ -100,7 +100,16 @@ jobs:
           cross clippy --workspace --target ${{ matrix.target }} -- -D warnings
 
       - name: Run clippy
-        if: ${{ matrix.platform != 'wasm32-unknown' && matrix.platform != 'linux-riscv64' && matrix.platform != 'linux-s390x' }}
+        if: ${{ matrix.platform == 'wasm32-wasi' }}
+        env:
+          CARGO_TERM_COLOR: always
+          RUSTC_BOOTSTRAP: 1
+        run: |
+          rustup target install ${{ matrix.target }}
+          cargo clippy --workspace --target ${{ matrix.target }} -- -D warnings
+
+      - name: Run clippy
+        if: ${{ matrix.platform != 'wasm32-unknown' && matrix.platform != 'linux-riscv64' && matrix.platform != 'linux-s390x' && matrix.platform != 'wasm32-wasi' }}
         env:
           CARGO_TERM_COLOR: always
         run: |
@@ -125,10 +134,50 @@ jobs:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           RUST_BACKTRACE: 1
+          RUSTC_BOOTSTRAP: 1
           RUST_LOG: info
         run: |
           rustup target install ${{ matrix.target }}
           cargo build --workspace --target ${{ matrix.target }}
+
+      - name: Build
+        if: ${{ matrix.platform == 'linux-riscv64' || matrix.platform == 'linux-s390x' }}
+        env:
+          CARGO_TERM_COLOR: always
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RUST_BACKTRACE: 1
+          RUST_LOG: info
+        run: |
+          cross build --workspace --target ${{ matrix.target }}
+
+      - name: Build
+        if: ${{ matrix.platform != 'wasm32-unknown' && matrix.platform != 'wasm32-wasi' && matrix.platform != 'linux-riscv64' && matrix.platform != 'linux-s390x' }}
+        env:
+          CARGO_TERM_COLOR: always
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RUST_BACKTRACE: 1
+          RUST_LOG: info
+        run: |
+          rustup target install ${{ matrix.target }}
+          cargo build --workspace --target ${{ matrix.target }}
+
+      - name: Install wasmtime
+        if: ${{ matrix.platform == 'wasm32-wasi' }}
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasmtime
+
+      - name: Tests
+        if: ${{ matrix.platform == 'wasm32-wasi' }}
+        env:
+          CARGO_TERM_COLOR: always
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RUST_BACKTRACE: 1
+          RUST_LOG: info
+          RUSTC_BOOTSTRAP: 1
+          CARGO_TARGET_WASM32_WASIP2_RUNNER: "wasmtime -W max-wasm-stack=8388608 -S http -S inherit-network -S allow-ip-name-lookup --dir=. --dir=${{ github.workspace }}::${{ github.workspace }} --env=HOME=/home --dir=${{ runner.temp }}::/home --env=TMPDIR=/tmp --dir=/tmp::/tmp"
+        run: |
+          cargo test --workspace --tests --exclude ristretto_classfile --target ${{ matrix.target }} -- --test-threads=1
 
       - name: Tests
         if: ${{ !startsWith(matrix.platform, 'wasm32') && matrix.platform != 'linux-riscv64' && matrix.platform != 'linux-s390x' && matrix.platform != 'macos-arm' }}

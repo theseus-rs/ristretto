@@ -1,7 +1,7 @@
 //! `GcTrace` trait and object tracing tests
 //!
 //! Tests custom `GcTrace` implementations, object graphs, and tracing correctness.
-
+#![cfg(not(target_family = "wasm"))]
 #![allow(unsafe_code)]
 
 use ristretto_gc::{GarbageCollector, Gc, GcRootGuard, Result, Trace};

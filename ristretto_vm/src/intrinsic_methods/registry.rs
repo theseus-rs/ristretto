@@ -194,7 +194,7 @@ impl MethodRegistry {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
     use crate::vm;
@@ -203,6 +203,9 @@ mod tests {
     use ristretto_classloader::{
         JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION, JAVA_21_VERSION, JAVA_25_VERSION,
     };
+    use std::sync::Mutex;
+
+    static RUNTIME_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[tokio::test]
     async fn test_method() -> Result<()> {
@@ -269,6 +272,10 @@ mod tests {
     /// Verify that all the intrinsic methods are registered for a given runtime targeting the
     /// specified OS / architecture.
     fn test_runtime(version: &str, os: &str, arch: &str) -> Result<()> {
+        let _guard = match RUNTIME_TEST_LOCK.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
         let intrinsic_methods = {
             let runtime = tokio::runtime::Runtime::new()?;
             runtime.block_on(get_intrinsic_methods(version, os, arch))?
