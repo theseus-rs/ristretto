@@ -651,7 +651,7 @@ impl Thread {
                             }
                             Err(error) => {
                                 // Step 8: <clinit> threw, mark as Erroneous
-                                let error_msg = format!("{error}");
+                                let error_msg = format!("{error:#}");
                                 class.fail_initialization(error_msg.clone())?;
                                 // Wrap in ExceptionInInitializerError (only first time)
                                 return Err(ExceptionInInitializerError(error_msg).into());

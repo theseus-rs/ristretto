@@ -26,6 +26,9 @@ jobs:
           components: 'llvm-tools-preview'
           toolchain: stable
 
+      - name: Install Linux dependencies
+        run: .github/scripts/setup-linux.sh
+
       - name: Install benchmarking tools
         uses: bencherdev/bencher@main
 

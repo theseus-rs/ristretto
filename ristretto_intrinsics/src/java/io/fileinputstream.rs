@@ -123,11 +123,8 @@ pub async fn is_regular_file_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file_input_stream = parameters.pop()?;
-    let file_descriptor = {
-        let file_input_stream = file_input_stream.as_object_ref()?;
-        file_input_stream.value("fd")?
-    };
+    let file_descriptor = parameters.pop()?;
+    let _this = parameters.pop()?;
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;

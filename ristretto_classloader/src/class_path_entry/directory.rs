@@ -31,6 +31,35 @@ impl Directory {
         &self.name
     }
 
+    /// Read a resource from the directory by name.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    pub async fn read_resource<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
+        let name = name.as_ref();
+        let path = self.path.join(name);
+
+        #[cfg(not(target_family = "wasm"))]
+        {
+            match tokio::fs::read(&path).await {
+                Ok(bytes) => Ok(Some(bytes)),
+                Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
+                Err(err) => Err(crate::Error::IoError(err)),
+            }
+        }
+
+        #[cfg(target_family = "wasm")]
+        {
+            match std::fs::read(&path) {
+                Ok(bytes) => Ok(Some(bytes)),
+                Err(err) if err.kind() == io::ErrorKind::NotFound => Ok(None),
+                Err(err) => Err(crate::Error::IoError(err)),
+            }
+        }
+    }
+
     /// Read a class from the directory.
     ///
     /// # Errors
@@ -124,6 +153,36 @@ mod tests {
         let directory1 = Directory::new("test1");
         let directory2 = Directory::new("test2");
         assert_ne!(directory1, directory2);
+    }
+
+    #[tokio::test]
+    async fn test_read_resource() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_directory = cargo_manifest.join("..").join("classes");
+        let directory = Directory::new(classes_directory);
+        let result = directory.read_resource("HelloWorld.class").await?;
+        assert!(result.is_some());
+        let bytes = result.expect("resource bytes");
+        assert!(!bytes.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_read_resource_not_found() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_directory = cargo_manifest.join("..").join("classes");
+        let directory = Directory::new(classes_directory);
+        let result = directory.read_resource("NonExistent.class").await?;
+        assert!(result.is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_read_resource_invalid_directory() -> Result<()> {
+        let directory = Directory::new("foo");
+        let result = directory.read_resource("HelloWorld.class").await?;
+        assert!(result.is_none());
+        Ok(())
     }
 
     #[tokio::test]

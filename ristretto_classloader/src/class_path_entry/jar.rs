@@ -89,6 +89,15 @@ impl Jar {
         archive.load_file(name.as_ref()).await
     }
 
+    /// Read a resource from the jar by name.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    pub async fn read_resource<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
+        self.read_file(name).await
+    }
+
     /// Read a class from the jar.
     ///
     /// # Errors
