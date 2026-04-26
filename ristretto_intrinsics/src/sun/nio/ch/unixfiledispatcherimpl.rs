@@ -181,6 +181,7 @@ pub async fn map_0<T: Thread + 'static>(
             position,
             length: len,
             mode,
+            path: None,
         },
     );
     Ok(Some(Value::Long(address)))

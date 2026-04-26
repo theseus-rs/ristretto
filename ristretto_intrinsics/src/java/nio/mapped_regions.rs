@@ -55,6 +55,9 @@ pub struct MappedRegion {
     pub length: usize,
     /// Mode the region was mapped with.
     pub mode: MapMode,
+    /// Canonicalized path of the underlying file, if known. Used (on Windows) to refuse
+    /// `DeleteFile0` for files with active mappings.
+    pub path: Option<String>,
 }
 
 /// Per-VM registry storing all currently-active memory-mapped file regions, keyed by their base
@@ -62,6 +65,9 @@ pub struct MappedRegion {
 #[derive(Debug, Default)]
 pub struct MappedRegions {
     regions: Mutex<AHashMap<i64, MappedRegion>>,
+    /// Reference-counted set of canonicalized file paths that currently have one or more
+    /// active mappings. Used (on Windows) to refuse `DeleteFile0` for mapped files.
+    mapped_paths: Mutex<AHashMap<String, usize>>,
 }
 
 impl MappedRegions {
@@ -108,9 +114,46 @@ impl MappedRegions {
         self.regions.lock().len()
     }
 
+    /// Returns all registered (address, region) pairs whose `fd` equals `fd` and whose mode
+    /// is writable back to the underlying file.
+    pub fn writable_entries_for_fd(&self, fd: i64) -> Vec<(i64, MappedRegion)> {
+        self.regions
+            .lock()
+            .iter()
+            .filter(|(_, r)| r.fd == fd && r.mode.is_writable_back_to_file())
+            .map(|(addr, region)| (*addr, region.clone()))
+            .collect()
+    }
+
     #[cfg(test)]
     pub fn is_empty(&self) -> bool {
         self.regions.lock().is_empty()
+    }
+
+    /// Records that `path` (a canonicalized file path) currently has an active mapping. Each
+    /// call must be balanced by a corresponding `release_path`.
+    pub fn track_path(&self, path: String) {
+        *self.mapped_paths.lock().entry(path).or_insert(0) += 1;
+    }
+
+    /// Releases a previously tracked path. Returns true if the path was tracked.
+    pub fn release_path(&self, path: &str) -> bool {
+        let mut paths = self.mapped_paths.lock();
+        if let Some(count) = paths.get_mut(path) {
+            *count -= 1;
+            if *count == 0 {
+                paths.remove(path);
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Returns true if `path` currently has any active mapping.
+    #[must_use]
+    pub fn is_path_mapped(&self, path: &str) -> bool {
+        self.mapped_paths.lock().contains_key(path)
     }
 }
 
@@ -143,6 +186,7 @@ mod tests {
                 position: 0,
                 length: 64,
                 mode: MapMode::ReadWrite,
+                path: None,
             },
         );
         assert_eq!(regions.len(), 1);
@@ -163,11 +207,26 @@ mod tests {
                 position: 0,
                 length: 100,
                 mode: MapMode::ReadWrite,
+                path: None,
             },
         );
         let (base, _) = regions.find_containing(0x1010, 16).expect("found");
         assert_eq!(base, 0x1000);
         assert!(regions.find_containing(0x2000, 1).is_none());
         assert!(regions.find_containing(0x1050, 100).is_none());
+    }
+
+    #[test]
+    fn test_track_release_path() {
+        let regions = MappedRegions::new();
+        assert!(!regions.is_path_mapped("/x"));
+        regions.track_path("/x".to_string());
+        regions.track_path("/x".to_string());
+        assert!(regions.is_path_mapped("/x"));
+        assert!(regions.release_path("/x"));
+        assert!(regions.is_path_mapped("/x"));
+        assert!(regions.release_path("/x"));
+        assert!(!regions.is_path_mapped("/x"));
+        assert!(!regions.release_path("/x"));
     }
 }

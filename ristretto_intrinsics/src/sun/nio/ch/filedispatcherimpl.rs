@@ -1,11 +1,13 @@
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
 #[cfg(target_os = "windows")]
-use crate::java::nio::mapped_regions::MappedRegions;
+use crate::java::nio::mapped_regions::{MapMode, MappedRegion, MappedRegions};
 use crate::sun::nio::fs::managed_files;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::JAVA_8;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_classfile::JAVA_11;
+use ristretto_classfile::JAVA_17;
+use ristretto_classfile::JAVA_21;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::JAVA_25;
 #[cfg(not(target_os = "linux"))]
@@ -14,8 +16,8 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::VersionSpecification::Between;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_classfile::VersionSpecification::Equal;
-use ristretto_classfile::VersionSpecification::{GreaterThanOrEqual, LessThanOrEqual};
-use ristretto_classfile::{JAVA_17, JAVA_21};
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 #[cfg(target_family = "unix")]
 use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
@@ -151,6 +153,15 @@ pub async fn force_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
     let file_handles = vm.file_handles();
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
+            for (address, region) in regions.writable_entries_for_fd(fd) {
+                let bytes = vm.native_memory().read_bytes(address, region.length);
+                let _ = managed_files::write_at(file_handles, fd, &bytes, region.position).await;
+            }
+        }
+    }
     if metadata_only {
         managed_files::sync_data(file_handles, fd)
             .await
@@ -872,16 +883,82 @@ pub async fn is_other0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn map0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _map_sync = parameters.pop_bool()?;
-    let _len = parameters.pop_long()?;
-    let _off = parameters.pop_long()?;
-    let _prot = parameters.pop_int()?;
-    let _fdo = parameters.pop_reference()?;
-    // Memory-mapped files are not supported; return IOStatus.UNSUPPORTED (-4).
-    Ok(Some(Value::Long(-4)))
+    let _is_sync = parameters.pop_bool()?;
+    let length = parameters.pop_long()?;
+    let position = parameters.pop_long()?;
+    let prot = parameters.pop_int()?;
+    let fd_value = parameters.pop()?;
+    let vm = thread.vm()?;
+    let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
+
+    let length =
+        u64::try_from(length).map_err(|_| InternalError("map0: negative length".to_string()))?;
+    let position = u64::try_from(position)
+        .map_err(|_| InternalError("map0: negative position".to_string()))?;
+    let len =
+        usize::try_from(length).map_err(|_| InternalError("map0: length too large".to_string()))?;
+
+    let file_handles = vm.file_handles();
+    let mut buf = vec![0u8; len];
+    if len > 0 {
+        let _ = managed_files::read_at(file_handles, fd, &mut buf, position)
+            .await
+            .map_err(|e| InternalError(format!("map0: {e}")))?;
+    }
+    let address = vm.native_memory().allocate(len.max(1));
+    if len > 0 {
+        vm.native_memory().write_bytes(address, &buf);
+    }
+    let mode = MapMode::from_int(prot).unwrap_or(MapMode::ReadOnly);
+    let path = path_for_fd(file_handles, fd).await;
+    let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
+    if let Some(p) = path.as_ref() {
+        regions.track_path(p.clone());
+    }
+    regions.insert(
+        address,
+        MappedRegion {
+            fd,
+            position,
+            length: len,
+            mode,
+            path,
+        },
+    );
+    Ok(Some(Value::Long(address)))
+}
+
+#[cfg(target_os = "windows")]
+#[expect(unsafe_code)]
+async fn path_for_fd(
+    file_handles: &ristretto_types::handles::HandleManager<
+        i64,
+        ristretto_types::handles::FileHandle,
+    >,
+    fd: i64,
+) -> Option<String> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::Storage::FileSystem::GetFinalPathNameByHandleW;
+    let handle = file_handles.get(&fd).await?;
+    let raw = handle.file.as_raw_handle() as HANDLE;
+    let mut buf = [0u16; 1024];
+    let len = unsafe {
+        GetFinalPathNameByHandleW(
+            raw,
+            buf.as_mut_ptr(),
+            u32::try_from(buf.len()).unwrap_or(0),
+            0,
+        )
+    };
+    if len == 0 {
+        return None;
+    }
+    let len = usize::try_from(len).ok()?.min(buf.len());
+    Some(String::from_utf16_lossy(&buf[..len]))
 }
 
 #[cfg(target_os = "windows")]
@@ -978,7 +1055,11 @@ pub async fn unmap0<T: Thread + 'static>(
     let address = parameters.pop_long()?;
     let vm = thread.vm()?;
     let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
-    regions.remove(address);
+    if let Some(region) = regions.remove(address)
+        && let Some(path) = region.path
+    {
+        regions.release_path(&path);
+    }
     vm.native_memory().free(address);
     Ok(Some(Value::Int(0)))
 }
@@ -1291,7 +1372,7 @@ mod tests {
             ]),
         )
         .await;
-        assert_eq!(Some(Value::Long(-4)), result.unwrap());
+        assert!(result.is_err());
     }
 
     #[cfg(target_os = "windows")]
