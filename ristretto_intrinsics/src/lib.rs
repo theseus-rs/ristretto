@@ -22,6 +22,8 @@ pub mod com;
 pub mod java;
 /// JDK-specific internal methods
 pub mod jdk;
+/// Host locale detection
+mod locale;
 /// Methods for handling Java properties
 pub mod properties;
 /// Methods from Sun packages

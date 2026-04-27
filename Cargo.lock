@@ -2579,6 +2579,7 @@ dependencies = [
  "bitflags 2.11.1",
  "byteorder",
  "console",
+ "core-foundation-sys",
  "dirs",
  "filetime",
  "flate2",

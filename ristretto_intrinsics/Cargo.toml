@@ -48,9 +48,12 @@ sysinfo = { workspace = true }
 thread-priority = { workspace = true }
 tokio = { workspace = true, features = ["fs", "net", "process", "time"] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation-sys = { workspace = true }
+
 [target.'cfg(target_family = "windows")'.dependencies]
 os_pipe = { workspace = true }
-windows-sys = { workspace = true }
+windows-sys = { workspace = true, features = ["Win32_Globalization"] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 tokio = { workspace = true }
