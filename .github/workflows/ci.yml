@@ -25,6 +25,7 @@ jobs:
       matrix:
         platform:
           - linux-arm
+          - linux-riscv64
           - linux-x64
           - macos-arm
           - macos-x64
@@ -36,6 +37,9 @@ jobs:
           - platform: linux-arm
             os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
+          - platform: linux-riscv64
+            os: ubuntu-latest
+            target: riscv64gc-unknown-linux-gnu
           - platform: linux-x64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
@@ -65,6 +69,12 @@ jobs:
           targets: ${{ matrix.target }}
           toolchain: stable
 
+      - name: Install cross
+        if: ${{ matrix.platform == 'linux-riscv64' }}
+        uses: taiki-e/install-action@main
+        with:
+          tool: cross
+
       - name: Run clippy
         if: ${{ matrix.platform == 'wasm32-unknown' }}
         env:
@@ -75,7 +85,14 @@ jobs:
           cargo clippy --workspace --target ${{ matrix.target }} -- -D warnings
 
       - name: Run clippy
-        if: ${{ matrix.platform != 'wasm32-unknown' }}
+        if: ${{ matrix.platform == 'linux-riscv64' }}
+        env:
+          CARGO_TERM_COLOR: always
+        run: |
+          cross clippy --workspace --target ${{ matrix.target }} -- -D warnings
+
+      - name: Run clippy
+        if: ${{ matrix.platform != 'wasm32-unknown' && matrix.platform != 'linux-riscv64' }}
         env:
           CARGO_TERM_COLOR: always
         run: |
@@ -106,7 +123,7 @@ jobs:
           cargo build --workspace --target ${{ matrix.target }}
 
       - name: Tests
-        if: ${{ startsWith(matrix.platform, 'linux') || matrix.platform == 'macos-x64' }}
+        if: ${{ (startsWith(matrix.platform, 'linux') && matrix.platform != 'linux-riscv64') || matrix.platform == 'macos-x64' }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -114,6 +131,16 @@ jobs:
           RUST_LOG: info
         run: |
           cargo test --profile release-tests --workspace --all-features
+
+      - name: Tests
+        if: ${{ matrix.platform == 'linux-riscv64' }}
+        env:
+          CARGO_TERM_COLOR: always
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RUST_BACKTRACE: 1
+          RUST_LOG: info
+        run: |
+          cross test --profile release-tests --workspace --all-features --target ${{ matrix.target }}
 
       - name: Install cargo-llvm-cov
         if: ${{ matrix.platform == 'macos-arm' }}
