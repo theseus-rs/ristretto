@@ -54,6 +54,7 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 default = ["rustls-tls"]
 native-tls = [
     "reqwest/native-tls",
+    "reqwest/native-tls-vendored",
 ]
 rustls-tls = [
     "reqwest/rustls",
