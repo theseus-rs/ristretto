@@ -453,7 +453,7 @@ impl fmt::Display for TargetType {
             TargetType::Offset {
                 target_type,
                 offset,
-            } => write!(f, "Offset[target_type={target_type}, offset={offset}]",),
+            } => write!(f, "Offset[target_type={target_type}, offset={offset}]"),
             TargetType::TypeArgument {
                 target_type,
                 offset,

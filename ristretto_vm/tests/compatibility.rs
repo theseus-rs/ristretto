@@ -48,11 +48,7 @@ fn compatibility_tests() -> Result<()> {
     let passed = AtomicUsize::new(0);
     let failures: Arc<Mutex<Vec<Failure>>> = Arc::new(Mutex::new(Vec::new()));
 
-    let num_threads = (std::thread::available_parallelism()
-        .map(NonZero::get)
-        .unwrap_or(1)
-        / 3)
-    .max(1);
+    let num_threads = (std::thread::available_parallelism().map_or(1, NonZero::get) / 3).max(1);
     info!("Running compatibility tests with {num_threads} threads");
     let pool = ThreadPoolBuilder::new()
         .num_threads(num_threads)
@@ -316,7 +312,7 @@ fn test_vm(
     let java_version = java_version.to_string();
     let test_name_owned = test_name.to_string();
     let test_dir = test_dir.to_path_buf();
-    let test_timeout = Duration::from_secs(120);
+    let test_timeout = Duration::from_mins(2);
     let stack_size = 8 * 1024 * 1024; // 8 MB stack
     let result = std::thread::Builder::new()
         .stack_size(stack_size)

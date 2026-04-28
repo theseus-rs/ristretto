@@ -285,8 +285,7 @@ pub async fn random_bytes<T: Thread + 'static>(
     #[expect(clippy::cast_possible_truncation)]
     let mut seed: u64 = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos() as u64)
-        .unwrap_or(42);
+        .map_or(42, |d| d.as_nanos() as u64);
     for b in bytes.iter_mut() {
         seed = seed
             .wrapping_mul(6_364_136_223_846_793_005)

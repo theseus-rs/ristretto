@@ -355,38 +355,30 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                         stack.push(last.clone());
                     }
                 }
-                Instruction::Dup_x1 => {
-                    if stack.len() >= 2 {
-                        let v1 = stack.pop().expect("stack checked");
-                        let v2 = stack.pop().expect("stack checked");
-                        stack.push(v1.clone());
-                        stack.push(v2);
-                        stack.push(v1);
-                    }
+                Instruction::Dup_x1 if stack.len() >= 2 => {
+                    let v1 = stack.pop().expect("stack checked");
+                    let v2 = stack.pop().expect("stack checked");
+                    stack.push(v1.clone());
+                    stack.push(v2);
+                    stack.push(v1);
                 }
-                Instruction::Dup_x2 => {
-                    if stack.len() >= 3 {
-                        let v1 = stack.pop().expect("stack checked");
-                        let v2 = stack.pop().expect("stack checked");
-                        let v3 = stack.pop().expect("stack checked");
-                        stack.push(v1.clone());
-                        stack.push(v3);
-                        stack.push(v2);
-                        stack.push(v1);
-                    }
+                Instruction::Dup_x2 if stack.len() >= 3 => {
+                    let v1 = stack.pop().expect("stack checked");
+                    let v2 = stack.pop().expect("stack checked");
+                    let v3 = stack.pop().expect("stack checked");
+                    stack.push(v1.clone());
+                    stack.push(v3);
+                    stack.push(v2);
+                    stack.push(v1);
                 }
-                Instruction::Dup2 => {
-                    if stack.len() >= 2 {
-                        let len = stack.len();
-                        stack.push(stack[len - 2].clone());
-                        stack.push(stack[len - 1].clone());
-                    }
+                Instruction::Dup2 if stack.len() >= 2 => {
+                    let len = stack.len();
+                    stack.push(stack[len - 2].clone());
+                    stack.push(stack[len - 1].clone());
                 }
-                Instruction::Swap => {
-                    if stack.len() >= 2 {
-                        let len = stack.len();
-                        stack.swap(len - 1, len - 2);
-                    }
+                Instruction::Swap if stack.len() >= 2 => {
+                    let len = stack.len();
+                    stack.swap(len - 1, len - 2);
                 }
 
                 // Arithmetic operations that consume and produce values
@@ -567,77 +559,61 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                     ));
                 }
             }
-            Instruction::Iaload => {
-                if stack.len() > 1 {
-                    let source = &stack[stack.len() - 2];
-                    let reason = self.describe_source(source);
-                    return Some(format!(
-                        "Cannot load from int array because {reason} is null"
-                    ));
-                }
+            Instruction::Iaload if stack.len() > 1 => {
+                let source = &stack[stack.len() - 2];
+                let reason = self.describe_source(source);
+                return Some(format!(
+                    "Cannot load from int array because {reason} is null"
+                ));
             }
-            Instruction::Laload => {
-                if stack.len() > 1 {
-                    let source = &stack[stack.len() - 2];
-                    let reason = self.describe_source(source);
-                    return Some(format!(
-                        "Cannot load from long array because {reason} is null"
-                    ));
-                }
+            Instruction::Laload if stack.len() > 1 => {
+                let source = &stack[stack.len() - 2];
+                let reason = self.describe_source(source);
+                return Some(format!(
+                    "Cannot load from long array because {reason} is null"
+                ));
             }
-            Instruction::Faload => {
-                if stack.len() > 1 {
-                    let source = &stack[stack.len() - 2];
-                    let reason = self.describe_source(source);
-                    return Some(format!(
-                        "Cannot load from float array because {reason} is null"
-                    ));
-                }
+            Instruction::Faload if stack.len() > 1 => {
+                let source = &stack[stack.len() - 2];
+                let reason = self.describe_source(source);
+                return Some(format!(
+                    "Cannot load from float array because {reason} is null"
+                ));
             }
-            Instruction::Daload => {
-                if stack.len() > 1 {
-                    let source = &stack[stack.len() - 2];
-                    let reason = self.describe_source(source);
-                    return Some(format!(
-                        "Cannot load from double array because {reason} is null"
-                    ));
-                }
+            Instruction::Daload if stack.len() > 1 => {
+                let source = &stack[stack.len() - 2];
+                let reason = self.describe_source(source);
+                return Some(format!(
+                    "Cannot load from double array because {reason} is null"
+                ));
             }
-            Instruction::Aaload => {
-                if stack.len() > 1 {
-                    let source = &stack[stack.len() - 2];
-                    let reason = self.describe_source(source);
-                    return Some(format!(
-                        "Cannot load from object array because {reason} is null"
-                    ));
-                }
+            Instruction::Aaload if stack.len() > 1 => {
+                let source = &stack[stack.len() - 2];
+                let reason = self.describe_source(source);
+                return Some(format!(
+                    "Cannot load from object array because {reason} is null"
+                ));
             }
-            Instruction::Baload => {
-                if stack.len() > 1 {
-                    let source = &stack[stack.len() - 2];
-                    let reason = self.describe_source(source);
-                    return Some(format!(
-                        "Cannot load from byte/boolean array because {reason} is null"
-                    ));
-                }
+            Instruction::Baload if stack.len() > 1 => {
+                let source = &stack[stack.len() - 2];
+                let reason = self.describe_source(source);
+                return Some(format!(
+                    "Cannot load from byte/boolean array because {reason} is null"
+                ));
             }
-            Instruction::Caload => {
-                if stack.len() > 1 {
-                    let source = &stack[stack.len() - 2];
-                    let reason = self.describe_source(source);
-                    return Some(format!(
-                        "Cannot load from char array because {reason} is null"
-                    ));
-                }
+            Instruction::Caload if stack.len() > 1 => {
+                let source = &stack[stack.len() - 2];
+                let reason = self.describe_source(source);
+                return Some(format!(
+                    "Cannot load from char array because {reason} is null"
+                ));
             }
-            Instruction::Saload => {
-                if stack.len() > 1 {
-                    let source = &stack[stack.len() - 2];
-                    let reason = self.describe_source(source);
-                    return Some(format!(
-                        "Cannot load from short array because {reason} is null"
-                    ));
-                }
+            Instruction::Saload if stack.len() > 1 => {
+                let source = &stack[stack.len() - 2];
+                let reason = self.describe_source(source);
+                return Some(format!(
+                    "Cannot load from short array because {reason} is null"
+                ));
             }
             Instruction::Athrow => {
                 if let Some(source) = stack.last() {
@@ -831,12 +807,8 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                     }
                     slot_count += 1;
                 }
-                'D' | 'J' => {
-                    if array_depth == 0 {
-                        slot_count += 2;
-                    } else {
-                        slot_count += 1;
-                    }
+                'D' | 'J' if array_depth == 0 => {
+                    slot_count += 2;
                 }
                 _ => {
                     slot_count += 1;

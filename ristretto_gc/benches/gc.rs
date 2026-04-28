@@ -83,8 +83,7 @@ fn collection_collector() -> Arc<GarbageCollector> {
 fn collect_and_wait(collector: &GarbageCollector) {
     let prior = collector
         .statistics()
-        .map(|s| s.collections_completed)
-        .unwrap_or(0);
+        .map_or(0, |s| s.collections_completed);
     collector.collect();
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     while std::time::Instant::now() < deadline {

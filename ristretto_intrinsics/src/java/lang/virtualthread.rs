@@ -100,7 +100,7 @@ pub async fn take_virtual_thread_list_to_unblock<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     // This method is supposed to block until there are virtual threads to unblock.
     // Sleep to avoid busy-waiting; the daemon thread will be aborted on VM shutdown.
-    tokio::time::sleep(Duration::from_secs(60)).await;
+    tokio::time::sleep(Duration::from_mins(1)).await;
     Ok(Some(Value::Object(None)))
 }
 
