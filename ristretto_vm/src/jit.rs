@@ -102,16 +102,16 @@ impl Compiler {
     /// or `None` if the target ISA is not supported.
     #[must_use]
     pub fn new(batch_compilation: bool, interpreted: bool) -> Option<Self> {
-        // The cranelift riscv64 backend produces code that interacts poorly with the GC and
-        // tokio runtime under qemu user-mode emulation, leading to heap corruption. Disable
-        // JIT compilation on RISC-V hosts and fall back to the interpreter.
-        #[cfg(target_arch = "riscv64")]
+        // The cranelift riscv64 and s390x backends produce code that interacts poorly with the
+        // GC and tokio runtime under qemu user-mode emulation, leading to heap corruption.
+        // Disable JIT compilation on these hosts and fall back to the interpreter.
+        #[cfg(any(target_arch = "riscv64", target_arch = "s390x"))]
         {
-            debug!("JIT compiler is disabled on riscv64; falling back to interpreter");
+            debug!("JIT compiler is disabled on riscv64 and s390x; falling back to interpreter");
             let _ = (batch_compilation, interpreted);
             None
         }
-        #[cfg(not(target_arch = "riscv64"))]
+        #[cfg(not(any(target_arch = "riscv64", target_arch = "s390x")))]
         {
             let jit_compiler = match ristretto_jit::Compiler::new() {
                 Ok(compiler) => compiler,

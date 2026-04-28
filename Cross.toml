@@ -3,3 +3,12 @@ passthrough = [
     "PKG_CONFIG_ALLOW_CROSS=1",
     "HOME=/tmp",
 ]
+
+[target.s390x-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/s390x-unknown-linux-gnu:edge"
+
+[target.s390x-unknown-linux-gnu.env]
+passthrough = [
+    "PKG_CONFIG_ALLOW_CROSS=1",
+    "HOME=/tmp",
+]
