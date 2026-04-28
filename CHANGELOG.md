@@ -7,6 +7,173 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_pom` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.31.0) - 2026-04-28
+
+### Added
+- implement sockets
+
+## `ristretto_cli` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/v0.30.0...v0.31.0) - 2026-04-28
+
+### Added
+- add jpms support
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- add array and object support to JIT
+- implement sun/misc/Version
+- implement sun.nio.fs
+- implement java/nio/MappedByteBuffer
+- implement sockets
+
+### Fixed
+- account for long/double slots and return values in invoke* stack_delta
+- correct macos locale detection
+- create lightweight class loading mode
+- throw java.lang.UnsatisfiedLinkError native method is not found
+- correct java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;
+- correct GC memory leak
+- set declaringClassObject on java/lang/StackTraceElement
+- correct java/lang/Class.forName0(...) support for custom class loaders
+- correct primordial thread name
+
+### Other
+- update Cargo.toml dependencies
+- update to rust 1.95.0
+- reduce memory utilization of Instruction
+- add intrinsic methods for all supported OS version combinations
+- update to java 25.0.3.9.1
+- enable clippy linting for wasm builds
+- update GC test to be deterministic
+- Merge pull request #727 from theseus-rs/fix-macos-locale
+- Merge pull request #721 from theseus-rs/impl-jdk-console
+- Merge pull request #720 from theseus-rs/impl-sctpnet
+- Merge pull request #722 from theseus-rs/fix-wasm-process
+- Merge pull request #719 from theseus-rs/impl-cupsprinter
+- Merge pull request #717 from theseus-rs/impl-gc-max-intro-age
+- Merge pull request #706 from theseus-rs/fix-java-io-unixfilesystem
+- update dependencies
+
+## `ristretto_vm` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.30.0...ristretto_vm-v0.31.0) - 2026-04-28
+
+### Added
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- add array and object support to JIT
+- add jpms support
+
+### Fixed
+- correct macos locale detection
+- throw java.lang.UnsatisfiedLinkError native method is not found
+- correct java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;
+- correct GC memory leak
+- create lightweight class loading mode
+- correct primordial thread name
+
+### Other
+- update to rust 1.95.0
+- add intrinsic methods for all supported OS version combinations
+- reduce memory utilization of Instruction
+- enable clippy linting for wasm builds
+
+## `ristretto_intrinsics` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.30.0...ristretto_intrinsics-v0.31.0) - 2026-04-28
+
+### Added
+- implement sun/misc/Version
+- implement sun.nio.fs
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- implement java/nio/MappedByteBuffer
+- add jpms support
+
+### Fixed
+- correct macos locale detection
+- correct java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;
+- correct GC memory leak
+- create lightweight class loading mode
+- set declaringClassObject on java/lang/StackTraceElement
+- correct java/lang/Class.forName0(...) support for custom class loaders
+
+### Other
+- update to rust 1.95.0
+- Merge pull request #727 from theseus-rs/fix-macos-locale
+- add intrinsic methods for all supported OS version combinations
+- update to java 25.0.3.9.1
+- Merge pull request #721 from theseus-rs/impl-jdk-console
+- Merge pull request #720 from theseus-rs/impl-sctpnet
+- Merge pull request #722 from theseus-rs/fix-wasm-process
+- Merge pull request #719 from theseus-rs/impl-cupsprinter
+- Merge pull request #717 from theseus-rs/impl-gc-max-intro-age
+- enable clippy linting for wasm builds
+- Merge pull request #706 from theseus-rs/fix-java-io-unixfilesystem
+- update dependencies
+
+## `ristretto_types` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.30.0...ristretto_types-v0.31.0) - 2026-04-28
+
+### Added
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- add jpms support
+
+### Fixed
+- correct GC memory leak
+- create lightweight class loading mode
+
+## `ristretto_jit` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.30.0...ristretto_jit-v0.31.0) - 2026-04-28
+
+### Added
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- add array and object support to JIT
+
+### Other
+- reduce memory utilization of Instruction
+- enable clippy linting for wasm builds
+
+## `ristretto_macros` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.30.0...ristretto_macros-v0.31.0) - 2026-04-28
+
+### Other
+- add intrinsic methods for all supported OS version combinations
+
+## `ristretto_classloader` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.30.0...ristretto_classloader-v0.31.0) - 2026-04-28
+
+### Added
+- add jpms support
+
+### Fixed
+- correct macos locale detection
+- create lightweight class loading mode
+
+### Other
+- add intrinsic methods for all supported OS version combinations
+- update to java 25.0.3.9.1
+- enable clippy linting for wasm builds
+
+## `ristretto_jimage` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.30.0...ristretto_jimage-v0.31.0) - 2026-04-28
+
+### Other
+- update to rust 1.95.0
+
+## `ristretto_gc` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.30.0...ristretto_gc-v0.31.0) - 2026-04-28
+
+### Added
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- add array and object support to JIT
+
+### Fixed
+- throw java.lang.UnsatisfiedLinkError native method is not found
+- correct java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;
+- correct GC memory leak
+
+### Other
+- update to rust 1.95.0
+- update GC test to be deterministic
+
+## `ristretto_classfile` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.30.0...ristretto_classfile-v0.31.0) - 2026-04-28
+
+### Added
+- add jpms support
+
+### Fixed
+- account for long/double slots and return values in invoke* stack_delta
+
+### Other
+- update to rust 1.95.0
+- reduce memory utilization of Instruction
+
 ## `ristretto_pom` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.30.0) - 2026-03-22
 
 ### Added
