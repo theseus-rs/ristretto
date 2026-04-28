@@ -73,8 +73,7 @@ pub async fn invoke_0<T: Thread + 'static>(
         // Check if setAccessible(true) was called (override flag)
         let override_flag = method
             .value("override")
-            .map(|v| v.as_i32().unwrap_or(0) != 0)
-            .unwrap_or(false);
+            .is_ok_and(|v| v.as_i32().unwrap_or(0) != 0);
         (
             name,
             class_object,

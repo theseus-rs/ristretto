@@ -2623,7 +2623,7 @@ mod tests {
         let result = park(thread, parameters).await?;
         assert_eq!(result, None);
         let elapsed_time = start_time.elapsed();
-        assert!(elapsed_time >= Duration::from_nanos(100_000_000));
+        assert!(elapsed_time >= Duration::from_millis(100));
         Ok(())
     }
 

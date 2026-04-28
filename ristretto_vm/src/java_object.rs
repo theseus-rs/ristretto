@@ -420,8 +420,7 @@ async fn update_cached_class_module(
         // ModuleBootstrap.boot() defines the named modules.
         let is_unnamed = current_module
             .as_object_ref()
-            .map(|obj| obj.value("name").map(|v| v.is_null()).unwrap_or(true))
-            .unwrap_or(true);
+            .map_or(true, |obj| obj.value("name").map_or(true, |v| v.is_null()));
         if !is_unnamed {
             return Ok(());
         }
@@ -429,8 +428,7 @@ async fn update_cached_class_module(
         // it was correctly set by defineClass and should not be overwritten.
         let has_real_loader = current_module
             .as_object_ref()
-            .map(|obj| obj.value("loader").map(|v| !v.is_null()).unwrap_or(false))
-            .unwrap_or(false);
+            .is_ok_and(|obj| obj.value("loader").is_ok_and(|v| !v.is_null()));
         if has_real_loader {
             return Ok(());
         }

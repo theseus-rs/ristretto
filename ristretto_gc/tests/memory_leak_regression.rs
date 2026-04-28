@@ -157,8 +157,7 @@ fn test_unreachable_objects_freed_at_shutdown() {
         wait_for_condition(TIMEOUT, POLL, || {
             collector
                 .statistics()
-                .map(|s| s.collections_completed >= 1)
-                .unwrap_or(false)
+                .is_ok_and(|s| s.collections_completed >= 1)
         }),
         "mark cycle must complete"
     );
@@ -192,8 +191,7 @@ fn test_rooted_objects_survive_collection() {
         wait_for_condition(TIMEOUT, POLL, || {
             collector
                 .statistics()
-                .map(|s| s.collections_completed >= 1)
-                .unwrap_or(false)
+                .is_ok_and(|s| s.collections_completed >= 1)
         }),
         "collection cycle must complete"
     );
@@ -223,8 +221,7 @@ fn test_large_object_correct_deallocation() {
         wait_for_condition(TIMEOUT, POLL, || {
             collector
                 .statistics()
-                .map(|s| s.collections_completed >= 1)
-                .unwrap_or(false)
+                .is_ok_and(|s| s.collections_completed >= 1)
         }),
         "mark cycle must complete"
     );
@@ -257,8 +254,7 @@ fn test_finalizer_called_on_correct_type() {
         wait_for_condition(TIMEOUT, POLL, || {
             collector
                 .statistics()
-                .map(|s| s.collections_completed >= 1)
-                .unwrap_or(false)
+                .is_ok_and(|s| s.collections_completed >= 1)
         }),
         "mark cycle must complete"
     );
@@ -344,8 +340,7 @@ fn test_memory_stable_across_cycles() {
             wait_for_condition(TIMEOUT, POLL, || {
                 collector
                     .statistics()
-                    .map(|s| s.collections_completed > cycle)
-                    .unwrap_or(false)
+                    .is_ok_and(|s| s.collections_completed > cycle)
             }),
             "collection cycle {cycle} must complete"
         );
@@ -404,8 +399,7 @@ fn test_all_objects_dropped_exactly_once() {
         wait_for_condition(TIMEOUT, POLL, || {
             collector
                 .statistics()
-                .map(|s| s.collections_completed >= 1)
-                .unwrap_or(false)
+                .is_ok_and(|s| s.collections_completed >= 1)
         }),
         "collection cycle must complete"
     );
@@ -445,8 +439,7 @@ fn test_collector_thread_self_join_no_deadlock() {
         let _ = wait_for_condition(TIMEOUT, POLL, || {
             collector
                 .statistics()
-                .map(|s| s.collections_completed >= 1)
-                .unwrap_or(false)
+                .is_ok_and(|s| s.collections_completed >= 1)
         });
 
         // Now drop the collector. The collector thread may still hold the last Arc
@@ -567,8 +560,7 @@ fn test_concurrent_allocation_during_sweep() {
         wait_for_condition(TIMEOUT, POLL, || {
             collector
                 .statistics()
-                .map(|s| s.collections_completed >= 1)
-                .unwrap_or(false)
+                .is_ok_and(|s| s.collections_completed >= 1)
         }),
         "collection cycle must complete"
     );
@@ -588,8 +580,7 @@ fn test_concurrent_allocation_during_sweep() {
         wait_for_condition(TIMEOUT, POLL, || {
             collector
                 .statistics()
-                .map(|s| s.collections_completed >= 2)
-                .unwrap_or(false)
+                .is_ok_and(|s| s.collections_completed >= 2)
         }),
         "mark cycle must complete"
     );
@@ -672,8 +663,7 @@ fn test_cyclic_object_graph_collection() {
         wait_for_condition(TIMEOUT, POLL, || {
             collector
                 .statistics()
-                .map(|s| s.collections_completed >= 1)
-                .unwrap_or(false)
+                .is_ok_and(|s| s.collections_completed >= 1)
         }),
         "first collection must complete"
     );
@@ -782,8 +772,7 @@ fn test_rooted_cyclic_graph_partial_unroot() {
         wait_for_condition(TIMEOUT, POLL, || {
             collector
                 .statistics()
-                .map(|s| s.collections_completed >= 1)
-                .unwrap_or(false)
+                .is_ok_and(|s| s.collections_completed >= 1)
         }),
         "collection cycle must complete"
     );

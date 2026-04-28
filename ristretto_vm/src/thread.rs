@@ -1245,7 +1245,7 @@ mod tests {
         let start_time = std::time::Instant::now();
         thread.park(false, 100_000_000).await?;
         let elapsed_time = start_time.elapsed();
-        assert!(elapsed_time >= Duration::from_nanos(100_000_000));
+        assert!(elapsed_time >= Duration::from_millis(100));
         Ok(())
     }
 
@@ -1257,7 +1257,7 @@ mod tests {
         thread.park(false, 100_000_000).await?;
         let elapsed_time = start_time.elapsed();
         // Thread should return immediately when interrupted
-        assert!(elapsed_time < Duration::from_nanos(1_000_000));
+        assert!(elapsed_time < Duration::from_millis(1));
         Ok(())
     }
 

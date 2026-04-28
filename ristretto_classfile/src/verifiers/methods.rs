@@ -68,9 +68,9 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
     // Verify each return instruction matches the expected return type
     for instruction in code {
         match instruction {
-            Instruction::Return => {
+            Instruction::Return
                 // void return; method must return void
-                if return_type.is_some() {
+                if return_type.is_some() => {
                     return Err(VerificationError {
                         context: "Method return type".to_string(),
                         message: format!(
@@ -78,7 +78,6 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                         ),
                     });
                 }
-            }
             Instruction::Ireturn => {
                 // int return; method must return int, byte, char, short, or boolean
                 match &return_type {
@@ -99,9 +98,9 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                     }
                 }
             }
-            Instruction::Lreturn => {
+            Instruction::Lreturn
                 // long return
-                if !matches!(&return_type, Some(FieldType::Base(BaseType::Long))) {
+                if !matches!(&return_type, Some(FieldType::Base(BaseType::Long))) => {
                     return Err(VerificationError {
                         context: "Method return type".to_string(),
                         message: format!(
@@ -109,10 +108,9 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                         ),
                     });
                 }
-            }
-            Instruction::Freturn => {
+            Instruction::Freturn
                 // float return
-                if !matches!(&return_type, Some(FieldType::Base(BaseType::Float))) {
+                if !matches!(&return_type, Some(FieldType::Base(BaseType::Float))) => {
                     return Err(VerificationError {
                         context: "Method return type".to_string(),
                         message: format!(
@@ -120,10 +118,9 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                         ),
                     });
                 }
-            }
-            Instruction::Dreturn => {
+            Instruction::Dreturn
                 // double return
-                if !matches!(&return_type, Some(FieldType::Base(BaseType::Double))) {
+                if !matches!(&return_type, Some(FieldType::Base(BaseType::Double))) => {
                     return Err(VerificationError {
                         context: "Method return type".to_string(),
                         message: format!(
@@ -131,7 +128,6 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
                         ),
                     });
                 }
-            }
             Instruction::Areturn => {
                 // reference return; method must return an object or array
                 match &return_type {

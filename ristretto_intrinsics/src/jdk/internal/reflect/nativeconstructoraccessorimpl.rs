@@ -83,8 +83,7 @@ pub async fn new_instance_0<T: Thread + 'static>(
         // Check if setAccessible(true) was called (override flag)
         let override_flag = method
             .value("override")
-            .map(|v| v.as_i32().unwrap_or(0) != 0)
-            .unwrap_or(false);
+            .is_ok_and(|v| v.as_i32().unwrap_or(0) != 0);
         (class_object, parameter_types, modifiers, override_flag)
     };
     let class = class::get_class(&thread, &class_object).await?;

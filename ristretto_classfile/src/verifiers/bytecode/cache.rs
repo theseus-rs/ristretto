@@ -298,13 +298,13 @@ impl VerificationCache {
     /// Returns the number of cached results.
     #[must_use]
     pub fn result_count(&self) -> usize {
-        self.results.read().map(|g| g.len()).unwrap_or(0)
+        self.results.read().map_or(0, |g| g.len())
     }
 
     /// Returns the number of cached descriptors.
     #[must_use]
     pub fn descriptor_count(&self) -> usize {
-        self.descriptors.read().map(|g| g.len()).unwrap_or(0)
+        self.descriptors.read().map_or(0, |g| g.len())
     }
 }
 

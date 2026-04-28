@@ -139,9 +139,9 @@ impl ByteSource {
                 let file = &mut file
                     .lock()
                     .map_err(|error| PoisonedLock(error.to_string()))?;
-                file.metadata()
-                    .map(|metadata| usize::try_from(metadata.len()))
-                    .unwrap_or(usize::try_from(0))?
+                file.metadata().map_or(usize::try_from(0), |metadata| {
+                    usize::try_from(metadata.len())
+                })?
             }
             #[cfg(not(target_family = "wasm"))]
             ByteSource::MemoryMap(mmap) => mmap.len(),
