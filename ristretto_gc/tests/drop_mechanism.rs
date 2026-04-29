@@ -1,3 +1,5 @@
+#![cfg(not(target_family = "wasm"))]
+
 use ristretto_gc::{Finalize, GarbageCollector, Gc};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

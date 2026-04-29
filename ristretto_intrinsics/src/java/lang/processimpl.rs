@@ -153,7 +153,7 @@ pub async fn fork_and_exec<T: Thread + 'static>(
 #[cfg(all(unix, not(target_family = "wasm")))]
 async fn register_child_pipes<T: Thread + 'static>(
     thread: &Arc<T>,
-    fds_ref: Option<&ristretto_gc::Gc<parking_lot::RwLock<Reference>>>,
+    fds_ref: Option<&ristretto_gc::Gc<ristretto_gc::sync::RwLock<Reference>>>,
     child: &mut tokio::process::Child,
 ) -> Result<()> {
     use std::os::fd::{AsFd, AsRawFd};
@@ -212,7 +212,7 @@ async fn register_child_pipes<T: Thread + 'static>(
 #[expect(clippy::unused_async)]
 async fn register_child_pipes<T: Thread + 'static>(
     _thread: &Arc<T>,
-    fds_ref: Option<&ristretto_gc::Gc<parking_lot::RwLock<Reference>>>,
+    fds_ref: Option<&ristretto_gc::Gc<ristretto_gc::sync::RwLock<Reference>>>,
     _child: &mut tokio::process::Child,
 ) -> Result<()> {
     if let Some(fds_r) = fds_ref {
@@ -235,7 +235,7 @@ async fn register_child_pipes<T: Thread + 'static>(
 /// Extract a null-terminated string from an optional byte array reference.
 #[cfg(not(target_family = "wasm"))]
 fn extract_null_terminated_string(
-    reference: Option<&ristretto_gc::Gc<parking_lot::RwLock<Reference>>>,
+    reference: Option<&ristretto_gc::Gc<ristretto_gc::sync::RwLock<Reference>>>,
 ) -> String {
     let Some(r) = reference else {
         return String::new();
@@ -250,7 +250,7 @@ fn extract_null_terminated_string(
 /// Extract null-separated strings from an optional byte array reference.
 #[cfg(not(target_family = "wasm"))]
 fn extract_null_separated_strings(
-    reference: Option<&ristretto_gc::Gc<parking_lot::RwLock<Reference>>>,
+    reference: Option<&ristretto_gc::Gc<ristretto_gc::sync::RwLock<Reference>>>,
 ) -> Vec<String> {
     let Some(r) = reference else {
         return Vec::new();
@@ -966,7 +966,8 @@ mod tests {
         let gc = GarbageCollector::new();
         #[expect(clippy::cast_possible_wrap)]
         let bytes: Vec<i8> = b"test\0".iter().map(|&b| b as i8).collect();
-        let gc_ref = ristretto_gc::Gc::new(&gc, parking_lot::RwLock::new(Reference::from(bytes)));
+        let gc_ref =
+            ristretto_gc::Gc::new(&gc, ristretto_gc::sync::RwLock::new(Reference::from(bytes)));
         let result = extract_null_terminated_string(Some(&gc_ref));
         assert_eq!(result, "test");
     }
@@ -982,7 +983,8 @@ mod tests {
         let gc = GarbageCollector::new();
         #[expect(clippy::cast_possible_wrap)]
         let bytes: Vec<i8> = b"one\0two\0".iter().map(|&b| b as i8).collect();
-        let gc_ref = ristretto_gc::Gc::new(&gc, parking_lot::RwLock::new(Reference::from(bytes)));
+        let gc_ref =
+            ristretto_gc::Gc::new(&gc, ristretto_gc::sync::RwLock::new(Reference::from(bytes)));
         let result = extract_null_separated_strings(Some(&gc_ref));
         assert_eq!(result, vec!["one", "two"]);
     }
@@ -992,7 +994,7 @@ mod tests {
         let gc = GarbageCollector::new();
         let gc_ref = ristretto_gc::Gc::new(
             &gc,
-            parking_lot::RwLock::new(Reference::from(vec![1i32, 2, 3])),
+            ristretto_gc::sync::RwLock::new(Reference::from(vec![1i32, 2, 3])),
         );
         let result = extract_null_terminated_string(Some(&gc_ref));
         assert_eq!(result, "");
@@ -1003,7 +1005,7 @@ mod tests {
         let gc = GarbageCollector::new();
         let gc_ref = ristretto_gc::Gc::new(
             &gc,
-            parking_lot::RwLock::new(Reference::from(vec![1i32, 2, 3])),
+            ristretto_gc::sync::RwLock::new(Reference::from(vec![1i32, 2, 3])),
         );
         let result = extract_null_separated_strings(Some(&gc_ref));
         assert!(result.is_empty());

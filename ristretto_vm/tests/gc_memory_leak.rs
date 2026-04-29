@@ -1,3 +1,5 @@
+#![cfg(not(target_family = "wasm"))]
+
 use ristretto_classloader::DEFAULT_JAVA_VERSION;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
 use std::io::Cursor;

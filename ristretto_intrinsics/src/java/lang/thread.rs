@@ -5,6 +5,7 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::VM;
+#[cfg(not(all(target_family = "wasm", target_os = "wasi")))]
 use ristretto_types::handles::ThreadHandle;
 use ristretto_types::{JavaError, Thread};
 use ristretto_types::{Parameters, Result};
@@ -647,7 +648,7 @@ pub async fn start_0<T: Thread + 'static>(
         tokio::task::yield_now().await;
     }
 
-    #[cfg(target_family = "wasm")]
+    #[cfg(all(target_family = "wasm", target_os = "unknown"))]
     {
         let spawn_vm = vm.clone();
         let spawn_thread_id = internal_thread_id;
@@ -678,6 +679,20 @@ pub async fn start_0<T: Thread + 'static>(
         thread_handles
             .insert(internal_thread_id, thread_handle)
             .await?;
+    }
+
+    #[cfg(all(target_family = "wasm", target_os = "wasi"))]
+    {
+        let _ = (
+            &spawn_thread,
+            &thread_class,
+            &run_method,
+            &thread_value,
+            &thread_object,
+            &vm,
+            &new_thread,
+            internal_thread_id,
+        );
     }
 
     Ok(None)
@@ -738,7 +753,7 @@ pub async fn yield_0<T: Thread + 'static>(
     r#yield(thread, parameters).await
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
     use ristretto_types::VM;

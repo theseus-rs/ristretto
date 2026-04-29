@@ -7,7 +7,7 @@
 //! region up to write the bytes back to the file and `unmap0` removes the registration.
 
 use ahash::AHashMap;
-use parking_lot::Mutex;
+use ristretto_gc::sync::Mutex;
 
 /// The protection / access mode for a memory-mapped region.
 ///

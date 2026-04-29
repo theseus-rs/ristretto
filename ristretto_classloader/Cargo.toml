@@ -32,13 +32,19 @@ zip = { workspace = true, features = ["deflate"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 reqwest = { workspace = true, features = ["json", "query"] }
+tokio = { workspace = true, features = ["fs"] }
+
+[target.'cfg(not(all(target_family = "wasm", target_os = "unknown")))'.dependencies]
+serde_json = { workspace = true }
 tar = { workspace = true }
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["fs"] }
 walkdir = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 tokio = { workspace = true }
+
+[target.'cfg(target_os = "wasi")'.dependencies]
+wstd = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

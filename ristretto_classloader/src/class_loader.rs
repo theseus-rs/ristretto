@@ -11,7 +11,7 @@ use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
 
 /// Synchronous lock for module configuration to avoid async overhead on every class load.
-type ModuleConfigLock = parking_lot::RwLock<Option<Arc<ResolvedConfiguration>>>;
+type ModuleConfigLock = ristretto_gc::sync::RwLock<Option<Arc<ResolvedConfiguration>>>;
 
 /// Implementation of a Java class loader.
 ///

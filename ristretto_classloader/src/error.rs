@@ -60,9 +60,8 @@ pub enum Error {
     #[error("Poisoned lock: {0}")]
     PoisonedLock(String),
     /// An error occurred while performing a request
-    #[cfg(not(target_family = "wasm"))]
-    #[error(transparent)]
-    RequestError(#[from] reqwest::Error),
+    #[error("Request error: {0}")]
+    RequestError(String),
     /// Error serializing or deserializing data
     #[error("Serde error: {0}")]
     SerdeError(String),
@@ -75,4 +74,11 @@ pub enum Error {
     /// An error while reading a jar or module
     #[error(transparent)]
     ZipError(#[from] zip::result::ZipError),
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl From<reqwest::Error> for Error {
+    fn from(error: reqwest::Error) -> Self {
+        Error::RequestError(error.to_string())
+    }
 }

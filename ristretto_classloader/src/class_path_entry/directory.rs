@@ -5,7 +5,7 @@ use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
 use std::io;
 use std::path::PathBuf;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use walkdir::WalkDir;
 
 /// A directory in the class path.
@@ -74,9 +74,9 @@ impl Directory {
     #[expect(clippy::unused_async)]
     pub async fn class_names(&self) -> Result<Vec<String>> {
         let path = self.path.clone();
-        #[cfg_attr(target_family = "wasm", expect(unused_mut))]
+        #[cfg_attr(all(target_family = "wasm", target_os = "unknown"), expect(unused_mut))]
         let mut classes = Vec::new();
-        #[cfg(not(target_family = "wasm"))]
+        #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
         for entry in WalkDir::new(path)
             .follow_links(true)
             .into_iter()
@@ -88,7 +88,7 @@ impl Directory {
                 classes.push(class_name);
             }
         }
-        #[cfg(target_family = "wasm")]
+        #[cfg(all(target_family = "wasm", target_os = "unknown"))]
         let _ = path;
         Ok(classes)
     }

@@ -309,7 +309,7 @@ pub async fn set_read_only_0<T: Thread + 'static>(
     filesystem::set_read_only(thread, parameters).await
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
     use ristretto_types::JavaError::RuntimeException;

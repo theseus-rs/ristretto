@@ -716,11 +716,10 @@ mod tests {
     use crate::Reference;
     use crate::runtime;
     use ristretto_classfile::JavaStr;
-    use ristretto_gc::GarbageCollector;
     use std::hash::DefaultHasher;
 
-    fn test_ref(reference: impl Into<Reference>) -> Value {
-        Value::new_object(&GarbageCollector::new(), reference.into())
+    fn test_ref(collector: &GarbageCollector, reference: impl Into<Reference>) -> Value {
+        Value::new_object(collector, reference.into())
     }
 
     async fn java8_string_class() -> Result<Arc<Class>> {
@@ -916,11 +915,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_string() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = load_class("java.lang.String").await?;
         let mut object = Object::new(class)?;
         #[expect(clippy::cast_possible_wrap)]
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
-        let string_value = test_ref(string_bytes);
+        let string_value = test_ref(&collector, string_bytes);
         object.set_value("value", string_value)?;
         assert_eq!("String(\"foo\")", object.to_string());
         Ok(())
@@ -928,6 +928,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_to_string_class() -> Result<()> {
+        let collector = GarbageCollector::new();
         let string_class = load_class("java.lang.String").await?;
         let mut string_object = Object::new(string_class)?;
         #[expect(clippy::cast_possible_wrap)]
@@ -937,12 +938,12 @@ mod tests {
             .iter()
             .map(|&b| b as i8)
             .collect();
-        let string_value = test_ref(string_bytes);
+        let string_value = test_ref(&collector, string_bytes);
         string_object.set_value("value", string_value)?;
 
         let class = load_class("java.lang.Class").await?;
         let mut object = Object::new(class)?;
-        object.set_value("name", test_ref(string_object))?;
+        object.set_value("name", test_ref(&collector, string_object))?;
         assert_eq!("Class(java.lang.Integer)", object.to_string());
         Ok(())
     }
@@ -1117,6 +1118,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_string_java8() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = java8_string_class().await?;
         let mut object = Object::new(class)?;
         let string_chars: Vec<char> = "foo"
@@ -1125,7 +1127,7 @@ mod tests {
             .iter()
             .map(|&b| b as char)
             .collect();
-        let string_value = test_ref(string_chars);
+        let string_value = test_ref(&collector, string_chars);
         object.set_value("value", string_value)?;
         let result = object.as_string()?;
         assert_eq!("foo".to_string(), result);
@@ -1134,9 +1136,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_string_java8_invalid_byte_array_value() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = java8_string_class().await?;
         let mut object = Object::new(class)?;
-        let string_value = test_ref(Vec::<i32>::new());
+        let string_value = test_ref(&collector, Vec::<i32>::new());
         object.set_value("value", string_value)?;
         let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));
@@ -1146,11 +1149,12 @@ mod tests {
     #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
     async fn test_as_string_latin1_byte_array() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = string_class().await?;
         let mut object = Object::new(class)?;
         object.set_value("coder", Value::Int(0))?;
         let string_bytes: Vec<i8> = "foo".as_bytes().to_vec().iter().map(|&b| b as i8).collect();
-        let string_value = test_ref(string_bytes);
+        let string_value = test_ref(&collector, string_bytes);
         object.set_value("value", string_value)?;
         let result = object.as_string()?;
         assert_eq!("foo".to_string(), result);
@@ -1160,6 +1164,7 @@ mod tests {
     #[expect(clippy::cast_possible_wrap)]
     #[tokio::test]
     async fn test_as_string_utf16_byte_array() -> Result<()> {
+        let collector = GarbageCollector::new();
         let value = "😃";
         let class = string_class().await?;
         let mut object = Object::new(class)?;
@@ -1169,7 +1174,7 @@ mod tests {
             .flat_map(u16::to_be_bytes)
             .map(|b| b as i8)
             .collect();
-        let string_value = test_ref(string_bytes);
+        let string_value = test_ref(&collector, string_bytes);
         object.set_value("value", string_value)?;
         let result = object.as_string()?;
         assert_eq!(value.to_string(), result);
@@ -1178,9 +1183,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_as_string_invalid_char_array_value() -> Result<()> {
+        let collector = GarbageCollector::new();
         let class = string_class().await?;
         let mut object = Object::new(class)?;
-        let string_value = test_ref(Vec::<i32>::new());
+        let string_value = test_ref(&collector, Vec::<i32>::new());
         object.set_value("value", string_value)?;
         let result = object.as_string();
         assert!(matches!(result, Err(InvalidValueType(_))));

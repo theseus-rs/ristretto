@@ -57,7 +57,7 @@ pub(crate) fn windows_error_code(error: &std::io::Error) -> i32 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
 

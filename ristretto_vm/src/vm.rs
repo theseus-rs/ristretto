@@ -206,19 +206,9 @@ impl VM {
         configuration: &Configuration,
     ) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
         if let Some(java_version) = configuration.java_version() {
-            #[cfg(not(target_family = "wasm"))]
-            {
-                let (java_home, java_version, bootstrap_class_loader) =
-                    runtime::version_class_loader(java_version).await?;
-                Ok((java_home, java_version, bootstrap_class_loader))
-            }
-            #[cfg(target_family = "wasm")]
-            {
-                let _ = java_version;
-                Err(InternalError(
-                    "version_class_loader is not supported on wasm".to_string(),
-                ))
-            }
+            let (java_home, java_version, bootstrap_class_loader) =
+                runtime::version_class_loader(java_version).await?;
+            Ok((java_home, java_version, bootstrap_class_loader))
         } else if let Some(java_home) = configuration.java_home() {
             let (java_home, java_version, bootstrap_class_loader) =
                 runtime::home_class_loader(java_home).await?;

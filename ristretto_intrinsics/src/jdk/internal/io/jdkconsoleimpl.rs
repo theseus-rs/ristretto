@@ -130,9 +130,11 @@ mod tests {
                 let _ = value.as_bool()?;
             }
             Ok(None) => panic!("expected a value"),
-            Err(_error) => {
+            Err(error) => {
                 #[cfg(target_family = "wasm")]
-                panic!("wasm implementation must not fail: {_error}");
+                panic!("wasm implementation must not fail: {error}");
+                #[cfg(not(target_family = "wasm"))]
+                let _ = error;
             }
         }
         Ok(())

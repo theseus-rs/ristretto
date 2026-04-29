@@ -52,7 +52,7 @@ pub async fn get_upper_0_windows<T: Thread + 'static>(
     Ok(Some(Value::Int(65535)))
 }
 
-#[cfg(all(test, not(target_os = "windows")))]
+#[cfg(all(test, not(target_os = "windows"), not(target_family = "wasm")))]
 mod tests {
     use super::*;
 

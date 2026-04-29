@@ -752,7 +752,7 @@ mod tests {
     }
 
     fn temp_path(name: &str) -> std::path::PathBuf {
-        std::env::current_dir().unwrap().join(name)
+        std::env::current_dir().expect("current dir").join(name)
     }
 
     #[tokio::test]

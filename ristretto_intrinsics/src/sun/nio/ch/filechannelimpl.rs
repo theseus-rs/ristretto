@@ -185,7 +185,7 @@ pub async fn unmap_0<T: Thread + 'static>(
 /// (Java >= 21). The native became static and explicitly receives the `FileDescriptor`.
 /// In `OpenJDK` 21+ this signature is implemented on `UnixFileDispatcherImpl` instead, so we do
 /// not register it here.
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
     use ristretto_types::handles::{FileHandle, FileModeFlags};

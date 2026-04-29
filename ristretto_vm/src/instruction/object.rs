@@ -7,9 +7,9 @@ use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::thread::Thread;
 use crate::{Result, Value};
-use parking_lot::RwLock;
 use ristretto_classloader::{Class, Object, Reference};
 use ristretto_gc::Gc;
+use ristretto_gc::sync::RwLock;
 use std::sync::Arc;
 
 /// # References

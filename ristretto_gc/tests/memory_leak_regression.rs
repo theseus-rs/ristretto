@@ -11,6 +11,7 @@
 //!   and the collector thread does not deadlock when it holds the last `Arc<GarbageCollector>`.
 //! - **Cycle collection**: cyclic object graphs are correctly traced when rooted and collected when
 //!   all roots are dropped.
+#![cfg(not(target_family = "wasm"))]
 
 use ristretto_gc::{Finalize, GarbageCollector, Gc, Trace};
 use std::sync::Arc;

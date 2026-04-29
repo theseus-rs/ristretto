@@ -7,6 +7,7 @@
 //!
 //! This crate provides intrinsics methods for the Ristretto VM.
 
+#![cfg_attr(all(target_os = "wasi", target_env = "p2"), feature(wasip2))]
 #![deny(unsafe_code)]
 // The async_recursion macro adds Send bounds that overlap with the generic parameter bounds.
 #![expect(clippy::multiple_bound_locations)]
@@ -16,6 +17,8 @@ pub(crate) mod test;
 
 /// Methods from the Apple-specific packages
 pub mod apple;
+/// Filesystem helpers with platform-appropriate async backends.
+mod async_fs;
 /// Methods from the COM-related packages
 pub mod com;
 /// Core Java standard library methods

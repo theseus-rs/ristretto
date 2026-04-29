@@ -1,17 +1,15 @@
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+use crate::runtime::http;
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use crate::runtime::models::Release;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use crate::{Error, Result};
-#[cfg(not(target_family = "wasm"))]
-use reqwest::Client;
-#[cfg(not(target_family = "wasm"))]
-use reqwest::header;
 use std::env;
 #[cfg(not(target_family = "wasm"))]
 use std::env::consts;
 use std::sync::LazyLock;
 use tracing::debug;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use tracing::warn;
 
 const DEFAULT_MAJOR_VERSION: u64 = 21;
@@ -45,7 +43,7 @@ static USER_AGENT: LazyLock<String> = LazyLock::new(|| {
 /// # Errors
 ///
 /// An error will be returned if the request fails or if the version requirement is not supported.
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String, Vec<u8>)> {
     let (os, arch) = host_os_arch();
     get_runtime_archive_for(version, os, arch).await
@@ -57,7 +55,7 @@ pub(crate) async fn get_runtime_archive(version: &str) -> Result<(String, String
 /// # Errors
 ///
 /// An error will be returned if the request fails or if the version requirement is not supported.
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 pub(crate) async fn get_runtime_archive_for(
     version: &str,
     os: &str,
@@ -133,12 +131,19 @@ pub(crate) fn host_os_arch() -> (&'static str, &'static str) {
     }
 }
 
+/// Determine the corretto OS/arch tuple to use when running under wasi. wasi has no host OS, so
+/// pick a sensible default that the JDK is published for. `x64` Linux is always available.
+#[cfg(target_os = "wasi")]
+pub(crate) fn host_os_arch() -> (&'static str, &'static str) {
+    ("linux", "x64")
+}
+
 /// Download a runtime archive for the given version targeting the host OS / architecture.
 ///
 /// # Errors
 ///
 /// An error will be returned if the request fails
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 async fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
     let (os, arch) = host_os_arch();
     download_archive_for(version, os, arch).await
@@ -153,18 +158,13 @@ async fn download_archive(version: &str) -> Result<(String, Vec<u8>)> {
 /// # Errors
 ///
 /// An error will be returned if the request fails
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 pub(crate) async fn download_archive_for(
     version: &str,
     os: &str,
     arch: &str,
 ) -> Result<(String, Vec<u8>)> {
-    let client = Client::new();
-    let mut headers = header::HeaderMap::new();
-    headers.insert(
-        header::USER_AGENT,
-        header::HeaderValue::from_static(&USER_AGENT),
-    );
+    let headers = vec![("user-agent".to_string(), USER_AGENT.clone())];
 
     let (corretto_os, corretto_arch, extension) = match os {
         "macos" => {
@@ -189,14 +189,8 @@ pub(crate) async fn download_archive_for(
     let file_name = format!("amazon-corretto-{version}-{corretto_os}-{corretto_arch}{extension}");
     let url = format!("https://corretto.aws/downloads/resources/{version}/{file_name}");
     debug!("Downloading archive: {url}");
-    let response = client
-        .get(url)
-        .headers(headers)
-        .send()
-        .await?
-        .error_for_status()?;
-    let archive = response.bytes().await?;
-    Ok((file_name, archive.to_vec()))
+    let archive = http::get_bytes(&url, &headers, &[]).await?;
+    Ok((file_name, archive))
 }
 
 /// Get the release versions for a given major version.
@@ -205,41 +199,28 @@ pub(crate) async fn download_archive_for(
 /// # Errors
 ///
 /// An error will be returned if the request fails
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 async fn get_release_versions(major_version: &str) -> Result<Vec<String>> {
     let url = format!("https://api.github.com/repos/corretto/corretto-{major_version}/releases");
-    let client = Client::new();
-    let mut headers = header::HeaderMap::new();
-    headers.insert(
-        header::USER_AGENT,
-        header::HeaderValue::from_static(&USER_AGENT),
-    );
-    headers.insert(
-        GITHUB_API_VERSION_HEADER,
-        header::HeaderValue::from_static(GITHUB_API_VERSION),
-    );
+    let mut headers = vec![
+        ("user-agent".to_string(), USER_AGENT.clone()),
+        (
+            GITHUB_API_VERSION_HEADER.to_string(),
+            GITHUB_API_VERSION.to_string(),
+        ),
+    ];
     if let Some(token) = &*GITHUB_TOKEN {
-        headers.append(
-            header::AUTHORIZATION,
-            format!("Bearer {token}")
-                .parse()
-                .map_err(|_| Error::ParseError("Bearer token".to_string()))?,
-        );
+        headers.push(("authorization".to_string(), format!("Bearer {token}")));
     }
 
     debug!("Getting release versions: {url}");
-    let mut page = 1;
+    let mut page = 1u32;
     let mut releases = Vec::new();
 
     loop {
-        let response = client
-            .get(&url)
-            .headers(headers.clone())
-            .query(&[("page", page.to_string().as_str()), ("per_page", "100")])
-            .send()
-            .await?
-            .error_for_status()?;
-        let response_releases = response.json::<Vec<Release>>().await?;
+        let page_str = page.to_string();
+        let query = [("page", page_str.as_str()), ("per_page", "100")];
+        let response_releases: Vec<Release> = http::get_json(&url, &headers, &query).await?;
         if response_releases.is_empty() {
             break;
         }
@@ -262,7 +243,7 @@ pub(crate) fn parse_major_version(version: &str) -> u64 {
     major_part.parse::<u64>().unwrap_or(0)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(all(target_family = "wasm", target_os = "unknown"))))]
 mod tests {
     use super::*;
     use crate::runtime::bootstrap::{JAVA_11_VERSION, JAVA_21_VERSION};

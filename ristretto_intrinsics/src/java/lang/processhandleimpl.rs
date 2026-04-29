@@ -296,7 +296,7 @@ pub async fn wait_for_process_exit_0<T: Thread + 'static>(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
 

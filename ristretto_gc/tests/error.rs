@@ -1,6 +1,7 @@
 //! Error handling and Result type tests
 //!
 //! Tests error scenarios, error types, and proper error propagation.
+#![cfg(not(target_family = "wasm"))]
 
 use ristretto_gc::{Error, GarbageCollector, Gc, Result};
 use std::sync::{Arc, Mutex};

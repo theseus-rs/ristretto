@@ -436,7 +436,7 @@ fn finish_execute(
 ) -> Result<Option<Value>> {
     runtime_context.take_pending_exception_into(|pending| {
         if pending != 0 {
-            let gc_ref: Gc<parking_lot::RwLock<ristretto_classloader::Reference>> =
+            let gc_ref: Gc<ristretto_gc::sync::RwLock<ristretto_classloader::Reference>> =
                 Gc::from_raw_i64(pending);
             return Err(crate::Error::Throwable(Value::Object(Some(gc_ref))));
         }

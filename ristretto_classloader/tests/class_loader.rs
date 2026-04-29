@@ -1,4 +1,5 @@
 //! Tests for the Ristretto `ClassLoader`
+#![cfg(not(target_family = "wasm"))]
 
 use ristretto_classloader::{ClassLoader, ClassPath, JavaStr, Result};
 use std::path::PathBuf;

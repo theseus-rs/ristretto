@@ -1091,7 +1091,7 @@ where
     }
 }
 
-impl<T> Trace for parking_lot::Mutex<T>
+impl<T> Trace for crate::sync::Mutex<T>
 where
     T: Trace,
 {
@@ -1100,7 +1100,7 @@ where
     }
 }
 
-impl<T> Trace for parking_lot::RwLock<T>
+impl<T> Trace for crate::sync::RwLock<T>
 where
     T: Trace,
 {

@@ -330,9 +330,9 @@ pub(crate) fn ifnonnull(stack: &mut OperandStack, address: u16) -> Result<Execut
 mod test {
     use super::*;
     use crate::java_object::JavaObject;
-    use parking_lot::RwLock;
     use ristretto_classloader::Value;
     use ristretto_gc::Gc;
+    use ristretto_gc::sync::RwLock;
 
     #[test]
     fn test_ifeq_equal() -> Result<()> {
