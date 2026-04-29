@@ -161,7 +161,7 @@ pub async fn create_file_exclusively<T: Thread + 'static>(
 }
 
 pub async fn delete<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop()?;
@@ -170,6 +170,19 @@ pub async fn delete<T: Thread + 'static>(
         file.value("path")?.as_string()?
     };
     let path = PathBuf::from(&path);
+
+    // Match Windows: a file with an active memory mapping cannot be deleted.
+    let vm = thread.vm()?;
+    if let Ok(regions) = vm
+        .resource_manager()
+        .get_or_init(crate::java::nio::mapped_regions::MappedRegions::new)
+        && let Ok(canonical) = std::fs::canonicalize(&path)
+        && let Some(canonical_str) = canonical.to_str()
+        && regions.is_path_mapped(canonical_str)
+    {
+        return Ok(Some(Value::from(false)));
+    }
+
     let deleted = tokio::fs::remove_file(&path)
         .await
         .or(tokio::fs::remove_dir(&path).await)

@@ -72,7 +72,7 @@ pub async fn is_loaded_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(1)))
+    Ok(Some(Value::Int(0)))
 }
 
 /// `MappedByteBuffer.load0(long address, long length)` (Java <= 11).
@@ -126,7 +126,7 @@ mod tests {
         params.push_long(16);
         params.push_int(1);
         let result = is_loaded_0(thread, params).await?;
-        assert_eq!(result, Some(Value::Int(1)));
+        assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
 

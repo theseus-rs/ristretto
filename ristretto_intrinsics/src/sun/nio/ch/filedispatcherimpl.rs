@@ -1,6 +1,6 @@
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
 #[cfg(target_os = "windows")]
-use crate::java::nio::mapped_regions::MappedRegions;
+use crate::java::nio::mapped_regions::{MapMode, MappedRegion, MappedRegions};
 use crate::sun::nio::fs::managed_files;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::JAVA_8;
@@ -14,8 +14,12 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::VersionSpecification::Between;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_classfile::VersionSpecification::Equal;
-use ristretto_classfile::VersionSpecification::{GreaterThanOrEqual, LessThanOrEqual};
-use ristretto_classfile::{JAVA_17, JAVA_21};
+#[cfg(target_family = "unix")]
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
+use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
+use ristretto_classfile::JAVA_21;
+#[cfg(target_family = "unix")]
+use ristretto_classfile::JAVA_17;
 #[cfg(target_family = "unix")]
 use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
@@ -61,10 +65,7 @@ async fn close_internal<T: Thread + 'static>(
     Ok(None)
 }
 
-#[intrinsic_method(
-    "sun/nio/ch/FileDispatcherImpl.close0(Ljava/io/FileDescriptor;)V",
-    LessThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.close0(Ljava/io/FileDescriptor;)V", Any)]
 #[async_method]
 pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -151,6 +152,15 @@ pub async fn force_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
     let file_handles = vm.file_handles();
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
+            for (address, region) in regions.writable_entries_for_fd(fd) {
+                let bytes = vm.native_memory().read_bytes(address, region.length);
+                let _ = managed_files::write_at(file_handles, fd, &bytes, region.position).await;
+            }
+        }
+    }
     if metadata_only {
         managed_files::sync_data(file_handles, fd)
             .await
@@ -229,10 +239,7 @@ async fn lock_internal<T: Thread + 'static>(
     Ok(Some(Value::Int(value)))
 }
 
-#[intrinsic_method(
-    "sun/nio/ch/FileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I",
-    LessThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I", Any)]
 #[async_method]
 pub async fn lock_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -255,10 +262,7 @@ pub async fn lock_0_windows<T: Thread + 'static>(
 }
 
 #[cfg(target_family = "unix")]
-#[intrinsic_method(
-    "sun/nio/ch/FileDispatcherImpl.preClose0(Ljava/io/FileDescriptor;)V",
-    LessThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.preClose0(Ljava/io/FileDescriptor;)V", Any)]
 #[async_method]
 pub async fn pre_close_0<T: Thread + 'static>(
     _thread: Arc<T>,
@@ -297,10 +301,7 @@ async fn pread_internal<T: Thread + 'static>(
     Ok(Some(Value::Int(result)))
 }
 
-#[intrinsic_method(
-    "sun/nio/ch/FileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I",
-    LessThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.pread0(Ljava/io/FileDescriptor;JIJ)I", Any)]
 #[async_method]
 pub async fn pread_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -344,10 +345,7 @@ async fn pwrite_internal<T: Thread + 'static>(
     Ok(Some(Value::Int(i32::try_from(n)?)))
 }
 
-#[intrinsic_method(
-    "sun/nio/ch/FileDispatcherImpl.pwrite0(Ljava/io/FileDescriptor;JIJ)I",
-    LessThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.pwrite0(Ljava/io/FileDescriptor;JIJ)I", Any)]
 #[async_method]
 pub async fn pwrite_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -403,10 +401,7 @@ async fn read_internal<T: Thread + 'static>(
     }
 }
 
-#[intrinsic_method(
-    "sun/nio/ch/FileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I",
-    LessThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.read0(Ljava/io/FileDescriptor;JI)I", Any)]
 #[async_method]
 pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -484,10 +479,7 @@ async fn readv_internal<T: Thread + 'static>(
     Ok(Some(Value::Long(total)))
 }
 
-#[intrinsic_method(
-    "sun/nio/ch/FileDispatcherImpl.readv0(Ljava/io/FileDescriptor;JI)J",
-    LessThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.readv0(Ljava/io/FileDescriptor;JI)J", Any)]
 #[async_method]
 pub async fn readv_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -526,10 +518,7 @@ async fn release_internal<T: Thread + 'static>(
     Ok(None)
 }
 
-#[intrinsic_method(
-    "sun/nio/ch/FileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V",
-    LessThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V", Any)]
 #[async_method]
 pub async fn release_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -575,10 +564,7 @@ async fn seek_internal<T: Thread + 'static>(
     Ok(Some(Value::Long(i64::try_from(result)?)))
 }
 
-#[intrinsic_method(
-    "sun/nio/ch/FileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J",
-    LessThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.seek0(Ljava/io/FileDescriptor;J)J", Any)]
 #[async_method]
 pub async fn seek_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -627,10 +613,7 @@ async fn size_internal<T: Thread + 'static>(
     Ok(Some(Value::Long(i64::try_from(size)?)))
 }
 
-#[intrinsic_method(
-    "sun/nio/ch/FileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J",
-    LessThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.size0(Ljava/io/FileDescriptor;)J", Any)]
 #[async_method]
 pub async fn size_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -681,10 +664,7 @@ async fn truncate_internal<T: Thread + 'static>(
     Ok(Some(Value::Int(0)))
 }
 
-#[intrinsic_method(
-    "sun/nio/ch/FileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I",
-    LessThanOrEqual(JAVA_17)
-)]
+#[intrinsic_method("sun/nio/ch/FileDispatcherImpl.truncate0(Ljava/io/FileDescriptor;J)I", Any)]
 #[async_method]
 pub async fn truncate_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -872,16 +852,74 @@ pub async fn is_other0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn map0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _map_sync = parameters.pop_bool()?;
-    let _len = parameters.pop_long()?;
-    let _off = parameters.pop_long()?;
-    let _prot = parameters.pop_int()?;
-    let _fdo = parameters.pop_reference()?;
-    // Memory-mapped files are not supported; return IOStatus.UNSUPPORTED (-4).
-    Ok(Some(Value::Long(-4)))
+    let _is_sync = parameters.pop_bool()?;
+    let length = parameters.pop_long()?;
+    let position = parameters.pop_long()?;
+    let prot = parameters.pop_int()?;
+    let fd_value = parameters.pop()?;
+    let vm = thread.vm()?;
+    let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
+
+    let length =
+        u64::try_from(length).map_err(|_| InternalError("map0: negative length".to_string()))?;
+    let position = u64::try_from(position)
+        .map_err(|_| InternalError("map0: negative position".to_string()))?;
+    let len =
+        usize::try_from(length).map_err(|_| InternalError("map0: length too large".to_string()))?;
+
+    let file_handles = vm.file_handles();
+    let mut buf = vec![0u8; len];
+    if len > 0 {
+        let _ = managed_files::read_at(file_handles, fd, &mut buf, position)
+            .await
+            .map_err(|e| InternalError(format!("map0: {e}")))?;
+    }
+    let address = vm.native_memory().allocate(len.max(1));
+    if len > 0 {
+        vm.native_memory().write_bytes(address, &buf);
+    }
+    let mode = MapMode::from_int(prot).unwrap_or(MapMode::ReadOnly);
+    let path = path_for_fd(file_handles, fd).await;
+    let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
+    if let Some(p) = path.as_ref() {
+        regions.track_path(p.clone());
+    }
+    regions.insert(
+        address,
+        MappedRegion {
+            fd,
+            position,
+            length: len,
+            mode,
+            path,
+        },
+    );
+    Ok(Some(Value::Long(address)))
+}
+
+#[cfg(target_os = "windows")]
+#[expect(unsafe_code)]
+async fn path_for_fd(
+    file_handles: &ristretto_types::handles::HandleManager<i64, ristretto_types::handles::FileHandle>,
+    fd: i64,
+) -> Option<String> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::Storage::FileSystem::GetFinalPathNameByHandleW;
+    let handle = file_handles.get(&fd).await?;
+    let raw = handle.file.as_raw_handle() as HANDLE;
+    let mut buf = [0u16; 1024];
+    let len = unsafe {
+        GetFinalPathNameByHandleW(raw, buf.as_mut_ptr(), u32::try_from(buf.len()).unwrap_or(0), 0)
+    };
+    if len == 0 {
+        return None;
+    }
+    let len = usize::try_from(len).ok()?.min(buf.len());
+    Some(String::from_utf16_lossy(&buf[..len]))
 }
 
 #[cfg(target_os = "windows")]
@@ -978,7 +1016,11 @@ pub async fn unmap0<T: Thread + 'static>(
     let address = parameters.pop_long()?;
     let vm = thread.vm()?;
     let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
-    regions.remove(address);
+    if let Some(region) = regions.remove(address)
+        && let Some(path) = region.path
+    {
+        regions.release_path(&path);
+    }
     vm.native_memory().free(address);
     Ok(Some(Value::Int(0)))
 }
@@ -1291,7 +1333,7 @@ mod tests {
             ]),
         )
         .await;
-        assert_eq!(Some(Value::Long(-4)), result.unwrap());
+        assert!(result.is_err());
     }
 
     #[cfg(target_os = "windows")]
