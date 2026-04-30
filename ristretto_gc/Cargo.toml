@@ -25,9 +25,4 @@ rayon = { workspace = true }
 sysinfo = { workspace = true }
 
 [dev-dependencies]
-criterion = { workspace = true }
 test-log = { workspace = true, features = ["trace"] }
-
-[[bench]]
-harness = false
-name = "gc"
