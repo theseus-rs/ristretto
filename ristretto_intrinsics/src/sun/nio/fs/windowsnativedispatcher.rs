@@ -9,6 +9,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError;
+use ristretto_types::JavaObject;
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
@@ -22,6 +23,11 @@ bitflags! {
     struct DesiredAccess: u32 {
         const GENERIC_READ = 0x8000_0000;
         const GENERIC_WRITE = 0x4000_0000;
+        const FILE_WRITE_ATTRIBUTES = 0x0000_0100;
+        const FILE_WRITE_DATA = 0x0000_0002;
+        const FILE_APPEND_DATA = 0x0000_0004;
+        const FILE_WRITE_EA = 0x0000_0010;
+        const DELETE = 0x0001_0000;
     }
 }
 
@@ -139,7 +145,13 @@ pub async fn create_file_0<T: Thread + 'static>(
     // Map Windows CreateFile parameters to POSIX-style flags for managed_files::open
     let access = DesiredAccess::from_bits_truncate(desired_access.cast_unsigned());
     let read = access.contains(DesiredAccess::GENERIC_READ);
-    let write = access.contains(DesiredAccess::GENERIC_WRITE);
+    let write = access.intersects(
+        DesiredAccess::GENERIC_WRITE
+            | DesiredAccess::FILE_WRITE_DATA
+            | DesiredAccess::FILE_APPEND_DATA
+            | DesiredAccess::FILE_WRITE_EA
+            | DesiredAccess::FILE_WRITE_ATTRIBUTES,
+    );
     let access_mode: i32 = match (read, write) {
         (true, true) => posix_open_flags::O_RDWR,
         (false, true) => posix_open_flags::O_WRONLY,
@@ -253,12 +265,21 @@ pub async fn get_file_attributes_ex_0<T: Thread + 'static>(
                 address + file_attribute_data_offset::FILE_ATTRIBUTES,
                 file_attributes,
             );
-            // ftCreationTime (8 bytes) - set to 0
-            native_memory.write_i64(address + file_attribute_data_offset::CREATION_TIME, 0);
-            // ftLastAccessTime (8 bytes) - set to 0
-            native_memory.write_i64(address + file_attribute_data_offset::LAST_ACCESS_TIME, 0);
-            // ftLastWriteTime (8 bytes) - set to 0
-            native_memory.write_i64(address + file_attribute_data_offset::LAST_WRITE_TIME, 0);
+            let creation = system_time_to_filetime(metadata.created().ok());
+            let access = system_time_to_filetime(metadata.accessed().ok());
+            let write = system_time_to_filetime(metadata.modified().ok());
+            native_memory.write_i64(
+                address + file_attribute_data_offset::CREATION_TIME,
+                i64::from_ne_bytes(creation.to_ne_bytes()),
+            );
+            native_memory.write_i64(
+                address + file_attribute_data_offset::LAST_ACCESS_TIME,
+                i64::from_ne_bytes(access.to_ne_bytes()),
+            );
+            native_memory.write_i64(
+                address + file_attribute_data_offset::LAST_WRITE_TIME,
+                i64::from_ne_bytes(write.to_ne_bytes()),
+            );
             // nFileSizeHigh (4 bytes) + nFileSizeLow (4 bytes)
             let size = metadata.len();
             let size_high = i32::try_from(size >> DWORD_BITS)
@@ -320,10 +341,10 @@ pub async fn access_check<T: Thread + 'static>(
     let _access_mask = parameters.pop_int()?;
     let _security_info = parameters.pop_long()?;
     let _token = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/WindowsNativeDispatcher.AccessCheck(JJIIIII)Z".to_string(),
-    )
-    .into())
+    // We do not enforce ACLs; report the requested access as granted so JDK's
+    // checkAccess returns success and Files.isWritable / isReadable / isExecutable
+    // mirror the underlying file system semantics already enforced by open/read/write.
+    Ok(Some(Value::Int(1)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.AddAccessAllowedAceEx(JIIJ)V", Any)]
@@ -547,6 +568,21 @@ pub async fn delete_file0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let address = parameters.pop_long()?;
     let path = read_native_string(&thread, address, "DeleteFile0")?;
+
+    // Match Windows: a file with an active memory mapping cannot be deleted (sharing
+    // violation). Compare via the canonicalized path stored when the mapping was created.
+    let vm = thread.vm()?;
+    if let Ok(regions) = vm
+        .resource_manager()
+        .get_or_init(crate::java::nio::mapped_regions::MappedRegions::new)
+        && let Ok(canonical) = std::fs::canonicalize(&path)
+        && let Some(canonical_str) = canonical.to_str()
+        && regions.is_path_mapped(canonical_str)
+    {
+        const ERROR_SHARING_VIOLATION: i32 = 32;
+        return Err(throw_windows_exception(&thread, ERROR_SHARING_VIOLATION).await);
+    }
+
     let metadata = std::fs::symlink_metadata(&path);
     let result = match metadata {
         Ok(meta) if meta.is_dir() => std::fs::remove_dir(&path),
@@ -596,11 +632,9 @@ pub async fn duplicate_token_ex<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let _desired_access = parameters.pop_int()?;
-    let _token = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/WindowsNativeDispatcher.DuplicateTokenEx(JI)J".to_string(),
-    )
-    .into())
+    let token = parameters.pop_long()?;
+    // We don't impersonate the user; return the same pseudo-token.
+    Ok(Some(Value::Long(token)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.FindFirstFile1(JJ)J", Any)]
@@ -746,10 +780,8 @@ pub async fn get_current_process<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/WindowsNativeDispatcher.GetCurrentProcess()J".to_string(),
-    )
-    .into())
+    // Win32 returns a pseudo-handle (-1) for the current process.
+    Ok(Some(Value::Long(-1)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetCurrentThread()J", Any)]
@@ -758,10 +790,8 @@ pub async fn get_current_thread<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/WindowsNativeDispatcher.GetCurrentThread()J".to_string(),
-    )
-    .into())
+    // Win32 returns a pseudo-handle (-2) for the current thread.
+    Ok(Some(Value::Long(-2)))
 }
 
 #[intrinsic_method(
@@ -795,14 +825,30 @@ pub async fn get_disk_free_space_ex0<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetDriveType0(J)I", Any)]
 #[async_method]
 pub async fn get_drive_type0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _address = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/WindowsNativeDispatcher.GetDriveType0(J)I".to_string(),
-    )
-    .into())
+    let address = parameters.pop_long()?;
+    let path = read_native_string(&thread, address, "GetDriveType0")?;
+    Ok(Some(Value::Int(drive_type(&path))))
+}
+
+#[cfg(target_family = "windows")]
+#[expect(unsafe_code)]
+fn drive_type(path: &str) -> i32 {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::GetDriveTypeW;
+    let wide: Vec<u16> = std::ffi::OsStr::new(path)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let t = unsafe { GetDriveTypeW(wide.as_ptr()) };
+    i32::try_from(t).unwrap_or(0)
+}
+
+#[cfg(not(target_family = "windows"))]
+fn drive_type(_path: &str) -> i32 {
+    0
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetFileAttributes0(J)I", Any)]
@@ -858,17 +904,49 @@ pub async fn get_file_information_by_handle0<T: Thread + 'static>(
     let modified_ft = system_time_to_filetime(metadata.modified().ok());
     let created_ft = system_time_to_filetime(metadata.created().ok());
     let accessed_ft = system_time_to_filetime(metadata.accessed().ok());
+    let (vol_serial, n_links, file_index) = file_identity(vm.file_handles(), handle)
+        .await
+        .unwrap_or((0, 1, 0));
+    let index_high = u32::try_from(file_index >> 32).unwrap_or(0);
+    let index_low = u32::try_from(file_index & 0xFFFF_FFFF).unwrap_or(0);
     let mut buffer = [0u8; 52];
     buffer[0..4].copy_from_slice(&attributes.to_le_bytes());
     buffer[4..12].copy_from_slice(&created_ft.to_le_bytes());
     buffer[12..20].copy_from_slice(&accessed_ft.to_le_bytes());
     buffer[20..28].copy_from_slice(&modified_ft.to_le_bytes());
+    buffer[28..32].copy_from_slice(&vol_serial.to_le_bytes());
     buffer[32..36].copy_from_slice(&size_high.to_le_bytes());
     buffer[36..40].copy_from_slice(&size_low.to_le_bytes());
-    let n_links: u32 = 1;
     buffer[40..44].copy_from_slice(&n_links.to_le_bytes());
+    buffer[44..48].copy_from_slice(&index_high.to_le_bytes());
+    buffer[48..52].copy_from_slice(&index_low.to_le_bytes());
     native_memory.write_bytes(address, &buffer);
     Ok(None)
+}
+
+/// Returns `(volume_serial_number, number_of_links, file_index)` for the given file handle.
+#[expect(unsafe_code)]
+async fn file_identity(
+    file_handles: &ristretto_types::handles::HandleManager<
+        i64,
+        ristretto_types::handles::FileHandle,
+    >,
+    fd: i64,
+) -> Option<(u32, u32, u64)> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::Storage::FileSystem::{
+        BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
+    };
+    let file_handle = file_handles.get(&fd).await?;
+    let raw_handle = file_handle.file.as_raw_handle() as HANDLE;
+    let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+    let ok = unsafe { GetFileInformationByHandle(raw_handle, &raw mut info) };
+    if ok == 0 {
+        return None;
+    }
+    let index = (u64::from(info.nFileIndexHigh) << 32) | u64::from(info.nFileIndexLow);
+    Some((info.dwVolumeSerialNumber, info.nNumberOfLinks, index))
 }
 
 fn system_time_to_filetime(time: Option<std::time::SystemTime>) -> u64 {
@@ -890,14 +968,16 @@ fn system_time_to_filetime(time: Option<std::time::SystemTime>) -> u64 {
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetFileSecurity0(JIJI)I", Any)]
 #[async_method]
 pub async fn get_file_security0<T: Thread + 'static>(
-    thread: Arc<T>,
+    _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let _n_length = parameters.pop_int()?;
     let _desc_address = parameters.pop_long()?;
     let _requested_information = parameters.pop_int()?;
     let _path_address = parameters.pop_long()?;
-    Err(throw_windows_exception(&thread, 50 /* ERROR_NOT_SUPPORTED */).await)
+    // We don't surface real security descriptors. Report zero bytes were written
+    // (the JDK treats this as success because the buffer was sufficient).
+    Ok(Some(Value::Int(0)))
 }
 
 #[intrinsic_method(
@@ -1040,12 +1120,79 @@ pub async fn get_token_information<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_volume_information0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _obj = parameters.pop_reference()?;
-    let _address = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError("sun/nio/fs/WindowsNativeDispatcher.GetVolumeInformation0(JLsun/nio/fs/WindowsNativeDispatcher$VolumeInformation;)V".to_string()).into())
+    let obj_gc = parameters
+        .pop_reference()?
+        .ok_or(InternalError("GetVolumeInformation0: null obj".to_string()))?;
+    let address = parameters.pop_long()?;
+    let path = read_native_string(&thread, address, "GetVolumeInformation0")?;
+    let info = volume_information(&path)
+        .ok_or_else(|| InternalError("GetVolumeInformation0: failed".to_string()))?;
+    let fs_name = info.0.to_object(thread.as_ref()).await?;
+    let vol_name = info.1.to_object(thread.as_ref()).await?;
+    let mut guard = obj_gc.write();
+    let Reference::Object(ref mut obj) = *guard else {
+        return Err(InternalError(
+            "GetVolumeInformation0: not an object".to_string(),
+        ));
+    };
+    obj.set_value("fileSystemName", fs_name)?;
+    obj.set_value("volumeName", vol_name)?;
+    obj.set_value("volumeSerialNumber", Value::Int(info.2.cast_signed()))?;
+    obj.set_value("flags", Value::Int(info.3.cast_signed()))?;
+    Ok(None)
+}
+
+#[cfg(target_family = "windows")]
+#[expect(unsafe_code)]
+fn volume_information(path: &str) -> Option<(String, String, u32, u32)> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::GetVolumeInformationW;
+    let wide: Vec<u16> = std::ffi::OsStr::new(path)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut vol_name = [0u16; 260];
+    let mut fs_name = [0u16; 260];
+    let mut serial: u32 = 0;
+    let mut max_component: u32 = 0;
+    let mut flags: u32 = 0;
+    let ok = unsafe {
+        GetVolumeInformationW(
+            wide.as_ptr(),
+            vol_name.as_mut_ptr(),
+            u32::try_from(vol_name.len()).unwrap_or(0),
+            &raw mut serial,
+            &raw mut max_component,
+            &raw mut flags,
+            fs_name.as_mut_ptr(),
+            u32::try_from(fs_name.len()).unwrap_or(0),
+        )
+    };
+    if ok == 0 {
+        return None;
+    }
+    let vol_len = vol_name
+        .iter()
+        .position(|&c| c == 0)
+        .unwrap_or(vol_name.len());
+    let fs_len = fs_name
+        .iter()
+        .position(|&c| c == 0)
+        .unwrap_or(fs_name.len());
+    Some((
+        String::from_utf16_lossy(&fs_name[..fs_len]),
+        String::from_utf16_lossy(&vol_name[..vol_len]),
+        serial,
+        flags,
+    ))
+}
+
+#[cfg(not(target_family = "windows"))]
+fn volume_information(_path: &str) -> Option<(String, String, u32, u32)> {
+    None
 }
 
 #[intrinsic_method(
@@ -1054,14 +1201,43 @@ pub async fn get_volume_information0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_volume_path_name0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _address = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/WindowsNativeDispatcher.GetVolumePathName0(J)Ljava/lang/String;".to_string(),
-    )
-    .into())
+    let address = parameters.pop_long()?;
+    let path = read_native_string(&thread, address, "GetVolumePathName0")?;
+    let volume = volume_path_name(&path);
+    let value = volume.to_object(thread.as_ref()).await?;
+    Ok(Some(value))
+}
+
+#[cfg(target_family = "windows")]
+#[expect(unsafe_code)]
+fn volume_path_name(path: &str) -> String {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::GetVolumePathNameW;
+    let wide: Vec<u16> = std::ffi::OsStr::new(path)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+    let mut buf = [0u16; 260];
+    let ok = unsafe {
+        GetVolumePathNameW(
+            wide.as_ptr(),
+            buf.as_mut_ptr(),
+            u32::try_from(buf.len()).unwrap_or(0),
+        )
+    };
+    if ok == 0 {
+        return String::new();
+    }
+    let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
+    String::from_utf16_lossy(&buf[..len])
+}
+
+#[cfg(not(target_family = "windows"))]
+fn volume_path_name(_path: &str) -> String {
+    String::new()
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.InitializeAcl(JI)V", Any)]
@@ -1174,10 +1350,8 @@ pub async fn open_process_token<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let _desired_access = parameters.pop_int()?;
     let _process = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/WindowsNativeDispatcher.OpenProcessToken(JI)J".to_string(),
-    )
-    .into())
+    // Return a sentinel pseudo-token. AccessCheck below ignores it.
+    Ok(Some(Value::Long(1)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.OpenThreadToken(JIZ)J", Any)]
@@ -1189,10 +1363,8 @@ pub async fn open_thread_token<T: Thread + 'static>(
     let _open_as_self = parameters.pop_bool()?;
     let _desired_access = parameters.pop_int()?;
     let _thread = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/WindowsNativeDispatcher.OpenThreadToken(JIZ)J".to_string(),
-    )
-    .into())
+    // No thread-impersonation token. JDK falls back to the process token.
+    Ok(Some(Value::Long(0)))
 }
 
 #[intrinsic_method(
@@ -1315,21 +1487,82 @@ pub async fn set_file_time<T: Thread + 'static>(
     .into())
 }
 
+#[cfg(target_os = "windows")]
+#[expect(unsafe_code)]
+async fn set_file_time_via_handle(
+    file_handles: &ristretto_types::handles::HandleManager<
+        i64,
+        ristretto_types::handles::FileHandle,
+    >,
+    fd: i64,
+    create_time: i64,
+    last_access_time: i64,
+    last_write_time: i64,
+) -> std::io::Result<()> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::{FILETIME, HANDLE};
+    use windows_sys::Win32::Storage::FileSystem::SetFileTime;
+    let file_handle = file_handles.get(&fd).await.ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::NotFound, "SetFileTime0: bad handle")
+    })?;
+    let raw_handle = file_handle.file.as_raw_handle() as HANDLE;
+    let to_filetime = |value: i64| -> FILETIME {
+        let v = u64::from_ne_bytes(value.to_ne_bytes());
+        FILETIME {
+            dwLowDateTime: u32::try_from(v & 0xFFFF_FFFF).unwrap_or(0),
+            dwHighDateTime: u32::try_from(v >> 32).unwrap_or(0),
+        }
+    };
+    let create_ft = to_filetime(create_time);
+    let access_ft = to_filetime(last_access_time);
+    let write_ft = to_filetime(last_write_time);
+    let create_ptr = if create_time == -1 {
+        std::ptr::null()
+    } else {
+        std::ptr::from_ref(&create_ft)
+    };
+    let access_ptr = if last_access_time == -1 {
+        std::ptr::null()
+    } else {
+        std::ptr::from_ref(&access_ft)
+    };
+    let write_ptr = if last_write_time == -1 {
+        std::ptr::null()
+    } else {
+        std::ptr::from_ref(&write_ft)
+    };
+    let ok = unsafe { SetFileTime(raw_handle, create_ptr, access_ptr, write_ptr) };
+    if ok == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(())
+}
+
 #[intrinsic_method(
     "sun/nio/fs/WindowsNativeDispatcher.SetFileTime0(JJJJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
 #[async_method]
 pub async fn set_file_time0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _last_write_time = parameters.pop_long()?;
-    let _last_access_time = parameters.pop_long()?;
-    let _create_time = parameters.pop_long()?;
-    let _handle = parameters.pop_long()?;
-    // No-op: setting file timestamps on the underlying handle is not supported,
-    // but we don't fail the call so attribute setters succeed silently.
+    let last_write_time = parameters.pop_long()?;
+    let last_access_time = parameters.pop_long()?;
+    let create_time = parameters.pop_long()?;
+    let handle = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    if let Err(e) = set_file_time_via_handle(
+        vm.file_handles(),
+        handle,
+        create_time,
+        last_access_time,
+        last_write_time,
+    )
+    .await
+    {
+        return Err(throw_windows_exception(&thread, windows_error_code(&e)).await);
+    }
     Ok(None)
 }
 
@@ -1456,11 +1689,9 @@ mod tests {
                 Value::Int(0),
             ]),
         )
-        .await;
-        assert_eq!(
-            "sun/nio/fs/WindowsNativeDispatcher.AccessCheck(JJIIIII)Z",
-            result.unwrap_err().to_string()
-        );
+        .await
+        .expect("ok");
+        assert_eq!(Some(Value::Int(1)), result);
     }
 
     #[tokio::test]
@@ -1700,11 +1931,10 @@ mod tests {
     async fn test_duplicate_token_ex() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            duplicate_token_ex(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
-        assert_eq!(
-            "sun/nio/fs/WindowsNativeDispatcher.DuplicateTokenEx(JI)J",
-            result.unwrap_err().to_string()
-        );
+            duplicate_token_ex(thread, Parameters::new(vec![Value::Long(7), Value::Int(0)]))
+                .await
+                .expect("ok");
+        assert_eq!(Some(Value::Long(7)), result);
     }
 
     #[tokio::test]
@@ -1818,21 +2048,19 @@ mod tests {
     #[tokio::test]
     async fn test_get_current_process() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_current_process(thread, Parameters::default()).await;
-        assert_eq!(
-            "sun/nio/fs/WindowsNativeDispatcher.GetCurrentProcess()J",
-            result.unwrap_err().to_string()
-        );
+        let result = get_current_process(thread, Parameters::default())
+            .await
+            .expect("ok");
+        assert_eq!(Some(Value::Long(-1)), result);
     }
 
     #[tokio::test]
     async fn test_get_current_thread() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_current_thread(thread, Parameters::default()).await;
-        assert_eq!(
-            "sun/nio/fs/WindowsNativeDispatcher.GetCurrentThread()J",
-            result.unwrap_err().to_string()
-        );
+        let result = get_current_thread(thread, Parameters::default())
+            .await
+            .expect("ok");
+        assert_eq!(Some(Value::Long(-2)), result);
     }
 
     #[tokio::test]
@@ -1867,10 +2095,7 @@ mod tests {
     async fn test_get_drive_type0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_drive_type0(thread, Parameters::new(vec![Value::Long(0)])).await;
-        assert_eq!(
-            "sun/nio/fs/WindowsNativeDispatcher.GetDriveType0(J)I",
-            result.unwrap_err().to_string()
-        );
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -1920,8 +2145,9 @@ mod tests {
                 Value::Int(0),
             ]),
         )
-        .await;
-        assert!(result.is_err());
+        .await
+        .expect("ok");
+        assert_eq!(Some(Value::Int(0)), result);
     }
 
     #[tokio::test]
@@ -2042,20 +2268,15 @@ mod tests {
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
         )
         .await;
-        assert_eq!(
-            "sun/nio/fs/WindowsNativeDispatcher.GetVolumeInformation0(JLsun/nio/fs/WindowsNativeDispatcher$VolumeInformation;)V",
-            result.unwrap_err().to_string()
-        );
+        assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_volume_path_name0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = get_volume_path_name0(thread, Parameters::new(vec![Value::Long(0)])).await;
-        assert_eq!(
-            "sun/nio/fs/WindowsNativeDispatcher.GetVolumePathName0(J)Ljava/lang/String;",
-            result.unwrap_err().to_string()
-        );
+        // Address 0 yields a bad-address read error.
+        assert!(result.is_err());
     }
 
     #[tokio::test]
@@ -2143,11 +2364,10 @@ mod tests {
     async fn test_open_process_token() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            open_process_token(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
-        assert_eq!(
-            "sun/nio/fs/WindowsNativeDispatcher.OpenProcessToken(JI)J",
-            result.unwrap_err().to_string()
-        );
+            open_process_token(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]))
+                .await
+                .expect("ok");
+        assert_eq!(Some(Value::Long(1)), result);
     }
 
     #[tokio::test]
@@ -2157,11 +2377,9 @@ mod tests {
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0), Value::from(false)]),
         )
-        .await;
-        assert_eq!(
-            "sun/nio/fs/WindowsNativeDispatcher.OpenThreadToken(JIZ)J",
-            result.unwrap_err().to_string()
-        );
+        .await
+        .expect("ok");
+        assert_eq!(Some(Value::Long(0)), result);
     }
 
     #[tokio::test]
@@ -2260,20 +2478,20 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_set_file_time0() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
+    async fn test_set_file_time0() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        // Handle 0 is invalid; call should surface a Windows exception.
         let result = set_file_time0(
             thread,
             Parameters::new(vec![
                 Value::Long(0),
-                Value::Long(0),
-                Value::Long(0),
-                Value::Long(0),
+                Value::Long(-1),
+                Value::Long(-1),
+                Value::Long(-1),
             ]),
         )
-        .await?;
-        assert_eq!(result, None);
-        Ok(())
+        .await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

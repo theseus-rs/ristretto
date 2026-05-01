@@ -68,6 +68,7 @@ async fn do_map<V: VM>(vm: &Arc<V>, fd: i64, prot: i32, position: i64, length: i
             position: position_u64,
             length: length_usize,
             mode,
+            path: None,
         },
     );
 

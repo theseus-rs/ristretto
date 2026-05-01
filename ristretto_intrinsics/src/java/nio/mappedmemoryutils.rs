@@ -67,7 +67,11 @@ pub async fn is_loaded_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(1)))
+    #[cfg(target_os = "windows")]
+    let loaded = 0;
+    #[cfg(not(target_os = "windows"))]
+    let loaded = 1;
+    Ok(Some(Value::Int(loaded)))
 }
 
 /// `MappedMemoryUtils.load0(long address, long length)` (Java >= 17). No-op.
@@ -138,7 +142,11 @@ mod tests {
         params.push_long(16);
         params.push_long(1);
         let result = is_loaded_0(thread, params).await?;
-        assert_eq!(result, Some(Value::Int(1)));
+        #[cfg(target_os = "windows")]
+        let expected = 0;
+        #[cfg(not(target_os = "windows"))]
+        let expected = 1;
+        assert_eq!(result, Some(Value::Int(expected)));
         Ok(())
     }
 
