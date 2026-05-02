@@ -111,7 +111,7 @@ fn get_socket_option(socket: &Socket, level: i32, opt: i32) -> Result<i32> {
         (IPPROTO_TCP, TCP_NODELAY) => socket.tcp_nodelay().map(i32::from),
         _ => Ok(0),
     };
-    result.map_err(|e| InternalError(e.to_string()))
+    result.map_err(|e| InternalError(format!("get_socket_option(level={level}, opt={opt}): {e}")))
 }
 
 #[expect(clippy::cast_sign_loss)]
@@ -136,7 +136,11 @@ fn set_socket_option(socket: &Socket, level: i32, opt: i32, value: i32) -> Resul
         (IPPROTO_TCP, TCP_NODELAY) => socket.set_tcp_nodelay(value != 0),
         _ => Ok(()),
     };
-    result.map_err(|e| InternalError(e.to_string()))
+    result.map_err(|e| {
+        InternalError(format!(
+            "set_socket_option(level={level}, opt={opt}, value={value}): {e}"
+        ))
+    })
 }
 
 #[intrinsic_method(
@@ -364,7 +368,7 @@ pub async fn bind_0<T: Thread + 'static>(
         if e.kind() == std::io::ErrorKind::AddrInUse {
             return Err(ristretto_types::JavaError::BindException(e.to_string()).into());
         }
-        return Err(InternalError(e.to_string()));
+        return Err(InternalError(format!("Net.bind0(addr={addr:?}): {e}")));
     }
     Ok(None)
 }
@@ -449,43 +453,35 @@ pub async fn connect_0<T: Thread + 'static>(
     let address_int = get_inet_address_int(&inet_addr_obj)?;
     let ipv4 = ipv4_from_int(address_int);
 
-    // Clone the raw socket for connecting (don't take ownership yet to avoid blocking)
-    let cloned_socket = {
-        let guard = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-        let Some(socket) = guard.socket_type.as_raw() else {
-            return Err(InternalError("expected raw socket for connect".to_string()));
-        };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("connect: clone: {e}")))?
+    // Take ownership of the raw socket from the handle map for the duration of connect.
+    let raw_handle = vm
+        .socket_handles()
+        .remove(&fd)
+        .await
+        .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
+    let SocketType::Raw(socket) = raw_handle.socket_type else {
+        return Err(InternalError("expected raw socket for connect".to_string()));
     };
 
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     let addr = make_sock_addr(prefer_ipv6, ipv4, port as u16);
 
     // Connect in spawn_blocking (connect itself is a one-shot blocking op)
-    tokio::task::spawn_blocking(move || cloned_socket.connect(&addr))
-        .await
-        .map_err(|e| InternalError(format!("connect: spawn: {e}")))?
-        .map_err(|e| -> ristretto_types::Error {
-            ristretto_types::JavaError::ConnectException(e.to_string()).into()
-        })?;
-
-    // Now transition: remove Raw socket and convert to appropriate type
-    let raw_socket = vm
-        .socket_handles()
-        .remove(&fd)
-        .await
-        .ok_or_else(|| InternalError(format!("socket not found for fd {fd} after connect")))?;
-    let SocketType::Raw(socket) = raw_socket.socket_type else {
-        return Err(InternalError(
-            "expected raw socket after connect".to_string(),
-        ));
-    };
+    let socket = tokio::task::spawn_blocking(
+        move || -> std::result::Result<Socket, (Socket, std::io::Error)> {
+            match socket.connect(&addr) {
+                Ok(()) => Ok(socket),
+                Err(e) => Err((socket, e)),
+            }
+        },
+    )
+    .await
+    .map_err(|e| InternalError(format!("connect: spawn: {e}")))?
+    .map_err(|(socket, e)| -> ristretto_types::Error {
+        // Re-insert the socket on failure so the fd stays valid (best effort).
+        let _ = socket;
+        ristretto_types::JavaError::ConnectException(e.to_string()).into()
+    })?;
 
     // Check socket type to decide transition
     let sock_type = socket
@@ -589,7 +585,9 @@ pub async fn is_exclusive_bind_available<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(-1)))
+    // Windows supports SO_EXCLUSIVEADDRUSE; on Unix-like systems exclusive bind is unavailable.
+    let value = if cfg!(target_os = "windows") { 1 } else { -1 };
+    Ok(Some(Value::Int(value)))
 }
 
 #[intrinsic_method("sun/nio/ch/Net.isIPv6Available0()Z", Any)]
@@ -664,7 +662,7 @@ pub async fn listen<T: Thread + 'static>(
 
     socket
         .listen(backlog)
-        .map_err(|e| InternalError(e.to_string()))?;
+        .map_err(|e| InternalError(format!("Net.listen: {e}")))?;
 
     // Convert to tokio TcpListener
     socket
@@ -703,17 +701,25 @@ pub async fn local_inet_address<T: Thread + 'static>(
             .await
             .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
         let socket = socket_from_type(&guard.socket_type);
-        socket
-            .local_addr()
-            .map_err(|e: std::io::Error| InternalError(e.to_string()))?
+        match socket.local_addr() {
+            Ok(addr) => Some(addr),
+            // On Windows, getsockname() returns WSAEINVAL (10022) for unbound sockets;
+            // OpenJDK returns the wildcard address in that case.
+            Err(e) if e.raw_os_error() == Some(10022) => None,
+            Err(e) => return Err(InternalError(format!("Net.localInetAddress: {e}"))),
+        }
     };
-    let addr_bytes: Vec<u8> = if let Some(v4) = addr.as_socket_ipv4() {
-        v4.ip().octets().to_vec()
-    } else if let Some(v6) = addr.as_socket_ipv6() {
-        if let Some(mapped) = v6.ip().to_ipv4_mapped() {
-            mapped.octets().to_vec()
+    let addr_bytes: Vec<u8> = if let Some(addr) = addr {
+        if let Some(v4) = addr.as_socket_ipv4() {
+            v4.ip().octets().to_vec()
+        } else if let Some(v6) = addr.as_socket_ipv6() {
+            if let Some(mapped) = v6.ip().to_ipv4_mapped() {
+                mapped.octets().to_vec()
+            } else {
+                v6.ip().octets().to_vec()
+            }
         } else {
-            v6.ip().octets().to_vec()
+            vec![0, 0, 0, 0]
         }
     } else {
         vec![0, 0, 0, 0]
@@ -751,11 +757,15 @@ pub async fn local_port<T: Thread + 'static>(
         .await
         .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
     let socket = socket_from_type(&guard.socket_type);
-    let addr = socket
-        .local_addr()
-        .map_err(|e: std::io::Error| InternalError(e.to_string()))?;
+    let addr = match socket.local_addr() {
+        Ok(a) => Some(a),
+        // On Windows, getsockname() returns WSAEINVAL (10022) for unbound sockets.
+        Err(e) if e.raw_os_error() == Some(10022) => None,
+        Err(e) => return Err(InternalError(format!("Net.localPort: {e}"))),
+    };
     let port = addr
-        .as_socket()
+        .as_ref()
+        .and_then(SockAddr::as_socket)
         .map_or(0, |a: std::net::SocketAddr| i32::from(a.port()));
     Ok(Some(Value::Int(port)))
 }
@@ -934,7 +944,7 @@ pub async fn remote_inet_address<T: Thread + 'static>(
         let socket = socket_from_type(&guard.socket_type);
         socket
             .peer_addr()
-            .map_err(|e: std::io::Error| InternalError(e.to_string()))?
+            .map_err(|e: std::io::Error| InternalError(format!("Net.remoteInetAddress: {e}")))?
     };
     let addr_bytes: Vec<u8> = if let Some(v4) = addr.as_socket_ipv4() {
         v4.ip().octets().to_vec()
@@ -982,7 +992,7 @@ pub async fn remote_port<T: Thread + 'static>(
     let socket = socket_from_type(&guard.socket_type);
     let addr = socket
         .peer_addr()
-        .map_err(|e: std::io::Error| InternalError(e.to_string()))?;
+        .map_err(|e: std::io::Error| InternalError(format!("Net.remotePort: {e}")))?;
     let port = addr
         .as_socket()
         .map_or(0, |a: std::net::SocketAddr| i32::from(a.port()));
@@ -1122,8 +1132,8 @@ pub async fn socket_0<T: Thread + 'static>(
     } else {
         Domain::IPV4
     };
-    let socket =
-        Socket::new(domain, sock_type, protocol).map_err(|e| InternalError(e.to_string()))?;
+    let socket = Socket::new(domain, sock_type, protocol)
+        .map_err(|e| InternalError(format!("Net.socket0(domain={domain:?}): {e}")))?;
     if prefer_ipv6 {
         // Allow IPv4-mapped IPv6 addresses (dual-stack)
         if let Err(e) = socket.set_only_v6(false) {
@@ -1131,9 +1141,13 @@ pub async fn socket_0<T: Thread + 'static>(
         }
     }
     if reuse_addr {
+        // On Windows, OpenJDK uses SO_EXCLUSIVEADDRUSE rather than SO_REUSEADDR; the latter
+        // would allow another process to steal the port. Skip the option entirely; the
+        // default Windows behavior already yields exclusive bind semantics for TCP.
+        #[cfg(not(target_os = "windows"))]
         socket
             .set_reuse_address(true)
-            .map_err(|e| InternalError(e.to_string()))?;
+            .map_err(|e| InternalError(format!("Net.socket0 set_reuse_address: {e}")))?;
     }
     let vm = thread.vm()?;
     let fd = vm.next_nio_fd();
@@ -1154,7 +1168,9 @@ pub async fn should_shutdown_write_before_close_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::from(true)))
+    // OpenJDK only returns true on macOS; Linux and Windows return false.
+    let value = cfg!(target_os = "macos");
+    Ok(Some(Value::from(value)))
 }
 
 #[cfg(test)]
@@ -1268,7 +1284,8 @@ mod tests {
     async fn test_is_exclusive_bind_available() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = is_exclusive_bind_available(thread, Parameters::default()).await?;
-        assert_eq!(Some(Value::Int(-1)), result);
+        let expected = if cfg!(target_os = "windows") { 1 } else { -1 };
+        assert_eq!(Some(Value::Int(expected)), result);
         Ok(())
     }
 
@@ -1453,7 +1470,8 @@ mod tests {
     async fn test_should_shutdown_write_before_close_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = should_shutdown_write_before_close_0(thread, Parameters::default()).await?;
-        assert_eq!(Some(Value::from(true)), result);
+        let expected = cfg!(target_os = "macos");
+        assert_eq!(Some(Value::from(expected)), result);
         Ok(())
     }
 }
