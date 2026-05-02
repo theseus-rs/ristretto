@@ -30,6 +30,7 @@ jobs:
           - linux-x64
           - macos-arm
           - macos-x64
+          - windows-arm
           - windows-x64
           - wasm32-unknown
           - wasm32-wasi
@@ -53,6 +54,9 @@ jobs:
           - platform: macos-x64
             os: macos-26-intel
             target: x86_64-apple-darwin
+          - platform: windows-arm
+            os: windows-11-arm
+            target: aarch64-pc-windows-msvc
           - platform: windows-x64
             os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -116,7 +120,7 @@ jobs:
           cargo build --workspace --target ${{ matrix.target }}
 
       - name: Build
-        if: ${{ matrix.platform == 'wasm32-wasi' || startsWith(matrix.platform, 'windows')}}
+        if: ${{ matrix.platform == 'wasm32-wasi' }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -127,7 +131,7 @@ jobs:
           cargo build --workspace --target ${{ matrix.target }}
 
       - name: Tests
-        if: ${{ (startsWith(matrix.platform, 'linux') && matrix.platform != 'linux-riscv64' && matrix.platform != 'linux-s390x') || matrix.platform == 'macos-x64' }}
+        if: ${{ !startsWith(matrix.platform, 'wasm32') && matrix.platform != 'linux-riscv64' && matrix.platform != 'linux-s390x' && matrix.platform != 'macos-arm' }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

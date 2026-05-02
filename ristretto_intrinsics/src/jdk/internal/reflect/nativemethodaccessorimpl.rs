@@ -6,7 +6,7 @@ use ristretto_classloader::{Class as RistrettoClass, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Frame;
-use ristretto_types::JavaError::{IllegalAccessException, InaccessibleObjectException};
+use ristretto_types::JavaError::IllegalAccessException;
 use ristretto_types::ModuleAccess;
 use ristretto_types::Thread;
 use ristretto_types::VM;
@@ -216,7 +216,7 @@ pub async fn invoke_0<T: Thread + 'static>(
                         package,
                         caller_display
                     );
-                    return Err(InaccessibleObjectException(error_msg).into());
+                    return Err(IllegalAccessException(error_msg).into());
                 }
             }
         }

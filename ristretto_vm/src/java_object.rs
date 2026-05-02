@@ -422,6 +422,36 @@ async fn update_cached_class_module(
             .as_object_ref()
             .map_or(true, |obj| obj.value("name").map_or(true, |v| v.is_null()));
         if !is_unnamed {
+            // Even if a named module is already set, ensure it is the canonical
+            // Module instance for the package. Multiple Module objects may have been
+            // created for the same module (e.g. java.base) at different bootstrap
+            // stages, which breaks JDK identity comparisons such as
+            // `callerModule == declaringModule` in
+            // `AccessibleObject.checkCanSetAccessible`.
+            if let Some(loader) = class.class_loader()?
+                && loader.name() != "bootstrap"
+            {
+                return Ok(());
+            }
+            let package = ClassLoader::package_from_class_name(class.name());
+            let canonical = if package.is_empty() && class.is_primitive() {
+                vm.module_system().get_module_for_package("java/lang")
+            } else {
+                vm.module_system().get_module_for_package(package)
+            };
+            if let Some(canonical) = canonical {
+                let same_identity = match (&canonical, &current_module) {
+                    (Value::Object(Some(a)), Value::Object(Some(b))) => {
+                        ristretto_gc::Gc::ptr_eq(a, b)
+                    }
+                    (Value::Object(None), Value::Object(None)) => true,
+                    _ => false,
+                };
+                if !same_identity {
+                    let mut object_mut = object.as_object_mut()?;
+                    object_mut.set_value_unchecked("module", canonical)?;
+                }
+            }
             return Ok(());
         }
         // If the unnamed module belongs to a non-bootstrap class loader (loader != null),
