@@ -52,6 +52,7 @@ pub enum SocketType {
 #[cfg(not(target_family = "wasm"))]
 impl SocketType {
     /// Returns a reference to the raw socket, if this is a `Raw` variant.
+    #[must_use]
     pub fn as_raw(&self) -> Option<&Socket> {
         match self {
             SocketType::Raw(s) => Some(s),
@@ -60,6 +61,7 @@ impl SocketType {
     }
 
     /// Returns a reference to the TCP stream, if this is a `TcpStream` variant.
+    #[must_use]
     pub fn as_tcp_stream(&self) -> Option<&Arc<tokio::net::TcpStream>> {
         match self {
             SocketType::TcpStream(s) => Some(s),
@@ -68,6 +70,7 @@ impl SocketType {
     }
 
     /// Returns a reference to the TCP listener, if this is a `TcpListener` variant.
+    #[must_use]
     pub fn as_tcp_listener(&self) -> Option<&Arc<tokio::net::TcpListener>> {
         match self {
             SocketType::TcpListener(l) => Some(l),
@@ -76,6 +79,7 @@ impl SocketType {
     }
 
     /// Returns a reference to the UDP socket, if this is a `UdpSocket` variant.
+    #[must_use]
     pub fn as_udp_socket(&self) -> Option<&tokio::net::UdpSocket> {
         match self {
             SocketType::UdpSocket(u) => Some(u),
