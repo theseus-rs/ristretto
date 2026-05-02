@@ -1,0 +1,5 @@
+[target.riscv64gc-unknown-linux-gnu.env]
+passthrough = [
+    "PKG_CONFIG_ALLOW_CROSS=1",
+    "HOME=/tmp",
+]

@@ -102,21 +102,33 @@ impl Compiler {
     /// or `None` if the target ISA is not supported.
     #[must_use]
     pub fn new(batch_compilation: bool, interpreted: bool) -> Option<Self> {
-        let jit_compiler = match ristretto_jit::Compiler::new() {
-            Ok(compiler) => compiler,
-            Err(error) => {
-                debug!("JIT compiler not available: {error:?}");
-                return None;
-            }
-        };
+        // The cranelift riscv64 backend produces code that interacts poorly with the GC and
+        // tokio runtime under qemu user-mode emulation, leading to heap corruption. Disable
+        // JIT compilation on RISC-V hosts and fall back to the interpreter.
+        #[cfg(target_arch = "riscv64")]
+        {
+            debug!("JIT compiler is disabled on riscv64; falling back to interpreter");
+            let _ = (batch_compilation, interpreted);
+            None
+        }
+        #[cfg(not(target_arch = "riscv64"))]
+        {
+            let jit_compiler = match ristretto_jit::Compiler::new() {
+                Ok(compiler) => compiler,
+                Err(error) => {
+                    debug!("JIT compiler not available: {error:?}");
+                    return None;
+                }
+            };
 
-        Some(Self {
-            jit_compiler,
-            function_cache: Arc::new(DashMap::new()),
-            compilation_queue: Mutex::new(None),
-            batch_compilation_enabled: batch_compilation,
-            interpreted,
-        })
+            Some(Self {
+                jit_compiler,
+                function_cache: Arc::new(DashMap::new()),
+                compilation_queue: Mutex::new(None),
+                batch_compilation_enabled: batch_compilation,
+                interpreted,
+            })
+        }
     }
 
     /// Gets a cached function by its cache key.
