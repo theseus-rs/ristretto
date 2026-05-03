@@ -16,8 +16,6 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_macros::intrinsic_method;
-#[cfg(target_os = "windows")]
-use ristretto_types::JavaError;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_types::Thread;
 #[cfg(not(target_family = "wasm"))]
@@ -141,7 +139,7 @@ pub async fn fork_and_exec<T: Thread + 'static>(
     #[cfg(target_family = "wasm")]
     {
         let _ = (thread, parameters);
-        Err(JavaError::UnsupportedOperationException(
+        Err(ristretto_types::JavaError::UnsupportedOperationException(
             "java.lang.ProcessImpl.forkAndExec(I[B[B[BI[BI[B[IZ)I".to_string(),
         )
         .into())
@@ -549,17 +547,18 @@ fn parse_windows_command_line(cmdstr: &str) -> (String, String) {
     }
 }
 
+/// JDK 8 alias for `ProcessImpl.closeHandle(J)Z`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/lang/ProcessImpl.closeHandle(J)Z", Equal(JAVA_8))]
 #[async_method]
 pub async fn close_handle_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _handle = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError("java/lang/ProcessImpl.closeHandle(J)Z".to_string()).into())
+    close_handle(thread, parameters).await
 }
 
+/// JDK 8 alias for `ProcessImpl.create(...)J`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/lang/ProcessImpl.create(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[JZ)J",
@@ -567,62 +566,47 @@ pub async fn close_handle_windows_v8<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn create_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _redirect_error_stream = parameters.pop_bool()?;
-    let _std_handles = parameters.pop_reference()?;
-    let _dir = parameters.pop_reference()?;
-    let _env_block = parameters.pop_reference()?;
-    let _cmd = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/lang/ProcessImpl.create(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[JZ)J"
-            .to_string(),
-    )
-    .into())
+    create(thread, parameters).await
 }
 
+/// JDK 8 alias for `ProcessImpl.getExitCodeProcess(J)I`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/lang/ProcessImpl.getExitCodeProcess(J)I", Equal(JAVA_8))]
 #[async_method]
 pub async fn get_exit_code_process_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _handle = parameters.pop_long()?;
-    Err(
-        JavaError::UnsatisfiedLinkError("java/lang/ProcessImpl.getExitCodeProcess(J)I".to_string())
-            .into(),
-    )
+    get_exit_code_process(thread, parameters).await
 }
 
+/// JDK 8 alias for `ProcessImpl.getStillActive()I`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/lang/ProcessImpl.getStillActive()I", Equal(JAVA_8))]
 #[async_method]
 pub async fn get_still_active_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(
-        JavaError::UnsatisfiedLinkError("java/lang/ProcessImpl.getStillActive()I".to_string())
-            .into(),
-    )
+    get_still_active(thread, parameters).await
 }
 
+/// JDK 8 alias for `ProcessImpl.isProcessAlive(J)Z`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/lang/ProcessImpl.isProcessAlive(J)Z", Equal(JAVA_8))]
 #[async_method]
 pub async fn is_process_alive_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _handle = parameters.pop_long()?;
-    Err(
-        JavaError::UnsatisfiedLinkError("java/lang/ProcessImpl.isProcessAlive(J)Z".to_string())
-            .into(),
-    )
+    is_process_alive(thread, parameters).await
 }
 
+/// JDK 8 alias for `ProcessImpl.openForAtomicAppend(Ljava/lang/String;)J`;
+/// delegates to the modern implementation.
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/lang/ProcessImpl.openForAtomicAppend(Ljava/lang/String;)J",
@@ -630,44 +614,36 @@ pub async fn is_process_alive_windows_v8<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn open_for_atomic_append_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _path = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/lang/ProcessImpl.openForAtomicAppend(Ljava/lang/String;)J".to_string(),
-    )
-    .into())
+    open_for_atomic_append(thread, parameters).await
 }
 
+/// JDK 8 alias for `ProcessImpl.terminateProcess(J)V`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/lang/ProcessImpl.terminateProcess(J)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn terminate_process_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _handle = parameters.pop_long()?;
-    Err(
-        JavaError::UnsatisfiedLinkError("java/lang/ProcessImpl.terminateProcess(J)V".to_string())
-            .into(),
-    )
+    terminate_process(thread, parameters).await
 }
 
+/// JDK 8 alias for `ProcessImpl.waitForInterruptibly(J)V`; delegates to the modern implementation.
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/lang/ProcessImpl.waitForInterruptibly(J)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn wait_for_interruptibly_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _handle = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/lang/ProcessImpl.waitForInterruptibly(J)V".to_string(),
-    )
-    .into())
+    wait_for_interruptibly(thread, parameters).await
 }
 
+/// JDK 8 alias for `ProcessImpl.waitForTimeoutInterruptibly(JJ)V`;
+/// delegates to the modern implementation.
 #[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/lang/ProcessImpl.waitForTimeoutInterruptibly(JJ)V",
@@ -675,15 +651,10 @@ pub async fn wait_for_interruptibly_windows_v8<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn wait_for_timeout_interruptibly_windows_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _timeout_millis = parameters.pop_long()?;
-    let _handle = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/lang/ProcessImpl.waitForTimeoutInterruptibly(JJ)V".to_string(),
-    )
-    .into())
+    wait_for_timeout_interruptibly(thread, parameters).await
 }
 
 #[cfg(all(test, not(target_family = "wasm")))]
@@ -1012,121 +983,325 @@ mod tests {
     }
 
     #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_close_handle_windows_v8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close_handle_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
-        assert_eq!(
-            "java/lang/ProcessImpl.closeHandle(J)Z",
-            result.unwrap_err().to_string()
-        );
+    async fn make_string<T: Thread + 'static>(thread: &Arc<T>, s: &str) -> Result<Value> {
+        use ristretto_types::JavaObject;
+        s.to_string().to_object(thread.as_ref()).await
+    }
+
+    #[cfg(target_os = "windows")]
+    async fn spawn_test_process<T: Thread + 'static>(
+        thread: &Arc<T>,
+        gc: &GarbageCollector,
+    ) -> Result<i64> {
+        let cmd = make_string(thread, "cmd.exe /C exit 0").await?;
+        let env = Value::Object(None);
+        let dir = Value::Object(None);
+        let std_handles = Value::new_object(gc, Reference::from(vec![0i64; 3]));
+        let mut params = Parameters::default();
+        params.push(cmd);
+        params.push(env);
+        params.push(dir);
+        params.push(std_handles);
+        params.push_bool(false);
+        let result = create(thread.clone(), params).await?.expect("handle");
+        Ok(result.as_i64()?)
     }
 
     #[cfg(target_os = "windows")]
     #[tokio::test]
-    async fn test_create_windows_v8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create_windows_v8(
+    async fn test_get_still_active() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let value = get_still_active(thread, Parameters::default())
+            .await?
+            .expect("value");
+        assert_eq!(value.as_i32()?, 259);
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_create_and_lifecycle() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let gc = GarbageCollector::new();
+        let handle = spawn_test_process(&thread, &gc).await?;
+        assert_ne!(handle, 0);
+
+        // get_process_id_0
+        let pid = get_process_id_0(thread.clone(), Parameters::new(vec![Value::Long(handle)]))
+            .await?
+            .expect("pid")
+            .as_i32()?;
+        assert!(pid > 0);
+
+        // wait_for_interruptibly (process should already be exiting quickly)
+        let _ = wait_for_interruptibly(thread.clone(), Parameters::new(vec![Value::Long(handle)]))
+            .await?;
+
+        // get_exit_code_process should be 0 after `cmd /C exit 0`
+        let exit =
+            get_exit_code_process(thread.clone(), Parameters::new(vec![Value::Long(handle)]))
+                .await?
+                .expect("exit")
+                .as_i32()?;
+        assert_eq!(exit, 0);
+
+        // is_process_alive should be false after exit
+        let alive = is_process_alive(thread.clone(), Parameters::new(vec![Value::Long(handle)]))
+            .await?
+            .expect("alive");
+        assert!(!alive.as_bool()?);
+
+        // close_handle should succeed
+        let closed = close_handle(thread.clone(), Parameters::new(vec![Value::Long(handle)]))
+            .await?
+            .expect("closed");
+        assert!(closed.as_bool()?);
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_wait_for_timeout_interruptibly_with_invalid_handle() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        // INVALID handle returns immediately with WAIT_FAILED.
+        let result = wait_for_timeout_interruptibly(
             thread,
-            Parameters::new(vec![
-                Value::Object(None),
-                Value::Object(None),
-                Value::Object(None),
-                Value::Object(None),
-                Value::from(false),
-            ]),
+            Parameters::new(vec![Value::Long(0), Value::Long(0)]),
         )
-        .await;
-        assert_eq!(
-            "java/lang/ProcessImpl.create(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[JZ)J",
-            result.unwrap_err().to_string()
-        );
+        .await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[cfg(target_os = "windows")]
     #[tokio::test]
-    async fn test_get_exit_code_process_windows_v8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+    async fn test_terminate_process_invalid_handle() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        // TerminateProcess(NULL, 1) returns 0; the function still returns Ok(None).
+        let result = terminate_process(thread, Parameters::new(vec![Value::Long(0)])).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close_handle_invalid() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = close_handle(thread, Parameters::new(vec![Value::Long(0)]))
+            .await?
+            .expect("value");
+        assert!(!result.as_bool()?);
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_get_exit_code_invalid_handle() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_exit_code_process(thread, Parameters::new(vec![Value::Long(0)]))
+            .await?
+            .expect("value");
+        // Invalid handle leaves exit_code 0 (function does not error).
+        assert_eq!(result.as_i32()?, 0);
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_is_process_alive_invalid_handle() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = is_process_alive(thread, Parameters::new(vec![Value::Long(0)]))
+            .await?
+            .expect("value");
+        assert!(!result.as_bool()?);
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_open_for_atomic_append() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let temp = std::env::temp_dir().join("ristretto_open_for_atomic_append_test.txt");
+        let path_str = temp.to_string_lossy().to_string();
+        let path_value = make_string(&thread, &path_str).await?;
+        let result = open_for_atomic_append(thread, Parameters::new(vec![path_value]))
+            .await?
+            .expect("handle");
+        let handle = result.as_i64()?;
+        assert_ne!(handle, 0);
+        // Cleanup: convert back to a File and drop it; also remove the temp file.
+        #[expect(unsafe_code)]
+        unsafe {
+            use std::os::windows::io::FromRawHandle;
+            let _ = std::fs::File::from_raw_handle(handle as *mut std::ffi::c_void);
+        }
+        let _ = std::fs::remove_file(&temp);
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_windows_command_line_quoted() {
+        #[cfg(target_os = "windows")]
+        {
+            let (program, args) = parse_windows_command_line("\"C:\\path\\program.exe\" arg1 arg2");
+            assert_eq!(program, "C:\\path\\program.exe");
+            assert_eq!(args, "arg1 arg2");
+        }
+    }
+
+    #[test]
+    fn test_parse_windows_command_line_unquoted() {
+        #[cfg(target_os = "windows")]
+        {
+            let (program, args) = parse_windows_command_line("cmd.exe /C echo hello");
+            assert_eq!(program, "cmd.exe");
+            assert_eq!(args, "/C echo hello");
+        }
+    }
+
+    #[test]
+    fn test_parse_windows_command_line_program_only() {
+        #[cfg(target_os = "windows")]
+        {
+            let (program, args) = parse_windows_command_line("cmd.exe");
+            assert_eq!(program, "cmd.exe");
+            assert_eq!(args, "");
+        }
+    }
+
+    #[test]
+    fn test_parse_windows_command_line_unterminated_quote() {
+        #[cfg(target_os = "windows")]
+        {
+            let (program, args) = parse_windows_command_line("\"unterminated");
+            assert_eq!(program, "\"unterminated");
+            assert_eq!(args, "");
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_close_handle_windows_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = close_handle_windows_v8(thread, Parameters::new(vec![Value::Long(0)]))
+            .await?
+            .expect("value");
+        assert!(!result.as_bool()?);
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_create_windows_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let gc = GarbageCollector::new();
+        let cmd = make_string(&thread, "cmd.exe /C exit 0").await?;
+        let std_handles = Value::new_object(&gc, Reference::from(vec![0i64; 3]));
+        let mut params = Parameters::default();
+        params.push(cmd);
+        params.push(Value::Object(None));
+        params.push(Value::Object(None));
+        params.push(std_handles);
+        params.push_bool(false);
+        let handle = create_windows_v8(thread.clone(), params)
+            .await?
+            .expect("handle")
+            .as_i64()?;
+        assert_ne!(handle, 0);
+        // Cleanup
+        let _ = wait_for_interruptibly(thread.clone(), Parameters::new(vec![Value::Long(handle)]))
+            .await?;
+        let _ = close_handle(thread, Parameters::new(vec![Value::Long(handle)])).await?;
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_get_exit_code_process_windows_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let result =
-            get_exit_code_process_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
-        assert_eq!(
-            "java/lang/ProcessImpl.getExitCodeProcess(J)I",
-            result.unwrap_err().to_string()
-        );
+            get_exit_code_process_windows_v8(thread, Parameters::new(vec![Value::Long(0)]))
+                .await?
+                .expect("value");
+        assert_eq!(result.as_i32()?, 0);
+        Ok(())
     }
 
     #[cfg(target_os = "windows")]
     #[tokio::test]
-    async fn test_get_still_active_windows_v8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_still_active_windows_v8(thread, Parameters::default()).await;
-        assert_eq!(
-            "java/lang/ProcessImpl.getStillActive()I",
-            result.unwrap_err().to_string()
-        );
+    async fn test_get_still_active_windows_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = get_still_active_windows_v8(thread, Parameters::default())
+            .await?
+            .expect("value");
+        assert_eq!(result.as_i32()?, 259);
+        Ok(())
     }
 
     #[cfg(target_os = "windows")]
     #[tokio::test]
-    async fn test_is_process_alive_windows_v8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+    async fn test_is_process_alive_windows_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let result = is_process_alive_windows_v8(thread, Parameters::new(vec![Value::Long(0)]))
+            .await?
+            .expect("value");
+        assert!(!result.as_bool()?);
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_open_for_atomic_append_windows_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let temp = std::env::temp_dir().join("ristretto_open_for_atomic_append_v8_test.txt");
+        let path_str = temp.to_string_lossy().to_string();
+        let path_value = make_string(&thread, &path_str).await?;
+        let result = open_for_atomic_append_windows_v8(thread, Parameters::new(vec![path_value]))
+            .await?
+            .expect("handle");
+        let handle = result.as_i64()?;
+        assert_ne!(handle, 0);
+        #[expect(unsafe_code)]
+        unsafe {
+            use std::os::windows::io::FromRawHandle;
+            let _ = std::fs::File::from_raw_handle(handle as *mut std::ffi::c_void);
+        }
+        let _ = std::fs::remove_file(&temp);
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_terminate_process_windows_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let result =
-            is_process_alive_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
-        assert_eq!(
-            "java/lang/ProcessImpl.isProcessAlive(J)Z",
-            result.unwrap_err().to_string()
-        );
+            terminate_process_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[cfg(target_os = "windows")]
     #[tokio::test]
-    async fn test_open_for_atomic_append_windows_v8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+    async fn test_wait_for_interruptibly_windows_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        // INVALID handle (0) returns WAIT_FAILED immediately on Windows.
         let result =
-            open_for_atomic_append_windows_v8(thread, Parameters::new(vec![Value::Object(None)]))
-                .await;
-        assert_eq!(
-            "java/lang/ProcessImpl.openForAtomicAppend(Ljava/lang/String;)J",
-            result.unwrap_err().to_string()
-        );
+            wait_for_interruptibly_windows_v8(thread, Parameters::new(vec![Value::Long(0)]))
+                .await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 
     #[cfg(target_os = "windows")]
     #[tokio::test]
-    async fn test_terminate_process_windows_v8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            terminate_process_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
-        assert_eq!(
-            "java/lang/ProcessImpl.terminateProcess(J)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_wait_for_interruptibly_windows_v8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            wait_for_interruptibly_windows_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
-        assert_eq!(
-            "java/lang/ProcessImpl.waitForInterruptibly(J)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_wait_for_timeout_interruptibly_windows_v8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+    async fn test_wait_for_timeout_interruptibly_windows_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
         let result = wait_for_timeout_interruptibly_windows_v8(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
         )
-        .await;
-        assert_eq!(
-            "java/lang/ProcessImpl.waitForTimeoutInterruptibly(JJ)V",
-            result.unwrap_err().to_string()
-        );
+        .await?;
+        assert_eq!(result, None);
+        Ok(())
     }
 }
