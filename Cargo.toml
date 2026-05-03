@@ -64,7 +64,7 @@ byte-unit = "5.2.0"
 clap = "4.6.1"
 console = "0.16.3"
 core-foundation-sys = "0.8.7"
-cranelift = "0.131.0"
+cranelift = "0.131.1"
 criterion = { version = "0.8.2", default-features = false }
 dashmap = "6.1.0"
 dirs = "6.0.0"
@@ -88,7 +88,7 @@ quick-xml = "0.39.2"
 quote = "1.0.45"
 rayon = "1.12.0"
 regex = "1.12.3"
-reqwest = "0.13.2"
+reqwest = "0.13.3"
 serde = "1.0.228"
 serde_plain = "1.0.2"
 socket2 = "0.6.3"
@@ -105,11 +105,11 @@ tokio = { version = "1.52.1", default-features = false, features = ["macros", "r
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 walkdir = "2.5.0"
-wasm-bindgen-futures = "0.4.68"
-whoami = "2.1.1"
+wasm-bindgen-futures = "0.4.70"
+whoami = "2.1.2"
 windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_Registry", "Win32_Security"] }
 zerocopy = "0.8.47"
-zip = { version = "8.5.1", default-features = false }
+zip = { version = "8.6.0", default-features = false }
 
 [workspace.metadata.release]
 shared-version = true
