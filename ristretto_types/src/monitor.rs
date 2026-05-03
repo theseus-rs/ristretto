@@ -1,5 +1,5 @@
 use crate::{Error, Result};
-use parking_lot::Mutex;
+use ristretto_gc::sync::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};

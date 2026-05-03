@@ -1,3 +1,4 @@
+#![cfg(not(target_family = "wasm"))]
 //! Tests for POM validation functionality.
 
 use ristretto_pom::{Error, Project, Result};

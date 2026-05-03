@@ -647,7 +647,7 @@ pub async fn start_0<T: Thread + 'static>(
         tokio::task::yield_now().await;
     }
 
-    #[cfg(target_family = "wasm")]
+    #[cfg(all(target_family = "wasm", target_os = "unknown"))]
     {
         let spawn_vm = vm.clone();
         let spawn_thread_id = internal_thread_id;
@@ -678,6 +678,53 @@ pub async fn start_0<T: Thread + 'static>(
         thread_handles
             .insert(internal_thread_id, thread_handle)
             .await?;
+    }
+
+    #[cfg(all(target_family = "wasm", target_os = "wasi"))]
+    {
+        let spawn_vm = vm.clone();
+        let spawn_thread_id = internal_thread_id;
+        tokio::task::spawn_local(async move {
+            let _ = spawn_thread
+                .execute(&thread_class, &run_method, &[thread_value])
+                .await;
+
+            if let Err(error) = set_thread_status(&thread_object, ThreadState::TERMINATED) {
+                error!("Failed to set thread status to TERMINATED: {error}");
+            }
+            if let Ok(mut thread_obj) = thread_object.as_object_mut()
+                && let Err(error) = thread_obj.set_value("eetop", Value::Long(0))
+            {
+                error!("Failed to set eetop to 0: {error}");
+            }
+
+            // Per the JVM specification, Thread.exit() calls notifyAll() on the
+            // Thread object so Thread.join() callers are woken via the monitor.
+            if let Value::Object(Some(ref reference)) = thread_object {
+                let monitor_id = crate::get_monitor_id(&reference.read());
+                if let Some(id) = monitor_id
+                    && let Ok(monitor_vm) = spawn_thread.vm()
+                {
+                    let monitor = monitor_vm.monitor_registry().monitor(id);
+                    let thread_id = spawn_thread.id();
+                    if monitor.acquire(thread_id).await.is_ok() {
+                        let _ = monitor.notify_all(thread_id);
+                        let _ = monitor.release(thread_id);
+                    }
+                }
+            }
+
+            let thread_handles = spawn_vm.thread_handles();
+            thread_handles.remove(&spawn_thread_id).await;
+        });
+
+        let thread_handle = ThreadHandle::from(new_thread);
+        let thread_handles = vm.thread_handles();
+        thread_handles
+            .insert(internal_thread_id, thread_handle)
+            .await?;
+
+        tokio::task::yield_now().await;
     }
 
     Ok(None)
@@ -738,7 +785,7 @@ pub async fn yield_0<T: Thread + 'static>(
     r#yield(thread, parameters).await
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
     use ristretto_types::VM;

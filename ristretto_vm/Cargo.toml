@@ -38,12 +38,13 @@ ristretto_types = { path = "../ristretto_types", version = "0.30.0" }
 sys-locale = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
-whoami = { workspace = true }
 zerocopy = { workspace = true }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 getrandom = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
+
+[target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dependencies]
 wasm-bindgen-futures = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
@@ -57,16 +58,19 @@ stacker = { workspace = true }
 sysinfo = { workspace = true }
 thread-priority = { workspace = true }
 tokio = { workspace = true, features = ["fs", "rt-multi-thread", "time"] }
+whoami = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
-rayon = { workspace = true }
 regex = { workspace = true }
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 walkdir = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+rayon = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
 default = ["rustls-tls"]

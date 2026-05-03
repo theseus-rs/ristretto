@@ -1,8 +1,8 @@
-use parking_lot::RwLock;
 use ristretto_classfile::VersionSpecification::{Between, GreaterThan, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{Object, Reference, Value};
 use ristretto_gc::Gc;
+use ristretto_gc::sync::RwLock;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;

@@ -1,7 +1,7 @@
-use parking_lot::RwLock;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
+use ristretto_gc::sync::RwLock;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
@@ -872,9 +872,14 @@ mod tests {
     use ristretto_types::JavaObject;
     use std::io::Write;
 
+    fn new_named_temp_file() -> tempfile::NamedTempFile {
+        ristretto_test_util::init_wasi_tempdir();
+        tempfile::NamedTempFile::new().expect("failed to create temp file")
+    }
+
     /// Helper to create a test zip file with known content and return its path.
     fn create_test_zip() -> (tempfile::NamedTempFile, String) {
-        let temp = tempfile::NamedTempFile::new().expect("failed to create temp file");
+        let temp = new_named_temp_file();
         let path = temp.path().to_string_lossy().to_string();
 
         {
@@ -1739,7 +1744,7 @@ mod tests {
         let (_vm, thread) = crate::test::java8_thread().await?;
 
         // Create a zip without a manifest
-        let temp = tempfile::NamedTempFile::new().expect("failed to create temp file");
+        let temp = new_named_temp_file();
         let path = temp.path().to_string_lossy().to_string();
         {
             let file = std::fs::File::create(&path).expect("failed to create file");

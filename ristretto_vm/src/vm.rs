@@ -33,6 +33,20 @@ use std::sync::{Arc, Weak};
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, warn};
 
+/// Run `future` to completion, wrapping it in a `tokio::task::LocalSet` on
+/// `wasi`. The wasi runtime is single-threaded and certain wasm-only code
+/// paths (notably `Thread.start_0`) dispatch via `tokio::task::spawn_local`,
+/// which requires an active `LocalSet`. On non-wasi targets this is a
+/// transparent passthrough.
+#[cfg(target_os = "wasi")]
+async fn run_local<F: Future>(future: F) -> F::Output {
+    tokio::task::LocalSet::new().run_until(future).await
+}
+#[cfg(not(target_os = "wasi"))]
+async fn run_local<F: Future>(future: F) -> F::Output {
+    future.await
+}
+
 /// The offset to add to the major version to get the class file version.  Java 1.0 has a class
 /// file major version of 45, so the class file major version is the Java version (1) + the
 /// class file offset version (44) = the Java 1 class file version (45).
@@ -127,78 +141,80 @@ impl VM {
     ///
     /// if the VM cannot be created
     pub async fn new(configuration: Configuration) -> Result<Arc<Self>> {
-        let (java_home, java_version, bootstrap_class_loader) =
-            Self::create_bootstrap_loader(&configuration).await?;
-        startup_trace!("[vm] bootstrap class loader");
+        run_local(async move {
+            let (java_home, java_version, bootstrap_class_loader) =
+                Self::create_bootstrap_loader(&configuration).await?;
+            startup_trace!("[vm] bootstrap class loader");
 
-        debug!(
-            "Java home: {java_home}; version: {java_version}",
-            java_home = java_home.to_string_lossy()
-        );
-        let java_major_version: u16 = java_version.split('.').next().unwrap_or("0").parse()?;
-        let java_class_file_version =
-            Self::compute_class_file_version(java_major_version, configuration.preview_features())?;
-        debug!("Class file version {java_class_file_version}");
+            debug!(
+                "Java home: {java_home}; version: {java_version}",
+                java_home = java_home.to_string_lossy()
+            );
+            let java_major_version: u16 = java_version.split('.').next().unwrap_or("0").parse()?;
+            let java_class_file_version = Self::compute_class_file_version(
+                java_major_version,
+                configuration.preview_features(),
+            )?;
+            debug!("Class file version {java_class_file_version}");
 
-        let (class_loader, main_class) =
-            Self::create_class_loader(&configuration, &bootstrap_class_loader).await?;
-        startup_trace!("[vm] system class loader");
+            let (class_loader, main_class) =
+                Self::create_class_loader(&configuration, &bootstrap_class_loader).await?;
+            startup_trace!("[vm] system class loader");
 
-        let method_registry = MethodRegistry::new(&java_class_file_version);
-        startup_trace!("[vm] method registry");
+            let method_registry = MethodRegistry::new(&java_class_file_version);
+            startup_trace!("[vm] method registry");
 
-        let compiler = Self::create_compiler(&configuration);
-        startup_trace!("[vm] jit compiler");
+            let compiler = Self::create_compiler(&configuration);
+            startup_trace!("[vm] jit compiler");
 
-        let module_system =
-            ModuleSystem::new(&configuration, &java_home, java_major_version).await?;
-        startup_trace!("[vm] module system");
+            let module_system =
+                ModuleSystem::new(&configuration, &java_home, java_major_version).await?;
+            startup_trace!("[vm] module system");
 
-        // Set module configuration on class loaders for JPMS support. This enables module name
-        // assignment during class loading
-        let module_config = Arc::new(module_system.resolved_configuration().clone());
-        bootstrap_class_loader.set_module_configuration(Some(module_config.clone()));
-        class_loader.set_module_configuration(Some(module_config));
-        startup_trace!("[vm] class loader module config");
+            let module_config = Arc::new(module_system.resolved_configuration().clone());
+            bootstrap_class_loader.set_module_configuration(Some(module_config.clone()));
+            class_loader.set_module_configuration(Some(module_config));
+            startup_trace!("[vm] class loader module config");
 
-        // Use the configured garbage collector or create a default one
-        let garbage_collector = configuration
-            .garbage_collector()
-            .cloned()
-            .unwrap_or_else(GarbageCollector::new);
+            let garbage_collector = configuration
+                .garbage_collector()
+                .cloned()
+                .unwrap_or_else(GarbageCollector::new);
 
-        let vm = Arc::new_cyclic(|vm| VM {
-            vm: vm.clone(),
-            configuration,
-            class_loader: Arc::new(RwLock::new(class_loader)),
-            garbage_collector,
-            main_class,
-            java_home,
-            java_version,
-            java_major_version,
-            java_class_file_version,
-            method_registry,
-            compiler,
-            hidden_class_counter: AtomicU64::new(1),
-            next_thread_id: AtomicU64::new(1),
-            next_nio_fd: AtomicI32::new(1),
-            native_memory: NativeMemory::new(),
-            resource_manager: ResourceManager::new(),
-            thread_handles: HandleManager::new(),
-            file_handles: HandleManager::new(),
-            #[cfg(not(target_family = "wasm"))]
-            socket_handles: HandleManager::new(),
-            member_handles: HandleManager::new(),
-            string_pool: StringPool::new(),
-            call_site_cache: CallSiteCache::new(),
-            method_ref_cache: MethodRefCache::new(),
-            monitor_registry: MonitorRegistry::new(),
-            module_system,
-        });
-        startup_trace!("[vm] vm allocation");
+            let vm = Arc::new_cyclic(|vm| VM {
+                vm: vm.clone(),
+                configuration,
+                class_loader: Arc::new(RwLock::new(class_loader)),
+                garbage_collector,
+                main_class,
+                java_home,
+                java_version,
+                java_major_version,
+                java_class_file_version,
+                method_registry,
+                compiler,
+                hidden_class_counter: AtomicU64::new(1),
+                next_thread_id: AtomicU64::new(1),
+                next_nio_fd: AtomicI32::new(1),
+                native_memory: NativeMemory::new(),
+                resource_manager: ResourceManager::new(),
+                thread_handles: HandleManager::new(),
+                file_handles: HandleManager::new(),
+                #[cfg(not(target_family = "wasm"))]
+                socket_handles: HandleManager::new(),
+                member_handles: HandleManager::new(),
+                string_pool: StringPool::new(),
+                call_site_cache: CallSiteCache::new(),
+                method_ref_cache: MethodRefCache::new(),
+                monitor_registry: MonitorRegistry::new(),
+                module_system,
+            });
+            startup_trace!("[vm] vm allocation");
 
-        vm.initialize().await?;
-        Ok(vm)
+            vm.initialize().await?;
+            Ok(vm)
+        })
+        .await
     }
 
     /// Creates the bootstrap class loader.
@@ -206,19 +222,9 @@ impl VM {
         configuration: &Configuration,
     ) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
         if let Some(java_version) = configuration.java_version() {
-            #[cfg(not(target_family = "wasm"))]
-            {
-                let (java_home, java_version, bootstrap_class_loader) =
-                    runtime::version_class_loader(java_version).await?;
-                Ok((java_home, java_version, bootstrap_class_loader))
-            }
-            #[cfg(target_family = "wasm")]
-            {
-                let _ = java_version;
-                Err(InternalError(
-                    "version_class_loader is not supported on wasm".to_string(),
-                ))
-            }
+            let (java_home, java_version, bootstrap_class_loader) =
+                runtime::version_class_loader(java_version).await?;
+            Ok((java_home, java_version, bootstrap_class_loader))
         } else if let Some(java_home) = configuration.java_home() {
             let (java_home, java_version, bootstrap_class_loader) =
                 runtime::home_class_loader(java_home).await?;
@@ -879,8 +885,11 @@ impl VM {
     where
         S: AsRef<str> + Debug + Send,
     {
-        let thread = self.primordial_thread().await?;
-        thread.class(class_name).await
+        run_local(async move {
+            let thread = self.primordial_thread().await?;
+            thread.class(class_name).await
+        })
+        .await
     }
 
     /// Invoke the main method of the main class associated with the VM. The main method must have
@@ -895,34 +904,37 @@ impl VM {
     where
         S: AsRef<OsStr> + Debug,
     {
-        let Some(main_class_name) = &self.main_class else {
-            return Err(InternalError("No main class specified".into()));
-        };
-        let main_class = self.class(&main_class_name).await?;
-        let Some(main_method) = main_class.main_method() else {
-            return Err(InternalError(format!(
-                "No main method found for {main_class_name}"
-            )));
-        };
+        run_local(async move {
+            let Some(main_class_name) = &self.main_class else {
+                return Err(InternalError("No main class specified".into()));
+            };
+            let main_class = self.class(&main_class_name).await?;
+            let Some(main_method) = main_class.main_method() else {
+                return Err(InternalError(format!(
+                    "No main method found for {main_class_name}"
+                )));
+            };
 
-        let mut string_parameters = Vec::with_capacity(parameters.len());
-        for parameter in parameters {
-            let parameter = parameter.as_ref();
-            let parameter = parameter.to_string_lossy().to_string();
-            let thread = self.primordial_thread().await?;
-            let value = parameter.to_object(&thread).await?;
-            string_parameters.push(value);
-        }
+            let mut string_parameters = Vec::with_capacity(parameters.len());
+            for parameter in parameters {
+                let parameter = parameter.as_ref();
+                let parameter = parameter.to_string_lossy().to_string();
+                let thread = self.primordial_thread().await?;
+                let value = parameter.to_object(&thread).await?;
+                string_parameters.push(value);
+            }
 
-        let string_array_class = self.class("[Ljava/lang/String;").await?;
-        let string_reference = Reference::try_from((string_array_class, string_parameters))?;
-        let string_parameter = Value::new_object(&self.garbage_collector, string_reference);
+            let string_array_class = self.class("[Ljava/lang/String;").await?;
+            let string_reference = Reference::try_from((string_array_class, string_parameters))?;
+            let string_parameter = Value::new_object(&self.garbage_collector, string_reference);
 
-        self.invoke(
-            &main_class_name,
-            main_method.signature(),
-            &[string_parameter],
-        )
+            self.invoke(
+                &main_class_name,
+                main_method.signature(),
+                &[string_parameter],
+            )
+            .await
+        })
         .await
     }
 
@@ -942,8 +954,11 @@ impl VM {
         C: AsRef<str> + Debug + Send + Sync,
         M: AsRef<str> + Debug + Send + Sync,
     {
-        let thread = self.primordial_thread().await?;
-        thread.invoke(&class, &method, parameters).await
+        run_local(async move {
+            let thread = self.primordial_thread().await?;
+            thread.invoke(&class, &method, parameters).await
+        })
+        .await
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
@@ -962,8 +977,11 @@ impl VM {
         C: AsRef<str> + Debug + Send + Sync,
         M: AsRef<str> + Debug + Send + Sync,
     {
-        let thread = self.primordial_thread().await?;
-        thread.try_invoke(&class, &method, parameters).await
+        run_local(async move {
+            let thread = self.primordial_thread().await?;
+            thread.try_invoke(&class, &method, parameters).await
+        })
+        .await
     }
 
     /// Create a new VM Object by invoking the constructor of the specified class.
@@ -981,8 +999,11 @@ impl VM {
         C: AsRef<str> + Debug + Send + Sync,
         M: AsRef<str> + Debug + Send + Sync,
     {
-        let thread = self.primordial_thread().await?;
-        thread.object(class_name, descriptor, parameters).await
+        run_local(async move {
+            let thread = self.primordial_thread().await?;
+            thread.object(class_name, descriptor, parameters).await
+        })
+        .await
     }
 
     /// The string pool is used to store and intern strings for the VM.

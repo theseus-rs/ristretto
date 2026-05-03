@@ -1,64 +1,72 @@
-use criterion::{Criterion, criterion_group, criterion_main};
-use ristretto_classfile::JavaStr;
-use ristretto_classloader::{ClassLoader, Result, runtime};
-use std::sync::Arc;
-use tokio::runtime::Runtime;
+#[cfg(not(target_family = "wasm"))]
+mod inner {
+    use criterion::{Criterion, criterion_group};
+    use ristretto_classfile::JavaStr;
+    use ristretto_classloader::{ClassLoader, Result, runtime};
+    use std::sync::Arc;
+    use tokio::runtime::Runtime;
 
-fn benchmarks(criterion: &mut Criterion) {
-    bench_lifecycle(criterion).ok();
-}
+    fn benchmarks(criterion: &mut Criterion) {
+        bench_lifecycle(criterion).ok();
+    }
 
-fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
-    let runtime = Runtime::new()?;
-    let class_loader = runtime.block_on(async { default_class_loader().await })?;
-    let class_loader = Arc::new(class_loader);
+    fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
+        let runtime = Runtime::new()?;
+        let class_loader = runtime.block_on(async { default_class_loader().await })?;
+        let class_loader = Arc::new(class_loader);
 
-    criterion.bench_function("default_class_loader", |bencher| {
-        bencher.iter(|| {
-            runtime.block_on(async {
-                let class_loader = default_class_loader()
-                    .await
-                    .expect("Failed to create class loader");
-                let _class = class_loader
-                    .load(JavaStr::try_from_str("java.lang.Object").expect("valid class name"))
-                    .await
-                    .ok();
+        criterion.bench_function("default_class_loader", |bencher| {
+            bencher.iter(|| {
+                runtime.block_on(async {
+                    let class_loader = default_class_loader()
+                        .await
+                        .expect("Failed to create class loader");
+                    let _class = class_loader
+                        .load(JavaStr::try_from_str("java.lang.Object").expect("valid class name"))
+                        .await
+                        .ok();
+                });
             });
         });
-    });
-    criterion.bench_function("load_hash_map", |bencher| {
-        bencher.iter(|| {
-            runtime.block_on(async {
-                let _ = class_loader
-                    .load(JavaStr::try_from_str("java.util.HashMap").expect("valid class name"))
-                    .await
-                    .ok();
+        criterion.bench_function("load_hash_map", |bencher| {
+            bencher.iter(|| {
+                runtime.block_on(async {
+                    let _ = class_loader
+                        .load(JavaStr::try_from_str("java.util.HashMap").expect("valid class name"))
+                        .await
+                        .ok();
+                });
             });
         });
-    });
-    criterion.bench_function("load_invalid_class", |bencher| {
-        bencher.iter(|| {
-            runtime.block_on(async {
-                let _ = class_loader
-                    .load(JavaStr::try_from_str("foo").expect("valid class name"))
-                    .await
-                    .err();
+        criterion.bench_function("load_invalid_class", |bencher| {
+            bencher.iter(|| {
+                runtime.block_on(async {
+                    let _ = class_loader
+                        .load(JavaStr::try_from_str("foo").expect("valid class name"))
+                        .await
+                        .err();
+                });
             });
         });
-    });
 
-    Ok(())
+        Ok(())
+    }
+
+    async fn default_class_loader() -> Result<Arc<ClassLoader>> {
+        let (_java_home, _version, class_loader) = runtime::default_class_loader().await?;
+        let class_loader = class_loader;
+        Ok(class_loader)
+    }
+
+    criterion_group!(
+        name = benches;
+        config = Criterion::default();
+        targets = benchmarks
+    );
 }
 
-async fn default_class_loader() -> Result<Arc<ClassLoader>> {
-    let (_java_home, _version, class_loader) = runtime::default_class_loader().await?;
-    let class_loader = class_loader;
-    Ok(class_loader)
-}
+#[cfg(not(target_family = "wasm"))]
+criterion::criterion_main!(inner::benches);
 
-criterion_group!(
-    name = benches;
-    config = Criterion::default();
-    targets = benchmarks
-);
-criterion_main!(benches);
+#[cfg(target_family = "wasm")]
+fn main() {}

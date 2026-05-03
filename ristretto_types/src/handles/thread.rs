@@ -61,9 +61,11 @@ mod tests {
         let handle: ThreadHandle<MockThread> = thread.clone().into();
         assert_eq!(handle.thread.id, 1);
         assert!(!handle.daemon);
+        #[cfg(not(target_family = "wasm"))]
         assert!(handle.join_handle.is_none());
     }
 
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_thread_handle_from_tuple() {
         let thread = Arc::new(MockThread { id: 2 });
@@ -74,6 +76,7 @@ mod tests {
         assert!(handle.join_handle.is_some());
     }
 
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_thread_handle_from_tuple_non_daemon() {
         let thread = Arc::new(MockThread { id: 3 });

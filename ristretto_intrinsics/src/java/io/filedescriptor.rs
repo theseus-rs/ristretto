@@ -77,7 +77,7 @@ pub(crate) fn raw_file_descriptor(
 #[cfg(target_os = "wasi")]
 #[expect(clippy::unnecessary_wraps)]
 pub(crate) fn raw_file_descriptor(file: &std::fs::File) -> Result<i64> {
-    use std::os::wasi::io::AsRawFd;
+    use std::os::fd::AsRawFd;
     let fd = file.as_raw_fd();
     Ok(i64::from(fd))
 }

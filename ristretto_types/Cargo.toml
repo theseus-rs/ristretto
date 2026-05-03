@@ -34,5 +34,11 @@ socket2 = { workspace = true }
 tokio = { workspace = true, features = ["net"] }
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["rt", "macros", "fs"] }
+ristretto_test_util = { workspace = true }
 tempfile = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+tokio = { workspace = true, features = ["fs", "macros", "rt"] }
+
+[target.'cfg(target_family = "wasm")'.dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }

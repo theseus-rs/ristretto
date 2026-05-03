@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicI64, Ordering};
 
-use parking_lot::RwLock;
+use ristretto_gc::sync::RwLock;
 
 /// Per-VM native memory manager.
 #[derive(Debug)]
@@ -373,6 +373,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_family = "wasm"))]
     fn test_concurrent_reads() {
         use std::sync::Arc;
         let mem = Arc::new(NativeMemory::new());

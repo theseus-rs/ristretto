@@ -1218,7 +1218,7 @@ impl ristretto_types::Thread for Thread {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
     use crate::ConfigurationBuilder;

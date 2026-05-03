@@ -21,9 +21,9 @@ use crate::JavaError::{
 };
 use crate::instruction::convert_error_to_throwable;
 use crate::{Result, Thread, VM};
-use parking_lot::RwLock;
 use ristretto_classfile::BaseType;
 use ristretto_classloader::{Class, Object, Reference, Value};
+use ristretto_gc::sync::RwLock;
 use ristretto_gc::{GarbageCollector, Gc};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
@@ -2475,7 +2475,7 @@ fn jit_exception_matches_impl(
     is_instance_of(thread, &gc_ref, &target_class)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
     use super::*;
     use crate::test;

@@ -6,13 +6,17 @@
 
 #![allow(clippy::unused_async)]
 
+use crate::async_fs;
 use bitflags::bitflags;
-use filetime::{FileTime, set_file_mtime};
 use ristretto_classloader::{Reference, Value};
 use ristretto_types::JavaError::RuntimeException;
 use ristretto_types::{JavaObject, Parameters, Result, Thread, VM};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+#[cfg(not(target_family = "wasm"))]
+use filetime::{FileTime, set_file_mtime};
+#[cfg(not(target_family = "wasm"))]
 use sysinfo::Disks;
 
 #[cfg(target_family = "unix")]
@@ -142,7 +146,7 @@ pub async fn create_directory<T: Thread + 'static>(
         file.value("path")?.as_string()?
     };
     let path = PathBuf::from(&path);
-    let created = tokio::fs::create_dir(&path).await.is_ok();
+    let created = async_fs::create_dir(&path).await.is_ok();
     Ok(Some(Value::from(created)))
 }
 
@@ -151,7 +155,7 @@ pub async fn create_file_exclusively<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let path = parameters.pop()?.as_string()?;
-    let created = tokio::fs::OpenOptions::new()
+    let created = async_fs::OpenOptions::new()
         .write(true)
         .create_new(true)
         .open(&path)
@@ -170,7 +174,6 @@ pub async fn delete<T: Thread + 'static>(
         file.value("path")?.as_string()?
     };
     let path = PathBuf::from(&path);
-
     // Match Windows: a file with an active memory mapping cannot be deleted.
     let vm = thread.vm()?;
     if let Ok(regions) = vm
@@ -183,10 +186,10 @@ pub async fn delete<T: Thread + 'static>(
         return Ok(Some(Value::from(false)));
     }
 
-    let deleted = tokio::fs::remove_file(&path)
-        .await
-        .or(tokio::fs::remove_dir(&path).await)
-        .is_ok();
+    let deleted = match async_fs::remove_file(&path).await {
+        Ok(()) => true,
+        Err(_) => async_fs::remove_dir(&path).await.is_ok(),
+    };
     Ok(Some(Value::from(deleted)))
 }
 
@@ -245,7 +248,7 @@ pub async fn get_last_modified_time<T: Thread + 'static>(
         file.value("path")?.as_string()?
     };
     let path = PathBuf::from(&path);
-    let last_modified = match tokio::fs::metadata(&path).await {
+    let last_modified = match async_fs::metadata(&path).await {
         Ok(metadata) => i64::try_from(
             metadata
                 .modified()?
@@ -268,7 +271,7 @@ pub async fn get_length<T: Thread + 'static>(
         file.value("path")?.as_string()?
     };
     let path = PathBuf::from(&path);
-    let metadata = tokio::fs::metadata(&path).await?;
+    let metadata = async_fs::metadata(&path).await?;
     let length = i64::try_from(metadata.len())?;
     Ok(Some(Value::Long(length)))
 }
@@ -294,20 +297,28 @@ pub async fn get_space<T: Thread + 'static>(
     let path = file.value("path")?.as_string()?;
     let path = PathBuf::from(path);
 
-    let disks = Disks::new_with_refreshed_list();
-    let disk = disks
-        .iter()
-        .find(|d| path.starts_with(d.mount_point()))
-        .or_else(|| disks.iter().find(|d| d.mount_point() == Path::new("/")));
+    #[cfg(not(target_family = "wasm"))]
+    let result = {
+        let disks = Disks::new_with_refreshed_list();
+        let disk = disks
+            .iter()
+            .find(|d| path.starts_with(d.mount_point()))
+            .or_else(|| disks.iter().find(|d| d.mount_point() == Path::new("/")));
 
-    let result = if let Some(disk) = disk {
-        match space_type {
-            0 => i64::try_from(disk.total_space()).unwrap_or(i64::MAX), // 0: total
-            1 | 2 => i64::try_from(disk.available_space()).unwrap_or(i64::MAX), // 1: free | 2: usable
-            _ => 0,
+        if let Some(disk) = disk {
+            match space_type {
+                0 => i64::try_from(disk.total_space()).unwrap_or(i64::MAX),
+                1 | 2 => i64::try_from(disk.available_space()).unwrap_or(i64::MAX),
+                _ => 0,
+            }
+        } else {
+            0
         }
-    } else {
-        0
+    };
+    #[cfg(target_family = "wasm")]
+    let result = {
+        let _ = (space_type, &path);
+        0i64
     };
 
     Ok(Some(Value::Long(result)))
@@ -325,12 +336,11 @@ pub async fn list<T: Thread + 'static>(
     let path = PathBuf::from(path);
 
     let mut entries: Vec<Value> = Vec::new();
-    let Ok(read_directory) = tokio::fs::read_dir(&path).await else {
+    let Ok(names) = async_fs::read_dir_names(&path).await else {
         return Ok(Some(Value::Object(None)));
     };
-    let mut directory = read_directory;
-    while let Ok(Some(entry)) = directory.next_entry().await {
-        if let Some(name) = entry.file_name().to_str() {
+    for file_name in names {
+        if let Some(name) = file_name.to_str() {
             let entry_name = name.to_string().to_object(&thread).await?;
             entries.push(entry_name);
         }
@@ -372,7 +382,7 @@ pub async fn rename<T: Thread + 'static>(
         source_file.value("path")?.as_string()?
     };
     let source = PathBuf::from(source_path);
-    let success = tokio::fs::rename(&source, &destination).await.is_ok();
+    let success = async_fs::rename(&source, &destination).await.is_ok();
     Ok(Some(Value::from(success)))
 }
 
@@ -388,8 +398,16 @@ pub async fn set_last_modified_time<T: Thread + 'static>(
 
     let seconds = time.saturating_div(1000);
     let nanoseconds = u32::try_from(time % 1000)?.saturating_mul(1_000_000);
-    let mtime = FileTime::from_unix_time(seconds, nanoseconds);
-    let modified = set_file_mtime(&path, mtime).is_ok();
+    #[cfg(not(target_family = "wasm"))]
+    let modified = {
+        let mtime = FileTime::from_unix_time(seconds, nanoseconds);
+        set_file_mtime(&path, mtime).is_ok()
+    };
+    #[cfg(target_family = "wasm")]
+    let modified = {
+        let _ = (seconds, nanoseconds, &path);
+        false
+    };
     Ok(Some(Value::from(modified)))
 }
 
@@ -410,7 +428,7 @@ pub async fn set_permission<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
-        let metadata = tokio::fs::metadata(&path).await?;
+        let metadata = async_fs::metadata(&path).await?;
         let mut permissions = metadata.permissions();
         let mut mode = permissions.mode();
 
@@ -446,24 +464,20 @@ pub async fn set_permission<T: Thread + 'static>(
         }
 
         permissions.set_mode(mode);
-        modified = tokio::fs::set_permissions(&path, permissions).await.is_ok();
+        modified = async_fs::set_permissions(&path, permissions).await.is_ok();
     }
 
     #[cfg(not(target_family = "unix"))]
     {
         let _ = owner_only;
-        let metadata = tokio::fs::metadata(&path).await?;
+        let metadata = async_fs::metadata(&path).await?;
         let mut permissions = metadata.permissions();
         modified = match access {
             1 => {
-                // write
                 permissions.set_readonly(!enable);
-                tokio::fs::set_permissions(&path, permissions).await.is_ok()
+                async_fs::set_permissions(&path, permissions).await.is_ok()
             }
-            0 | 2 => {
-                // read or execute - not separately controllable on windows
-                true
-            }
+            0 | 2 => true,
             _ => false,
         };
     }
@@ -481,9 +495,9 @@ pub async fn set_read_only<T: Thread + 'static>(
         file.value("path")?.as_string()?
     };
     let path = PathBuf::from(path);
-    let metadata = tokio::fs::metadata(&path).await?;
+    let metadata = async_fs::metadata(&path).await?;
     let mut permissions = metadata.permissions();
     permissions.set_readonly(true);
-    let modified = tokio::fs::set_permissions(&path, permissions).await.is_ok();
+    let modified = async_fs::set_permissions(&path, permissions).await.is_ok();
     Ok(Some(Value::from(modified)))
 }

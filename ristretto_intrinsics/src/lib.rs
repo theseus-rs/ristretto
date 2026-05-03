@@ -16,6 +16,8 @@ pub(crate) mod test;
 
 /// Methods from the Apple-specific packages
 pub mod apple;
+/// Filesystem helpers with platform-appropriate async backends.
+mod async_fs;
 /// Methods from the COM-related packages
 pub mod com;
 /// Core Java standard library methods

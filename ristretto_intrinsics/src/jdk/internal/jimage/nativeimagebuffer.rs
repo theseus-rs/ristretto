@@ -45,14 +45,17 @@ mod tests {
     use super::*;
     use ristretto_types::JavaObject;
     use std::io::Write;
-    use tempfile::NamedTempFile;
 
+    fn new_named_tempfile() -> std::io::Result<tempfile::NamedTempFile> {
+        ristretto_test_util::init_wasi_tempdir();
+        tempfile::NamedTempFile::new()
+    }
     #[tokio::test]
     async fn test_get_native_map() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
 
         // Create a temporary file with known content
-        let mut temp_file = NamedTempFile::new().expect("create temp file");
+        let mut temp_file = new_named_tempfile().expect("create temp file");
         let content = b"Hello, jimage!";
         temp_file.write_all(content).expect("write temp file");
 

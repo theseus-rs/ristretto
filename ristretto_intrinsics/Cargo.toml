@@ -33,7 +33,6 @@ ristretto_macros = { path = "../ristretto_macros", version = "0.30.0" }
 ristretto_types = { path = "../ristretto_types", version = "0.30.0" }
 sys-locale = { workspace = true }
 tracing = { workspace = true }
-whoami = { workspace = true }
 zerocopy = { workspace = true }
 zip = { workspace = true, features = ["deflate"] }
 
@@ -47,6 +46,7 @@ socket2 = { workspace = true }
 sysinfo = { workspace = true }
 thread-priority = { workspace = true }
 tokio = { workspace = true, features = ["fs", "net", "process", "time"] }
+whoami = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation-sys = { workspace = true }
@@ -57,11 +57,16 @@ windows-sys = { workspace = true, features = ["Win32_Globalization"] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 tokio = { workspace = true }
+
+[target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dependencies]
 wasm-bindgen-futures = { workspace = true }
 
 [dev-dependencies]
+ristretto_test_util = { workspace = true }
 ristretto_vm = { path = "../ristretto_vm", version = "0.30.0" }
 tempfile = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [package.metadata.cargo-machete]

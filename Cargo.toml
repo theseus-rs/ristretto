@@ -23,6 +23,7 @@ members = [
     "ristretto_jit",
     "ristretto_macros",
     "ristretto_pom",
+    "ristretto_test_util",
     "ristretto_types",
     "ristretto_vm",
 ]
@@ -90,6 +91,7 @@ rayon = "1.12.0"
 regex = "1.12.3"
 reqwest = "0.13.3"
 serde = "1.0.228"
+serde_json = "1.0.149"
 serde_plain = "1.0.2"
 socket2 = "0.6.3"
 stacker = "0.1.24"
@@ -99,6 +101,7 @@ sys-locale = "0.3.2"
 tar = "0.4.45"
 tempfile = "3.27.0"
 test-log = "0.2.20"
+ristretto_test_util = { path = "ristretto_test_util", version = "0.30.0" }
 thiserror = "2.0.18"
 thread-priority = "3.0.0"
 tokio = { version = "1.52.1", default-features = false, features = ["macros", "rt", "sync", "time"] }
@@ -108,6 +111,7 @@ walkdir = "2.5.0"
 wasm-bindgen-futures = "0.4.70"
 whoami = "2.1.2"
 windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_Console", "Win32_System_Registry", "Win32_Security"] }
+wstd = "0.6.6"
 zerocopy = "0.8.47"
 zip = { version = "8.6.0", default-features = false }
 

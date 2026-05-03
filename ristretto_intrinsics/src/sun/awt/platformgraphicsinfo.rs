@@ -50,20 +50,11 @@ pub async fn has_displays0<T: Thread + 'static>(
     )
 }
 
-#[cfg(target_os = "windows")]
-#[intrinsic_method("sun/awt/PlatformGraphicsInfo.hasDisplays0()Z", Equal(JAVA_25))]
-#[async_method]
-pub async fn has_displays0_windows_v25<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(
-        JavaError::UnsatisfiedLinkError("sun/awt/PlatformGraphicsInfo.hasDisplays0()Z".to_string())
-            .into(),
-    )
-}
-
-#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+#[cfg(all(
+    test,
+    any(target_os = "macos", target_os = "windows"),
+    not(target_family = "wasm")
+))]
 mod tests {
     use super::*;
 
@@ -83,17 +74,6 @@ mod tests {
     async fn test_has_displays0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = has_displays0(thread, Parameters::default()).await;
-        assert_eq!(
-            "sun/awt/PlatformGraphicsInfo.hasDisplays0()Z",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_has_displays0_windows_v25() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = has_displays0_windows_v25(thread, Parameters::default()).await;
         assert_eq!(
             "sun/awt/PlatformGraphicsInfo.hasDisplays0()Z",
             result.unwrap_err().to_string()

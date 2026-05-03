@@ -534,9 +534,11 @@ impl ProjectBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(not(target_family = "wasm"))]
     use tempfile::NamedTempFile;
 
     #[test]
+    #[cfg(not(target_family = "wasm"))]
     fn test_parse_pom() -> Result<()> {
         let xml = r"
 <project>

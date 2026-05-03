@@ -1,0 +1,18 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "Internal shared test utilities for the ristretto workspace."
+edition.workspace = true
+keywords = ["java", "jvm", "test"]
+license.workspace = true
+name = "ristretto_test_util"
+publish = false
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[target.'cfg(not(all(target_family = "wasm", target_os = "unknown")))'.dependencies]
+tempfile = { workspace = true }

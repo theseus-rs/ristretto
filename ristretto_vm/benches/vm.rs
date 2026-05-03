@@ -5,7 +5,6 @@ use ristretto_vm::{ConfigurationBuilder, Result, VM};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
 
 const CARGO_MANIFEST: &str = env!("CARGO_MANIFEST_DIR");
@@ -15,7 +14,20 @@ fn benchmarks(criterion: &mut Criterion) {
 }
 
 fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
-    let runtime = Runtime::new().map_err(|error| Error::IoError(error.to_string()))?;
+    let mut builder = {
+        #[cfg(target_family = "wasm")]
+        {
+            tokio::runtime::Builder::new_current_thread()
+        }
+        #[cfg(not(target_family = "wasm"))]
+        {
+            tokio::runtime::Builder::new_multi_thread()
+        }
+    };
+    let runtime = builder
+        .enable_all()
+        .build()
+        .map_err(|error| Error::IoError(error.to_string()))?;
 
     criterion.bench_function("vm_init_int", |bencher| {
         bencher.iter(|| {

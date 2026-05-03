@@ -98,13 +98,20 @@ impl TryInto<tokio::fs::File> for FileHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(not(target_family = "wasm"))]
     use crate::Result;
-    use tempfile::NamedTempFile;
+    #[cfg(not(target_family = "wasm"))]
     use tokio::fs::File;
 
+    fn new_named_tempfile() -> std::io::Result<tempfile::NamedTempFile> {
+        ristretto_test_util::init_wasi_tempdir();
+        tempfile::NamedTempFile::new()
+    }
+
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_file_handle_from_file_and_append() -> Result<()> {
-        let tmp = NamedTempFile::new().expect("temp file");
+        let tmp = new_named_tempfile().expect("temp file");
         let file = File::create(tmp.path()).await.expect("create");
         let file_handle: FileHandle = (file, false).into();
         assert!(!file_handle.append);
@@ -112,9 +119,10 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_file_handle_from_file_and_append_true() -> Result<()> {
-        let tmp = NamedTempFile::new().expect("temp file");
+        let tmp = new_named_tempfile().expect("temp file");
         let file = File::create(tmp.path()).await.expect("create");
         let file_handle: FileHandle = (file, true).into();
         assert!(file_handle.append);
@@ -122,9 +130,10 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_file_handle_from_file_and_mode() -> Result<()> {
-        let tmp = NamedTempFile::new().expect("temp file");
+        let tmp = new_named_tempfile().expect("temp file");
         let file = File::create(tmp.path()).await.expect("create");
         let expected_mode = FileModeFlags::READ_WRITE;
         let file_handle: FileHandle = (file, expected_mode).into();
@@ -133,18 +142,20 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_file_handle_from_file_and_mode_read_only() -> Result<()> {
-        let tmp = NamedTempFile::new().expect("temp file");
+        let tmp = new_named_tempfile().expect("temp file");
         let file = File::create(tmp.path()).await.expect("create");
         let file_handle: FileHandle = (file, FileModeFlags::READ_ONLY).into();
         assert_eq!(file_handle.mode, FileModeFlags::READ_ONLY);
         Ok(())
     }
 
+    #[cfg(not(target_family = "wasm"))]
     #[tokio::test]
     async fn test_file_handle_try_into_file() -> Result<()> {
-        let tmp = NamedTempFile::new().expect("temp file");
+        let tmp = new_named_tempfile().expect("temp file");
         let file = File::create(tmp.path()).await.expect("create");
         let file_handle: FileHandle = (file, false).into();
         let extracted_file: File = file_handle.try_into()?;

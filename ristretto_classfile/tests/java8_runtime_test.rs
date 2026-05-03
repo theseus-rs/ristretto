@@ -1,3 +1,5 @@
+#![cfg(not(target_family = "wasm"))]
+
 mod utilities;
 
 use anyhow::{Result, anyhow};

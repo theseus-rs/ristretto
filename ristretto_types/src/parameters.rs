@@ -1,8 +1,8 @@
 use crate::Error::{InvalidOperand, ParametersUnderflow};
 use crate::Result;
-use parking_lot::RwLock;
 use ristretto_classloader::{Reference, Value};
 use ristretto_gc::Gc;
+use ristretto_gc::sync::RwLock;
 use std::fmt::Display;
 
 /// Parameters for Ristretto VM methods
