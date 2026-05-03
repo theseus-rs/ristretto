@@ -97,7 +97,9 @@ async fn hello_world(interpreted: bool) -> Result<()> {
 
 criterion_group!(
     name = benches;
-    config = Criterion::default().measurement_time(Duration::from_secs(10));
+    config = Criterion::default()
+        .sample_size(10)
+        .measurement_time(Duration::from_secs(10));
     targets = benchmarks
 );
 criterion_main!(benches);

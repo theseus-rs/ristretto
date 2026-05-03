@@ -109,6 +109,23 @@ impl Jar {
         Ok(class_file)
     }
 
+    /// Read a resource from the jar.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    pub async fn read_resource<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
+        let name = name.as_ref();
+        let mut archive = self.archive.write().await;
+        if archive.is_module().await? {
+            let module_name = format!("classes/{name}");
+            if let Some(bytes) = archive.load_file(&module_name).await? {
+                return Ok(Some(bytes));
+            }
+        }
+        archive.load_file(name).await
+    }
+
     /// Get the class names in the jar.
     ///
     /// # Errors
@@ -306,6 +323,7 @@ mod tests {
     use super::*;
     use crate::Error::ClassFileError;
     use crate::class_path_entry::manifest::{MAIN_CLASS, MANIFEST_VERSION};
+    use ristretto_classfile::{ConstantPool, JAVA_17};
     use std::fs;
     use std::io::{self, Write};
     use std::path::PathBuf;
@@ -398,6 +416,49 @@ mod tests {
         let jar = Jar::new(classes_jar);
         let result = jar.read_class("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_read_resource() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
+        let jar = Jar::new(classes_jar);
+        assert!(jar.read_resource("HelloWorld.class").await?.is_some());
+        assert!(jar.read_resource("missing.resource").await?.is_none());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_read_resource_from_modular_jar() -> Result<()> {
+        let temp_dir = make_tempdir()?;
+        let jar_path = temp_dir.path().join("module.jar");
+        let mut constant_pool = ConstantPool::new();
+        let this_class = constant_pool.add_class("module-info")?;
+        let module_info = ClassFile {
+            version: JAVA_17,
+            constant_pool,
+            this_class,
+            ..Default::default()
+        };
+        let mut module_info_bytes = Vec::new();
+        module_info.to_bytes(&mut module_info_bytes)?;
+
+        let mut archive = zip::ZipWriter::new(fs::File::create(&jar_path)?);
+        archive.start_file("classes/module-info.class", SimpleFileOptions::default())?;
+        archive.write_all(&module_info_bytes)?;
+        archive.start_file("classes/resource.txt", SimpleFileOptions::default())?;
+        archive.write_all(b"module resource")?;
+        archive.finish()?;
+
+        let jar = Jar::new(jar_path);
+        assert_eq!(
+            Some(b"module resource".to_vec()),
+            jar.read_resource("resource.txt").await?
+        );
+        Ok(())
     }
 
     #[tokio::test]

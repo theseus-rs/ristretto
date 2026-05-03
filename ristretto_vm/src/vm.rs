@@ -171,7 +171,7 @@ impl VM {
                 ModuleSystem::new(&configuration, &java_home, java_major_version).await?;
             startup_trace!("[vm] module system");
 
-            let module_config = Arc::new(module_system.resolved_configuration().clone());
+            let module_config = module_system.resolved_configuration_arc();
             bootstrap_class_loader.set_module_configuration(Some(module_config.clone()));
             class_loader.set_module_configuration(Some(module_config));
             startup_trace!("[vm] class loader module config");
@@ -602,6 +602,7 @@ impl VM {
             // Run each sub-operation independently so one failure doesn't prevent the others
             self.bind_layer_to_loaders(&boot_layer, &boot_loader, &platform_loader, &app_loader)
                 .await;
+            startup_trace!("[vm] boot layer bound to loaders");
 
             if let Err(e) = self
                 .register_services_catalog(&boot_layer, &boot_loader)
@@ -609,10 +610,7 @@ impl VM {
             {
                 warn!("Failed to register services catalog: {e}");
             }
-
-            if let Err(e) = self.register_module_references(&boot_loader).await {
-                warn!("Failed to register module references: {e}");
-            }
+            startup_trace!("[vm] boot services catalog registered");
 
             Ok(())
         }
@@ -711,79 +709,6 @@ impl VM {
                         .await
                 {
                     warn!("Failed to register services for module {module_name}: {error}");
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Register module references with the boot class loader so resource loading works.
-    /// `BuiltinClassLoader.findResourceAsStream()` requires `nameToModule` entries.
-    async fn register_module_references(&self, boot_loader: &Value) -> Result<()> {
-        if boot_loader.is_null() {
-            return Ok(());
-        }
-
-        let system_finder = self
-            .invoke(
-                "java.lang.module.ModuleFinder",
-                "ofSystem()Ljava/lang/module/ModuleFinder;",
-                &[] as &[Value],
-            )
-            .await?
-            .unwrap_or(Value::Object(None));
-
-        if system_finder.is_null() {
-            return Ok(());
-        }
-
-        // findAll() returns Set<ModuleReference>; call on the implementation class
-        let finder_class = system_finder.as_object_ref()?.class().name().to_string();
-        let all_refs = self
-            .invoke(
-                &finder_class.replace('/', "."),
-                "findAll()Ljava/util/Set;",
-                std::slice::from_ref(&system_finder),
-            )
-            .await?
-            .unwrap_or(Value::Object(None));
-
-        if all_refs.is_null() {
-            return Ok(());
-        }
-
-        // Convert Set to array for easy iteration
-        let refs_class = all_refs.as_object_ref()?.class().name().to_string();
-        let array = self
-            .invoke(
-                &refs_class.replace('/', "."),
-                "toArray()[Ljava/lang/Object;",
-                std::slice::from_ref(&all_refs),
-            )
-            .await?
-            .unwrap_or(Value::Object(None));
-
-        if let Value::Object(Some(ref arc)) = array {
-            let elements: Vec<Value> = {
-                let reference = arc.read();
-                if let Reference::Array(obj_array) = &*reference {
-                    obj_array.elements.to_vec()
-                } else {
-                    Vec::new()
-                }
-            };
-            for element in &elements {
-                if !element.is_null()
-                    && let Err(error) = self
-                        .invoke(
-                            "jdk.internal.loader.BuiltinClassLoader",
-                            "loadModule(Ljava/lang/module/ModuleReference;)V",
-                            &[boot_loader.clone(), element.clone()],
-                        )
-                        .await
-                {
-                    warn!("Failed to register module reference: {error}");
                 }
             }
         }

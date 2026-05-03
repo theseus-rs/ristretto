@@ -210,23 +210,75 @@ pub async fn version_class_loader_for_os(
 
     let base_path = home_dir.join(".ristretto").join(format!("{os}-{arch}"));
     let mut installation_dir = base_path.join(&version);
-    if !installation_dir.exists() {
+    if !is_complete_installation(&version, os, &installation_dir)? {
+        remove_incomplete_installation(&installation_dir).await?;
         let (extracted_version, file_name, archive) =
             util::get_runtime_archive_for(&version, os, arch).await?;
         installation_dir = extract_archive(&version, &file_name, &archive, &base_path).await?;
         version = extracted_version;
     }
 
-    let installation_dir = if os == "macos" {
-        installation_dir.join("Contents").join("Home")
-    } else {
-        installation_dir
-    };
-
+    let installation_dir = java_home_for_os(os, installation_dir);
     let class_path = get_class_path(&version, &installation_dir)?;
     let class_loader = ClassLoader::new("bootstrap", class_path);
     register_primitives(&class_loader).await?;
     Ok((installation_dir, version, class_loader))
+}
+
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+fn java_home_for_os(os: &str, installation_dir: PathBuf) -> PathBuf {
+    if os == "macos" {
+        installation_dir.join("Contents").join("Home")
+    } else {
+        installation_dir
+    }
+}
+
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+fn is_complete_installation(version: &str, os: &str, installation_dir: &Path) -> Result<bool> {
+    if !installation_dir.exists() {
+        return Ok(false);
+    }
+
+    let java_home = java_home_for_os(os, installation_dir.to_path_buf());
+    if util::parse_major_version(version) <= 8 {
+        return Ok(java_home.join("jre").join("lib").join("rt.jar").is_file());
+    }
+
+    if java_home.join("lib").join("modules").is_file() {
+        return Ok(true);
+    }
+
+    let jmods_path = java_home.join("jmods");
+    if !jmods_path.is_dir() {
+        return Ok(false);
+    }
+
+    for entry in std::fs::read_dir(jmods_path)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path
+            .extension()
+            .is_some_and(|extension| extension == "jmod")
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+#[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+async fn remove_incomplete_installation(installation_dir: &Path) -> Result<()> {
+    if !installation_dir.exists() {
+        return Ok(());
+    }
+
+    #[cfg(target_family = "wasm")]
+    std::fs::remove_dir_all(installation_dir)?;
+    #[cfg(not(target_family = "wasm"))]
+    tokio::fs::remove_dir_all(installation_dir).await?;
+    Ok(())
 }
 
 /// If `RISTRETTO_JDK_<MAJOR>_HOME`, `RISTRETTO_JDKS_DIR`, or `RISTRETTO_JDK_HOME` is set, use it
@@ -466,6 +518,7 @@ async fn extract_archive(
 mod tests {
     use super::*;
     use ristretto_classfile::JavaStr;
+    use tempfile::TempDir;
 
     /// Load a class using the default class loader.
     async fn load_class(class_name: &str) -> Result<Arc<Class>> {
@@ -562,6 +615,58 @@ mod tests {
         let class_name = "[[Ljava.math.BigInteger;";
         let class = load_class(class_name).await?;
         assert_eq!(class.name(), "[[Ljava/math/BigInteger;");
+        Ok(())
+    }
+
+    #[test]
+    fn test_java_home_for_os() {
+        let installation_dir = PathBuf::from("runtime");
+        assert_eq!(
+            installation_dir.join("Contents").join("Home"),
+            java_home_for_os("macos", installation_dir.clone())
+        );
+        assert_eq!(
+            installation_dir,
+            java_home_for_os("linux", PathBuf::from("runtime"))
+        );
+    }
+
+    #[test]
+    fn test_is_complete_installation() -> Result<()> {
+        let temp_dir = TempDir::new()?;
+        let missing = temp_dir.path().join("missing");
+        assert!(!is_complete_installation("17.0.1", "linux", &missing)?);
+
+        let java8 = temp_dir.path().join("java8");
+        std::fs::create_dir_all(java8.join("jre").join("lib"))?;
+        std::fs::write(java8.join("jre").join("lib").join("rt.jar"), [])?;
+        assert!(is_complete_installation("8u402", "linux", &java8)?);
+
+        let modules = temp_dir.path().join("modules");
+        std::fs::create_dir_all(modules.join("lib"))?;
+        std::fs::write(modules.join("lib").join("modules"), [])?;
+        assert!(is_complete_installation("17.0.1", "linux", &modules)?);
+
+        let jmods = temp_dir.path().join("jmods");
+        assert!(!is_complete_installation("17.0.1", "linux", &jmods)?);
+        std::fs::create_dir_all(jmods.join("jmods"))?;
+        std::fs::write(jmods.join("jmods").join("README.txt"), [])?;
+        assert!(!is_complete_installation("17.0.1", "linux", &jmods)?);
+        std::fs::write(jmods.join("jmods").join("java.base.jmod"), [])?;
+        assert!(is_complete_installation("17.0.1", "linux", &jmods)?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_remove_incomplete_installation() -> Result<()> {
+        let temp_dir = TempDir::new()?;
+        let installation_dir = temp_dir.path().join("runtime");
+        remove_incomplete_installation(&installation_dir).await?;
+
+        std::fs::create_dir_all(&installation_dir)?;
+        std::fs::write(installation_dir.join("partial"), [])?;
+        remove_incomplete_installation(&installation_dir).await?;
+        assert!(!installation_dir.exists());
         Ok(())
     }
 }

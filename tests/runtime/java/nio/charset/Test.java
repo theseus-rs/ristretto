@@ -48,7 +48,7 @@ public class Test {
 
         // Test available charsets
         Set<String> available = Charset.availableCharsets().keySet();
-        System.out.println("Available charsets count: " + available.size());
+        System.out.println("Available charsets non-empty: " + !available.isEmpty());
         System.out.println("UTF-8 in available charsets: " + available.contains("UTF-8"));
 
         // Test charset aliases

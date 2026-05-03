@@ -71,7 +71,10 @@ pub async fn wait_for_reference_pending_list<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // TODO: Implement when the pending list is implemented
+    // The collector does not expose a pending-reference queue yet, so there is no event that can
+    // make this wait complete. Remaining asynchronously pending keeps the JDK Reference Handler
+    // from busy-spinning while still allowing its Tokio task to be cancelled during VM shutdown.
+    std::future::pending::<()>().await;
     Ok(None)
 }
 
@@ -146,8 +149,15 @@ mod tests {
     #[tokio::test]
     async fn test_wait_for_reference_pending_list() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = wait_for_reference_pending_list(thread, Parameters::default()).await?;
-        assert_eq!(result, None);
+        let result = tokio::time::timeout(
+            std::time::Duration::from_millis(10),
+            wait_for_reference_pending_list(thread, Parameters::default()),
+        )
+        .await;
+        assert!(
+            result.is_err(),
+            "pending-list wait must block when the list is empty"
+        );
         Ok(())
     }
 }

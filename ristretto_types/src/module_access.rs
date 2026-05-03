@@ -1,6 +1,7 @@
 use crate::Result;
 use ristretto_classloader::Value;
 use ristretto_classloader::module::ResolvedConfiguration;
+use std::sync::Arc;
 
 /// Information about a defined module.
 #[derive(Clone, Debug)]
@@ -127,11 +128,9 @@ pub trait ModuleAccess: Send + Sync {
     /// Get the resolved module configuration.
     fn resolved_configuration(&self) -> &ResolvedConfiguration;
 
-    /// Returns true if the module system is in lightweight mode.
-    /// In this mode, full module resolution was deferred at startup for performance.
-    /// `ModuleBootstrap.boot()` should create an empty layer without triggering lazy resolution.
-    fn is_lightweight_mode(&self) -> bool {
-        false
+    /// Get a shared reference to the resolved module configuration.
+    fn resolved_configuration_arc(&self) -> Arc<ResolvedConfiguration> {
+        Arc::new(self.resolved_configuration().clone())
     }
 
     /// Get all packages from all defined modules.
@@ -144,13 +143,13 @@ mod tests {
     use ristretto_classloader::module::ResolvedConfiguration;
     use std::sync::Mutex;
 
-    struct DefaultLightweightModeModuleAccess {
+    struct DefaultModuleAccess {
         modules: Mutex<Vec<DefinedModule>>,
         boot_unnamed_module: Mutex<Option<Value>>,
         resolved_configuration: ResolvedConfiguration,
     }
 
-    impl DefaultLightweightModeModuleAccess {
+    impl DefaultModuleAccess {
         fn new() -> Self {
             Self {
                 modules: Mutex::new(Vec::new()),
@@ -160,7 +159,7 @@ mod tests {
         }
     }
 
-    impl ModuleAccess for DefaultLightweightModeModuleAccess {
+    impl ModuleAccess for DefaultModuleAccess {
         fn add_export(&self, _source_module: &str, _package: &str, _target_module: Option<&str>) {}
 
         fn add_export_to_all(&self, _source_module: &str, _package: &str) {}
@@ -279,8 +278,8 @@ mod tests {
     }
 
     #[test]
-    fn test_module_access_default_lightweight_mode_and_methods() -> Result<()> {
-        let module_access = DefaultLightweightModeModuleAccess::new();
+    fn test_module_access_methods() -> Result<()> {
+        let module_access = DefaultModuleAccess::new();
         module_access.add_export("source", "package", Some("target"));
         module_access.add_export_to_all("source", "package");
         module_access.add_export_to_all_unnamed("source", "package");
@@ -313,7 +312,6 @@ mod tests {
             None
         );
         assert!(module_access.resolved_configuration().is_empty());
-        assert!(!module_access.is_lightweight_mode());
         assert_eq!(
             module_access.all_defined_packages(),
             vec!["defined/package".to_string()]

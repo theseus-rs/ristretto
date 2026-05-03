@@ -18,11 +18,14 @@
 //! ╰───────────────────╯
 //! ```
 
+use crate::attribute::Attributes;
 use crate::byte_source::ByteSource;
 use crate::header::{Header, IMAGE_MAGIC, IMAGE_MAGIC_INVERTED};
 use crate::index::Index;
 use crate::{Error, Resource, Result};
-use byteorder::{BigEndian, LittleEndian};
+use byteorder::{BigEndian, ByteOrder, LittleEndian};
+use std::collections::BTreeSet;
+use std::mem::size_of;
 use std::path::Path;
 
 /// Endian detected from the magic number.
@@ -134,6 +137,58 @@ impl Image {
         Ok(resource)
     }
 
+    /// Returns the names of modules with root `module-info.class` resources.
+    ///
+    /// This reads only resource index metadata and does not load resource data.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the resource index cannot be read.
+    pub fn module_names(&self) -> Result<BTreeSet<String>> {
+        match self.endian {
+            Endian::Little => self.module_names_with_endian::<LittleEndian>(),
+            Endian::Big => self.module_names_with_endian::<BigEndian>(),
+        }
+    }
+
+    fn module_names_with_endian<T: ByteOrder>(&self) -> Result<BTreeSet<String>> {
+        let attribute_offsets = self
+            .byte_source
+            .get_bytes(self.header.attribute_offsets()..self.header.attribute_data_offset())?;
+        let attribute_data = self
+            .byte_source
+            .get_bytes(self.header.attribute_data_offset()..self.header.strings_offset())?;
+        let strings = self
+            .byte_source
+            .get_bytes(self.header.strings_offset()..self.header.data_offset())?;
+        let mut module_names = BTreeSet::new();
+        for index in 0..self.header.table_length() {
+            let offset_index = index
+                .checked_mul(size_of::<u32>())
+                .ok_or(Error::InvalidIndex(index))?;
+            let offset_end = offset_index
+                .checked_add(size_of::<u32>())
+                .ok_or(Error::InvalidIndex(offset_index))?;
+            let offset_bytes = attribute_offsets
+                .get(offset_index..offset_end)
+                .ok_or(Error::InvalidIndex(offset_index))?;
+            let attribute_offset = usize::try_from(T::read_u32(offset_bytes))?;
+            let attributes = Attributes::from_slice(&attribute_data, attribute_offset)?;
+            if string_from_table(&strings, attributes.parent_offset())? != b""
+                || string_from_table(&strings, attributes.base_offset())? != b"module-info"
+                || string_from_table(&strings, attributes.extension_offset())? != b"class"
+            {
+                continue;
+            }
+            let module_bytes = string_from_table(&strings, attributes.module_offset())?;
+            if module_bytes.is_empty() {
+                continue;
+            }
+            module_names.insert(String::from_utf8_lossy(module_bytes).into_owned());
+        }
+        Ok(module_names)
+    }
+
     /// Returns an iterator over all resources in the Image file.
     ///
     /// # Examples
@@ -160,6 +215,12 @@ impl Image {
             total_resources: self.header.table_length(),
         }
     }
+}
+
+fn string_from_table(strings: &[u8], offset: usize) -> Result<&[u8]> {
+    let bytes = strings.get(offset..).ok_or(Error::InvalidIndex(offset))?;
+    let length = memchr::memchr(0, bytes).ok_or(Error::InvalidIndex(offset))?;
+    bytes.get(..length).ok_or(Error::InvalidIndex(offset))
 }
 
 /// Determines the endian from the magic bytes.
@@ -298,6 +359,11 @@ mod tests {
         assert!(iterator.next().is_none());
         assert_eq!(iterator.size_hint(), (0, Some(0)));
 
+        assert_eq!(
+            image.module_names()?,
+            BTreeSet::from(["java.base".to_string()])
+        );
+
         let names = (&image)
             .into_iter()
             .map(|resource| resource.map(|resource| resource.full_name()))
@@ -320,6 +386,10 @@ mod tests {
         assert_eq!(next_full_name(&mut iterator)?, EXT_NAME);
         assert_eq!(next_full_name(&mut iterator)?, STRING_NAME);
         assert!(iterator.next().is_none());
+        assert_eq!(
+            image.module_names()?,
+            BTreeSet::from(["java.base".to_string()])
+        );
         Ok(())
     }
 

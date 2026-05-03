@@ -92,6 +92,35 @@ pub async fn get_system_package_names<T: Thread + 'static>(
 }
 
 #[intrinsic_method(
+    "jdk/internal/loader/BootLoader.findResourceAsStream(Ljava/lang/String;Ljava/lang/String;)Ljava/io/InputStream;",
+    GreaterThanOrEqual(JAVA_11)
+)]
+#[async_method]
+pub async fn find_resource_as_stream<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let resource_name = parameters.pop()?.as_string()?;
+    let module_name = parameters.pop()?.as_string()?;
+    let class_loader = boot_class_loader(&thread).await?;
+    let Some(bytes) = class_loader
+        .class_path()
+        .read_resource(Some(&module_name), &resource_name)
+        .await?
+    else {
+        return Ok(Some(Value::Object(None)));
+    };
+
+    let vm = thread.vm()?;
+    let bytes = bytes.into_iter().map(u8::cast_signed).collect::<Vec<_>>();
+    let bytes = Value::new_object(vm.garbage_collector(), Reference::from(bytes));
+    let stream = thread
+        .object("java/io/ByteArrayInputStream", "[B", &[bytes])
+        .await?;
+    Ok(Some(stream))
+}
+
+#[intrinsic_method(
     "jdk/internal/loader/BootLoader.setBootLoaderUnnamedModule0(Ljava/lang/Module;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
@@ -136,6 +165,17 @@ mod tests {
         assert!(package_names.contains(&"java.lang".to_string()));
         // The count depends on how many classes the boot loader has loaded in this test context
         assert!(!package_names.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_find_resource_as_stream() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let module_name = "java.base".to_object(&thread).await?;
+        let resource_name = "java/lang/String.class".to_object(&thread).await?;
+        let parameters = Parameters::new(vec![module_name, resource_name]);
+        let result = find_resource_as_stream(thread, parameters).await?;
+        assert!(!result.expect("stream").is_null());
         Ok(())
     }
 

@@ -1363,7 +1363,7 @@ fn set_top_frame_pc(ctx: &RuntimeContext, bci: i32) {
     }
     let thread = thread_from_ctx(ctx);
     run_async(async {
-        if let Ok(frame) = thread.current_frame().await {
+        if let Ok(frame) = thread.current_frame() {
             frame.set_program_counter(bci as usize);
         }
     });

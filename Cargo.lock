@@ -2583,6 +2583,7 @@ dependencies = [
  "ahash 0.8.12",
  "bytemuck",
  "criterion",
+ "dashmap",
  "dirs",
  "flate2",
  "indexmap",

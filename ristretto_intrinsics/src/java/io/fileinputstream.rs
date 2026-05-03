@@ -12,7 +12,10 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
 use ristretto_types::JavaError::RuntimeException;
-#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+#[cfg(all(
+    not(all(target_family = "wasm", not(target_os = "wasi"))),
+    not(target_os = "windows")
+))]
 use ristretto_types::JavaError::{AccessControlException, IllegalArgumentException};
 use ristretto_types::JavaError::{FileNotFoundException, IoException};
 use ristretto_types::Thread;
@@ -22,16 +25,37 @@ use ristretto_types::handles::FileHandle;
 use ristretto_types::{Parameters, Result};
 #[cfg(target_os = "wasi")]
 use std::fs::OpenOptions;
+#[cfg(all(
+    not(all(target_family = "wasm", not(target_os = "wasi"))),
+    not(target_os = "windows")
+))]
+use std::io::ErrorKind;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
-use std::io::{ErrorKind, SeekFrom};
+use std::io::SeekFrom;
 #[cfg(target_os = "wasi")]
 use std::io::{Read, Seek};
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
 use tokio::fs::OpenOptions;
 #[cfg(not(target_family = "wasm"))]
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use zerocopy::transmute_ref;
+
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+fn resolve_path<T: Thread + 'static>(thread: &Arc<T>, path: &str) -> Result<PathBuf> {
+    let path_buf = PathBuf::from(path);
+    if path_buf.is_absolute() {
+        return Ok(path_buf);
+    }
+    let vm = thread.vm()?;
+    if let Some(user_dir) = vm.system_properties().get("user.dir") {
+        Ok(PathBuf::from(user_dir).join(path_buf))
+    } else {
+        Ok(path_buf)
+    }
+}
 
 #[intrinsic_method("java/io/FileInputStream.available0()I", Any)]
 #[async_method]
@@ -124,10 +148,17 @@ pub async fn is_regular_file_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file_input_stream = parameters.pop()?;
-    let file_descriptor = {
-        let file_input_stream = file_input_stream.as_object_ref()?;
-        file_input_stream.value("fd")?
+    let file_descriptor_or_stream = parameters.pop()?;
+    let file_descriptor = match file_descriptor_or_stream {
+        value @ Value::Object(_) => {
+            let object = value.as_object_ref()?;
+            if object.class().name() == "java/io/FileDescriptor" {
+                value.clone()
+            } else {
+                object.value("fd")?
+            }
+        }
+        value => value,
     };
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
@@ -201,6 +232,7 @@ pub async fn open_0<T: Thread + 'static>(
     #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
     {
         let file_result;
+        let resolved_path = resolve_path(&thread, &path)?;
 
         #[cfg(target_os = "wasi")]
         {
@@ -208,7 +240,7 @@ pub async fn open_0<T: Thread + 'static>(
                 .create(false)
                 .read(true)
                 .write(false)
-                .open(&path);
+                .open(&resolved_path);
         }
 
         #[cfg(not(target_family = "wasm"))]
@@ -217,7 +249,7 @@ pub async fn open_0<T: Thread + 'static>(
                 .create(false)
                 .read(true)
                 .write(false)
-                .open(&path)
+                .open(&resolved_path)
                 .await;
         }
 
@@ -237,18 +269,33 @@ pub async fn open_0<T: Thread + 'static>(
                 Ok(None)
             }
             Err(error) => {
-                let error = match error.kind() {
-                    ErrorKind::NotFound => FileNotFoundException(format!("File not found: {path}")),
-                    ErrorKind::PermissionDenied => {
-                        AccessControlException(format!("Access denied: {path}"))
-                    }
-                    ErrorKind::InvalidInput => {
-                        IllegalArgumentException(format!("Invalid file path: {path}"))
-                    }
-                    ErrorKind::InvalidFilename => IoException(format!("Invalid filename: {path}")),
-                    _ => IoException(format!("IO error opening file '{path}': {error}")),
-                };
-                Err(error.into())
+                #[cfg(not(target_os = "windows"))]
+                {
+                    let error = match error.kind() {
+                        ErrorKind::NotFound => {
+                            FileNotFoundException(format!("{path} (No such file or directory)"))
+                        }
+                        ErrorKind::PermissionDenied => {
+                            AccessControlException(format!("Access denied: {path}"))
+                        }
+                        ErrorKind::InvalidInput => {
+                            IllegalArgumentException(format!("Invalid file path: {path}"))
+                        }
+                        ErrorKind::InvalidFilename => {
+                            IoException(format!("Invalid filename: {path}"))
+                        }
+                        _ => IoException(format!("IO error opening file '{path}': {error}")),
+                    };
+                    Err(error.into())
+                }
+                #[cfg(target_os = "windows")]
+                {
+                    Err(FileNotFoundException(format!(
+                        "{path} ({})",
+                        crate::java::io::filesystem::open_error_message(&error)
+                    ))
+                    .into())
+                }
             }
         }
     }
@@ -409,14 +456,29 @@ pub async fn skip_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let skip_bytes = parameters.pop_long()?;
-    let file_input_stream = parameters.pop()?;
-    let file_descriptor = {
-        let file_input_stream = file_input_stream.as_object_ref()?;
-        file_input_stream.value("fd")?
-    };
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
-    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    let stream_or_descriptor = parameters.pop()?;
+    let fd = match stream_or_descriptor {
+        Value::Int(fd) => i64::from(fd),
+        Value::Long(fd) => fd,
+        value @ Value::Object(_) => {
+            let file_descriptor_or_fd = {
+                let object = value.as_object_ref()?;
+                object.value("fd").unwrap_or_else(|_| value.clone())
+            };
+            match file_descriptor_or_fd {
+                Value::Int(fd) => i64::from(fd),
+                Value::Long(fd) => fd,
+                file_descriptor => file_descriptor_from_java_object(&vm, &file_descriptor)?,
+            }
+        }
+        value => {
+            return Err(
+                IoException(format!("Invalid FileInputStream.skip0 receiver: {value}")).into(),
+            );
+        }
+    };
     let mut file_handle = file_handles
         .get_mut(&fd)
         .await
@@ -453,12 +515,59 @@ pub async fn skip_0<T: Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(not(target_family = "wasm"))]
+    use ristretto_classloader::{Object, Reference};
+    #[cfg(not(target_family = "wasm"))]
+    use ristretto_types::VM;
+    #[cfg(not(target_family = "wasm"))]
+    use ristretto_types::handles::FileHandle;
 
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = init_ids(thread, Parameters::default()).await?;
         assert_eq!(None, result);
+        Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[tokio::test]
+    async fn test_skip_0_receiver_forms() -> Result<()> {
+        let (vm, thread) = crate::test::java17_thread().await?;
+        let temp_file = tempfile::NamedTempFile::new()?;
+        std::fs::write(temp_file.path(), b"abcdef")?;
+
+        for fd in [4101, 4102, 4103] {
+            let file = OpenOptions::new().read(true).open(temp_file.path()).await?;
+            vm.file_handles()
+                .insert(i64::from(fd), FileHandle::from((file, false)))
+                .await?;
+        }
+
+        let mut parameters = Parameters::new(vec![Value::Int(4101), Value::Long(2)]);
+        assert_eq!(
+            Some(Value::Long(2)),
+            skip_0(thread.clone(), std::mem::take(&mut parameters)).await?
+        );
+
+        let parameters = Parameters::new(vec![Value::Long(4102), Value::Long(3)]);
+        assert_eq!(
+            Some(Value::Long(3)),
+            skip_0(thread.clone(), parameters).await?
+        );
+
+        let class = thread.class("java/io/FileDescriptor").await?;
+        let mut descriptor = Object::new(class)?;
+        descriptor.set_value("fd", Value::Int(4103))?;
+        let descriptor = Value::new_object(vm.garbage_collector(), Reference::Object(descriptor));
+        let parameters = Parameters::new(vec![descriptor, Value::Long(4)]);
+        assert_eq!(
+            Some(Value::Long(4)),
+            skip_0(thread.clone(), parameters).await?
+        );
+
+        let parameters = Parameters::new(vec![Value::Float(1.0), Value::Long(1)]);
+        assert!(skip_0(thread, parameters).await.is_err());
         Ok(())
     }
 }

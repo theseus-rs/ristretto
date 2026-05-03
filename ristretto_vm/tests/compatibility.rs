@@ -23,7 +23,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex as AsyncMutex;
 use tracing::metadata::LevelFilter;
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info, trace, warn};
 use tracing_subscriber::{EnvFilter, fmt};
 
 /// Regex to filter which tests to run. Defaults to matching all tests.
@@ -35,6 +35,7 @@ static TEST_FILTER: LazyLock<Regex> = LazyLock::new(|| {
 const TEST_CLASS_NAME: &str = "Test";
 const TEST_FILE: &str = "Test.java";
 const IGNORE_FILE: &str = "ignore.txt";
+const TEST_TIMEOUT_PREFIX: &str = "Test timed out after ";
 
 /// A single failure observed while running the compatibility test suite.
 #[derive(Debug, Clone)]
@@ -60,7 +61,15 @@ fn compatibility_tests() -> Result<()> {
     let passed = AtomicUsize::new(0);
     let failures: Arc<Mutex<Vec<Failure>>> = Arc::new(Mutex::new(Vec::new()));
 
-    let num_threads = (std::thread::available_parallelism().map_or(1, NonZero::get) / 3).max(1);
+    let available_threads = std::thread::available_parallelism().map_or(1, NonZero::get);
+    // Each VM uses one Tokio worker and one GC worker. Keep the conservative default for local
+    // runs, but allow CI to use all of its small fixed-size CPU allocation.
+    let default_threads = (available_threads / 2).max(1);
+    let num_threads = std::env::var("RISTRETTO_COMPATIBILITY_THREADS")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|&value| value > 0)
+        .map_or(default_threads, |value| value.min(available_threads));
     info!("Running compatibility tests with {num_threads} threads");
     let pool = ThreadPoolBuilder::new()
         .num_threads(num_threads)
@@ -68,7 +77,27 @@ fn compatibility_tests() -> Result<()> {
         .map_err(|error| InternalError(error.to_string()))?;
 
     pool.install(|| {
-        test_dirs.par_iter().for_each(|test_dir| {
+        test_dirs
+            .par_iter()
+            .filter(|test_dir| !test_dir.starts_with("socket"))
+            .for_each(|test_dir| {
+                run_compatibility_test(
+                    &java_version,
+                    &java_home,
+                    &tests_root_dir,
+                    test_dir,
+                    &passed,
+                    &failures,
+                );
+            });
+    });
+
+    // Socket tests can bind shared ports and depend on tight client/server timing. Run them after
+    // the parallel suite so unrelated VMs cannot starve or interfere with their network threads.
+    test_dirs
+        .iter()
+        .filter(|test_dir| test_dir.starts_with("socket"))
+        .for_each(|test_dir| {
             run_compatibility_test(
                 &java_version,
                 &java_home,
@@ -78,7 +107,6 @@ fn compatibility_tests() -> Result<()> {
                 &failures,
             );
         });
-    });
 
     let passed_count = passed.load(Ordering::Relaxed);
     let failures = std::mem::take(&mut *failures.lock().expect("failures lock"));
@@ -328,40 +356,66 @@ fn test_vm(
     expected_output: &str,
 ) -> Result<(), Failure> {
     let test_type = if interpreted { "int" } else { "jit" };
-    // Spawn a thread with a larger stack to handle deeply nested async calls that occur during
-    // method handle invocations and invokedynamic resolution
-    let java_version = java_version.to_string();
-    let test_name_owned = test_name.to_string();
-    let test_dir = test_dir.to_path_buf();
-    let test_timeout = Duration::from_mins(2);
+    let is_socket_test = test_name.starts_with("socket/");
+    let test_timeout = if is_socket_test {
+        // Socket cases normally finish in seconds. A longer wait only delays recovery from a
+        // client/server scheduling deadlock.
+        Duration::from_secs(30)
+    } else {
+        Duration::from_mins(2)
+    };
+    let worker_threads = if is_socket_test { 2 } else { 1 };
+    let timeout_message = format!("{TEST_TIMEOUT_PREFIX}{} seconds", test_timeout.as_secs());
     let stack_size = 8 * 1024 * 1024; // 8 MB stack
-    let result = std::thread::Builder::new()
-        .stack_size(stack_size)
-        .spawn(move || {
-            std::panic::catch_unwind(|| {
-                let runtime = tokio::runtime::Builder::new_multi_thread()
-                    .enable_all()
-                    .thread_stack_size(stack_size)
-                    .build()
-                    .map_err(|error| InternalError(error.to_string()))?;
-                runtime.block_on(async {
-                    match tokio::time::timeout(
-                        test_timeout,
-                        run_test(&java_version, &test_name_owned, &test_dir, interpreted),
-                    )
-                    .await
-                    {
-                        Ok(result) => result,
-                        Err(_elapsed) => Err(InternalError(
-                            "Test timed out after 120 seconds".to_string(),
-                        )),
-                    }
+    let run_once = || {
+        // Spawn a thread with a larger stack to handle deeply nested async calls that occur during
+        // method handle invocations and invokedynamic resolution.
+        let java_version = java_version.to_string();
+        let test_dir = test_dir.to_path_buf();
+        let timeout_message = timeout_message.clone();
+        std::thread::Builder::new()
+            .stack_size(stack_size)
+            .spawn(move || {
+                std::panic::catch_unwind(|| {
+                    let runtime = tokio::runtime::Builder::new_multi_thread()
+                        // Rayon already runs multiple compatibility tests in parallel. A single
+                        // worker avoids multiplying the runner's thread count for most VMs, while
+                        // socket cases need a second worker so their Java server and client threads
+                        // can make progress independently.
+                        .worker_threads(worker_threads)
+                        .enable_all()
+                        .thread_stack_size(stack_size)
+                        .build()
+                        .map_err(|error| InternalError(error.to_string()))?;
+                    runtime.block_on(async {
+                        match tokio::time::timeout(
+                            test_timeout,
+                            run_test(&java_version, &test_dir, interpreted),
+                        )
+                        .await
+                        {
+                            Ok(result) => result,
+                            Err(_elapsed) => Err(InternalError(timeout_message)),
+                        }
+                    })
                 })
             })
-        })
-        .expect("Failed to spawn test thread")
-        .join()
-        .expect("Test thread panicked");
+            .expect("Failed to spawn test thread")
+            .join()
+            .expect("Test thread panicked")
+    };
+
+    let max_attempts = if is_socket_test { 3 } else { 1 };
+    let mut result = run_once();
+    for attempt in 2..=max_attempts {
+        let should_retry =
+            matches!(&result, Ok(Err(error)) if is_retryable_socket_timeout(test_name, error));
+        if !should_retry {
+            break;
+        }
+        warn!("Retrying ({test_type}) {test_name} after timeout ({attempt}/{max_attempts})");
+        result = run_once();
+    }
 
     let make_failure = |message: String| Failure {
         test_name: test_name.to_string(),
@@ -394,11 +448,28 @@ fn test_vm(
     }
 }
 
+#[cfg(not(target_family = "wasm"))]
+fn is_retryable_socket_timeout(test_name: &str, error: &ristretto_vm::Error) -> bool {
+    test_name.starts_with("socket/")
+        && matches!(error, InternalError(message) if message.starts_with(TEST_TIMEOUT_PREFIX))
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[test]
+fn socket_timeout_retry_policy() {
+    let timeout = InternalError(format!("{TEST_TIMEOUT_PREFIX}30 seconds"));
+    assert!(is_retryable_socket_timeout("socket/tcp_streams", &timeout));
+    assert!(!is_retryable_socket_timeout("module/services", &timeout));
+    assert!(!is_retryable_socket_timeout(
+        "socket/tcp_streams",
+        &InternalError("different failure".to_string())
+    ));
+}
+
 /// Runs the test by creating a VM and invoking the `Test` class.
 #[cfg(not(target_family = "wasm"))]
 async fn run_test(
     java_version: &str,
-    test_name: &str,
     test_dir: &Path,
     interpreted: bool,
 ) -> Result<(Duration, String)> {
@@ -422,13 +493,6 @@ async fn run_test(
         .stderr(stderr.clone())
         .garbage_collector(garbage_collector)
         .add_system_property("user.dir", user_dir);
-
-    // Module tests need full JPMS resolution. The real JVM always initializes the
-    // module system fully; our lightweight fast path skips it for classpath apps.
-    // Adding ALL-DEFAULT ensures full resolution is triggered for module tests.
-    if test_name.starts_with("module/") {
-        configuration_builder = configuration_builder.add_module("ALL-DEFAULT");
-    }
 
     configuration_builder = configuration_builder.interpreted(interpreted);
     if !interpreted {

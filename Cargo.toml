@@ -43,6 +43,7 @@ version = "0.31.0"
 dead_code = "allow"
 missing_debug_implementations = "deny"
 unsafe_code = "deny"
+unexpected_cfgs = { level = "deny", check-cfg = ["cfg(coverage)"] }
 unused_qualifications = "deny"
 warnings = "deny"
 
