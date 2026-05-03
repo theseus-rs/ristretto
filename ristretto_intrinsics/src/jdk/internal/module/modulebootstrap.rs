@@ -38,17 +38,9 @@ pub async fn boot<T: Thread + 'static>(
     let resolved_config = module_system.resolved_configuration().clone();
 
     if resolved_config.is_empty() {
-        // If in lightweight mode (simple classpath app), create an empty layer without
-        // performing expensive lazy resolution. This keeps startup fast for apps that
-        // don't need module introspection.
-        if module_system.is_lightweight_mode() {
-            debug!("Lightweight mode; creating empty boot layer for classpath app");
-            return create_empty_layer(&thread).await;
-        }
-
         // Attempt lazy full resolution from jimage if a java_home is available.
-        // This handles the case where no module resolution was done at startup
-        // but the application needs a populated boot layer.
+        // This handles classpath applications that start in lightweight mode but later
+        // need a populated boot layer for JDK APIs such as StackTraceElement.
         let java_home = vm.java_home();
         let jimage_path = java_home.join("lib").join("modules");
         if jimage_path.exists() {
@@ -492,7 +484,13 @@ async fn create_resolved_modules<T: Thread + 'static>(
         .object("java/util/HashMap", "", &[] as &[Value])
         .await?;
 
-    let mref_class = thread.class("java/lang/module/ModuleReference").await.ok();
+    let mref_class = match thread
+        .class("jdk/internal/module/ModuleReferenceImpl")
+        .await
+    {
+        Ok(class) => Some(class),
+        Err(_) => thread.class("java/lang/module/ModuleReference").await.ok(),
+    };
     let resolved_module_class = thread.class("java/lang/module/ResolvedModule").await.ok();
 
     let mut resolved_module_map: HashMap<String, Value> = HashMap::new();

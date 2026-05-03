@@ -7,9 +7,16 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Frame;
 use ristretto_types::JavaObject;
+use ristretto_types::ModuleAccess;
 use ristretto_types::Thread;
+use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+struct BootModuleReferenceState {
+    java_base: AtomicBool,
+}
 
 #[intrinsic_method(
     "jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z",
@@ -86,6 +93,12 @@ pub async fn get_caller_class<T: Thread + 'static>(
     // We do NOT skip java/lang/invoke/* because those classes may legitimately call
     // getCallerClass to get their own class (e.g., StringConcatFactory calling
     // MethodHandles.lookup() should get a lookup for StringConcatFactory, not the user class).
+    if frames.iter().rev().any(|frame| {
+        frame.class().name() == "java/lang/Class" && frame.method().name() == "getResourceAsStream"
+    }) {
+        ensure_java_base_module_reference(&thread).await?;
+    }
+
     for frame in frames.iter().rev().skip(1) {
         let class = frame.class();
         let class_name = class.name();
@@ -94,11 +107,120 @@ pub async fn get_caller_class<T: Thread + 'static>(
         {
             continue;
         }
+        if is_caller_sensitive_frame(frame.as_ref())? {
+            continue;
+        }
         let class_object = class.to_object(&thread).await?;
         return Ok(Some(class_object));
     }
     // No caller found
     Ok(Some(Value::Object(None)))
+}
+
+async fn ensure_java_base_module_reference<T: Thread + 'static>(thread: &Arc<T>) -> Result<()> {
+    let vm = thread.vm()?;
+    if !vm.module_system().resolved_configuration().is_empty() {
+        return Ok(());
+    }
+
+    let state = vm
+        .resource_manager()
+        .get_or_init(|| BootModuleReferenceState {
+            java_base: AtomicBool::new(false),
+        })?;
+    if state.java_base.swap(true, Ordering::AcqRel) {
+        return Ok(());
+    }
+
+    if let Err(error) = register_java_base_module_reference(thread).await {
+        state.java_base.store(false, Ordering::Release);
+        return Err(error);
+    }
+
+    Ok(())
+}
+
+async fn register_java_base_module_reference<T: Thread + 'static>(thread: &Arc<T>) -> Result<()> {
+    let boot_loader = thread
+        .try_invoke(
+            "jdk.internal.loader.ClassLoaders",
+            "bootLoader()Ljdk/internal/loader/BuiltinClassLoader;",
+            &[] as &[Value],
+        )
+        .await?;
+    if boot_loader.is_null() {
+        return Ok(());
+    }
+
+    let system_finder = thread
+        .try_invoke(
+            "java.lang.module.ModuleFinder",
+            "ofSystem()Ljava/lang/module/ModuleFinder;",
+            &[] as &[Value],
+        )
+        .await?;
+    if system_finder.is_null() {
+        return Ok(());
+    }
+
+    let module_name = "java.base".to_object(thread.as_ref()).await?;
+    let finder_class = system_finder
+        .as_object_ref()?
+        .class()
+        .name()
+        .replace('/', ".");
+    let module_ref = thread
+        .try_invoke(
+            &finder_class,
+            "find(Ljava/lang/String;)Ljava/util/Optional;",
+            &[system_finder, module_name],
+        )
+        .await?;
+    if module_ref.is_null() {
+        return Ok(());
+    }
+
+    let module_ref = thread
+        .try_invoke(
+            "java.util.Optional",
+            "orElse(Ljava/lang/Object;)Ljava/lang/Object;",
+            &[module_ref, Value::Object(None)],
+        )
+        .await?;
+    if module_ref.is_null() {
+        return Ok(());
+    }
+
+    thread
+        .invoke(
+            "jdk.internal.loader.BuiltinClassLoader",
+            "loadModule(Ljava/lang/module/ModuleReference;)V",
+            &[boot_loader, module_ref],
+        )
+        .await?;
+    Ok(())
+}
+
+fn is_caller_sensitive_frame<F: Frame>(frame: &F) -> Result<bool> {
+    let class_file = frame.class().class_file();
+    let constant_pool = &class_file.constant_pool;
+    let method = frame.method();
+    for attribute in &method.definition().attributes {
+        let (Attribute::RuntimeVisibleAnnotations { annotations, .. }
+        | Attribute::RuntimeInvisibleAnnotations { annotations, .. }) = attribute
+        else {
+            continue;
+        };
+        for annotation in annotations {
+            let annotation_type = constant_pool.try_get_utf8(annotation.type_index)?;
+            if annotation_type == "Ljdk/internal/reflect/CallerSensitive;"
+                || annotation_type == "Lsun/reflect/CallerSensitive;"
+            {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
 }
 
 #[intrinsic_method(

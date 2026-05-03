@@ -109,6 +109,23 @@ impl Jar {
         Ok(class_file)
     }
 
+    /// Read a resource from the jar.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    pub async fn read_resource<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
+        let name = name.as_ref();
+        let mut archive = self.archive.write().await;
+        if archive.is_module().await? {
+            let module_name = format!("classes/{name}");
+            if let Some(bytes) = archive.load_file(&module_name).await? {
+                return Ok(Some(bytes));
+            }
+        }
+        archive.load_file(name).await
+    }
+
     /// Get the class names in the jar.
     ///
     /// # Errors

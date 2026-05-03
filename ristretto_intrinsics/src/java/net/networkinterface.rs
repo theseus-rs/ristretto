@@ -69,7 +69,7 @@ async fn create_loopback_interface<T: Thread + 'static>(thread: &Arc<T>) -> Resu
 
     // Create the NetworkInterface object with no-arg constructor
     let ni_value = thread
-        .object("java.net.NetworkInterface", "()V", &[])
+        .object("java.net.NetworkInterface", "", &[] as &[Value])
         .await?;
     {
         let mut ni_obj = ni_value.as_object_mut()?;

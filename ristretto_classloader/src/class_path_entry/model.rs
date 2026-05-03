@@ -66,6 +66,23 @@ impl ClassPathEntry {
         }
     }
 
+    /// Read a resource from the class path entry.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    pub async fn read_resource<S: AsRef<str>>(
+        &self,
+        module: Option<&str>,
+        name: S,
+    ) -> Result<Option<Vec<u8>>> {
+        match self {
+            ClassPathEntry::Directory(directory) => directory.read_resource(name).await,
+            ClassPathEntry::Image(image) => image.read_resource(module, name).await,
+            ClassPathEntry::Jar(jar) => jar.read_resource(name).await,
+        }
+    }
+
     /// Get the class names in the class path entry.
     ///
     /// # Errors

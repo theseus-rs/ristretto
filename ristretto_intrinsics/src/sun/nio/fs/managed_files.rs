@@ -72,6 +72,19 @@ pub(crate) async fn open(
         open_options.append(true);
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        // FILE_FLAG_BACKUP_SEMANTICS (0x02000000) allows opening directories via CreateFile.
+        // It is benign for regular files.
+        open_options.custom_flags(0x0200_0000);
+        // Match Java's default file sharing on Windows: allow concurrent read but refuse
+        // concurrent write or delete while the handle is open. This causes File.delete() to
+        // fail (returning false) for files that still have an open channel - matching the
+        // behavior of the reference JDK.
+        // FILE_SHARE_READ = 0x1
+        open_options.share_mode(0x0000_0001);
+    }
+
     #[cfg(not(target_family = "wasm"))]
     let file = open_options.open(path).await?;
     #[cfg(target_os = "wasi")]
@@ -97,7 +110,11 @@ pub(crate) async fn open(
     let file_handle = FileHandle {
         file,
         append,
-        mode: FileModeFlags::empty(),
+        mode: if access_mode == 0 {
+            FileModeFlags::READ_ONLY
+        } else {
+            FileModeFlags::READ_WRITE
+        },
     };
     file_handles
         .insert(fd, file_handle)
@@ -220,13 +237,16 @@ pub(crate) async fn close(file_handles: &HandleManager<i64, FileHandle>, fd: i64
     if let Some(mut handle) = file_handles.remove(&fd).await {
         #[cfg(not(target_family = "wasm"))]
         {
-            let _ = handle.file.flush().await;
-            let _ = handle.file.shutdown().await;
+            if handle.mode != FileModeFlags::READ_ONLY {
+                let _ = handle.file.flush().await;
+            }
         }
         #[cfg(target_os = "wasi")]
         {
             use std::io::Write;
-            let _ = handle.file.flush();
+            if handle.mode != FileModeFlags::READ_ONLY {
+                let _ = handle.file.flush();
+            }
         }
     }
 }
@@ -584,12 +604,26 @@ pub(crate) async fn readv(
         tokio::task::spawn_blocking(move || {
             use std::io::Read;
             let mut std_file = std_file;
-            let mut io_slices: Vec<std::io::IoSliceMut<'_>> = chunks
-                .iter_mut()
-                .map(|c| std::io::IoSliceMut::new(c))
-                .collect();
-            let n = std_file.read_vectored(&mut io_slices)?;
-            Ok((n, chunks))
+            let mut total: usize = 0;
+            for chunk in &mut chunks {
+                if chunk.is_empty() {
+                    continue;
+                }
+                let mut filled = 0usize;
+                while filled < chunk.len() {
+                    match std_file.read(&mut chunk[filled..]) {
+                        Ok(0) => break,
+                        Ok(n) => filled += n,
+                        Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
+                        Err(e) => return Err(e),
+                    }
+                }
+                total += filled;
+                if filled < chunk.len() {
+                    break;
+                }
+            }
+            Ok((total, chunks))
         })
         .await
         .map_err(std::io::Error::other)?
@@ -602,12 +636,26 @@ pub(crate) async fn readv(
             .get_mut(&fd)
             .await
             .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "bad fd"))?;
-        let mut io_slices: Vec<std::io::IoSliceMut<'_>> = chunks
-            .iter_mut()
-            .map(|c| std::io::IoSliceMut::new(c))
-            .collect();
-        let n = file_handle.file.read_vectored(&mut io_slices)?;
-        Ok((n, chunks))
+        let mut total: usize = 0;
+        for chunk in &mut chunks {
+            if chunk.is_empty() {
+                continue;
+            }
+            let mut filled = 0usize;
+            while filled < chunk.len() {
+                match file_handle.file.read(&mut chunk[filled..]) {
+                    Ok(0) => break,
+                    Ok(n) => filled += n,
+                    Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
+                    Err(e) => return Err(e),
+                }
+            }
+            total += filled;
+            if filled < chunk.len() {
+                break;
+            }
+        }
+        Ok((total, chunks))
     }
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -640,9 +688,15 @@ pub(crate) async fn writev(
         tokio::task::spawn_blocking(move || {
             use std::io::Write;
             let mut std_file = std_file;
-            let io_slices: Vec<std::io::IoSlice<'_>> =
-                chunks.iter().map(|c| std::io::IoSlice::new(c)).collect();
-            std_file.write_vectored(&io_slices)
+            let mut total: usize = 0;
+            for chunk in &chunks {
+                if chunk.is_empty() {
+                    continue;
+                }
+                std_file.write_all(chunk)?;
+                total += chunk.len();
+            }
+            Ok(total)
         })
         .await
         .map_err(std::io::Error::other)?
@@ -655,9 +709,15 @@ pub(crate) async fn writev(
             .get_mut(&fd)
             .await
             .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "bad fd"))?;
-        let io_slices: Vec<std::io::IoSlice<'_>> =
-            chunks.iter().map(|c| std::io::IoSlice::new(c)).collect();
-        file_handle.file.write_vectored(&io_slices)
+        let mut total: usize = 0;
+        for chunk in &chunks {
+            if chunk.is_empty() {
+                continue;
+            }
+            file_handle.file.write_all(chunk)?;
+            total += chunk.len();
+        }
+        Ok(total)
     }
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]

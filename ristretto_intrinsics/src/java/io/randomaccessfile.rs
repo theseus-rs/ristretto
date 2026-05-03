@@ -12,8 +12,6 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
 use ristretto_types::JavaError::RuntimeException;
-#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
-use ristretto_types::JavaError::{AccessControlException, IllegalArgumentException};
 use ristretto_types::JavaError::{FileNotFoundException, IoException};
 use ristretto_types::Thread;
 use ristretto_types::VM;
@@ -24,15 +22,31 @@ use ristretto_types::{Parameters, Result};
 #[cfg(target_os = "wasi")]
 use std::fs::OpenOptions;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
-use std::io::{ErrorKind, SeekFrom};
+use std::io::SeekFrom;
 #[cfg(target_os = "wasi")]
 use std::io::{Read, Seek, Write};
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
 use tokio::fs::OpenOptions;
 #[cfg(not(target_family = "wasm"))]
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use zerocopy::transmute_ref;
+
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+fn resolve_path<T: Thread + 'static>(thread: &Arc<T>, path: &str) -> Result<PathBuf> {
+    let path_buf = PathBuf::from(path);
+    if path_buf.is_absolute() {
+        return Ok(path_buf);
+    }
+    let vm = thread.vm()?;
+    if let Some(user_dir) = vm.system_properties().get("user.dir") {
+        Ok(PathBuf::from(user_dir).join(path_buf))
+    } else {
+        Ok(path_buf)
+    }
+}
 
 #[intrinsic_method("java/io/RandomAccessFile.close0()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
@@ -57,6 +71,9 @@ pub async fn get_file_pointer<T: Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
     let mut file_handle = file_handles
         .get_mut(&fd)
         .await
@@ -116,6 +133,9 @@ pub async fn length_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
     let file_handle = file_handles
         .get(&fd)
         .await
@@ -147,7 +167,6 @@ pub async fn length_0<T: Thread + 'static>(
 
 #[intrinsic_method("java/io/RandomAccessFile.open0(Ljava/lang/String;I)V", Any)]
 #[async_method]
-#[expect(clippy::too_many_lines)]
 pub async fn open_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -179,6 +198,7 @@ pub async fn open_0<T: Thread + 'static>(
 
     #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
     {
+        let resolved_path = resolve_path(&thread, &path)?;
         let file_result;
 
         #[cfg(target_os = "wasi")]
@@ -188,37 +208,33 @@ pub async fn open_0<T: Thread + 'static>(
                     .read(true)
                     .write(false)
                     .create(false)
-                    .open(&path),
+                    .open(&resolved_path),
                 _ => OpenOptions::new()
                     .create(true)
                     .truncate(false)
                     .read(true)
                     .write(true)
-                    .open(&path),
+                    .open(&resolved_path),
             };
         }
 
         #[cfg(not(target_family = "wasm"))]
         {
-            file_result = match mode {
+            let mut options = OpenOptions::new();
+            match mode {
                 FileModeFlags::READ_ONLY => {
-                    OpenOptions::new()
-                        .read(true)
-                        .write(false)
-                        .create(false)
-                        .open(&path)
-                        .await
+                    options.read(true).write(false).create(false);
                 }
                 _ => {
-                    OpenOptions::new()
-                        .create(true)
-                        .truncate(false)
-                        .read(true)
-                        .write(true)
-                        .open(&path)
-                        .await
+                    options.create(true).truncate(false).read(true).write(true);
                 }
-            };
+            }
+            #[cfg(target_os = "windows")]
+            {
+                // Match Java's default Windows file sharing: FILE_SHARE_READ only.
+                options.share_mode(0x0000_0001);
+            }
+            file_result = options.open(&resolved_path).await;
         }
 
         match file_result {
@@ -226,7 +242,7 @@ pub async fn open_0<T: Thread + 'static>(
                 let fd = raw_file_descriptor(&file)?;
                 let vm = thread.vm()?;
                 let file_handles = vm.file_handles();
-                let file_handle: FileHandle = (file, false).into();
+                let file_handle: FileHandle = (file, mode).into();
                 file_handles.insert(fd, file_handle).await?;
 
                 {
@@ -243,23 +259,11 @@ pub async fn open_0<T: Thread + 'static>(
                 }
                 Ok(None)
             }
-            Err(error) => {
-                let error = match error.kind() {
-                    ErrorKind::NotFound => FileNotFoundException(format!("File not found: {path}")),
-                    ErrorKind::PermissionDenied => {
-                        AccessControlException(format!("Access denied: {path}"))
-                    }
-                    ErrorKind::AlreadyExists => {
-                        IoException(format!("File exists and cannot be overwritten: {path}"))
-                    }
-                    ErrorKind::InvalidInput => {
-                        IllegalArgumentException(format!("Invalid file path: {path}"))
-                    }
-                    ErrorKind::InvalidFilename => IoException(format!("Invalid filename: {path}")),
-                    _ => IoException(format!("IO error opening file '{path}': {error}")),
-                };
-                Err(error.into())
-            }
+            Err(error) => Err(FileNotFoundException(format!(
+                "{path} ({})",
+                crate::java::io::filesystem::open_error_message(&error)
+            ))
+            .into()),
         }
     }
 }
@@ -324,6 +328,9 @@ pub async fn read_bytes_0<T: Thread + 'static>(
     };
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
 
     let file_handles = vm.file_handles();
     let mut file_handle = file_handles
@@ -391,6 +398,9 @@ pub async fn seek_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
     let mut file_handle = file_handles
         .get_mut(&fd)
         .await
@@ -427,7 +437,7 @@ pub async fn set_length_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let length = u64::try_from(parameters.pop_int()?)?;
+    let length = u64::try_from(parameters.pop_long()?)?;
     let random_access_file = parameters.pop()?;
     let file_descriptor = {
         let random_access_file = random_access_file.as_object_ref()?;
@@ -436,6 +446,9 @@ pub async fn set_length_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
     let file_handle = file_handles
         .get_mut(&fd)
         .await
@@ -466,8 +479,7 @@ pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let append = parameters.pop_bool()?;
-    let byte = i8::try_from(parameters.pop_int()?)?;
+    let byte = i8::from_ne_bytes([parameters.pop_int()?.to_le_bytes()[0]]);
     let random_access_file = parameters.pop()?;
     let bytes = Value::new_object(
         thread.vm()?.garbage_collector(),
@@ -478,7 +490,6 @@ pub async fn write_0<T: Thread + 'static>(
     parameters.push(bytes);
     parameters.push_int(0); // offset
     parameters.push_int(1); // length
-    parameters.push_bool(append);
     write_bytes(thread, parameters).await
 }
 
@@ -515,12 +526,22 @@ pub async fn write_bytes_0<T: Thread + 'static>(
     };
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
 
     let file_handles = vm.file_handles();
     let mut file_handle = file_handles
         .get_mut(&fd)
         .await
         .ok_or_else(|| IoException(format!("File handle not found: {fd}")))?;
+    if file_handle.mode == FileModeFlags::READ_ONLY {
+        #[cfg(target_os = "windows")]
+        let message = crate::java::io::filesystem::access_denied_message();
+        #[cfg(not(target_os = "windows"))]
+        let message = "Bad file descriptor";
+        return Err(IoException(message.to_string()).into());
+    }
     let mode = file_handle.mode;
     let file = &mut file_handle.file;
 
@@ -533,13 +554,22 @@ pub async fn write_bytes_0<T: Thread + 'static>(
     }
 
     #[cfg(target_os = "wasi")]
-    file.write_all(&bytes[offset..offset + length])
-        .map_err(|error| IoException(error.to_string()))?;
+    {
+        file.write_all(&bytes[offset..offset + length])
+            .map_err(|error| IoException(error.to_string()))?;
+        file.flush()
+            .map_err(|error| IoException(error.to_string()))?;
+    }
 
     #[cfg(not(target_family = "wasm"))]
-    file.write_all(&bytes[offset..offset + length])
-        .await
-        .map_err(|error| IoException(error.to_string()))?;
+    {
+        file.write_all(&bytes[offset..offset + length])
+            .await
+            .map_err(|error| IoException(error.to_string()))?;
+        file.flush()
+            .await
+            .map_err(|error| IoException(error.to_string()))?;
+    }
 
     match mode {
         FileModeFlags::READ_ONLY => {

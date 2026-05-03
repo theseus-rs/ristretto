@@ -46,11 +46,20 @@ pub async fn force_0<T: Thread + 'static>(
         return Ok(None);
     }
 
-    // The address may point into the middle of the region (sliced buffer); compute file offset
-    // and read from native memory accordingly.
-    let offset_in_region = u64::try_from(address - base)?;
+    // JDK passes a page-aligned address that may begin before our region base. Clamp the
+    // write range to the actual region extents.
+    let req_start = address;
+    let req_end = address.saturating_add(i64::try_from(length_usize)?);
+    let region_end = base.saturating_add(i64::try_from(region.length)?);
+    let clamped_start = req_start.max(base);
+    let clamped_end = req_end.min(region_end);
+    if clamped_end <= clamped_start {
+        return Ok(None);
+    }
+    let clamped_len = usize::try_from(clamped_end - clamped_start)?;
+    let offset_in_region = u64::try_from(clamped_start - base)?;
     let file_position = region.position + offset_in_region;
-    let bytes = vm.native_memory().read_bytes(address, length_usize);
+    let bytes = vm.native_memory().read_bytes(clamped_start, clamped_len);
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
     if let Err(e) = managed_files::write_at(vm.file_handles(), fd, &bytes, file_position).await {
         return Err(IoException(format!("force0: {e}")).into());
