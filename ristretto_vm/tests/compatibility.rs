@@ -106,7 +106,8 @@ fn run_compatibility_test(
     passed: &AtomicUsize,
     failures: &Mutex<Vec<Failure>>,
 ) {
-    let test_name = test_dir.to_string_lossy().to_string();
+    // Normalize path separators so test names use '/' on all platforms.
+    let test_name = test_dir.to_string_lossy().replace('\\', "/");
     let test_dir = tests_root_dir.join(test_dir);
 
     if !TEST_FILTER.is_match(&test_name) {
@@ -388,6 +389,10 @@ async fn run_test(
     // Create a garbage collector configured to use only one thread
     let gc_config = GcConfigurationBuilder::new().threads(1).build();
     let garbage_collector = GarbageCollector::with_config(gc_config);
+    let user_dir = {
+        let s = test_dir.to_string_lossy().to_string();
+        s.strip_prefix(r"\\?\").map_or(s.clone(), str::to_string)
+    };
     let mut configuration_builder = ConfigurationBuilder::new()
         .class_path(class_path)
         .java_version(java_version)
@@ -395,11 +400,11 @@ async fn run_test(
         .stdout(stdout.clone())
         .stderr(stderr.clone())
         .garbage_collector(garbage_collector)
-        .add_system_property("user.dir", test_dir.to_string_lossy());
+        .add_system_property("user.dir", user_dir);
 
     // Module tests need full JPMS resolution. The real JVM always initializes the
     // module system fully; our lightweight fast path skips it for classpath apps.
-    // Adding ALL-SYSTEM ensures full resolution is triggered for module tests.
+    // Adding ALL-DEFAULT ensures full resolution is triggered for module tests.
     if test_name.starts_with("module/") {
         configuration_builder = configuration_builder.add_module("ALL-DEFAULT");
     }

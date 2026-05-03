@@ -174,6 +174,7 @@ async fn create_populated_layer<T: Thread + 'static>(
 
     // Update primitive class modules to point to java.base
     update_primitive_class_modules(thread, &module_map).await;
+    update_loaded_class_modules(thread, &module_map).await;
 
     debug!("Boot layer created with {} modules", resolved_config.len());
 
@@ -758,6 +759,65 @@ async fn register_services_catalog_on_layer<T: Thread + 'static>(
 
     if let Err(e) = result {
         debug!("ServicesCatalog registration failed (non-fatal): {e}");
+    }
+}
+
+/// Updates the module field on every loaded boot-loader Class object whose package
+/// belongs to a now-defined named module. Classes loaded during early bootstrap
+/// (before `ModuleBootstrap.boot()` ran) had their module field assigned to the
+/// boot loader's unnamed module. After `defineModule0` populates the canonical
+/// `Module` instances, those Class objects must be re-pointed at the canonical
+/// `Module` so that JDK identity comparisons such as
+/// `callerModule == declaringModule` in
+/// `java.lang.reflect.AccessibleObject.checkCanSetAccessible` succeed for
+/// system-to-system reflection (e.g. `Class.getEnumConstantsShared` calling
+/// `Method.setAccessible(true)` on an enum's `values()` method).
+async fn update_loaded_class_modules<T: Thread + 'static>(
+    thread: &Arc<T>,
+    module_map: &HashMap<String, Value>,
+) {
+    let Ok(vm) = thread.vm() else { return };
+    let mut class_loader = vm.class_loader().read().await.clone();
+    while let Some(parent) = class_loader.parent().await {
+        class_loader = parent.clone();
+    }
+    let classes = class_loader.loaded_classes().await;
+    for class in classes {
+        if class.is_primitive() {
+            continue;
+        }
+        let Ok(Some(class_obj)) = class.object() else {
+            continue;
+        };
+        let Ok(obj_ref) = class_obj.as_object_ref() else {
+            continue;
+        };
+        let Ok(current_module) = obj_ref.value("module") else {
+            continue;
+        };
+        drop(obj_ref);
+        let package = ristretto_classloader::ClassLoader::package_from_class_name(class.name());
+        let Some(name) = vm
+            .module_system()
+            .resolved_configuration()
+            .find_module_for_package(package)
+        else {
+            continue;
+        };
+        let Some(canonical) = module_map.get(name) else {
+            continue;
+        };
+        let same = !current_module.is_null()
+            && match (&current_module, canonical) {
+                (Value::Object(Some(a)), Value::Object(Some(b))) => ristretto_gc::Gc::ptr_eq(a, b),
+                _ => false,
+            };
+        if same {
+            continue;
+        }
+        if let Ok(mut obj_mut) = class_obj.as_object_mut() {
+            let _ = obj_mut.set_value_unchecked("module", canonical.clone());
+        }
     }
 }
 

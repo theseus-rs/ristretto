@@ -267,7 +267,27 @@ async fn extract_archive(
     } else {
         let decoder = GzDecoder::new(archive);
         let mut tar = Archive::new(decoder);
-        tar.unpack(extract_dir.clone())?;
+        #[cfg(windows)]
+        {
+            // Iterate entries manually so symlinks (which require admin / Developer
+            // Mode privilege on Windows) can be skipped without aborting extraction.
+            for entry in tar.entries()? {
+                let mut entry = entry?;
+                let header_kind = entry.header().entry_type();
+                if header_kind.is_symlink() || header_kind.is_hard_link() {
+                    continue;
+                }
+                if let Err(error) = entry.unpack_in(&extract_dir)
+                    && error.raw_os_error() != Some(1314)
+                {
+                    return Err(error.into());
+                }
+            }
+        }
+        #[cfg(not(windows))]
+        {
+            tar.unpack(extract_dir.clone())?;
+        }
     }
 
     #[cfg(target_family = "wasm")]

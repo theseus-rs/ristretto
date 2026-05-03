@@ -38,8 +38,17 @@ pub(crate) fn file_descriptor_from_java_object<V: VM>(
     let fd = if vm.java_class_file_version() >= &JAVA_11 {
         file_descriptor.value("handle")?.as_i64()?
     } else {
-        let fd = file_descriptor.value("fd")?.as_i32()?;
-        i64::from(fd)
+        // On Windows JDK 8, `FileDescriptor` has both `fd` (int) and `handle` (long) fields
+        // initialized to -1. `FileOutputStream`/`FileInputStream` `open0` natives set `fd` for real
+        // files; the standard streams (`in`/`out`/`err`) instead set `handle` via the `set(I)J`
+        // intrinsic. Prefer `fd` when valid, otherwise fall back to `handle` so std streams resolve
+        // to 0/1/2 and route through `vm.stdin`/`stdout`/`stderr`.
+        let fd_value = file_descriptor.value("fd")?.as_i32()?;
+        if fd_value >= 0 {
+            i64::from(fd_value)
+        } else {
+            file_descriptor.value("handle")?.as_i64()?
+        }
     };
 
     Ok(fd)
@@ -232,25 +241,20 @@ pub async fn sync_0<T: Thread + 'static>(
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/io/FileDescriptor.set(I)J", Equal(JAVA_8))]
 #[async_method]
-#[expect(unsafe_code)]
 pub async fn set<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    use windows_sys::Win32::System::Console::{
-        GetStdHandle, STD_ERROR_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE,
-    };
-
+    // On JDK 8 Windows, `FileDescriptor.standardStream(int fd)` calls `set(fd)` and stores the
+    // returned value in the `handle` field. The real OS HANDLE returned by `GetStdHandle` is not
+    // useful to us because all I/O on these descriptors is intercepted by our intrinsics and
+    // routed through `vm.stdin`/`stdout`/`stderr`. Returning the canonical fd (0/1/2) lets
+    // `file_descriptor_from_java_object` resolve std streams correctly on JDK 8.
     let fd = parameters.pop_int()?;
-    let std_handle = match fd {
-        0 => STD_INPUT_HANDLE,
-        1 => STD_OUTPUT_HANDLE,
-        2 => STD_ERROR_HANDLE,
-        _ => return Ok(Some(Value::Long(-1))),
-    };
-    // SAFETY: `GetStdHandle` is safe to call with a valid standard handle identifier.
-    let handle = unsafe { GetStdHandle(std_handle) };
-    Ok(Some(Value::Long(handle as i64)))
+    match fd {
+        0..=2 => Ok(Some(Value::Long(i64::from(fd)))),
+        _ => Ok(Some(Value::Long(-1))),
+    }
 }
 
 #[cfg(test)]

@@ -6,6 +6,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Frame;
+use ristretto_types::JavaError::IllegalAccessException;
 use ristretto_types::ModuleAccess;
 use ristretto_types::Thread;
 use ristretto_types::VM;
@@ -121,11 +122,20 @@ pub async fn new_instance_0<T: Thread + 'static>(
 
                 // Allow system-to-system access, deny all other denied cases
                 if !(caller_is_system && target_is_system) {
-                    vm.module_system().require_reflection_access(
-                        caller_module.as_deref(),
-                        target_module.as_deref(),
-                        class.name(),
-                    )?;
+                    let class_name = class.name().replace('/', ".");
+                    let caller_display = if caller.is_empty() {
+                        "unnamed module".to_string()
+                    } else {
+                        format!("module {caller}")
+                    };
+                    let error_msg = format!(
+                        "class {caller_display} cannot access class {class_name} (in module {}) because module {} does not export {} to {}",
+                        target_module.as_deref().unwrap_or("unnamed module"),
+                        target_module.as_deref().unwrap_or("unnamed module"),
+                        ristretto_types::package_from_class_name(class.name()).replace('/', "."),
+                        caller_display,
+                    );
+                    return Err(IllegalAccessException(error_msg).into());
                 }
             }
         }
