@@ -109,17 +109,13 @@ fn apply_numeric_result(old: &Value, result: i64) -> Result<Value> {
 /// Read a field value from a target object `Value` at the given offset.
 fn read_field_by_offset(target: &Value, offset: usize) -> Result<Value> {
     let obj = target.as_object_ref()?;
-    let class = obj.class();
-    let field_name = class.field_name(offset)?;
-    Ok(obj.value(&field_name)?)
+    Ok(obj.value(offset)?)
 }
 
 /// Write a field value to a target object `Value` at the given offset.
 fn write_field_by_offset(target: &Value, offset: usize, value: Value) -> Result<()> {
     let mut object = target.as_object_mut()?;
-    let class = object.class().clone();
-    let field_name = class.field_name(offset)?;
-    Ok(object.set_value(&field_name, value)?)
+    Ok(object.set_value(offset, value)?)
 }
 
 /// Directly implements `VarHandle` access modes by inspecting the `VarHandle`'s fields
@@ -222,11 +218,9 @@ fn dispatch_field_instance(
                 .ok_or_else(|| InternalError("VarHandle.CAS: missing new value".into()))?;
             // Hold a single write lock for the entire read-check-write to ensure atomicity
             let mut object = target.as_object_mut()?;
-            let class = object.class().clone();
-            let field_name = class.field_name(offset)?;
-            let current = object.value(&field_name)?;
+            let current = object.value(offset)?;
             if values_equal(&current, expected) {
-                object.set_value(&field_name, new_value.clone())?;
+                object.set_value(offset, new_value.clone())?;
                 Ok(Some(Value::Int(1)))
             } else {
                 Ok(Some(Value::Int(0)))
@@ -245,11 +239,9 @@ fn dispatch_field_instance(
                 .get(2)
                 .ok_or_else(|| InternalError("VarHandle.CAE: missing new value".into()))?;
             let mut object = target.as_object_mut()?;
-            let class = object.class().clone();
-            let field_name = class.field_name(offset)?;
-            let current = object.value(&field_name)?;
+            let current = object.value(offset)?;
             if values_equal(&current, expected) {
-                object.set_value(&field_name, new_val.clone())?;
+                object.set_value(offset, new_val.clone())?;
             }
             Ok(Some(current))
         }
@@ -261,10 +253,8 @@ fn dispatch_field_instance(
                 .get(1)
                 .ok_or_else(|| InternalError("VarHandle.getAndSet: missing new value".into()))?;
             let mut object = target.as_object_mut()?;
-            let class = object.class().clone();
-            let field_name = class.field_name(offset)?;
-            let old = object.value(&field_name)?;
-            object.set_value(&field_name, new_value.clone())?;
+            let old = object.value(offset)?;
+            object.set_value(offset, new_value.clone())?;
             Ok(Some(old))
         }
         AccessMode::GetAndAdd | AccessMode::GetAndAddAcquire | AccessMode::GetAndAddRelease => {
@@ -275,13 +265,11 @@ fn dispatch_field_instance(
                 .get(1)
                 .ok_or_else(|| InternalError("VarHandle.getAndAdd: missing delta".into()))?;
             let mut object = target.as_object_mut()?;
-            let class = object.class().clone();
-            let field_name = class.field_name(offset)?;
-            let old = object.value(&field_name)?;
+            let old = object.value(offset)?;
             let old_i64 = value_to_i64(&old)?;
             let delta_i64 = value_to_i64(delta)?;
             let new_value = apply_numeric_result(&old, old_i64.wrapping_add(delta_i64))?;
-            object.set_value(&field_name, new_value)?;
+            object.set_value(offset, new_value)?;
             Ok(Some(old))
         }
         AccessMode::GetAndBitwiseOr
@@ -294,13 +282,11 @@ fn dispatch_field_instance(
                 .get(1)
                 .ok_or_else(|| InternalError("VarHandle.getAndBitwiseOr: missing mask".into()))?;
             let mut object = target.as_object_mut()?;
-            let class = object.class().clone();
-            let field_name = class.field_name(offset)?;
-            let old = object.value(&field_name)?;
+            let old = object.value(offset)?;
             let old_i64 = value_to_i64(&old)?;
             let mask_i64 = value_to_i64(mask)?;
             let new_value = apply_numeric_result(&old, old_i64 | mask_i64)?;
-            object.set_value(&field_name, new_value)?;
+            object.set_value(offset, new_value)?;
             Ok(Some(old))
         }
         AccessMode::GetAndBitwiseAnd
@@ -313,13 +299,11 @@ fn dispatch_field_instance(
                 .get(1)
                 .ok_or_else(|| InternalError("VarHandle.getAndBitwiseAnd: missing mask".into()))?;
             let mut object = target.as_object_mut()?;
-            let class = object.class().clone();
-            let field_name = class.field_name(offset)?;
-            let old = object.value(&field_name)?;
+            let old = object.value(offset)?;
             let old_i64 = value_to_i64(&old)?;
             let mask_i64 = value_to_i64(mask)?;
             let new_value = apply_numeric_result(&old, old_i64 & mask_i64)?;
-            object.set_value(&field_name, new_value)?;
+            object.set_value(offset, new_value)?;
             Ok(Some(old))
         }
         AccessMode::GetAndBitwiseXor
@@ -332,13 +316,11 @@ fn dispatch_field_instance(
                 .get(1)
                 .ok_or_else(|| InternalError("VarHandle.getAndBitwiseXor: missing mask".into()))?;
             let mut object = target.as_object_mut()?;
-            let class = object.class().clone();
-            let field_name = class.field_name(offset)?;
-            let old = object.value(&field_name)?;
+            let old = object.value(offset)?;
             let old_i64 = value_to_i64(&old)?;
             let mask_i64 = value_to_i64(mask)?;
             let new_value = apply_numeric_result(&old, old_i64 ^ mask_i64)?;
-            object.set_value(&field_name, new_value)?;
+            object.set_value(offset, new_value)?;
             Ok(Some(old))
         }
     }

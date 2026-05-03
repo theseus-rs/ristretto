@@ -1205,6 +1205,26 @@ impl Class {
         Ok(fields)
     }
 
+    /// Instance field offset by name.  This is primarily used by the Unsafe class that references
+    /// instance fields by offset.
+    ///
+    /// # Errors
+    ///
+    /// if the field is not found.
+    pub fn object_field_offset<S: AsRef<str>>(&self, name: S) -> Result<usize> {
+        let name = name.as_ref().to_string();
+        let fields = self.all_object_fields()?;
+        for (offset, field) in fields.iter().enumerate().rev() {
+            if field.name() == name {
+                return Ok(offset);
+            }
+        }
+        Err(FieldNotFound {
+            class_name: self.name().to_string(),
+            field_name: name,
+        })
+    }
+
     /// Get a list of field names in the class hierarchy.
     ///
     /// # Errors
@@ -1237,7 +1257,7 @@ impl Class {
     pub fn field_offset<S: AsRef<str>>(&self, name: S) -> Result<usize> {
         let name = name.as_ref().to_string();
         let field_names = self.field_names()?;
-        for (offset, field_name) in field_names.iter().enumerate() {
+        for (offset, field_name) in field_names.iter().enumerate().rev() {
             if field_name == &name {
                 return Ok(offset);
             }

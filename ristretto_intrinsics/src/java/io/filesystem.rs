@@ -22,6 +22,19 @@ use sysinfo::Disks;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::PermissionsExt;
 
+fn resolve_path<T: Thread + 'static>(thread: &Arc<T>, path: impl AsRef<Path>) -> Result<PathBuf> {
+    let path = path.as_ref();
+    if path.is_absolute() {
+        return Ok(path.to_path_buf());
+    }
+    let vm = thread.vm()?;
+    if let Some(user_dir) = vm.system_properties().get("user.dir") {
+        Ok(PathBuf::from(user_dir).join(path))
+    } else {
+        Ok(path.to_path_buf())
+    }
+}
+
 bitflags! {
     /// Boolean Attribute Flags.
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -86,7 +99,7 @@ pub async fn canonicalize<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let path = parameters.pop()?.as_string()?;
-    let path_buf = PathBuf::from(&path);
+    let path_buf = resolve_path(&thread, &path)?;
     let canonical_path = canonicalize_best_effort(&path_buf);
     let canonical = canonical_path.to_object(&thread).await?;
     Ok(Some(canonical))
@@ -98,21 +111,22 @@ pub async fn canonicalize_with_prefix<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let path = parameters.pop()?.as_string()?;
     let prefix = parameters.pop()?.as_string()?;
-    let joined = Path::new(&prefix).join(&path);
+    let prefix = resolve_path(&thread, &prefix)?;
+    let joined = prefix.join(&path);
     let canonical_path = canonicalize_best_effort(&joined);
     let canonical = canonical_path.to_object(&thread).await?;
     Ok(Some(canonical))
 }
 
 pub async fn check_access<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let access_mode = FileAccessMode::from_bits_truncate(parameters.pop_int()?);
     let file = parameters.pop()?;
     let file = file.as_object_ref()?;
     let path = file.value("path")?.as_string()?;
-    let path = Path::new(&path);
+    let path = resolve_path(&thread, &path)?;
 
     let Ok(metadata) = path.metadata() else {
         return Ok(Some(Value::from(false)));
@@ -121,7 +135,7 @@ pub async fn check_access<T: Thread + 'static>(
     #[cfg(target_family = "unix")]
     let (can_read, can_write, can_execute) = {
         let mode = metadata.permissions().mode();
-        (mode & 0o444 != 0, mode & 0o222 != 0, mode & 0o111 != 0)
+        (mode & 0o400 != 0, mode & 0o200 != 0, mode & 0o100 != 0)
     };
     #[cfg(not(target_family = "unix"))]
     let (can_read, can_write, can_execute) = {
@@ -137,7 +151,7 @@ pub async fn check_access<T: Thread + 'static>(
 }
 
 pub async fn create_directory<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop()?;
@@ -145,20 +159,21 @@ pub async fn create_directory<T: Thread + 'static>(
         let file = file.as_object_ref()?;
         file.value("path")?.as_string()?
     };
-    let path = PathBuf::from(&path);
+    let path = resolve_path(&thread, &path)?;
     let created = async_fs::create_dir(&path).await.is_ok();
     Ok(Some(Value::from(created)))
 }
 
 pub async fn create_file_exclusively<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let path = parameters.pop()?.as_string()?;
+    let resolved_path = resolve_path(&thread, &path)?;
     let created = async_fs::OpenOptions::new()
         .write(true)
         .create_new(true)
-        .open(&path)
+        .open(&resolved_path)
         .await
         .is_ok();
     Ok(Some(Value::from(created)))
@@ -173,7 +188,7 @@ pub async fn delete<T: Thread + 'static>(
         let file = file.as_object_ref()?;
         file.value("path")?.as_string()?
     };
-    let path = PathBuf::from(&path);
+    let path = resolve_path(&thread, &path)?;
     // Match Windows: a file with an active memory mapping cannot be deleted.
     let vm = thread.vm()?;
     if let Ok(regions) = vm
@@ -194,13 +209,13 @@ pub async fn delete<T: Thread + 'static>(
 }
 
 pub async fn get_boolean_attributes<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop()?;
     let file = file.as_object_ref()?;
     let path = file.value("path")?.as_string()?;
-    let path = PathBuf::from(path);
+    let path = resolve_path(&thread, path)?;
     let mut attributes = if path.exists() {
         BooleanAttributeFlags::EXISTS
     } else {
@@ -239,7 +254,7 @@ pub async fn get_drive_directory<T: Thread + 'static>(
 }
 
 pub async fn get_last_modified_time<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop()?;
@@ -247,7 +262,7 @@ pub async fn get_last_modified_time<T: Thread + 'static>(
         let file = file.as_object_ref()?;
         file.value("path")?.as_string()?
     };
-    let path = PathBuf::from(&path);
+    let path = resolve_path(&thread, &path)?;
     let last_modified = match async_fs::metadata(&path).await {
         Ok(metadata) => i64::try_from(
             metadata
@@ -262,7 +277,7 @@ pub async fn get_last_modified_time<T: Thread + 'static>(
 }
 
 pub async fn get_length<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop()?;
@@ -270,9 +285,11 @@ pub async fn get_length<T: Thread + 'static>(
         let file = file.as_object_ref()?;
         file.value("path")?.as_string()?
     };
-    let path = PathBuf::from(&path);
-    let metadata = async_fs::metadata(&path).await?;
-    let length = i64::try_from(metadata.len())?;
+    let path = resolve_path(&thread, &path)?;
+    let length = match async_fs::metadata(&path).await {
+        Ok(metadata) => i64::try_from(metadata.len())?,
+        Err(_) => 0,
+    };
     Ok(Some(Value::Long(length)))
 }
 
@@ -288,14 +305,14 @@ pub async fn get_name_max<T: Thread + 'static>(
 }
 
 pub async fn get_space<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let space_type = parameters.pop_int()?;
     let file = parameters.pop()?;
     let file = file.as_object_ref()?;
     let path = file.value("path")?.as_string()?;
-    let path = PathBuf::from(path);
+    let path = resolve_path(&thread, path)?;
 
     #[cfg(not(target_family = "wasm"))]
     let result = {
@@ -333,7 +350,7 @@ pub async fn list<T: Thread + 'static>(
         let file = file.as_object_ref()?;
         file.value("path")?.as_string()?
     };
-    let path = PathBuf::from(path);
+    let path = resolve_path(&thread, path)?;
 
     let mut entries: Vec<Value> = Vec::new();
     let Ok(names) = async_fs::read_dir_names(&path).await else {
@@ -367,7 +384,7 @@ pub async fn list_roots<T: Thread + 'static>(
 }
 
 pub async fn rename<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let destination_file = parameters.pop()?;
@@ -375,26 +392,26 @@ pub async fn rename<T: Thread + 'static>(
         let destination_file = destination_file.as_object_ref()?;
         destination_file.value("path")?.as_string()?
     };
-    let destination = PathBuf::from(destination_path);
+    let destination = resolve_path(&thread, destination_path)?;
     let source_file = parameters.pop()?;
     let source_path = {
         let source_file = source_file.as_object_ref()?;
         source_file.value("path")?.as_string()?
     };
-    let source = PathBuf::from(source_path);
+    let source = resolve_path(&thread, source_path)?;
     let success = async_fs::rename(&source, &destination).await.is_ok();
     Ok(Some(Value::from(success)))
 }
 
 pub async fn set_last_modified_time<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let time = parameters.pop_long()?;
     let file = parameters.pop()?;
     let file = file.as_object_ref()?;
     let path = file.value("path")?.as_string()?;
-    let path = PathBuf::from(path);
+    let path = resolve_path(&thread, path)?;
 
     let seconds = time.saturating_div(1000);
     let nanoseconds = u32::try_from(time % 1000)?.saturating_mul(1_000_000);
@@ -412,7 +429,7 @@ pub async fn set_last_modified_time<T: Thread + 'static>(
 }
 
 pub async fn set_permission<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let owner_only = parameters.pop_bool()?;
@@ -423,7 +440,7 @@ pub async fn set_permission<T: Thread + 'static>(
         let file = file.as_object_ref()?;
         file.value("path")?.as_string()?
     };
-    let path = PathBuf::from(path);
+    let path = resolve_path(&thread, path)?;
     let modified: bool;
 
     #[cfg(target_family = "unix")]
@@ -432,28 +449,25 @@ pub async fn set_permission<T: Thread + 'static>(
         let mut permissions = metadata.permissions();
         let mut mode = permissions.mode();
 
-        let (read_bit, write_bit, execute_bit) = if owner_only {
-            (0o400, 0o200, 0o100)
-        } else {
-            (0o444, 0o222, 0o111)
-        };
-
         match access {
-            0 => {
+            access if access == FileAccessMode::READ.bits() => {
+                let read_bit = if owner_only { 0o400 } else { 0o444 };
                 if enable {
                     mode |= read_bit;
                 } else {
                     mode &= !read_bit;
                 }
             }
-            1 => {
+            access if access == FileAccessMode::WRITE.bits() => {
+                let write_bit = if owner_only { 0o200 } else { 0o222 };
                 if enable {
                     mode |= write_bit;
                 } else {
                     mode &= !write_bit;
                 }
             }
-            2 => {
+            access if access == FileAccessMode::EXECUTE.bits() => {
+                let execute_bit = if owner_only { 0o100 } else { 0o111 };
                 if enable {
                     mode |= execute_bit;
                 } else {
@@ -473,11 +487,16 @@ pub async fn set_permission<T: Thread + 'static>(
         let metadata = async_fs::metadata(&path).await?;
         let mut permissions = metadata.permissions();
         modified = match access {
-            1 => {
+            access if access == FileAccessMode::WRITE.bits() => {
                 permissions.set_readonly(!enable);
                 async_fs::set_permissions(&path, permissions).await.is_ok()
             }
-            0 | 2 => true,
+            access
+                if access == FileAccessMode::READ.bits()
+                    || access == FileAccessMode::EXECUTE.bits() =>
+            {
+                true
+            }
             _ => false,
         };
     }
@@ -486,7 +505,7 @@ pub async fn set_permission<T: Thread + 'static>(
 }
 
 pub async fn set_read_only<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let file = parameters.pop()?;
@@ -494,7 +513,7 @@ pub async fn set_read_only<T: Thread + 'static>(
         let file = file.as_object_ref()?;
         file.value("path")?.as_string()?
     };
-    let path = PathBuf::from(path);
+    let path = resolve_path(&thread, path)?;
     let metadata = async_fs::metadata(&path).await?;
     let mut permissions = metadata.permissions();
     permissions.set_readonly(true);

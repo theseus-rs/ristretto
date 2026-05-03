@@ -97,7 +97,11 @@ pub(crate) async fn open(
     let file_handle = FileHandle {
         file,
         append,
-        mode: FileModeFlags::empty(),
+        mode: if access_mode == 0 {
+            FileModeFlags::READ_ONLY
+        } else {
+            FileModeFlags::READ_WRITE
+        },
     };
     file_handles
         .insert(fd, file_handle)
@@ -220,13 +224,16 @@ pub(crate) async fn close(file_handles: &HandleManager<i64, FileHandle>, fd: i64
     if let Some(mut handle) = file_handles.remove(&fd).await {
         #[cfg(not(target_family = "wasm"))]
         {
-            let _ = handle.file.flush().await;
-            let _ = handle.file.shutdown().await;
+            if handle.mode != FileModeFlags::READ_ONLY {
+                let _ = handle.file.flush().await;
+            }
         }
         #[cfg(target_os = "wasi")]
         {
             use std::io::Write;
-            let _ = handle.file.flush();
+            if handle.mode != FileModeFlags::READ_ONLY {
+                let _ = handle.file.flush();
+            }
         }
     }
 }

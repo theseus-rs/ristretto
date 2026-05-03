@@ -1,5 +1,6 @@
 import java.io.*;
 import java.nio.charset.Charset;
+import java.util.Set;
 
 /**
  * Tests for java.io.InputStreamReader and OutputStreamWriter classes
@@ -233,8 +234,6 @@ public class Test {
         // Test different buffer sizes
         int[] bufferSizes = {512, 1024, 4096};
         for (int bufferSize : bufferSizes) {
-            long startTime = System.currentTimeMillis();
-
             try (FileInputStream fis = new FileInputStream(bufferedFile);
                  InputStreamReader isr = new InputStreamReader(fis, "UTF-8");
                  BufferedReader br = new BufferedReader(isr, bufferSize)) {
@@ -244,8 +243,7 @@ public class Test {
                     chars++;
                 }
 
-                long time = System.currentTimeMillis() - startTime;
-                System.out.println("Buffer size " + bufferSize + ": read " + chars + " chars in " + time + "ms");
+                System.out.println("Buffer size " + bufferSize + ": read " + chars + " chars");
             }
         }
     }
@@ -333,15 +331,9 @@ public class Test {
         }
 
         // Test available charsets
-        System.out.println("Available charsets sample:");
-        int count = 0;
-        for (String charsetName : Charset.availableCharsets().keySet()) {
-            System.out.println("  " + charsetName);
-            if (++count >= 5) {
-                System.out.println("  ... and more");
-                break;
-            }
-        }
+        Set<String> charsets = Charset.availableCharsets().keySet();
+        System.out.println("Available charsets non-empty: " + !charsets.isEmpty());
+        System.out.println("UTF-8 available: " + charsets.contains("UTF-8"));
     }
 
     private static void testExceptionHandling() {

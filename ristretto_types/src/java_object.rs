@@ -2,8 +2,9 @@ use crate::Error::InternalError;
 use crate::Result;
 use crate::Thread;
 use crate::VM;
-use crate::module_access::ModuleAccess;
+use crate::module_access::{DefinedModule, ModuleAccess};
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25, JavaStr};
+use ristretto_classloader::module::{ModuleDescriptor, ModuleFinder, SystemModuleFinder};
 use ristretto_classloader::{Class, ClassLoader, Object, Reference, Value};
 use std::sync::Arc;
 
@@ -488,11 +489,167 @@ fn create_boot_unnamed_module<T: Thread + 'static>(
     thread: &T,
 ) -> crate::BoxFuture<'_, Result<Value>> {
     Box::pin(async move {
-        let module_class = thread.class("java/lang/Module").await?;
+        let module_class_name = JavaStr::try_from_str("java/lang/Module")?;
+        let module_class = thread.load_and_link_class(module_class_name).await?;
         let module_object = Object::new(module_class)?;
 
         let vm = thread.vm()?;
         Ok(Value::from_object(vm.garbage_collector(), module_object))
+    })
+}
+
+/// Create a minimal named module for a bootstrap class loaded while the VM is using the
+/// lightweight package-to-module map.
+fn create_named_boot_module<'a, T: Thread + 'static>(
+    thread: &'a T,
+    module_name: &'a str,
+    package: &'a str,
+) -> crate::BoxFuture<'a, Result<Value>> {
+    Box::pin(async move {
+        let vm = thread.vm()?;
+        if let Some(module) = vm
+            .module_system()
+            .get_module(module_name)
+            .and_then(|module| module.module_object)
+        {
+            return Ok(module);
+        }
+
+        let module_class_name = JavaStr::try_from_str("java/lang/Module")?;
+        let module_class = thread.load_and_link_class(module_class_name).await?;
+        let mut module_object = Object::new(module_class)?;
+        let name = module_name.to_object(thread).await?;
+        let descriptor = create_minimal_module_descriptor(thread, module_name, package).await?;
+        module_object.set_value_unchecked("name", name)?;
+        module_object.set_value_unchecked("loader", Value::Object(None))?;
+        module_object.set_value_unchecked("descriptor", descriptor)?;
+        let module = Value::from_object(vm.garbage_collector(), module_object);
+
+        let mut defined_module = DefinedModule::new(module_name.to_string(), false);
+        let packages = vm
+            .module_system()
+            .resolved_configuration()
+            .packages_for_module(module_name);
+        if packages.is_empty() {
+            defined_module.packages.insert(package.replace('/', "."));
+        } else {
+            for package in packages {
+                defined_module.packages.insert(package.replace('/', "."));
+            }
+        }
+        defined_module.module_object = Some(module.clone());
+        vm.module_system().define_module(defined_module);
+
+        Ok(module)
+    })
+}
+
+fn create_minimal_module_descriptor<'a, T: Thread + 'static>(
+    thread: &'a T,
+    module_name: &'a str,
+    package: &'a str,
+) -> crate::BoxFuture<'a, Result<Value>> {
+    Box::pin(async move {
+        let vm = thread.vm()?;
+        let system_descriptor = system_module_descriptor(thread, module_name).await;
+        let descriptor_class_name = JavaStr::try_from_str("java/lang/module/ModuleDescriptor")?;
+        let descriptor_class = thread.load_and_link_class(descriptor_class_name).await?;
+        let mut descriptor = Object::new(descriptor_class)?;
+        let name = module_name.to_object(thread).await?;
+        descriptor.set_value_unchecked("name", name)?;
+        let is_open = system_descriptor
+            .as_ref()
+            .is_some_and(ModuleDescriptor::is_open);
+        descriptor.set_value_unchecked("open", Value::from(is_open))?;
+        descriptor.set_value_unchecked("automatic", Value::Int(0))?;
+
+        let empty_set = thread
+            .try_invoke(
+                "java.util.Collections",
+                "emptySet()Ljava/util/Set;",
+                &[] as &[Value],
+            )
+            .await?;
+        descriptor.set_value_unchecked("modifiers", empty_set.clone())?;
+        descriptor.set_value_unchecked("requires", empty_set.clone())?;
+        descriptor.set_value_unchecked("exports", empty_set.clone())?;
+        descriptor.set_value_unchecked("opens", empty_set.clone())?;
+        let uses = system_descriptor
+            .as_ref()
+            .map_or_else(Vec::new, |descriptor| descriptor.uses.clone());
+        if uses.is_empty() {
+            descriptor.set_value_unchecked("uses", empty_set.clone())?;
+        } else {
+            let uses_len = i32::try_from(uses.len())?;
+            let uses_set = thread
+                .object("java/util/HashSet", "I", &[Value::Int(uses_len)])
+                .await?;
+            for service in uses {
+                let service = service.replace('/', ".");
+                let service = service.as_str().to_object(thread).await?;
+                thread
+                    .try_invoke(
+                        "java.util.HashSet",
+                        "add(Ljava/lang/Object;)Z",
+                        &[uses_set.clone(), service],
+                    )
+                    .await?;
+            }
+            descriptor.set_value_unchecked("uses", uses_set)?;
+        }
+        descriptor.set_value_unchecked("provides", empty_set)?;
+
+        let packages: Vec<String> = system_descriptor.map_or_else(
+            || {
+                vm.module_system()
+                    .resolved_configuration()
+                    .packages_for_module(module_name)
+                    .into_iter()
+                    .map(ToString::to_string)
+                    .collect()
+            },
+            |descriptor| descriptor.packages.into_iter().collect(),
+        );
+        let packages = if packages.is_empty() {
+            vec![package.to_string()]
+        } else {
+            packages
+        };
+        let packages_len = i32::try_from(packages.len())?;
+        let package_set = thread
+            .object("java/util/HashSet", "I", &[Value::Int(packages_len)])
+            .await?;
+        for package in packages {
+            let package = package.replace('/', ".");
+            let package = package.as_str().to_object(thread).await?;
+            thread
+                .try_invoke(
+                    "java.util.HashSet",
+                    "add(Ljava/lang/Object;)Z",
+                    &[package_set.clone(), package],
+                )
+                .await?;
+        }
+        descriptor.set_value_unchecked("packages", package_set)?;
+
+        Ok(Value::from_object(vm.garbage_collector(), descriptor))
+    })
+}
+
+fn system_module_descriptor<'a, T: Thread + 'static>(
+    thread: &'a T,
+    module_name: &'a str,
+) -> crate::BoxFuture<'a, Option<ModuleDescriptor>> {
+    Box::pin(async move {
+        let vm = thread.vm().ok()?;
+        let jimage_path = vm.java_home().join("lib").join("modules");
+        if !jimage_path.exists() {
+            return None;
+        }
+        let finder = SystemModuleFinder::new(&jimage_path).await.ok()?;
+        finder
+            .find(module_name)
+            .map(|reference| reference.descriptor().clone())
     })
 }
 
@@ -515,6 +672,14 @@ fn get_class_module<'a, T: Thread + 'static>(
 
             if let Some(module) = vm.module_system().get_module_for_package(package) {
                 return Ok(module);
+            }
+
+            if let Some(module_name) = vm
+                .module_system()
+                .resolved_configuration()
+                .find_module_for_package(package)
+            {
+                return create_named_boot_module(thread, module_name, package).await;
             }
 
             if let Some(module) = vm.module_system().boot_unnamed_module() {
@@ -556,7 +721,8 @@ fn create_unnamed_module<'a, T: Thread + 'static>(
     class_loader_object: &'a Value,
 ) -> crate::BoxFuture<'a, Result<Value>> {
     Box::pin(async move {
-        let module_class = thread.class("java/lang/Module").await?;
+        let module_class_name = JavaStr::try_from_str("java/lang/Module")?;
+        let module_class = thread.load_and_link_class(module_class_name).await?;
         let mut module_object = Object::new(module_class)?;
         module_object.set_value_unchecked("loader", class_loader_object.clone())?;
 

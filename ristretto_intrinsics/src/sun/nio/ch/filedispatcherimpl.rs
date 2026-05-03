@@ -1,6 +1,7 @@
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
+use crate::java::nio::mapped_regions::MappedRegions;
 #[cfg(target_os = "windows")]
-use crate::java::nio::mapped_regions::{MapMode, MappedRegion, MappedRegions};
+use crate::java::nio::mapped_regions::{MapMode, MappedRegion};
 use crate::sun::nio::fs::managed_files;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::JAVA_8;
@@ -50,6 +51,9 @@ async fn close_internal<T: Thread + 'static>(
     let fd_value = parameters.pop()?;
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
+    if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
+        regions.remove_fd(fd);
+    }
     managed_files::close(vm.file_handles(), fd).await;
     // NIO SocketChannel/ServerSocketChannel route their close through
     // FileDispatcherImpl, so also clean up any socket-related state to
@@ -100,6 +104,9 @@ pub async fn close_int_fd<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let fd = parameters.pop_int()?;
     let vm = thread.vm()?;
+    if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
+        regions.remove_fd(i64::from(fd));
+    }
     managed_files::close(vm.file_handles(), i64::from(fd)).await;
     #[cfg(not(target_family = "wasm"))]
     vm.socket_handles().remove(&fd).await;
@@ -153,13 +160,10 @@ pub async fn force_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
     let file_handles = vm.file_handles();
-    #[cfg(target_os = "windows")]
-    {
-        if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
-            for (address, region) in regions.writable_entries_for_fd(fd) {
-                let bytes = vm.native_memory().read_bytes(address, region.length);
-                let _ = managed_files::write_at(file_handles, fd, &bytes, region.position).await;
-            }
+    if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
+        for (address, region) in regions.writable_entries_for_fd(fd) {
+            let bytes = vm.native_memory().read_bytes(address, region.length);
+            let _ = managed_files::write_at(file_handles, fd, &bytes, region.position).await;
         }
     }
     if metadata_only {
@@ -189,6 +193,12 @@ pub async fn force_0_linux<T: Thread + 'static>(
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
     let file_handles = vm.file_handles();
+    if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
+        for (address, region) in regions.writable_entries_for_fd(fd) {
+            let bytes = vm.native_memory().read_bytes(address, region.length);
+            let _ = managed_files::write_at(file_handles, fd, &bytes, region.position).await;
+        }
+    }
     if metadata_only {
         managed_files::sync_data(file_handles, fd)
             .await
@@ -925,6 +935,7 @@ pub async fn map0<T: Thread + 'static>(
             position,
             length: len,
             mode,
+            file_key: None,
             path,
         },
     );

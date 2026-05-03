@@ -27,12 +27,28 @@ use std::fs::OpenOptions;
 use std::io::{ErrorKind, SeekFrom};
 #[cfg(target_os = "wasi")]
 use std::io::{Read, Seek, Write};
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
 use tokio::fs::OpenOptions;
 #[cfg(not(target_family = "wasm"))]
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use zerocopy::transmute_ref;
+
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+fn resolve_path<T: Thread + 'static>(thread: &Arc<T>, path: &str) -> Result<PathBuf> {
+    let path_buf = PathBuf::from(path);
+    if path_buf.is_absolute() {
+        return Ok(path_buf);
+    }
+    let vm = thread.vm()?;
+    if let Some(user_dir) = vm.system_properties().get("user.dir") {
+        Ok(PathBuf::from(user_dir).join(path_buf))
+    } else {
+        Ok(path_buf)
+    }
+}
 
 #[intrinsic_method("java/io/RandomAccessFile.close0()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
@@ -57,6 +73,9 @@ pub async fn get_file_pointer<T: Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
     let mut file_handle = file_handles
         .get_mut(&fd)
         .await
@@ -116,6 +135,9 @@ pub async fn length_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
     let file_handle = file_handles
         .get(&fd)
         .await
@@ -179,6 +201,7 @@ pub async fn open_0<T: Thread + 'static>(
 
     #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
     {
+        let resolved_path = resolve_path(&thread, &path)?;
         let file_result;
 
         #[cfg(target_os = "wasi")]
@@ -188,13 +211,13 @@ pub async fn open_0<T: Thread + 'static>(
                     .read(true)
                     .write(false)
                     .create(false)
-                    .open(&path),
+                    .open(&resolved_path),
                 _ => OpenOptions::new()
                     .create(true)
                     .truncate(false)
                     .read(true)
                     .write(true)
-                    .open(&path),
+                    .open(&resolved_path),
             };
         }
 
@@ -206,7 +229,7 @@ pub async fn open_0<T: Thread + 'static>(
                         .read(true)
                         .write(false)
                         .create(false)
-                        .open(&path)
+                        .open(&resolved_path)
                         .await
                 }
                 _ => {
@@ -215,7 +238,7 @@ pub async fn open_0<T: Thread + 'static>(
                         .truncate(false)
                         .read(true)
                         .write(true)
-                        .open(&path)
+                        .open(&resolved_path)
                         .await
                 }
             };
@@ -226,7 +249,7 @@ pub async fn open_0<T: Thread + 'static>(
                 let fd = raw_file_descriptor(&file)?;
                 let vm = thread.vm()?;
                 let file_handles = vm.file_handles();
-                let file_handle: FileHandle = (file, false).into();
+                let file_handle: FileHandle = (file, mode).into();
                 file_handles.insert(fd, file_handle).await?;
 
                 {
@@ -245,7 +268,9 @@ pub async fn open_0<T: Thread + 'static>(
             }
             Err(error) => {
                 let error = match error.kind() {
-                    ErrorKind::NotFound => FileNotFoundException(format!("File not found: {path}")),
+                    ErrorKind::NotFound => {
+                        FileNotFoundException(format!("{path} (No such file or directory)"))
+                    }
                     ErrorKind::PermissionDenied => {
                         AccessControlException(format!("Access denied: {path}"))
                     }
@@ -324,6 +349,9 @@ pub async fn read_bytes_0<T: Thread + 'static>(
     };
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
 
     let file_handles = vm.file_handles();
     let mut file_handle = file_handles
@@ -391,6 +419,9 @@ pub async fn seek_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
     let mut file_handle = file_handles
         .get_mut(&fd)
         .await
@@ -436,6 +467,9 @@ pub async fn set_length_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
     let file_handle = file_handles
         .get_mut(&fd)
         .await
@@ -466,8 +500,7 @@ pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let append = parameters.pop_bool()?;
-    let byte = i8::try_from(parameters.pop_int()?)?;
+    let byte = i8::from_ne_bytes([parameters.pop_int()?.to_le_bytes()[0]]);
     let random_access_file = parameters.pop()?;
     let bytes = Value::new_object(
         thread.vm()?.garbage_collector(),
@@ -478,7 +511,6 @@ pub async fn write_0<T: Thread + 'static>(
     parameters.push(bytes);
     parameters.push_int(0); // offset
     parameters.push_int(1); // length
-    parameters.push_bool(append);
     write_bytes(thread, parameters).await
 }
 
@@ -515,12 +547,18 @@ pub async fn write_bytes_0<T: Thread + 'static>(
     };
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    if fd < 0 {
+        return Err(IoException("Stream Closed".to_string()).into());
+    }
 
     let file_handles = vm.file_handles();
     let mut file_handle = file_handles
         .get_mut(&fd)
         .await
         .ok_or_else(|| IoException(format!("File handle not found: {fd}")))?;
+    if file_handle.mode == FileModeFlags::READ_ONLY {
+        return Err(IoException("Bad file descriptor".to_string()).into());
+    }
     let mode = file_handle.mode;
     let file = &mut file_handle.file;
 

@@ -55,6 +55,10 @@ pub struct MappedRegion {
     pub length: usize,
     /// Mode the region was mapped with.
     pub mode: MapMode,
+    /// Stable host file identity for this mapping, when the platform exposes one. Unix uses
+    /// `(st_dev, st_ino)`. This prevents fd-number reuse from attaching an old mapping to a new
+    /// file.
+    pub file_key: Option<(u64, u64)>,
     /// Canonicalized path of the underlying file, if known. Used (on Windows) to refuse
     /// `DeleteFile0` for files with active mappings.
     pub path: Option<String>,
@@ -91,6 +95,29 @@ impl MappedRegions {
     /// Removes and returns the region metadata for `address`, if any.
     pub fn remove(&self, address: i64) -> Option<MappedRegion> {
         self.regions.lock().remove(&address)
+    }
+
+    /// Removes all region metadata associated with `fd`.
+    ///
+    /// This is used when the VM closes its managed file descriptor. Ristretto tracks mappings by
+    /// fd number, while the host OS may immediately reuse that same number for an unrelated file.
+    /// Dropping the association on close prevents stale mapped bytes from being flushed into a new
+    /// file that happens to receive the recycled fd.
+    pub fn remove_fd(&self, fd: i64) {
+        let paths = {
+            let mut regions = self.regions.lock();
+            let addresses: Vec<i64> = regions
+                .iter()
+                .filter_map(|(address, region)| (region.fd == fd).then_some(*address))
+                .collect();
+            addresses
+                .into_iter()
+                .filter_map(|address| regions.remove(&address).and_then(|region| region.path))
+                .collect::<Vec<_>>()
+        };
+        for path in paths {
+            self.release_path(&path);
+        }
     }
 
     /// Returns the region whose mapping covers `[address, address+length)` if any. The address
@@ -186,6 +213,7 @@ mod tests {
                 position: 0,
                 length: 64,
                 mode: MapMode::ReadWrite,
+                file_key: None,
                 path: None,
             },
         );
@@ -207,6 +235,7 @@ mod tests {
                 position: 0,
                 length: 100,
                 mode: MapMode::ReadWrite,
+                file_key: None,
                 path: None,
             },
         );

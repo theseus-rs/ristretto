@@ -11,7 +11,29 @@ use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::io::SeekFrom;
+use std::os::unix::fs::MetadataExt;
 use std::sync::Arc;
+
+async fn file_key<V: VM>(vm: &V, fd: i64) -> Option<(u64, u64)> {
+    managed_files::metadata(vm.file_handles(), fd)
+        .await
+        .ok()
+        .map(|metadata| (metadata.dev(), metadata.ino()))
+}
+
+async fn flush_writable_mappings<V: VM>(vm: &V, fd: i64) {
+    let file_handles = vm.file_handles();
+    let current_file_key = file_key(vm, fd).await;
+    if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
+        for (address, region) in regions.writable_entries_for_fd(fd) {
+            if region.file_key.is_some() && region.file_key != current_file_key {
+                continue;
+            }
+            let bytes = vm.native_memory().read_bytes(address, region.length);
+            let _ = managed_files::write_at(file_handles, fd, &bytes, region.position).await;
+        }
+    }
+}
 
 #[intrinsic_method(
     "sun/nio/ch/UnixFileDispatcherImpl.allocationGranularity0()J",
@@ -62,6 +84,9 @@ pub async fn close_int_fd<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let fd = parameters.pop_int()?;
     let vm = thread.vm()?;
+    if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
+        regions.remove_fd(i64::from(fd));
+    }
     managed_files::close(vm.file_handles(), i64::from(fd)).await;
     #[cfg(not(target_family = "wasm"))]
     vm.socket_handles().remove(&fd).await;
@@ -82,6 +107,7 @@ pub async fn force_0<T: Thread + 'static>(
     let fd = i64::from(get_fd(&fd_value)?);
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
+    flush_writable_mappings(&*vm, fd).await;
     if metadata_only {
         managed_files::sync_data(file_handles, fd)
             .await
@@ -173,6 +199,7 @@ pub async fn map_0<T: Thread + 'static>(
         vm.native_memory().write_bytes(address, &buf);
     }
     let mode = MapMode::from_int(prot).unwrap_or(MapMode::ReadOnly);
+    let file_key = file_key(&*vm, fd).await;
     let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
     regions.insert(
         address,
@@ -181,6 +208,7 @@ pub async fn map_0<T: Thread + 'static>(
             position,
             length: len,
             mode,
+            file_key,
             path: None,
         },
     );
@@ -205,6 +233,7 @@ pub async fn pread_0<T: Thread + 'static>(
     let count = usize::try_from(count)?;
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
+    flush_writable_mappings(&*vm, fd).await;
 
     // Save current position
     let offset = u64::try_from(position)
@@ -274,6 +303,7 @@ pub async fn read_0<T: Thread + 'static>(
     let mut buf = vec![0u8; count];
 
     let vm = thread.vm()?;
+    flush_writable_mappings(&*vm, fd).await;
     match managed_files::read(vm.file_handles(), fd, &mut buf).await {
         Ok(n) => {
             if n > 0 {
@@ -313,6 +343,7 @@ pub async fn readv_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let native_memory = vm.native_memory();
     let file_handles = vm.file_handles();
+    flush_writable_mappings(&*vm, fd).await;
 
     let count = usize::try_from(count)?;
     let mut chunks = Vec::with_capacity(count);
