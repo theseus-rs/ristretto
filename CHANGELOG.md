@@ -7,6 +7,174 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_pom` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.31.0) - 2026-05-03
+
+### Added
+- implement sockets
+
+## `ristretto_cli` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/v0.30.0...v0.31.0) - 2026-05-03
+
+### Added
+- add jpms support
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- add array and object support to JIT
+- implement sun/misc/Version
+- implement sun/nio/fs
+- implement java/nio/MappedByteBuffer
+- implement sockets
+
+### Fixed
+- correct windows socket io
+- account for long/double slots and return values in invoke* stack_delta
+- correct module support on windows
+- correct macos locale detection
+- create lightweight class loading mode
+- throw java.lang.UnsatisfiedLinkError native method is not found
+- correct java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;
+- correct GC memory leak
+- correct windows file io
+- set declaringClassObject on java/lang/StackTraceElement
+- correct java/lang/Class.forName0(...) support for custom class loaders
+- correct primordial thread name
+
+### Other
+- update to rust 1.95.0
+- reduce memory utilization of Instruction
+- add ci tests for riscv64gc-unknown-linux-gnu
+- add intrinsic methods for all supported OS version combinations
+- update to java 25.0.3.9.1
+- enable clippy linting for wasm builds
+- remove gc benchmarks
+- update GC test to be deterministic
+- update dependencies
+- add ci tests for s390x-unknown-linux-gnu
+
+## `ristretto_vm` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.30.0...ristretto_vm-v0.31.0) - 2026-05-03
+
+### Added
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- add array and object support to JIT
+- add jpms support
+
+### Fixed
+- correct module support on windows
+- correct macos locale detection
+- throw java.lang.UnsatisfiedLinkError native method is not found
+- correct java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;
+- correct GC memory leak
+- create lightweight class loading mode
+- correct primordial thread name
+
+### Other
+- add ci tests for s390x-unknown-linux-gnu
+- add ci tests for riscv64gc-unknown-linux-gnu
+- update to rust 1.95.0
+- add intrinsic methods for all supported OS version combinations
+- reduce memory utilization of Instruction
+- enable clippy linting for wasm builds
+
+## `ristretto_intrinsics` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.30.0...ristretto_intrinsics-v0.31.0) - 2026-05-03
+
+### Added
+- implement sun/misc/Version
+- implement sun/nio/fs
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- implement java/nio/MappedByteBuffer
+- add jpms support
+
+### Fixed
+- correct module support on windows
+- correct windows socket io
+- correct windows file io
+- correct macos locale detection
+- correct java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;
+- correct GC memory leak
+- create lightweight class loading mode
+- set declaringClassObject on java/lang/StackTraceElement
+- correct java/lang/Class.forName0(...) support for custom class loaders
+
+### Other
+- update to rust 1.95.0
+- add intrinsic methods for all supported OS version combinations
+- update to java 25.0.3.9.1
+- enable clippy linting for wasm builds
+- update dependencies
+
+## `ristretto_types` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.30.0...ristretto_types-v0.31.0) - 2026-05-03
+
+### Added
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- add jpms support
+
+### Fixed
+- correct windows socket io
+- correct GC memory leak
+- create lightweight class loading mode
+
+## `ristretto_jit` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.30.0...ristretto_jit-v0.31.0) - 2026-05-03
+
+### Added
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- add array and object support to JIT
+
+### Other
+- reduce memory utilization of Instruction
+- enable clippy linting for wasm builds
+
+## `ristretto_macros` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.30.0...ristretto_macros-v0.31.0) - 2026-05-03
+
+### Other
+- add intrinsic methods for all supported OS version combinations
+
+## `ristretto_classloader` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.30.0...ristretto_classloader-v0.31.0) - 2026-05-03
+
+### Added
+- add jpms support
+
+### Fixed
+- correct module support on windows
+- correct macos locale detection
+- create lightweight class loading mode
+
+### Other
+- add ci tests for riscv64gc-unknown-linux-gnu
+- add intrinsic methods for all supported OS version combinations
+- update to java 25.0.3.9.1
+- enable clippy linting for wasm builds
+
+## `ristretto_jimage` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.30.0...ristretto_jimage-v0.31.0) - 2026-05-03
+
+### Other
+- update to rust 1.95.0
+
+## `ristretto_gc` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.30.0...ristretto_gc-v0.31.0) - 2026-05-03
+
+### Added
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- add array and object support to JIT
+
+### Fixed
+- throw java.lang.UnsatisfiedLinkError native method is not found
+- correct java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;
+- correct GC memory leak
+
+### Other
+- remove gc benchmarks
+- update to rust 1.95.0
+- update GC test to be deterministic
+
+## `ristretto_classfile` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.30.0...ristretto_classfile-v0.31.0) - 2026-05-03
+
+### Added
+- add jpms support
+
+### Fixed
+- account for long/double slots and return values in invoke* stack_delta
+
+### Other
+- update to rust 1.95.0
+- reduce memory utilization of Instruction
+
 ## `ristretto_pom` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.30.0) - 2026-03-22
 
 ### Added
@@ -344,7 +512,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 - update java versions
-- Merge pull request #630 from theseus-rs/optimize-async-instructions
 - correct clippy lints
 - Implement invokedynamic support and MethodHandleNatives updates for JDK 17+ compatibility
 - update rustdoc references section
