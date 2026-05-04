@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" id="oranda" class="dark">
+  <head>
+    <title>ristretto</title>
+    
+      <meta property="og:url" content="https://theseus-rs.github.io/ristretto/ristretto_cli/" />
+    
+    
+      <link rel="icon" href="/ristretto/ristretto_cli/favicon.ico" />
+    
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+      <meta name="description" content="A Java Virtual Machine (JVM) CLI." />
+      <meta property="og:description" content="A Java Virtual Machine (JVM) CLI." />
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="ristretto" />
+    
+    
+    
+    <meta http-equiv="Permissions-Policy" content="interest-cohort=()" />
+    <link rel="stylesheet" href="/ristretto/ristretto_cli/oranda-v0.6.1.css" />
+    
+    
+  </head>
+  <body>
+    <div class="container">
+      <div class="page-body">
+        
+          <div class="repo_banner">
+            <a href="https://github.com/theseus-rs/ristretto">
+              <div class="github-icon" aria-hidden="true"></div>
+              Check out our GitHub!
+            </a>
+          </div>
+        
+
+        <main>
+          <header>
+            
+            <h1 class="title">ristretto</h1>
+            
+  <nav class="nav">
+    <ul>
+      <li><a href="/ristretto/ristretto_cli/">Home</a></li>
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/artifacts/">Install</a></li>
+      
+
+      
+
+      
+
+      
+        <li><a href="/ristretto/ristretto_cli/changelog/">Changelog</a></li>
+      
+    </ul>
+  </nav>
+
+          </header>
+
+          
+  <div>
+    <h1>v0.30.0</h1>
+    <div class="releases-body">
+      
+      
+      <section class="release ">
+  
+  <div class="release-info">
+    <span class="flex items-center gap-2">
+      <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'>
+    <path stroke-linecap='round' stroke-linejoin='round' d='M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z' />
+    <path stroke-linecap='round' stroke-linejoin='round' d='M6 6h.008v.008H6V6z' /></svg>
+      v0.30.0
+    </span>
+    <span class="flex items-center gap-2">
+      
+        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'><path stroke-linecap='round' stroke-linejoin='round' d='M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' /></svg>
+        Mar 23 2026 at 03:23 UTC
+      
+    </span>
+  </div>
+  <div class="release-body">
+    <h3>Added</h3>
+<ul>
+<li>implement sockets</li>
+<li>implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;</li>
+<li>implement jdk/internal/jimage/NativeImageBuffer.getNativeMap(Ljava/lang/String;)Ljava/nio/ByteBuffer;</li>
+<li>implement java/util/jar/JarFile</li>
+<li>implement java/util/zip/ZipFile</li>
+<li>implement java/lang/ProcessBuilder</li>
+<li>implement java/lang/Compiler</li>
+<li>implement jdk/internal/perf/Perf</li>
+<li>implement sun/nio/fs/WindowsNativeDispatcher</li>
+<li>implement java/lang/invoke/VarHandle</li>
+<li>implement threading</li>
+<li>implement java/lang/Package</li>
+<li>implement java/lang/StringCoding.err(Ljava/lang/String;)V</li>
+<li>implement java/util/logging/FileHandler.isSetUID()Z</li>
+<li>implement jdk/internal/misc/VM.getNanoTimeAdjustment(J)J</li>
+<li>implement java/util/prefs/FileSystemPreferences</li>
+<li>implement jdk/net/WindowsSocketOptions</li>
+<li>implement sun/misc/URLClassPath</li>
+<li>implement java/lang/UNIXProcess</li>
+<li>implement java/lang/StackStreamFactory</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>add areturn class file verification</li>
+<li>correct manifest to handle line continuations</li>
+<li>add system property jdk.module.illegal.native.access=allow</li>
+<li>correct java/lang/reflect/Array boxing, widening and error handling</li>
+<li>correct java/lang/Class.forName0 to support custom class loaders</li>
+<li>unify file java.io and java.nio file handles</li>
+<li>update nio to use async file io</li>
+<li>improve interface method resolution and MethodHandle dispatch</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>[<strong>breaking</strong>] correct java.lang.String to comply with the JVM specification</li>
+<li>[<strong>breaking</strong>] optimize class file reading</li>
+<li>update intrinsic method java versions</li>
+<li>update unimplemented intrinsic functions to return java.lang.UnsatisfiedLinkError</li>
+<li>update Cargo.toml dependencies</li>
+<li>update intrinsic functions to support configuration macros</li>
+<li>optimize native memory access</li>
+<li>update to rust 1.94.0</li>
+<li>update cranelift=0.130.0</li>
+<li>enable all release compiler optimizations</li>
+<li>update macos builds to use macos 26</li>
+<li>update dist=0.31.0</li>
+<li>update test profile</li>
+</ul>
+
+  </div>
+</section>
+    </div>
+  </div>
+
+        </main>
+      </div>
+
+      <footer>
+        
+          <a href="https://github.com/theseus-rs/ristretto"><div class="github-icon" aria-hidden="true"></div></a>
+        
+        <span>
+          ristretto, Apache-2.0 OR MIT
+        </span>
+      </footer>
+    </div>
+
+    
+    
+
+    
+  </body>
+</html>
