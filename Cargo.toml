@@ -37,7 +37,7 @@ keywords = ["java", "jvm"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/theseus-rs/ristretto"
 rust-version = "1.95.0"
-version = "0.31.0"
+version = "0.31.1"
 
 [workspace.lints.rust]
 dead_code = "allow"
@@ -101,7 +101,7 @@ sys-locale = "0.3.2"
 tar = "0.4.45"
 tempfile = "3.27.0"
 test-log = "0.2.20"
-ristretto_test_util = { path = "ristretto_test_util", version = "0.31.0" }
+ristretto_test_util = { path = "ristretto_test_util", version = "0.31.1" }
 thiserror = "2.0.18"
 thread-priority = "3.0.0"
 tokio = { version = "1.52.1", default-features = false, features = ["macros", "rt", "sync", "time"] }

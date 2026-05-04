@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_pom` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.31.1) - 2026-05-04
+
+### Added
+- implement sockets
+
+### Other
+- initial wasm32-wasip2 tests
+
+## `ristretto_cli` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/v0.31.0...v0.31.1) - 2026-05-04
+
+### Added
+- implement sockets
+
+### Other
+- initial wasm32-wasip2 tests
+
 ## `ristretto_pom` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.31.0) - 2026-05-03
 
 ### Added
