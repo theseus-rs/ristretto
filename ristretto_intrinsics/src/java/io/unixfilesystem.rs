@@ -315,7 +315,7 @@ mod tests {
     use ristretto_types::JavaError::RuntimeException;
     use ristretto_types::JavaObject;
     use std::path::Path;
-    use tempfile::NamedTempFile;
+    use tempfile::{NamedTempFile, tempdir};
 
     async fn create_file<T: Thread + 'static>(
         thread: &T,
@@ -536,6 +536,28 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_get_length_missing_file() -> Result<()> {
+        let (_vm, thread) = crate::test::java17_thread().await?;
+        let temp_dir = tempdir()?;
+        let path_name = temp_dir
+            .path()
+            .join("get_length_missing_file")
+            .to_string_lossy()
+            .to_string();
+        let path_name: Value = path_name.to_object(&thread).await?;
+        let file_object = thread
+            .object("java.io.File", "Ljava/lang/String;", &[path_name])
+            .await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push(file_object);
+        let value = get_length(thread, parameters).await?.expect("length");
+        let length = value.as_i64()?;
+        assert_eq!(0, length);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_get_length_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let (_file, file_object) = create_file(&thread, "get_length_0").await?;
@@ -697,9 +719,9 @@ mod tests {
         let (_file, file_object) = create_file(&thread, "set_permission").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
-        parameters.push_bool(false); // owner_only
+        parameters.push_int(2); // access (write)
         parameters.push_bool(true); // enable
-        parameters.push_int(1); // access (write)
+        parameters.push_bool(false); // owner_only
         let value = set_permission(thread, parameters).await?.expect("success");
         let success = value.as_bool()?;
         assert!(success);
@@ -712,9 +734,9 @@ mod tests {
         let (_file, file_object) = create_file(&thread, "set_permission_0").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
-        parameters.push_bool(false); // owner_only
+        parameters.push_int(2); // access (write)
         parameters.push_bool(true); // enable
-        parameters.push_int(1); // access (write)
+        parameters.push_bool(false); // owner_only
         let value = set_permission_0(thread, parameters)
             .await?
             .expect("success");

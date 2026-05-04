@@ -978,7 +978,7 @@ pub async fn object_field_offset<T: Thread + 'static>(
         (class_object, field_name)
     };
     let class = get_class(&thread, &class_object).await?;
-    let offset = class.field_offset(&field_name)?;
+    let offset = class.object_field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
     Ok(Some(Value::Long(offset)))
 }
@@ -1635,7 +1635,11 @@ async fn resolve_field<T: Thread + 'static>(
     let modifiers = i32::from(field_access_flags.bits());
     let flags = flags | modifiers;
     {
-        let field_offset = class.field_offset(&field_name)?;
+        let field_offset = if field_access_flags.contains(FieldAccessFlags::STATIC) {
+            class.field_offset(&field_name)?
+        } else {
+            class.object_field_offset(&field_name)?
+        };
         let vmindex = (i64::try_from(field_offset)?).to_object(thread).await?;
         let mut member_self = member_self.as_object_mut()?;
         member_self.set_value("flags", Value::from(flags))?;
@@ -2253,7 +2257,7 @@ mod tests {
             Reference::Object(member_name),
         ));
         let result = object_field_offset(thread, parameters).await?;
-        assert_eq!(Some(Value::Long(5)), result);
+        assert_eq!(Some(Value::Long(0)), result);
         Ok(())
     }
 

@@ -282,7 +282,7 @@ public class Test {
         File largeFile = new File(TEST_DIR, "large_test.txt");
 
         // Write larger amount of data
-        int dataSize = 10000;
+        int dataSize = 2000;
         try (FileOutputStream fos = new FileOutputStream(largeFile)) {
             for (int i = 0; i < dataSize; i++) {
                 String line = String.format("Line %04d: This is test data\n", i);

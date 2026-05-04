@@ -104,6 +104,34 @@ impl Image {
         Ok(class_file)
     }
 
+    /// Read a resource from the image.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    #[expect(clippy::unused_async)]
+    pub async fn read_resource<S: AsRef<str>>(
+        &self,
+        module: Option<&str>,
+        name: S,
+    ) -> Result<Option<Vec<u8>>> {
+        let name = name.as_ref().trim_start_matches('/');
+        let Some(module) = module else {
+            return Ok(None);
+        };
+
+        let mut full_name = String::with_capacity(module.len() + name.len() + 2);
+        full_name.push('/');
+        full_name.push_str(module);
+        full_name.push('/');
+        full_name.push_str(name);
+
+        let Ok(resource) = self.image.get_resource(&full_name) else {
+            return Ok(None);
+        };
+        Ok(Some(resource.data().to_vec()))
+    }
+
     /// Get the class names in the image.
     ///
     /// # Errors

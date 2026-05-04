@@ -207,23 +207,75 @@ pub async fn version_class_loader_for_os(
 
     let base_path = home_dir.join(".ristretto").join(format!("{os}-{arch}"));
     let mut installation_dir = base_path.join(&version);
-    if !installation_dir.exists() {
+    if !is_complete_installation(&version, os, &installation_dir)? {
+        remove_incomplete_installation(&installation_dir).await?;
         let (extracted_version, file_name, archive) =
             util::get_runtime_archive_for(&version, os, arch).await?;
         installation_dir = extract_archive(&version, &file_name, &archive, &base_path).await?;
         version = extracted_version;
     }
 
-    let installation_dir = if os == "macos" {
-        installation_dir.join("Contents").join("Home")
-    } else {
-        installation_dir
-    };
-
+    let installation_dir = java_home_for_os(os, installation_dir);
     let class_path = get_class_path(&version, &installation_dir)?;
     let class_loader = ClassLoader::new("bootstrap", class_path);
     register_primitives(&class_loader).await?;
     Ok((installation_dir, version, class_loader))
+}
+
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+fn java_home_for_os(os: &str, installation_dir: PathBuf) -> PathBuf {
+    if os == "macos" {
+        installation_dir.join("Contents").join("Home")
+    } else {
+        installation_dir
+    }
+}
+
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+fn is_complete_installation(version: &str, os: &str, installation_dir: &Path) -> Result<bool> {
+    if !installation_dir.exists() {
+        return Ok(false);
+    }
+
+    let java_home = java_home_for_os(os, installation_dir.to_path_buf());
+    if util::parse_major_version(version) <= 8 {
+        return Ok(java_home.join("jre").join("lib").join("rt.jar").is_file());
+    }
+
+    if java_home.join("lib").join("modules").is_file() {
+        return Ok(true);
+    }
+
+    let jmods_path = java_home.join("jmods");
+    if !jmods_path.is_dir() {
+        return Ok(false);
+    }
+
+    for entry in std::fs::read_dir(jmods_path)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path
+            .extension()
+            .is_some_and(|extension| extension == "jmod")
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+#[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+#[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+async fn remove_incomplete_installation(installation_dir: &Path) -> Result<()> {
+    if !installation_dir.exists() {
+        return Ok(());
+    }
+
+    #[cfg(target_family = "wasm")]
+    std::fs::remove_dir_all(installation_dir)?;
+    #[cfg(not(target_family = "wasm"))]
+    tokio::fs::remove_dir_all(installation_dir).await?;
+    Ok(())
 }
 
 /// If `RISTRETTO_JDK_<MAJOR>_HOME`, `RISTRETTO_JDKS_DIR`, or `RISTRETTO_JDK_HOME` is set, use it

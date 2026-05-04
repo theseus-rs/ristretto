@@ -25,12 +25,28 @@ use std::fs::OpenOptions;
 use std::io::{ErrorKind, SeekFrom};
 #[cfg(target_os = "wasi")]
 use std::io::{Read, Seek};
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
 use tokio::fs::OpenOptions;
 #[cfg(not(target_family = "wasm"))]
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use zerocopy::transmute_ref;
+
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+fn resolve_path<T: Thread + 'static>(thread: &Arc<T>, path: &str) -> Result<PathBuf> {
+    let path_buf = PathBuf::from(path);
+    if path_buf.is_absolute() {
+        return Ok(path_buf);
+    }
+    let vm = thread.vm()?;
+    if let Some(user_dir) = vm.system_properties().get("user.dir") {
+        Ok(PathBuf::from(user_dir).join(path_buf))
+    } else {
+        Ok(path_buf)
+    }
+}
 
 #[intrinsic_method("java/io/FileInputStream.available0()I", Any)]
 #[async_method]
@@ -123,10 +139,17 @@ pub async fn is_regular_file_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file_input_stream = parameters.pop()?;
-    let file_descriptor = {
-        let file_input_stream = file_input_stream.as_object_ref()?;
-        file_input_stream.value("fd")?
+    let file_descriptor_or_stream = parameters.pop()?;
+    let file_descriptor = match file_descriptor_or_stream {
+        value @ Value::Object(_) => {
+            let object = value.as_object_ref()?;
+            if object.class().name() == "java/io/FileDescriptor" {
+                value.clone()
+            } else {
+                object.value("fd")?
+            }
+        }
+        value => value,
     };
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
@@ -200,6 +223,7 @@ pub async fn open_0<T: Thread + 'static>(
     #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
     {
         let file_result;
+        let resolved_path = resolve_path(&thread, &path)?;
 
         #[cfg(target_os = "wasi")]
         {
@@ -207,7 +231,7 @@ pub async fn open_0<T: Thread + 'static>(
                 .create(false)
                 .read(true)
                 .write(false)
-                .open(&path);
+                .open(&resolved_path);
         }
 
         #[cfg(not(target_family = "wasm"))]
@@ -216,7 +240,7 @@ pub async fn open_0<T: Thread + 'static>(
                 .create(false)
                 .read(true)
                 .write(false)
-                .open(&path)
+                .open(&resolved_path)
                 .await;
         }
 
@@ -237,7 +261,9 @@ pub async fn open_0<T: Thread + 'static>(
             }
             Err(error) => {
                 let error = match error.kind() {
-                    ErrorKind::NotFound => FileNotFoundException(format!("File not found: {path}")),
+                    ErrorKind::NotFound => {
+                        FileNotFoundException(format!("{path} (No such file or directory)"))
+                    }
                     ErrorKind::PermissionDenied => {
                         AccessControlException(format!("Access denied: {path}"))
                     }
@@ -393,14 +419,29 @@ pub async fn skip_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let skip_bytes = parameters.pop_long()?;
-    let file_input_stream = parameters.pop()?;
-    let file_descriptor = {
-        let file_input_stream = file_input_stream.as_object_ref()?;
-        file_input_stream.value("fd")?
-    };
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
-    let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    let stream_or_descriptor = parameters.pop()?;
+    let fd = match stream_or_descriptor {
+        Value::Int(fd) => i64::from(fd),
+        Value::Long(fd) => fd,
+        value @ Value::Object(_) => {
+            let file_descriptor_or_fd = {
+                let object = value.as_object_ref()?;
+                object.value("fd").unwrap_or_else(|_| value.clone())
+            };
+            match file_descriptor_or_fd {
+                Value::Int(fd) => i64::from(fd),
+                Value::Long(fd) => fd,
+                file_descriptor => file_descriptor_from_java_object(&vm, &file_descriptor)?,
+            }
+        }
+        value => {
+            return Err(
+                IoException(format!("Invalid FileInputStream.skip0 receiver: {value}")).into(),
+            );
+        }
+    };
     let mut file_handle = file_handles
         .get_mut(&fd)
         .await

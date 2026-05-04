@@ -133,8 +133,10 @@ pub async fn close_0<T: Thread + 'static>(
 
     #[cfg(not(target_family = "wasm"))]
     {
-        let mut file_handle: File = handle.try_into()?;
-        file_handle.shutdown().await?;
+        if handle.mode != ristretto_types::handles::FileModeFlags::READ_ONLY {
+            let mut file_handle: File = handle.try_into()?;
+            file_handle.flush().await?;
+        }
     }
 
     Ok(None)

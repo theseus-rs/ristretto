@@ -75,12 +75,12 @@ public class Test {
         System.out.println("canExecute: " + testFile.canExecute());
 
         System.out.println("isHidden: " + testFile.isHidden());
-        System.out.println("lastModified: " + testFile.lastModified());
+        System.out.println("lastModified positive: " + (testFile.lastModified() > 0));
 
         // Test setters
-        long newTime = System.currentTimeMillis() - 10000;
+        long newTime = 1234567890000L;
         System.out.println("setLastModified: " + testFile.setLastModified(newTime));
-        System.out.println("lastModified after set: " + testFile.lastModified());
+        System.out.println("lastModified after set matches: " + (testFile.lastModified() == newTime));
 
         System.out.println("setReadOnly: " + testFile.setReadOnly());
         System.out.println("canWrite after setReadOnly: " + testFile.canWrite());

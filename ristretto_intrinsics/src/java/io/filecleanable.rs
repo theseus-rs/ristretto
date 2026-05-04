@@ -48,14 +48,18 @@ pub async fn cleanup_close_0<T: Thread + 'static>(
 
         #[cfg(target_os = "wasi")]
         {
-            let file_handle: std::fs::File = handle.try_into()?;
-            file_handle.sync_all()?;
+            if handle.mode != ristretto_types::handles::FileModeFlags::READ_ONLY {
+                let file_handle: std::fs::File = handle.try_into()?;
+                file_handle.sync_all()?;
+            }
         }
 
         #[cfg(not(target_family = "wasm"))]
         {
-            let mut file_handle: tokio::fs::File = handle.try_into()?;
-            file_handle.shutdown().await?;
+            if handle.mode != ristretto_types::handles::FileModeFlags::READ_ONLY {
+                let mut file_handle: tokio::fs::File = handle.try_into()?;
+                file_handle.flush().await?;
+            }
         }
     }
 

@@ -926,7 +926,7 @@ pub async fn get_file_information_by_handle0<T: Thread + 'static>(
 
 /// Returns `(volume_serial_number, number_of_links, file_index)` for the given file handle.
 #[expect(unsafe_code)]
-async fn file_identity(
+pub(crate) async fn file_identity(
     file_handles: &ristretto_types::handles::HandleManager<
         i64,
         ristretto_types::handles::FileHandle,
