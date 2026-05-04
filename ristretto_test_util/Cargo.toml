@@ -6,7 +6,6 @@ edition.workspace = true
 keywords = ["java", "jvm", "test"]
 license.workspace = true
 name = "ristretto_test_util"
-publish = false
 repository.workspace = true
 rust-version.workspace = true
 version.workspace = true
