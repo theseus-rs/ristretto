@@ -26,11 +26,11 @@ flate2 = { workspace = true }
 getrandom = { workspace = true }
 jiff = { workspace = true }
 parking_lot = { workspace = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.30.0" }
-ristretto_classloader = { path = "../ristretto_classloader", version = "0.30.0" }
-ristretto_gc = { path = "../ristretto_gc", version = "0.30.0" }
-ristretto_macros = { path = "../ristretto_macros", version = "0.30.0" }
-ristretto_types = { path = "../ristretto_types", version = "0.30.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.31.0" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.31.0" }
+ristretto_gc = { path = "../ristretto_gc", version = "0.31.0" }
+ristretto_macros = { path = "../ristretto_macros", version = "0.31.0" }
+ristretto_types = { path = "../ristretto_types", version = "0.31.0" }
 sys-locale = { workspace = true }
 tracing = { workspace = true }
 zerocopy = { workspace = true }
@@ -62,8 +62,8 @@ tokio = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 
 [dev-dependencies]
-ristretto_test_util = { workspace = true }
-ristretto_vm = { path = "../ristretto_vm", version = "0.30.0" }
+ristretto_test_util = { path = "../ristretto_test_util", version = "0.31.0" }
+ristretto_vm = { path = "../ristretto_vm", version = "0.31.0" }
 tempfile = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
