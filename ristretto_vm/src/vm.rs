@@ -539,7 +539,9 @@ impl VM {
                 .await?;
             startup_trace!("[vm] init phase 3");
 
-            if !self.module_system.resolved_configuration().is_empty() {
+            if !self.module_system.resolved_configuration().is_empty()
+                || self.module_system.is_lightweight_mode()
+            {
                 self.register_boot_layer_with_loaders().await;
                 startup_trace!("[vm] boot layer registered with loaders");
             }

@@ -3,6 +3,8 @@ use std::sync::atomic::{AtomicI64, Ordering};
 
 use ristretto_gc::sync::RwLock;
 
+const PAGE_ALIGNMENT: i64 = 4096;
+
 /// Per-VM native memory manager.
 #[derive(Debug)]
 pub struct NativeMemory {
@@ -29,9 +31,10 @@ impl NativeMemory {
     /// Allocates a block of memory and returns the base address.
     pub fn allocate(&self, size: usize) -> i64 {
         let address = self.next_address.fetch_add(
-            i64::try_from(size + 4096).unwrap_or(4096),
+            i64::try_from(size).unwrap_or(0) + PAGE_ALIGNMENT,
             Ordering::Relaxed,
         );
+        let address = (address + PAGE_ALIGNMENT - 1) & !(PAGE_ALIGNMENT - 1);
         self.memory
             .write()
             .insert(address, RwLock::new(vec![0u8; size]));
@@ -205,6 +208,15 @@ mod tests {
         mem.write_bytes(addr, &[1, 2, 3, 4]);
         let data = mem.read_bytes(addr, 4);
         assert_eq!(data, vec![1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn test_allocate_page_aligned() {
+        let mem = NativeMemory::new();
+        let first = mem.allocate(1);
+        let second = mem.allocate(17);
+        assert_eq!(first % PAGE_ALIGNMENT, 0);
+        assert_eq!(second % PAGE_ALIGNMENT, 0);
     }
 
     #[test]
