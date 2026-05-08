@@ -35,6 +35,7 @@ reqwest = { workspace = true, features = ["json", "query"] }
 tokio = { workspace = true, features = ["fs"] }
 
 [target.'cfg(not(all(target_family = "wasm", target_os = "unknown")))'.dependencies]
+dirs = { workspace = true }
 serde_json = { workspace = true }
 tar = { workspace = true }
 tempfile = { workspace = true }

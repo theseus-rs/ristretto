@@ -167,14 +167,17 @@ pub async fn version_class_loader(version: &str) -> Result<(PathBuf, String, Arc
 }
 
 /// Resolve the home directory used to cache JDK downloads. On native targets this is the user's
-/// `$HOME`. On wasi we fall back to the current directory because wasi does not expose a real home
-/// directory.
+/// home directory (`$HOME` on Unix, `%USERPROFILE%` on Windows). On wasi we fall back to the
+/// current directory because wasi does not expose a real home directory.
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 fn cache_home_dir() -> PathBuf {
     if let Ok(value) = env::var("HOME")
         && !value.is_empty()
     {
         return PathBuf::from(value);
+    }
+    if let Some(home) = dirs::home_dir() {
+        return home;
     }
     env::current_dir().unwrap_or_default()
 }
