@@ -107,9 +107,8 @@ pub struct LookupSwitch {
 ///    - Short branch instructions (`Ifeq`, `Ifne`, `Iflt`, `Ifge`, `Ifgt`, `Ifle`, `If_icmpeq`,
 ///      `If_icmpne`, `If_icmplt`, `If_icmpge`, `If_icmpgt`, `If_icmple`, `If_acmpeq`, `If_acmpne`,
 ///      `Goto`, `Jsr`, `Ifnull`, `Ifnonnull`) carry the **absolute** target index as `u16`.
-///    - Wide branch instructions (`Goto_w`, `Jsr_w`) carry the **signed difference** between the
-///      target index and this instruction's own index as `i32`, allowing forward and backward
-///      jumps that exceed `u16::MAX` to round-trip through the table.
+///    - Wide branch instructions (`Goto_w`, `Jsr_w`) carry the **absolute** target index as `i32`,
+///      matching the short branch convention while preserving the JVM operand width.
 ///    - Switch instructions ([`TableSwitch`], [`LookupSwitch`]) store every offset as a **signed
 ///      relative instruction index** (target index minus this instruction's index).
 ///
@@ -2411,11 +2410,9 @@ impl fmt::Display for Instruction {
             Instruction::Ret(value) => write!(f, "ret {value}"),
             Instruction::Tableswitch(table_switch) => {
                 let width = 12;
-                writeln!(
-                    f,
-                    "tableswitch {{ // {} to {}",
-                    table_switch.low, table_switch.high
-                )?;
+                let low = table_switch.low;
+                let high = table_switch.high;
+                writeln!(f, "tableswitch {{ // {low} to {high}")?;
                 for (i, offset) in table_switch.offsets.iter().enumerate() {
                     let value = table_switch.low + i32::try_from(i).map_err(|_| fmt::Error)?;
                     writeln!(f, "        {value:>width$}: {offset}")?;
@@ -2430,11 +2427,8 @@ impl fmt::Display for Instruction {
                     let (value, offset) = pair;
                     writeln!(f, "        {value:>width$}: {offset}")?;
                 }
-                writeln!(
-                    f,
-                    "        {:>width$}: {}",
-                    "default", lookup_switch.default
-                )?;
+                let default = lookup_switch.default;
+                writeln!(f, "        {:>width$}: {default}", "default")?;
                 write!(f, "        }}")
             }
             Instruction::Ireturn => write!(f, "ireturn"),

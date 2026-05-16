@@ -301,13 +301,6 @@ impl<'a> ConstantPool<'a> {
         Ok(ConstantPool { constants })
     }
 
-    /// Create a new constant pool with the given capacity.
-    fn with_capacity(capacity: usize) -> Self {
-        let mut constants = Vec::with_capacity(capacity + 1);
-        constants.push(ConstantEntry::Placeholder);
-        Self { constants }
-    }
-
     /// Fast constant pool lookup using unchecked indexing.
     /// Only for internal use where index is known to be valid.
     #[inline]
@@ -1802,6 +1795,18 @@ mod test {
             .set(1, Constant::utf8("baz"))
             .expect("Failed to set constant");
         assert_eq!(Some(&Constant::utf8("baz")), constant_pool.get(1));
+        assert_eq!(
+            Err(InvalidConstantPoolIndex(2)),
+            constant_pool.set(2, Constant::utf8("missing"))
+        );
+    }
+
+    #[test]
+    fn test_get_unchecked_placeholder() {
+        let mut constant_pool = ConstantPool::default();
+        constant_pool.push(Constant::Long(42));
+        assert_eq!(Some(&Constant::Long(42)), constant_pool.get_unchecked(1));
+        assert_eq!(None, constant_pool.get_unchecked(2));
     }
 
     #[test]

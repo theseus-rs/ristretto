@@ -1135,7 +1135,7 @@ mod tests {
 
     #[test]
     fn test_iaload_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1149,7 +1149,7 @@ mod tests {
 
     #[test]
     fn test_iaload_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1169,7 +1169,7 @@ mod tests {
 
     #[test]
     fn test_iaload_wrong_array_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1183,7 +1183,7 @@ mod tests {
 
     #[test]
     fn test_iastore_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1198,7 +1198,7 @@ mod tests {
 
     #[test]
     fn test_iastore_wrong_value_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1219,7 +1219,7 @@ mod tests {
 
     #[test]
     fn test_iastore_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1240,7 +1240,7 @@ mod tests {
 
     #[test]
     fn test_aaload_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let string_array = VerificationType::Array(Box::new(VerificationType::java_lang_string()));
@@ -1253,7 +1253,7 @@ mod tests {
 
     #[test]
     fn test_aaload_null_array() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame.push(VerificationType::Null).unwrap();
@@ -1265,7 +1265,7 @@ mod tests {
 
     #[test]
     fn test_aaload_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let string_array = VerificationType::Array(Box::new(VerificationType::java_lang_string()));
@@ -1284,7 +1284,7 @@ mod tests {
 
     #[test]
     fn test_aaload_primitive_array_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1349,7 +1349,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_iload_0() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.set_local(0, VerificationType::Integer).unwrap();
 
@@ -1360,7 +1360,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_aload() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .set_local(2, VerificationType::java_lang_object())
@@ -1372,7 +1372,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_istore() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
@@ -1382,7 +1382,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_non_load_store() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let handled = dispatch_load_store(&Instruction::Nop, &mut frame, &ctx).unwrap();
@@ -1391,7 +1391,7 @@ mod tests {
 
     #[test]
     fn test_laload_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1405,7 +1405,7 @@ mod tests {
 
     #[test]
     fn test_laload_null_array_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame.push(VerificationType::Null).unwrap();
@@ -1416,7 +1416,7 @@ mod tests {
 
     #[test]
     fn test_laload_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1436,7 +1436,7 @@ mod tests {
 
     #[test]
     fn test_laload_wrong_array_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1450,7 +1450,7 @@ mod tests {
 
     #[test]
     fn test_faload_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1464,7 +1464,7 @@ mod tests {
 
     #[test]
     fn test_faload_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1484,7 +1484,7 @@ mod tests {
 
     #[test]
     fn test_faload_wrong_array_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1498,7 +1498,7 @@ mod tests {
 
     #[test]
     fn test_daload_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1512,7 +1512,7 @@ mod tests {
 
     #[test]
     fn test_daload_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1532,7 +1532,7 @@ mod tests {
 
     #[test]
     fn test_daload_wrong_array_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1546,7 +1546,7 @@ mod tests {
 
     #[test]
     fn test_baload_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         // byte[] is represented as Integer[] in verification
@@ -1561,7 +1561,7 @@ mod tests {
 
     #[test]
     fn test_baload_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1581,7 +1581,7 @@ mod tests {
 
     #[test]
     fn test_baload_wrong_array_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1595,7 +1595,7 @@ mod tests {
 
     #[test]
     fn test_caload_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         // char[] is represented as Integer[] in verification
@@ -1610,7 +1610,7 @@ mod tests {
 
     #[test]
     fn test_caload_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1630,7 +1630,7 @@ mod tests {
 
     #[test]
     fn test_saload_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         // short[] is represented as Integer[] in verification
@@ -1645,7 +1645,7 @@ mod tests {
 
     #[test]
     fn test_saload_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1665,7 +1665,7 @@ mod tests {
 
     #[test]
     fn test_lastore_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1680,7 +1680,7 @@ mod tests {
 
     #[test]
     fn test_lastore_wrong_value_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1701,7 +1701,7 @@ mod tests {
 
     #[test]
     fn test_lastore_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1722,7 +1722,7 @@ mod tests {
 
     #[test]
     fn test_fastore_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1737,7 +1737,7 @@ mod tests {
 
     #[test]
     fn test_fastore_wrong_value_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1758,7 +1758,7 @@ mod tests {
 
     #[test]
     fn test_fastore_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1779,7 +1779,7 @@ mod tests {
 
     #[test]
     fn test_dastore_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1794,7 +1794,7 @@ mod tests {
 
     #[test]
     fn test_dastore_wrong_value_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1815,7 +1815,7 @@ mod tests {
 
     #[test]
     fn test_dastore_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1836,7 +1836,7 @@ mod tests {
 
     #[test]
     fn test_aastore_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let string_array = VerificationType::Array(Box::new(VerificationType::java_lang_string()));
@@ -1850,7 +1850,7 @@ mod tests {
 
     #[test]
     fn test_aastore_null_value_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let string_array = VerificationType::Array(Box::new(VerificationType::java_lang_string()));
@@ -1864,7 +1864,7 @@ mod tests {
 
     #[test]
     fn test_aastore_null_array_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame.push(VerificationType::Null).unwrap();
@@ -1877,7 +1877,7 @@ mod tests {
 
     #[test]
     fn test_aastore_wrong_value_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let string_array = VerificationType::Array(Box::new(VerificationType::java_lang_string()));
@@ -1897,7 +1897,7 @@ mod tests {
 
     #[test]
     fn test_aastore_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let string_array = VerificationType::Array(Box::new(VerificationType::java_lang_string()));
@@ -1917,7 +1917,7 @@ mod tests {
 
     #[test]
     fn test_aastore_primitive_array_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1938,7 +1938,7 @@ mod tests {
 
     #[test]
     fn test_aastore_not_array_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame.push(VerificationType::java_lang_object()).unwrap();
@@ -1957,7 +1957,7 @@ mod tests {
 
     #[test]
     fn test_bastore_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         // byte[] is represented as Integer[] in verification
@@ -1973,7 +1973,7 @@ mod tests {
 
     #[test]
     fn test_bastore_wrong_value_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -1994,7 +1994,7 @@ mod tests {
 
     #[test]
     fn test_bastore_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -2015,7 +2015,7 @@ mod tests {
 
     #[test]
     fn test_castore_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         // char[] is represented as Integer[] in verification
@@ -2031,7 +2031,7 @@ mod tests {
 
     #[test]
     fn test_castore_wrong_value_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -2052,7 +2052,7 @@ mod tests {
 
     #[test]
     fn test_castore_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -2073,7 +2073,7 @@ mod tests {
 
     #[test]
     fn test_sastore_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         // short[] is represented as Integer[] in verification
@@ -2089,7 +2089,7 @@ mod tests {
 
     #[test]
     fn test_sastore_wrong_value_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -2110,7 +2110,7 @@ mod tests {
 
     #[test]
     fn test_sastore_wrong_index_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -2199,7 +2199,7 @@ mod tests {
 
     #[test]
     fn test_aaload_legacy_array_representation() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         // Legacy representation: Object with name starting with '['
@@ -2215,7 +2215,7 @@ mod tests {
 
     #[test]
     fn test_aaload_not_array_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame.push(VerificationType::java_lang_object()).unwrap();
@@ -2233,7 +2233,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_lload_0() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .set_local_category2(0, VerificationType::Long)
@@ -2246,7 +2246,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_fload_0() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.set_local(0, VerificationType::Float).unwrap();
 
@@ -2257,7 +2257,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_dload_0() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .set_local_category2(0, VerificationType::Double)
@@ -2270,7 +2270,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_aload_0() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .set_local(0, VerificationType::java_lang_object())
@@ -2282,7 +2282,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_lstore_0() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push_category2(VerificationType::Long).unwrap();
 
@@ -2292,7 +2292,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_fstore_0() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
@@ -2302,7 +2302,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_dstore_0() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push_category2(VerificationType::Double).unwrap();
 
@@ -2312,7 +2312,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_astore_0() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
@@ -2322,7 +2322,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_iaload() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Integer)))
@@ -2335,7 +2335,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_laload() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Long)))
@@ -2348,7 +2348,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_faload() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Float)))
@@ -2361,7 +2361,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_daload() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Double)))
@@ -2374,7 +2374,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_aaload() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(
@@ -2389,7 +2389,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_baload() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Integer)))
@@ -2402,7 +2402,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_caload() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Integer)))
@@ -2415,7 +2415,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_saload() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Integer)))
@@ -2428,7 +2428,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_iastore() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Integer)))
@@ -2442,7 +2442,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_lastore() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Long)))
@@ -2456,7 +2456,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_fastore() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Float)))
@@ -2470,7 +2470,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_dastore() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Double)))
@@ -2484,7 +2484,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_aastore() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(
@@ -2500,7 +2500,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_bastore() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Integer)))
@@ -2514,7 +2514,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_castore() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Integer)))
@@ -2528,7 +2528,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_sastore() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Integer)))
@@ -2542,7 +2542,7 @@ mod tests {
 
     #[test]
     fn test_iaload_not_array_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame.push(VerificationType::java_lang_object()).unwrap();
@@ -2560,7 +2560,7 @@ mod tests {
 
     #[test]
     fn test_iastore_not_array_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame.push(VerificationType::java_lang_object()).unwrap();
@@ -2579,7 +2579,7 @@ mod tests {
 
     #[test]
     fn test_iastore_wrong_array_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -2594,7 +2594,7 @@ mod tests {
 
     #[test]
     fn test_baload_not_array_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame.push(VerificationType::java_lang_object()).unwrap();
@@ -2612,7 +2612,7 @@ mod tests {
 
     #[test]
     fn test_bastore_not_array_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame.push(VerificationType::java_lang_object()).unwrap();
@@ -2631,7 +2631,7 @@ mod tests {
 
     #[test]
     fn test_bastore_wrong_array_type_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         frame
@@ -2648,5 +2648,181 @@ mod tests {
                 .to_string()
                 .contains("expected byte[] or boolean[]")
         );
+    }
+
+    #[test]
+    fn test_aastore_legacy_array_representation() {
+        let ctx = MockContext::PERMISSIVE;
+        let mut frame = Frame::new(5, 10);
+        frame
+            .push(VerificationType::Object(JavaString::from(
+                "[Ljava/lang/Object;",
+            )))
+            .unwrap();
+        frame.push(VerificationType::Integer).unwrap();
+        frame.push(VerificationType::java_lang_string()).unwrap();
+
+        assert!(handle_aastore(&mut frame, &ctx).is_ok());
+    }
+
+    #[test]
+    fn test_byte_or_boolean_array_accepts_null() {
+        let ctx = MockContext::PERMISSIVE;
+        let mut frame = Frame::new(5, 10);
+        frame.push(VerificationType::Null).unwrap();
+        frame.push(VerificationType::Integer).unwrap();
+        assert!(handle_baload(&mut frame, &ctx).is_ok());
+    }
+
+    #[test]
+    fn test_dispatch_load_variants() {
+        let ctx = MockContext::PERMISSIVE;
+
+        for instruction in [
+            Instruction::Iload(2),
+            Instruction::Iload_w(2),
+            Instruction::Iload_0,
+            Instruction::Iload_1,
+            Instruction::Iload_2,
+            Instruction::Iload_3,
+        ] {
+            let mut frame = Frame::new(6, 10);
+            for index in 0..4 {
+                frame.set_local(index, VerificationType::Integer).unwrap();
+            }
+            assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
+        }
+
+        for (instruction, index) in [
+            (Instruction::Lload(2), 2),
+            (Instruction::Lload_w(2), 2),
+            (Instruction::Lload_0, 0),
+            (Instruction::Lload_1, 1),
+            (Instruction::Lload_2, 2),
+            (Instruction::Lload_3, 3),
+        ] {
+            let mut frame = Frame::new(6, 10);
+            frame
+                .set_local_category2(index, VerificationType::Long)
+                .unwrap();
+            assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
+        }
+
+        for instruction in [
+            Instruction::Fload(2),
+            Instruction::Fload_w(2),
+            Instruction::Fload_0,
+            Instruction::Fload_1,
+            Instruction::Fload_2,
+            Instruction::Fload_3,
+        ] {
+            let mut frame = Frame::new(6, 10);
+            for index in 0..4 {
+                frame.set_local(index, VerificationType::Float).unwrap();
+            }
+            assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
+        }
+
+        for (instruction, index) in [
+            (Instruction::Dload(2), 2),
+            (Instruction::Dload_w(2), 2),
+            (Instruction::Dload_0, 0),
+            (Instruction::Dload_1, 1),
+            (Instruction::Dload_2, 2),
+            (Instruction::Dload_3, 3),
+        ] {
+            let mut frame = Frame::new(6, 10);
+            frame
+                .set_local_category2(index, VerificationType::Double)
+                .unwrap();
+            assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
+        }
+
+        for instruction in [
+            Instruction::Aload(2),
+            Instruction::Aload_w(2),
+            Instruction::Aload_0,
+            Instruction::Aload_1,
+            Instruction::Aload_2,
+            Instruction::Aload_3,
+        ] {
+            let mut frame = Frame::new(6, 10);
+            for index in 0..4 {
+                frame
+                    .set_local(index, VerificationType::java_lang_object())
+                    .unwrap();
+            }
+            assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
+        }
+    }
+
+    #[test]
+    fn test_dispatch_store_variants() {
+        let ctx = MockContext::PERMISSIVE;
+
+        for instruction in [
+            Instruction::Istore(2),
+            Instruction::Istore_w(2),
+            Instruction::Istore_0,
+            Instruction::Istore_1,
+            Instruction::Istore_2,
+            Instruction::Istore_3,
+        ] {
+            let mut frame = Frame::new(6, 10);
+            frame.push(VerificationType::Integer).unwrap();
+            assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
+        }
+
+        for instruction in [
+            Instruction::Lstore(2),
+            Instruction::Lstore_w(2),
+            Instruction::Lstore_0,
+            Instruction::Lstore_1,
+            Instruction::Lstore_2,
+            Instruction::Lstore_3,
+        ] {
+            let mut frame = Frame::new(6, 10);
+            frame.push_category2(VerificationType::Long).unwrap();
+            assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
+        }
+
+        for instruction in [
+            Instruction::Fstore(2),
+            Instruction::Fstore_w(2),
+            Instruction::Fstore_0,
+            Instruction::Fstore_1,
+            Instruction::Fstore_2,
+            Instruction::Fstore_3,
+        ] {
+            let mut frame = Frame::new(6, 10);
+            frame.push(VerificationType::Float).unwrap();
+            assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
+        }
+
+        for instruction in [
+            Instruction::Dstore(2),
+            Instruction::Dstore_w(2),
+            Instruction::Dstore_0,
+            Instruction::Dstore_1,
+            Instruction::Dstore_2,
+            Instruction::Dstore_3,
+        ] {
+            let mut frame = Frame::new(6, 10);
+            frame.push_category2(VerificationType::Double).unwrap();
+            assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
+        }
+
+        for instruction in [
+            Instruction::Astore(2),
+            Instruction::Astore_w(2),
+            Instruction::Astore_0,
+            Instruction::Astore_1,
+            Instruction::Astore_2,
+            Instruction::Astore_3,
+        ] {
+            let mut frame = Frame::new(6, 10);
+            frame.push(VerificationType::java_lang_object()).unwrap();
+            assert!(dispatch_load_store(&instruction, &mut frame, &ctx).unwrap());
+        }
     }
 }

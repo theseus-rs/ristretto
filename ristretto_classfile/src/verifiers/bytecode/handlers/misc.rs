@@ -527,6 +527,52 @@ mod tests {
     }
 
     #[test]
+    fn test_ldc_method_handle_method_type_and_dynamic() {
+        let mut constant_pool = ConstantPool::default();
+        let method_name = constant_pool.add(Constant::utf8("method")).unwrap();
+        let descriptor = constant_pool.add(Constant::utf8("()V")).unwrap();
+        let name_and_type = constant_pool
+            .add(Constant::NameAndType {
+                name_index: method_name,
+                descriptor_index: descriptor,
+            })
+            .unwrap();
+        let method_type = constant_pool.add(Constant::MethodType(descriptor)).unwrap();
+        let method_handle = constant_pool
+            .add(Constant::MethodHandle {
+                reference_kind: crate::ReferenceKind::InvokeStatic,
+                reference_index: name_and_type,
+            })
+            .unwrap();
+        let dynamic = constant_pool
+            .add(Constant::Dynamic {
+                bootstrap_method_attr_index: 0,
+                name_and_type_index: name_and_type,
+            })
+            .unwrap();
+        let class_file = ClassFile {
+            constant_pool,
+            ..Default::default()
+        };
+
+        let mut frame = Frame::new(5, 10);
+        handle_ldc(&mut frame, &class_file, method_handle).unwrap();
+        assert_eq!(
+            frame.pop().unwrap(),
+            VerificationType::Object(JavaString::from("java/lang/invoke/MethodHandle"))
+        );
+
+        handle_ldc(&mut frame, &class_file, method_type).unwrap();
+        assert_eq!(
+            frame.pop().unwrap(),
+            VerificationType::Object(JavaString::from("java/lang/invoke/MethodType"))
+        );
+
+        handle_ldc(&mut frame, &class_file, dynamic).unwrap();
+        assert_eq!(frame.pop().unwrap(), VerificationType::java_lang_object());
+    }
+
+    #[test]
     fn test_monitorenter_success() {
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
@@ -591,6 +637,7 @@ mod tests {
     #[test]
     fn test_reserved_breakpoint_success() {
         assert!(handle_reserved(&Instruction::Breakpoint).is_ok());
+        assert!(handle_reserved(&Instruction::Iadd).is_ok());
     }
 
     #[test]

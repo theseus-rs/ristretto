@@ -357,4 +357,51 @@ mod tests {
         assert!(config.requires_stackmap(52)); // Java 8
         assert!(config.requires_stackmap(65)); // Java 21
     }
+
+    #[test]
+    fn test_display_values() {
+        assert_eq!("all", VerifyMode::All.to_string());
+        assert_eq!("remote", VerifyMode::Remote.to_string());
+        assert_eq!("none", VerifyMode::None.to_string());
+        assert_eq!("strict", FallbackStrategy::Strict.to_string());
+        assert_eq!(
+            "fallback",
+            FallbackStrategy::FallbackToInference.to_string()
+        );
+        assert_eq!("inference", FallbackStrategy::AlwaysInference.to_string());
+    }
+
+    #[test]
+    fn test_builder_flags_and_inference_modes() {
+        let config = VerifierConfig::new()
+            .with_fallback_strategy(FallbackStrategy::AlwaysInference)
+            .with_verbose(true)
+            .with_trace(true)
+            .with_cache_results(true)
+            .with_max_inference_iterations(17);
+
+        assert!(config.verbose());
+        assert!(config.trace());
+        assert!(config.flags.contains(VerifierFlags::CACHE_RESULTS));
+        assert_eq!(17, config.max_inference_iterations);
+        assert!(config.use_inference());
+        assert!(config.allows_inference_fallback());
+
+        let fallback =
+            VerifierConfig::new().with_fallback_strategy(FallbackStrategy::FallbackToInference);
+        assert!(!fallback.use_inference());
+        assert!(fallback.allows_inference_fallback());
+
+        let strict = VerifierConfig::new().with_fallback_strategy(FallbackStrategy::Strict);
+        assert!(!strict.use_inference());
+        assert!(!strict.allows_inference_fallback());
+
+        let disabled = config
+            .with_verbose(false)
+            .with_trace(false)
+            .with_cache_results(false);
+        assert!(!disabled.verbose());
+        assert!(!disabled.trace());
+        assert!(!disabled.flags.contains(VerifierFlags::CACHE_RESULTS));
+    }
 }

@@ -162,11 +162,8 @@ mod tests {
             host_class_index: class_index,
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("Multiple NestHost"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("Multiple NestHost"));
     }
 
     // NestMembers tests
@@ -228,11 +225,8 @@ mod tests {
             class_indexes: vec![class_index, class_index],
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("Duplicate"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("Duplicate"));
     }
 
     #[test]
@@ -248,11 +242,8 @@ mod tests {
             class_indexes: vec![class_index],
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("Multiple NestMembers"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("Multiple NestMembers"));
     }
 
     // Mutual exclusivity tests
@@ -270,11 +261,8 @@ mod tests {
             class_indexes: vec![class_index],
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("both NestHost and NestMembers"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("both NestHost and NestMembers"));
     }
 
     #[test]
@@ -290,11 +278,8 @@ mod tests {
             host_class_index: class_index,
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("both NestHost and NestMembers"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("both NestHost and NestMembers"));
     }
 
     // No nest attributes (valid)

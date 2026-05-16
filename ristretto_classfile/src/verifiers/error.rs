@@ -159,3 +159,176 @@ impl From<crate::Error> for VerifyError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_classfile_error_conversion(source: crate::Error, expected: &VerifyError) {
+        assert_eq!(expected, &VerifyError::from(source));
+    }
+
+    #[test]
+    fn test_from_invalid_annotation_element_tag() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidAnnotationElementTag(b'I'),
+            &VerifyError::InvalidAnnotationElementTag(b'I'),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_array_type_code() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidArrayTypeCode(99),
+            &VerifyError::InvalidArrayTypeCode(99),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_attribute_length() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidAttributeLength(4),
+            &VerifyError::InvalidAttributeLength(4),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_attribute_name_index() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidAttributeNameIndex(5),
+            &VerifyError::InvalidAttributeNameIndex(5),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_base_type_code() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidBaseTypeCode('Q'),
+            &VerifyError::InvalidBaseTypeCode('Q'),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_constant_pool_index() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidConstantPoolIndex(7),
+            &VerifyError::InvalidConstantPoolIndex(7),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_constant_pool_index_type() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidConstantPoolIndexType(8),
+            &VerifyError::InvalidConstantPoolIndexType(8),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_constant_tag() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidConstantTag(9),
+            &VerifyError::InvalidConstantTag(9),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_field_type_code() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidFieldTypeCode('Z'),
+            &VerifyError::InvalidFieldTypeCode('Z'),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_instruction() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidInstruction(0xFF),
+            &VerifyError::InvalidInstruction(0xFF),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_instruction_offset() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidInstructionOffset(12),
+            &VerifyError::InvalidInstructionOffset(12),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_reference_kind() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidReferenceKind(13),
+            &VerifyError::InvalidReferenceKind(13),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_stack_frame_type() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidStackFrameType(14),
+            &VerifyError::InvalidStackFrameType(14),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_target_type_code() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidTargetTypeCode(15),
+            &VerifyError::InvalidTargetTypeCode(15),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_verification_type_tag() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidVerificationTypeTag(16),
+            &VerifyError::InvalidVerificationTypeTag(16),
+        );
+    }
+
+    #[test]
+    fn test_from_invalid_wide_instruction() {
+        assert_classfile_error_conversion(
+            crate::Error::InvalidWideInstruction(17),
+            &VerifyError::InvalidWideInstruction(17),
+        );
+    }
+
+    #[test]
+    fn test_from_classfile_error_string_variants() {
+        assert_eq!(
+            VerifyError::InvalidFieldTypeDescriptor("bad".to_string()),
+            VerifyError::from(crate::Error::InvalidFieldTypeDescriptor("bad".to_string()))
+        );
+        assert_eq!(
+            VerifyError::InvalidMethodDescriptor("bad".to_string()),
+            VerifyError::from(crate::Error::InvalidMethodDescriptor("bad".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_from_classfile_error_passthrough_and_fallback() {
+        assert_eq!(
+            VerifyError::ClassFormatError("bad class".to_string()),
+            VerifyError::from(crate::Error::VerificationError(
+                VerifyError::ClassFormatError("bad class".to_string())
+            ))
+        );
+
+        assert!(matches!(
+            VerifyError::from(crate::Error::InvalidMagicNumber(0)),
+            VerifyError::VerifyError(_)
+        ));
+    }
+
+    #[test]
+    fn test_from_try_from_int_error() {
+        let err = u8::try_from(u16::MAX).expect_err("value must not fit in u8");
+        assert!(matches!(
+            VerifyError::from(crate::Error::TryFromIntError(err)),
+            VerifyError::TryFromIntError(_)
+        ));
+    }
+}

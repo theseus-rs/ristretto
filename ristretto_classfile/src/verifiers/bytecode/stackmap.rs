@@ -241,7 +241,7 @@ fn decode_frame(
 
         StackFrame::SameLocals1StackItemFrame { stack, .. }
         | StackFrame::SameLocals1StackItemFrameExtended { stack, .. } => {
-            let stack_types = convert_verification_types(stack, class_file);
+            let stack_types = convert_verification_types(stack, class_file)?;
             (
                 FrameType::SameLocals1StackItem,
                 current_locals.to_vec(),
@@ -265,7 +265,7 @@ fn decode_frame(
 
         StackFrame::AppendFrame { locals, .. } => {
             let mut new_locals = current_locals.to_vec();
-            let additional = convert_verification_types(locals, class_file);
+            let additional = convert_verification_types(locals, class_file)?;
 
             for ty in &additional {
                 new_locals.push(ty.clone());
@@ -279,8 +279,8 @@ fn decode_frame(
         }
 
         StackFrame::FullFrame { locals, stack, .. } => {
-            let new_locals = expand_locals(locals, class_file);
-            let stack_types = convert_verification_types(stack, class_file);
+            let new_locals = expand_locals(locals, class_file)?;
+            let stack_types = convert_verification_types(stack, class_file)?;
             (FrameType::Full, new_locals, stack_types)
         }
     };
@@ -302,11 +302,11 @@ fn decode_frame(
 fn expand_locals(
     locals: &[ClassFileVerificationType],
     class_file: &ClassFile<'_>,
-) -> Vec<VerificationType> {
+) -> Result<Vec<VerificationType>> {
     let mut result = Vec::with_capacity(locals.len() * 2);
 
     for local in locals {
-        let ty = convert_single_type(local, class_file);
+        let ty = convert_single_type(local, class_file)?;
         result.push(ty.clone());
 
         // Category 2 types occupy an additional slot
@@ -315,14 +315,14 @@ fn expand_locals(
         }
     }
 
-    result
+    Ok(result)
 }
 
 /// Converts a slice of class file verification types to internal types.
 fn convert_verification_types(
     types: &[ClassFileVerificationType],
     class_file: &ClassFile<'_>,
-) -> Vec<VerificationType> {
+) -> Result<Vec<VerificationType>> {
     types
         .iter()
         .map(|t| convert_single_type(t, class_file))
@@ -333,24 +333,24 @@ fn convert_verification_types(
 fn convert_single_type(
     v_type: &ClassFileVerificationType,
     class_file: &ClassFile<'_>,
-) -> VerificationType {
+) -> Result<VerificationType> {
     match v_type {
-        ClassFileVerificationType::Top => VerificationType::Top,
-        ClassFileVerificationType::Integer => VerificationType::Integer,
-        ClassFileVerificationType::Float => VerificationType::Float,
-        ClassFileVerificationType::Long => VerificationType::Long,
-        ClassFileVerificationType::Double => VerificationType::Double,
-        ClassFileVerificationType::Null => VerificationType::Null,
-        ClassFileVerificationType::UninitializedThis => VerificationType::UninitializedThis,
+        ClassFileVerificationType::Top => Ok(VerificationType::Top),
+        ClassFileVerificationType::Integer => Ok(VerificationType::Integer),
+        ClassFileVerificationType::Float => Ok(VerificationType::Float),
+        ClassFileVerificationType::Long => Ok(VerificationType::Long),
+        ClassFileVerificationType::Double => Ok(VerificationType::Double),
+        ClassFileVerificationType::Null => Ok(VerificationType::Null),
+        ClassFileVerificationType::UninitializedThis => Ok(VerificationType::UninitializedThis),
         ClassFileVerificationType::Object { cpool_index } => {
-            if let Ok(name) = class_file.constant_pool.try_get_class(*cpool_index) {
-                VerificationType::Object(JavaString::from(name))
-            } else {
-                VerificationType::Top
-            }
+            let name = class_file
+                .constant_pool
+                .try_get_class(*cpool_index)
+                .map_err(|error| VerifyError::ClassFormatError(error.to_string()))?;
+            Ok(VerificationType::Object(JavaString::from(name)))
         }
         ClassFileVerificationType::Uninitialized { offset } => {
-            VerificationType::Uninitialized(*offset)
+            Ok(VerificationType::Uninitialized(*offset))
         }
     }
 }
@@ -397,9 +397,16 @@ mod tests {
     #[test]
     fn test_empty_stack_map_table() {
         let table = DecodedStackMapTable::empty();
+        let class_file = create_test_class_file();
+        let initial_frame = Frame::new(0, 0);
+        let decoded = DecodedStackMapTable::decode(&[], &initial_frame, &class_file, 0).unwrap();
         assert!(table.is_empty());
+        assert!(decoded.is_empty());
         assert_eq!(table.len(), 0);
         assert!(table.get(0).is_none());
+        assert_eq!(table.offsets().collect::<Vec<_>>(), Vec::<u16>::new());
+        assert_eq!(table.frames().count(), 0);
+        assert!(table.validate_offsets(|_| false).is_ok());
     }
 
     #[test]
@@ -463,5 +470,138 @@ mod tests {
 
         // Second frame at offset 5 + 10 + 1 = 16
         assert!(table.has_frame_at(16));
+    }
+
+    #[test]
+    fn test_decode_all_frame_types_and_type_conversions() {
+        let class_file = create_test_class_file();
+        let mut initial_frame = Frame::new(4, 4);
+        initial_frame.locals[0] = VerificationType::Integer;
+
+        let stack_frames = vec![
+            StackFrame::SameLocals1StackItemFrame {
+                frame_type: 64,
+                stack: vec![ClassFileVerificationType::Object { cpool_index: 2 }],
+            },
+            StackFrame::SameLocals1StackItemFrameExtended {
+                frame_type: 247,
+                offset_delta: 0,
+                stack: vec![ClassFileVerificationType::Uninitialized { offset: 3 }],
+            },
+            StackFrame::AppendFrame {
+                frame_type: 253,
+                offset_delta: 0,
+                locals: vec![
+                    ClassFileVerificationType::Long,
+                    ClassFileVerificationType::Double,
+                ],
+            },
+            StackFrame::FullFrame {
+                frame_type: 255,
+                offset_delta: 0,
+                locals: vec![
+                    ClassFileVerificationType::Top,
+                    ClassFileVerificationType::Integer,
+                    ClassFileVerificationType::Float,
+                    ClassFileVerificationType::Long,
+                    ClassFileVerificationType::Double,
+                    ClassFileVerificationType::Null,
+                    ClassFileVerificationType::UninitializedThis,
+                    ClassFileVerificationType::Object { cpool_index: 2 },
+                    ClassFileVerificationType::Uninitialized { offset: 7 },
+                ],
+                stack: vec![ClassFileVerificationType::Integer],
+            },
+        ];
+
+        let table =
+            DecodedStackMapTable::decode(&stack_frames, &initial_frame, &class_file, 8).unwrap();
+        assert_eq!(table.offsets().collect::<Vec<_>>(), vec![0, 1, 2, 3]);
+
+        let first = table.get(0).unwrap();
+        assert_eq!(first.frame_type, FrameType::SameLocals1StackItem);
+        assert_eq!(
+            first.stack,
+            vec![VerificationType::Object(JavaString::from("TestClass"))]
+        );
+
+        let second = table.get(1).unwrap();
+        assert_eq!(second.stack, vec![VerificationType::Uninitialized(3)]);
+
+        let appended = table.get(2).unwrap();
+        assert_eq!(appended.frame_type, FrameType::Append);
+        assert!(appended.locals.contains(&VerificationType::Long));
+        assert!(appended.locals.contains(&VerificationType::Double));
+
+        let full = table.get(3).unwrap();
+        assert_eq!(full.frame_type, FrameType::Full);
+        assert_eq!(full.stack, vec![VerificationType::Integer]);
+        assert!(full.locals.contains(&VerificationType::Float));
+        assert!(full.locals.contains(&VerificationType::Null));
+        assert!(full.locals.contains(&VerificationType::UninitializedThis));
+        assert!(full.locals.contains(&VerificationType::Uninitialized(7)));
+
+        let frame = table.to_frame(full, 20, 4);
+        assert_eq!(frame.stack, vec![VerificationType::Integer]);
+        assert_eq!(
+            frame.locals[9],
+            VerificationType::Object(JavaString::from("TestClass"))
+        );
+        assert_eq!(frame.locals[10], VerificationType::Uninitialized(7));
+        assert_eq!(table.frames().count(), 4);
+        assert!(table.validate_offsets(|offset| offset <= 3).is_ok());
+        assert!(table.validate_offsets(|offset| offset != 2).is_err());
+    }
+
+    #[test]
+    fn test_decode_rejects_invalid_object_stack_class_index() {
+        let class_file = create_test_class_file();
+        let initial_frame = Frame::new(0, 1);
+        let stack_frames = vec![StackFrame::SameLocals1StackItemFrame {
+            frame_type: 64,
+            stack: vec![ClassFileVerificationType::Object { cpool_index: 99 }],
+        }];
+
+        assert!(matches!(
+            DecodedStackMapTable::decode(&stack_frames, &initial_frame, &class_file, 1),
+            Err(VerifyError::ClassFormatError(_))
+        ));
+    }
+
+    #[test]
+    fn test_decode_rejects_invalid_object_local_class_index() {
+        let class_file = create_test_class_file();
+        let initial_frame = Frame::new(1, 0);
+        let stack_frames = vec![StackFrame::FullFrame {
+            frame_type: 255,
+            offset_delta: 0,
+            locals: vec![ClassFileVerificationType::Object { cpool_index: 99 }],
+            stack: vec![],
+        }];
+
+        assert!(matches!(
+            DecodedStackMapTable::decode(&stack_frames, &initial_frame, &class_file, 0),
+            Err(VerifyError::ClassFormatError(_))
+        ));
+    }
+
+    #[test]
+    fn test_decode_stack_map_table_overflow() {
+        let class_file = create_test_class_file();
+        let initial_frame = Frame::new(0, 0);
+        let stack_frames = vec![
+            StackFrame::SameFrameExtended {
+                frame_type: 251,
+                offset_delta: u16::MAX,
+            },
+            StackFrame::SameFrameExtended {
+                frame_type: 251,
+                offset_delta: 0,
+            },
+        ];
+
+        assert!(
+            DecodedStackMapTable::decode(&stack_frames, &initial_frame, &class_file, 0).is_err()
+        );
     }
 }

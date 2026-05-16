@@ -13,7 +13,7 @@
 
 use ahash::AHashSet;
 
-use crate::attributes::{ExceptionTableEntry, Instruction, StackFrame};
+use crate::attributes::{ExceptionTableEntry, Instruction, LookupSwitch, StackFrame, TableSwitch};
 use crate::verifiers::error::{Result, VerifyError};
 
 /// Information about the bytecode for control flow analysis.
@@ -235,14 +235,24 @@ pub fn compute_successors(
     match instruction {
         // Unconditional branches
         Instruction::Goto(target) => {
-            code_info.validate_offset(*target, "Goto target")?;
-            successors.push(*target);
+            successors.push(logical_target_to_offset(
+                usize::from(*target),
+                code_info,
+                "Goto target",
+            )?);
             falls_through = false;
         }
         Instruction::Goto_w(target) => {
-            let target_u16 = compute_relative_target(offset, *target)?;
-            code_info.validate_offset(target_u16, "Goto_w target")?;
-            successors.push(target_u16);
+            let target = usize::try_from(*target).map_err(|_| {
+                VerifyError::VerifyError(format!(
+                    "Goto_w target: instruction index {target} out of range"
+                ))
+            })?;
+            successors.push(logical_target_to_offset(
+                target,
+                code_info,
+                "Goto_w target",
+            )?);
             falls_through = false;
         }
 
@@ -274,44 +284,23 @@ pub fn compute_successors(
         | Instruction::If_acmpne(target)
         | Instruction::Ifnull(target)
         | Instruction::Ifnonnull(target) => {
-            code_info.validate_offset(*target, "Conditional branch target")?;
-            successors.push(*target);
+            successors.push(logical_target_to_offset(
+                usize::from(*target),
+                code_info,
+                "Conditional branch target",
+            )?);
             // Also falls through
         }
 
         // Table switch
         Instruction::Tableswitch(table) => {
-            // Default target
-            let default_target = compute_relative_target(offset, table.default)?;
-            code_info.validate_offset(default_target, "tableswitch default")?;
-            successors.push(default_target);
-
-            // All case targets
-            for (i, &off) in table.offsets.iter().enumerate() {
-                let case_target = compute_relative_target(offset, off)?;
-                let case_index = i32::try_from(i).unwrap_or(0);
-                code_info.validate_offset(
-                    case_target,
-                    &format!("tableswitch case {}", table.low + case_index),
-                )?;
-                successors.push(case_target);
-            }
+            add_table_switch_successors(offset, table, code_info, &mut successors)?;
             falls_through = false;
         }
 
         // Lookup switch
         Instruction::Lookupswitch(lookup) => {
-            // Default target
-            let default_target = compute_relative_target(offset, lookup.default)?;
-            code_info.validate_offset(default_target, "lookupswitch default")?;
-            successors.push(default_target);
-
-            // All case targets
-            for (&key, &off) in &lookup.pairs {
-                let case_target = compute_relative_target(offset, off)?;
-                code_info.validate_offset(case_target, &format!("lookupswitch case {key}"))?;
-                successors.push(case_target);
-            }
+            add_lookup_switch_successors(offset, lookup, code_info, &mut successors)?;
             falls_through = false;
         }
 
@@ -332,27 +321,111 @@ pub fn compute_successors(
 
     // Add fallthrough successor if applicable
     if falls_through {
-        if next_offset > code_info.code_length() {
-            return Err(VerifyError::VerifyError(format!(
-                "Instruction at offset {offset} falls off the end of code"
-            )));
-        }
-        successors.push(next_offset);
+        add_fallthrough_successor(offset, next_offset, code_info, &mut successors)?;
     }
 
     Ok((successors, falls_through))
 }
 
-/// Computes an absolute target from a relative offset.
-fn compute_relative_target(current_offset: u16, relative: i32) -> Result<u16> {
-    let current = i32::from(current_offset);
-    let target = current + relative;
-    if target < 0 || target > i32::from(u16::MAX) {
+fn add_table_switch_successors(
+    offset: u16,
+    table: &TableSwitch,
+    code_info: &CodeInfo,
+    successors: &mut Vec<u16>,
+) -> Result<()> {
+    let current_index = current_instruction_index(offset, code_info)?;
+    successors.push(relative_logical_target_to_offset(
+        current_index,
+        table.default,
+        code_info,
+        "tableswitch default",
+    )?);
+
+    for (i, &off) in table.offsets.iter().enumerate() {
+        let case_index = i32::try_from(i).unwrap_or(0);
+        successors.push(relative_logical_target_to_offset(
+            current_index,
+            off,
+            code_info,
+            &format!("tableswitch case {}", table.low + case_index),
+        )?);
+    }
+    Ok(())
+}
+
+fn add_lookup_switch_successors(
+    offset: u16,
+    lookup: &LookupSwitch,
+    code_info: &CodeInfo,
+    successors: &mut Vec<u16>,
+) -> Result<()> {
+    let current_index = current_instruction_index(offset, code_info)?;
+    successors.push(relative_logical_target_to_offset(
+        current_index,
+        lookup.default,
+        code_info,
+        "lookupswitch default",
+    )?);
+
+    for (&key, &off) in &lookup.pairs {
+        successors.push(relative_logical_target_to_offset(
+            current_index,
+            off,
+            code_info,
+            &format!("lookupswitch case {key}"),
+        )?);
+    }
+    Ok(())
+}
+
+fn add_fallthrough_successor(
+    offset: u16,
+    next_offset: u16,
+    code_info: &CodeInfo,
+    successors: &mut Vec<u16>,
+) -> Result<()> {
+    if next_offset >= code_info.code_length() {
         return Err(VerifyError::VerifyError(format!(
-            "Branch target {target} out of range"
+            "Instruction at offset {offset} falls off the end of code"
         )));
     }
-    Ok(u16::try_from(target)?)
+    successors.push(next_offset);
+    Ok(())
+}
+
+fn logical_target_to_offset(
+    target_index: usize,
+    code_info: &CodeInfo,
+    context: &str,
+) -> Result<u16> {
+    code_info.offset_at(target_index).ok_or_else(|| {
+        VerifyError::VerifyError(format!(
+            "{context}: instruction index {target_index} out of bounds"
+        ))
+    })
+}
+
+fn current_instruction_index(offset: u16, code_info: &CodeInfo) -> Result<usize> {
+    code_info.index_at(offset).ok_or_else(|| {
+        VerifyError::VerifyError(format!(
+            "Current instruction offset {offset} is not an instruction boundary"
+        ))
+    })
+}
+
+fn relative_logical_target_to_offset(
+    current_index: usize,
+    relative: i32,
+    code_info: &CodeInfo,
+    context: &str,
+) -> Result<u16> {
+    let target_index = i64::try_from(current_index)? + i64::from(relative);
+    let target_index = usize::try_from(target_index).map_err(|_| {
+        VerifyError::VerifyError(format!(
+            "{context}: relative instruction target {target_index} out of range"
+        ))
+    })?;
+    logical_target_to_offset(target_index, code_info, context)
 }
 
 /// Decodes stack map table entries and returns frame information at each offset.
@@ -471,6 +544,8 @@ impl Worklist {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::attributes::{LookupSwitch, TableSwitch};
+    use indexmap::IndexMap;
 
     fn make_code_info() -> CodeInfo {
         // Simulates: offset 0, 1, 3, 6, 10 (instructions of various sizes)
@@ -483,6 +558,7 @@ mod tests {
 
         assert_eq!(info.code_length(), 12);
         assert_eq!(info.instruction_count(), 5);
+        assert_eq!(info.offsets(), &[0, 1, 3, 6, 10]);
 
         assert!(info.is_valid_offset(0));
         assert!(info.is_valid_offset(3));
@@ -564,6 +640,245 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_exception_table_invalid_end_and_handler() {
+        let info = make_code_info();
+
+        let invalid_end = vec![ExceptionTableEntry {
+            range_pc: 0..2,
+            handler_pc: 10,
+            catch_type: 0,
+        }];
+        assert!(validate_exception_table(&invalid_end, &info).is_err());
+
+        let invalid_handler = vec![ExceptionTableEntry {
+            range_pc: 0..6,
+            handler_pc: 2,
+            catch_type: 0,
+        }];
+        assert!(validate_exception_table(&invalid_handler, &info).is_err());
+    }
+
+    #[test]
+    fn test_compute_successors_all_branch_families() {
+        let info = make_code_info();
+
+        assert_eq!(
+            compute_successors(0, &Instruction::Goto(2), 1, &info).unwrap(),
+            (vec![3], false)
+        );
+        assert_eq!(
+            compute_successors(1, &Instruction::Goto_w(3), 3, &info).unwrap(),
+            (vec![6], false)
+        );
+        assert_eq!(
+            compute_successors(0, &Instruction::Ifeq(4), 1, &info).unwrap(),
+            (vec![10, 1], true)
+        );
+        assert_eq!(
+            compute_successors(0, &Instruction::Return, 1, &info).unwrap(),
+            (Vec::new(), false)
+        );
+        assert_eq!(
+            compute_successors(0, &Instruction::Athrow, 1, &info).unwrap(),
+            (Vec::new(), false)
+        );
+
+        let table = TableSwitch {
+            default: 3,
+            low: 4,
+            high: 5,
+            offsets: vec![1, 2],
+        };
+        assert_eq!(
+            compute_successors(0, &Instruction::Tableswitch(Box::new(table)), 1, &info).unwrap(),
+            (vec![6, 1, 3], false)
+        );
+
+        let mut pairs = IndexMap::new();
+        pairs.insert(10, 1);
+        pairs.insert(20, 2);
+        let lookup = LookupSwitch { default: 3, pairs };
+        assert_eq!(
+            compute_successors(0, &Instruction::Lookupswitch(Box::new(lookup)), 1, &info).unwrap(),
+            (vec![6, 1, 3], false)
+        );
+
+        assert_eq!(
+            compute_successors(0, &Instruction::Iconst_0, 1, &info).unwrap(),
+            (vec![1], true)
+        );
+    }
+
+    #[test]
+    fn test_compute_successors_error_paths() {
+        let info = make_code_info();
+
+        assert!(compute_successors(0, &Instruction::Goto(5), 1, &info).is_err());
+        assert!(compute_successors(0, &Instruction::Goto_w(-1), 1, &info).is_err());
+        assert!(compute_successors(0, &Instruction::Goto_w(5), 1, &info).is_err());
+        assert!(compute_successors(0, &Instruction::Ifne(5), 1, &info).is_err());
+        assert!(compute_successors(0, &Instruction::Jsr(1), 1, &info).is_err());
+        assert!(compute_successors(0, &Instruction::Ret(0), 1, &info).is_err());
+        assert!(compute_successors(10, &Instruction::Nop, 12, &info).is_err());
+        assert!(compute_successors(10, &Instruction::Nop, 13, &info).is_err());
+
+        let invalid_table_default = TableSwitch {
+            default: 5,
+            low: 0,
+            high: 0,
+            offsets: vec![0],
+        };
+        assert!(
+            compute_successors(
+                0,
+                &Instruction::Tableswitch(Box::new(invalid_table_default)),
+                1,
+                &info
+            )
+            .is_err()
+        );
+
+        let table = TableSwitch {
+            default: 3,
+            low: 0,
+            high: 0,
+            offsets: vec![5],
+        };
+        assert!(
+            compute_successors(0, &Instruction::Tableswitch(Box::new(table)), 1, &info).is_err()
+        );
+
+        let mut pairs = IndexMap::new();
+        pairs.insert(10, 5);
+        let lookup = LookupSwitch { default: 3, pairs };
+        assert!(
+            compute_successors(0, &Instruction::Lookupswitch(Box::new(lookup)), 1, &info).is_err()
+        );
+
+        let invalid_lookup_default = LookupSwitch {
+            default: 5,
+            pairs: IndexMap::from([(10, 0)]),
+        };
+        assert!(
+            compute_successors(
+                0,
+                &Instruction::Lookupswitch(Box::new(invalid_lookup_default)),
+                1,
+                &info
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn test_compute_successors_conditional_variants() {
+        let info = make_code_info();
+        for instruction in [
+            Instruction::Iflt(3),
+            Instruction::Ifge(3),
+            Instruction::Ifgt(3),
+            Instruction::Ifle(3),
+            Instruction::If_icmpeq(3),
+            Instruction::If_icmpne(3),
+            Instruction::If_icmplt(3),
+            Instruction::If_icmpge(3),
+            Instruction::If_icmpgt(3),
+            Instruction::If_icmple(3),
+            Instruction::If_acmpeq(3),
+            Instruction::If_acmpne(3),
+            Instruction::Ifnull(3),
+            Instruction::Ifnonnull(3),
+        ] {
+            assert_eq!(
+                compute_successors(0, &instruction, 1, &info).unwrap(),
+                (vec![6, 1], true)
+            );
+        }
+    }
+
+    #[test]
+    fn test_decode_stack_map_table_offsets() {
+        let info = CodeInfo::new(vec![0, 1, 3, 6], 7);
+        let frames = vec![
+            StackFrame::SameFrame { frame_type: 1 },
+            StackFrame::SameFrameExtended {
+                frame_type: 251,
+                offset_delta: 1,
+            },
+            StackFrame::SameLocals1StackItemFrame {
+                frame_type: 66,
+                stack: vec![],
+            },
+        ];
+
+        let decoded = decode_stack_map_table(&frames, &info).unwrap();
+        assert_eq!(
+            decoded
+                .iter()
+                .map(|(offset, _)| *offset)
+                .collect::<Vec<_>>(),
+            vec![1, 3, 6]
+        );
+        assert!(decode_stack_map_table(&[StackFrame::SameFrame { frame_type: 2 }], &info).is_err());
+    }
+
+    #[test]
+    fn test_decode_stack_map_table_offset_overflow_and_delta_variants() {
+        let info = CodeInfo::new(vec![u16::MAX], u16::MAX);
+        let frames = [
+            StackFrame::SameFrameExtended {
+                frame_type: 251,
+                offset_delta: u16::MAX,
+            },
+            StackFrame::SameFrameExtended {
+                frame_type: 251,
+                offset_delta: 0,
+            },
+        ];
+        assert!(decode_stack_map_table(&frames, &info).is_err());
+
+        assert_eq!(
+            4,
+            get_offset_delta(&StackFrame::SameLocals1StackItemFrame {
+                frame_type: 68,
+                stack: Vec::new(),
+            })
+        );
+        assert_eq!(
+            7,
+            get_offset_delta(&StackFrame::AppendFrame {
+                frame_type: 252,
+                offset_delta: 7,
+                locals: Vec::new(),
+            })
+        );
+        assert_eq!(
+            8,
+            get_offset_delta(&StackFrame::SameLocals1StackItemFrameExtended {
+                frame_type: 247,
+                offset_delta: 8,
+                stack: Vec::new(),
+            })
+        );
+        assert_eq!(
+            6,
+            get_offset_delta(&StackFrame::ChopFrame {
+                frame_type: 248,
+                offset_delta: 6,
+            })
+        );
+        assert_eq!(
+            9,
+            get_offset_delta(&StackFrame::FullFrame {
+                frame_type: 255,
+                offset_delta: 9,
+                locals: Vec::new(),
+                stack: Vec::new(),
+            })
+        );
+    }
+
+    #[test]
     fn test_worklist() {
         let mut worklist = Worklist::new(10);
 
@@ -588,11 +903,21 @@ mod tests {
     }
 
     #[test]
-    fn test_compute_relative_target() {
-        assert_eq!(compute_relative_target(10, 5).unwrap(), 15);
-        assert_eq!(compute_relative_target(10, -5).unwrap(), 5);
+    fn test_logical_target_helpers() {
+        let info = make_code_info();
 
-        // Overflow
-        assert!(compute_relative_target(0, -1).is_err());
+        assert_eq!(logical_target_to_offset(2, &info, "test").unwrap(), 3);
+        assert!(logical_target_to_offset(5, &info, "test").is_err());
+        assert_eq!(current_instruction_index(3, &info).unwrap(), 2);
+        assert!(current_instruction_index(2, &info).is_err());
+        assert_eq!(
+            relative_logical_target_to_offset(2, 2, &info, "test").unwrap(),
+            10
+        );
+        assert_eq!(
+            relative_logical_target_to_offset(2, -1, &info, "test").unwrap(),
+            1
+        );
+        assert!(relative_logical_target_to_offset(0, -1, &info, "test").is_err());
     }
 }

@@ -369,6 +369,7 @@ impl Iterator for Mutf8CharIter<'_> {
                     | u32::from(byte2 & 0x3F) << 6
                     | u32::from(byte3 & 0x3F);
 
+                let mut decoded = None;
                 // Check for surrogate pair
                 if (0xD800..=0xDBFF).contains(&ch) && self.pos + 5 < self.bytes.len() {
                     let next1 = self.bytes[self.pos + 3];
@@ -382,13 +383,17 @@ impl Iterator for Mutf8CharIter<'_> {
                         if (0xDC00..=0xDFFF).contains(&low) {
                             let code = 0x1_0000 + ((ch - 0xD800) << 10) + (low - 0xDC00);
                             self.pos += 6;
-                            return Some(char::from_u32(code).unwrap_or('\u{FFFD}'));
+                            decoded = Some(char::from_u32(code).unwrap_or('\u{FFFD}'));
                         }
                     }
                 }
-                self.pos += 3;
-                // Lone surrogate -> replacement character
-                Some(char::from_u32(ch).unwrap_or('\u{FFFD}'))
+                if let Some(decoded) = decoded {
+                    Some(decoded)
+                } else {
+                    self.pos += 3;
+                    // Lone surrogate -> replacement character
+                    Some(char::from_u32(ch).unwrap_or('\u{FFFD}'))
+                }
             }
             _ => {
                 self.pos += 1;
@@ -572,10 +577,7 @@ impl From<&str> for JavaString {
             return JavaString(bytes.to_vec());
         }
         // Need to convert UTF-8 -> MUTF-8
-        match mutf8::to_bytes(s) {
-            Ok(mutf8_bytes) => JavaString(mutf8_bytes),
-            Err(_) => JavaString(bytes.to_vec()),
-        }
+        JavaString(mutf8::to_bytes_lossless(s))
     }
 }
 
@@ -917,5 +919,108 @@ mod tests {
         let js = JavaString::from("Hello");
         let java_str: &JavaStr = &js;
         assert_eq!(java_str, js.as_java_str());
+    }
+
+    #[test]
+    fn test_java_str_cow_from_str_borrowed_and_owned() {
+        let borrowed = JavaStr::cow_from_str("Hello");
+        assert!(matches!(borrowed, Cow::Borrowed(_)));
+        assert_eq!(&*borrowed, "Hello");
+
+        let owned = JavaStr::cow_from_str("Hi\0");
+        assert!(matches!(owned, Cow::Owned(_)));
+        assert_eq!(&*owned, "Hi\0");
+    }
+
+    #[test]
+    fn test_java_str_lossy_and_utf16_for_special_sequences() -> Result<()> {
+        let java_string = JavaString::from("A\0😀");
+        let java_str: &JavaStr = &java_string;
+        assert!(matches!(java_str.to_str_lossy(), Cow::Owned(_)));
+        assert_eq!(java_str.to_rust_string(), "A\0😀");
+        assert_eq!(java_str.to_utf16()?, vec![0x0041, 0x0000, 0xD83D, 0xDE00]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_java_str_trait_impls() {
+        use std::collections::hash_map::DefaultHasher;
+
+        let java_string = JavaString::from("Hello");
+        let java_str: &JavaStr = &java_string;
+        let as_bytes: &[u8] = java_str.as_ref();
+        let as_java_str = <JavaStr as AsRef<JavaStr>>::as_ref(java_str);
+        let owned = java_str.to_owned();
+        let rust_string = String::from("Hello");
+
+        assert_eq!(as_bytes, b"Hello");
+        assert_eq!(as_java_str, java_str);
+        assert_eq!(owned, java_string);
+        assert!(java_str.eq(&rust_string));
+        assert!(<str as PartialEq<JavaStr>>::eq("Hello", java_str));
+
+        let mut hasher = DefaultHasher::new();
+        java_str.hash(&mut hasher);
+        assert_ne!(0, hasher.finish());
+    }
+
+    #[test]
+    fn test_java_string_trait_impls() {
+        let java_string = JavaString::from("Hello");
+        let borrowed: &JavaStr = java_string.borrow();
+        let as_java_str: &JavaStr = java_string.as_ref();
+        let cow: Cow<'static, JavaStr> = JavaString::from("owned").into();
+
+        assert_eq!(borrowed, "Hello");
+        assert_eq!(as_java_str, "Hello");
+        assert!(matches!(cow, Cow::Owned(_)));
+        assert_eq!(&*cow, "owned");
+        assert_eq!("Hello", java_string);
+        assert_eq!(&"Hello", &java_string);
+        assert_eq!(java_string, *java_string.as_java_str());
+        assert_eq!(java_string, String::from("Hello"));
+        assert!(<&str as PartialEq<JavaString>>::eq(&"Hello", &java_string));
+        assert!(<str as PartialEq<JavaString>>::eq("Hello", &java_string));
+    }
+
+    #[test]
+    #[expect(unsafe_code)]
+    fn test_unchecked_invalid_bytes_use_lossy_fallbacks() {
+        let invalid = unsafe { JavaStr::from_mutf8_unchecked(&[0xFF]) };
+        assert_eq!(invalid.to_rust_string(), "\u{FFFD}");
+
+        let java_string = unsafe { JavaString::from_mutf8_unchecked(vec![0xFF]) };
+        assert_eq!(format!("{java_string:?}"), "\"�\"");
+        assert_eq!(format!("{java_string}"), "�");
+    }
+
+    #[test]
+    fn test_mutf8_char_iter_edge_paths_via_equality() {
+        let mut bare_null = Mutf8CharIter::new(&[0x00]);
+        assert_eq!(Some('\0'), bare_null.next());
+        assert_eq!(None, bare_null.next());
+
+        let mut truncated_two_byte = Mutf8CharIter::new(&[0xC2]);
+        assert_eq!(Some('\u{FFFD}'), truncated_two_byte.next());
+
+        let mut truncated_three_byte = Mutf8CharIter::new(&[0xE0, 0xA0]);
+        assert_eq!(Some('\u{FFFD}'), truncated_three_byte.next());
+
+        let mut surrogate_pair = Mutf8CharIter::new(&[0xED, 0xA0, 0xBD, 0xED, 0xB8, 0x80]);
+        assert_eq!(Some('😀'), surrogate_pair.next());
+
+        let mut invalid_surrogate_pair = Mutf8CharIter::new(&[0xED, 0xA0, 0xBD, 0xE0, 0x80, 0x80]);
+        assert_eq!(Some('\u{FFFD}'), invalid_surrogate_pair.next());
+
+        let mut lone_surrogate = Mutf8CharIter::new(&[0xED, 0xA0, 0xBD]);
+        assert_eq!(Some('\u{FFFD}'), lone_surrogate.next());
+
+        let mut invalid_leading_byte = Mutf8CharIter::new(&[0xFF]);
+        assert_eq!(Some('\u{FFFD}'), invalid_leading_byte.next());
+
+        let java_string = JavaString::from("\0");
+        let mismatch = java_string.as_java_str();
+        assert_ne!(mismatch, "x");
+        assert_ne!(mismatch, "\0x");
     }
 }

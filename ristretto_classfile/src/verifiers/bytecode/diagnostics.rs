@@ -167,26 +167,12 @@ impl VerificationDiagnostic {
 
         let _ = writeln!(result, "  Error: {}", self.message);
 
-        if let Some(ref expected) = self.expected {
-            result.push_str("  Expected: ");
-            for (i, t) in expected.iter().enumerate() {
-                if i > 0 {
-                    result.push_str(", ");
-                }
-                let _ = write!(result, "{t}");
-            }
-            result.push('\n');
+        if let Some(expected) = &self.expected {
+            push_type_list(&mut result, "Expected", expected);
         }
 
-        if let Some(ref actual) = self.actual {
-            result.push_str("  Actual: ");
-            for (i, t) in actual.iter().enumerate() {
-                if i > 0 {
-                    result.push_str(", ");
-                }
-                let _ = write!(result, "{t}");
-            }
-            result.push('\n');
+        if let Some(actual) = &self.actual {
+            push_type_list(&mut result, "Actual", actual);
         }
 
         if let Some(ref frame) = self.pre_frame {
@@ -218,6 +204,21 @@ impl VerificationDiagnostic {
 
         result
     }
+}
+
+fn push_type_list(result: &mut String, label: &str, types: &[VerificationType]) {
+    use std::fmt::Write;
+
+    result.push_str("  ");
+    result.push_str(label);
+    result.push_str(": ");
+    for (i, t) in types.iter().enumerate() {
+        if i > 0 {
+            result.push_str(", ");
+        }
+        let _ = write!(result, "{t}");
+    }
+    result.push('\n');
 }
 
 impl fmt::Display for VerificationDiagnostic {
@@ -433,7 +434,77 @@ mod tests {
 
         let frame = Frame::new(2, 4);
         trace.log_anchor(0, &frame);
+        trace.log_instruction(1, &Instruction::Nop, &frame, &frame, false);
+        trace.log_note(1, "disabled note");
 
+        assert!(trace.entries().is_empty());
+    }
+
+    #[test]
+    fn test_diagnostic_full_detail_and_display() {
+        let mut frame = Frame::new(2, 2);
+        frame.locals[0] = VerificationType::Integer;
+        frame.stack.push(VerificationType::java_lang_object());
+        frame.stack.push(VerificationType::Null);
+
+        let message = "a".repeat(60);
+        let diag = VerificationDiagnostic::new("Test", "method", "(I)V", 7, message)
+            .with_instruction(&Instruction::Ireturn)
+            .with_frame(&frame)
+            .with_expected(vec![VerificationType::Integer, VerificationType::Float])
+            .with_actual(vec![VerificationType::Long, VerificationType::Double])
+            .with_note("first note")
+            .with_note("second note");
+
+        let details = diag.detailed_string();
+        assert!(details.contains("Instruction: Ireturn"));
+        assert!(details.contains("Frame state:"));
+        assert!(details.contains("Locals: [int"));
+        assert!(details.contains("Stack: [java/lang/Object, null"));
+        assert!(details.contains("Expected: int, float"));
+        assert!(details.contains("Actual: long, double"));
+        assert!(details.contains("Note: first note"));
+        assert!(details.contains("Repro: Test#method(I)V @7: "));
+        assert_eq!(details, diag.to_string());
+        assert!(diag.repro_string().len() < 90);
+    }
+
+    #[test]
+    fn test_trace_instruction_note_format_and_clear() {
+        let mut trace = VerificationTrace::new(true);
+        assert!(trace.is_enabled());
+
+        let mut pre = Frame::new(1, 2);
+        pre.stack.push(VerificationType::Integer);
+        let mut post = pre.clone();
+        post.stack.push(VerificationType::Float);
+
+        trace.log_instruction(2, &Instruction::Fconst_0, &pre, &post, false);
+        trace.log_note(2, "same pc note");
+        trace.log_anchor(4, &post);
+        trace.log_note(3, "new pc note");
+
+        assert_eq!(3, trace.entries().len());
+        assert_eq!("Fconst_0", trace.entries()[0].instruction);
+        assert_eq!(
+            vec![VerificationType::Integer],
+            trace.entries()[0].pre_stack
+        );
+        assert_eq!(
+            vec![VerificationType::Integer, VerificationType::Float],
+            trace.entries()[0].post_stack
+        );
+        assert_eq!(vec!["same pc note"], trace.entries()[0].notes);
+        assert_eq!(3, trace.entries()[2].pc);
+
+        let formatted = trace.format();
+        assert!(formatted.contains("PC    2: Fconst_0"));
+        assert!(formatted.contains("Stack:"));
+        assert!(formatted.contains("Note: same pc note"));
+        assert!(formatted.contains("PC    3:"));
+        assert!(formatted.contains("[ANCHOR]"));
+
+        trace.clear();
         assert!(trace.entries().is_empty());
     }
 }

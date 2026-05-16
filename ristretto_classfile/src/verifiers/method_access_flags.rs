@@ -40,12 +40,11 @@ pub(crate) fn verify(class_file: &ClassFile<'_>, method: &Method) -> Result<()> 
             return Err(InvalidMethodAccessFlags(access_flags.bits()));
         }
 
-        if class_file.version.major() >= 46
-            && class_file.version.major() <= 60
-            && access_flags.contains(MethodAccessFlags::STRICT)
-        {
-            return Err(InvalidMethodAccessFlags(access_flags.bits()));
-        }
+        let strict_disallowed = (46..=60).contains(&class_file.version.major())
+            && access_flags.contains(MethodAccessFlags::STRICT);
+        strict_disallowed
+            .then_some(InvalidMethodAccessFlags(access_flags.bits()))
+            .map_or(Ok(()), Err)?;
     }
 
     Ok(())
@@ -158,5 +157,20 @@ mod test {
         test_strict_version_error(JAVA_14);
         test_strict_version_error(JAVA_15);
         test_strict_version_error(JAVA_16);
+    }
+
+    #[test]
+    fn test_strict_flag_without_abstract_is_allowed_for_java_2_to_16() {
+        let class_file = ClassFile {
+            version: JAVA_8,
+            ..Default::default()
+        };
+        let access_flags = MethodAccessFlags::PUBLIC | MethodAccessFlags::STRICT;
+        let method = Method {
+            access_flags,
+            ..Default::default()
+        };
+
+        assert_eq!(Ok(()), verify(&class_file, &method));
     }
 }

@@ -77,7 +77,7 @@
 //!
 //! // Now you can save these bytes to a file
 //! fs::write("HelloWorld.class", buffer)?;
-//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! # Ok::<(), ristretto_classfile::Error>(())
 //! ```
 
 #![deny(unsafe_code)]

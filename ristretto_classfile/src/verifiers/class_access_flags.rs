@@ -130,4 +130,19 @@ mod test {
         assert_eq!(Ok(()), verify(&class_file));
         Ok(())
     }
+
+    #[test]
+    fn test_verify_package_info_interface_without_abstract() -> Result<()> {
+        let mut constant_pool = ConstantPool::default();
+        let this_class = constant_pool.add_class("com/example/package-info")?;
+        let class_file = ClassFile {
+            constant_pool,
+            access_flags: ClassAccessFlags::INTERFACE,
+            this_class,
+            ..Default::default()
+        };
+
+        assert_eq!(Ok(()), verify(&class_file));
+        Ok(())
+    }
 }

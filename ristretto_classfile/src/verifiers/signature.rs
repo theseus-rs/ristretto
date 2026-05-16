@@ -208,9 +208,10 @@ impl<'a> SignatureParser<'a> {
         while self.peek() == Some('.') {
             self.advance();
             self.parse_identifier()?;
-            if self.peek() == Some('<') {
-                self.parse_type_arguments()?;
+            if self.peek() != Some('<') {
+                continue;
             }
+            self.parse_type_arguments()?;
         }
 
         self.expect(';')?;
@@ -486,10 +487,8 @@ mod tests {
     #[test]
     fn test_class_signature_empty() {
         let result = verify_class_signature("");
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("empty"));
-        }
+        let message = result.unwrap_err().to_string();
+        assert!(message.contains("empty"));
     }
 
     #[test]
@@ -570,10 +569,8 @@ mod tests {
     #[test]
     fn test_method_signature_undefined_type_variable() {
         let result = verify_method_signature("(TT;)V");
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("Undefined type variable"));
-        }
+        let message = result.unwrap_err().to_string();
+        assert!(message.contains("Undefined type variable"));
     }
 
     // Field signature tests
@@ -617,10 +614,8 @@ mod tests {
     #[test]
     fn test_field_signature_undefined_type_variable() {
         let result = verify_field_signature("TT;", &[]);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("Undefined type variable"));
-        }
+        let message = result.unwrap_err().to_string();
+        assert!(message.contains("Undefined type variable"));
     }
 
     #[test]
@@ -661,5 +656,81 @@ mod tests {
         assert!(verify_method_signature(
             "<T:Ljava/lang/Object;U:Ljava/lang/Object;>(TT;TU;Ljava/util/Map<TT;TU;>;)Ljava/util/List<TT;>;"
         ).is_ok());
+    }
+
+    #[test]
+    fn test_signature_parser_error_edges() {
+        let message = SignatureParser::new("X")
+            .expect('Y')
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("Expected 'Y'"));
+
+        let message = SignatureParser::new("")
+            .expect('Y')
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("end of input"));
+
+        let message = SignatureParser::new(";")
+            .parse_identifier()
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("Expected identifier"));
+
+        let message = SignatureParser::new("!")
+            .parse_class_name()
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("Expected class name"));
+
+        let message = SignatureParser::new("I")
+            .parse_field_type_signature()
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("Invalid field type signature"));
+
+        let message = SignatureParser::new("")
+            .parse_field_type_signature()
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("Unexpected end of signature"));
+
+        let message = SignatureParser::new("Ljava/lang/Outer.Inner<>;")
+            .parse_field_type_signature()
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("Type arguments cannot be empty"));
+
+        assert!(
+            SignatureParser::new("Ljava/lang/Outer.Inner<Ljava/lang/String;>;")
+                .parse_field_type_signature()
+                .is_ok()
+        );
+        assert!(
+            SignatureParser::new("Ljava/lang/Outer.Inner;")
+                .parse_field_type_signature()
+                .is_ok()
+        );
+
+        let message = SignatureParser::new("^I")
+            .parse_throws_signature()
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("Invalid throws signature"));
+
+        let message = SignatureParser::new("^")
+            .parse_throws_signature()
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("Unexpected end of throws signature"));
+
+        let message = verify_method_signature("()Vextra").unwrap_err().to_string();
+        assert!(message.contains("Unexpected characters at end of method signature"));
+
+        let message = verify_field_signature("Ljava/lang/String;extra", &[])
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("Unexpected characters at end of field signature"));
     }
 }

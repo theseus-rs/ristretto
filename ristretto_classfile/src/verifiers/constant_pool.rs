@@ -183,7 +183,7 @@ mod test {
     use crate::attributes::BootstrapMethod;
     use crate::class_file::ClassFile;
     use crate::constant::Constant;
-    use crate::{JAVA_6, JAVA_10, Version};
+    use crate::{JAVA_6, JAVA_8, JAVA_10, Version};
 
     fn get_class_file() -> Result<ClassFile<'static>> {
         let class_bytes = include_bytes!("../../../classes/Minimum.class");
@@ -395,22 +395,14 @@ mod test {
         let class_index = get_class_index(class_file)?;
         let name_and_type_index = get_name_and_type_index(class_file)?;
 
-        test_indexes_index_error(
-            class_file.clone(),
-            get_ref_constant(constant, u16::MAX, name_and_type_index),
-        )?;
-        test_indexes_index_type_error(
-            class_file.clone(),
-            get_ref_constant(constant, utf8_index, name_and_type_index),
-        )?;
-        test_indexes_index_error(
-            class_file.clone(),
-            get_ref_constant(constant, class_index, u16::MAX),
-        )?;
-        test_indexes_index_type_error(
-            class_file.clone(),
-            get_ref_constant(constant, class_index, utf8_index),
-        )?;
+        let bad_class = get_ref_constant(constant, u16::MAX, name_and_type_index);
+        test_indexes_index_error(class_file.clone(), bad_class)?;
+        let wrong_class_type = get_ref_constant(constant, utf8_index, name_and_type_index);
+        test_indexes_index_type_error(class_file.clone(), wrong_class_type)?;
+        let bad_name_and_type = get_ref_constant(constant, class_index, u16::MAX);
+        test_indexes_index_error(class_file.clone(), bad_name_and_type)?;
+        let wrong_name_and_type = get_ref_constant(constant, class_index, utf8_index);
+        test_indexes_index_type_error(class_file.clone(), wrong_name_and_type)?;
         Ok(())
     }
 
@@ -444,34 +436,26 @@ mod test {
         let integer_index = get_integer_index(class_file)?;
         let utf8_index = get_utf8_index(class_file)?;
 
-        test_indexes_index_error(
-            class_file.clone(),
-            Constant::NameAndType {
-                name_index: u16::MAX,
-                descriptor_index: utf8_index,
-            },
-        )?;
-        test_indexes_index_type_error(
-            class_file.clone(),
-            Constant::NameAndType {
-                name_index: integer_index,
-                descriptor_index: utf8_index,
-            },
-        )?;
-        test_indexes_index_error(
-            class_file.clone(),
-            Constant::NameAndType {
-                name_index: utf8_index,
-                descriptor_index: u16::MAX,
-            },
-        )?;
-        test_indexes_index_type_error(
-            class_file.clone(),
-            Constant::NameAndType {
-                name_index: utf8_index,
-                descriptor_index: integer_index,
-            },
-        )?;
+        let bad_name = Constant::NameAndType {
+            name_index: u16::MAX,
+            descriptor_index: utf8_index,
+        };
+        test_indexes_index_error(class_file.clone(), bad_name)?;
+        let wrong_name_type = Constant::NameAndType {
+            name_index: integer_index,
+            descriptor_index: utf8_index,
+        };
+        test_indexes_index_type_error(class_file.clone(), wrong_name_type)?;
+        let bad_descriptor = Constant::NameAndType {
+            name_index: utf8_index,
+            descriptor_index: u16::MAX,
+        };
+        test_indexes_index_error(class_file.clone(), bad_descriptor)?;
+        let wrong_descriptor_type = Constant::NameAndType {
+            name_index: utf8_index,
+            descriptor_index: integer_index,
+        };
+        test_indexes_index_type_error(class_file.clone(), wrong_descriptor_type)?;
         Ok(())
     }
 
@@ -481,21 +465,79 @@ mod test {
         let integer_index = get_integer_index(class_file)?;
 
         for reference_kind in ReferenceKind::all() {
-            test_indexes_index_error(
-                class_file.clone(),
-                Constant::MethodHandle {
-                    reference_kind: reference_kind.clone(),
-                    reference_index: u16::MAX,
-                },
-            )?;
-            test_indexes_index_type_error(
-                class_file.clone(),
-                Constant::MethodHandle {
-                    reference_kind: reference_kind.clone(),
-                    reference_index: integer_index,
-                },
-            )?;
+            let bad_reference = Constant::MethodHandle {
+                reference_kind: reference_kind.clone(),
+                reference_index: u16::MAX,
+            };
+            test_indexes_index_error(class_file.clone(), bad_reference)?;
+            let wrong_reference_type = Constant::MethodHandle {
+                reference_kind: reference_kind.clone(),
+                reference_index: integer_index,
+            };
+            test_indexes_index_type_error(class_file.clone(), wrong_reference_type)?;
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_indexes_method_handle_success_paths() -> Result<()> {
+        let class_file = &mut get_class_file()?;
+        class_file.version = JAVA_8;
+        let utf8_index = get_utf8_index(class_file)?;
+        let class_index = get_class_index(class_file)?;
+        let name_and_type_index = get_name_and_type_index(class_file)?;
+        let field_ref = class_file.constant_pool.add(Constant::FieldRef {
+            class_index,
+            name_and_type_index,
+        })?;
+        let method_ref = class_file.constant_pool.add(Constant::MethodRef {
+            class_index,
+            name_and_type_index,
+        })?;
+        let interface_method_ref = class_file.constant_pool.add(Constant::InterfaceMethodRef {
+            class_index,
+            name_and_type_index,
+        })?;
+
+        for reference_kind in [
+            ReferenceKind::GetField,
+            ReferenceKind::GetStatic,
+            ReferenceKind::PutField,
+            ReferenceKind::PutStatic,
+        ] {
+            class_file.constant_pool.add(Constant::MethodHandle {
+                reference_kind,
+                reference_index: field_ref,
+            })?;
+        }
+        for reference_kind in [
+            ReferenceKind::InvokeVirtual,
+            ReferenceKind::NewInvokeSpecial,
+        ] {
+            class_file.constant_pool.add(Constant::MethodHandle {
+                reference_kind,
+                reference_index: method_ref,
+            })?;
+        }
+        for reference_kind in [ReferenceKind::InvokeStatic, ReferenceKind::InvokeSpecial] {
+            class_file.constant_pool.add(Constant::MethodHandle {
+                reference_kind: reference_kind.clone(),
+                reference_index: method_ref,
+            })?;
+            class_file.constant_pool.add(Constant::MethodHandle {
+                reference_kind,
+                reference_index: interface_method_ref,
+            })?;
+        }
+        class_file.constant_pool.add(Constant::MethodHandle {
+            reference_kind: ReferenceKind::InvokeInterface,
+            reference_index: interface_method_ref,
+        })?;
+        class_file
+            .constant_pool
+            .add(Constant::MethodType(utf8_index))?;
+
+        assert_eq!(Ok(()), verify_constant_indexes(class_file));
         Ok(())
     }
 
@@ -540,20 +582,16 @@ mod test {
             },
             u16::MAX as usize,
         );
-        test_indexes_index_error(
-            class_file.clone(),
-            Constant::Dynamic {
-                bootstrap_method_attr_index: bootstrap_method_index,
-                name_and_type_index: u16::MAX,
-            },
-        )?;
-        test_indexes_index_type_error(
-            class_file.clone(),
-            Constant::Dynamic {
-                bootstrap_method_attr_index: bootstrap_method_index,
-                name_and_type_index: integer_index,
-            },
-        )?;
+        let bad_name_and_type = Constant::Dynamic {
+            bootstrap_method_attr_index: bootstrap_method_index,
+            name_and_type_index: u16::MAX,
+        };
+        test_indexes_index_error(class_file.clone(), bad_name_and_type)?;
+        let wrong_name_and_type = Constant::Dynamic {
+            bootstrap_method_attr_index: bootstrap_method_index,
+            name_and_type_index: integer_index,
+        };
+        test_indexes_index_type_error(class_file.clone(), wrong_name_and_type)?;
         Ok(())
     }
 
@@ -576,20 +614,35 @@ mod test {
             },
             u16::MAX as usize,
         );
-        test_indexes_index_error(
-            class_file.clone(),
-            Constant::Dynamic {
-                bootstrap_method_attr_index: bootstrap_method_index,
-                name_and_type_index: u16::MAX,
-            },
-        )?;
-        test_indexes_index_type_error(
-            class_file.clone(),
-            Constant::Dynamic {
-                bootstrap_method_attr_index: bootstrap_method_index,
-                name_and_type_index: integer_index,
-            },
-        )?;
+        let bad_name_and_type = Constant::Dynamic {
+            bootstrap_method_attr_index: bootstrap_method_index,
+            name_and_type_index: u16::MAX,
+        };
+        test_indexes_index_error(class_file.clone(), bad_name_and_type)?;
+        let wrong_name_and_type = Constant::Dynamic {
+            bootstrap_method_attr_index: bootstrap_method_index,
+            name_and_type_index: integer_index,
+        };
+        test_indexes_index_type_error(class_file.clone(), wrong_name_and_type)?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_indexes_dynamic_success_paths() -> Result<()> {
+        let class_file = &mut get_class_file()?;
+        get_bootstrap_methods_index(class_file)?;
+        let name_and_type_index = get_name_and_type_index(class_file)?;
+
+        class_file.constant_pool.add(Constant::Dynamic {
+            bootstrap_method_attr_index: 0,
+            name_and_type_index,
+        })?;
+        class_file.constant_pool.add(Constant::InvokeDynamic {
+            bootstrap_method_attr_index: 0,
+            name_and_type_index,
+        })?;
+
+        assert_eq!(Ok(()), verify_constant_indexes(class_file));
         Ok(())
     }
 }

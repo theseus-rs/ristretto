@@ -22,11 +22,8 @@ pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
         verify_name_index(class_file, method)?;
         verify_descriptor_index(class_file, method)?;
         verify_return_instructions(class_file, method)?;
-        attributes::verify(
-            class_file,
-            &method.attributes,
-            AttributeContext::Method(method),
-        )?;
+        let context = AttributeContext::Method(method);
+        attributes::verify(class_file, &method.attributes, context)?;
     }
     Ok(())
 }
@@ -45,14 +42,10 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
         return Ok(()); // Invalid descriptor handled elsewhere
     };
 
-    // Find the Code attribute
-    let code = method.attributes.iter().find_map(|attr| {
-        if let Attribute::Code { code, .. } = attr {
-            Some(code)
-        } else {
-            None
-        }
-    });
+    let code = method
+        .attributes
+        .iter()
+        .find_map(code_attribute_instructions);
 
     // If there's no Code attribute, nothing to verify (abstract/native methods)
     let Some(code) = code else {
@@ -147,6 +140,13 @@ fn verify_return_instructions(class_file: &ClassFile<'_>, method: &Method) -> Re
     }
 
     Ok(())
+}
+
+fn code_attribute_instructions(attribute: &Attribute) -> Option<&[Instruction]> {
+    match attribute {
+        Attribute::Code { code, .. } => Some(code),
+        _ => None,
+    }
 }
 
 fn verify_name_index(class_file: &ClassFile<'_>, method: &Method) -> Result<()> {
@@ -285,11 +285,10 @@ mod test {
     #[test]
     fn test_void_return_invalid_ireturn() {
         let (class_file, method) = create_method_with_code("()V", vec![Instruction::Ireturn]);
-        let result = verify_return_instructions(&class_file, &method);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("ireturn"));
-        }
+        let message = verify_return_instructions(&class_file, &method)
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("ireturn"));
     }
 
     #[test]
@@ -302,11 +301,10 @@ mod test {
     #[test]
     fn test_int_return_invalid_return() {
         let (class_file, method) = create_method_with_code("()I", vec![Instruction::Return]);
-        let result = verify_return_instructions(&class_file, &method);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("void return"));
-        }
+        let message = verify_return_instructions(&class_file, &method)
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("void return"));
     }
 
     #[test]
@@ -335,6 +333,46 @@ mod test {
         let (class_file, method) = create_method_with_code("()J", vec![Instruction::Ireturn]);
         let result = verify_return_instructions(&class_file, &method);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_return_instruction_skips_invalid_descriptor_inputs() {
+        let (class_file, mut method) = create_method_with_code("()V", vec![Instruction::Return]);
+        method.descriptor_index = u16::MAX;
+        assert_eq!(Ok(()), verify_return_instructions(&class_file, &method));
+
+        let (mut class_file, method) =
+            create_method_with_code("not a descriptor", vec![Instruction::Return]);
+        class_file
+            .constant_pool
+            .set(method.descriptor_index, Constant::utf8("not a descriptor"))
+            .unwrap();
+        assert_eq!(Ok(()), verify_return_instructions(&class_file, &method));
+    }
+
+    #[test]
+    fn test_return_instruction_skips_methods_without_code_attribute() {
+        let (class_file, mut method) = create_method_with_code("()V", vec![Instruction::Return]);
+        method.attributes = vec![Attribute::Deprecated { name_index: 0 }];
+        assert_eq!(Ok(()), verify_return_instructions(&class_file, &method));
+
+        method.attributes.clear();
+        assert_eq!(Ok(()), verify_return_instructions(&class_file, &method));
+    }
+
+    #[test]
+    fn test_category2_and_float_return_mismatches() {
+        for (descriptor, instruction, needle) in [
+            ("()I", Instruction::Lreturn, "lreturn"),
+            ("()I", Instruction::Freturn, "freturn"),
+            ("()I", Instruction::Dreturn, "dreturn"),
+        ] {
+            let (class_file, method) = create_method_with_code(descriptor, vec![instruction]);
+            let message = verify_return_instructions(&class_file, &method)
+                .unwrap_err()
+                .to_string();
+            assert!(message.contains(needle));
+        }
     }
 
     #[test]

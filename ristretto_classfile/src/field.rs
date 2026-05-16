@@ -92,14 +92,8 @@ impl Field {
         let access_flags = FieldAccessFlags::from_bits_truncate(bytes.read_u16()?);
         let name_index = bytes.read_u16()?;
         let descriptor_index = bytes.read_u16()?;
-        let field_type = if let Some(crate::constant::Constant::Utf8(desc)) =
-            constant_pool.get_unchecked(descriptor_index)
-        {
-            FieldType::parse_java_str(desc)?
-        } else {
-            let desc = constant_pool.try_get_utf8(descriptor_index)?;
-            FieldType::parse_java_str(desc)?
-        };
+        let desc = constant_pool.try_get_utf8(descriptor_index)?;
+        let field_type = FieldType::parse_java_str(desc)?;
 
         let attribute_count = bytes.read_u16()? as usize;
         let mut attributes = Vec::with_capacity(attribute_count);

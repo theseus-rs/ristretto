@@ -733,11 +733,8 @@ impl Attribute {
                             .ok_or(InvalidInstructionOffset(u32::from(exception.handler_pc)))?;
                     exception_table.push(exception);
                 }
-                let attributes = Self::from_bytes_code_attributes(
-                    constant_pool,
-                    bytes,
-                    &byte_to_instruction_pairs,
-                )?;
+                let pairs = &byte_to_instruction_pairs;
+                let attributes = Self::from_bytes_code_attributes(constant_pool, bytes, pairs)?;
                 Attribute::Code {
                     name_index,
                     max_stack,
@@ -1854,8 +1851,8 @@ mod test {
     use crate::attributes::annotation_value_pair::AnnotationValuePair;
     use crate::attributes::nested_class_access_flags::NestedClassAccessFlags;
     use crate::attributes::{
-        AnnotationElement, ExportsFlags, OpensFlags, RequiresFlags, TargetPath, TargetType,
-        VerificationType,
+        AnnotationElement, ExportsFlags, LookupSwitch, OpensFlags, RequiresFlags, TableSwitch,
+        TargetPath, TargetType, VerificationType,
     };
     use crate::method_access_flags::MethodAccessFlags;
     use indoc::indoc;
@@ -2071,6 +2068,59 @@ mod test {
         let code_attribute = Attribute::from_bytes(&constant_pool, &mut reader)?;
         assert_eq!(attribute, code_attribute);
         Ok(())
+    }
+
+    #[test]
+    fn test_code_to_string_tableswitch_offsets() {
+        let attribute = Attribute::Code {
+            name_index: 1,
+            max_stack: 1,
+            max_locals: 1,
+            code: vec![
+                Instruction::Tableswitch(Box::new(TableSwitch {
+                    default: 3,
+                    low: 3,
+                    high: 4,
+                    offsets: vec![1, 2],
+                })),
+                Instruction::Nop,
+                Instruction::Nop,
+                Instruction::Return,
+            ],
+            exception_table: Vec::new(),
+            attributes: Vec::new(),
+        };
+
+        let display = attribute.to_string();
+        assert!(display.contains("tableswitch"));
+        assert!(display.contains("default"));
+    }
+
+    #[test]
+    fn test_code_to_string_lookupswitch_offsets() {
+        let attribute = Attribute::Code {
+            name_index: 1,
+            max_stack: 1,
+            max_locals: 1,
+            code: vec![
+                Instruction::Nop,
+                Instruction::Lookupswitch(Box::new(LookupSwitch {
+                    default: 3,
+                    pairs: [(7, 1), (9, 2)].into_iter().collect(),
+                })),
+                Instruction::Nop,
+                Instruction::Nop,
+                Instruction::Return,
+            ],
+            exception_table: Vec::new(),
+            attributes: Vec::new(),
+        };
+
+        let display = attribute.to_string();
+        assert!(display.contains("lookupswitch"));
+        assert!(display.contains("default"));
+        assert!(display.contains("7:"));
+        assert!(display.contains("9:"));
     }
 
     #[test]

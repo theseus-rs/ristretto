@@ -516,10 +516,8 @@ impl fmt::Display for StackFrame {
                 write!(f, "frame_type = {frame_type} /* same */")
             }
             StackFrame::SameLocals1StackItemFrame { frame_type, stack } => {
-                writeln!(
-                    f,
-                    "frame_type = {frame_type} /* same_locals_1_stack_item */"
-                )?;
+                let header = format!("frame_type = {frame_type} /* same_locals_1_stack_item */");
+                writeln!(f, "{header}")?;
                 let stack = stack
                     .iter()
                     .map(ToString::to_string)
@@ -532,10 +530,11 @@ impl fmt::Display for StackFrame {
                 offset_delta,
                 stack,
             } => {
-                writeln!(
-                    f,
+                let frame_type = *frame_type;
+                let header = format!(
                     "frame_type = {frame_type} /* same_locals_1_stack_item_frame_extended */"
-                )?;
+                );
+                writeln!(f, "{header}")?;
                 writeln!(f, "  offset_delta = {offset_delta}")?;
                 let stack = stack
                     .iter()

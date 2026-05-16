@@ -320,11 +320,8 @@ mod tests {
             records: vec![component],
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("Invalid field descriptor"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("Invalid field descriptor"));
     }
 
     #[test]
@@ -337,11 +334,8 @@ mod tests {
             records: vec![component1, component2],
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("Duplicate record component name"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("Duplicate record component name"));
     }
 
     #[test]
@@ -357,11 +351,8 @@ mod tests {
             records: vec![component],
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("Multiple Record attributes"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("Multiple Record attributes"));
     }
 
     #[test]
@@ -400,6 +391,49 @@ mod tests {
     }
 
     #[test]
+    fn test_record_with_signature_attribute_index_errors_and_unknown() {
+        let mut class_file = ClassFile::default();
+        let name_index = class_file.constant_pool.add_utf8("items").unwrap();
+        let descriptor_index = class_file
+            .constant_pool
+            .add_utf8("Ljava/util/List;")
+            .unwrap();
+        let signature_name_index = class_file.constant_pool.add_utf8("Signature").unwrap();
+        let class_index = class_file.constant_pool.add_class("NotUtf8").unwrap();
+
+        let wrong_type = Attribute::Signature {
+            name_index: signature_name_index,
+            signature_index: class_index,
+        };
+        assert!(matches!(
+            verify_component_attributes(&class_file, &[wrong_type], 0),
+            Err(InvalidConstantPoolIndexType(_))
+        ));
+
+        let missing = Attribute::Signature {
+            name_index: signature_name_index,
+            signature_index: u16::MAX,
+        };
+        assert_eq!(
+            Err(InvalidConstantPoolIndex(u16::MAX)),
+            verify_component_attributes(&class_file, &[missing], 0)
+        );
+
+        class_file.attributes.push(Attribute::Record {
+            name_index: 0,
+            records: vec![Record {
+                name_index,
+                descriptor_index,
+                attributes: vec![Attribute::Unknown {
+                    name_index: 0,
+                    info: vec![1, 2, 3],
+                }],
+            }],
+        });
+        assert!(verify(&class_file).is_ok());
+    }
+
+    #[test]
     fn test_record_with_invalid_component_attribute() {
         let mut class_file = ClassFile::default();
         let component = Record {
@@ -419,11 +453,8 @@ mod tests {
             records: vec![component],
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("Invalid attribute"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("Invalid attribute"));
     }
 
     // Field descriptor validation tests
@@ -453,6 +484,7 @@ mod tests {
         assert!(!is_valid_field_descriptor("X"));
         assert!(!is_valid_field_descriptor("Ljava/lang/String")); // missing semicolon
         assert!(!is_valid_field_descriptor("L;")); // empty class name
+        assert!(!is_valid_field_descriptor("Lbad-name;"));
         assert!(!is_valid_field_descriptor("[")); // array with no type
         assert!(!is_valid_field_descriptor("II")); // extra characters
     }
