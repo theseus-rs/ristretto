@@ -486,11 +486,7 @@ impl VerificationType {
                     || comp2.is_category2()
                     || matches!(comp2.as_ref(), VerificationType::Float)
                 {
-                    if comp1 == comp2 {
-                        Ok(self.clone())
-                    } else {
-                        Ok(VerificationType::java_lang_object())
-                    }
+                    Ok(VerificationType::java_lang_object())
                 } else {
                     // Reference arrays: merge component types
                     let merged_comp = comp1.merge(comp2, context)?;
@@ -532,6 +528,7 @@ impl Display for VerificationType {
 mod tests {
     use super::*;
     use crate::JavaString;
+    use crate::verifiers::bytecode::handlers::test_utils as handler_test_utils;
 
     struct MockContext;
 
@@ -552,6 +549,11 @@ mod tests {
         }
 
         fn common_superclass(&self, class1: &str, class2: &str) -> Result<String> {
+            if class1 == "error" || class2 == "error" {
+                return Err(VerifyError::VerifyError(
+                    "common superclass failure".to_string(),
+                ));
+            }
             if class1 == class2 {
                 Ok(class1.to_string())
             } else {
@@ -740,12 +742,322 @@ mod tests {
         assert_eq!(VerificationType::Long.to_string(), "long");
         assert_eq!(VerificationType::Null.to_string(), "null");
         assert_eq!(
+            VerificationType::UninitializedThis.to_string(),
+            "uninitializedThis"
+        );
+        assert_eq!(
+            VerificationType::Uninitialized(7).to_string(),
+            "uninitialized(7)"
+        );
+        assert_eq!(
             VerificationType::Object(JavaString::from("java/lang/String")).to_string(),
             "java/lang/String"
         );
         assert_eq!(
             VerificationType::Array(Box::new(VerificationType::Integer)).to_string(),
             "int[]"
+        );
+    }
+
+    #[test]
+    fn test_constructors_predicates_and_descriptors() {
+        assert_eq!(
+            VerificationType::java_lang_string(),
+            VerificationType::Object(JavaString::from("java/lang/String"))
+        );
+        assert_eq!(
+            VerificationType::java_lang_class(),
+            VerificationType::Object(JavaString::from("java/lang/Class"))
+        );
+        assert_eq!(
+            VerificationType::java_lang_throwable(),
+            VerificationType::Object(JavaString::from("java/lang/Throwable"))
+        );
+
+        assert!(VerificationType::Null.is_initialized_reference());
+        assert!(!VerificationType::UninitializedThis.is_initialized_reference());
+        assert!(VerificationType::UninitializedThis.is_uninitialized());
+        assert!(VerificationType::Uninitialized(9).is_uninitialized());
+        assert!(!VerificationType::Integer.is_uninitialized());
+        assert!(!VerificationType::Integer.is_array());
+        assert!(VerificationType::Integer.is_integer());
+        assert!(VerificationType::Top.is_top());
+        assert!(!VerificationType::Integer.is_top());
+        assert!(VerificationType::Null.is_null());
+        assert_eq!(None, VerificationType::Integer.component_type());
+        assert_eq!(0, VerificationType::Integer.array_dimensions());
+        assert_eq!(
+            &VerificationType::Integer,
+            VerificationType::Integer.element_type()
+        );
+
+        assert_eq!(
+            Some("I".to_string()),
+            VerificationType::Integer.to_descriptor()
+        );
+        assert_eq!(
+            Some("F".to_string()),
+            VerificationType::Float.to_descriptor()
+        );
+        assert_eq!(
+            Some("J".to_string()),
+            VerificationType::Long.to_descriptor()
+        );
+        assert_eq!(
+            Some("D".to_string()),
+            VerificationType::Double.to_descriptor()
+        );
+        assert_eq!(
+            Some("Ljava/lang/String;".to_string()),
+            VerificationType::java_lang_string().to_descriptor()
+        );
+        assert_eq!(
+            Some("[I".to_string()),
+            VerificationType::Integer.make_array().to_descriptor()
+        );
+        assert_eq!(None, VerificationType::Top.to_descriptor());
+    }
+
+    #[test]
+    fn test_from_field_type_and_array_type_codes() {
+        assert_eq!(
+            VerificationType::from_field_type(&FieldType::Base(BaseType::Boolean)),
+            VerificationType::Integer
+        );
+        assert_eq!(
+            VerificationType::from_field_type(&FieldType::Base(BaseType::Float)),
+            VerificationType::Float
+        );
+        assert_eq!(
+            VerificationType::from_field_type(&FieldType::Base(BaseType::Double)),
+            VerificationType::Double
+        );
+        assert_eq!(
+            VerificationType::from_field_type(&FieldType::Array(Box::new(FieldType::Base(
+                BaseType::Int
+            )))),
+            VerificationType::Array(Box::new(VerificationType::Integer))
+        );
+
+        for code in [4, 5, 8, 9, 10] {
+            assert_eq!(
+                VerificationType::Integer,
+                VerificationType::from_array_type_code(code).unwrap()
+            );
+        }
+        assert_eq!(
+            VerificationType::Float,
+            VerificationType::from_array_type_code(6).unwrap()
+        );
+        assert_eq!(
+            VerificationType::Double,
+            VerificationType::from_array_type_code(7).unwrap()
+        );
+        assert_eq!(
+            VerificationType::Long,
+            VerificationType::from_array_type_code(11).unwrap()
+        );
+        assert_eq!(
+            Err(VerifyError::InvalidArrayTypeCode(12)),
+            VerificationType::from_array_type_code(12)
+        );
+    }
+
+    #[test]
+    fn test_assignability_remaining_cases() {
+        let ctx = MockContext;
+        assert!(
+            !VerificationType::Top
+                .is_assignable_to(&VerificationType::Integer, &ctx)
+                .unwrap()
+        );
+        assert!(
+            VerificationType::java_lang_string()
+                .is_assignable_to(&VerificationType::java_lang_object(), &ctx)
+                .unwrap()
+        );
+        assert!(
+            !VerificationType::java_lang_object()
+                .is_assignable_to(&VerificationType::java_lang_string(), &ctx)
+                .unwrap()
+        );
+        assert!(
+            !VerificationType::Integer
+                .is_assignable_to(&VerificationType::Float, &ctx)
+                .unwrap()
+        );
+        assert!(
+            !VerificationType::Integer
+                .make_array()
+                .is_assignable_to(&VerificationType::java_lang_string(), &ctx)
+                .unwrap()
+        );
+        assert!(
+            VerificationType::Integer
+                .make_array()
+                .is_assignable_to(&VerificationType::Integer.make_array(), &ctx)
+                .unwrap()
+        );
+        assert!(
+            !VerificationType::Integer
+                .make_array()
+                .is_assignable_to(&VerificationType::Float.make_array(), &ctx)
+                .unwrap()
+        );
+        assert!(
+            VerificationType::java_lang_string()
+                .make_array()
+                .is_assignable_to(&VerificationType::java_lang_object().make_array(), &ctx)
+                .unwrap()
+        );
+        assert!(
+            !VerificationType::Uninitialized(1)
+                .is_assignable_to(&VerificationType::java_lang_object(), &ctx)
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_merge_object_null_and_primitive_cases() {
+        let ctx = MockContext;
+        assert_eq!(
+            "java/lang/String",
+            ctx.common_superclass("java/lang/String", "java/lang/String")
+                .unwrap()
+        );
+        assert_eq!(
+            VerificationType::Top,
+            VerificationType::Null
+                .merge(&VerificationType::UninitializedThis, &ctx)
+                .unwrap()
+        );
+        assert_eq!(
+            VerificationType::java_lang_object(),
+            VerificationType::java_lang_object()
+                .merge(&VerificationType::Null, &ctx)
+                .unwrap()
+        );
+        assert_eq!(
+            VerificationType::java_lang_object(),
+            VerificationType::java_lang_string()
+                .merge(&VerificationType::java_lang_object(), &ctx)
+                .unwrap()
+        );
+        let error_object = VerificationType::Object(JavaString::from("error"));
+        let other_object = VerificationType::Object(JavaString::from("other"));
+        assert!(error_object.merge(&other_object, &ctx).is_err());
+        let handler_ctx = handler_test_utils::MockContext::PERMISSIVE;
+        let handler_error_object = VerificationType::Object(JavaString::from("error"));
+        let handler_other_object = VerificationType::Object(JavaString::from("other"));
+        assert!(
+            handler_error_object
+                .merge(&handler_other_object, &handler_ctx)
+                .is_err()
+        );
+        assert_eq!(
+            VerificationType::Top,
+            VerificationType::Integer
+                .merge(&VerificationType::Float, &handler_ctx)
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_merge_array_cases() {
+        let ctx = MockContext;
+        let handler_ctx = handler_test_utils::MockContext::PERMISSIVE;
+        let error_object = VerificationType::Object(JavaString::from("error"));
+        let other_object = VerificationType::Object(JavaString::from("other"));
+        let handler_error_object = VerificationType::Object(JavaString::from("error"));
+        let handler_other_object = VerificationType::Object(JavaString::from("other"));
+
+        assert_eq!(
+            VerificationType::java_lang_cloneable(),
+            VerificationType::Integer
+                .make_array()
+                .merge(&VerificationType::java_lang_cloneable(), &ctx)
+                .unwrap()
+        );
+        assert_eq!(
+            VerificationType::java_io_serializable(),
+            VerificationType::java_io_serializable()
+                .merge(&VerificationType::Integer.make_array(), &ctx)
+                .unwrap()
+        );
+        assert_eq!(
+            VerificationType::java_lang_object(),
+            VerificationType::Integer
+                .make_array()
+                .merge(&VerificationType::java_lang_string(), &ctx)
+                .unwrap()
+        );
+        assert_eq!(
+            VerificationType::Integer.make_array(),
+            VerificationType::Integer
+                .make_array()
+                .merge(&VerificationType::Integer.make_array(), &ctx)
+                .unwrap()
+        );
+        assert_eq!(
+            VerificationType::java_lang_object(),
+            VerificationType::Integer
+                .make_array()
+                .merge(&VerificationType::Float.make_array(), &ctx)
+                .unwrap()
+        );
+        assert_eq!(
+            VerificationType::java_lang_object().make_array(),
+            VerificationType::java_lang_string()
+                .make_array()
+                .merge(&VerificationType::java_lang_object().make_array(), &ctx)
+                .unwrap()
+        );
+        assert!(
+            error_object
+                .make_array()
+                .merge(&other_object.make_array(), &ctx)
+                .is_err()
+        );
+        assert!(
+            handler_error_object
+                .make_array()
+                .merge(&handler_other_object.make_array(), &handler_ctx)
+                .is_err()
+        );
+        assert_eq!(
+            VerificationType::java_lang_object().make_array(),
+            VerificationType::java_lang_string()
+                .make_array()
+                .merge(
+                    &VerificationType::java_lang_object().make_array(),
+                    &handler_ctx
+                )
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_merge_uninitialized_cases() {
+        let ctx = MockContext;
+        let handler_ctx = handler_test_utils::MockContext::PERMISSIVE;
+
+        assert_eq!(
+            VerificationType::Top,
+            VerificationType::Uninitialized(1)
+                .merge(&VerificationType::Uninitialized(2), &ctx)
+                .unwrap()
+        );
+        assert_eq!(
+            VerificationType::Top,
+            VerificationType::UninitializedThis
+                .merge(&VerificationType::Uninitialized(2), &ctx)
+                .unwrap()
+        );
+        assert_eq!(
+            VerificationType::Top,
+            VerificationType::Uninitialized(1)
+                .merge(&VerificationType::Uninitialized(2), &handler_ctx)
+                .unwrap()
         );
     }
 }

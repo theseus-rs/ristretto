@@ -20,9 +20,6 @@
 //! - [JVMS §4.9 - Constraints on Java Virtual Machine Code](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.9)
 //! - [JVMS §4.10 - Verification of class Files](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-4.html#jvms-4.10)
 
-/// Performs dataflow analysis and bytecode verification (legacy implementation).
-pub(crate) mod analysis;
-
 /// New modular bytecode verification implementation.
 ///
 /// This module provides a 100% JVMS-compliant bytecode verifier organized into:

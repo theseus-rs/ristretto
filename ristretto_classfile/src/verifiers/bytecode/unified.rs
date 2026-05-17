@@ -120,16 +120,17 @@ pub fn verify_method<C: VerificationContext>(
         .intersects(MethodAccessFlags::NATIVE | MethodAccessFlags::ABSTRACT)
     {
         // Verify they don't have Code attribute
-        for attribute in &method.attributes {
-            if matches!(attribute, Attribute::Code { .. }) {
-                let name = class_file
-                    .constant_pool
-                    .try_get_utf8(method.name_index)
-                    .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
-                return Err(VerifyError::ClassFormatError(format!(
-                    "Method {name} is native or abstract but has Code attribute"
-                )));
-            }
+        let has_code = method
+            .attributes
+            .iter()
+            .any(|attribute| matches!(attribute, Attribute::Code { .. }));
+        if has_code {
+            let name = class_file
+                .constant_pool
+                .try_get_utf8(method.name_index)
+                .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
+            let message = format!("Method {name} is native or abstract but has Code attribute");
+            return Err(VerifyError::ClassFormatError(message));
         }
         return Ok(VerificationResult::success(VerificationPath::Skipped));
     }
@@ -150,38 +151,35 @@ pub fn verify_method<C: VerificationContext>(
     let major_version = class_file.version.major();
     let use_fast_path = !config.use_inference() && config.requires_stackmap(major_version);
 
-    if use_fast_path {
-        // Try fast path first
-        let mut fast_verifier = FastPathVerifier::new(class_file, method, context, config)?;
-
-        match fast_verifier.verify() {
-            FastPathResult::Success => {
-                return Ok(VerificationResult::success(VerificationPath::FastPath));
-            }
-            FastPathResult::Failed(e) => {
-                if config.allows_inference_fallback() {
-                    // Fall through to inference
-                } else {
-                    return Err(e);
-                }
-            }
-            FastPathResult::NeedsFallback(reason) => {
-                if !config.allows_inference_fallback() {
-                    return Err(VerifyError::VerifyError(format!(
-                        "Fast path verification failed and fallback disabled: {reason}"
-                    )));
-                }
-                // Fall through to inference
-            }
-        }
+    let fast_path_result = if use_fast_path {
+        verify_with_fast_path(class_file, method, context, config)?
+    } else {
+        None
+    };
+    if let Some(result) = fast_path_result {
+        return Ok(result);
     }
 
     // Use type inference (either directly or as fallback)
     let mut inference_verifier = InferenceVerifier::new(class_file, method, context, config)?;
 
-    match inference_verifier.verify() {
-        Ok(()) => Ok(VerificationResult::success(VerificationPath::Inference)),
-        Err(e) => Err(e),
+    inference_verifier.verify()?;
+    Ok(VerificationResult::success(VerificationPath::Inference))
+}
+
+fn verify_with_fast_path<C: VerificationContext>(
+    class_file: &ClassFile<'_>,
+    method: &Method,
+    context: &C,
+    config: &VerifierConfig,
+) -> Result<Option<VerificationResult>> {
+    let mut fast_verifier = FastPathVerifier::new(class_file, method, context, config)?;
+    match fast_verifier.verify() {
+        FastPathResult::Success => Ok(Some(VerificationResult::success(
+            VerificationPath::FastPath,
+        ))),
+        FastPathResult::Failed(e) => Err(e),
+        FastPathResult::NeedsFallback(_) => Ok(None),
     }
 }
 
@@ -325,23 +323,11 @@ impl ErrorClass {
 mod tests {
     use super::*;
     use crate::Version;
-    use crate::attributes::Instruction;
+    use crate::attributes::{ExceptionTableEntry, Instruction, StackFrame};
     use crate::constant::Constant;
     use crate::constant_pool::ConstantPool;
-
-    struct MockContext;
-
-    impl VerificationContext for MockContext {
-        fn is_subclass(&self, _subclass: &str, _superclass: &str) -> Result<bool> {
-            Ok(false)
-        }
-        fn is_assignable(&self, _target: &str, _source: &str) -> Result<bool> {
-            Ok(true)
-        }
-        fn common_superclass(&self, _class1: &str, _class2: &str) -> Result<String> {
-            Ok("java/lang/Object".to_string())
-        }
-    }
+    use crate::verifiers::bytecode::config::FallbackStrategy;
+    use crate::verifiers::bytecode::handlers::test_utils::MockContext;
 
     fn create_mock_class_file() -> ClassFile<'static> {
         let mut constant_pool = ConstantPool::default();
@@ -386,13 +372,19 @@ mod tests {
         };
 
         let config = VerifierConfig::default();
-        let context = MockContext;
+        let context = MockContext::PERMISSIVE;
 
         let result = verify_method(&class_file, &method, &context, &config);
         assert!(result.is_ok());
 
         let result = result.unwrap();
         assert!(result.success);
+
+        let inference_config =
+            VerifierConfig::default().with_fallback_strategy(FallbackStrategy::AlwaysInference);
+        let inference_result = verify_method(&class_file, &method, &context, &inference_config)
+            .expect("always-inference verifier should verify simple method");
+        assert_eq!(VerificationPath::Inference, inference_result.path_used);
     }
 
     #[test]
@@ -406,7 +398,7 @@ mod tests {
         };
 
         let config = VerifierConfig::default();
-        let context = MockContext;
+        let context = MockContext::PERMISSIVE;
 
         let result = verify_method(&class_file, &method, &context, &config);
         assert!(result.is_ok());
@@ -437,7 +429,7 @@ mod tests {
         };
 
         let config = VerifierConfig::default();
-        let context = MockContext;
+        let context = MockContext::PERMISSIVE;
         let cache = VerificationCache::new(true);
 
         // First verification
@@ -449,6 +441,114 @@ mod tests {
         let result2 = verify_method_cached(&class_file, &method, &context, &config, &cache);
         assert!(result2.is_ok());
         assert_eq!(result2.unwrap().path_used, VerificationPath::Cached);
+    }
+
+    #[test]
+    fn test_mock_context_methods_and_inference_fallbacks() {
+        let class_file = create_mock_class_file();
+        let context = MockContext::PERMISSIVE;
+        assert!(context.is_subclass("Child", "Parent").unwrap());
+        assert!(context.is_assignable("Target", "Source").unwrap());
+        assert_eq!(
+            "java/lang/Object",
+            context.common_superclass("Left", "Right").unwrap()
+        );
+
+        let fallback_method = Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![Attribute::Code {
+                name_index: 5,
+                max_stack: 0,
+                max_locals: 0,
+                code: vec![Instruction::Goto(2), Instruction::Nop, Instruction::Return],
+                exception_table: Vec::new(),
+                attributes: Vec::new(),
+            }],
+        };
+        let result = verify_method(
+            &class_file,
+            &fallback_method,
+            &context,
+            &VerifierConfig::permissive(),
+        )
+        .expect("permissive verifier should fall back to inference");
+        assert_eq!(VerificationPath::Inference, result.path_used);
+
+        let mismatched_stackmap_method = Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![Attribute::Code {
+                name_index: 5,
+                max_stack: 1,
+                max_locals: 0,
+                code: vec![Instruction::Iconst_0, Instruction::Return],
+                exception_table: Vec::new(),
+                attributes: vec![Attribute::StackMapTable {
+                    name_index: 0,
+                    frames: vec![StackFrame::SameFrame { frame_type: 1 }],
+                }],
+            }],
+        };
+        let mismatch_error = verify_method(
+            &class_file,
+            &mismatched_stackmap_method,
+            &context,
+            &VerifierConfig::permissive(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(mismatch_error.contains("mismatch"));
+
+        let mut class_with_methods = class_file.clone();
+        class_with_methods.methods.push(Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![Attribute::Code {
+                name_index: 5,
+                max_stack: 0,
+                max_locals: 0,
+                code: vec![Instruction::Return],
+                exception_table: Vec::new(),
+                attributes: Vec::new(),
+            }],
+        });
+        let results = verify_class(&class_with_methods, &context, &VerifierConfig::default())
+            .expect("class methods should verify");
+        assert_eq!(1, results.len());
+
+        let failed_fast_path_method = Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![Attribute::Code {
+                name_index: 5,
+                max_stack: 1,
+                max_locals: 0,
+                code: vec![Instruction::Return],
+                exception_table: vec![ExceptionTableEntry {
+                    range_pc: 0..1,
+                    handler_pc: 9,
+                    catch_type: 0,
+                }],
+                attributes: vec![Attribute::StackMapTable {
+                    name_index: 0,
+                    frames: vec![StackFrame::SameFrame { frame_type: 0 }],
+                }],
+            }],
+        };
+        let error = verify_method(
+            &class_file,
+            &failed_fast_path_method,
+            &context,
+            &VerifierConfig::permissive(),
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(!error.is_empty());
     }
 
     #[test]
@@ -466,6 +566,163 @@ mod tests {
         assert_eq!(
             ErrorClass::classify(&ncdf_error),
             ErrorClass::NoClassDefFoundError
+        );
+    }
+
+    #[test]
+    fn test_verification_result_failed_and_diagnostic() {
+        let diagnostic = VerificationDiagnostic::new("Test", "method", "()V", 1, "bad stack");
+        let result = VerificationResult::failed(VerificationPath::FastPath, "failed")
+            .with_diagnostic(diagnostic);
+
+        assert!(!result.success);
+        assert_eq!(VerificationPath::FastPath, result.path_used);
+        assert_eq!(Some("failed"), result.error.as_deref());
+        assert!(result.diagnostic.is_some());
+    }
+
+    #[test]
+    fn test_verify_method_no_code_and_native_code_error() {
+        let class_file = create_mock_class_file();
+        let config = VerifierConfig::default();
+        let context = MockContext::PERMISSIVE;
+
+        let no_code_method = Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: Vec::new(),
+        };
+        assert!(matches!(
+            verify_method(&class_file, &no_code_method, &context, &config),
+            Err(VerifyError::ClassFormatError(_))
+        ));
+
+        let native_with_code = Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::NATIVE,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![Attribute::Code {
+                name_index: 5,
+                max_stack: 0,
+                max_locals: 0,
+                code: vec![Instruction::Return],
+                exception_table: Vec::new(),
+                attributes: Vec::new(),
+            }],
+        };
+        assert!(matches!(
+            verify_method(&class_file, &native_with_code, &context, &config),
+            Err(VerifyError::ClassFormatError(_))
+        ));
+
+        let mut bad_native_name = native_with_code;
+        bad_native_name.name_index = 999;
+        assert!(matches!(
+            verify_method(&class_file, &bad_native_name, &context, &config),
+            Err(VerifyError::ClassFormatError(_))
+        ));
+    }
+
+    #[test]
+    fn test_verify_cached_failure_and_class_cached() {
+        let mut class_file = create_mock_class_file();
+        let invalid_method = Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: Vec::new(),
+        };
+        class_file.methods = vec![invalid_method.clone()];
+
+        let config = VerifierConfig::default();
+        let context = MockContext::PERMISSIVE;
+        let cache = VerificationCache::new(true);
+
+        let first = verify_method_cached(&class_file, &invalid_method, &context, &config, &cache);
+        assert!(first.is_err());
+        let second = verify_method_cached(&class_file, &invalid_method, &context, &config, &cache);
+        assert!(matches!(second, Err(VerifyError::VerifyError(_))));
+
+        let mut valid_class = create_mock_class_file();
+        valid_class.methods = vec![Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![Attribute::Code {
+                name_index: 5,
+                max_stack: 1,
+                max_locals: 1,
+                code: vec![Instruction::Return],
+                exception_table: Vec::new(),
+                attributes: Vec::new(),
+            }],
+        }];
+        let valid_cache = VerificationCache::new(true);
+        let results = verify_class_cached(&valid_class, &context, &config, &valid_cache)
+            .expect("class verification should succeed");
+        assert_eq!(1, results.len());
+    }
+
+    #[test]
+    fn test_verify_method_cached_key_errors() {
+        let class_file = create_mock_class_file();
+        let config = VerifierConfig::default();
+        let context = MockContext::PERMISSIVE;
+        let cache = VerificationCache::new(true);
+        let method = Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: 3,
+            descriptor_index: 4,
+            attributes: vec![Attribute::Code {
+                name_index: 5,
+                max_stack: 0,
+                max_locals: 0,
+                code: vec![Instruction::Return],
+                exception_table: Vec::new(),
+                attributes: Vec::new(),
+            }],
+        };
+
+        let mut bad_class_file = class_file.clone();
+        bad_class_file.this_class = 999;
+        assert!(verify_method_cached(&bad_class_file, &method, &context, &config, &cache).is_err());
+
+        let mut bad_method_name = method.clone();
+        bad_method_name.name_index = 999;
+        assert!(
+            verify_method_cached(&class_file, &bad_method_name, &context, &config, &cache).is_err()
+        );
+
+        let mut bad_descriptor = method;
+        bad_descriptor.descriptor_index = 999;
+        assert!(
+            verify_method_cached(&class_file, &bad_descriptor, &context, &config, &cache).is_err()
+        );
+    }
+
+    #[test]
+    fn test_error_classification_remaining_variants() {
+        assert_eq!(
+            ErrorClass::IllegalAccessError,
+            ErrorClass::classify(&VerifyError::IllegalAccessError("denied".to_string()))
+        );
+        assert_eq!(
+            ErrorClass::IncompatibleClassChangeError,
+            ErrorClass::classify(&VerifyError::IncompatibleClassChangeError(
+                "changed".to_string()
+            ))
+        );
+        assert_eq!(
+            ErrorClass::VerifyError,
+            ErrorClass::classify(&VerifyError::VerificationError {
+                context: "ctx".to_string(),
+                message: "msg".to_string(),
+            })
+        );
+        assert_eq!(
+            ErrorClass::VerifyError,
+            ErrorClass::classify(&VerifyError::InvalidInstruction(0))
         );
     }
 }

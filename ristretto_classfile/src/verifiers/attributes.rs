@@ -194,7 +194,7 @@ fn verify_code(
         });
     };
     // code::verify returns the code_length which is needed for context
-    let code_length = code::verify(
+    let code_result = code::verify(
         class_file,
         method,
         max_stack,
@@ -202,7 +202,8 @@ fn verify_code(
         code,
         exception_table,
         attributes,
-    )?;
+    );
+    let code_length = code_result?;
     // Recursively verify attributes of Code
     verify(
         class_file,
@@ -276,12 +277,13 @@ fn verify_inner_classes(
             }
         }
         // inner_name_index (can be 0)
-        if class.name_index != 0 {
-            match class_file.constant_pool.get(class.name_index) {
-                Some(Constant::Utf8(_)) => {}
-                Some(_) => return Err(InvalidConstantPoolIndexType(class.name_index)),
-                None => return Err(InvalidConstantPoolIndex(class.name_index)),
-            }
+        if class.name_index == 0 {
+            continue;
+        }
+        match class_file.constant_pool.get(class.name_index) {
+            Some(Constant::Utf8(_)) => {}
+            Some(_) => return Err(InvalidConstantPoolIndexType(class.name_index)),
+            None => return Err(InvalidConstantPoolIndex(class.name_index)),
         }
     }
     Ok(())
@@ -729,12 +731,13 @@ fn verify_method_parameters(
         });
     }
     for parameter in parameters {
-        if parameter.name_index != 0 {
-            match class_file.constant_pool.get(parameter.name_index) {
-                Some(Constant::Utf8(_)) => {}
-                Some(_) => return Err(InvalidConstantPoolIndexType(parameter.name_index)),
-                None => return Err(InvalidConstantPoolIndex(parameter.name_index)),
-            }
+        if parameter.name_index == 0 {
+            continue;
+        }
+        match class_file.constant_pool.get(parameter.name_index) {
+            Some(Constant::Utf8(_)) => {}
+            Some(_) => return Err(InvalidConstantPoolIndexType(parameter.name_index)),
+            None => return Err(InvalidConstantPoolIndex(parameter.name_index)),
         }
     }
     Ok(())
@@ -776,14 +779,15 @@ fn verify_module(
             Some(_) => return Err(InvalidConstantPoolIndexType(require.index)),
             None => return Err(InvalidConstantPoolIndex(require.index)),
         }
-        if require.version_index != 0 {
-            match class_file.constant_pool.get(require.version_index) {
-                Some(Constant::Utf8(_)) => {}
-                Some(_) => {
-                    return Err(InvalidConstantPoolIndexType(require.version_index));
-                }
-                None => return Err(InvalidConstantPoolIndex(require.version_index)),
+        if require.version_index == 0 {
+            continue;
+        }
+        match class_file.constant_pool.get(require.version_index) {
+            Some(Constant::Utf8(_)) => {}
+            Some(_) => {
+                return Err(InvalidConstantPoolIndexType(require.version_index));
             }
+            None => return Err(InvalidConstantPoolIndex(require.version_index)),
         }
     }
     for export in exports {
@@ -975,7 +979,7 @@ mod tests {
     use super::*;
     use crate::attributes::{
         AnnotationValuePair, ExportsFlags, ModuleAccessFlags, NestedClassAccessFlags, OpensFlags,
-        RequiresFlags,
+        RequiresFlags, TargetType,
     };
     use crate::constant::Constant;
     use crate::constant_pool::ConstantPool;
@@ -1015,35 +1019,42 @@ mod tests {
 
         assert!(verify(&class_file, std::slice::from_ref(&attribute), context).is_ok());
 
-        assert!(matches!(
+        assert_eq!(
+            Err(VerificationError {
+                context: "ConstantValue Attribute".to_string(),
+                message: "ConstantValue attribute only allowed in Field context".to_string(),
+            }),
             verify(
                 &class_file,
                 std::slice::from_ref(&attribute),
-                AttributeContext::Class
-            ),
-            Err(VerificationError { .. })
-        ));
+                AttributeContext::Class,
+            )
+        );
 
         let attribute_invalid_index = Attribute::ConstantValue {
             name_index: 0,
             constant_value_index: 2,
         };
-        assert!(matches!(
-            verify(&class_file, &[attribute_invalid_index], context),
-            Err(InvalidConstantPoolIndex(2))
-        ));
+        assert_eq!(
+            Err(InvalidConstantPoolIndex(2)),
+            verify(&class_file, &[attribute_invalid_index], context)
+        );
 
         let constants_invalid = vec![Constant::Class(1)];
         let class_file_invalid = create_class_file(constants_invalid);
-        assert!(matches!(
-            verify(&class_file_invalid, &[attribute], context),
-            Err(InvalidConstantPoolIndexType(1))
-        ));
+        assert_eq!(
+            Err(InvalidConstantPoolIndexType(1)),
+            verify(&class_file_invalid, &[attribute], context)
+        );
     }
 
     #[test]
     fn test_verify_code() {
-        let constants = vec![Constant::utf8("()V"), Constant::utf8("Code")];
+        let constants = vec![
+            Constant::utf8("()V"),
+            Constant::utf8("Code"),
+            Constant::utf8("(J)V"),
+        ];
         let class_file = create_class_file(constants);
         let method = Method {
             descriptor_index: 1,
@@ -1060,6 +1071,19 @@ mod tests {
         let context = AttributeContext::Method(&method);
 
         assert!(verify(&class_file, std::slice::from_ref(&attribute), context).is_ok());
+
+        let invalid_locals_method = Method {
+            descriptor_index: 3,
+            ..Default::default()
+        };
+        assert!(
+            verify(
+                &class_file,
+                std::slice::from_ref(&attribute),
+                AttributeContext::Method(&invalid_locals_method),
+            )
+            .is_err()
+        );
 
         assert!(matches!(
             verify(
@@ -1732,6 +1756,66 @@ mod tests {
     }
 
     #[test]
+    fn test_verify_annotation_nested_invalid_values() {
+        let class_file = create_class_file(vec![
+            Constant::utf8("LAnnotation;"),
+            Constant::utf8("name"),
+            Constant::Integer(42),
+        ]);
+        let annotation = Annotation {
+            type_index: 1,
+            elements: Vec::new(),
+        };
+        let context = AttributeContext::Class;
+        let nested_invalid_value = Annotation {
+            elements: vec![AnnotationValuePair {
+                name_index: 2,
+                value: AnnotationElement::Annotation {
+                    annotation: Annotation {
+                        type_index: 3,
+                        elements: Vec::new(),
+                    },
+                },
+            }],
+            ..annotation.clone()
+        };
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::RuntimeVisibleAnnotations {
+                    name_index: 0,
+                    annotations: vec![nested_invalid_value],
+                }],
+                context,
+            ),
+            Err(InvalidConstantPoolIndexType(3))
+        ));
+
+        let array_invalid_value = Annotation {
+            elements: vec![AnnotationValuePair {
+                name_index: 2,
+                value: AnnotationElement::Array {
+                    values: vec![AnnotationElement::Int {
+                        const_value_index: 1,
+                    }],
+                },
+            }],
+            ..annotation
+        };
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::RuntimeVisibleAnnotations {
+                    name_index: 0,
+                    annotations: vec![array_invalid_value],
+                }],
+                context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+    }
+
+    #[test]
     fn test_verify_parameter_annotations() {
         let attribute = Attribute::RuntimeVisibleParameterAnnotations {
             name_index: 0,
@@ -1752,6 +1836,30 @@ mod tests {
         assert!(matches!(
             verify(&ClassFile::default(), &[attribute], AttributeContext::Class),
             Err(VerificationError { .. })
+        ));
+
+        let class_file = create_class_file(vec![
+            Constant::utf8("LAnnotation;"),
+            Constant::utf8("name"),
+            Constant::Integer(42),
+        ]);
+        let invalid_parameter_value = Attribute::RuntimeVisibleParameterAnnotations {
+            name_index: 0,
+            parameter_annotations: vec![ParameterAnnotation {
+                annotations: vec![Annotation {
+                    type_index: 1,
+                    elements: vec![AnnotationValuePair {
+                        name_index: 2,
+                        value: AnnotationElement::Int {
+                            const_value_index: 1,
+                        },
+                    }],
+                }],
+            }],
+        };
+        assert!(matches!(
+            verify(&class_file, &[invalid_parameter_value], context),
+            Err(InvalidConstantPoolIndexType(1))
         ));
     }
 
@@ -1867,6 +1975,73 @@ mod tests {
             verify(&class_file, &[attribute_invalid], context),
             Err(InvalidConstantPoolIndex(2))
         ));
+    }
+
+    #[test]
+    fn test_verify_optional_zero_indexes() {
+        let class_file = create_class_file(vec![
+            Constant::Class(2),
+            Constant::utf8("Inner"),
+            Constant::Module(4),
+            Constant::utf8("module"),
+        ]);
+        let class_context = AttributeContext::Class;
+
+        assert!(
+            verify(
+                &class_file,
+                &[Attribute::InnerClasses {
+                    name_index: 0,
+                    classes: vec![InnerClass {
+                        class_info_index: 1,
+                        outer_class_info_index: 0,
+                        name_index: 0,
+                        access_flags: NestedClassAccessFlags::empty(),
+                    }],
+                }],
+                class_context,
+            )
+            .is_ok()
+        );
+
+        let method = Method::default();
+        assert!(
+            verify(
+                &class_file,
+                &[Attribute::MethodParameters {
+                    name_index: 0,
+                    parameters: vec![MethodParameter {
+                        name_index: 0,
+                        access_flags: crate::MethodAccessFlags::empty(),
+                    }],
+                }],
+                AttributeContext::Method(&method),
+            )
+            .is_ok()
+        );
+
+        assert!(
+            verify(
+                &class_file,
+                &[Attribute::Module {
+                    name_index: 0,
+                    module_name_index: 3,
+                    flags: ModuleAccessFlags::empty(),
+                    version_index: 0,
+                    requires: vec![Requires {
+                        index: 3,
+                        flags: RequiresFlags::empty(),
+                        version_index: 0,
+                    }],
+                    exports: Vec::new(),
+                    opens: Vec::new(),
+                    uses: Vec::new(),
+                    provides: Vec::new(),
+                }],
+                class_context,
+            )
+            .is_ok()
+        );
     }
 
     #[test]
@@ -2054,6 +2229,1494 @@ mod tests {
                 AttributeContext::Method(&Method::default())
             ),
             Err(VerificationError { .. })
+        ));
+    }
+
+    #[test]
+    fn test_verify_inner_class_enclosing_invalid_paths() {
+        let class_context = AttributeContext::Class;
+
+        let empty_class = create_class_file(Vec::new());
+        let class_file = create_class_file(vec![
+            Constant::Class(2),
+            Constant::utf8("Class"),
+            Constant::NameAndType {
+                name_index: 2,
+                descriptor_index: 2,
+            },
+        ]);
+
+        let missing_inner_class = Attribute::InnerClasses {
+            name_index: 0,
+            classes: vec![InnerClass {
+                class_info_index: 1,
+                outer_class_info_index: 0,
+                name_index: 0,
+                access_flags: NestedClassAccessFlags::empty(),
+            }],
+        };
+        assert!(matches!(
+            verify(&empty_class, &[missing_inner_class], class_context),
+            Err(InvalidConstantPoolIndex(1))
+        ));
+
+        let missing_outer_class = Attribute::InnerClasses {
+            name_index: 0,
+            classes: vec![InnerClass {
+                class_info_index: 1,
+                outer_class_info_index: 4,
+                name_index: 0,
+                access_flags: NestedClassAccessFlags::empty(),
+            }],
+        };
+        assert!(matches!(
+            verify(&class_file, &[missing_outer_class], class_context),
+            Err(InvalidConstantPoolIndex(4))
+        ));
+
+        let missing_inner_name = Attribute::InnerClasses {
+            name_index: 0,
+            classes: vec![InnerClass {
+                class_info_index: 1,
+                outer_class_info_index: 0,
+                name_index: 4,
+                access_flags: NestedClassAccessFlags::empty(),
+            }],
+        };
+        assert!(matches!(
+            verify(&class_file, &[missing_inner_name], class_context),
+            Err(InvalidConstantPoolIndex(4))
+        ));
+
+        assert!(matches!(
+            verify(
+                &empty_class,
+                &[Attribute::EnclosingMethod {
+                    name_index: 0,
+                    class_index: 1,
+                    method_index: 0,
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(1))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::EnclosingMethod {
+                    name_index: 0,
+                    class_index: 1,
+                    method_index: 4,
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(4))
+        ));
+    }
+
+    #[test]
+    fn test_verify_signature_source_local_var_invalid_paths() {
+        let method = Method::default();
+        let class_context = AttributeContext::Class;
+        let code_context = AttributeContext::Code(&method, 10);
+        let int_class = create_class_file(vec![Constant::Integer(1), Constant::utf8("ok")]);
+
+        assert!(matches!(
+            verify(
+                &int_class,
+                &[Attribute::Signature {
+                    name_index: 0,
+                    signature_index: 1,
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+        assert!(matches!(
+            verify(
+                &int_class,
+                &[Attribute::SourceFile {
+                    name_index: 0,
+                    source_file_index: 1,
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+
+        assert!(matches!(
+            verify(
+                &int_class,
+                &[Attribute::LocalVariableTable {
+                    name_index: 0,
+                    variables: vec![LocalVariableTable {
+                        start_pc: 0,
+                        length: 1,
+                        name_index: 1,
+                        descriptor_index: 2,
+                        index: 0,
+                    }],
+                }],
+                code_context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+        assert!(matches!(
+            verify(
+                &int_class,
+                &[Attribute::LocalVariableTable {
+                    name_index: 0,
+                    variables: vec![LocalVariableTable {
+                        start_pc: 0,
+                        length: 1,
+                        name_index: 2,
+                        descriptor_index: 1,
+                        index: 0,
+                    }],
+                }],
+                code_context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+
+        assert!(matches!(
+            verify(
+                &int_class,
+                &[Attribute::LocalVariableTypeTable {
+                    name_index: 0,
+                    variable_types: vec![LocalVariableTypeTable {
+                        start_pc: 0,
+                        length: 1,
+                        name_index: 1,
+                        signature_index: 2,
+                        index: 0,
+                    }],
+                }],
+                code_context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+        assert!(matches!(
+            verify(
+                &int_class,
+                &[Attribute::LocalVariableTypeTable {
+                    name_index: 0,
+                    variable_types: vec![LocalVariableTypeTable {
+                        start_pc: 0,
+                        length: 1,
+                        name_index: 2,
+                        signature_index: 1,
+                        index: 0,
+                    }],
+                }],
+                code_context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+    }
+
+    #[test]
+    fn test_verify_annotation_element_scalar_invalid_paths() {
+        let empty_class = create_class_file(Vec::new());
+        let int_class = create_class_file(vec![Constant::Integer(1), Constant::utf8("ok")]);
+
+        assert!(matches!(
+            verify_annotation_element(
+                &empty_class,
+                &AnnotationElement::Int {
+                    const_value_index: 1
+                }
+            ),
+            Err(InvalidConstantPoolIndex(1))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &int_class,
+                &AnnotationElement::Double {
+                    const_value_index: 2
+                }
+            ),
+            Err(InvalidConstantPoolIndexType(2))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &empty_class,
+                &AnnotationElement::Double {
+                    const_value_index: 1
+                }
+            ),
+            Err(InvalidConstantPoolIndex(1))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &int_class,
+                &AnnotationElement::Float {
+                    const_value_index: 2
+                }
+            ),
+            Err(InvalidConstantPoolIndexType(2))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &empty_class,
+                &AnnotationElement::Float {
+                    const_value_index: 1
+                }
+            ),
+            Err(InvalidConstantPoolIndex(1))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &int_class,
+                &AnnotationElement::Long {
+                    const_value_index: 2
+                }
+            ),
+            Err(InvalidConstantPoolIndexType(2))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &empty_class,
+                &AnnotationElement::Long {
+                    const_value_index: 1
+                }
+            ),
+            Err(InvalidConstantPoolIndex(1))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &int_class,
+                &AnnotationElement::String {
+                    const_value_index: 1
+                }
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &empty_class,
+                &AnnotationElement::String {
+                    const_value_index: 1
+                }
+            ),
+            Err(InvalidConstantPoolIndex(1))
+        ));
+    }
+
+    #[test]
+    fn test_verify_annotation_element_enum_class_invalid_paths() {
+        let empty_class = create_class_file(Vec::new());
+        let int_class = create_class_file(vec![Constant::Integer(1), Constant::utf8("ok")]);
+
+        assert!(matches!(
+            verify_annotation_element(
+                &int_class,
+                &AnnotationElement::Enum {
+                    type_name_index: 1,
+                    const_name_index: 2,
+                },
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &empty_class,
+                &AnnotationElement::Enum {
+                    type_name_index: 1,
+                    const_name_index: 1,
+                },
+            ),
+            Err(InvalidConstantPoolIndex(1))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &int_class,
+                &AnnotationElement::Enum {
+                    type_name_index: 2,
+                    const_name_index: 1,
+                },
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &create_class_file(vec![Constant::utf8("Enum")]),
+                &AnnotationElement::Enum {
+                    type_name_index: 1,
+                    const_name_index: 2,
+                },
+            ),
+            Err(InvalidConstantPoolIndex(2))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &int_class,
+                &AnnotationElement::Class {
+                    class_info_index: 1
+                }
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+        assert!(matches!(
+            verify_annotation_element(
+                &empty_class,
+                &AnnotationElement::Class {
+                    class_info_index: 1
+                }
+            ),
+            Err(InvalidConstantPoolIndex(1))
+        ));
+    }
+
+    #[test]
+    fn test_verify_type_annotation_invalid_paths() {
+        let class_context = AttributeContext::Class;
+        let empty_class = create_class_file(Vec::new());
+        let int_class = create_class_file(vec![Constant::Integer(1), Constant::utf8("ok")]);
+
+        let bad_type_annotation = TypeAnnotation {
+            target_type: TargetType::Empty { target_type: 0x13 },
+            type_path: Vec::new(),
+            type_index: 1,
+            elements: Vec::new(),
+        };
+        assert!(matches!(
+            verify(
+                &int_class,
+                &[Attribute::RuntimeVisibleTypeAnnotations {
+                    name_index: 0,
+                    type_annotations: vec![bad_type_annotation.clone()],
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+        assert!(matches!(
+            verify(
+                &empty_class,
+                &[Attribute::RuntimeVisibleTypeAnnotations {
+                    name_index: 0,
+                    type_annotations: vec![bad_type_annotation.clone()],
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(1))
+        ));
+
+        let bad_pair_name = TypeAnnotation {
+            type_index: 2,
+            elements: vec![AnnotationValuePair {
+                name_index: 1,
+                value: AnnotationElement::Int {
+                    const_value_index: 1,
+                },
+            }],
+            ..bad_type_annotation
+        };
+        assert!(matches!(
+            verify(
+                &int_class,
+                &[Attribute::RuntimeVisibleTypeAnnotations {
+                    name_index: 0,
+                    type_annotations: vec![bad_pair_name],
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+
+        let missing_pair_name = TypeAnnotation {
+            target_type: TargetType::Empty { target_type: 0x13 },
+            type_path: Vec::new(),
+            type_index: 1,
+            elements: vec![AnnotationValuePair {
+                name_index: 2,
+                value: AnnotationElement::Int {
+                    const_value_index: 1,
+                },
+            }],
+        };
+        assert!(matches!(
+            verify(
+                &create_class_file(vec![Constant::utf8("Type")]),
+                &[Attribute::RuntimeVisibleTypeAnnotations {
+                    name_index: 0,
+                    type_annotations: vec![missing_pair_name],
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(2))
+        ));
+
+        let bad_pair_value = TypeAnnotation {
+            target_type: TargetType::Empty { target_type: 0x13 },
+            type_path: Vec::new(),
+            type_index: 2,
+            elements: vec![AnnotationValuePair {
+                name_index: 2,
+                value: AnnotationElement::Int {
+                    const_value_index: 2,
+                },
+            }],
+        };
+        assert!(matches!(
+            verify(
+                &int_class,
+                &[Attribute::RuntimeVisibleTypeAnnotations {
+                    name_index: 0,
+                    type_annotations: vec![bad_pair_value],
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(2))
+        ));
+    }
+
+    struct AnnotationTestFixture {
+        class_file: ClassFile<'static>,
+        method: Method,
+        annotation: Annotation,
+        element_name: u16,
+        int_value: u16,
+        class_name: u16,
+        module_name: u16,
+        module_version: u16,
+        package_name: u16,
+        nested: Annotation,
+    }
+
+    fn annotation_value(name_index: u16, value: AnnotationElement) -> AnnotationValuePair {
+        AnnotationValuePair { name_index, value }
+    }
+
+    fn annotation_elements(
+        element_name: u16,
+        int_value: u16,
+        double_value: u16,
+        float_value: u16,
+        long_value: u16,
+        string_value: u16,
+        nested: &Annotation,
+    ) -> Vec<AnnotationValuePair> {
+        vec![
+            annotation_value(
+                element_name,
+                AnnotationElement::Byte {
+                    const_value_index: int_value,
+                },
+            ),
+            annotation_value(
+                element_name,
+                AnnotationElement::Char {
+                    const_value_index: int_value,
+                },
+            ),
+            annotation_value(
+                element_name,
+                AnnotationElement::Short {
+                    const_value_index: int_value,
+                },
+            ),
+            annotation_value(
+                element_name,
+                AnnotationElement::Boolean {
+                    const_value_index: int_value,
+                },
+            ),
+            annotation_value(
+                element_name,
+                AnnotationElement::Double {
+                    const_value_index: double_value,
+                },
+            ),
+            annotation_value(
+                element_name,
+                AnnotationElement::Float {
+                    const_value_index: float_value,
+                },
+            ),
+            annotation_value(
+                element_name,
+                AnnotationElement::Long {
+                    const_value_index: long_value,
+                },
+            ),
+            annotation_value(
+                element_name,
+                AnnotationElement::String {
+                    const_value_index: string_value,
+                },
+            ),
+            annotation_value(
+                element_name,
+                AnnotationElement::Enum {
+                    type_name_index: string_value,
+                    const_name_index: element_name,
+                },
+            ),
+            annotation_value(
+                element_name,
+                AnnotationElement::Class {
+                    class_info_index: string_value,
+                },
+            ),
+            annotation_value(
+                element_name,
+                AnnotationElement::Annotation {
+                    annotation: nested.clone(),
+                },
+            ),
+            annotation_value(
+                element_name,
+                AnnotationElement::Array {
+                    values: vec![AnnotationElement::Int {
+                        const_value_index: int_value,
+                    }],
+                },
+            ),
+        ]
+    }
+
+    fn create_annotation_test_fixture() -> AnnotationTestFixture {
+        let mut constant_pool = ConstantPool::default();
+        let annotation_type = constant_pool.add_utf8("LAnnotation;").unwrap();
+        let element_name = constant_pool.add_utf8("value").unwrap();
+        let int_value = constant_pool.add(Constant::Integer(1)).unwrap();
+        let double_value = constant_pool.add(Constant::Double(2.0)).unwrap();
+        let float_value = constant_pool.add(Constant::Float(3.0)).unwrap();
+        let long_value = constant_pool.add(Constant::Long(4)).unwrap();
+        let string_value = constant_pool.add_utf8("text").unwrap();
+        let module_name = constant_pool.add_module("module").unwrap();
+        let module_version = constant_pool.add_utf8("1.0").unwrap();
+        let package_name = constant_pool.add_package("package").unwrap();
+        let class_name = constant_pool.add_class("Outer$Inner").unwrap();
+        let method_name = constant_pool.add_utf8("method").unwrap();
+        let method_descriptor = constant_pool.add_utf8("()V").unwrap();
+        let class_file = ClassFile {
+            constant_pool,
+            ..Default::default()
+        };
+        let method = Method {
+            name_index: method_name,
+            descriptor_index: method_descriptor,
+            ..Default::default()
+        };
+        let nested = Annotation {
+            type_index: annotation_type,
+            elements: Vec::new(),
+        };
+        let annotation = Annotation {
+            type_index: annotation_type,
+            elements: annotation_elements(
+                element_name,
+                int_value,
+                double_value,
+                float_value,
+                long_value,
+                string_value,
+                &nested,
+            ),
+        };
+        AnnotationTestFixture {
+            class_file,
+            method,
+            annotation,
+            element_name,
+            int_value,
+            class_name,
+            module_name,
+            module_version,
+            package_name,
+            nested,
+        }
+    }
+
+    #[test]
+    fn test_verify_valid_annotation_attribute_paths() {
+        let AnnotationTestFixture {
+            class_file,
+            method,
+            annotation,
+            nested,
+            element_name,
+            int_value,
+            ..
+        } = create_annotation_test_fixture();
+
+        assert!(
+            verify(
+                &class_file,
+                &[Attribute::RuntimeInvisibleAnnotations {
+                    name_index: 0,
+                    annotations: vec![annotation.clone()],
+                }],
+                AttributeContext::Class,
+            )
+            .is_ok()
+        );
+        assert!(
+            verify(
+                &class_file,
+                &[Attribute::RuntimeInvisibleParameterAnnotations {
+                    name_index: 0,
+                    parameter_annotations: vec![ParameterAnnotation {
+                        annotations: vec![annotation.clone()],
+                    }],
+                }],
+                AttributeContext::Method(&method),
+            )
+            .is_ok()
+        );
+        assert!(
+            verify(
+                &class_file,
+                &[Attribute::RuntimeInvisibleTypeAnnotations {
+                    name_index: 0,
+                    type_annotations: vec![TypeAnnotation {
+                        target_type: TargetType::Empty { target_type: 0x13 },
+                        type_path: Vec::new(),
+                        type_index: annotation.type_index,
+                        elements: vec![AnnotationValuePair {
+                            name_index: element_name,
+                            value: AnnotationElement::Int {
+                                const_value_index: int_value,
+                            },
+                        }],
+                    }],
+                }],
+                AttributeContext::Code(&method, 1),
+            )
+            .is_ok()
+        );
+        assert!(
+            verify(
+                &class_file,
+                &[Attribute::AnnotationDefault {
+                    name_index: 0,
+                    element: AnnotationElement::Annotation { annotation: nested },
+                }],
+                AttributeContext::Method(&method),
+            )
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn test_verify_valid_method_class_module_paths() {
+        let AnnotationTestFixture {
+            class_file,
+            method,
+            element_name,
+            class_name,
+            module_name,
+            module_version,
+            package_name,
+            ..
+        } = create_annotation_test_fixture();
+
+        assert!(
+            verify(
+                &class_file,
+                &[Attribute::MethodParameters {
+                    name_index: 0,
+                    parameters: vec![MethodParameter {
+                        name_index: element_name,
+                        access_flags: crate::MethodAccessFlags::empty(),
+                    }],
+                }],
+                AttributeContext::Method(&method),
+            )
+            .is_ok()
+        );
+        assert!(
+            verify(
+                &class_file,
+                &[Attribute::InnerClasses {
+                    name_index: 0,
+                    classes: vec![InnerClass {
+                        class_info_index: class_name,
+                        outer_class_info_index: class_name,
+                        name_index: element_name,
+                        access_flags: NestedClassAccessFlags::empty(),
+                    }],
+                }],
+                AttributeContext::Class,
+            )
+            .is_ok()
+        );
+        assert!(
+            verify(
+                &class_file,
+                &[Attribute::EnclosingMethod {
+                    name_index: 0,
+                    class_index: class_name,
+                    method_index: 0,
+                }],
+                AttributeContext::Class,
+            )
+            .is_ok()
+        );
+        assert!(
+            verify(
+                &class_file,
+                &[Attribute::Module {
+                    name_index: 0,
+                    module_name_index: module_name,
+                    flags: ModuleAccessFlags::empty(),
+                    version_index: module_version,
+                    requires: vec![Requires {
+                        index: module_name,
+                        flags: RequiresFlags::empty(),
+                        version_index: module_version,
+                    }],
+                    exports: vec![crate::attributes::Exports {
+                        index: package_name,
+                        flags: ExportsFlags::empty(),
+                        to_index: Vec::new(),
+                    }],
+                    opens: Vec::new(),
+                    uses: Vec::new(),
+                    provides: Vec::new(),
+                }],
+                AttributeContext::Class,
+            )
+            .is_ok()
+        );
+    }
+
+    fn module_attribute(
+        module_name_index: u16,
+        version_index: u16,
+        requires: Vec<Requires>,
+        exports: Vec<Exports>,
+        opens: Vec<Opens>,
+        uses: Vec<u16>,
+        provides: Vec<Provides>,
+    ) -> Attribute {
+        Attribute::Module {
+            name_index: 0,
+            module_name_index,
+            flags: ModuleAccessFlags::empty(),
+            version_index,
+            requires,
+            exports,
+            opens,
+            uses,
+            provides,
+        }
+    }
+
+    fn module_edge_class_file() -> ClassFile<'static> {
+        create_class_file(vec![
+            Constant::Module(2),
+            Constant::utf8("module"),
+            Constant::utf8("1.0"),
+            Constant::Package(5),
+            Constant::utf8("package"),
+            Constant::Class(7),
+            Constant::utf8("Class"),
+        ])
+    }
+
+    fn attribute_edge_class_file() -> ClassFile<'static> {
+        create_class_file(vec![
+            Constant::Module(2),
+            Constant::utf8("module"),
+            Constant::utf8("1.0"),
+            Constant::Package(5),
+            Constant::utf8("package"),
+            Constant::Class(7),
+            Constant::utf8("Class"),
+            Constant::Integer(42),
+        ])
+    }
+
+    fn module_with_edges(opens: Vec<Opens>, uses: Vec<u16>, provides: Vec<Provides>) -> Attribute {
+        module_attribute(1, 0, Vec::new(), Vec::new(), opens, uses, provides)
+    }
+
+    #[test]
+    fn test_verify_module_name_version_invalid_paths() {
+        let class_context = AttributeContext::Class;
+        let class_file = module_edge_class_file();
+
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    2,
+                    0,
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new()
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(2))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    8,
+                    0,
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new()
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    1,
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new()
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    8,
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new()
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(8))
+        ));
+    }
+
+    #[test]
+    fn test_verify_module_requires_invalid_paths() {
+        let class_context = AttributeContext::Class;
+        let class_file = create_class_file(vec![
+            Constant::Module(2),
+            Constant::utf8("module"),
+            Constant::utf8("1.0"),
+            Constant::Package(5),
+            Constant::utf8("package"),
+            Constant::Class(7),
+            Constant::utf8("Class"),
+        ]);
+
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    0,
+                    vec![Requires {
+                        index: 2,
+                        flags: RequiresFlags::empty(),
+                        version_index: 0,
+                    }],
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(2))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    0,
+                    vec![Requires {
+                        index: 8,
+                        flags: RequiresFlags::empty(),
+                        version_index: 0,
+                    }],
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    0,
+                    vec![Requires {
+                        index: 1,
+                        flags: RequiresFlags::empty(),
+                        version_index: 1,
+                    }],
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    0,
+                    vec![Requires {
+                        index: 1,
+                        flags: RequiresFlags::empty(),
+                        version_index: 8,
+                    }],
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(8))
+        ));
+    }
+
+    #[test]
+    fn test_verify_module_exports_invalid_paths() {
+        let class_context = AttributeContext::Class;
+        let class_file = module_edge_class_file();
+
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    0,
+                    Vec::new(),
+                    vec![Exports {
+                        index: 1,
+                        flags: ExportsFlags::empty(),
+                        to_index: Vec::new(),
+                    }],
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(1))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    0,
+                    Vec::new(),
+                    vec![Exports {
+                        index: 8,
+                        flags: ExportsFlags::empty(),
+                        to_index: Vec::new(),
+                    }],
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    0,
+                    Vec::new(),
+                    vec![Exports {
+                        index: 4,
+                        flags: ExportsFlags::empty(),
+                        to_index: vec![2],
+                    }],
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(2))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    0,
+                    Vec::new(),
+                    vec![Exports {
+                        index: 4,
+                        flags: ExportsFlags::empty(),
+                        to_index: vec![8],
+                    }],
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(8))
+        ));
+    }
+
+    #[test]
+    fn test_verify_module_uses_packages_main_class_invalid_paths() {
+        let class_context = AttributeContext::Class;
+        let class_file = module_edge_class_file();
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    0,
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    vec![2],
+                    Vec::new()
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(2))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_attribute(
+                    1,
+                    0,
+                    Vec::new(),
+                    Vec::new(),
+                    Vec::new(),
+                    vec![8],
+                    Vec::new()
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(8))
+        ));
+
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::ModulePackages {
+                    name_index: 0,
+                    package_indexes: vec![2],
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(2))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::ModulePackages {
+                    name_index: 0,
+                    package_indexes: vec![8],
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::ModuleMainClass {
+                    name_index: 0,
+                    main_class_index: 2,
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(2))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::ModuleMainClass {
+                    name_index: 0,
+                    main_class_index: 8,
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(8))
+        ));
+    }
+
+    #[test]
+    fn test_verify_annotation_and_bootstrap_index_edges() {
+        let class_context = AttributeContext::Class;
+        let class_file = attribute_edge_class_file();
+
+        let annotation = |type_index, name_index| Annotation {
+            type_index,
+            elements: vec![AnnotationValuePair {
+                name_index,
+                value: AnnotationElement::Int {
+                    const_value_index: 8,
+                },
+            }],
+        };
+        assert!(matches!(
+            verify_annotations(&class_file, &[annotation(9, 2)]),
+            Err(InvalidConstantPoolIndex(9))
+        ));
+        assert!(matches!(
+            verify_annotations(&class_file, &[annotation(2, 9)]),
+            Err(InvalidConstantPoolIndex(9))
+        ));
+
+        let missing_bootstrap = Attribute::BootstrapMethods {
+            name_index: 0,
+            methods: vec![BootstrapMethod {
+                bootstrap_method_ref: 9,
+                arguments: Vec::new(),
+            }],
+        };
+        assert!(matches!(
+            verify(&class_file, &[missing_bootstrap], class_context),
+            Err(InvalidConstantPoolIndex(9))
+        ));
+
+        let method = Method::default();
+        let bad_parameter = Attribute::MethodParameters {
+            name_index: 0,
+            parameters: vec![MethodParameter {
+                name_index: 8,
+                access_flags: crate::MethodAccessFlags::empty(),
+            }],
+        };
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[bad_parameter],
+                AttributeContext::Method(&method),
+            ),
+            Err(InvalidConstantPoolIndexType(8))
+        ));
+    }
+
+    #[test]
+    fn test_verify_module_opens_invalid_paths() {
+        let class_context = AttributeContext::Class;
+        let class_file = attribute_edge_class_file();
+
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_with_edges(
+                    vec![Opens {
+                        index: 8,
+                        flags: OpensFlags::empty(),
+                        to_index: Vec::new(),
+                    }],
+                    Vec::new(),
+                    Vec::new()
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_with_edges(
+                    vec![Opens {
+                        index: 9,
+                        flags: OpensFlags::empty(),
+                        to_index: Vec::new(),
+                    }],
+                    Vec::new(),
+                    Vec::new()
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(9))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_with_edges(
+                    vec![Opens {
+                        index: 4,
+                        flags: OpensFlags::empty(),
+                        to_index: vec![8],
+                    }],
+                    Vec::new(),
+                    Vec::new()
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_with_edges(
+                    vec![Opens {
+                        index: 4,
+                        flags: OpensFlags::empty(),
+                        to_index: vec![9],
+                    }],
+                    Vec::new(),
+                    Vec::new()
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(9))
+        ));
+    }
+
+    #[test]
+    fn test_verify_module_provides_invalid_paths() {
+        let class_context = AttributeContext::Class;
+        let class_file = attribute_edge_class_file();
+
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_with_edges(
+                    Vec::new(),
+                    Vec::new(),
+                    vec![Provides {
+                        index: 8,
+                        with_index: Vec::new(),
+                    }]
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_with_edges(
+                    Vec::new(),
+                    Vec::new(),
+                    vec![Provides {
+                        index: 9,
+                        with_index: Vec::new(),
+                    }]
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(9))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_with_edges(
+                    Vec::new(),
+                    Vec::new(),
+                    vec![Provides {
+                        index: 6,
+                        with_index: vec![8],
+                    }]
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[module_with_edges(
+                    Vec::new(),
+                    Vec::new(),
+                    vec![Provides {
+                        index: 6,
+                        with_index: vec![9],
+                    }]
+                )],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(9))
+        ));
+    }
+
+    #[test]
+    fn test_verify_nest_invalid_paths() {
+        let class_context = AttributeContext::Class;
+        let class_file = attribute_edge_class_file();
+
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::NestHost {
+                    name_index: 0,
+                    host_class_index: 8,
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::NestHost {
+                    name_index: 0,
+                    host_class_index: 9,
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(9))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::NestMembers {
+                    name_index: 0,
+                    class_indexes: vec![8],
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::NestMembers {
+                    name_index: 0,
+                    class_indexes: vec![9],
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(9))
+        ));
+    }
+
+    #[test]
+    fn test_verify_record_invalid_paths() {
+        let class_context = AttributeContext::Class;
+        let class_file = attribute_edge_class_file();
+
+        let record_attribute = |record: Record| Attribute::Record {
+            name_index: 0,
+            records: vec![record],
+        };
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[record_attribute(Record {
+                    name_index: 8,
+                    descriptor_index: 2,
+                    attributes: Vec::new(),
+                })],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[record_attribute(Record {
+                    name_index: 9,
+                    descriptor_index: 2,
+                    attributes: Vec::new(),
+                })],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(9))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[record_attribute(Record {
+                    name_index: 2,
+                    descriptor_index: 8,
+                    attributes: Vec::new(),
+                })],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[record_attribute(Record {
+                    name_index: 2,
+                    descriptor_index: 9,
+                    attributes: Vec::new(),
+                })],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(9))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[record_attribute(Record {
+                    name_index: 2,
+                    descriptor_index: 2,
+                    attributes: vec![Attribute::Code {
+                        name_index: 0,
+                        max_stack: 0,
+                        max_locals: 0,
+                        code: Vec::new(),
+                        exception_table: Vec::new(),
+                        attributes: Vec::new(),
+                    }],
+                })],
+                class_context,
+            ),
+            Err(VerificationError { .. })
+        ));
+    }
+
+    #[test]
+    fn test_verify_permitted_subclasses_invalid_paths() {
+        let class_context = AttributeContext::Class;
+        let class_file = attribute_edge_class_file();
+
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::PermittedSubclasses {
+                    name_index: 0,
+                    class_indexes: vec![8],
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndexType(8))
+        ));
+        assert!(matches!(
+            verify(
+                &class_file,
+                &[Attribute::PermittedSubclasses {
+                    name_index: 0,
+                    class_indexes: vec![9],
+                }],
+                class_context,
+            ),
+            Err(InvalidConstantPoolIndex(9))
         ));
     }
 }

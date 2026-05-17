@@ -364,7 +364,7 @@ impl FieldType {
     /// assert_eq!(params.len(), 1);
     /// assert_eq!(params[0], FieldType::Array(Box::new(FieldType::Base(BaseType::Boolean))));
     /// assert_eq!(ret, Some(FieldType::Array(Box::new(FieldType::Base(BaseType::Int)))));
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     ///
     /// # Errors
@@ -576,6 +576,22 @@ mod test {
     }
 
     #[test]
+    fn test_object_invalid_mutf8_class_name_is_lossy() -> Result<()> {
+        assert_eq!(
+            FieldType::Object(JavaString::from("\u{FFFD}")),
+            FieldType::parse_bytes(b"L\xFF;", "Linvalid;")?
+        );
+        assert_eq!(
+            (
+                FieldType::Object(JavaString::from("\u{FFFD}")),
+                b"L\xFF;".len()
+            ),
+            FieldType::parse_field_type_bytes(b"L\xFF;", "Linvalid;")?
+        );
+        Ok(())
+    }
+
+    #[test]
     fn test_array() -> Result<()> {
         let component_type = FieldType::Base(BaseType::Int);
         let field_type = FieldType::Array(component_type.into());
@@ -716,6 +732,10 @@ mod test {
         assert!(matches!(
             FieldType::parse_field_type_bytes(b"", ""),
             Err(InvalidMethodDescriptor(_))
+        ));
+        assert!(matches!(
+            FieldType::parse_field_type_bytes(b"Lmissing-semicolon", "Lmissing-semicolon"),
+            Err(InvalidFieldTypeDescriptor(_))
         ));
     }
 }

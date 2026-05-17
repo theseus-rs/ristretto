@@ -817,6 +817,35 @@ mod test {
     }
 
     #[test]
+    fn test_dynamic_into_owned() {
+        let constants = [
+            Constant::InterfaceMethodRef {
+                class_index: 1,
+                name_and_type_index: 2,
+            },
+            Constant::MethodHandle {
+                reference_kind: ReferenceKind::GetField,
+                reference_index: 2,
+            },
+            Constant::MethodType(1),
+            Constant::Dynamic {
+                bootstrap_method_attr_index: 1,
+                name_and_type_index: 2,
+            },
+            Constant::InvokeDynamic {
+                bootstrap_method_attr_index: 1,
+                name_and_type_index: 2,
+            },
+            Constant::Module(1),
+            Constant::Package(1),
+        ];
+
+        for constant in constants {
+            assert_eq!(constant, constant.clone().into_owned());
+        }
+    }
+
+    #[test]
     fn test_invoke_dynamic() -> Result<()> {
         let constant = Constant::InvokeDynamic {
             bootstrap_method_attr_index: 1,

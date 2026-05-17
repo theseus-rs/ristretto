@@ -69,13 +69,17 @@ use crate::Result;
 /// let result = mutf8::to_bytes(mixed)?;
 /// # Ok::<(), ristretto_classfile::Error>(())
 /// ```
-#[expect(clippy::cast_possible_truncation)]
 pub fn to_bytes(data: &str) -> Result<Vec<u8>> {
+    Ok(to_bytes_lossless(data))
+}
+
+#[expect(clippy::cast_possible_truncation)]
+pub(crate) fn to_bytes_lossless(data: &str) -> Vec<u8> {
     let bytes = data.as_bytes();
 
     // Fast path for ASCII without nulls
     if bytes.iter().all(|&b| b > 0 && b < 128) {
-        return Ok(bytes.to_vec());
+        return bytes.to_vec();
     }
 
     // Calculate capacity: worst case is 6 bytes per char (supplementary as surrogate pair)
@@ -111,7 +115,7 @@ pub fn to_bytes(data: &str) -> Result<Vec<u8>> {
         }
     }
 
-    Ok(encoded)
+    encoded
 }
 
 /// Converts MUTF-8 bytes to UTF-16 code units, preserving lone surrogates.
@@ -374,10 +378,11 @@ fn validate_slow(input: &[u8]) -> Result<()> {
                 // Reject overlong 3-byte encodings: 0xE0 with byte2 < 0xA0 encodes
                 // U+0000..U+07FF which should use 1 or 2-byte encoding per JVM spec §4.4.7.
                 if byte1 == 0xE0 && byte2 < 0xA0 {
-                    return Err(FromUtf8Error(
-                        "Invalid MUTF-8: overlong 3-byte encoding".to_string(),
-                    ));
-                }
+                    let message = "Invalid MUTF-8: overlong 3-byte encoding";
+                    Err(FromUtf8Error(message.to_string()))
+                } else {
+                    Ok(())
+                }?;
             }
             // 4-byte sequences and continuation bytes as lead are invalid in MUTF-8
             _ => {
@@ -528,6 +533,7 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::borrow::Cow;
 
     /// Test all valid UTF-8 characters, the only two invalid characters are U+D800 and U+DFFF
     ///
@@ -540,33 +546,30 @@ mod tests {
                 assert!(char::from_u32(i).is_none());
                 continue;
             }
-            if let Some(ch) = char::from_u32(i) {
-                let s = ch.to_string();
-                let rust_encoded_bytes = s.as_bytes().to_vec();
-                let mutf8_encoded_bytes = to_bytes(&s)?;
+            let ch = char::from_u32(i).expect("non-surrogate code point must be valid");
+            let s = ch.to_string();
+            let rust_encoded_bytes = s.as_bytes().to_vec();
+            let mutf8_encoded_bytes = to_bytes(&s)?;
 
-                match i {
-                    0 => {
-                        // Special null encoding in MUTF-8
-                        assert_eq!(mutf8_encoded_bytes, vec![0xC0, 0x80]);
-                    }
-                    0x10000..=0x10_FFFF => {
-                        // Supplementary characters (encoded as surrogate pairs in MUTF-8). Don't
-                        // assert that encoding matches Rust UTF-8. Instead, check round-trip
-                        // correctness below.
-                    }
-                    _ => {
-                        // BMP (non-null, non-surrogate)
-                        assert_eq!(rust_encoded_bytes, mutf8_encoded_bytes);
-                    }
+            match i {
+                0 => {
+                    // Special null encoding in MUTF-8
+                    assert_eq!(mutf8_encoded_bytes, vec![0xC0, 0x80]);
                 }
-
-                let rust_encoded_result = String::from_utf8(rust_encoded_bytes)?;
-                let mutf8_encoded_result = from_bytes(mutf8_encoded_bytes.as_slice())?;
-                assert_eq!(rust_encoded_result, mutf8_encoded_result);
-            } else {
-                assert!((0xD800..=0xDFFF).contains(&i));
+                0x10000..=0x10_FFFF => {
+                    // Supplementary characters (encoded as surrogate pairs in MUTF-8). Don't
+                    // assert that encoding matches Rust UTF-8. Instead, check round-trip
+                    // correctness below.
+                }
+                _ => {
+                    // BMP (non-null, non-surrogate)
+                    assert_eq!(rust_encoded_bytes, mutf8_encoded_bytes);
+                }
             }
+
+            let rust_encoded_result = String::from_utf8(rust_encoded_bytes)?;
+            let mutf8_encoded_result = from_bytes(mutf8_encoded_bytes.as_slice())?;
+            assert_eq!(rust_encoded_result, mutf8_encoded_result);
         }
         Ok(())
     }
@@ -620,6 +623,7 @@ mod tests {
         assert!(from_bytes(&[0x56, 0xe7]).is_err());
         assert!(from_bytes(&[0x56, 0xa8]).is_err());
         assert!(from_bytes(&[0x7e, 0xff, 0xff, 0x2a]).is_err());
+        assert!(from_bytes(&[0xE0, 0x80, 0x80]).is_err());
     }
 
     #[test]
@@ -630,5 +634,84 @@ mod tests {
         let decoded = from_bytes(&mutf8_encoded_bytes)?;
         assert_eq!(decoded, s);
         Ok(())
+    }
+
+    #[test]
+    fn test_to_utf16_all_paths_and_errors() -> Result<()> {
+        assert_eq!(to_utf16(&[0x00])?, vec![0]);
+        assert_eq!(to_utf16(&[0xC2, 0xA2])?, vec![0x00A2]);
+        assert_eq!(to_utf16(&[0xE2, 0x82, 0xAC])?, vec![0x20AC]);
+        assert!(to_utf16(&[0xC2]).is_err());
+        assert!(to_utf16(&[0xE2]).is_err());
+        assert!(to_utf16(&[0xE2, 0x82]).is_err());
+        assert!(to_utf16(&[0xF0, 0x9F, 0x98, 0x80]).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_bytes_cow_paths() -> Result<()> {
+        assert!(matches!(from_bytes_cow(b"Hello")?, Cow::Borrowed("Hello")));
+        assert!(matches!(
+            from_bytes_cow("β".as_bytes())?,
+            Cow::Borrowed("β")
+        ));
+        let owned = from_bytes_cow(&[0xC0, 0x80])?;
+        assert!(matches!(owned, Cow::Owned(_)));
+        assert_eq!(&*owned, "\0");
+        assert!(from_bytes_cow(&[0xC2]).is_err());
+        assert!(from_bytes_cow(&[0xC1, 0x80]).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_validate_slow_error_paths() {
+        assert!(validate(&[0xC0, 0x80, 0xE0, 0xA0, 0x80]).is_ok());
+        assert!(validate(&[0x00]).is_err());
+        assert!(validate(&[0xC2]).is_err());
+        assert!(validate(&[0xC2, b'A']).is_err());
+        assert!(validate(&[0xC0, 0x81]).is_err());
+        assert!(validate(&[0xC1, 0x80]).is_err());
+        assert!(validate(&[0xE2]).is_err());
+        assert!(validate(&[0xE2, 0x82]).is_err());
+        assert!(validate(&[0xE2, b'A', 0xAC]).is_err());
+        assert!(validate(&[0xE0, 0x80, 0x80]).is_err());
+        assert!(validate(&[0x80]).is_err());
+    }
+
+    #[test]
+    fn test_has_special_sequences_and_decode_errors() {
+        assert!(!has_mutf8_specials("β".as_bytes()));
+        assert!(has_mutf8_specials(&[0x80]));
+        assert!(has_mutf8_specials(&[0xC0, 0x80]));
+        assert!(has_mutf8_specials(&[0xC1, 0x80]));
+        assert!(has_mutf8_specials(&[0xED, 0xA0, 0x80]));
+        assert!(has_mutf8_specials(&[0xF0, 0x9F, 0x98, 0x80]));
+        assert!(from_bytes(&[0xC0]).is_err());
+        assert!(from_bytes(&[0xED, 0xA0]).is_err());
+        assert!(from_bytes(&[0xF0]).is_err());
+    }
+
+    #[test]
+    fn test_decode_lone_and_mismatched_surrogates() -> Result<()> {
+        assert_eq!(from_bytes(&[0xED, 0xA0, 0xBD])?, "\u{FFFD}");
+        assert_eq!(
+            from_bytes(&[0xED, 0xA0, 0xBD, 0xE0, 0xA0, 0x80])?,
+            "\u{FFFD}\u{0800}"
+        );
+        assert_eq!(
+            from_bytes(&[0xED, 0xA0, 0xBD, 0xED, 0xA0, 0x80])?,
+            "\u{FFFD}\u{FFFD}"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_decode_mutf8_private_error_paths() {
+        assert!(decode_mutf8(&[0xC2]).is_err());
+        assert!(decode_mutf8(&[0xE2]).is_err());
+        assert_eq!(
+            decode_mutf8(&[0xED, 0xA0, 0xBD, b'A', b'B', b'C']).unwrap(),
+            "\u{FFFD}ABC"
+        );
     }
 }

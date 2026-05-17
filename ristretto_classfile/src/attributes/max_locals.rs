@@ -261,22 +261,16 @@ mod tests {
 
     #[test]
     fn test_instruction_int_constant() -> Result<()> {
-        let max_locals = get_max_locals(
-            MethodAccessFlags::empty(),
-            "()V",
-            &[Instruction::Iconst_0, Instruction::Iload_0],
-        )?;
+        let instructions = [Instruction::Iconst_0, Instruction::Iload_0];
+        let max_locals = get_max_locals(MethodAccessFlags::empty(), "()V", &instructions)?;
         assert_eq!(1, max_locals);
         Ok(())
     }
 
     #[test]
     fn test_instruction_long_constant() -> Result<()> {
-        let max_locals = get_max_locals(
-            MethodAccessFlags::empty(),
-            "()V",
-            &[Instruction::Lconst_0, Instruction::Lload_0],
-        )?;
+        let instructions = [Instruction::Lconst_0, Instruction::Lload_0];
+        let max_locals = get_max_locals(MethodAccessFlags::empty(), "()V", &instructions)?;
         assert_eq!(2, max_locals);
         Ok(())
     }

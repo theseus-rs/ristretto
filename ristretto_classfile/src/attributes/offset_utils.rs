@@ -240,10 +240,11 @@ pub(crate) fn instructions_to_bytes(
             }
             Instruction::Tableswitch(table_switch) => {
                 let position = u32::try_from(index)?;
+                let position_key = u16::try_from(position)?;
                 let position_byte = i32::from(
                     *instruction_to_byte_map
-                        .get(&u16::try_from(position)?)
-                        .expect("instruction byte"),
+                        .get(&position_key)
+                        .ok_or(InvalidInstructionOffset(position))?,
                 );
                 let default_offset =
                     u32::try_from(i64::from(position) + i64::from(table_switch.default))?;
@@ -263,10 +264,11 @@ pub(crate) fn instructions_to_bytes(
             }
             Instruction::Lookupswitch(lookup_switch) => {
                 let position = u32::try_from(index)?;
+                let position_key = u16::try_from(position)?;
                 let position_byte = i32::from(
                     *instruction_to_byte_map
-                        .get(&u16::try_from(position)?)
-                        .expect("instruction byte"),
+                        .get(&position_key)
+                        .ok_or(InvalidInstructionOffset(position))?,
                 );
                 let default_offset =
                     u32::try_from(i64::from(position) + i64::from(lookup_switch.default))?;
@@ -825,5 +827,11 @@ mod tests {
             instructions_from_bytes(&mut ByteReader::new(&bytes))?;
         assert_eq!(instructions, instructions_from_bytes.as_slice());
         Ok(())
+    }
+
+    #[test]
+    fn test_lookup_byte_offset_le_before_first_offset() {
+        let pairs = [(3, 0), (5, 1)];
+        assert_eq!(None, lookup_byte_offset_le(&pairs, 2));
     }
 }

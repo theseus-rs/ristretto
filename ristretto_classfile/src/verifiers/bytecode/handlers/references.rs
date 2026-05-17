@@ -442,6 +442,12 @@ pub fn handle_invoke<C: VerificationContext>(
     is_static: bool,
     context: &C,
 ) -> Result<Option<VerificationType>> {
+    if method_name == "<init>" {
+        return Err(VerifyError::VerifyError(
+            "<init> may only be invoked by invokespecial".to_string(),
+        ));
+    }
+
     let descriptor = JavaStr::cow_from_str(descriptor);
     let (params, return_type) = FieldType::parse_method_descriptor(&descriptor)
         .map_err(|e| VerifyError::ClassFormatError(e.to_string()))?;
@@ -466,16 +472,12 @@ pub fn handle_invoke<C: VerificationContext>(
     if !is_static {
         let objectref = frame.pop()?;
 
-        if method_name != "<init>" {
-            // Regular method call
-            let expected = VerificationType::Object(JavaString::from(class_name));
-            if !objectref.is_null() && !objectref.is_assignable_to(&expected, context)? {
-                return Err(VerifyError::VerifyError(format!(
-                    "invoke: {objectref} is not assignable to {class_name}"
-                )));
-            }
+        let expected = VerificationType::Object(JavaString::from(class_name));
+        if !objectref.is_null() && !objectref.is_assignable_to(&expected, context)? {
+            return Err(VerifyError::VerifyError(format!(
+                "invoke: {objectref} is not assignable to {class_name}"
+            )));
         }
-        // For <init>, objectref handling is done by the caller (handle_invokespecial)
     }
 
     // Push return type
@@ -721,7 +723,7 @@ mod tests {
     use crate::Version;
     use crate::constant::Constant;
     use crate::constant_pool::ConstantPool;
-    use crate::verifiers::bytecode::handlers::test_utils::{MockContext, StrictMockContext};
+    use crate::verifiers::bytecode::handlers::test_utils::MockContext;
 
     // Helper function to create a class file with a complete constant pool for testing
     fn create_test_class_file_with_refs() -> ClassFile<'static> {
@@ -802,6 +804,16 @@ mod tests {
             attributes: vec![],
             code_source_url: None,
         }
+    }
+
+    fn assert_resolver_error<T>(
+        mutate: impl FnOnce(&mut ClassFile<'static>),
+        resolve: impl FnOnce(&ConstantPoolResolver<'_>) -> Result<T>,
+    ) {
+        let mut class_file = create_test_class_file_with_refs();
+        mutate(&mut class_file);
+        let resolver = ConstantPoolResolver::new(&class_file);
+        assert!(resolve(&resolver).is_err());
     }
 
     #[test]
@@ -951,6 +963,168 @@ mod tests {
     }
 
     #[test]
+    fn test_resolver_malformed_field_ref_components_fail() {
+        assert_resolver_error(
+            |class_file| {
+                class_file
+                    .constant_pool
+                    .set(
+                        6,
+                        Constant::FieldRef {
+                            class_index: 999,
+                            name_and_type_index: 5,
+                        },
+                    )
+                    .unwrap();
+            },
+            |resolver| resolver.resolve_field_ref(6),
+        );
+        assert_resolver_error(
+            |class_file| {
+                class_file
+                    .constant_pool
+                    .set(
+                        6,
+                        Constant::FieldRef {
+                            class_index: 2,
+                            name_and_type_index: 999,
+                        },
+                    )
+                    .unwrap();
+            },
+            |resolver| resolver.resolve_field_ref(6),
+        );
+        assert_resolver_error(
+            |class_file| {
+                class_file
+                    .constant_pool
+                    .set(
+                        5,
+                        Constant::NameAndType {
+                            name_index: 999,
+                            descriptor_index: 4,
+                        },
+                    )
+                    .unwrap();
+            },
+            |resolver| resolver.resolve_field_ref(6),
+        );
+        assert_resolver_error(
+            |class_file| {
+                class_file
+                    .constant_pool
+                    .set(
+                        5,
+                        Constant::NameAndType {
+                            name_index: 3,
+                            descriptor_index: 999,
+                        },
+                    )
+                    .unwrap();
+            },
+            |resolver| resolver.resolve_field_ref(6),
+        );
+    }
+
+    #[test]
+    fn test_resolver_malformed_method_ref_components_fail() {
+        assert_resolver_error(
+            |class_file| {
+                class_file
+                    .constant_pool
+                    .set(
+                        10,
+                        Constant::MethodRef {
+                            class_index: 999,
+                            name_and_type_index: 9,
+                        },
+                    )
+                    .unwrap();
+            },
+            |resolver| resolver.resolve_method_ref(10),
+        );
+        assert_resolver_error(
+            |class_file| {
+                class_file
+                    .constant_pool
+                    .set(
+                        10,
+                        Constant::MethodRef {
+                            class_index: 2,
+                            name_and_type_index: 999,
+                        },
+                    )
+                    .unwrap();
+            },
+            |resolver| resolver.resolve_method_ref(10),
+        );
+        assert_resolver_error(
+            |class_file| {
+                class_file
+                    .constant_pool
+                    .set(
+                        9,
+                        Constant::NameAndType {
+                            name_index: 999,
+                            descriptor_index: 8,
+                        },
+                    )
+                    .unwrap();
+            },
+            |resolver| resolver.resolve_method_ref(10),
+        );
+        assert_resolver_error(
+            |class_file| {
+                class_file
+                    .constant_pool
+                    .set(
+                        9,
+                        Constant::NameAndType {
+                            name_index: 7,
+                            descriptor_index: 999,
+                        },
+                    )
+                    .unwrap();
+            },
+            |resolver| resolver.resolve_method_ref(10),
+        );
+    }
+
+    #[test]
+    fn test_resolver_malformed_invoke_dynamic_components_fail() {
+        assert_resolver_error(
+            |class_file| {
+                class_file
+                    .constant_pool
+                    .set(
+                        14,
+                        Constant::InvokeDynamic {
+                            bootstrap_method_attr_index: 0,
+                            name_and_type_index: 999,
+                        },
+                    )
+                    .unwrap();
+            },
+            |resolver| resolver.resolve_invoke_dynamic(14),
+        );
+        assert_resolver_error(
+            |class_file| {
+                class_file
+                    .constant_pool
+                    .set(
+                        9,
+                        Constant::NameAndType {
+                            name_index: 7,
+                            descriptor_index: 999,
+                        },
+                    )
+                    .unwrap();
+            },
+            |resolver| resolver.resolve_invoke_dynamic(14),
+        );
+    }
+
+    #[test]
     fn test_handle_new_success() {
         let mut frame = Frame::new(5, 10);
 
@@ -1016,15 +1190,12 @@ mod tests {
 
         handle_anewarray(&mut frame, "java/lang/String").unwrap();
 
-        match frame.peek().unwrap() {
-            VerificationType::Array(component) => {
-                assert_eq!(
-                    **component,
-                    VerificationType::Object(JavaString::from("java/lang/String"))
-                );
-            }
-            _ => panic!("Expected array type"),
-        }
+        assert_eq!(
+            *frame.peek().unwrap(),
+            VerificationType::Array(Box::new(VerificationType::Object(JavaString::from(
+                "java/lang/String",
+            ))))
+        );
     }
 
     #[test]
@@ -1099,7 +1270,7 @@ mod tests {
 
     #[test]
     fn test_handle_putstatic_int_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
@@ -1109,7 +1280,7 @@ mod tests {
 
     #[test]
     fn test_handle_putstatic_wrong_type_fails() {
-        let ctx = StrictMockContext;
+        let ctx = MockContext::STRICT;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
@@ -1120,7 +1291,7 @@ mod tests {
 
     #[test]
     fn test_handle_getfield_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
@@ -1130,7 +1301,7 @@ mod tests {
 
     #[test]
     fn test_handle_getfield_null_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Null).unwrap();
 
@@ -1140,7 +1311,7 @@ mod tests {
 
     #[test]
     fn test_handle_getfield_wrong_object_type_fails() {
-        let ctx = StrictMockContext;
+        let ctx = MockContext::STRICT;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Object(JavaString::from("some/Other")))
@@ -1153,7 +1324,7 @@ mod tests {
 
     #[test]
     fn test_handle_putfield_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
         frame.push(VerificationType::Integer).unwrap();
@@ -1164,7 +1335,7 @@ mod tests {
 
     #[test]
     fn test_handle_putfield_wrong_value_type_fails() {
-        let ctx = StrictMockContext;
+        let ctx = MockContext::STRICT;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
         frame.push(VerificationType::Float).unwrap();
@@ -1172,6 +1343,19 @@ mod tests {
         let result = handle_putfield(&mut frame, "java/lang/Object", "I", &ctx);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not assignable"));
+    }
+
+    #[test]
+    fn test_handle_invoke_invalid_descriptor_errors() {
+        let ctx = MockContext::PERMISSIVE;
+        let mut frame = Frame::new(1, 1);
+        assert!(handle_invoke(&mut frame, "Test", "test", "invalid", true, &ctx).is_err());
+
+        let mut frame = Frame::new(1, 1);
+        assert!(handle_invokespecial(&mut frame, "Test", "test", "invalid", &ctx).is_err());
+
+        let mut frame = Frame::new(1, 1);
+        assert!(handle_invokedynamic(&mut frame, "invalid", &ctx).is_err());
     }
 
     #[test]
@@ -1337,7 +1521,7 @@ mod tests {
 
     #[test]
     fn test_handle_invoke_static_no_args_void_return() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let result = handle_invoke(&mut frame, "Test", "test", "()V", true, &ctx).unwrap();
@@ -1347,7 +1531,7 @@ mod tests {
 
     #[test]
     fn test_handle_invoke_static_with_int_arg() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
@@ -1358,7 +1542,7 @@ mod tests {
 
     #[test]
     fn test_handle_invoke_static_with_return_value() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let result = handle_invoke(&mut frame, "Test", "test", "()I", true, &ctx).unwrap();
@@ -1368,7 +1552,7 @@ mod tests {
 
     #[test]
     fn test_handle_invoke_virtual_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
@@ -1385,8 +1569,20 @@ mod tests {
     }
 
     #[test]
+    fn test_handle_invoke_constructor_name_fails() {
+        let ctx = MockContext::STRICT;
+        let mut frame = Frame::new(5, 10);
+        frame
+            .push(VerificationType::Object(JavaString::from("other/Class")))
+            .unwrap();
+
+        let result = handle_invoke(&mut frame, "java/lang/String", "<init>", "()V", false, &ctx);
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn test_handle_invoke_wrong_arg_type_fails() {
-        let ctx = StrictMockContext;
+        let ctx = MockContext::STRICT;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
@@ -1397,7 +1593,7 @@ mod tests {
 
     #[test]
     fn test_handle_invoke_wrong_objectref_type_fails() {
-        let ctx = StrictMockContext;
+        let ctx = MockContext::STRICT;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Object(JavaString::from("other/Class")))
@@ -1417,7 +1613,7 @@ mod tests {
 
     #[test]
     fn test_handle_invoke_with_long_arg() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push_category2(VerificationType::Long).unwrap();
 
@@ -1428,7 +1624,7 @@ mod tests {
 
     #[test]
     fn test_handle_invoke_with_long_return() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let result = handle_invoke(&mut frame, "Test", "test", "()J", true, &ctx).unwrap();
@@ -1438,7 +1634,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokespecial_constructor_uninitialized() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Uninitialized(0)).unwrap();
 
@@ -1449,7 +1645,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokespecial_constructor_uninitialized_this() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::UninitializedThis).unwrap();
 
@@ -1459,7 +1655,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokespecial_constructor_with_args() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Uninitialized(0)).unwrap();
         frame.push(VerificationType::Integer).unwrap();
@@ -1470,7 +1666,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokespecial_constructor_wrong_objectref_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
@@ -1486,7 +1682,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokespecial_non_constructor() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
@@ -1496,7 +1692,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokespecial_non_constructor_with_return() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
@@ -1506,7 +1702,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokespecial_wrong_arg_type_fails() {
-        let ctx = StrictMockContext;
+        let ctx = MockContext::STRICT;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Uninitialized(0)).unwrap();
         frame.push(VerificationType::Float).unwrap();
@@ -1518,7 +1714,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokespecial_non_constructor_wrong_objectref_fails() {
-        let ctx = StrictMockContext;
+        let ctx = MockContext::STRICT;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Object(JavaString::from("other/Class")))
@@ -1532,7 +1728,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokedynamic_no_args_void_return() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         handle_invokedynamic(&mut frame, "()V", &ctx).unwrap();
@@ -1541,7 +1737,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokedynamic_with_args() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
         frame.push(VerificationType::Integer).unwrap();
@@ -1552,7 +1748,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokedynamic_with_return() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
@@ -1562,7 +1758,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokedynamic_with_long_return() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         handle_invokedynamic(&mut frame, "()J", &ctx).unwrap();
@@ -1571,7 +1767,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokedynamic_wrong_arg_type_fails() {
-        let ctx = StrictMockContext;
+        let ctx = MockContext::STRICT;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
@@ -1582,7 +1778,7 @@ mod tests {
 
     #[test]
     fn test_handle_invokedynamic_with_object_arg() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_string()).unwrap();
 
@@ -1657,13 +1853,12 @@ mod tests {
 
         handle_anewarray(&mut frame, "[I").unwrap();
 
-        // Should be array of int arrays
-        match frame.peek().unwrap() {
-            VerificationType::Array(component) => {
-                assert!(matches!(**component, VerificationType::Array(_)));
-            }
-            _ => panic!("Expected array type"),
-        }
+        assert_eq!(
+            *frame.peek().unwrap(),
+            VerificationType::Array(Box::new(VerificationType::Array(Box::new(
+                VerificationType::Integer,
+            ))))
+        );
     }
 
     #[test]
@@ -1686,6 +1881,82 @@ mod tests {
         let result = handle_arraylength(&mut frame);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("expected array"));
+    }
+
+    #[test]
+    fn test_category2_fields_invokes_and_array_checkcast() {
+        let ctx = MockContext::PERMISSIVE;
+
+        let mut getfield = Frame::new(5, 10);
+        getfield.push(VerificationType::Null).unwrap();
+        handle_getfield(&mut getfield, "TestClass", "J", &ctx).unwrap();
+        assert_eq!(getfield.pop_category2().unwrap(), VerificationType::Long);
+
+        let mut putfield = Frame::new(5, 10);
+        putfield.push(VerificationType::Null).unwrap();
+        putfield.push_category2(VerificationType::Long).unwrap();
+        handle_putfield(&mut putfield, "TestClass", "J", &ctx).unwrap();
+        assert!(putfield.is_stack_empty());
+
+        let mut putstatic = Frame::new(5, 10);
+        putstatic.push_category2(VerificationType::Long).unwrap();
+        handle_putstatic(&mut putstatic, "J", &ctx).unwrap();
+        assert!(putstatic.is_stack_empty());
+
+        let mut special_argument = Frame::new(5, 10);
+        special_argument
+            .push(VerificationType::UninitializedThis)
+            .unwrap();
+        special_argument
+            .push_category2(VerificationType::Long)
+            .unwrap();
+        handle_invokespecial(&mut special_argument, "TestClass", "<init>", "(J)V", &ctx).unwrap();
+        assert!(special_argument.is_stack_empty());
+
+        let mut special_return = Frame::new(5, 10);
+        special_return.push(VerificationType::Null).unwrap();
+        handle_invokespecial(&mut special_return, "TestClass", "special", "()J", &ctx).unwrap();
+        assert_eq!(
+            special_return.pop_category2().unwrap(),
+            VerificationType::Long
+        );
+
+        let mut dynamic = Frame::new(5, 10);
+        dynamic.push_category2(VerificationType::Long).unwrap();
+        handle_invokedynamic(&mut dynamic, "(J)J", &ctx).unwrap();
+        assert_eq!(dynamic.pop_category2().unwrap(), VerificationType::Long);
+
+        let mut cast = Frame::new(5, 10);
+        cast.push(VerificationType::Null).unwrap();
+        handle_checkcast(&mut cast, "[I").unwrap();
+        assert_eq!(
+            *cast.peek().unwrap(),
+            VerificationType::Array(Box::new(VerificationType::Integer))
+        );
+    }
+
+    #[test]
+    fn test_reference_assignability_failures() {
+        let ctx = MockContext::STRICT;
+
+        let mut getfield = Frame::new(5, 10);
+        getfield
+            .push(VerificationType::Object(JavaString::from("OtherClass")))
+            .unwrap();
+        assert!(handle_getfield(&mut getfield, "TestClass", "I", &ctx).is_err());
+
+        let mut putfield = Frame::new(5, 10);
+        putfield
+            .push(VerificationType::Object(JavaString::from("OtherClass")))
+            .unwrap();
+        putfield.push(VerificationType::Integer).unwrap();
+        assert!(handle_putfield(&mut putfield, "TestClass", "I", &ctx).is_err());
+
+        let mut invoke = Frame::new(5, 10);
+        invoke
+            .push(VerificationType::Object(JavaString::from("OtherClass")))
+            .unwrap();
+        assert!(handle_invoke(&mut invoke, "TestClass", "method", "()V", false, &ctx).is_err());
     }
 
     #[test]

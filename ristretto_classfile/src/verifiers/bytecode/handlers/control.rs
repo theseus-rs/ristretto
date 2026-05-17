@@ -324,7 +324,7 @@ mod tests {
     use crate::BaseType;
     use crate::JavaString;
     use crate::attributes::{LookupSwitch, TableSwitch};
-    use crate::verifiers::bytecode::handlers::test_utils::{MockContext, StrictMockContext};
+    use crate::verifiers::bytecode::handlers::test_utils::MockContext;
     use indexmap::IndexMap;
 
     #[test]
@@ -487,7 +487,7 @@ mod tests {
 
     #[test]
     fn test_areturn_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
@@ -496,7 +496,7 @@ mod tests {
 
     #[test]
     fn test_areturn_null_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Null).unwrap();
 
@@ -505,7 +505,7 @@ mod tests {
 
     #[test]
     fn test_areturn_with_expected_type() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
@@ -515,7 +515,7 @@ mod tests {
 
     #[test]
     fn test_areturn_not_reference_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
@@ -531,7 +531,7 @@ mod tests {
 
     #[test]
     fn test_areturn_not_assignable_fails() {
-        let ctx = StrictMockContext;
+        let ctx = MockContext::STRICT;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Object("some/Other".into()))
@@ -648,7 +648,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_goto() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let handled = dispatch_control(&Instruction::Goto(10), &mut frame, None, 52, &ctx).unwrap();
@@ -657,7 +657,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_goto_w() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let handled =
@@ -667,7 +667,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_return() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let handled = dispatch_control(&Instruction::Return, &mut frame, None, 52, &ctx).unwrap();
@@ -676,7 +676,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_ireturn() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
@@ -686,7 +686,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_lreturn() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push_category2(VerificationType::Long).unwrap();
 
@@ -696,7 +696,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_freturn() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
@@ -706,7 +706,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_dreturn() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push_category2(VerificationType::Double).unwrap();
 
@@ -716,7 +716,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_areturn() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_object()).unwrap();
 
@@ -726,7 +726,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_tableswitch() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
@@ -749,7 +749,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_lookupswitch() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
@@ -770,7 +770,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_jsr_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let result = dispatch_control(&Instruction::Jsr(10), &mut frame, None, 52, &ctx);
@@ -779,7 +779,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_jsr_w_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let result = dispatch_control(&Instruction::Jsr_w(1000), &mut frame, None, 52, &ctx);
@@ -788,7 +788,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_ret_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let result = dispatch_control(&Instruction::Ret(0), &mut frame, None, 52, &ctx);
@@ -797,7 +797,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_ret_w_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let result = dispatch_control(&Instruction::Ret_w(0), &mut frame, None, 52, &ctx);
@@ -806,7 +806,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_non_control_instruction() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let handled = dispatch_control(&Instruction::Nop, &mut frame, None, 52, &ctx).unwrap();

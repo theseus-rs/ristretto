@@ -265,6 +265,30 @@ mod test {
     }
 
     #[test]
+    fn test_valid_code_with_multiple_stack_map_frames() {
+        let class_file = ClassFile {
+            version: Version::Java7 { minor: 0 },
+            ..Default::default()
+        };
+        let method = get_dummy_method();
+        let code = vec![
+            Instruction::Nop,
+            Instruction::Goto(3),
+            Instruction::Return,
+            Instruction::Return,
+        ];
+        let stack_map_table = Attribute::StackMapTable {
+            name_index: 0,
+            frames: vec![
+                StackFrame::SameFrame { frame_type: 1 },
+                StackFrame::SameFrame { frame_type: 1 },
+            ],
+        };
+
+        assert!(verify(&class_file, &method, 0, 10, &code, &[], &[stack_map_table]).is_ok());
+    }
+
+    #[test]
     fn test_invalid_jump_target() {
         let class_file = ClassFile::default();
         let method = get_dummy_method();
@@ -293,12 +317,10 @@ mod test {
         ];
         // Missing StackMapTable
 
-        match verify(&class_file, &method, 0, 10, &code, &[], &[]) {
-            Err(VerificationError { message, .. }) => {
-                assert!(message.contains("StackMapTable missing"));
-            }
-            _ => panic!("Expected VerificationError"),
-        }
+        let message = verify(&class_file, &method, 0, 10, &code, &[], &[])
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("StackMapTable missing"));
     }
 
     #[test]
@@ -325,14 +347,12 @@ mod test {
         };
         let attributes = vec![stack_map_table];
 
-        match verify(&class_file, &method, 0, 10, &code, &[], &attributes) {
-            Err(VerificationError { message, .. }) => {
-                assert!(message.contains(
-                    "Jump target at instruction index 3 does not have a corresponding StackMapFrame"
-                ));
-            }
-            _ => panic!("Expected VerificationError"),
-        }
+        let message = verify(&class_file, &method, 0, 10, &code, &[], &attributes)
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains(
+            "Jump target at instruction index 3 does not have a corresponding StackMapFrame"
+        ));
     }
 
     #[test]
@@ -354,12 +374,124 @@ mod test {
         // Requires 3 locals (this + int + int)
         // max_locals = 2 -> Error
 
-        match verify(&class_file, &method, 0, 2, &code, &[], &[]) {
-            Err(VerificationError { message, .. }) => {
-                assert!(message.contains("max_locals (2) is less than required locals (3)"));
-            }
-            _ => panic!("Expected VerificationError"),
-        }
+        let message = verify(&class_file, &method, 0, 2, &code, &[], &[])
+            .unwrap_err()
+            .to_string();
+        assert!(message.contains("max_locals (2) is less than required locals (3)"));
+    }
+
+    #[test]
+    fn test_max_locals_accepts_wide_parameters() {
+        let mut constant_pool = crate::ConstantPool::default();
+        let descriptor_index = constant_pool.add_utf8("(JD)V").unwrap();
+        let class_file = ClassFile {
+            version: Version::Java7 { minor: 0 },
+            constant_pool,
+            ..Default::default()
+        };
+        let method = Method {
+            access_flags: MethodAccessFlags::PUBLIC,
+            name_index: 0,
+            descriptor_index,
+            attributes: vec![],
+        };
+        let code = vec![Instruction::Return];
+
+        assert!(verify(&class_file, &method, 0, 5, &code, &[], &[]).is_ok());
+    }
+
+    #[test]
+    fn test_conditional_jump_variants_are_collected() {
+        let class_file = ClassFile {
+            version: Version::Java7 { minor: 0 },
+            ..Default::default()
+        };
+        let method = get_dummy_method();
+        let code = vec![
+            Instruction::Ifeq(19),
+            Instruction::Ifne(19),
+            Instruction::Iflt(19),
+            Instruction::Ifge(19),
+            Instruction::Ifgt(19),
+            Instruction::Ifle(19),
+            Instruction::If_icmpeq(19),
+            Instruction::If_icmpne(19),
+            Instruction::If_icmplt(19),
+            Instruction::If_icmpge(19),
+            Instruction::If_icmpgt(19),
+            Instruction::If_icmple(19),
+            Instruction::If_acmpeq(19),
+            Instruction::If_acmpne(19),
+            Instruction::Goto(19),
+            Instruction::Jsr(19),
+            Instruction::Ifnull(19),
+            Instruction::Ifnonnull(19),
+            Instruction::Nop,
+            Instruction::Return,
+        ];
+        let stack_map_table = Attribute::StackMapTable {
+            name_index: 0,
+            frames: vec![StackFrame::SameFrame { frame_type: 19 }],
+        };
+
+        assert!(verify(&class_file, &method, 0, 10, &code, &[], &[stack_map_table]).is_ok());
+    }
+
+    #[test]
+    fn test_wide_jump_targets() {
+        let class_file = ClassFile::default();
+        let method = get_dummy_method();
+        let valid_code = vec![
+            Instruction::Goto_w(2),
+            Instruction::Jsr_w(2),
+            Instruction::Return,
+        ];
+        assert!(verify(&class_file, &method, 0, 10, &valid_code, &[], &[]).is_ok());
+
+        let invalid_code = vec![Instruction::Jsr_w(10)];
+        assert_eq!(
+            Err(InvalidInstructionOffset(10)),
+            verify(&class_file, &method, 0, 10, &invalid_code, &[], &[])
+        );
+    }
+
+    #[test]
+    fn test_invalid_exception_handler_and_stack_frame_offsets() {
+        let class_file = ClassFile::default();
+        let method = get_dummy_method();
+        let code = vec![Instruction::Return];
+        let exception_table = vec![ExceptionTableEntry {
+            range_pc: 0..1,
+            handler_pc: 10,
+            catch_type: 0,
+        }];
+        assert_eq!(
+            Err(InvalidInstructionOffset(10)),
+            verify(&class_file, &method, 0, 10, &code, &exception_table, &[])
+        );
+
+        let stack_map_table = Attribute::StackMapTable {
+            name_index: 0,
+            frames: vec![StackFrame::SameFrame { frame_type: 10 }],
+        };
+        assert_eq!(
+            Err(InvalidStackFrameOffset(10)),
+            verify(&class_file, &method, 0, 10, &code, &[], &[stack_map_table])
+        );
+    }
+
+    #[test]
+    fn test_valid_exception_handler_is_recorded_as_jump_target() {
+        let class_file = ClassFile::default();
+        let method = get_dummy_method();
+        let code = vec![Instruction::Return];
+        let exception_table = vec![ExceptionTableEntry {
+            range_pc: 0..1,
+            handler_pc: 0,
+            catch_type: 0,
+        }];
+
+        assert!(verify(&class_file, &method, 0, 10, &code, &exception_table, &[]).is_ok());
     }
 
     #[test]

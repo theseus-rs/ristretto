@@ -198,14 +198,7 @@ impl VerificationCache {
 
         drop(guard);
 
-        // Update stats
-        if let Ok(mut stats) = self.stats.write() {
-            if result.is_some() {
-                stats.result_hits += 1;
-            } else {
-                stats.result_misses += 1;
-            }
-        }
+        self.record_result_lookup(result.is_some());
 
         result
     }
@@ -237,16 +230,31 @@ impl VerificationCache {
 
         drop(guard);
 
-        // Update stats
-        if let Ok(mut stats) = self.stats.write() {
-            if result.is_some() {
-                stats.descriptor_hits += 1;
-            } else {
-                stats.descriptor_misses += 1;
-            }
-        }
+        self.record_descriptor_lookup(result.is_some());
 
         result
+    }
+
+    fn record_result_lookup(&self, hit: bool) {
+        let Ok(mut stats) = self.stats.write() else {
+            return;
+        };
+        if hit {
+            stats.result_hits += 1;
+        } else {
+            stats.result_misses += 1;
+        }
+    }
+
+    fn record_descriptor_lookup(&self, hit: bool) {
+        let Ok(mut stats) = self.stats.write() else {
+            return;
+        };
+        if hit {
+            stats.descriptor_hits += 1;
+        } else {
+            stats.descriptor_misses += 1;
+        }
     }
 
     /// Parses and caches a method descriptor.
@@ -554,6 +562,19 @@ mod tests {
         assert_eq!(stats.descriptor_misses, 1);
         assert_eq!(stats.result_hits, 0);
         assert_eq!(stats.descriptor_hits, 0);
+    }
+
+    #[test]
+    fn test_cache_stats_poisoned_lock_is_ignored() {
+        let cache = VerificationCache::new(true);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = cache.stats.write().unwrap();
+            panic!("poison stats lock");
+        }));
+        assert!(result.is_err());
+
+        cache.record_result_lookup(true);
+        cache.record_descriptor_lookup(false);
     }
 
     #[test]

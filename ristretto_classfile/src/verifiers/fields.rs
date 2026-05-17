@@ -17,11 +17,8 @@ pub(crate) fn verify(class_file: &ClassFile<'_>) -> Result<()> {
         field_access_flags::verify(class_file, field)?;
         verify_name_index(class_file, field)?;
         verify_descriptor_index(class_file, field)?;
-        attributes::verify(
-            class_file,
-            &field.attributes,
-            AttributeContext::Field(field),
-        )?;
+        let context = AttributeContext::Field(field);
+        attributes::verify(class_file, &field.attributes, context)?;
     }
     Ok(())
 }

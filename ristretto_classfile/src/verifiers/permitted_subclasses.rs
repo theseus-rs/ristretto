@@ -127,11 +127,8 @@ mod tests {
     fn test_permitted_subclasses_empty() {
         let class_file = create_class_file_with_permitted_subclasses(vec![], false);
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("at least one"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("at least one"));
     }
 
     #[test]
@@ -164,30 +161,22 @@ mod tests {
             class_indexes: vec![class_index, class_index],
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("Duplicate"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("Duplicate"));
     }
 
     #[test]
     fn test_permitted_subclasses_final_class() {
-        let mut class_file = ClassFile {
-            access_flags: ClassAccessFlags::FINAL,
-            ..Default::default()
-        };
+        let mut class_file = create_class_file_with_permitted_subclasses(Vec::new(), true);
+        class_file.attributes.clear();
         let class_index = class_file.constant_pool.add_class("Subclass").unwrap();
         class_file.attributes.push(Attribute::PermittedSubclasses {
             name_index: 0,
             class_indexes: vec![class_index],
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("cannot be final"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("cannot be final"));
     }
 
     #[test]
@@ -203,11 +192,8 @@ mod tests {
             class_indexes: vec![class_index],
         });
 
-        let result = verify(&class_file);
-        assert!(result.is_err());
-        if let Err(VerificationError { message, .. }) = result {
-            assert!(message.contains("Multiple PermittedSubclasses"));
-        }
+        let message = verify(&class_file).unwrap_err().to_string();
+        assert!(message.contains("Multiple PermittedSubclasses"));
     }
 
     #[test]

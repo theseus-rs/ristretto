@@ -42,13 +42,11 @@ pub fn handle_athrow<C: VerificationContext>(frame: &mut Frame, context: &C) -> 
         if !objectref.is_assignable_to(&throwable, context)? {
             // We can't always verify this statically without class hierarchy info
             // So we just check it's a reference type
-            if let VerificationType::Object(_) = &objectref {
-                // Assume valid; will be checked at runtime
-            } else if let VerificationType::Array(_) = &objectref {
-                return Err(VerifyError::VerifyError(
-                    "athrow: arrays are not throwable".to_string(),
-                ));
+            if matches!(&objectref, VerificationType::Array(_)) {
+                let message = "athrow: arrays are not throwable".to_string();
+                return Err(VerifyError::VerifyError(message));
             }
+            // Object types are assumed valid; runtime class loading enforces the hierarchy.
         }
     }
 
@@ -81,11 +79,11 @@ pub fn dispatch_exceptions<C: VerificationContext>(
 mod tests {
     use super::*;
     use crate::JavaString;
-    use crate::verifiers::bytecode::handlers::test_utils::{MockContext, StrictMockContext};
+    use crate::verifiers::bytecode::handlers::test_utils::MockContext;
 
     #[test]
     fn test_athrow_object_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Object(JavaString::from(
@@ -98,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_athrow_throwable_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_throwable()).unwrap();
 
@@ -107,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_athrow_null_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Null).unwrap();
 
@@ -116,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_athrow_non_reference_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
@@ -132,7 +130,7 @@ mod tests {
 
     #[test]
     fn test_athrow_float_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Float).unwrap();
 
@@ -148,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_athrow_array_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(VerificationType::Integer)))
@@ -166,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_athrow_object_array_fails() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Array(Box::new(
@@ -185,10 +183,28 @@ mod tests {
     }
 
     #[test]
+    fn test_athrow_array_fails_with_strict_context() {
+        let ctx = MockContext::STRICT;
+        let mut frame = Frame::new(5, 10);
+        frame
+            .push(VerificationType::Array(Box::new(VerificationType::Integer)))
+            .unwrap();
+
+        let result = handle_athrow(&mut frame, &ctx);
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("arrays are not throwable")
+        );
+    }
+
+    #[test]
     fn test_athrow_with_strict_context_object_assumed_valid() {
         // Even with strict context, Object types are assumed valid
         // (will be checked at runtime)
-        let ctx = StrictMockContext;
+        let ctx = MockContext::STRICT;
         let mut frame = Frame::new(5, 10);
         frame
             .push(VerificationType::Object(JavaString::from(
@@ -202,7 +218,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_athrow_success() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::java_lang_throwable()).unwrap();
 
@@ -212,7 +228,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_athrow_fails_with_non_reference() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
         frame.push(VerificationType::Integer).unwrap();
 
@@ -222,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_non_exception_instruction() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let handled = dispatch_exceptions(&Instruction::Nop, &mut frame, &ctx).unwrap();
@@ -231,7 +247,7 @@ mod tests {
 
     #[test]
     fn test_dispatch_pop_not_handled() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame = Frame::new(5, 10);
 
         let handled = dispatch_exceptions(&Instruction::Pop, &mut frame, &ctx).unwrap();

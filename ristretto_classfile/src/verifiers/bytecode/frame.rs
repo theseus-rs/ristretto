@@ -456,22 +456,7 @@ impl Frame {
 mod tests {
     use super::*;
     use crate::JavaString;
-
-    struct MockContext;
-
-    impl VerificationContext for MockContext {
-        fn is_subclass(&self, subclass: &str, superclass: &str) -> Result<bool> {
-            Ok(subclass == superclass)
-        }
-
-        fn is_assignable(&self, target: &str, source: &str) -> Result<bool> {
-            Ok(target == source || target == "java/lang/Object")
-        }
-
-        fn common_superclass(&self, _class1: &str, _class2: &str) -> Result<String> {
-            Ok("java/lang/Object".to_string())
-        }
-    }
+    use crate::verifiers::bytecode::handlers::test_utils::MockContext;
 
     #[test]
     fn test_new_frame() {
@@ -483,11 +468,22 @@ mod tests {
     }
 
     #[test]
+    fn test_with_locals_and_peek_empty() {
+        let frame = Frame::with_locals(vec![VerificationType::Integer], 2);
+        assert_eq!(frame.locals_count(), 1);
+        assert_eq!(frame.max_stack(), 2);
+        assert!(frame.peek().is_err());
+    }
+
+    #[test]
     fn test_push_pop() {
         let mut frame = Frame::new(5, 10);
 
         frame.push(VerificationType::Integer).unwrap();
         assert_eq!(frame.stack_depth(), 1);
+        frame.clear_stack();
+        assert!(frame.is_stack_empty());
+        frame.push(VerificationType::Integer).unwrap();
 
         let ty = frame.pop().unwrap();
         assert_eq!(ty, VerificationType::Integer);
@@ -526,6 +522,21 @@ mod tests {
     }
 
     #[test]
+    fn test_category2_error_paths() {
+        let mut overflow = Frame::new(1, 1);
+        assert!(overflow.push_category2(VerificationType::Long).is_err());
+
+        let mut missing_top = Frame::new(1, 2);
+        missing_top.push(VerificationType::Long).unwrap();
+        assert!(missing_top.pop_category2().is_err());
+
+        let mut wrong_value = Frame::new(1, 2);
+        wrong_value.push(VerificationType::Integer).unwrap();
+        wrong_value.push(VerificationType::Top).unwrap();
+        assert!(wrong_value.pop_category2().is_err());
+    }
+
+    #[test]
     fn test_local_operations() {
         let mut frame = Frame::new(5, 10);
 
@@ -550,15 +561,29 @@ mod tests {
 
     #[test]
     fn test_local_out_of_bounds() {
-        let frame = Frame::new(5, 10);
+        let mut frame = Frame::new(5, 10);
 
         let result = frame.get_local(10);
         assert!(result.is_err());
+        assert!(frame.set_local(10, VerificationType::Integer).is_err());
+        assert!(
+            frame
+                .set_local_category2(4, VerificationType::Long)
+                .is_err()
+        );
+        assert!(frame.get_local_category2(4).is_err());
+
+        frame.locals[1] = VerificationType::Integer;
+        assert!(frame.get_local_category2(1).is_err());
+
+        frame.locals[1] = VerificationType::Long;
+        frame.locals[2] = VerificationType::Integer;
+        assert!(frame.get_local_category2(1).is_err());
     }
 
     #[test]
     fn test_merge_same_frames() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame1 = Frame::new(5, 10);
         frame1.set_local(0, VerificationType::Integer).unwrap();
         frame1.push(VerificationType::Float).unwrap();
@@ -571,7 +596,7 @@ mod tests {
 
     #[test]
     fn test_merge_different_types() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame1 = Frame::new(5, 10);
         frame1
             .set_local(
@@ -598,7 +623,7 @@ mod tests {
 
     #[test]
     fn test_merge_stack_depth_mismatch() {
-        let ctx = MockContext;
+        let ctx = MockContext::PERMISSIVE;
         let mut frame1 = Frame::new(5, 10);
         frame1.push(VerificationType::Integer).unwrap();
 
@@ -606,6 +631,36 @@ mod tests {
 
         let result = frame1.merge(&frame2, &ctx);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_merge_local_count_mismatch_and_stack_change() {
+        let ctx = MockContext::PERMISSIVE;
+        let mut frame1 = Frame::new(1, 10);
+        let frame2 = Frame::new(2, 10);
+        assert!(frame1.merge(&frame2, &ctx).is_err());
+
+        let mut stack_target = Frame::new(1, 10);
+        stack_target
+            .push(VerificationType::Object(JavaString::from(
+                "java/lang/String",
+            )))
+            .unwrap();
+
+        let mut stack_source = Frame::new(1, 10);
+        stack_source
+            .push(VerificationType::Object(JavaString::from(
+                "java/lang/Integer",
+            )))
+            .unwrap();
+
+        assert!(stack_target.merge(&stack_source, &ctx).unwrap());
+        assert_eq!(
+            stack_target.stack,
+            vec![VerificationType::Object(JavaString::from(
+                "java/lang/Object"
+            ))]
+        );
     }
 
     #[test]
@@ -621,6 +676,25 @@ mod tests {
 
         assert_eq!(*frame.get_local(0).unwrap(), init);
         assert_eq!(*frame.peek().unwrap(), init);
+    }
+
+    #[test]
+    fn test_mock_context_methods() {
+        let context = MockContext::PERMISSIVE;
+        assert!(
+            context
+                .is_subclass("java/lang/String", "java/lang/String")
+                .unwrap()
+        );
+        assert!(
+            context
+                .is_assignable("java/lang/Object", "java/lang/String")
+                .unwrap()
+        );
+        assert_eq!(
+            "java/lang/Object",
+            context.common_superclass("A", "B").unwrap()
+        );
     }
 
     #[test]

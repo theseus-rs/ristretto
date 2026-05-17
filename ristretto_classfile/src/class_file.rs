@@ -332,7 +332,7 @@ impl<'a> ClassFile<'a> {
     ///
     /// // Now you can save these bytes to a file
     /// fs::write("HelloWorld.class", buffer)?;
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     ///
     /// # Errors
@@ -417,29 +417,26 @@ impl fmt::Display for ClassFile<'_> {
     /// //    #1 = Methodref          #2.#3
     /// //    #2 = Class              #4
     /// //    ...
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// # Ok::<(), ristretto_classfile::Error>(())
     /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let class_name = self.class_name().map_err(|_| fmt::Error)?;
         writeln!(f, "{} {class_name}", self.access_flags.as_code())?;
         writeln!(f, "  minor version: {}", self.version.minor())?;
-        writeln!(
-            f,
-            "  major version: {} ({})",
-            self.version.major(),
-            self.version
-        )?;
+        let major_version = self.version.major();
+        let version = &self.version;
+        writeln!(f, "  major version: {major_version} ({version})")?;
         writeln!(f, "  flags: {}", self.access_flags)?;
         writeln!(f, "  this_class: #{}", self.this_class)?;
         writeln!(f, "  super_class: #{}", self.super_class)?;
-        writeln!(
-            f,
-            "  interfaces: {}, fields: {}, methods: {}, attributes: {}",
-            self.interfaces.len(),
-            self.fields.len(),
-            self.methods.len(),
-            self.attributes.len()
-        )?;
+        let interfaces_len = self.interfaces.len();
+        let fields_len = self.fields.len();
+        let methods_len = self.methods.len();
+        let attributes_len = self.attributes.len();
+        let summary = format!(
+            "  interfaces: {interfaces_len}, fields: {fields_len}, methods: {methods_len}, attributes: {attributes_len}"
+        );
+        writeln!(f, "{summary}")?;
 
         writeln!(f, "Constant pool:")?;
         write!(f, "{}", self.constant_pool)?;
@@ -484,8 +481,50 @@ mod test {
     use super::*;
     use crate::Error::{InvalidConstantPoolIndexType, IoError};
     use crate::error::Result;
-    use crate::{Constant, JAVA_8, JAVA_21};
+    use crate::field_access_flags::FieldAccessFlags;
+    use crate::method_access_flags::MethodAccessFlags;
+    use crate::{BaseType, Constant, FieldType, JAVA_8, JAVA_21};
     use indoc::indoc;
+
+    fn populated_class_file() -> Result<ClassFile<'static>> {
+        let mut constant_pool = ConstantPool::default();
+        let this_class = constant_pool.add_class("Populated")?;
+        let super_class = constant_pool.add_class("java/lang/Object")?;
+        let interface = constant_pool.add_class("java/io/Serializable")?;
+        let field_name = constant_pool.add_utf8("value")?;
+        let field_descriptor = constant_pool.add_utf8("I")?;
+        let method_name = constant_pool.add_utf8("method")?;
+        let method_descriptor = constant_pool.add_utf8("()V")?;
+        let source_file_name = constant_pool.add_utf8("SourceFile")?;
+        let source_file = constant_pool.add_utf8("Populated.java")?;
+
+        Ok(ClassFile {
+            version: JAVA_21,
+            constant_pool,
+            access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER,
+            this_class,
+            super_class,
+            interfaces: vec![interface],
+            fields: vec![Field {
+                access_flags: FieldAccessFlags::PRIVATE,
+                name_index: field_name,
+                descriptor_index: field_descriptor,
+                field_type: FieldType::Base(BaseType::Int),
+                attributes: Vec::new(),
+            }],
+            methods: vec![Method {
+                access_flags: MethodAccessFlags::PUBLIC,
+                name_index: method_name,
+                descriptor_index: method_descriptor,
+                attributes: Vec::new(),
+            }],
+            attributes: vec![Attribute::SourceFile {
+                name_index: source_file_name,
+                source_file_index: source_file,
+            }],
+            code_source_url: Some("file:/tmp/populated/".to_string()),
+        })
+    }
 
     #[test]
     fn test_invalid_magic() {
@@ -519,6 +558,75 @@ mod test {
             class_file.class_name()
         );
         Ok(())
+    }
+
+    #[test]
+    fn test_into_owned_preserves_all_fields() -> Result<()> {
+        let class_file = populated_class_file()?;
+        let owned = class_file.clone().into_owned();
+        assert_eq!(class_file.version, owned.version);
+        assert_eq!(class_file.constant_pool, owned.constant_pool);
+        assert_eq!(class_file.access_flags, owned.access_flags);
+        assert_eq!(class_file.this_class, owned.this_class);
+        assert_eq!(class_file.super_class, owned.super_class);
+        assert_eq!(class_file.interfaces, owned.interfaces);
+        assert_eq!(class_file.fields, owned.fields);
+        assert_eq!(class_file.methods, owned.methods);
+        assert_eq!(class_file.attributes, owned.attributes);
+        assert_eq!(class_file.code_source_url, owned.code_source_url);
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_slice_populated_class() -> Result<()> {
+        let class_file = populated_class_file()?;
+        let mut bytes = Vec::new();
+        class_file.to_bytes(&mut bytes)?;
+
+        let parsed = ClassFile::from_slice(&bytes)?;
+        assert_eq!(JAVA_21, parsed.version);
+        assert_eq!("Populated", parsed.class_name()?);
+        assert_eq!(vec![class_file.interfaces[0]], parsed.interfaces);
+        assert_eq!(1, parsed.fields.len());
+        assert_eq!(1, parsed.methods.len());
+        assert_eq!(1, parsed.attributes.len());
+        assert_eq!(None, parsed.code_source_url);
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_bytes_populated_class() -> Result<()> {
+        let class_file = populated_class_file()?;
+        let mut bytes = Vec::new();
+        class_file.to_bytes(&mut bytes)?;
+
+        let parsed = ClassFile::from_bytes(&bytes)?;
+        assert_eq!(class_file.version, parsed.version);
+        assert_eq!(class_file.access_flags, parsed.access_flags);
+        assert_eq!(class_file.this_class, parsed.this_class);
+        assert_eq!(class_file.super_class, parsed.super_class);
+        assert_eq!(class_file.interfaces, parsed.interfaces);
+        assert_eq!(class_file.fields, parsed.fields);
+        assert_eq!(class_file.methods, parsed.methods);
+        assert_eq!(class_file.attributes, parsed.attributes);
+        Ok(())
+    }
+
+    #[test]
+    fn test_populated_class_to_string_summary() -> Result<()> {
+        let output = populated_class_file()?.to_string();
+        assert!(output.contains("major version: 65 (Java 21)"));
+        assert!(output.contains("interfaces: 1, fields: 1, methods: 1, attributes: 1"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_slice_invalid_magic() {
+        let invalid_magic = 0xDEAD_BEEF_u32;
+        assert_eq!(
+            Err(InvalidMagicNumber(invalid_magic)),
+            ClassFile::from_slice(&invalid_magic.to_be_bytes())
+        );
     }
 
     #[test]
@@ -594,6 +702,19 @@ mod test {
         "};
 
         assert_eq!(expected, class_file.to_string());
+        Ok(())
+    }
+
+    #[test]
+    fn test_to_string_separates_multiple_fields_and_methods() -> Result<()> {
+        let mut class_file = populated_class_file()?;
+        class_file.fields.push(class_file.fields[0].clone());
+        class_file.methods.push(class_file.methods[0].clone());
+
+        let output = class_file.to_string();
+        assert!(output.contains("fields:\n  flags"));
+        assert!(output.contains("methods:\n  flags"));
+        assert!(output.contains("fields: 2, methods: 2"));
         Ok(())
     }
 
