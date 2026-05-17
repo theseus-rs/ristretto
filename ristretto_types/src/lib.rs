@@ -18,6 +18,8 @@ pub mod native_memory;
 mod parameters;
 mod resource_manager;
 mod rust_value;
+#[cfg(test)]
+mod test_utils;
 mod thread;
 mod vm;
 

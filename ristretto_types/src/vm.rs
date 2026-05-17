@@ -272,3 +272,64 @@ impl<V: VM> VM for Arc<V> {
         (**self).create_thread(id)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Thread;
+    use crate::test_utils;
+    use ristretto_classfile::JAVA_17;
+
+    #[tokio::test]
+    async fn test_arc_vm_delegates_to_inner_vm() -> Result<()> {
+        let vm: Arc<test_utils::MockVm> = test_utils::MockVm::new(JAVA_17);
+        let vm_ref: &dyn VM<ThreadType = test_utils::MockThread, ModuleSystem = test_utils::MockModuleSystem> =
+            &vm;
+        let thread = test_utils::MockThread::new(vm.clone());
+
+        assert!(Arc::strong_count(vm_ref.garbage_collector()) >= 1);
+        assert_eq!(vm_ref.java_home(), &PathBuf::from("/mock/java/home"));
+        assert_eq!(vm_ref.java_version(), "mock-java");
+        assert_eq!(vm_ref.java_major_version(), JAVA_17.major());
+        assert_eq!(vm_ref.java_class_file_version(), &JAVA_17);
+        assert!(vm_ref.system_properties().is_empty());
+        assert_eq!(vm_ref.next_thread_id()?, 1);
+        assert_eq!(vm_ref.next_hidden_class_suffix()?, 1);
+        assert_eq!(vm_ref.next_nio_fd(), 3);
+        assert_eq!(
+            vm_ref.class("java/lang/Object").await?.name(),
+            "java/lang/Object"
+        );
+        assert_eq!(
+            vm_ref.invoke_main(&["arg"]).await?.expect("main result"),
+            Value::Int(0)
+        );
+        assert!(!vm_ref.module_system().is_lightweight_mode());
+        assert!(vm_ref.class_path().iter().next().is_none());
+        assert_eq!(vm_ref.verify_mode(), VerifyMode::Remote);
+        assert!(!vm_ref.preview_features());
+        assert!(vm_ref.stdin().try_lock().is_ok());
+        assert!(vm_ref.stdout().try_lock().is_ok());
+        assert!(vm_ref.stderr().try_lock().is_ok());
+        assert!(!vm_ref.native_memory().contains(0));
+        assert!(format!("{:?}", vm_ref.resource_manager()).contains("ResourceManager"));
+        assert!(vm_ref.file_handles().read().await.is_empty());
+        #[cfg(not(target_family = "wasm"))]
+        assert!(vm_ref.socket_handles().read().await.is_empty());
+        assert!(vm_ref.thread_handles().read().await.is_empty());
+        assert!(Arc::ptr_eq(
+            &vm_ref.monitor_registry().monitor(1),
+            &vm_ref.monitor_registry().monitor(1)
+        ));
+        assert_eq!(vm_ref.class_loader().read().await.name(), "bootstrap");
+        assert!(vm_ref.intern_string(&thread, "intern").await?.is_object());
+        assert!(
+            vm_ref
+                .object("java/lang/Object", "()V", &[])
+                .await?
+                .is_object()
+        );
+        assert_eq!(vm_ref.create_thread(42)?.id(), 42);
+        Ok(())
+    }
+}

@@ -47,7 +47,6 @@ impl<T: Send + Sync> TryInto<Arc<T>> for ThreadHandle<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Result;
     use std::fmt::Debug;
 
     #[derive(Debug)]
@@ -74,6 +73,11 @@ mod tests {
         assert_eq!(handle.thread.id, 2);
         assert!(handle.daemon);
         assert!(handle.join_handle.is_some());
+        handle
+            .join_handle
+            .expect("join handle")
+            .await
+            .expect("join task");
     }
 
     #[cfg(not(target_family = "wasm"))]
@@ -84,15 +88,19 @@ mod tests {
         let handle: ThreadHandle<MockThread> = (thread, join_handle, false).into();
         assert!(!handle.daemon);
         assert!(handle.join_handle.is_some());
+        handle
+            .join_handle
+            .expect("join handle")
+            .await
+            .expect("join task");
     }
 
     #[test]
-    fn test_thread_handle_try_into() -> Result<()> {
+    fn test_thread_handle_try_into() {
         let thread = Arc::new(MockThread { id: 42 });
         let handle: ThreadHandle<MockThread> = thread.into();
-        let extracted: Arc<MockThread> = handle.try_into()?;
+        let extracted: Arc<MockThread> = handle.try_into().expect("thread handle into arc");
         assert_eq!(extracted.id, 42);
-        Ok(())
     }
 
     #[test]

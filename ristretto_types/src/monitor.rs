@@ -3,6 +3,7 @@ use ristretto_gc::sync::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Duration;
 use tokio::sync::{Notify, Semaphore};
 
 /// A monitor is a synchronization mechanism that allows threads to have:
@@ -160,8 +161,9 @@ impl Monitor {
                 interrupted = true;
                 break;
             }
-            if let Ok(()) =
-                tokio::time::timeout(std::time::Duration::from_millis(10), notified.as_mut()).await
+            if tokio::time::timeout(Duration::from_millis(10), notified.as_mut())
+                .await
+                .is_ok()
             {
                 break; // Notified
             }
@@ -322,5 +324,232 @@ impl MonitorRegistry {
     pub fn remove(&self, object_id: usize) {
         let mut monitors = self.monitors.lock();
         monitors.remove(&object_id);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::JavaError;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::time::Duration;
+
+    static WAIT_INTERRUPT_ON_FIRST: AtomicBool = AtomicBool::new(false);
+    static WAIT_INTERRUPT_AFTER_POLL: AtomicBool = AtomicBool::new(false);
+    static WAIT_TIMEOUT_INTERRUPT_ON_FIRST: AtomicBool = AtomicBool::new(false);
+
+    fn assert_illegal_monitor_state(result: &Result<impl Sized>) {
+        assert!(matches!(
+            result,
+            Err(Error::JavaError(JavaError::IllegalMonitorStateException(_)))
+        ));
+    }
+
+    fn never_interrupted() -> bool {
+        false
+    }
+
+    fn wait_interrupt_on_first_check() -> bool {
+        !WAIT_INTERRUPT_ON_FIRST.swap(true, Ordering::SeqCst)
+    }
+
+    fn wait_interrupt_after_poll() -> bool {
+        WAIT_INTERRUPT_AFTER_POLL.swap(true, Ordering::SeqCst)
+    }
+
+    fn wait_timeout_interrupt_on_first_check() -> bool {
+        !WAIT_TIMEOUT_INTERRUPT_ON_FIRST.swap(true, Ordering::SeqCst)
+    }
+
+    #[tokio::test]
+    async fn test_acquire_release_reentrant_and_errors() -> Result<()> {
+        let monitor = Monitor::default();
+        monitor.acquire(1).await?;
+        assert!(monitor.is_owned_by(1));
+        monitor.acquire(1).await?;
+        assert!(!monitor.release(1)?);
+        assert!(monitor.is_owned_by(1));
+        assert!(monitor.release(1)?);
+        assert!(!monitor.is_owned_by(1));
+        assert_illegal_monitor_state(&monitor.release(1));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_wait_notify_and_notify_errors() -> Result<()> {
+        let monitor = Arc::new(Monitor::new());
+        assert_illegal_monitor_state(&monitor.notify(1));
+        assert_illegal_monitor_state(&monitor.notify_all(1));
+        monitor.acquire(1).await?;
+
+        let waiter = monitor.clone();
+        let wait_task = tokio::spawn(async move { waiter.wait(1).await });
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        monitor.acquire(2).await?;
+        assert!(monitor.is_owned_by(2));
+        assert_illegal_monitor_state(&monitor.notify(1));
+        monitor.notify(2)?;
+        monitor.release(2)?;
+        wait_task.await.expect("wait task")?;
+        assert!(monitor.is_owned_by(1));
+        monitor.release(1)?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_wait_timeout_notified_and_timed_out() -> Result<()> {
+        let monitor = Arc::new(Monitor::new());
+        monitor.acquire(1).await?;
+        let waiter = monitor.clone();
+        let wait_task =
+            tokio::spawn(async move { waiter.wait_timeout(1, Duration::from_secs(5)).await });
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        monitor.acquire(2).await?;
+        monitor.notify_all(2)?;
+        monitor.release(2)?;
+        assert!(wait_task.await.expect("wait task")?);
+        monitor.release(1)?;
+
+        monitor.acquire(3).await?;
+        assert!(!monitor.wait_timeout(3, Duration::from_millis(1)).await?);
+        monitor.release(3)?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_wait_interruptibly_notified_and_interrupted() -> Result<()> {
+        let monitor = Arc::new(Monitor::new());
+        monitor.acquire(1).await?;
+        let waiter = monitor.clone();
+        let wait_task = tokio::spawn(async move {
+            waiter
+                .wait_interruptibly(1, never_interrupted as fn() -> bool)
+                .await
+        });
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        monitor.acquire(2).await?;
+        monitor.notify(2)?;
+        monitor.release(2)?;
+        assert!(!wait_task.await.expect("wait task")?);
+        monitor.release(1)?;
+
+        WAIT_INTERRUPT_ON_FIRST.store(false, Ordering::SeqCst);
+        monitor.acquire(3).await?;
+        assert!(
+            monitor
+                .wait_interruptibly(3, wait_interrupt_on_first_check as fn() -> bool)
+                .await?
+        );
+        monitor.release(3)?;
+
+        WAIT_INTERRUPT_AFTER_POLL.store(false, Ordering::SeqCst);
+        monitor.acquire(4).await?;
+        assert!(
+            monitor
+                .wait_interruptibly(4, wait_interrupt_after_poll as fn() -> bool)
+                .await?
+        );
+        monitor.release(4)?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_wait_timeout_interruptibly_paths() -> Result<()> {
+        let monitor = Arc::new(Monitor::new());
+        monitor.acquire(1).await?;
+        assert!(
+            !monitor
+                .wait_timeout_interruptibly(
+                    1,
+                    Duration::from_millis(1),
+                    never_interrupted as fn() -> bool
+                )
+                .await?
+        );
+        monitor.release(1)?;
+
+        WAIT_TIMEOUT_INTERRUPT_ON_FIRST.store(false, Ordering::SeqCst);
+        monitor.acquire(2).await?;
+        assert!(
+            monitor
+                .wait_timeout_interruptibly(
+                    2,
+                    Duration::from_secs(1),
+                    wait_timeout_interrupt_on_first_check as fn() -> bool,
+                )
+                .await?
+        );
+        monitor.release(2)?;
+
+        monitor.acquire(3).await?;
+        let waiter = monitor.clone();
+        let wait_task = tokio::spawn(async move {
+            waiter
+                .wait_timeout_interruptibly(
+                    3,
+                    Duration::from_secs(5),
+                    never_interrupted as fn() -> bool,
+                )
+                .await
+        });
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        monitor.acquire(4).await?;
+        monitor.notify(4)?;
+        monitor.release(4)?;
+        assert!(!wait_task.await.expect("wait task")?);
+        monitor.release(3)?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_wait_requires_owner() {
+        let monitor = Monitor::new();
+        let result = monitor.wait(1).await;
+        assert_illegal_monitor_state(&result);
+        let result = monitor.wait_timeout(1, Duration::from_millis(1)).await;
+        assert_illegal_monitor_state(&result);
+        let result = monitor
+            .wait_interruptibly(1, never_interrupted as fn() -> bool)
+            .await;
+        assert_illegal_monitor_state(&result);
+        let result = monitor
+            .wait_timeout_interruptibly(
+                1,
+                Duration::from_millis(1),
+                never_interrupted as fn() -> bool,
+            )
+            .await;
+        assert_illegal_monitor_state(&result);
+    }
+
+    #[tokio::test]
+    async fn test_closed_semaphore_errors() -> Result<()> {
+        let monitor = Monitor::new();
+        monitor.lock.close();
+        assert!(matches!(
+            monitor.acquire(1).await,
+            Err(Error::InternalError(_))
+        ));
+
+        let monitor = Monitor::new();
+        monitor.acquire(1).await?;
+        let saved_count = monitor.release_for_wait(1)?;
+        monitor.lock.close();
+        assert!(matches!(
+            monitor.reacquire_after_wait(1, saved_count).await,
+            Err(Error::InternalError(_))
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn test_monitor_registry_new_monitor_and_remove() {
+        let registry = MonitorRegistry::new();
+        let first = registry.monitor(123);
+        let second = registry.monitor(123);
+        assert!(Arc::ptr_eq(&first, &second));
+        registry.remove(123);
+        let third = registry.monitor(123);
+        assert!(!Arc::ptr_eq(&first, &third));
     }
 }

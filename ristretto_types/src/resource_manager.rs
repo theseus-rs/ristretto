@@ -6,6 +6,10 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
 
+fn resource_type_mismatch(_: Arc<dyn Any + Send + Sync>) -> crate::Error {
+    InternalError("ResourceManager type mismatch".to_string())
+}
+
 /// Type erased per VM resource storage.
 pub struct ResourceManager {
     resources: RwLock<HashMap<TypeId, Arc<dyn Any + Send + Sync>>>,
@@ -37,7 +41,7 @@ impl ResourceManager {
                 return resource
                     .clone()
                     .downcast::<T>()
-                    .map_err(|_| InternalError("ResourceManager type mismatch".to_string()));
+                    .map_err(resource_type_mismatch);
             }
         }
 
@@ -48,7 +52,7 @@ impl ResourceManager {
             .or_insert_with(|| Arc::new(init()))
             .clone()
             .downcast::<T>()
-            .map_err(|_| InternalError("ResourceManager type mismatch".to_string()))
+            .map_err(resource_type_mismatch)
     }
 }
 
@@ -84,6 +88,10 @@ mod tests {
         }
     }
 
+    fn string_resource() -> String {
+        "hello".to_string()
+    }
+
     #[test]
     fn test_new() {
         let manager = ResourceManager::new();
@@ -115,11 +123,36 @@ mod tests {
         let manager = ResourceManager::new();
         let _r1 = manager.get_or_init(TestResource::new).expect("resource");
         let r2 = manager
-            .get_or_init(|| "hello".to_string())
+            .get_or_init(string_resource as fn() -> String)
             .expect("resource");
         assert_eq!(*r2, "hello");
+        let r3 = manager
+            .get_or_init(string_resource as fn() -> String)
+            .expect("resource");
+        assert_eq!(*r3, "hello");
 
         let debug = format!("{manager:?}");
         assert!(debug.contains("resource_count: 2"));
+    }
+
+    #[test]
+    fn test_type_mismatch() {
+        let manager = ResourceManager::new();
+        manager
+            .resources
+            .write()
+            .insert(TypeId::of::<TestResource>(), Arc::new("wrong".to_string()));
+        assert!(manager.get_or_init(TestResource::new).is_err());
+
+        let manager = ResourceManager::new();
+        manager
+            .resources
+            .write()
+            .insert(TypeId::of::<String>(), Arc::new(TestResource::new()));
+        assert!(
+            manager
+                .get_or_init(string_resource as fn() -> String)
+                .is_err()
+        );
     }
 }

@@ -99,21 +99,17 @@ impl RustValue for &str {
         const STRING_PREFIX: &str = "str:";
         let class_name = format!("{STRING_PREFIX}{self}");
         let mut constant_pool = ConstantPool::new();
-        let Ok(class_index) = constant_pool.add_class(class_name) else {
-            return Value::Object(None);
-        };
+        let class_index = constant_pool.add_class(class_name).unwrap_or_default();
         let class_file = ClassFile {
             constant_pool,
             this_class: class_index,
             ..Default::default()
         };
-        let Ok(class) = Class::from(None, class_file) else {
-            return Value::Object(None);
-        };
-        let Ok(object) = Object::new(class) else {
-            return Value::Object(None);
-        };
-        Value::from_object(collector, object)
+        Class::from(None, class_file)
+            .and_then(Object::new)
+            .map_or(Value::Object(None), |object| {
+                Value::from_object(collector, object)
+            })
     }
 }
 

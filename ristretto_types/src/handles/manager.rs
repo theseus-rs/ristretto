@@ -45,31 +45,17 @@ where
         Q: ?Sized + Hash + Eq,
     {
         let guard = self.handles.read().await;
-        if guard.contains_key(key) {
-            Some(RwLockReadGuard::map(guard, |handles| &handles[key]))
-        } else {
-            None
-        }
+        RwLockReadGuard::try_map(guard, |handles| handles.get(key)).ok()
     }
 
     /// Retrieves a mutable handle by its key.
-    ///
-    /// # Panics
-    /// Panics if the key is not found after a successful containment check
-    /// (should not happen in practice).
     pub async fn get_mut<Q>(&self, key: &Q) -> Option<RwLockMappedWriteGuard<'_, V>>
     where
         K: Borrow<Q>,
         Q: ?Sized + Hash + Eq,
     {
         let guard = self.handles.write().await;
-        if guard.contains_key(key) {
-            Some(RwLockWriteGuard::map(guard, |handles| {
-                handles.get_mut(key).expect("Handle not found")
-            }))
-        } else {
-            None
-        }
+        RwLockWriteGuard::try_map(guard, |handles| handles.get_mut(key)).ok()
     }
 
     /// Removes a handle by its key.
@@ -188,6 +174,19 @@ mod tests {
         guard.remove(&1u64);
         assert!(!guard.contains_key(&1u64));
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_try_write_sync() {
+        let manager: HandleManager<u64, String> = HandleManager::new();
+        let guard = manager.try_write_sync();
+        assert!(guard.is_some());
+        drop(guard);
+
+        let read_guard = manager.read().await;
+        assert!(manager.try_write_sync().is_none());
+        drop(read_guard);
+        assert!(manager.try_write_sync().is_some());
     }
 
     #[tokio::test]

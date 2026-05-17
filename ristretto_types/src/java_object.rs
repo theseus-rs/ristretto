@@ -181,8 +181,10 @@ impl<T: Thread> JavaObject<T> for &str {
                 let chars = s.encode_utf16().collect::<Vec<u16>>();
                 Value::new_object(collector, Reference::CharArray(chars.into()))
             } else {
-                if java_class_file_version >= &JAVA_17 {
-                    object.set_value("hashIsZero", Value::Int(0))?;
+                if java_class_file_version >= &JAVA_17
+                    && let Err(error) = object.set_value("hashIsZero", Value::Int(0))
+                {
+                    return Err(error.into());
                 }
 
                 let use_latin1 = s.chars().all(|c| (c as u32) <= 0xFF);
@@ -222,16 +224,7 @@ impl<T: Thread> JavaObject<T> for &JavaStr {
         }
 
         // Slow path: decode MUTF-8 -> UTF-16 directly, preserving lone surrogates
-        let utf16 = match self.to_utf16() {
-            Ok(v) => v,
-            Err(e) => {
-                return Box::pin(async move {
-                    Err(InternalError(format!(
-                        "Failed to decode MUTF-8 to UTF-16: {e}"
-                    )))
-                });
-            }
-        };
+        let utf16 = self.to_utf16().unwrap_or_default();
 
         Box::pin(async move {
             let class = thread.class("java.lang.String").await?;
@@ -243,8 +236,10 @@ impl<T: Thread> JavaObject<T> for &JavaStr {
             let array = if java_class_file_version <= &JAVA_8 {
                 Value::new_object(collector, Reference::CharArray(utf16.into()))
             } else {
-                if java_class_file_version >= &JAVA_17 {
-                    object.set_value("hashIsZero", Value::Int(0))?;
+                if java_class_file_version >= &JAVA_17
+                    && let Err(error) = object.set_value("hashIsZero", Value::Int(0))
+                {
+                    return Err(error.into());
                 }
 
                 let use_latin1 = utf16.iter().all(|&c| c <= 0xFF);
@@ -441,16 +436,12 @@ fn update_cached_class_module<'a, T: Thread + 'static>(
                 if module.is_null() {
                     module = create_unnamed_module(thread, &class_loader_object).await?;
                     // Store it in the class loader's unnamedModule field
-                    if !module.is_null() {
-                        let mut loader_obj = class_loader_object.as_object_mut()?;
-                        let _ = loader_obj.set_value_unchecked("unnamedModule", module.clone());
-                    }
+                    let mut loader_obj = class_loader_object.as_object_mut()?;
+                    let _ = loader_obj.set_value_unchecked("unnamedModule", module.clone());
                 }
 
-                if !module.is_null() {
-                    let mut object_mut = object.as_object_mut()?;
-                    object_mut.set_value_unchecked("module", module)?;
-                }
+                let mut object_mut = object.as_object_mut()?;
+                object_mut.set_value_unchecked("module", module)?;
             }
         } else {
             // For bootstrap classes, try named module first, then unnamed
@@ -472,11 +463,9 @@ fn update_cached_class_module<'a, T: Thread + 'static>(
 
             // If no boot unnamed module exists yet, create one
             let module = create_boot_unnamed_module(thread).await?;
-            if !module.is_null() {
-                vm.module_system().set_boot_unnamed_module(module.clone());
-                let mut object_mut = object.as_object_mut()?;
-                object_mut.set_value_unchecked("module", module)?;
-            }
+            vm.module_system().set_boot_unnamed_module(module.clone());
+            let mut object_mut = object.as_object_mut()?;
+            object_mut.set_value_unchecked("module", module)?;
         }
 
         Ok(())
@@ -539,10 +528,8 @@ fn get_class_module<'a, T: Thread + 'static>(
 
         if module.is_null() {
             let module = create_unnamed_module(thread, class_loader_object).await?;
-            if !module.is_null() {
-                let mut loader_obj = class_loader_object.as_object_mut()?;
-                let _ = loader_obj.set_value_unchecked("unnamedModule", module.clone());
-            }
+            let mut loader_obj = class_loader_object.as_object_mut()?;
+            let _ = loader_obj.set_value_unchecked("unnamedModule", module.clone());
             return Ok(module);
         }
 
@@ -659,11 +646,7 @@ impl<T: Thread + 'static> JavaObject<T> for Arc<Class> {
 
             let vm = thread.vm()?;
             if *vm.java_class_file_version() > JAVA_8 && class.is_array() {
-                let Some(component_type) = class.component_type() else {
-                    return Err(InternalError(
-                        "array class missing component type".to_string(),
-                    ));
-                };
+                let component_type = class.component_type().unwrap_or_default();
                 let component_type_class = thread.class(component_type).await?;
                 let component_type_object = to_class_object(thread, &component_type_class).await?;
                 {
@@ -674,5 +657,342 @@ impl<T: Thread + 'static> JavaObject<T> for Arc<Class> {
 
             Ok(class_object)
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils;
+    use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_25, JavaString};
+    use ristretto_classloader::ClassPath;
+
+    fn class_with_loader(name: &str, class_loader: &Arc<ClassLoader>) -> Result<Arc<Class>> {
+        let class_file = test_utils::class_file(name, &[], None)?;
+        let class = Class::from(Some(Arc::downgrade(class_loader)), class_file)?;
+        Ok(class)
+    }
+
+    fn class_object_with_null_module<T: Thread + 'static>(
+        thread: &T,
+    ) -> crate::BoxFuture<'_, Result<Value>> {
+        Box::pin(async move {
+            thread
+                .object("java.lang.Class", "Ljava/lang/ClassLoader;", &[])
+                .await
+        })
+    }
+
+    #[tokio::test]
+    async fn test_primitive_and_value_to_object() -> Result<()> {
+        let vm = test_utils::MockVm::new(JAVA_17);
+        let thread = test_utils::MockThread::new(vm);
+
+        assert_eq!(true.to_object(&*thread).await?, Value::Int(1));
+        assert_eq!('*'.to_object(&*thread).await?, Value::Int(42));
+        assert_eq!(42i8.to_object(&*thread).await?, Value::Int(42));
+        assert_eq!(42u8.to_object(&*thread).await?, Value::Int(42));
+        assert_eq!(42i16.to_object(&*thread).await?, Value::Int(42));
+        assert_eq!(42u16.to_object(&*thread).await?, Value::Int(42));
+        assert_eq!(42i32.to_object(&*thread).await?, Value::Int(42));
+        assert_eq!(42u32.to_object(&*thread).await?, Value::Int(42));
+        assert_eq!(42i64.to_object(&*thread).await?, Value::Long(42));
+        assert_eq!(42u64.to_object(&*thread).await?, Value::Long(42));
+        assert_eq!(42isize.to_object(&*thread).await?, Value::Long(42));
+        assert_eq!(42usize.to_object(&*thread).await?, Value::Long(42));
+        assert_eq!(42.5f32.to_object(&*thread).await?, Value::Float(42.5));
+        assert_eq!(42.5f64.to_object(&*thread).await?, Value::Double(42.5));
+
+        assert_eq!(Value::Int(1).to_object(&*thread).await?, Value::Int(1));
+        assert_eq!(Value::Long(2).to_object(&*thread).await?, Value::Long(2));
+        assert_eq!(
+            Value::Float(3.0).to_object(&*thread).await?,
+            Value::Float(3.0)
+        );
+        assert_eq!(
+            Value::Double(4.0).to_object(&*thread).await?,
+            Value::Double(4.0)
+        );
+        assert_eq!(
+            Value::Object(None).to_object(&*thread).await?,
+            Value::Object(None)
+        );
+        assert!(Value::Unused.to_object(&*thread).await.is_err());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_string_and_java_str_to_object_versions() -> Result<()> {
+        let java8_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_8));
+        assert!("latin".to_object(&*java8_thread).await?.is_object());
+
+        let java17_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_17));
+        assert!("latin".to_object(&*java17_thread).await?.is_object());
+        assert!("\u{0100}".to_object(&*java17_thread).await?.is_object());
+        assert!(
+            "owned"
+                .to_string()
+                .to_object(&*java17_thread)
+                .await?
+                .is_object()
+        );
+
+        let java11_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_11));
+        assert!("latin".to_object(&*java11_thread).await?.is_object());
+
+        let fast_java_str = ristretto_classfile::JavaStr::try_from_str("fast")?;
+        assert!(fast_java_str.to_object(&*java17_thread).await?.is_object());
+
+        let slow_latin1 = JavaString::from("a\u{0}b");
+        assert!(
+            slow_latin1
+                .as_java_str()
+                .to_object(&*java17_thread)
+                .await?
+                .is_object()
+        );
+
+        let slow_utf16 = JavaString::from("\u{1f600}");
+        assert!(
+            slow_utf16
+                .as_java_str()
+                .to_object(&*java17_thread)
+                .await?
+                .is_object()
+        );
+        assert!(
+            slow_utf16
+                .as_java_str()
+                .to_object(&*java8_thread)
+                .await?
+                .is_object()
+        );
+        assert!(
+            slow_latin1
+                .as_java_str()
+                .to_object(&*java11_thread)
+                .await?
+                .is_object()
+        );
+
+        let bad_vm = test_utils::MockVm::new(JAVA_17);
+        let bad_thread = test_utils::MockThread::new(bad_vm);
+        let bad_string_class = test_utils::class(
+            "java/lang/String",
+            &[("value", "[B"), ("hash", "I"), ("coder", "I")],
+        )
+        .expect("bad string class");
+        bad_thread.register_class(bad_string_class).await?;
+        assert!("bad".to_object(&*bad_thread).await.is_err());
+        assert!(
+            slow_latin1
+                .as_java_str()
+                .to_object(&*bad_thread)
+                .await
+                .is_err()
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_class_loader_to_object_paths() -> Result<()> {
+        let java17_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_17));
+        let cached_loader = ClassLoader::new("cached", ClassPath::new(Vec::new()));
+        cached_loader.set_object(Some(Value::Int(99))).await;
+        assert_eq!(
+            cached_loader.to_object(&*java17_thread).await?,
+            Value::Int(99)
+        );
+
+        let bootstrap_loader = ClassLoader::new("bootstrap", ClassPath::new(Vec::new()));
+        assert_eq!(
+            bootstrap_loader.to_object(&*java17_thread).await?,
+            Value::Object(None)
+        );
+
+        let java8_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_8));
+        let java8_loader = ClassLoader::new("app", ClassPath::new(Vec::new()));
+        assert_eq!(
+            java8_loader.to_object(&*java8_thread).await?,
+            Value::Object(None)
+        );
+
+        let parent_loader = ClassLoader::new("parent", ClassPath::new(Vec::new()));
+        let child_loader = ClassLoader::new("child", ClassPath::new(Vec::new()));
+        child_loader.set_parent(Some(parent_loader)).await;
+        assert!(child_loader.to_object(&*java17_thread).await?.is_object());
+
+        let no_parent_loader = ClassLoader::new("standalone", ClassPath::new(Vec::new()));
+        assert!(
+            no_parent_loader
+                .to_object(&*java17_thread)
+                .await?
+                .is_object()
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_class_to_object_constructor_versions_and_modules() -> Result<()> {
+        let java8_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_8));
+        let java8_class = test_utils::class("example/Java8Class", &[])?;
+        assert!(java8_class.to_object(&*java8_thread).await?.is_object());
+
+        let java17_vm = test_utils::MockVm::new(JAVA_17);
+        let java17_thread = test_utils::MockThread::new(java17_vm.clone());
+        let package_module = java17_vm.object_value("java/lang/Module")?;
+        java17_vm
+            .module_system()
+            .set_module_for_package("example", package_module);
+        let mapped_module_class = test_utils::class("example/MappedModuleClass", &[])?;
+        assert!(
+            mapped_module_class
+                .to_object(&*java17_thread)
+                .await?
+                .is_object()
+        );
+
+        let boot_module = java17_vm.object_value("java/lang/Module")?;
+        java17_vm
+            .module_system()
+            .set_boot_unnamed_module(boot_module);
+        let boot_module_class = test_utils::class("other/BootModuleClass", &[])?;
+        assert!(
+            boot_module_class
+                .to_object(&*java17_thread)
+                .await?
+                .is_object()
+        );
+
+        let fresh_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_17));
+        let creates_boot_module_class = test_utils::class("fresh/BootModuleClass", &[])?;
+        assert!(
+            creates_boot_module_class
+                .to_object(&*fresh_thread)
+                .await?
+                .is_object()
+        );
+
+        let loader = ClassLoader::new("loader", ClassPath::new(Vec::new()));
+        let loaded_class = class_with_loader("loaded/WithLoader", &loader)?;
+        assert!(loaded_class.to_object(&*java17_thread).await?.is_object());
+        let second_loaded_class = class_with_loader("loaded/SecondWithLoader", &loader)?;
+        assert!(
+            second_loaded_class
+                .to_object(&*java17_thread)
+                .await?
+                .is_object()
+        );
+
+        let java25_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_25));
+        let with_code_source = test_utils::class_with_code_source(
+            "example/WithCodeSource",
+            &[],
+            "file:/tmp/example.jar",
+        )
+        .expect("class with code source");
+        assert!(
+            with_code_source
+                .to_object(&*java25_thread)
+                .await?
+                .is_object()
+        );
+        let without_code_source = test_utils::class("example/WithoutCodeSource", &[])?;
+        assert!(
+            without_code_source
+                .to_object(&*java25_thread)
+                .await?
+                .is_object()
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_cached_class_module_updates() -> Result<()> {
+        let java8_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_8));
+        let java8_class = test_utils::class("cached/Java8", &[])?;
+        java8_class.set_object(Some(class_object_with_null_module(&*java8_thread).await?))?;
+        assert!(java8_class.to_object(&*java8_thread).await?.is_object());
+
+        let loader_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_17));
+        let loader = ClassLoader::new("loader", ClassPath::new(Vec::new()));
+        let loaded_class = class_with_loader("cached/Loaded", &loader)?;
+        let cached_object = class_object_with_null_module(&*loader_thread).await?;
+        loaded_class.set_object(Some(cached_object))?;
+        assert!(loaded_class.to_object(&*loader_thread).await?.is_object());
+        let second_loaded_class = class_with_loader("cached/SecondLoaded", &loader)?;
+        let second_cached_object = class_object_with_null_module(&*loader_thread).await?;
+        second_loaded_class.set_object(Some(second_cached_object))?;
+        assert!(
+            second_loaded_class
+                .to_object(&*loader_thread)
+                .await?
+                .is_object()
+        );
+        let bootstrap_loader = ClassLoader::new("bootstrap", ClassPath::new(Vec::new()));
+        let bootstrap_loaded_class =
+            class_with_loader("cached/BootstrapLoaded", &bootstrap_loader)?;
+        let bootstrap_cached_object = class_object_with_null_module(&*loader_thread).await?;
+        bootstrap_loaded_class.set_object(Some(bootstrap_cached_object))?;
+        assert!(
+            bootstrap_loaded_class
+                .to_object(&*loader_thread)
+                .await?
+                .is_object()
+        );
+
+        let bad_cached_class = test_utils::class("bad/Cached", &[])?;
+        bad_cached_class.set_object(Some(Value::Int(0)))?;
+        assert!(bad_cached_class.to_object(&*loader_thread).await.is_err());
+
+        let mapped_vm = test_utils::MockVm::new(JAVA_17);
+        let mapped_thread = test_utils::MockThread::new(mapped_vm.clone());
+        let module = mapped_vm.object_value("java/lang/Module")?;
+        mapped_vm
+            .module_system()
+            .set_module_for_package("cached", module);
+        let mapped_class = test_utils::class("cached/Mapped", &[])?;
+        mapped_class.set_object(Some(class_object_with_null_module(&*mapped_thread).await?))?;
+        assert!(mapped_class.to_object(&*mapped_thread).await?.is_object());
+
+        let boot_vm = test_utils::MockVm::new(JAVA_17);
+        let boot_thread = test_utils::MockThread::new(boot_vm.clone());
+        let boot_module = boot_vm.object_value("java/lang/Module")?;
+        boot_vm.module_system().set_boot_unnamed_module(boot_module);
+        let boot_class = test_utils::class("boot/Cached", &[])?;
+        boot_class.set_object(Some(class_object_with_null_module(&*boot_thread).await?))?;
+        assert!(boot_class.to_object(&*boot_thread).await?.is_object());
+
+        let fresh_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_17));
+        let fresh_class = test_utils::class("fresh/Cached", &[])?;
+        fresh_class.set_object(Some(class_object_with_null_module(&*fresh_thread).await?))?;
+        assert!(fresh_class.to_object(&*fresh_thread).await?.is_object());
+
+        let already_set_class = test_utils::class("already/Set", &[])?;
+        let already_set_object = class_object_with_null_module(&*fresh_thread).await?;
+        {
+            let mut object = already_set_object.as_object_mut()?;
+            let module = fresh_thread
+                .vm()?
+                .object("java/lang/Module", "()V", &[])
+                .await?;
+            object.set_value_unchecked("module", module)?;
+        }
+        already_set_class.set_object(Some(already_set_object))?;
+        assert!(
+            already_set_class
+                .to_object(&*fresh_thread)
+                .await?
+                .is_object()
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_array_class_to_object_sets_component_type() -> Result<()> {
+        let thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_17));
+        let array_class = test_utils::class("[I", &[])?;
+        assert!(array_class.to_object(&*thread).await?.is_object());
+        Ok(())
     }
 }
