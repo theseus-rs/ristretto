@@ -35,6 +35,7 @@ pub mod reporting;
 pub mod repository;
 pub mod scm;
 pub mod types;
+pub mod version;
 
 pub use error::{Error, Result};
 
@@ -76,3 +77,4 @@ pub use scm::{
     ScmBuilder,
 };
 pub use types::{ChecksumPolicy, DependencyScope, Packaging, RepositoryLayout, UpdatePolicy};
+pub use version::PomVersion;

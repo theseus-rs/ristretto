@@ -10,6 +10,7 @@ use crate::profile::{Modules, Profiles};
 use crate::reporting::Reporting;
 use crate::repository::Repositories;
 use crate::scm::{CiManagement, IssueManagement, Scm};
+use crate::version::PomVersion;
 use crate::{DependencyScope, Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -24,7 +25,7 @@ use std::path::Path;
 pub struct Project {
     /// The version of the POM model.
     #[serde(rename = "modelVersion")]
-    pub model_version: String,
+    pub model_version: PomVersion,
 
     /// The parent project of this project.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -201,7 +202,7 @@ impl Project {
     /// Validates the syntactic structure of the `Project`.
     ///
     /// This checks that required fields are present according to Maven rules:
-    /// - `modelVersion` must be "4.0.0"
+    /// - `modelVersion` must be "3.0.0", "4.0.0", or "4.1.0"
     /// - `artifactId` is always required (enforced by struct)
     /// - `groupId` and `version` can be inherited from parent
     ///
@@ -209,9 +210,9 @@ impl Project {
     ///
     /// Returns an error if required fields are missing.
     pub fn validate_syntax(&self) -> Result<()> {
-        // Model version must be 4.0.0
-        if self.model_version != "4.0.0" {
-            return Err(Error::InvalidModelVersion(self.model_version.clone()));
+        // Model version must be supported by this crate.
+        if !self.model_version.is_supported_model() {
+            return Err(Error::InvalidModelVersion(self.model_version.to_string()));
         }
 
         // groupId is required unless inherited from parent
@@ -286,7 +287,7 @@ impl Project {
         version: impl Into<String>,
     ) -> Self {
         Self {
-            model_version: "4.0.0".to_string(),
+            model_version: PomVersion::DEFAULT_MODEL,
             parent: None,
             group_id: Some(group_id.into()),
             artifact_id: artifact_id.into(),
@@ -337,7 +338,7 @@ impl ProjectBuilder {
     pub fn new(artifact_id: impl Into<String>) -> Self {
         Self {
             project: Project {
-                model_version: "4.0.0".to_string(),
+                model_version: PomVersion::DEFAULT_MODEL,
                 parent: None,
                 group_id: None,
                 artifact_id: artifact_id.into(),
