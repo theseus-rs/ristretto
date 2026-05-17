@@ -26,8 +26,11 @@ pub enum Error {
     /// An invalid value was encountered.
     #[error("Invalid value: {0}")]
     InvalidValue(String),
-    /// The model version is invalid.
-    #[error("Invalid model version: expected '4.0.0', got '{0}'")]
+    /// The POM version is invalid.
+    #[error("Invalid POM version: expected 'major.minor.patch', got '{0}'")]
+    InvalidPomVersion(String),
+    /// The model version is unsupported.
+    #[error("Invalid model version: expected '3.0.0', '4.0.0', or '4.1.0', got '{0}'")]
     InvalidModelVersion(String),
     /// A semantic validation error occurred.
     #[error("Validation error: {0}")]

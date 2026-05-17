@@ -1,7 +1,9 @@
 #![cfg(not(target_family = "wasm"))]
 //! Tests for POM validation functionality.
 
-use ristretto_pom::{Error, Project, Result};
+use ristretto_pom::{
+    Dependencies, Dependency, DependencyScope, Error, Parent, PomVersion, Project, Result,
+};
 use std::io::Write;
 use tempfile::NamedTempFile;
 
@@ -101,10 +103,62 @@ fn test_version_inherited_from_parent() {
 }
 
 #[test]
-fn test_invalid_model_version() {
+fn test_supported_model_versions() {
+    for model_version in ["3.0.0", "4.0.0", "4.1.0"] {
+        let xml = format!(
+            r"
+<project>
+    <modelVersion>{model_version}</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>my-app</artifactId>
+    <version>1.0.0</version>
+</project>
+"
+        );
+        let result = parse_xml(&xml);
+        assert!(result.is_ok(), "{model_version} should be supported");
+    }
+}
+
+#[test]
+fn test_pom_version_is_structured_model_version() -> Result<()> {
+    let project = parse_xml(
+        r"
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>my-app</artifactId>
+    <version>1.0.0</version>
+</project>
+",
+    )?;
+
+    assert_eq!(project.model_version, PomVersion::new(4, 0, 0));
+    assert_eq!(project.model_version.major, 4);
+    assert_eq!(project.model_version.minor, 0);
+    assert_eq!(project.model_version.patch, 0);
+    assert_eq!(PomVersion::default(), PomVersion::DEFAULT_MODEL);
+    assert!(
+        parse_xml(
+            r"
+<project>
+    <modelVersion>4.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>my-app</artifactId>
+    <version>1.0.0</version>
+</project>
+",
+        )
+        .is_err()
+    );
+    Ok(())
+}
+
+#[test]
+fn test_unsupported_model_version() {
     let xml = r"
 <project>
-    <modelVersion>3.0.0</modelVersion>
+    <modelVersion>5.0.0</modelVersion>
     <groupId>com.example</groupId>
     <artifactId>my-app</artifactId>
     <version>1.0.0</version>
@@ -113,9 +167,42 @@ fn test_invalid_model_version() {
     let result = parse_xml(xml);
     assert!(result.is_err());
     match result.unwrap_err() {
-        Error::InvalidModelVersion(v) => assert_eq!(v, "3.0.0"),
+        Error::InvalidModelVersion(v) => assert_eq!(v, "5.0.0"),
         e => panic!("Expected InvalidModelVersion error, got: {e:?}"),
     }
+}
+
+#[test]
+fn test_project_validation_error_paths() {
+    let project = Project::builder("child")
+        .parent(Parent::new("", "parent", "1.0.0"))
+        .build_project();
+    assert_missing_field(project.validate_syntax(), "parent.groupId");
+
+    let project = Project::builder("child")
+        .parent(Parent::new("com.example", "", "1.0.0"))
+        .build_project();
+    assert_missing_field(project.validate_syntax(), "parent.artifactId");
+
+    let project = Project::builder("child")
+        .parent(Parent::new("com.example", "parent", ""))
+        .build_project();
+    assert_missing_field(project.validate_syntax(), "parent.version");
+
+    let project = Project::builder("my-app")
+        .group_id("com.example")
+        .version("1.0.0")
+        .dependencies(Dependencies::from_vec(vec![
+            Dependency::builder("com.example", "system-lib")
+                .scope(DependencyScope::System)
+                .build(),
+        ]))
+        .build_project();
+    assert!(matches!(
+        project.validate_semantics(),
+        Err(Error::ValidationError(message)) if message.contains("system scope")
+    ));
+    assert!(project.validate_effective(None).is_err());
 }
 
 #[test]
@@ -344,4 +431,11 @@ fn test_packaging_type() -> Result<()> {
     assert_eq!(custom, Packaging::Other("bundle".to_string()));
 
     Ok(())
+}
+
+fn assert_missing_field(result: Result<()>, expected: &str) {
+    assert!(matches!(
+        result,
+        Err(Error::MissingField(field)) if field == expected
+    ));
 }
