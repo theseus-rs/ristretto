@@ -29,12 +29,14 @@ impl NativeMemory {
     /// Allocates a block of memory and returns the base address.
     pub fn allocate(&self, size: usize) -> i64 {
         let address = self.next_address.fetch_add(
-            i64::try_from(size + 4096).unwrap_or(4096),
+            i64::try_from(size.saturating_add(4096)).unwrap_or(4096),
             Ordering::Relaxed,
         );
-        self.memory
-            .write()
-            .insert(address, RwLock::new(vec![0u8; size]));
+        let mut bytes = Vec::new();
+        if bytes.try_reserve_exact(size).is_ok() {
+            bytes.resize(size, 0);
+        }
+        self.memory.write().insert(address, RwLock::new(bytes));
         address
     }
 
@@ -45,8 +47,13 @@ impl NativeMemory {
 
     /// Reads `len` bytes starting at `address`.
     pub fn read_bytes(&self, address: i64, len: usize) -> Vec<u8> {
-        self.try_read_bytes(address, len)
-            .unwrap_or_else(|| vec![0u8; len])
+        self.try_read_bytes(address, len).unwrap_or_else(|| {
+            let mut bytes = Vec::new();
+            if bytes.try_reserve_exact(len).is_ok() {
+                bytes.resize(len, 0);
+            }
+            bytes
+        })
     }
 
     /// Tries to read `len` bytes starting at `address`.
@@ -57,10 +64,11 @@ impl NativeMemory {
     pub fn try_read_bytes(&self, address: i64, len: usize) -> Option<Vec<u8>> {
         let guard = self.memory.read();
         let (&base, buf_lock) = guard.range(..=address).next_back()?;
-        let offset = usize::try_from(address - base).ok()?;
+        let offset = offset_from_base(address, base);
+        let end = offset.checked_add(len)?;
         let buf = buf_lock.read();
-        if offset + len <= buf.len() {
-            Some(buf[offset..offset + len].to_vec())
+        if end <= buf.len() {
+            Some(buf[offset..end].to_vec())
         } else {
             None
         }
@@ -77,10 +85,11 @@ impl NativeMemory {
     {
         let guard = self.memory.read();
         let (&base, buf_lock) = guard.range(..=address).next_back()?;
-        let offset = usize::try_from(address - base).ok()?;
+        let offset = offset_from_base(address, base);
+        let end = offset.checked_add(len)?;
         let buf = buf_lock.read();
-        if offset + len <= buf.len() {
-            Some(f(&buf[offset..offset + len]))
+        if end <= buf.len() {
+            Some(f(&buf[offset..end]))
         } else {
             None
         }
@@ -88,47 +97,62 @@ impl NativeMemory {
 
     /// Reads a single `i8` from `address`.
     pub fn read_i8(&self, address: i64) -> Option<i8> {
-        self.read_with(address, 1, |b| b[0].cast_signed())
+        self.read_with(address, 1, |bytes| {
+            bytes.first().copied().map(u8::cast_signed)
+        })
+        .flatten()
     }
 
     /// Reads a single `i16` (native endian) from `address`.
     pub fn read_i16(&self, address: i64) -> Option<i16> {
-        self.read_with(address, 2, |b| i16::from_ne_bytes([b[0], b[1]]))
+        self.read_with(address, 2, |bytes| {
+            <[u8; 2]>::try_from(bytes).map(i16::from_ne_bytes).ok()
+        })
+        .flatten()
     }
 
     /// Reads a single `i32` (native endian) from `address`.
     pub fn read_i32(&self, address: i64) -> Option<i32> {
-        self.read_with(address, 4, |b| i32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+        self.read_with(address, 4, |bytes| {
+            <[u8; 4]>::try_from(bytes).map(i32::from_ne_bytes).ok()
+        })
+        .flatten()
     }
 
     /// Reads a single `i64` (native endian) from `address`.
     pub fn read_i64(&self, address: i64) -> Option<i64> {
-        self.read_with(address, 8, |b| {
-            i64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+        self.read_with(address, 8, |bytes| {
+            <[u8; 8]>::try_from(bytes).map(i64::from_ne_bytes).ok()
         })
+        .flatten()
     }
 
     /// Reads a single `f32` (native endian) from `address`.
     pub fn read_f32(&self, address: i64) -> Option<f32> {
-        self.read_with(address, 4, |b| f32::from_ne_bytes([b[0], b[1], b[2], b[3]]))
+        self.read_with(address, 4, |bytes| {
+            <[u8; 4]>::try_from(bytes).map(f32::from_ne_bytes).ok()
+        })
+        .flatten()
     }
 
     /// Reads a single `f64` (native endian) from `address`.
     pub fn read_f64(&self, address: i64) -> Option<f64> {
-        self.read_with(address, 8, |b| {
-            f64::from_ne_bytes([b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]])
+        self.read_with(address, 8, |bytes| {
+            <[u8; 8]>::try_from(bytes).map(f64::from_ne_bytes).ok()
         })
+        .flatten()
     }
 
     /// Writes `data` starting at `address`.
     pub fn write_bytes(&self, address: i64, data: &[u8]) {
         let guard = self.memory.read();
-        if let Some((&base, buf_lock)) = guard.range(..=address).next_back()
-            && let Ok(offset) = usize::try_from(address - base)
-        {
+        if let Some((&base, buf_lock)) = guard.range(..=address).next_back() {
+            let offset = offset_from_base(address, base);
             let mut buf = buf_lock.write();
-            if offset + data.len() <= buf.len() {
-                buf[offset..offset + data.len()].copy_from_slice(data);
+            if let Some(end) = offset.checked_add(data.len())
+                && end <= buf.len()
+            {
+                buf[offset..end].copy_from_slice(data);
             }
         }
     }
@@ -166,9 +190,8 @@ impl NativeMemory {
     /// Reads a null-terminated C string starting at `address`.
     pub fn read_cstring(&self, address: i64) -> Vec<u8> {
         let guard = self.memory.read();
-        if let Some((&base, buf_lock)) = guard.range(..=address).next_back()
-            && let Ok(offset) = usize::try_from(address - base)
-        {
+        if let Some((&base, buf_lock)) = guard.range(..=address).next_back() {
+            let offset = offset_from_base(address, base);
             let buf = buf_lock.read();
             if offset < buf.len() {
                 let end = buf[offset..]
@@ -184,14 +207,17 @@ impl NativeMemory {
     /// Checks if the given address falls within any managed allocation.
     pub fn contains(&self, address: i64) -> bool {
         let guard = self.memory.read();
-        if let Some((&base, buf_lock)) = guard.range(..=address).next_back()
-            && let Ok(offset) = usize::try_from(address - base)
-        {
+        if let Some((&base, buf_lock)) = guard.range(..=address).next_back() {
+            let offset = offset_from_base(address, base);
             let buf = buf_lock.read();
             return offset < buf.len();
         }
         false
     }
+}
+
+fn offset_from_base(address: i64, base: i64) -> usize {
+    usize::try_from(address - base).unwrap_or(usize::MAX)
 }
 
 #[cfg(test)]
@@ -348,6 +374,51 @@ mod tests {
     }
 
     #[test]
+    fn test_try_read_bytes_out_of_bounds() {
+        let mem = NativeMemory::new();
+        let addr = mem.allocate(4);
+        assert_eq!(mem.try_read_bytes(addr + 2, 4), None);
+    }
+
+    #[test]
+    fn test_large_length_reads_do_not_panic() {
+        let mem = NativeMemory::new();
+        let addr = mem.allocate(4);
+        assert_eq!(mem.try_read_bytes(addr, usize::MAX), None);
+        assert_eq!(mem.read_with(addr, usize::MAX, |_| 42), None);
+        assert!(mem.read_bytes(0x9999_0000, usize::MAX).is_empty());
+    }
+
+    #[test]
+    fn test_write_bytes_out_of_bounds_and_unallocated() {
+        let mem = NativeMemory::new();
+        let addr = mem.allocate(4);
+        mem.write_bytes(addr + 3, &[1, 2]);
+        assert_eq!(mem.read_bytes(addr, 4), vec![0; 4]);
+        mem.write_bytes(0x9999_0000, &[1, 2, 3]);
+        assert_eq!(mem.read_bytes(0x9999_0000, 3), vec![0; 3]);
+        mem.write_bytes(addr - 1, &[1]);
+        assert_eq!(mem.read_bytes(addr, 4), vec![0; 4]);
+    }
+
+    #[test]
+    fn test_read_cstring_invalid_addresses() {
+        let mem = NativeMemory::new();
+        let addr = mem.allocate(4);
+        assert_eq!(mem.read_cstring(addr + 4), Vec::<u8>::new());
+        assert_eq!(mem.read_cstring(addr - 1), Vec::<u8>::new());
+        assert_eq!(mem.read_cstring(0x9999_0000), Vec::<u8>::new());
+    }
+
+    #[test]
+    fn test_contains_at_allocation_end_and_unallocated() {
+        let mem = NativeMemory::new();
+        let addr = mem.allocate(4);
+        assert!(!mem.contains(addr + 4));
+        assert!(!mem.contains(0x9999_0000));
+    }
+
+    #[test]
     fn test_typed_read_unallocated() {
         let mem = NativeMemory::new();
         assert_eq!(mem.read_i8(0x9999_0000), None);
@@ -356,6 +427,18 @@ mod tests {
         assert_eq!(mem.read_i64(0x9999_0000), None);
         assert_eq!(mem.read_f32(0x9999_0000), None);
         assert_eq!(mem.read_f64(0x9999_0000), None);
+    }
+
+    #[test]
+    fn test_typed_read_out_of_bounds() {
+        let mem = NativeMemory::new();
+        let addr = mem.allocate(1);
+        assert_eq!(mem.read_i8(addr + 1), None);
+        assert_eq!(mem.read_i16(addr), None);
+        assert_eq!(mem.read_i32(addr), None);
+        assert_eq!(mem.read_i64(addr), None);
+        assert_eq!(mem.read_f32(addr), None);
+        assert_eq!(mem.read_f64(addr), None);
     }
 
     #[test]

@@ -27,3 +27,27 @@ impl<F: Frame> Frame for Arc<F> {
         (**self).program_counter()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils;
+
+    #[test]
+    fn test_arc_frame_delegates_to_inner_frame() -> crate::Result<()> {
+        let class = test_utils::class("FrameClass", &[])?;
+        let method = test_utils::method("frameMethod", "()V");
+        let frame = Arc::new(test_utils::MockFrame::new(
+            class.clone(),
+            method.clone(),
+            42,
+        ));
+
+        let frame_ref: &dyn Frame = &frame;
+        assert_eq!(frame_ref.class().name(), "FrameClass");
+        assert!(Arc::ptr_eq(frame_ref.class(), &class));
+        assert!(Arc::ptr_eq(frame_ref.method(), &method));
+        assert_eq!(frame_ref.program_counter(), 42);
+        Ok(())
+    }
+}

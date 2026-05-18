@@ -154,3 +154,71 @@ impl SocketHandle {
         self.timeout.map_or(0, |d| d.as_millis() as i32)
     }
 }
+
+#[cfg(all(test, not(target_family = "wasm")))]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_socket_type_accessors_and_raw_fd() -> crate::Result<()> {
+        let raw = crate::test_utils::raw_socket_type();
+        assert!(raw.as_raw().is_some());
+        assert!(raw.as_tcp_stream().is_none());
+        assert!(raw.as_tcp_listener().is_none());
+        assert!(raw.as_udp_socket().is_none());
+        #[cfg(unix)]
+        assert!(raw.raw_fd() >= 0);
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
+        let listener_addr = listener.local_addr()?;
+        let accept_task = tokio::spawn(async move {
+            listener
+                .accept()
+                .await
+                .map(|(stream, _addr)| stream)
+                .expect("accept")
+        });
+        let stream = tokio::net::TcpStream::connect(listener_addr).await?;
+        let accepted_stream = accept_task.await.expect("accept task");
+        drop(accepted_stream);
+
+        let stream = SocketType::TcpStream(Arc::new(stream));
+        assert!(stream.as_raw().is_none());
+        assert!(stream.as_tcp_stream().is_some());
+        assert!(stream.as_tcp_listener().is_none());
+        assert!(stream.as_udp_socket().is_none());
+        #[cfg(unix)]
+        assert!(stream.raw_fd() >= 0);
+
+        let listener = SocketType::TcpListener(Arc::new(
+            tokio::net::TcpListener::bind("127.0.0.1:0").await?,
+        ));
+        assert!(listener.as_raw().is_none());
+        assert!(listener.as_tcp_stream().is_none());
+        assert!(listener.as_tcp_listener().is_some());
+        assert!(listener.as_udp_socket().is_none());
+        #[cfg(unix)]
+        assert!(listener.raw_fd() >= 0);
+
+        let udp = SocketType::UdpSocket(tokio::net::UdpSocket::bind("127.0.0.1:0").await?);
+        assert!(udp.as_raw().is_none());
+        assert!(udp.as_tcp_stream().is_none());
+        assert!(udp.as_tcp_listener().is_none());
+        assert!(udp.as_udp_socket().is_some());
+        #[cfg(unix)]
+        assert!(udp.raw_fd() >= 0);
+        Ok(())
+    }
+
+    #[test]
+    fn test_socket_handle_new_and_timeout_millis() {
+        let mut handle = SocketHandle::new(crate::test_utils::raw_socket_type());
+        assert!(handle.timeout.is_none());
+        assert!(!handle.is_ipv6);
+        assert!(!handle.non_blocking);
+        assert_eq!(handle.timeout_millis(), 0);
+
+        handle.timeout = Some(Duration::from_millis(1500));
+        assert_eq!(handle.timeout_millis(), 1500);
+    }
+}

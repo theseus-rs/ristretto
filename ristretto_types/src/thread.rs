@@ -278,3 +278,79 @@ impl<T: Thread> Thread for Arc<T> {
         (**self).intern_string(string)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::VM;
+    use crate::test_utils;
+    use ristretto_classfile::JAVA_17;
+
+    #[tokio::test]
+    async fn test_arc_thread_delegates_to_inner_thread() -> Result<()> {
+        let vm = test_utils::MockVm::new(JAVA_17);
+        let inner = test_utils::MockThread::new_with_id(vm, 123);
+        let thread: Arc<test_utils::MockThread> = inner;
+        let thread_ref: &dyn Thread<Vm = test_utils::MockVm, Frame = test_utils::MockFrame> =
+            &thread;
+
+        assert_eq!(thread_ref.id(), 123);
+        assert_eq!(thread_ref.vm()?.java_version(), "mock-java");
+        thread_ref.set_name("arc-thread").await;
+        assert_eq!(thread_ref.name().await, "arc-thread");
+        thread_ref.set_java_object(Value::Int(1)).await;
+        assert_eq!(thread_ref.java_object().await, Value::Int(1));
+        assert!(thread_ref.frames().await?.is_empty());
+        thread_ref.interrupt();
+        assert!(thread_ref.is_interrupted(false));
+        assert!(thread_ref.sleep(Duration::from_millis(0)).await);
+        thread_ref.park(false, 0).await?;
+        thread_ref.unpark();
+        let class = thread_ref.class("java/lang/Object").await?;
+        let java_str = JavaStr::try_from_str("java/lang/Object")?;
+        assert_eq!(
+            thread_ref.class_java_str(java_str).await?.name(),
+            class.name()
+        );
+        assert_eq!(
+            thread_ref.load_and_link_class(java_str).await?.name(),
+            class.name()
+        );
+        thread_ref.register_class(class.clone()).await?;
+        assert_eq!(
+            thread_ref
+                .invoke("Owner", "method", &[Value::Int(2)])
+                .await?
+                .expect("invoke value"),
+            Value::Int(2)
+        );
+        assert_eq!(
+            thread_ref
+                .try_invoke("Owner", "method", &[Value::Int(3)])
+                .await?,
+            Value::Int(3)
+        );
+        let method = test_utils::method("run", "()V");
+        assert_eq!(
+            thread_ref
+                .execute(&class, &method, &[Value::Int(4)])
+                .await?
+                .expect("execute value"),
+            Value::Int(4)
+        );
+        assert_eq!(
+            thread_ref
+                .try_execute(&class, &method, &[Value::Int(5)])
+                .await?,
+            Value::Int(5)
+        );
+        assert!(
+            thread_ref
+                .object("java/lang/Object", "()V", &[])
+                .await?
+                .is_object()
+        );
+        assert!(thread_ref.intern_string("value").await?.is_object());
+        Ok(())
+    }
+}
