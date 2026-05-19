@@ -52,7 +52,7 @@ use proc_macro::TokenStream;
 /// full intrinsic name, the Rust function's name, and the version specification.
 #[proc_macro_attribute]
 pub fn intrinsic_method(attributes: TokenStream, item: TokenStream) -> TokenStream {
-    intrinsic::process(attributes, item)
+    intrinsic::process(attributes.into(), item.into()).into()
 }
 
 /// A procedural attribute macro that applies `async_recursion` with platform-appropriate Send bounds.
@@ -76,7 +76,7 @@ pub fn intrinsic_method(attributes: TokenStream, item: TokenStream) -> TokenStre
 /// ```
 #[proc_macro_attribute]
 pub fn async_method(_attributes: TokenStream, item: TokenStream) -> TokenStream {
-    async_method::process(item)
+    async_method::process(item.into()).into()
 }
 
 /// A procedural macro that generates the intrinsic method registry at compile time.
@@ -95,5 +95,5 @@ pub fn async_method(_attributes: TokenStream, item: TokenStream) -> TokenStream 
 /// each mapping method signatures to their intrinsic method implementations.
 #[proc_macro]
 pub fn generate_intrinsic_registry(input: TokenStream) -> TokenStream {
-    intrinsic_registry::process(input)
+    intrinsic_registry::process(input.into()).into()
 }
