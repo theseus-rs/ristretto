@@ -33,6 +33,8 @@ mod header;
 mod image;
 mod index;
 mod resource;
+#[cfg(test)]
+mod test_utils;
 
 pub use error::{Error, Result};
 pub use image::Image;

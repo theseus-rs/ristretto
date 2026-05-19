@@ -204,6 +204,10 @@ impl Index {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::{
+        CLASS_DATA, EXT_NAME, MODULE_INFO_NAME, STRING_NAME, write_standard_big_endian_image,
+    };
+    use byteorder::BigEndian;
 
     #[test]
     fn test_hash() {
@@ -211,5 +215,57 @@ mod tests {
         assert_eq!(Index::hash("a", 42), 704_660_095);
         assert_eq!(Index::hash("42", 0), 872_436_206);
         assert_eq!(Index::hash("Hello, World!", 0), 530_056_657);
+    }
+
+    #[test]
+    fn test_index_accessors() -> Result<()> {
+        let temp_file = write_standard_big_endian_image()?;
+        let image = Image::from_file(temp_file.path())?;
+
+        assert_eq!(
+            Index::get_resource_offset::<BigEndian>(&image, MODULE_INFO_NAME)?,
+            0
+        );
+        assert_eq!(
+            Index::get_resource_offset::<BigEndian>(&image, EXT_NAME)?,
+            1
+        );
+        assert_eq!(
+            Index::get_resource_offset::<BigEndian>(&image, STRING_NAME)?,
+            2
+        );
+
+        let attribute_offset = Index::get_attribute_offset::<BigEndian>(&image, 2)?;
+        let attributes = Index::get_attributes(&image, attribute_offset)?;
+        assert_eq!(attributes.offset(), 25);
+        assert_eq!(
+            Index::get_string(&image, attributes.base_offset())?,
+            "String"
+        );
+        assert_eq!(&*Index::get_data(&image, &attributes)?, CLASS_DATA);
+        Ok(())
+    }
+
+    #[test]
+    fn test_index_accessors_reject_out_of_bounds_indexes() -> Result<()> {
+        let temp_file = write_standard_big_endian_image()?;
+        let image = Image::from_file(temp_file.path())?;
+        assert!(matches!(
+            Index::get_attribute_offset::<BigEndian>(&image, 1_000),
+            Err(crate::Error::InvalidIndex(_))
+        ));
+        Ok(())
+    }
+
+    #[test]
+    #[should_panic(expected = "not yet implemented: compressed jimage support")]
+    fn test_get_data_panics_for_compressed_resource() {
+        let temp_file = write_standard_big_endian_image().expect("image should be written");
+        let image = Image::from_file(temp_file.path()).expect("image should load");
+        let bytes = [48, 1, 56, 1, 0];
+        let byte_source = crate::byte_source::ByteSource::Bytes(bytes.to_vec());
+        let attributes =
+            Attributes::from_bytes(&byte_source, 0, bytes.len()).expect("attributes should parse");
+        let _ = Index::get_data(&image, &attributes);
     }
 }

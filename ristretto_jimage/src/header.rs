@@ -230,4 +230,20 @@ mod tests {
         let result = Header::from_bytes::<BigEndian>(&bytes);
         assert!(matches!(result, Err(Error::VersionNotSupported(2, 0))));
     }
+
+    #[test]
+    fn test_unsupported_minor_version() {
+        let bytes: [u8; 28] = [
+            0xCA, 0xFE, 0xDA, 0xDA, // magic
+            0x00, 0x01, 0x00, 0x01, // unsupported minor version
+            0x00, 0x00, 0x00, 0x00, // flags
+            0x00, 0x00, 0x00, 0x10, // resource_count
+            0x00, 0x00, 0x00, 0x20, // table_length
+            0x00, 0x00, 0x00, 0x02, // locations_offset
+            0x00, 0x00, 0x00, 0x30, // strings_offset
+        ];
+
+        let result = Header::from_bytes::<BigEndian>(&bytes);
+        assert!(matches!(result, Err(Error::VersionNotSupported(1, 1))));
+    }
 }

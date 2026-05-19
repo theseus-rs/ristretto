@@ -3,7 +3,7 @@ use crate::byte_source::ByteSource;
 use crate::{Error, Result};
 
 /// Represents the types of attributes in an Image file.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum AttributeType {
     End,
     Module,
@@ -74,7 +74,8 @@ impl Attributes {
         };
 
         while offset < limit {
-            let bytes = byte_source.get_bytes(offset..=offset)?;
+            let end = offset.checked_add(1).ok_or(InvalidAttributeData)?;
+            let bytes = byte_source.get_bytes(offset..end)?;
             let data = bytes[0];
             let attribute_type = AttributeType::try_from(data >> 3)?;
             if attribute_type == AttributeType::End {
@@ -84,35 +85,7 @@ impl Attributes {
             let length = (data as usize & 0x7) + 1;
             offset += 1;
             let value = Self::read_value(byte_source, offset, length)?;
-
-            match attribute_type {
-                AttributeType::End => break,
-                AttributeType::Module => {
-                    attributes.module_offset = value;
-                }
-                AttributeType::Parent => {
-                    attributes.parent_offset = value;
-                }
-                AttributeType::Base => {
-                    attributes.base_offset = value;
-                }
-                AttributeType::Extension => {
-                    attributes.extension_offset = value;
-                }
-                AttributeType::Offset => {
-                    attributes.offset = value;
-                }
-                AttributeType::Compressed => {
-                    attributes.compressed_size = value;
-                }
-                AttributeType::Uncompressed => {
-                    attributes.uncompressed_size = value;
-                }
-                AttributeType::Count => {
-                    // Count attribute is not used in this context
-                }
-            }
-
+            attributes.apply_attribute(attribute_type, value);
             offset += length;
         }
 
@@ -129,6 +102,46 @@ impl Attributes {
         let value = u64::from_be_bytes(buffer);
         let value = usize::try_from(value)?;
         Ok(value)
+    }
+
+    /// Applies an attribute value. Returns `false` when parsing should stop.
+    #[inline]
+    fn apply_attribute(&mut self, attribute_type: AttributeType, value: usize) -> bool {
+        match attribute_type {
+            AttributeType::End => false,
+            AttributeType::Module => {
+                self.module_offset = value;
+                true
+            }
+            AttributeType::Parent => {
+                self.parent_offset = value;
+                true
+            }
+            AttributeType::Base => {
+                self.base_offset = value;
+                true
+            }
+            AttributeType::Extension => {
+                self.extension_offset = value;
+                true
+            }
+            AttributeType::Offset => {
+                self.offset = value;
+                true
+            }
+            AttributeType::Compressed => {
+                self.compressed_size = value;
+                true
+            }
+            AttributeType::Uncompressed => {
+                self.uncompressed_size = value;
+                true
+            }
+            AttributeType::Count => {
+                // Count attribute is not used in this context.
+                true
+            }
+        }
     }
 
     /// Returns the module offset.
@@ -204,6 +217,47 @@ mod tests {
         assert_eq!(attributes.compressed_size(), 0);
         assert_eq!(attributes.uncompressed_size(), 928);
         Ok(())
+    }
+
+    #[test]
+    fn test_attributes_from_bytes_with_count_and_compressed_size() -> Result<()> {
+        let bytes = vec![48, 3, 64, 1, 56, 7, 0];
+        let byte_source = ByteSource::Bytes(bytes);
+        let attributes = Attributes::from_bytes(&byte_source, 0, byte_source.len()?)?;
+        assert_eq!(attributes.compressed_size(), 3);
+        assert_eq!(attributes.uncompressed_size(), 7);
+        Ok(())
+    }
+
+    #[test]
+    fn test_apply_attribute() {
+        let mut attributes = Attributes {
+            module_offset: 0,
+            parent_offset: 0,
+            base_offset: 0,
+            extension_offset: 0,
+            offset: 0,
+            compressed_size: 0,
+            uncompressed_size: 0,
+        };
+
+        assert!(attributes.apply_attribute(AttributeType::Module, 1));
+        assert!(attributes.apply_attribute(AttributeType::Parent, 2));
+        assert!(attributes.apply_attribute(AttributeType::Base, 3));
+        assert!(attributes.apply_attribute(AttributeType::Extension, 4));
+        assert!(attributes.apply_attribute(AttributeType::Offset, 5));
+        assert!(attributes.apply_attribute(AttributeType::Compressed, 6));
+        assert!(attributes.apply_attribute(AttributeType::Uncompressed, 7));
+        assert!(attributes.apply_attribute(AttributeType::Count, 8));
+        assert!(!attributes.apply_attribute(AttributeType::End, 9));
+
+        assert_eq!(attributes.module_offset(), 1);
+        assert_eq!(attributes.parent_offset(), 2);
+        assert_eq!(attributes.base_offset(), 3);
+        assert_eq!(attributes.extension_offset(), 4);
+        assert_eq!(attributes.offset(), 5);
+        assert_eq!(attributes.compressed_size(), 6);
+        assert_eq!(attributes.uncompressed_size(), 7);
     }
 
     #[test]

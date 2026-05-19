@@ -129,6 +129,8 @@ impl<'a> Resource<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::test_utils::{CLASS_DATA, STRING_NAME, write_standard_big_endian_image};
+    use byteorder::BigEndian;
 
     #[test]
     fn test_name() {
@@ -227,5 +229,20 @@ mod test {
             data: Cow::Owned(Vec::new()),
         };
         assert_eq!(resource_only_base.full_name(), "README");
+    }
+
+    #[test]
+    fn test_from_bytes() -> Result<()> {
+        let temp_file = write_standard_big_endian_image()?;
+        let image = Image::from_file(temp_file.path())?;
+        let resource = Resource::from_bytes::<BigEndian>(&image, 2)?;
+        assert_eq!(resource.module(), "java.base");
+        assert_eq!(resource.parent(), "java/lang");
+        assert_eq!(resource.base(), "String");
+        assert_eq!(resource.extension(), "class");
+        assert_eq!(resource.name(), "java/lang/String.class");
+        assert_eq!(resource.full_name(), STRING_NAME);
+        assert_eq!(resource.data(), CLASS_DATA);
+        Ok(())
     }
 }
