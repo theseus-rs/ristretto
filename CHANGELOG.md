@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_pom` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.31.1) - 2026-05-20
+
+### Added
+- implement sockets
+
+### Other
+- improve pom testing
+- initial wasm32-wasip2 tests
+
+## `ristretto_cli` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/v0.31.0...v0.31.1) - 2026-05-20
+
+### Added
+- implement sun/util/locale/provider/HostLocaleProviderAdapterImpl
+- implement jdk/internal/platform/CgroupMetrics
+- implement sockets
+
+### Fixed
+- correct windows jdk installation directory
+
+### Other
+- update Cargo.toml dependencies
+- improve classfile testing
+- improve jimage testing
+- improve macro testing
+- improve pom testing
+- initial wasm32-wasip2 tests
+- improve types testing
+
+## `ristretto_vm` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.31.0...ristretto_vm-v0.31.1) - 2026-05-20
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_intrinsics` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.31.0...ristretto_intrinsics-v0.31.1) - 2026-05-20
+
+### Added
+- implement sun/util/locale/provider/HostLocaleProviderAdapterImpl
+- implement jdk/internal/platform/CgroupMetrics
+
+## `ristretto_types` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.31.0...ristretto_types-v0.31.1) - 2026-05-20
+
+### Other
+- improve types testing
+
+## `ristretto_macros` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.31.0...ristretto_macros-v0.31.1) - 2026-05-20
+
+### Other
+- improve macro testing
+
+## `ristretto_classloader` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.31.0...ristretto_classloader-v0.31.1) - 2026-05-20
+
+### Fixed
+- correct windows jdk installation directory
+
+## `ristretto_jimage` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.31.0...ristretto_jimage-v0.31.1) - 2026-05-20
+
+### Other
+- improve jimage testing
+
+## `ristretto_gc` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.31.0...ristretto_gc-v0.31.1) - 2026-05-20
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classfile` - [0.31.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.31.0...ristretto_classfile-v0.31.1) - 2026-05-20
+
+### Other
+- improve classfile testing
+
 ## `ristretto_pom` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.31.0) - 2026-05-03
 
 ### Added
