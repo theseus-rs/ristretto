@@ -1,7 +1,7 @@
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::parse::{Parse, ParseStream, Result as SynResult};
-use syn::{Expr, ItemFn, LitStr, parse_macro_input};
+use syn::{Expr, ItemFn, LitStr};
 
 /// Helper struct for parsing macro attributes
 struct IntrinsicMethodArgs {
@@ -23,11 +23,17 @@ impl Parse for IntrinsicMethodArgs {
 
 /// Processing for the `intrinsic_method` procedural macro.
 pub(crate) fn process(attributes: TokenStream, item: TokenStream) -> TokenStream {
-    let arguments = parse_macro_input!(attributes as IntrinsicMethodArgs);
+    let arguments = match syn::parse2::<IntrinsicMethodArgs>(attributes) {
+        Ok(arguments) => arguments,
+        Err(error) => return error.to_compile_error(),
+    };
     let signature_lit = &arguments.signature;
     let version_specification_expr = &arguments.version_specification;
 
-    let input_fn = parse_macro_input!(item as ItemFn);
+    let input_fn = match syn::parse2::<ItemFn>(item) {
+        Ok(input_fn) => input_fn,
+        Err(error) => return error.to_compile_error(),
+    };
     let fn_name = &input_fn.sig.ident;
     let fn_vis = &input_fn.vis;
 
@@ -63,5 +69,87 @@ pub(crate) fn process(attributes: TokenStream, item: TokenStream) -> TokenStream
         #generated_registration_code
     };
 
-    TokenStream::from(output)
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::process;
+    use quote::quote;
+
+    #[test]
+    fn process_preserves_function_and_generates_registration() {
+        let output = process(
+            quote! { "java/lang/Object.hashCode()I", Any },
+            quote! {
+                pub fn hash_code() -> i32 {
+                    42
+                }
+            },
+        )
+        .to_string();
+
+        assert!(output.contains("pub fn hash_code"));
+        assert!(
+            output.contains("pub static _java_lang_Object_hashCode__I_hash_code_INTRINSIC_DATA")
+        );
+        assert!(output.contains("\"java/lang/Object.hashCode()I\""));
+        assert!(output.contains("stringify ! (hash_code)"));
+        assert!(output.contains("Any"));
+    }
+
+    #[test]
+    fn process_cleans_raw_identifier_for_registration_name() {
+        let output = process(
+            quote! { "pkg/Example.$init([I)V", Any },
+            quote! {
+                fn r#type() {}
+            },
+        )
+        .to_string();
+
+        assert!(output.contains("fn r#type"));
+        assert!(output.contains("static _pkg_Example__init__I_V_type_INTRINSIC_DATA"));
+        assert!(output.contains("stringify ! (r#type)"));
+    }
+
+    #[test]
+    fn process_returns_compile_error_for_invalid_attributes() {
+        let output = process(
+            quote! { "java/lang/Object.hashCode()I" },
+            quote! { fn hash_code() {} },
+        )
+        .to_string();
+
+        assert!(output.contains("compile_error"));
+    }
+
+    #[test]
+    fn process_returns_compile_error_for_non_string_signature() {
+        let output = process(quote! { 123, Any }, quote! { fn hash_code() {} }).to_string();
+
+        assert!(output.contains("compile_error"));
+    }
+
+    #[test]
+    fn process_returns_compile_error_for_missing_version_expression() {
+        let output = process(
+            quote! { "java/lang/Object.hashCode()I", },
+            quote! { fn hash_code() {} },
+        )
+        .to_string();
+
+        assert!(output.contains("compile_error"));
+    }
+
+    #[test]
+    fn process_returns_compile_error_for_invalid_item() {
+        let output = process(
+            quote! { "java/lang/Object.hashCode()I", Any },
+            quote! { struct NotAFunction; },
+        )
+        .to_string();
+
+        assert!(output.contains("compile_error"));
+    }
 }

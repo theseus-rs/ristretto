@@ -2702,10 +2702,12 @@ name = "ristretto_macros"
 version = "0.31.0"
 dependencies = [
  "ahash 0.8.12",
+ "async-recursion",
  "proc-macro2",
  "quote",
  "ristretto_classfile",
  "syn 2.0.117",
+ "tempfile",
  "walkdir",
 ]
 
