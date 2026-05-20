@@ -11,7 +11,10 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
 use ristretto_types::JavaError::RuntimeException;
-#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+#[cfg(all(
+    not(all(target_family = "wasm", not(target_os = "wasi"))),
+    not(target_os = "windows")
+))]
 use ristretto_types::JavaError::{AccessControlException, IllegalArgumentException};
 use ristretto_types::JavaError::{FileNotFoundException, IoException};
 use ristretto_types::Thread;
@@ -21,16 +24,35 @@ use ristretto_types::handles::FileHandle;
 use ristretto_types::{Parameters, Result};
 #[cfg(target_os = "wasi")]
 use std::fs::OpenOptions;
-#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+#[cfg(all(
+    not(all(target_family = "wasm", not(target_os = "wasi"))),
+    not(target_os = "windows")
+))]
 use std::io::ErrorKind;
 #[cfg(target_os = "wasi")]
 use std::io::Write;
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
 use tokio::fs::OpenOptions;
 #[cfg(not(target_family = "wasm"))]
 use tokio::io::AsyncWriteExt;
 use zerocopy::transmute_ref;
+
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
+fn resolve_path<T: Thread + 'static>(thread: &Arc<T>, path: &str) -> Result<PathBuf> {
+    let path_buf = PathBuf::from(path);
+    if path_buf.is_absolute() {
+        return Ok(path_buf);
+    }
+    let vm = thread.vm()?;
+    if let Some(user_dir) = vm.system_properties().get("user.dir") {
+        Ok(PathBuf::from(user_dir).join(path_buf))
+    } else {
+        Ok(path_buf)
+    }
+}
 
 #[intrinsic_method("java/io/FileOutputStream.close0()V", LessThanOrEqual(JAVA_8))]
 #[async_method]
@@ -52,6 +74,7 @@ pub async fn init_ids<T: Thread + 'static>(
 
 #[intrinsic_method("java/io/FileOutputStream.open0(Ljava/lang/String;Z)V", Any)]
 #[async_method]
+#[expect(clippy::too_many_lines)]
 pub async fn open_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -75,7 +98,7 @@ pub async fn open_0<T: Thread + 'static>(
         let _ = append;
         let _ = file_descriptor;
         Err(RuntimeException(
-            "java.io.FileInputStream.open0(Ljava/lang/String;)V is not supported on WebAssembly"
+            "java.io.FileOutputStream.open0(Ljava/lang/String;Z)V is not supported on WebAssembly"
                 .to_string(),
         )
         .into())
@@ -84,6 +107,7 @@ pub async fn open_0<T: Thread + 'static>(
     #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
     {
         let file_result;
+        let resolved_path = resolve_path(&thread, &path)?;
 
         #[cfg(target_os = "wasi")]
         {
@@ -92,14 +116,14 @@ pub async fn open_0<T: Thread + 'static>(
                     .create(true)
                     .read(false)
                     .append(true)
-                    .open(&path)
+                    .open(&resolved_path)
             } else {
                 OpenOptions::new()
                     .create(true)
                     .read(false)
                     .write(true)
                     .truncate(true)
-                    .open(&path)
+                    .open(&resolved_path)
             };
         }
 
@@ -111,7 +135,7 @@ pub async fn open_0<T: Thread + 'static>(
                     .read(false)
                     .write(true)
                     .append(true)
-                    .open(&path)
+                    .open(&resolved_path)
                     .await
             } else {
                 OpenOptions::new()
@@ -119,7 +143,7 @@ pub async fn open_0<T: Thread + 'static>(
                     .read(false)
                     .write(true)
                     .truncate(true)
-                    .open(&path)
+                    .open(&resolved_path)
                     .await
             };
         }
@@ -143,21 +167,39 @@ pub async fn open_0<T: Thread + 'static>(
                 Ok(None)
             }
             Err(error) => {
-                let error = match error.kind() {
-                    ErrorKind::NotFound => FileNotFoundException(format!("File not found: {path}")),
-                    ErrorKind::PermissionDenied => {
-                        AccessControlException(format!("Access denied: {path}"))
-                    }
-                    ErrorKind::AlreadyExists if !append => {
-                        IoException(format!("File exists and cannot be overwritten: {path}"))
-                    }
-                    ErrorKind::InvalidInput => {
-                        IllegalArgumentException(format!("Invalid file path: {path}"))
-                    }
-                    ErrorKind::InvalidFilename => IoException(format!("Invalid filename: {path}")),
-                    _ => IoException(format!("IO error opening file '{path}': {error}")),
-                };
-                Err(error.into())
+                #[cfg(not(target_os = "windows"))]
+                {
+                    let error = match error.kind() {
+                        ErrorKind::NotFound => {
+                            FileNotFoundException(format!("{path} (No such file or directory)"))
+                        }
+                        ErrorKind::PermissionDenied => {
+                            AccessControlException(format!("Access denied: {path}"))
+                        }
+                        ErrorKind::IsADirectory => {
+                            FileNotFoundException(format!("{path} (Is a directory)"))
+                        }
+                        ErrorKind::AlreadyExists if !append => {
+                            IoException(format!("File exists and cannot be overwritten: {path}"))
+                        }
+                        ErrorKind::InvalidInput => {
+                            IllegalArgumentException(format!("Invalid file path: {path}"))
+                        }
+                        ErrorKind::InvalidFilename => {
+                            IoException(format!("Invalid filename: {path}"))
+                        }
+                        _ => IoException(format!("IO error opening file '{path}': {error}")),
+                    };
+                    Err(error.into())
+                }
+                #[cfg(target_os = "windows")]
+                {
+                    Err(FileNotFoundException(format!(
+                        "{path} ({})",
+                        crate::java::io::filesystem::open_error_message(&error)
+                    ))
+                    .into())
+                }
             }
         }
     }
@@ -170,7 +212,7 @@ pub async fn write<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let append = parameters.pop_bool()?;
-    let byte = i8::try_from(parameters.pop_int()?)?;
+    let byte = i8::from_ne_bytes([parameters.pop_int()?.to_le_bytes()[0]]);
     let file_output_stream = parameters.pop()?;
     let bytes = Value::new_object(
         thread.vm()?.garbage_collector(),
@@ -242,11 +284,16 @@ pub async fn write_bytes<T: Thread + 'static>(
             {
                 file.write_all(&bytes[offset..offset + length])
                     .map_err(|error| IoException(error.to_string()))?;
+                file.flush()
+                    .map_err(|error| IoException(error.to_string()))?;
             }
 
             #[cfg(not(target_family = "wasm"))]
             {
                 file.write_all(&bytes[offset..offset + length])
+                    .await
+                    .map_err(|error| IoException(error.to_string()))?;
+                file.flush()
                     .await
                     .map_err(|error| IoException(error.to_string()))?;
             }

@@ -629,6 +629,21 @@ impl ResolvedConfiguration {
         self.package_to_module.get(package).map(String::as_str)
     }
 
+    /// Returns all packages belonging to the given module.
+    #[must_use]
+    pub fn packages_for_module(&self, module_name: &str) -> Vec<&str> {
+        self.package_to_module
+            .iter()
+            .filter_map(|(package, module)| {
+                if module == module_name {
+                    Some(package.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     /// Returns true if module `from` reads module `to`.
     #[must_use]
     pub fn reads(&self, from: &str, to: &str) -> bool {

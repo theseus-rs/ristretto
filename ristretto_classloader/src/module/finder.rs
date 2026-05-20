@@ -127,16 +127,17 @@ impl SystemModuleFinder {
                 continue;
             }
 
-            if resource.extension() == "class" {
-                if resource.base() == "module-info" {
-                    module_infos.insert(module_name, resource.data().to_vec());
-                } else {
-                    let package = resource.parent().to_string();
-                    module_packages
-                        .entry(module_name)
-                        .or_default()
-                        .insert(package);
-                }
+            if resource.extension() == "class" && resource.base() == "module-info" {
+                module_infos.insert(module_name, resource.data().to_vec());
+                continue;
+            }
+
+            let package = resource.parent();
+            if is_package_path(package) {
+                module_packages
+                    .entry(module_name)
+                    .or_default()
+                    .insert(package.to_string());
             }
         }
 
@@ -185,14 +186,16 @@ impl SystemModuleFinder {
                 continue;
             }
 
-            if resource.extension() == "class" && resource.base() != "module-info" {
-                let package = resource.parent();
-                if !package.is_empty() {
-                    // Use entry API to avoid duplicate insertions
-                    package_to_module
-                        .entry(package.to_string())
-                        .or_insert_with(|| module_name.to_string());
-                }
+            if resource.extension() == "class" && resource.base() == "module-info" {
+                continue;
+            }
+
+            let package = resource.parent();
+            if is_package_path(package) {
+                // Use entry API to avoid duplicate insertions
+                package_to_module
+                    .entry(package.to_string())
+                    .or_insert_with(|| module_name.to_string());
             }
         }
 
@@ -471,6 +474,24 @@ impl ModuleFinder for EmptyModuleFinder {
     fn find_all(&self) -> Vec<ModuleReference> {
         Vec::new()
     }
+}
+
+fn is_package_path(path: &str) -> bool {
+    !path.is_empty() && path.split('/').all(is_package_segment)
+}
+
+fn is_package_segment(segment: &str) -> bool {
+    let mut chars = segment.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    (first == '_' || first == '$' || first.is_alphabetic())
+        && chars.all(|character| {
+            character == '_'
+                || character == '$'
+                || character.is_alphabetic()
+                || character.is_ascii_digit()
+        })
 }
 
 #[cfg(test)]

@@ -2,13 +2,14 @@ use crate::java::lang::invoke::methodhandlenatives::MemberNameFlags;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::ReferenceKind;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
-use ristretto_classloader::{Class, Value};
+use ristretto_classloader::{Class, Object, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::NullPointerException;
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
+use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 use tracing::debug;
@@ -916,6 +917,27 @@ async fn invoke_special<T: Thread + 'static>(
             .rfind(')')
             .unwrap_or(method_descriptor.len());
         let descriptor = &method_descriptor[start_index..end_index];
+
+        if let Some(allocation_class_name) = object_return_class_name(&method_descriptor)
+            && allocation_class_name != target_class.name()
+        {
+            let allocation_class = thread.class(&allocation_class_name).await?;
+            if is_same_or_subclass_of(&allocation_class, &target_class)? {
+                let instance = Value::from_object(
+                    thread.vm()?.garbage_collector(),
+                    Object::new(allocation_class)?,
+                );
+                let constructor_descriptor = format!("({descriptor})V");
+                let method = target_class.try_get_method(&method_name, &constructor_descriptor)?;
+                let mut call_arguments = vec![instance.clone()];
+                call_arguments.extend(arguments);
+                thread
+                    .execute(&target_class, &method, &call_arguments)
+                    .await?;
+                return Ok(instance);
+            }
+        }
+
         let instance = thread
             .object(target_class.name(), descriptor, arguments.as_slice())
             .await?;
@@ -947,6 +969,61 @@ async fn invoke_special<T: Thread + 'static>(
             .await?;
         Ok(result.unwrap_or(Value::Object(None)))
     }
+}
+
+fn object_return_class_name(method_descriptor: &str) -> Option<String> {
+    let return_descriptor = method_descriptor.rsplit_once(')')?.1;
+    let return_descriptor = return_descriptor.strip_prefix('L')?;
+    let class_name = return_descriptor.strip_suffix(';')?;
+    Some(class_name.to_string())
+}
+
+fn direct_constructor_instance_class_name(method_handle: &Value) -> Result<Option<String>> {
+    let method_handle = method_handle.as_object_ref()?;
+    if method_handle.class().name() != "java/lang/invoke/DirectMethodHandle$Constructor" {
+        return Ok(None);
+    }
+    let Ok(instance_class) = method_handle.value("instanceClass") else {
+        return Ok(None);
+    };
+    if instance_class.is_null() {
+        return Ok(None);
+    }
+    let instance_class = instance_class.as_object_ref()?;
+    Ok(Some(instance_class.value("name")?.as_string()?))
+}
+
+fn method_handle_return_class_name(method_handle: &Value) -> Result<Option<String>> {
+    let method_handle = method_handle.as_object_ref()?;
+    let Ok(method_type) = method_handle.value("type") else {
+        return Ok(None);
+    };
+    if method_type.is_null() {
+        return Ok(None);
+    }
+    let method_type = method_type.as_object_ref()?;
+    let Ok(return_type) = method_type.value("rtype") else {
+        return Ok(None);
+    };
+    if return_type.is_null() {
+        return Ok(None);
+    }
+    let return_type = return_type.as_object_ref()?;
+    Ok(Some(return_type.value("name")?.as_string()?))
+}
+
+fn is_same_or_subclass_of(class: &Arc<Class>, target_class: &Class) -> Result<bool> {
+    if class.name() == target_class.name() {
+        return Ok(true);
+    }
+    let mut parent = class.parent()?;
+    while let Some(parent_class) = parent {
+        if parent_class.name() == target_class.name() {
+            return Ok(true);
+        }
+        parent = parent_class.parent()?;
+    }
+    Ok(false)
 }
 
 /// Checks if a class is a Holder class or similar class used for `LambdaForm` entry points.
@@ -1102,6 +1179,54 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
             if is_holder_class(class_name) {
                 debug!("newInvokeSpecial: member points to holder class, skipping");
             } else {
+                let target_class = thread.class(class_name).await?;
+                let allocation_class_name = direct_constructor_instance_class_name(&method_handle)?
+                    .or(method_handle_return_class_name(&method_handle)?);
+                if let Some(allocation_class_name) = allocation_class_name
+                    && allocation_class_name != *class_name
+                {
+                    let allocation_class = thread.class(&allocation_class_name).await?;
+                    let can_initialize_with_target_constructor =
+                        is_same_or_subclass_of(&allocation_class, &target_class)?;
+                    if !can_initialize_with_target_constructor {
+                        return call_method_handle_target(thread, &member, arguments).await;
+                    }
+                    let instance = Value::from_object(
+                        thread.vm()?.garbage_collector(),
+                        Object::new(allocation_class)?,
+                    );
+
+                    let member_type = {
+                        let member_ref = member.as_object_ref()?;
+                        member_ref.value("type").ok()
+                    };
+                    let method_descriptor = if let Some(type_value) = member_type
+                        && get_object_class_name(&type_value).as_deref()
+                            == Some("java/lang/invoke/MethodType")
+                    {
+                        let descriptor = thread
+                            .invoke(
+                                "java.lang.invoke.MethodType",
+                                "toMethodDescriptorString()Ljava/lang/String;",
+                                &[type_value],
+                            )
+                            .await?
+                            .ok_or_else(|| InternalError("Invalid MethodType".to_string()))?
+                            .as_string()?;
+                        let end = descriptor.rfind(')').unwrap_or(descriptor.len());
+                        format!("{}V", &descriptor[..=end])
+                    } else {
+                        "()V".to_string()
+                    };
+
+                    let method = target_class.try_get_method("<init>", &method_descriptor)?;
+                    let mut call_arguments = vec![instance.clone()];
+                    call_arguments.extend(arguments);
+                    thread
+                        .execute(&target_class, &method, &call_arguments)
+                        .await?;
+                    return Ok(instance);
+                }
                 // The member points to a real constructor; use it
                 return call_method_handle_target(thread, &member, arguments).await;
             }

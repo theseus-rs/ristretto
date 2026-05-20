@@ -594,8 +594,12 @@ pub async fn get_declared_fields_0<T: Thread + 'static>(
         let field_type_class = thread.class(&field_type_class_name).await?;
         let field_type = field_type_class.to_object(&thread).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
-        let slot = &class.field_offset(field.name())?;
-        let slot = Value::Int(i32::try_from(*slot)?);
+        let slot = if access_flags.contains(FieldAccessFlags::STATIC) {
+            class.field_offset(field.name())?
+        } else {
+            class.object_field_offset(field.name())?
+        };
+        let slot = Value::Int(i32::try_from(slot)?);
 
         let mut field_signature = Value::Object(None);
         let mut annotations = Value::Object(None);

@@ -66,6 +66,33 @@ impl Directory {
         Ok(class_file)
     }
 
+    /// Read a resource from the directory.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    pub async fn read_resource<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
+        let name = name.as_ref();
+        let path = self.path.join(name);
+
+        #[cfg(not(target_family = "wasm"))]
+        let bytes = match tokio::fs::read(path).await {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(crate::Error::IoError(error)),
+        };
+
+        #[cfg(target_family = "wasm")]
+        let bytes = match std::fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(crate::Error::IoError(error)),
+        };
+
+        Ok(Some(bytes))
+    }
+
     /// Get the class names in the directory.
     ///
     /// # Errors

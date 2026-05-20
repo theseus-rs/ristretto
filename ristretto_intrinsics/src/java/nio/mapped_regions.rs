@@ -55,6 +55,10 @@ pub struct MappedRegion {
     pub length: usize,
     /// Mode the region was mapped with.
     pub mode: MapMode,
+    /// Stable host file identity for this mapping, when the platform exposes one. Unix uses
+    /// `(st_dev, st_ino)`. This prevents fd-number reuse from attaching an old mapping to a new
+    /// file.
+    pub file_key: Option<(u64, u64)>,
     /// Canonicalized path of the underlying file, if known. Used (on Windows) to refuse
     /// `DeleteFile0` for files with active mappings.
     pub path: Option<String>,
@@ -93,16 +97,43 @@ impl MappedRegions {
         self.regions.lock().remove(&address)
     }
 
-    /// Returns the region whose mapping covers `[address, address+length)` if any. The address
-    /// passed by Java may point into the middle of a region (when the buffer was sliced).
+    /// Removes all region metadata associated with `fd`.
+    ///
+    /// This is used when the VM closes its managed file descriptor. Ristretto tracks mappings by
+    /// fd number, while the host OS may immediately reuse that same number for an unrelated file.
+    /// Dropping the association on close prevents stale mapped bytes from being flushed into a new
+    /// file that happens to receive the recycled fd.
+    pub fn remove_fd(&self, fd: i64) {
+        let paths = {
+            let mut regions = self.regions.lock();
+            let addresses: Vec<i64> = regions
+                .iter()
+                .filter_map(|(address, region)| (region.fd == fd).then_some(*address))
+                .collect();
+            addresses
+                .into_iter()
+                .filter_map(|address| regions.remove(&address).and_then(|region| region.path))
+                .collect::<Vec<_>>()
+        };
+        for path in paths {
+            self.release_path(&path);
+        }
+    }
+
+    /// Returns the region whose mapping overlaps with `[address, address+length)` if any.
+    ///
+    /// JDK aligns the address passed to `force0`/`unmap0` down to the OS page size and rounds
+    /// the length up, so the address may fall *before* the region base. We accept any region
+    /// whose extent overlaps the requested range; callers are responsible for clamping their
+    /// operations to the actual region bounds.
     pub fn find_containing(&self, address: i64, length: usize) -> Option<(i64, MappedRegion)> {
         let regions = self.regions.lock();
         let length_i64 = i64::try_from(length).ok()?;
+        let req_end = address.saturating_add(length_i64);
         for (&base, region) in regions.iter() {
             let region_len_i64 = i64::try_from(region.length).ok()?;
-            if address >= base
-                && address.saturating_add(length_i64) <= base.saturating_add(region_len_i64)
-            {
+            let region_end = base.saturating_add(region_len_i64);
+            if req_end > base && address < region_end {
                 return Some((base, region.clone()));
             }
         }
@@ -186,6 +217,7 @@ mod tests {
                 position: 0,
                 length: 64,
                 mode: MapMode::ReadWrite,
+                file_key: None,
                 path: None,
             },
         );
@@ -207,13 +239,22 @@ mod tests {
                 position: 0,
                 length: 100,
                 mode: MapMode::ReadWrite,
+                file_key: None,
                 path: None,
             },
         );
         let (base, _) = regions.find_containing(0x1010, 16).expect("found");
         assert_eq!(base, 0x1000);
+        // Region is [0x1000, 0x1064); queries that touch the region (even partially)
+        // succeed under overlap semantics, while non-overlapping queries return None.
+        let (base, _) = regions.find_containing(0x1050, 100).expect("overlap");
+        assert_eq!(base, 0x1000);
+        let (base, _) = regions
+            .find_containing(0x0F00, 0x200)
+            .expect("overlap-left");
+        assert_eq!(base, 0x1000);
         assert!(regions.find_containing(0x2000, 1).is_none());
-        assert!(regions.find_containing(0x1050, 100).is_none());
+        assert!(regions.find_containing(0x0F00, 0x100).is_none());
     }
 
     #[test]

@@ -179,17 +179,15 @@ pub async fn compare_and_exchange_int<T: Thread + 'static>(
             current_value
         } else {
             let mut object = value.as_object_mut()?;
-            let class = object.class();
             let offset = usize::try_from(offset_long)?;
-            let field_name = class.field_name(offset)?;
-            let value_object = object.value(&field_name)?;
+            let value_object = object.value(offset)?;
             let current_value = if let Value::Object(None) = value_object {
                 0
             } else {
                 value_object.as_i32()?
             };
             if current_value == expected_value {
-                object.set_value(&field_name, Value::Int(new_value))?;
+                object.set_value(offset, Value::Int(new_value))?;
             }
             current_value
         }
@@ -247,17 +245,15 @@ pub async fn compare_and_exchange_long<T: Thread + 'static>(
             current_value
         } else {
             let mut object = value.as_object_mut()?;
-            let class = object.class();
             let offset = usize::try_from(offset_long)?;
-            let field_name = class.field_name(offset)?;
-            let value_object = object.value(&field_name)?;
+            let value_object = object.value(offset)?;
             let current_value = if let Value::Object(None) = value_object {
                 0
             } else {
                 value_object.as_i64()?
             };
             if current_value == expected_value {
-                object.set_value(&field_name, Value::Long(new_value))?;
+                object.set_value(offset, Value::Long(new_value))?;
             }
             current_value
         }
@@ -307,8 +303,7 @@ pub async fn compare_and_exchange_reference<T: Thread + 'static>(
 
     let result = match &mut *object {
         Reference::Object(object) => {
-            let field_name = object.class().field_name(offset)?;
-            let current_value = object.value(&field_name)?;
+            let current_value = object.value(offset)?;
 
             let equal = match (&current_value, &expected_value) {
                 (Value::Object(Some(r1)), Value::Object(Some(r2))) => Gc::ptr_eq(r1, r2),
@@ -317,7 +312,7 @@ pub async fn compare_and_exchange_reference<T: Thread + 'static>(
             };
 
             if equal {
-                object.set_value(&field_name, new_value)?;
+                object.set_value(offset, new_value)?;
             }
             current_value
         }
@@ -391,17 +386,15 @@ pub async fn compare_and_set_int<T: Thread + 'static>(
             }
         } else {
             let mut object = value.as_object_mut()?;
-            let class = object.class();
             let offset = usize::try_from(offset_long)?;
-            let field_name = class.field_name(offset)?;
-            let value_object = object.value(&field_name)?;
+            let value_object = object.value(offset)?;
             let value = if let Value::Object(None) = value_object {
                 0
             } else {
                 value_object.as_i32()?
             };
             if value == expected {
-                object.set_value(&field_name, Value::Int(x))?;
+                object.set_value(offset, Value::Int(x))?;
                 1
             } else {
                 0
@@ -462,17 +455,15 @@ pub async fn compare_and_set_long<T: Thread + 'static>(
             }
         } else {
             let mut object = value.as_object_mut()?;
-            let class = object.class();
             let offset = usize::try_from(offset_long)?;
-            let field_name = class.field_name(offset)?;
-            let value_object = object.value(&field_name)?;
+            let value_object = object.value(offset)?;
             let value = if let Value::Object(None) = value_object {
                 0
             } else {
                 value_object.as_i64()?
             };
             if value == expected {
-                object.set_value(&field_name, Value::Long(x))?;
+                object.set_value(offset, Value::Long(x))?;
                 1
             } else {
                 0
@@ -564,10 +555,9 @@ pub async fn compare_and_set_reference<T: Thread + 'static>(
             }
         }
         Reference::Object(object) => {
-            let field_name = object.class().field_name(offset)?;
-            let value = object.value(&field_name)?;
+            let value = object.value(offset)?;
             if value == expected {
-                object.set_value(&field_name, x)?;
+                object.set_value(offset, x)?;
                 1
             } else {
                 0
@@ -645,8 +635,33 @@ pub async fn copy_memory_0<T: Thread + 'static>(
         }
         (false, false) => {
             // array-to-array
-            if let (Value::Object(dst), Value::Object(src)) = (&mut destination, &source) {
-                dst.clone_from(src);
+            let (Value::Object(Some(dst_ref)), Value::Object(Some(src_ref))) =
+                (&mut destination, &source)
+            else {
+                return Ok(None);
+            };
+
+            let data = {
+                let guard = src_ref.read();
+                let Some(src_bytes) = guard.as_bytes() else {
+                    return Ok(None);
+                };
+                let src_off = usize::try_from(source_offset)?;
+                let copy_len = bytes.min(src_bytes.len().saturating_sub(src_off));
+                src_bytes[src_off..src_off + copy_len].to_vec()
+            };
+
+            if data.is_empty() {
+                return Ok(None);
+            }
+
+            let mut guard = dst_ref.write();
+            if let Some(dst_bytes) = guard.as_bytes_mut() {
+                let dst_off = usize::try_from(destination_offset)?;
+                let copy_len = data.len().min(dst_bytes.len().saturating_sub(dst_off));
+                if copy_len > 0 {
+                    dst_bytes[dst_off..dst_off + copy_len].copy_from_slice(&data[..copy_len]);
+                }
             }
         }
     }
@@ -1080,8 +1095,12 @@ async fn get_reference_type<T: Thread + 'static>(
             }
             Reference::Object(object) => {
                 let class = object.class();
-                let field_name = class.field_name(offset)?;
-                let value = object.value(&field_name)?;
+                let value = object.value(offset).map_err(|error| {
+                    InternalError(format!(
+                        "Unsafe get field failed for {} offset {offset}: {error}",
+                        class.name()
+                    ))
+                })?;
                 match value {
                     Value::Object(None) => {
                         if let Some(base_type) = base_type {
@@ -1274,9 +1293,12 @@ async fn put_reference_type<T: Thread + 'static>(
                 }
             }
             Reference::Object(object) => {
-                let class = object.class();
-                let field_name = class.field_name(offset)?;
-                object.set_value(&field_name, value)?;
+                let class_name = object.class().name().to_string();
+                object.set_value(offset, value).map_err(|error| {
+                    InternalError(format!(
+                        "Unsafe put field failed for {class_name} offset {offset}: {error}"
+                    ))
+                })?;
             }
             primitive_array => {
                 let Some(array) = primitive_array.as_bytes_mut() else {
@@ -1678,7 +1700,7 @@ pub async fn object_field_offset_1<T: Thread + 'static>(
         class_object.value("name")?.as_string()?
     };
     let class = thread.class(&class_name).await?;
-    let offset = class.field_offset(&field_name)?;
+    let offset = class.object_field_offset(&field_name)?;
     let offset = i64::try_from(offset)?;
     Ok(Some(Value::Long(offset)))
 }
@@ -2117,13 +2139,14 @@ pub async fn static_field_offset_0<T: Thread + 'static>(
         let name = field.value("name")?;
         (class, name)
     };
-    let parameters = Parameters::new(vec![class, name]);
-    let result = object_field_offset_1(thread, parameters).await?;
-    if let Some(Value::Long(offset)) = result {
-        Ok(Some(Value::Long(offset | STATIC_FIELD_OFFSET_MASK)))
-    } else {
-        Ok(result)
-    }
+    let field_name = name.as_string()?;
+    let class_name = {
+        let class = class.as_object_ref()?;
+        class.value("name")?.as_string()?
+    };
+    let class = thread.class(&class_name).await?;
+    let offset = i64::try_from(class.field_offset(&field_name)?)?;
+    Ok(Some(Value::Long(offset | STATIC_FIELD_OFFSET_MASK)))
 }
 
 #[intrinsic_method("jdk/internal/misc/Unsafe.storeFence()V", Between(JAVA_11, JAVA_17))]

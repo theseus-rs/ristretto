@@ -253,7 +253,6 @@ public class Test {
 
         // Test StringWriter with large content
         StringWriter sw = new StringWriter();
-        long startTime = System.currentTimeMillis();
 
         // Write in chunks
         int chunkSize = 1000;
@@ -262,13 +261,11 @@ public class Test {
             sw.write(largeString.substring(i, end));
         }
 
-        long writeTime = System.currentTimeMillis() - startTime;
-        System.out.println("Large string write time: " + writeTime + "ms");
+        System.out.println("Large string write completed: true");
         System.out.println("StringWriter result length: " + sw.toString().length());
 
         // Test StringReader with large content
         StringReader sr = new StringReader(largeString);
-        startTime = System.currentTimeMillis();
 
         char[] buffer = new char[1024];
         int totalChars = 0;
@@ -277,8 +274,7 @@ public class Test {
             totalChars += charsRead;
         }
 
-        long readTime = System.currentTimeMillis() - startTime;
-        System.out.println("Large string read time: " + readTime + "ms");
+        System.out.println("Large string read completed: true");
         System.out.println("Total characters read: " + totalChars);
         System.out.println("Read all characters: " + (totalChars == largeString.length()));
 

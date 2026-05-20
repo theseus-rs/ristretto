@@ -68,6 +68,7 @@ async fn do_map<V: VM>(vm: &Arc<V>, fd: i64, prot: i32, position: i64, length: i
             position: position_u64,
             length: length_usize,
             mode,
+            file_key: None,
             path: None,
         },
     );
@@ -173,12 +174,18 @@ pub async fn unmap_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _length = parameters.pop_long()?;
+    let length = parameters.pop_long()?;
     let address = parameters.pop_long()?;
     let vm = thread.vm()?;
     let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
-    regions.remove(address);
-    vm.native_memory().free(address);
+    let length_usize = usize::try_from(length.max(0)).unwrap_or(0);
+    let base = regions
+        .find_containing(address, length_usize)
+        .map_or(address, |(base, _)| {
+            regions.remove(base);
+            base
+        });
+    vm.native_memory().free(base);
     Ok(Some(Value::Int(0)))
 }
 

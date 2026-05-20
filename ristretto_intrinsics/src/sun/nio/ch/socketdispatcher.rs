@@ -1,4 +1,5 @@
 use crate::java::io::socketfiledescriptor::get_fd;
+use crate::sun::nio::fs::managed_files;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
@@ -71,6 +72,76 @@ fn parse_iovecs(memory: &NativeMemory, address: i64, count: i32) -> Result<Vec<(
     Ok(entries)
 }
 
+async fn read_file_descriptor<V: VM>(
+    vm: &V,
+    fd: i32,
+    address: i64,
+    count: usize,
+) -> Result<Option<Value>> {
+    let mut buf = vec![0u8; count];
+    match managed_files::read(vm.file_handles(), i64::from(fd), &mut buf).await {
+        Ok(0) if count > 0 => Ok(Some(Value::Int(-1))),
+        Ok(n) => {
+            if n > 0 {
+                vm.native_memory().write_bytes(address, &buf[..n]);
+            }
+            Ok(Some(Value::Int(i32::try_from(n)?)))
+        }
+        Err(e) => Err(InternalError(format!("SocketDispatcher.read0: {e}"))),
+    }
+}
+
+async fn readv_file_descriptor<V: VM>(
+    vm: &V,
+    fd: i32,
+    iov_entries: &[(i64, usize)],
+) -> Result<Option<Value>> {
+    let chunks: Vec<Vec<u8>> = iov_entries.iter().map(|(_, len)| vec![0u8; *len]).collect();
+    if chunks.is_empty() {
+        return Ok(Some(Value::Long(0)));
+    }
+
+    let (n, returned_chunks) = managed_files::readv(vm.file_handles(), i64::from(fd), chunks)
+        .await
+        .map_err(|e| InternalError(format!("SocketDispatcher.readv0: {e}")))?;
+    if n == 0 {
+        return Ok(Some(Value::Long(-1)));
+    }
+
+    let mut remaining = n;
+    let mut total = 0i64;
+    for (index, chunk) in returned_chunks.into_iter().enumerate() {
+        if remaining == 0 {
+            break;
+        }
+        let chunk_len = remaining.min(chunk.len());
+        if chunk_len > 0 {
+            vm.native_memory()
+                .write_bytes(iov_entries[index].0, &chunk[..chunk_len]);
+            total += i64::try_from(chunk_len)?;
+            remaining -= chunk_len;
+        }
+    }
+    Ok(Some(Value::Long(total)))
+}
+
+async fn write_file_descriptor<V: VM>(vm: &V, fd: i32, data: &[u8]) -> Result<Option<Value>> {
+    let n = managed_files::write(vm.file_handles(), i64::from(fd), data)
+        .await
+        .map_err(|e| InternalError(format!("SocketDispatcher.write0: {e}")))?;
+    Ok(Some(Value::Int(i32::try_from(n)?)))
+}
+
+async fn writev_file_descriptor<V: VM>(vm: &V, fd: i32, data: &[u8]) -> Result<Option<Value>> {
+    if data.is_empty() {
+        return Ok(Some(Value::Long(0)));
+    }
+    let n = managed_files::write(vm.file_handles(), i64::from(fd), data)
+        .await
+        .map_err(|e| InternalError(format!("SocketDispatcher.writev0: {e}")))?;
+    Ok(Some(Value::Long(i64::try_from(n)?)))
+}
+
 #[intrinsic_method(
     "sun/nio/ch/SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I",
     GreaterThanOrEqual(JAVA_17)
@@ -95,11 +166,9 @@ pub async fn read_0<T: Thread + 'static>(
 
     // For TcpStream: loop with try_read, dropping guard between retries to avoid deadlock
     loop {
-        let handle = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+        let Some(handle) = vm.socket_handles().get(&fd).await else {
+            return read_file_descriptor(&*vm, fd, address, count).await;
+        };
 
         if let Some(stream) = handle.socket_type.as_tcp_stream() {
             let mut buf = vec![0u8; count];
@@ -174,7 +243,6 @@ pub async fn read_0<T: Thread + 'static>(
     GreaterThanOrEqual(JAVA_17)
 )]
 #[async_method]
-#[expect(clippy::too_many_lines)]
 pub async fn readv_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -195,11 +263,9 @@ pub async fn readv_0<T: Thread + 'static>(
 
     // Loop with try_read, dropping guard between retries to avoid deadlock
     loop {
-        let handle = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+        let Some(handle) = vm.socket_handles().get(&fd).await else {
+            return readv_file_descriptor(&*vm, fd, &iov_entries).await;
+        };
 
         if let Some(stream) = handle.socket_type.as_tcp_stream() {
             let mut buf = vec![0u8; total_len];
@@ -314,11 +380,9 @@ pub async fn write_0<T: Thread + 'static>(
 
     // Loop with try_write, dropping guard between retries to avoid deadlock
     loop {
-        let handle = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+        let Some(handle) = vm.socket_handles().get(&fd).await else {
+            return write_file_descriptor(&*vm, fd, &data).await;
+        };
 
         if let Some(stream) = handle.socket_type.as_tcp_stream() {
             match stream.try_write(&data) {
@@ -387,11 +451,9 @@ pub async fn writev_0<T: Thread + 'static>(
 
     // Loop with try_write, dropping guard between retries to avoid deadlock
     loop {
-        let handle = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+        let Some(handle) = vm.socket_handles().get(&fd).await else {
+            return writev_file_descriptor(&*vm, fd, &data).await;
+        };
 
         if let Some(stream) = handle.socket_type.as_tcp_stream() {
             match stream.try_write(&data) {
