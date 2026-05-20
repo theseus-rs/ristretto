@@ -1,13 +1,10 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::JAVA_11;
-#[cfg(not(target_os = "windows"))]
-use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::JavaError;
 use ristretto_types::{Parameters, Result, Thread, VM};
 use std::sync::Arc;
 use windows_sys::Win32::System::Registry::{
@@ -22,6 +19,21 @@ fn extract_bytes(value: &Value) -> Option<Vec<u8>> {
     let guard = value.as_byte_vec_ref().ok()?;
     #[expect(clippy::cast_sign_loss)]
     Some(guard.iter().map(|&b| b as u8).collect())
+}
+
+/// Widens a Java 8 `int` registry handle to the 64-bit value used by the helper
+/// functions. The handle is zero-extended so that predefined `HKEY_*` constants
+/// (e.g. `HKEY_CURRENT_USER` = `0x8000_0001`) round-trip correctly.
+fn widen_handle(h_key: i32) -> i64 {
+    i64::from(h_key.cast_unsigned())
+}
+
+/// Narrows a 64-bit registry handle to a Java 8 `int`, preserving the low 32
+/// bits. This matches `OpenJDK` 8's behavior when storing `HKEY` values in
+/// `jint` fields.
+#[expect(clippy::cast_possible_truncation)]
+fn narrow_handle(h_key: i64) -> i32 {
+    h_key as i32
 }
 
 /// `WindowsRegOpenKey(long hKey, byte[] subKey, int securityMask) -> long[]`
@@ -536,402 +548,239 @@ fn reg_enum_value(h_key: i64, value_index: i32, max_value_name_length: i32) -> O
 }
 
 #[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegCloseKey(I)I",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_close_key_windows_v8_v1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegCloseKey(I)I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegCreateKeyEx(I[B)[I",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_create_key_ex_windows_v8_v1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _lp_sub_key = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegCreateKeyEx(I[B)[I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegDeleteKey(I[B)I",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_delete_key_windows_v8_v1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _lp_sub_key = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegDeleteKey(I[B)I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegDeleteValue(I[B)I",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_delete_value_windows_v8_v1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _value_name = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegDeleteValue(I[B)I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegEnumKeyEx(III)[B",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_enum_key_ex_windows_v8_v1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _max_key_length = parameters.pop_int()?;
-    let _sub_key_index = parameters.pop_int()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegEnumKeyEx(III)[B".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegEnumValue(III)[B",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_enum_value_windows_v8_v1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _max_value_name_length = parameters.pop_int()?;
-    let _value_index = parameters.pop_int()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegEnumValue(III)[B".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegFlushKey(I)I",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_flush_key_windows_v8_v1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegFlushKey(I)I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegOpenKey(I[BI)[I",
     Equal(JAVA_8)
 )]
 #[async_method]
-pub async fn windows_reg_open_key_windows_v8_v1<T: Thread + 'static>(
-    _thread: Arc<T>,
+pub async fn windows_reg_open_key_v8<T: Thread + 'static>(
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _security_mask = parameters.pop_int()?;
-    let _lp_sub_key = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegOpenKey(I[BI)[I".to_string(),
-    )
-    .into())
+    let security_mask = parameters.pop_int()?;
+    let sub_key_val = parameters.pop()?;
+    let h_key = parameters.pop_int()?;
+
+    let sub_key = extract_bytes(&sub_key_val).unwrap_or_default();
+    let result = reg_open_key(widen_handle(h_key), &sub_key, security_mask);
+
+    let int_array: Vec<i32> = vec![narrow_handle(result[0]), narrow_handle(result[1])];
+    let reference = Reference::from(int_array);
+    let vm = thread.vm()?;
+    let value = Value::new_object(vm.garbage_collector(), reference);
+    Ok(Some(value))
 }
 
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegQueryInfoKey(I)[I",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_query_info_key_windows_v8_v1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegQueryInfoKey(I)[I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegQueryValueEx(I[B)[B",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_query_value_ex_windows_v8_v1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _value_name = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegQueryValueEx(I[B)[B".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegSetValueEx(I[B[B)I",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_set_value_ex_windows_v8_v1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _data = parameters.pop_reference()?;
-    let _value_name = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegSetValueEx(I[B[B)I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegCloseKey(I)I",
     Equal(JAVA_8)
 )]
 #[async_method]
-pub async fn windows_reg_close_key_windows_v8_v2<T: Thread + 'static>(
+pub async fn windows_reg_close_key_v8<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegCloseKey(I)I".to_string(),
-    )
-    .into())
+    let h_key = parameters.pop_int()?;
+    let result = reg_close_key(widen_handle(h_key));
+    Ok(Some(Value::Int(result)))
 }
 
-#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegCreateKeyEx(I[B)[I",
     Equal(JAVA_8)
 )]
 #[async_method]
-pub async fn windows_reg_create_key_ex_windows_v8_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
+pub async fn windows_reg_create_key_ex_v8<T: Thread + 'static>(
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _lp_sub_key = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegCreateKeyEx(I[B)[I".to_string(),
-    )
-    .into())
+    let sub_key_val = parameters.pop()?;
+    let h_key = parameters.pop_int()?;
+
+    let sub_key = extract_bytes(&sub_key_val).unwrap_or_default();
+    let result = reg_create_key_ex(widen_handle(h_key), &sub_key);
+
+    let int_array: Vec<i32> = vec![
+        narrow_handle(result[0]),
+        narrow_handle(result[1]),
+        narrow_handle(result[2]),
+    ];
+    let reference = Reference::from(int_array);
+    let vm = thread.vm()?;
+    let value = Value::new_object(vm.garbage_collector(), reference);
+    Ok(Some(value))
 }
 
-#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegDeleteKey(I[B)I",
     Equal(JAVA_8)
 )]
 #[async_method]
-pub async fn windows_reg_delete_key_windows_v8_v2<T: Thread + 'static>(
+pub async fn windows_reg_delete_key_v8<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _lp_sub_key = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegDeleteKey(I[B)I".to_string(),
-    )
-    .into())
+    let sub_key_val = parameters.pop()?;
+    let h_key = parameters.pop_int()?;
+
+    let sub_key = extract_bytes(&sub_key_val).unwrap_or_default();
+    let result = reg_delete_key(widen_handle(h_key), &sub_key);
+    Ok(Some(Value::Int(result)))
 }
 
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegDeleteValue(I[B)I",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_delete_value_windows_v8_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _value_name = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegDeleteValue(I[B)I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegEnumKeyEx(III)[B",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_enum_key_ex_windows_v8_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _max_key_length = parameters.pop_int()?;
-    let _sub_key_index = parameters.pop_int()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegEnumKeyEx(III)[B".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegEnumValue(III)[B",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_enum_value_windows_v8_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _max_value_name_length = parameters.pop_int()?;
-    let _value_index = parameters.pop_int()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegEnumValue(III)[B".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegFlushKey(I)I",
     Equal(JAVA_8)
 )]
 #[async_method]
-pub async fn windows_reg_flush_key_windows_v8_v2<T: Thread + 'static>(
+pub async fn windows_reg_flush_key_v8<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegFlushKey(I)I".to_string(),
-    )
-    .into())
+    let h_key = parameters.pop_int()?;
+    let result = reg_flush_key(widen_handle(h_key));
+    Ok(Some(Value::Int(result)))
 }
 
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegOpenKey(I[BI)[I",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_open_key_windows_v8_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _security_mask = parameters.pop_int()?;
-    let _lp_sub_key = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegOpenKey(I[BI)[I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
-#[intrinsic_method(
-    "java/util/prefs/WindowsPreferences.WindowsRegQueryInfoKey(I)[I",
-    Equal(JAVA_8)
-)]
-#[async_method]
-pub async fn windows_reg_query_info_key_windows_v8_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegQueryInfoKey(I)[I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegQueryValueEx(I[B)[B",
     Equal(JAVA_8)
 )]
 #[async_method]
-pub async fn windows_reg_query_value_ex_windows_v8_v2<T: Thread + 'static>(
-    _thread: Arc<T>,
+pub async fn windows_reg_query_value_ex_v8<T: Thread + 'static>(
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _value_name = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegQueryValueEx(I[B)[B".to_string(),
-    )
-    .into())
+    let value_name_val = parameters.pop()?;
+    let h_key = parameters.pop_int()?;
+
+    let value_name = extract_bytes(&value_name_val).unwrap_or_default();
+    match reg_query_value_ex(widen_handle(h_key), &value_name) {
+        Some(data) => {
+            #[expect(clippy::cast_possible_wrap)]
+            let byte_array: Vec<i8> = data.into_iter().map(|b| b as i8).collect();
+            let reference = Reference::from(byte_array);
+            let vm = thread.vm()?;
+            let value = Value::new_object(vm.garbage_collector(), reference);
+            Ok(Some(value))
+        }
+        None => Ok(Some(Value::Object(None))),
+    }
 }
 
-#[cfg(target_os = "windows")]
 #[intrinsic_method(
     "java/util/prefs/WindowsPreferences.WindowsRegSetValueEx(I[B[B)I",
     Equal(JAVA_8)
 )]
 #[async_method]
-pub async fn windows_reg_set_value_ex_windows_v8_v2<T: Thread + 'static>(
+pub async fn windows_reg_set_value_ex_v8<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _data = parameters.pop_reference()?;
-    let _value_name = parameters.pop_reference()?;
-    let _h_key = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/util/prefs/WindowsPreferences.WindowsRegSetValueEx(I[B[B)I".to_string(),
-    )
-    .into())
+    let data_val = parameters.pop()?;
+    let value_name_val = parameters.pop()?;
+    let h_key = parameters.pop_int()?;
+
+    let Some(value_name) = extract_bytes(&value_name_val) else {
+        return Ok(Some(Value::Int(-1)));
+    };
+    let Some(data) = extract_bytes(&data_val) else {
+        return Ok(Some(Value::Int(-1)));
+    };
+
+    let result = reg_set_value_ex(widen_handle(h_key), &value_name, &data);
+    Ok(Some(Value::Int(result)))
 }
 
+#[intrinsic_method(
+    "java/util/prefs/WindowsPreferences.WindowsRegDeleteValue(I[B)I",
+    Equal(JAVA_8)
+)]
+#[async_method]
+pub async fn windows_reg_delete_value_v8<T: Thread + 'static>(
+    _thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let value_name_val = parameters.pop()?;
+    let h_key = parameters.pop_int()?;
+
+    let Some(value_name) = extract_bytes(&value_name_val) else {
+        return Ok(Some(Value::Int(-1)));
+    };
+
+    let result = reg_delete_value(widen_handle(h_key), &value_name);
+    Ok(Some(Value::Int(result)))
+}
+
+#[intrinsic_method(
+    "java/util/prefs/WindowsPreferences.WindowsRegQueryInfoKey(I)[I",
+    Equal(JAVA_8)
+)]
+#[async_method]
+pub async fn windows_reg_query_info_key_v8<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let h_key = parameters.pop_int()?;
+    let result = reg_query_info_key(widen_handle(h_key));
+
+    let int_array: Vec<i32> = result.iter().map(|&v| narrow_handle(v)).collect();
+    let reference = Reference::from(int_array);
+    let vm = thread.vm()?;
+    let value = Value::new_object(vm.garbage_collector(), reference);
+    Ok(Some(value))
+}
+
+#[intrinsic_method(
+    "java/util/prefs/WindowsPreferences.WindowsRegEnumKeyEx(III)[B",
+    Equal(JAVA_8)
+)]
+#[async_method]
+pub async fn windows_reg_enum_key_ex_v8<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let max_key_length = parameters.pop_int()?;
+    let sub_key_index = parameters.pop_int()?;
+    let h_key = parameters.pop_int()?;
+
+    match reg_enum_key_ex(widen_handle(h_key), sub_key_index, max_key_length) {
+        Some(data) => {
+            #[expect(clippy::cast_possible_wrap)]
+            let byte_array: Vec<i8> = data.into_iter().map(|b| b as i8).collect();
+            let reference = Reference::from(byte_array);
+            let vm = thread.vm()?;
+            let value = Value::new_object(vm.garbage_collector(), reference);
+            Ok(Some(value))
+        }
+        None => Ok(Some(Value::Object(None))),
+    }
+}
+
+#[intrinsic_method(
+    "java/util/prefs/WindowsPreferences.WindowsRegEnumValue(III)[B",
+    Equal(JAVA_8)
+)]
+#[async_method]
+pub async fn windows_reg_enum_value_v8<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let max_value_name_length = parameters.pop_int()?;
+    let value_index = parameters.pop_int()?;
+    let h_key = parameters.pop_int()?;
+
+    match reg_enum_value(widen_handle(h_key), value_index, max_value_name_length) {
+        Some(data) => {
+            #[expect(clippy::cast_possible_wrap)]
+            let byte_array: Vec<i8> = data.into_iter().map(|b| b as i8).collect();
+            let reference = Reference::from(byte_array);
+            let vm = thread.vm()?;
+            let value = Value::new_object(vm.garbage_collector(), reference);
+            Ok(Some(value))
+        }
+        None => Ok(Some(Value::Object(None))),
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1168,302 +1017,255 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_windows_reg_close_key_windows_v8_v1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            windows_reg_close_key_windows_v8_v1(thread, Parameters::new(vec![Value::Int(0)])).await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegCloseKey(I)I",
-            result.unwrap_err().to_string()
-        );
+    async fn test_windows_reg_open_close_key_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let sub_key: Vec<i8> = b"Software\0".iter().map(|&b| b.cast_signed()).collect();
+        let sub_key_ref = Reference::from(sub_key);
+        let sub_key_val = Value::new_object(thread.vm()?.garbage_collector(), sub_key_ref);
+
+        let mut parameters = Parameters::default();
+        parameters.push_int(0x8000_0001u32.cast_signed()); // HKEY_CURRENT_USER
+        parameters.push(sub_key_val);
+        parameters.push_int(0x2_0019); // KEY_READ
+
+        let result = windows_reg_open_key_v8(thread.clone(), parameters)
+            .await?
+            .expect("value");
+        let handle = {
+            let result_ref = result.as_reference()?;
+            let Reference::IntArray(arr) = &*result_ref else {
+                panic!("Expected IntArray result");
+            };
+            assert_eq!(2, arr.len());
+            assert_eq!(0, arr[1], "Expected ERROR_SUCCESS");
+            assert_ne!(0, arr[0], "Expected valid handle");
+            arr[0]
+        };
+
+        let mut close_params = Parameters::default();
+        close_params.push_int(handle);
+        let close_result = windows_reg_close_key_v8(thread, close_params)
+            .await?
+            .expect("value");
+        assert_eq!(0, close_result.as_i32()?);
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_windows_reg_create_key_ex_windows_v8_v1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_create_key_ex_windows_v8_v1(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegCreateKeyEx(I[B)[I",
-            result.unwrap_err().to_string()
-        );
+    async fn test_windows_reg_create_and_delete_key_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+
+        let sub_key: Vec<i8> = b"Software\\JavaSoft\\Prefs\\ristretto_v8_test_key\0"
+            .iter()
+            .map(|&b| b.cast_signed())
+            .collect();
+        let sub_key_ref = Reference::from(sub_key);
+        let sub_key_val = Value::new_object(thread.vm()?.garbage_collector(), sub_key_ref);
+
+        let mut parameters = Parameters::default();
+        parameters.push_int(0x8000_0001u32.cast_signed()); // HKEY_CURRENT_USER
+        parameters.push(sub_key_val);
+
+        let result = windows_reg_create_key_ex_v8(thread.clone(), parameters)
+            .await?
+            .expect("value");
+        let handle = {
+            let result_ref = result.as_reference()?;
+            let Reference::IntArray(arr) = &*result_ref else {
+                panic!("Expected IntArray result");
+            };
+            assert_eq!(3, arr.len());
+            assert_eq!(0, arr[1], "Expected ERROR_SUCCESS");
+            assert_ne!(0, arr[0], "Expected valid handle");
+            arr[0]
+        };
+
+        let mut close_params = Parameters::default();
+        close_params.push_int(handle);
+        let _ = windows_reg_close_key_v8(thread.clone(), close_params).await?;
+
+        let del_key: Vec<i8> = b"Software\\JavaSoft\\Prefs\\ristretto_v8_test_key\0"
+            .iter()
+            .map(|&b| b.cast_signed())
+            .collect();
+        let del_key_ref = Reference::from(del_key);
+        let del_key_val = Value::new_object(thread.vm()?.garbage_collector(), del_key_ref);
+
+        let mut del_params = Parameters::default();
+        del_params.push_int(0x8000_0001u32.cast_signed());
+        del_params.push(del_key_val);
+        let del_result = windows_reg_delete_key_v8(thread, del_params)
+            .await?
+            .expect("value");
+        assert_eq!(0, del_result.as_i32()?);
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_windows_reg_delete_key_windows_v8_v1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_delete_key_windows_v8_v1(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegDeleteKey(I[B)I",
-            result.unwrap_err().to_string()
-        );
+    async fn test_windows_reg_query_info_key_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+
+        let mut parameters = Parameters::default();
+        parameters.push_int(0x8000_0001u32.cast_signed()); // HKEY_CURRENT_USER
+
+        let result = windows_reg_query_info_key_v8(thread, parameters)
+            .await?
+            .expect("value");
+        let result_ref = result.as_reference()?;
+        let Reference::IntArray(arr) = &*result_ref else {
+            panic!("Expected IntArray result");
+        };
+        assert_eq!(5, arr.len());
+        assert_eq!(0, arr[1], "Expected ERROR_SUCCESS");
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_windows_reg_delete_value_windows_v8_v1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_delete_value_windows_v8_v1(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegDeleteValue(I[B)I",
-            result.unwrap_err().to_string()
-        );
+    async fn test_windows_reg_set_query_enum_delete_value_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+
+        let sub_key_bytes: &[u8] = b"Software\\JavaSoft\\Prefs\\ristretto_v8_val_test\0";
+        let vm = thread.vm()?;
+        let gc = vm.garbage_collector();
+        let make_bytes = |data: &[u8]| -> Value {
+            let bytes: Vec<i8> = data.iter().map(|&b| b.cast_signed()).collect();
+            Value::new_object(gc, Reference::from(bytes))
+        };
+
+        let mut create_params = Parameters::default();
+        create_params.push_int(0x8000_0001u32.cast_signed());
+        create_params.push(make_bytes(sub_key_bytes));
+        let create_result = windows_reg_create_key_ex_v8(thread.clone(), create_params)
+            .await?
+            .expect("value");
+        let handle = {
+            let create_ref = create_result.as_reference()?;
+            if let Reference::IntArray(arr) = &*create_ref {
+                assert_eq!(0, arr[1]);
+                arr[0]
+            } else {
+                panic!("Expected IntArray");
+            }
+        };
+
+        let mut close_params = Parameters::default();
+        close_params.push_int(handle);
+        let _ = windows_reg_close_key_v8(thread.clone(), close_params).await?;
+
+        let mut open_params = Parameters::default();
+        open_params.push_int(0x8000_0001u32.cast_signed());
+        open_params.push(make_bytes(sub_key_bytes));
+        open_params.push_int(0xf_003f); // KEY_ALL_ACCESS
+        let open_result = windows_reg_open_key_v8(thread.clone(), open_params)
+            .await?
+            .expect("value");
+        let handle = {
+            let open_ref = open_result.as_reference()?;
+            if let Reference::IntArray(arr) = &*open_ref {
+                assert_eq!(0, arr[1]);
+                arr[0]
+            } else {
+                panic!("Expected IntArray");
+            }
+        };
+
+        let make_name = |name: &[u8]| -> Value { make_bytes(name) };
+
+        let mut set_params = Parameters::default();
+        set_params.push_int(handle);
+        set_params.push(make_name(b"v8Val\0"));
+        set_params.push(make_name(b"hello\0"));
+        let set_result = windows_reg_set_value_ex_v8(thread.clone(), set_params)
+            .await?
+            .expect("value");
+        assert_eq!(0, set_result.as_i32()?);
+
+        // Flush
+        let mut flush_params = Parameters::default();
+        flush_params.push_int(handle);
+        let flush_result = windows_reg_flush_key_v8(thread.clone(), flush_params)
+            .await?
+            .expect("value");
+        assert_eq!(0, flush_result.as_i32()?);
+
+        // Query value
+        let mut query_params = Parameters::default();
+        query_params.push_int(handle);
+        query_params.push(make_name(b"v8Val\0"));
+        let query_result = windows_reg_query_value_ex_v8(thread.clone(), query_params)
+            .await?
+            .expect("value");
+        assert_ne!(Value::Object(None), query_result);
+
+        // Enum value (index 0 should yield our value name)
+        let mut enum_val_params = Parameters::default();
+        enum_val_params.push_int(handle);
+        enum_val_params.push_int(0);
+        enum_val_params.push_int(64);
+        let enum_val_result = windows_reg_enum_value_v8(thread.clone(), enum_val_params)
+            .await?
+            .expect("value");
+        assert_ne!(Value::Object(None), enum_val_result);
+
+        // Delete value
+        let mut del_val_params = Parameters::default();
+        del_val_params.push_int(handle);
+        del_val_params.push(make_name(b"v8Val\0"));
+        let del_result = windows_reg_delete_value_v8(thread.clone(), del_val_params)
+            .await?
+            .expect("value");
+        assert_eq!(0, del_result.as_i32()?);
+
+        let mut close_params = Parameters::default();
+        close_params.push_int(handle);
+        let _ = windows_reg_close_key_v8(thread.clone(), close_params).await?;
+
+        let mut del_params = Parameters::default();
+        del_params.push_int(0x8000_0001u32.cast_signed());
+        del_params.push(make_bytes(sub_key_bytes));
+        let _ = windows_reg_delete_key_v8(thread, del_params).await?;
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_windows_reg_enum_key_ex_windows_v8_v1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_enum_key_ex_windows_v8_v1(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegEnumKeyEx(III)[B",
-            result.unwrap_err().to_string()
-        );
-    }
+    async fn test_windows_reg_enum_key_ex_v8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
 
-    #[tokio::test]
-    async fn test_windows_reg_enum_value_windows_v8_v1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_enum_value_windows_v8_v1(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegEnumValue(III)[B",
-            result.unwrap_err().to_string()
-        );
-    }
+        // Open HKCU\Software for read
+        let sub_key: Vec<i8> = b"Software\0".iter().map(|&b| b.cast_signed()).collect();
+        let sub_key_ref = Reference::from(sub_key);
+        let sub_key_val = Value::new_object(thread.vm()?.garbage_collector(), sub_key_ref);
 
-    #[tokio::test]
-    async fn test_windows_reg_flush_key_windows_v8_v1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            windows_reg_flush_key_windows_v8_v1(thread, Parameters::new(vec![Value::Int(0)])).await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegFlushKey(I)I",
-            result.unwrap_err().to_string()
-        );
-    }
+        let mut open_params = Parameters::default();
+        open_params.push_int(0x8000_0001u32.cast_signed());
+        open_params.push(sub_key_val);
+        open_params.push_int(0x2_0019); // KEY_READ
+        let open_result = windows_reg_open_key_v8(thread.clone(), open_params)
+            .await?
+            .expect("value");
+        let handle = {
+            let open_ref = open_result.as_reference()?;
+            if let Reference::IntArray(arr) = &*open_ref {
+                arr[0]
+            } else {
+                panic!("Expected IntArray");
+            }
+        };
 
-    #[tokio::test]
-    async fn test_windows_reg_open_key_windows_v8_v1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_open_key_windows_v8_v1(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None), Value::Int(0)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegOpenKey(I[BI)[I",
-            result.unwrap_err().to_string()
-        );
-    }
+        let mut enum_params = Parameters::default();
+        enum_params.push_int(handle);
+        enum_params.push_int(0);
+        enum_params.push_int(256);
+        let enum_result = windows_reg_enum_key_ex_v8(thread.clone(), enum_params)
+            .await?
+            .expect("value");
+        // HKCU\Software almost certainly has at least one subkey, but guard against the
+        // (unlikely) empty case.
+        let _ = enum_result;
 
-    #[tokio::test]
-    async fn test_windows_reg_query_info_key_windows_v8_v1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            windows_reg_query_info_key_windows_v8_v1(thread, Parameters::new(vec![Value::Int(0)]))
-                .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegQueryInfoKey(I)[I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_query_value_ex_windows_v8_v1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_query_value_ex_windows_v8_v1(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegQueryValueEx(I[B)[B",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_set_value_ex_windows_v8_v1() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_set_value_ex_windows_v8_v1(
-            thread,
-            Parameters::new(vec![
-                Value::Int(0),
-                Value::Object(None),
-                Value::Object(None),
-            ]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegSetValueEx(I[B[B)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_close_key_windows_v8_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            windows_reg_close_key_windows_v8_v2(thread, Parameters::new(vec![Value::Int(0)])).await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegCloseKey(I)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_create_key_ex_windows_v8_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_create_key_ex_windows_v8_v2(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegCreateKeyEx(I[B)[I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_delete_key_windows_v8_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_delete_key_windows_v8_v2(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegDeleteKey(I[B)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_delete_value_windows_v8_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_delete_value_windows_v8_v2(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegDeleteValue(I[B)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_enum_key_ex_windows_v8_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_enum_key_ex_windows_v8_v2(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegEnumKeyEx(III)[B",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_enum_value_windows_v8_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_enum_value_windows_v8_v2(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegEnumValue(III)[B",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_flush_key_windows_v8_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            windows_reg_flush_key_windows_v8_v2(thread, Parameters::new(vec![Value::Int(0)])).await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegFlushKey(I)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_open_key_windows_v8_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_open_key_windows_v8_v2(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None), Value::Int(0)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegOpenKey(I[BI)[I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_query_info_key_windows_v8_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            windows_reg_query_info_key_windows_v8_v2(thread, Parameters::new(vec![Value::Int(0)]))
-                .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegQueryInfoKey(I)[I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_query_value_ex_windows_v8_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_query_value_ex_windows_v8_v2(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegQueryValueEx(I[B)[B",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[tokio::test]
-    async fn test_windows_reg_set_value_ex_windows_v8_v2() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = windows_reg_set_value_ex_windows_v8_v2(
-            thread,
-            Parameters::new(vec![
-                Value::Int(0),
-                Value::Object(None),
-                Value::Object(None),
-            ]),
-        )
-        .await;
-        assert_eq!(
-            "java/util/prefs/WindowsPreferences.WindowsRegSetValueEx(I[B[B)I",
-            result.unwrap_err().to_string()
-        );
+        let mut close_params = Parameters::default();
+        close_params.push_int(handle);
+        let _ = windows_reg_close_key_v8(thread, close_params).await?;
+        Ok(())
     }
 }
