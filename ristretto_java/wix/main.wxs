@@ -60,7 +60,7 @@
 
     <Product
         Id='*'
-        Name='ristretto_cli'
+        Name='ristretto_java'
         UpgradeCode='F6B5B513-84DC-4554-8DFB-50263541E9C9'
         Manufacturer='Brian Heineman'
         Language='1033'
@@ -83,11 +83,11 @@
             DowngradeErrorMessage='A newer version of [ProductName] is already installed. Setup will now exit.'/>
 
         <Media Id='1' Cabinet='media1.cab' EmbedCab='yes' DiskPrompt='CD-ROM #1'/>
-        <Property Id='DiskPrompt' Value='ristretto_cli Installation'/>
+        <Property Id='DiskPrompt' Value='ristretto_java Installation'/>
 
         <Directory Id='TARGETDIR' Name='SourceDir'>
             <Directory Id='$(var.PlatformProgramFilesFolder)' Name='PFiles'>
-                <Directory Id='APPLICATIONFOLDER' Name='ristretto_cli'>
+                <Directory Id='APPLICATIONFOLDER' Name='ristretto_java'>
                     
                     <!--
                       Enabling the license sidecar file in the installer is a four step process:
@@ -173,7 +173,7 @@
         <!--<Icon Id='ProductICO' SourceFile='wix\Product.ico'/>-->
         <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
 
-        <Property Id='ARPHELPLINK' Value='https://theseus-rs.github.io/ristretto/ristretto_cli/'/>
+        <Property Id='ARPHELPLINK' Value='https://theseus-rs.github.io/ristretto/ristretto_java/'/>
         
         <UI>
             <UIRef Id='WixUI_FeatureTree'/>

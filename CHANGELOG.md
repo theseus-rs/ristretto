@@ -7,16 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## `ristretto_pom` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.31.0) - 2026-05-03
+##
+`ristretto_pom` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.31.0) - 2026-05-03
 
 ### Added
+
 - implement sockets
 
-## `ristretto_cli` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/v0.30.0...v0.31.0) - 2026-05-03
+## `ristretto_java` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/v0.30.0...v0.31.0) - 2026-05-03
 
 ### Added
+
 - add jpms support
-- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof,
+  and multianewarray
 - add array and object support to JIT
 - implement sun/misc/Version
 - implement sun/nio/fs
@@ -24,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement sockets
 
 ### Fixed
+
 - correct windows socket io
 - account for long/double slots and return values in invoke* stack_delta
 - correct module support on windows
@@ -38,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct primordial thread name
 
 ### Other
+
 - update to rust 1.95.0
 - reduce memory utilization of Instruction
 - add ci tests for riscv64gc-unknown-linux-gnu
@@ -49,14 +55,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update dependencies
 - add ci tests for s390x-unknown-linux-gnu
 
-## `ristretto_vm` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.30.0...ristretto_vm-v0.31.0) - 2026-05-03
+##
+`ristretto_vm` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.30.0...ristretto_vm-v0.31.0) - 2026-05-03
 
 ### Added
-- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof,
+  and multianewarray
 - add array and object support to JIT
 - add jpms support
 
 ### Fixed
+
 - correct module support on windows
 - correct macos locale detection
 - throw java.lang.UnsatisfiedLinkError native method is not found
@@ -66,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct primordial thread name
 
 ### Other
+
 - add ci tests for s390x-unknown-linux-gnu
 - add ci tests for riscv64gc-unknown-linux-gnu
 - update to rust 1.95.0
@@ -73,16 +84,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - reduce memory utilization of Instruction
 - enable clippy linting for wasm builds
 
-## `ristretto_intrinsics` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.30.0...ristretto_intrinsics-v0.31.0) - 2026-05-03
+##
+`ristretto_intrinsics` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.30.0...ristretto_intrinsics-v0.31.0) - 2026-05-03
 
 ### Added
+
 - implement sun/misc/Version
 - implement sun/nio/fs
-- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof,
+  and multianewarray
 - implement java/nio/MappedByteBuffer
 - add jpms support
 
 ### Fixed
+
 - correct module support on windows
 - correct windows socket io
 - correct windows file io
@@ -94,95 +109,124 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct java/lang/Class.forName0(...) support for custom class loaders
 
 ### Other
+
 - update to rust 1.95.0
 - add intrinsic methods for all supported OS version combinations
 - update to java 25.0.3.9.1
 - enable clippy linting for wasm builds
 - update dependencies
 
-## `ristretto_types` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.30.0...ristretto_types-v0.31.0) - 2026-05-03
+##
+`ristretto_types` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.30.0...ristretto_types-v0.31.0) - 2026-05-03
 
 ### Added
-- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof,
+  and multianewarray
 - add jpms support
 
 ### Fixed
+
 - correct windows socket io
 - correct GC memory leak
 - create lightweight class loading mode
 
-## `ristretto_jit` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.30.0...ristretto_jit-v0.31.0) - 2026-05-03
+##
+`ristretto_jit` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.30.0...ristretto_jit-v0.31.0) - 2026-05-03
 
 ### Added
-- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof,
+  and multianewarray
 - add array and object support to JIT
 
 ### Other
+
 - reduce memory utilization of Instruction
 - enable clippy linting for wasm builds
 
-## `ristretto_macros` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.30.0...ristretto_macros-v0.31.0) - 2026-05-03
+##
+`ristretto_macros` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.30.0...ristretto_macros-v0.31.0) - 2026-05-03
 
 ### Other
+
 - add intrinsic methods for all supported OS version combinations
 
-## `ristretto_classloader` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.30.0...ristretto_classloader-v0.31.0) - 2026-05-03
+##
+`ristretto_classloader` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.30.0...ristretto_classloader-v0.31.0) - 2026-05-03
 
 ### Added
+
 - add jpms support
 
 ### Fixed
+
 - correct module support on windows
 - correct macos locale detection
 - create lightweight class loading mode
 
 ### Other
+
 - add ci tests for riscv64gc-unknown-linux-gnu
 - add intrinsic methods for all supported OS version combinations
 - update to java 25.0.3.9.1
 - enable clippy linting for wasm builds
 
-## `ristretto_jimage` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.30.0...ristretto_jimage-v0.31.0) - 2026-05-03
+##
+`ristretto_jimage` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.30.0...ristretto_jimage-v0.31.0) - 2026-05-03
 
 ### Other
+
 - update to rust 1.95.0
 
-## `ristretto_gc` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.30.0...ristretto_gc-v0.31.0) - 2026-05-03
+##
+`ristretto_gc` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.30.0...ristretto_gc-v0.31.0) - 2026-05-03
 
 ### Added
-- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof, and multianewarray
+
+- implement jit instructions getstatic, putstatic, getfield, putfield, new, anewarray, athrow, checkcast, instanceof,
+  and multianewarray
 - add array and object support to JIT
 
 ### Fixed
+
 - throw java.lang.UnsatisfiedLinkError native method is not found
 - correct java/io/UnixFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;
 - correct GC memory leak
 
 ### Other
+
 - remove gc benchmarks
 - update to rust 1.95.0
 - update GC test to be deterministic
 
-## `ristretto_classfile` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.30.0...ristretto_classfile-v0.31.0) - 2026-05-03
+##
+`ristretto_classfile` - [0.31.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.30.0...ristretto_classfile-v0.31.0) - 2026-05-03
 
 ### Added
+
 - add jpms support
 
 ### Fixed
+
 - account for long/double slots and return values in invoke* stack_delta
 
 ### Other
+
 - update to rust 1.95.0
 - reduce memory utilization of Instruction
 
-## `ristretto_pom` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.30.0) - 2026-03-22
+##
+`ristretto_pom` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.30.0) - 2026-03-22
 
 ### Added
+
 - implement sockets
 
-## `ristretto_cli` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/v0.29.0...v0.30.0) - 2026-03-22
+## `ristretto_java` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/v0.29.0...v0.30.0) - 2026-03-22
 
 ### Added
+
 - implement sockets
 - implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
 - implement jdk/internal/jimage/NativeImageBuffer.getNativeMap(Ljava/lang/String;)Ljava/nio/ByteBuffer;
@@ -205,6 +249,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement java/lang/StackStreamFactory
 
 ### Fixed
+
 - add areturn class file verification
 - correct manifest to handle line continuations
 - add system property jdk.module.illegal.native.access=allow
@@ -215,6 +260,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve interface method resolution and MethodHandle dispatch
 
 ### Other
+
 - [**breaking**] correct java.lang.String to comply with the JVM specification
 - [**breaking**] optimize class file reading
 - update intrinsic method java versions
@@ -229,28 +275,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update dist=0.31.0
 - update test profile
 
-## `ristretto_vm` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.29.0...ristretto_vm-v0.30.0) - 2026-03-22
+##
+`ristretto_vm` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.29.0...ristretto_vm-v0.30.0) - 2026-03-22
 
 ### Added
+
 - implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
 - implement sockets
 - add sun/nio/fs/WindowsNativeDispatcher
 - implement threading
 
 ### Fixed
+
 - improve interface method resolution and MethodHandle dispatch
 - unify file java.io and java.nio file handles
 - update nio to use async file io
 
 ### Other
+
 - update to rust 1.94.0
 - update intrinsic functions to support configuration macros
 - [**breaking**] correct java.lang.String to comply with the JVM specification
 - [**breaking**] optimize class file reading
 
-## `ristretto_intrinsics` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.29.0...ristretto_intrinsics-v0.30.0) - 2026-03-22
+##
+`ristretto_intrinsics` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.29.0...ristretto_intrinsics-v0.30.0) - 2026-03-22
 
 ### Added
+
 - implement jdk/internal/jimage/NativeImageBuffer.getNativeMap(Ljava/lang/String;)Ljava/nio/ByteBuffer;
 - implement java/util/jar/JarFile
 - implement java/util/zip/ZipFile
@@ -263,6 +315,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement threading
 
 ### Fixed
+
 - add system property jdk.module.illegal.native.access=allow
 - correct java/lang/reflect/Array boxing, widening and error handling
 - correct java/lang/Class.forName0 to support custom class loaders
@@ -270,180 +323,235 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update nio to use async file io
 
 ### Other
+
 - update intrinsic method java versions
 - update unimplemented intrinsic functions to return java.lang.UnsatisfiedLinkError
 - [**breaking**] correct java.lang.String to comply with the JVM specification
 - [**breaking**] optimize class file reading
 
-## `ristretto_types` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.29.0...ristretto_types-v0.30.0) - 2026-03-22
+##
+`ristretto_types` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.29.0...ristretto_types-v0.30.0) - 2026-03-22
 
 ### Added
+
 - implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
 - implement sockets
 - implement threading
 
 ### Fixed
+
 - unify file java.io and java.nio file handles
 - update nio to use async file io
 
 ### Other
+
 - update intrinsic functions to support configuration macros
 - [**breaking**] correct java.lang.String to comply with the JVM specification
 - optimize native memory access
 
-## `ristretto_jit` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.29.0...ristretto_jit-v0.30.0) - 2026-03-22
+##
+`ristretto_jit` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.29.0...ristretto_jit-v0.30.0) - 2026-03-22
 
 ### Added
+
 - implement sockets
 
 ### Other
+
 - [**breaking**] correct java.lang.String to comply with the JVM specification
 
-## `ristretto_macros` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.29.0...ristretto_macros-v0.30.0) - 2026-03-22
+##
+`ristretto_macros` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.29.0...ristretto_macros-v0.30.0) - 2026-03-22
 
 ### Added
+
 - implement sockets
 
 ### Other
+
 - update intrinsic functions to support configuration macros
 
-## `ristretto_classloader` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.29.0...ristretto_classloader-v0.30.0) - 2026-03-22
+##
+`ristretto_classloader` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.29.0...ristretto_classloader-v0.30.0) - 2026-03-22
 
 ### Added
+
 - implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
 - implement sockets
 
 ### Fixed
+
 - correct manifest to handle line continuations
 
 ### Other
+
 - [**breaking**] correct java.lang.String to comply with the JVM specification
 - [**breaking**] optimize class file reading
 
-## `ristretto_jimage` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.29.0...ristretto_jimage-v0.30.0) - 2026-03-22
+##
+`ristretto_jimage` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.29.0...ristretto_jimage-v0.30.0) - 2026-03-22
 
 ### Other
+
 - update Cargo.toml dependencies
 
-## `ristretto_gc` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.29.0...ristretto_gc-v0.30.0) - 2026-03-22
+##
+`ristretto_gc` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.29.0...ristretto_gc-v0.30.0) - 2026-03-22
 
 ### Added
+
 - implement sockets
 
-## `ristretto_classfile` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.29.0...ristretto_classfile-v0.30.0) - 2026-03-22
+##
+`ristretto_classfile` - [0.30.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.29.0...ristretto_classfile-v0.30.0) - 2026-03-22
 
 ### Added
+
 - implement java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;
 - implement sockets
 
 ### Fixed
+
 - add areturn class file verification
 
 ### Other
+
 - [**breaking**] correct java.lang.String to comply with the JVM specification
 - [**breaking**] optimize class file reading
 
-## `ristretto_pom` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.28.0...ristretto_pom-v0.29.0) - 2026-02-08
+##
+`ristretto_pom` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.28.0...ristretto_pom-v0.29.0) - 2026-02-08
 
 ### Added
+
 - add ristretto_pom crate
 
 ### Other
+
 - create ristretto_intrinsics and ristretto_types crates
 
-## `ristretto_cli` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/v0.28.0...v0.29.0) - 2026-02-08
+## `ristretto_java` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/v0.28.0...v0.29.0) - 2026-02-08
 
 ### Added
+
 - add ristretto_pom crate
 - implement java.lang.Record
 - implement java/util/zip package
 
 ### Fixed
+
 - improve Java 8 support
 
 ### Other
+
 - create ristretto_intrinsics and ristretto_types crates
 - refactor ClassFile::from_bytes interface to avoid allocation when loading classes
 - update Java 17 tests to 17.0.18.9.1
 - increase instruction yield count
 - optimize ldc/ldc_w to load integer and float synchronously
 
-## `ristretto_vm` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.28.0...ristretto_vm-v0.29.0) - 2026-02-08
+##
+`ristretto_vm` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.28.0...ristretto_vm-v0.29.0) - 2026-02-08
 
 ### Added
+
 - implement java.lang.Record
 - add ristretto_pom crate
 
 ### Fixed
+
 - improve Java 8 support
 
 ### Other
+
 - create ristretto_intrinsics and ristretto_types crates
 - increase instruction yield count
 - optimize ldc/ldc_w to load integer and float synchronously
 
-## `ristretto_intrinsics` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.28.0...ristretto_intrinsics-v0.29.0) - 2026-02-08
+##
+`ristretto_intrinsics` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.28.0...ristretto_intrinsics-v0.29.0) - 2026-02-08
 
 ### Added
+
 - implement java.lang.Record
 
 ### Other
+
 - create ristretto_intrinsics and ristretto_types crates
 
-## `ristretto_types` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.28.0...ristretto_types-v0.29.0) - 2026-02-08
+##
+`ristretto_types` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.28.0...ristretto_types-v0.29.0) - 2026-02-08
 
 ### Added
+
 - implement java.lang.Record
 
 ### Other
+
 - create ristretto_intrinsics and ristretto_types crates
 
-## `ristretto_jit` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.28.0...ristretto_jit-v0.29.0) - 2026-02-08
+##
+`ristretto_jit` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.28.0...ristretto_jit-v0.29.0) - 2026-02-08
 
 ### Other
+
 - create ristretto_intrinsics and ristretto_types crates
 
-## `ristretto_macros` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.28.0...ristretto_macros-v0.29.0) - 2026-02-08
+##
+`ristretto_macros` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.28.0...ristretto_macros-v0.29.0) - 2026-02-08
 
 ### Added
+
 - implement java.lang.Record
 
 ### Other
+
 - create ristretto_intrinsics and ristretto_types crates
 
-## `ristretto_classloader` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.28.0...ristretto_classloader-v0.29.0) - 2026-02-08
+##
+`ristretto_classloader` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.28.0...ristretto_classloader-v0.29.0) - 2026-02-08
 
 ### Added
+
 - implement java.lang.Record
 - add ristretto_pom crate
 
 ### Other
+
 - create ristretto_intrinsics and ristretto_types crates
 - refactor ClassFile::from_bytes interface to avoid allocation when loading classes
 - update Java 17 tests to 17.0.18.9.1
 
-## `ristretto_jimage` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.28.0...ristretto_jimage-v0.29.0) - 2026-02-08
+##
+`ristretto_jimage` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.28.0...ristretto_jimage-v0.29.0) - 2026-02-08
 
 ### Other
+
 - create ristretto_intrinsics and ristretto_types crates
 
-## `ristretto_gc` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.28.0...ristretto_gc-v0.29.0) - 2026-02-08
+##
+`ristretto_gc` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.28.0...ristretto_gc-v0.29.0) - 2026-02-08
 
 ### Other
+
 - create ristretto_intrinsics and ristretto_types crates
 
-## `ristretto_classfile` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.28.0...ristretto_classfile-v0.29.0) - 2026-02-08
+##
+`ristretto_classfile` - [0.29.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.28.0...ristretto_classfile-v0.29.0) - 2026-02-08
 
 ### Added
+
 - add ristretto_pom crate
 
 ### Other
+
 - create ristretto_intrinsics and ristretto_types crates
 - refactor ClassFile::from_bytes interface to avoid allocation when loading classes
 
-## `ristretto_cli` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/v0.27.0...v0.28.0) - 2026-01-26
+## `ristretto_java` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/v0.27.0...v0.28.0) - 2026-01-26
 
 ### Added
+
 - implement async threading
 - initial jpms support
 - implement comprehensive bytecode and attribute verification
@@ -460,6 +568,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;
 
 ### Fixed
+
 - isolate GC to VM instance
 - improve performance
 - improve cli exception cause reporting
@@ -471,6 +580,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - register dynamically created classes
 
 ### Other
+
 - improve lint configuration
 - rename mutf8 benchmark
 - Fix lookupswitch type cast error
@@ -483,9 +593,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct clippy lints
 - Implement invokedynamic support and MethodHandleNatives updates for JDK 17+ compatibility
 
-## `ristretto_vm` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.27.0...ristretto_vm-v0.28.0) - 2026-01-26
+##
+`ristretto_vm` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.27.0...ristretto_vm-v0.28.0) - 2026-01-26
 
 ### Added
+
 - add monitorenter and monitorexit instructions
 - implement async threading
 - enhance interface method resolution and string constant initialization
@@ -502,6 +614,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;
 
 ### Fixed
+
 - isolate GC to VM instance
 - handle backward jumps to method entry and enable ignored tests
 - improve performance
@@ -511,6 +624,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update class loading to comply with JVMS 5.5
 
 ### Other
+
 - update java versions
 - correct clippy lints
 - Implement invokedynamic support and MethodHandleNatives updates for JDK 17+ compatibility
@@ -518,35 +632,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add field initialization tests and docs
 - improve lint configuration
 
-## `ristretto_macros` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.27.0...ristretto_macros-v0.28.0) - 2026-01-26
+##
+`ristretto_macros` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.27.0...ristretto_macros-v0.28.0) - 2026-01-26
 
 ### Added
+
 - implement async threading
 
 ### Fixed
+
 - improve performance
 
 ### Other
+
 - improve lint configuration
 
-## `ristretto_jit` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.27.0...ristretto_jit-v0.28.0) - 2026-01-26
+##
+`ristretto_jit` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.27.0...ristretto_jit-v0.28.0) - 2026-01-26
 
 ### Added
+
 - implement lambda support
 
 ### Fixed
+
 - isolate GC to VM instance
 - handle backward jumps to method entry and enable ignored tests
 - improve performance
 - correct tableswitch and lookupswitch negative offsets
 
 ### Other
+
 - update rustdoc references section
 - improve lint configuration
 
-## `ristretto_classloader` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.27.0...ristretto_classloader-v0.28.0) - 2026-01-26
+##
+`ristretto_classloader` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.27.0...ristretto_classloader-v0.28.0) - 2026-01-26
 
 ### Added
+
 - enhance interface method resolution and string constant initialization
 - implement reflection
 - implement lambda support
@@ -556,11 +680,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - initial jpms support
 
 ### Fixed
+
 - isolate GC to VM instance
 - improve performance
 - update class loading to comply with JVMS 5.5
 
 ### Other
+
 - update java versions
 - update to reqwest=0.13.0
 - update rustdoc references section
@@ -568,39 +694,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve lint configuration
 - correct cyclic crate dependencies with ristretto_jimage
 
-## `ristretto_jimage` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.27.0...ristretto_jimage-v0.28.0) - 2026-01-26
+##
+`ristretto_jimage` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.27.0...ristretto_jimage-v0.28.0) - 2026-01-26
 
 ### Other
+
 - improve lint configuration
 - correct cyclic crate dependencies with ristretto_jimage
 
-## `ristretto_gc` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.27.0...ristretto_gc-v0.28.0) - 2026-01-26
+##
+`ristretto_gc` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.27.0...ristretto_gc-v0.28.0) - 2026-01-26
 
 ### Added
+
 - implement reflection
 - implement lambda support
 - initial jpms support
 
 ### Fixed
+
 - isolate GC to VM instance
 
 ### Other
+
 - improve lint configuration
 
-## `ristretto_classfile` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.27.0...ristretto_classfile-v0.28.0) - 2026-01-26
+##
+`ristretto_classfile` - [0.28.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.27.0...ristretto_classfile-v0.28.0) - 2026-01-26
 
 ### Added
+
 - implement invokedynamic instruction
 - implement hidden classes
 - initial jpms support
 - implement comprehensive bytecode and attribute verification
 
 ### Fixed
+
 - optimize mutf8
 - improve performance
 - correct tableswitch and lookupswitch negative offsets
 
 ### Other
+
 - rename mutf8 benchmark
 - Fix lookupswitch type cast error
 - Add test for lookupswitch bug
@@ -608,9 +744,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update rustdoc references section
 - improve lint configuration
 
-## `ristretto_cli` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/v0.26.0...v0.27.0) - 2025-12-09
+## `ristretto_java` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/v0.26.0...v0.27.0) - 2025-12-09
 
 ### Added
+
 - add jimage support
 - implement jdk.internal.misc.Unsafe
 - load classes using JImage
@@ -620,6 +757,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement jdk/internal/misc/CDS.logLambdaFormInvoker(Ljava/lang/String;)V
 
 ### Fixed
+
 - disable ansi colors in logs when not writing to the terminal
 - correct logic for determining the latest corretto release to account for missing OS packages
 - fixes endianness handling to be architecture aware instead of hardcoding
@@ -629,6 +767,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct Java 25 system property definitions
 
 ### Other
+
 - move Gc<RwLock<>> from Reference to Value::Object()
 - address clippy errors
 - update rustdoc references to point to java 25
@@ -645,9 +784,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update Cargo.toml dependencies
 - remove unnecessary mutex and code generation from startup_trace macro
 
-## `ristretto_vm` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.26.0...ristretto_vm-v0.27.0) - 2025-12-09
+##
+`ristretto_vm` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.26.0...ristretto_vm-v0.27.0) - 2025-12-09
 
 ### Added
+
 - implement jdk.internal.misc.Unsafe
 - add java.lang.Class nestmate support
 - implement java.lang.invoke.MethodHandleNatives
@@ -657,6 +798,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement jdk/internal/misc/CDS.logLambdaFormInvoker(Ljava/lang/String;)V
 
 ### Fixed
+
 - fixes endianness handling to be architecture aware instead of hardcoding
 - add check for java.lang.NegativeArraySizeException
 - correct Unsafe get/put primitive array support
@@ -664,6 +806,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct Java 25 system property definitions
 
 ### Other
+
 - update rustdoc references to point to java 25
 - update array references to Box<[T]> instead of Vec<T>
 - update default java version to 25.0.1.8.1
@@ -673,34 +816,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - remove unnecessary mutex and code generation from startup_trace macro
 - update to java 25.0.0.36.1
 
-## `ristretto_macros` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.26.0...ristretto_macros-v0.27.0) - 2025-12-09
+##
+`ristretto_macros` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.26.0...ristretto_macros-v0.27.0) - 2025-12-09
 
 ### Other
+
 - update Cargo.toml dependencies
 
-## `ristretto_jit` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.26.0...ristretto_jit-v0.27.0) - 2025-12-09
+##
+`ristretto_jit` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.26.0...ristretto_jit-v0.27.0) - 2025-12-09
 
 ### Added
+
 - add jimage support
 
 ### Other
+
 - update rustdoc references to point to java 25
 - address clippy errors
 - simplify jit branch type casting
 - optimize jit tableswitch instruction
 - update jit docs
 
-## `ristretto_classloader` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.26.0...ristretto_classloader-v0.27.0) - 2025-12-09
+##
+`ristretto_classloader` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.26.0...ristretto_classloader-v0.27.0) - 2025-12-09
 
 ### Added
+
 - implement jdk.internal.misc.Unsafe
 - load classes using JImage
 - add jimage support
 
 ### Fixed
+
 - correct logic for determining the latest corretto release to account for missing OS packages
 
 ### Other
+
 - update rustdoc references to point to java 25
 - update array references to Box<[T]> instead of Vec<T>
 - update default java version to 25.0.1.8.1
@@ -710,40 +862,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - address clippy errors
 - update to java 25.0.0.36.1
 
-## `ristretto_jimage` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.26.0...ristretto_jimage-v0.27.0) - 2025-12-09
+##
+`ristretto_jimage` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.26.0...ristretto_jimage-v0.27.0) - 2025-12-09
 
 ### Added
+
 - add jimage support
 
 ### Fixed
+
 - correct JImage get_resource_offset calculation and validation
 
 ### Other
+
 - update java versions
 - address clippy errors
 
-## `ristretto_gc` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.26.0...ristretto_gc-v0.27.0) - 2025-12-09
+##
+`ristretto_gc` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.26.0...ristretto_gc-v0.27.0) - 2025-12-09
 
 ### Other
+
 - improve GC safety with rooted objects
 - move Gc<RwLock<>> from Reference to Value::Object()
 - address clippy errors
 - update gc docs
 
-## `ristretto_classfile` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.26.0...ristretto_classfile-v0.27.0) - 2025-12-09
+##
+`ristretto_classfile` - [0.27.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.26.0...ristretto_classfile-v0.27.0) - 2025-12-09
 
 ### Added
+
 - add jimage support
 
 ### Other
+
 - update rustdoc references to point to java 25
 - update java version in readme
 - address clippy errors
 - update to java 25.0.0.36.1
 
-## `ristretto_cli` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/v0.25.0...v0.26.0) - 2025-08-21
+## `ristretto_java` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/v0.25.0...v0.26.0) - 2025-08-21
 
 ### Added
+
 - calculate clap styles at compile time instead of runtime
 - add startup tracing
 - add Java 25 support
@@ -755,6 +917,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - reduce memory allocations during primordial thread creation
 
 ### Fixed
+
 - correct java.lang.Object.clone()
 - correct class name generation for anewarray instruction
 - never deep clone java.lang.Class objects
@@ -764,6 +927,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct JVM initialization process to call java.lang.ref.Reference.<clinit>()
 
 ### Other
+
 - update CallSiteCache to use a DashMap instead of RwLock<HashMap>
 - [**breaking**] switch to OsStr/OsString and classpath handling
 - correct lint errors
@@ -776,9 +940,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct lint errors
 - update compatibility tests
 
-## `ristretto_vm` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.25.0...ristretto_vm-v0.26.0) - 2025-08-21
+##
+`ristretto_vm` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.25.0...ristretto_vm-v0.26.0) - 2025-08-21
 
 ### Added
+
 - add Java 25 support
 - add java/lang/invoke/MemberName.vmindex
 - implement java/lang/Class.isRecord0()Z
@@ -788,6 +954,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement invokedynamic call site cache
 
 ### Fixed
+
 - use private java.lang.Class constructor to create a Class object
 - update frame exception handling to create throwable using the current thread instead of the primordial thread
 - correct polymorphic calls to java.lang.invoke Holder inner classes
@@ -795,6 +962,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct class name generation for anewarray instruction
 
 ### Other
+
 - define MemberNameFlags::REFERENCE_KIND_MASK using MemberNameFlags::REFERENCE_KIND_SHIFT
 - update CallSiteCache to use a DashMap instead of RwLock<HashMap>
 - [**breaking**] switch to OsStr/OsString and classpath handling
@@ -804,61 +972,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct lint errors
 - update compatibility tests
 
-## `ristretto_macros` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.25.0...ristretto_macros-v0.26.0) - 2025-08-21
+##
+`ristretto_macros` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.25.0...ristretto_macros-v0.26.0) - 2025-08-21
 
 ### Other
+
 - update Cargo.toml dependencies
 
-## `ristretto_jit` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.25.0...ristretto_jit-v0.26.0) - 2025-08-21
+##
+`ristretto_jit` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.25.0...ristretto_jit-v0.26.0) - 2025-08-21
 
 ### Other
+
 - update Cargo.toml dependencies
 
-## `ristretto_classloader` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.25.0...ristretto_classloader-v0.26.0) - 2025-08-21
+##
+`ristretto_classloader` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.25.0...ristretto_classloader-v0.26.0) - 2025-08-21
 
 ### Added
+
 - add Java 25 support
 - add java/lang/invoke/MemberName.vmindex
 - optimize logging startup
 
 ### Fixed
+
 - correct java.lang.Object.clone()
 - correct class name generation for anewarray instruction
 - never deep clone java.lang.Class objects
 
 ### Other
+
 - remove superfluous Class arc usage
 - reduce memory allocations and locks when registering primitives with the boot class loader
 - [**breaking**] switch to OsStr/OsString and classpath handling
 - replace Reference std::sync::RwLock with parking_lot::RwLock
 - correct lint errors
 
-## `ristretto_gc` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.25.0...ristretto_gc-v0.26.0) - 2025-08-21
+##
+`ristretto_gc` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.25.0...ristretto_gc-v0.26.0) - 2025-08-21
 
 ### Added
+
 - implement invokedynamic call site cache
 
 ### Other
+
 - correct lint errors
 
-## `ristretto_classfile` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.25.0...ristretto_classfile-v0.26.0) - 2025-08-21
+##
+`ristretto_classfile` - [0.26.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.25.0...ristretto_classfile-v0.26.0) - 2025-08-21
 
 ### Other
+
 - correct lint errors
 
-## `ristretto_cli` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/v0.24.0...v0.25.0) - 2025-07-31
+## `ristretto_java` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/v0.24.0...v0.25.0) - 2025-07-31
 
 ### Added
+
 - add parallel jit compiler
 - update GC threads to be configurable; default to 50% of cpu cores
 
 ### Fixed
+
 - correct default interface method resolution
 - correct instanceof operations
 - address stack overflow in invokedynamic instruction
 - correct definition of the ristretto/internal/access/JavaLangRefAccess class
 
 ### Other
+
 - replace Value TryInto<type> with as_<type>
 - replace Value.to_<type> methods with TryInto
 - remove ConcurrentVec
@@ -866,30 +1050,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor Reference and Object to improve memory and lock utilization
 - replace Reference TryInto<type> with as_<type>
 - replace Object TryInto<type> with as_<type>
-- implement value, reference and object  hash
+- implement value, reference and object hash
 - refactor usages of Reference to Value
 - correct clippy lint warnings
 - remove debugging code
 - update to cranelift=0.122.0, criterion=0.7.0
 
-## `ristretto_vm` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.24.0...ristretto_vm-v0.25.0) - 2025-07-31
+##
+`ristretto_vm` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.24.0...ristretto_vm-v0.25.0) - 2025-07-31
 
 ### Added
+
 - update GC threads to be configurable; default to 50% of cpu cores
 - add parallel jit compiler
 
 ### Fixed
+
 - address stack overflow in invokedynamic instruction
 - correct default interface method resolution
 - correct definition of the ristretto/internal/access/JavaLangRefAccess class
 - correct instanceof operations
 
 ### Other
+
 - refactor Reference and Object to improve memory and lock utilization
 - replace Value TryInto<type> with as_<type>
 - replace Reference TryInto<type> with as_<type>
 - replace Object TryInto<type> with as_<type>
-- implement value, reference and object  hash
+- implement value, reference and object hash
 - replace Value.to_<type> methods with TryInto
 - remove ConcurrentVec
 - refactor usages of Reference to Value
@@ -897,48 +1085,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update to cranelift=0.122.0, criterion=0.7.0
 - correct clippy lint warnings
 
-## `ristretto_jit` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.24.0...ristretto_jit-v0.25.0) - 2025-07-31
+##
+`ristretto_jit` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.24.0...ristretto_jit-v0.25.0) - 2025-07-31
 
 ### Fixed
+
 - correct default interface method resolution
 
 ### Other
+
 - remove debugging code
 - update to cranelift=0.122.0, criterion=0.7.0
 
-## `ristretto_classloader` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.24.0...ristretto_classloader-v0.25.0) - 2025-07-31
+##
+`ristretto_classloader` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.24.0...ristretto_classloader-v0.25.0) - 2025-07-31
 
 ### Fixed
+
 - correct default interface method resolution
 - correct instanceof operations
 
 ### Other
+
 - refactor Reference and Object to improve memory and lock utilization
 - replace Value TryInto<type> with as_<type>
 - replace Reference TryInto<type> with as_<type>
 - replace Object TryInto<type> with as_<type>
-- implement value, reference and object  hash
+- implement value, reference and object hash
 - replace Value.to_<type> methods with TryInto
 - remove ConcurrentVec
 - refactor usages of Reference to Value
 - correct clippy lint warnings
 
-## `ristretto_gc` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.24.0...ristretto_gc-v0.25.0) - 2025-07-31
+##
+`ristretto_gc` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.24.0...ristretto_gc-v0.25.0) - 2025-07-31
 
 ### Added
+
 - update GC threads to be configurable; default to 50% of cpu cores
 
 ### Other
+
 - refactor Reference and Object to improve memory and lock utilization
 
-## `ristretto_classfile` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.24.0...ristretto_classfile-v0.25.0) - 2025-07-31
+##
+`ristretto_classfile` - [0.25.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.24.0...ristretto_classfile-v0.25.0) - 2025-07-31
 
 ### Other
+
 - update Cargo.toml dependencies
 
-## `ristretto_cli` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/v0.23.0...v0.24.0) - 2025-07-22
+## `ristretto_java` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/v0.23.0...v0.24.0) - 2025-07-22
 
 ### Added
+
 - add background jit compiler
 - improve class loader reflection; initial class loader and module support
 - implement java/lang/reflect/Array
@@ -946,15 +1146,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add initial string pool
 
 ### Fixed
+
 - update cli to allow -cp argument for classpath
 - do not deep clone java.lang.Class objects
 - unbox primitives for constructor reflection
 - correct class loading hierarchy logic
-- correct java/lang/Class.getRawAnnotations()[B and java/lang/Class.getRawTypeAnnotations()[B to return zero length in byte array when there are no annotations
+- correct java/lang/Class.getRawAnnotations()[B and java/lang/Class.getRawTypeAnnotations()[B to return zero length in
+  byte array when there are no annotations
 - correct private method invocation
 - reduce gc memory utilization
 - add Unsafe support for getting/setting Class static fields
-- update java/lang/invoke/MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J to get the correct class name
+- update java/lang/invoke/MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J to get the correct class
+  name
 - update java/lang/Class.forName0 to throw ClassNotFoundException for primitive types
 - correct multinewarray instruction
 - correct jdk.internal.misc.Unsafe put methods
@@ -962,6 +1165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct java/lang/System.arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V
 
 ### Other
+
 - introduce -X cli arguments and move --int to -Xint
 - stub java/lang/invoke/DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;
 - stub java/lang/invoke/DelegatingMethodHandle$Holder.delegate([Ljava/lang/Object;)Ljava/lang/Object;
@@ -975,9 +1179,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add timing to compatibility tests
 - add method and string integration tests
 
-## `ristretto_vm` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.23.0...ristretto_vm-v0.24.0) - 2025-07-22
+##
+`ristretto_vm` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.23.0...ristretto_vm-v0.24.0) - 2025-07-22
 
 ### Added
+
 - add background jit compiler
 - implement java/lang/reflect/Array
 - implement java/lang/String.intern()Ljava/lang/String;
@@ -985,11 +1191,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - improve class loader reflection; initial class loader and module support
 
 ### Fixed
+
 - add Unsafe support for getting/setting Class static fields
-- update java/lang/invoke/MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J to get the correct class name
+- update java/lang/invoke/MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J to get the correct class
+  name
 - unbox primitives for constructor reflection
 - update java/lang/Class.forName0 to throw ClassNotFoundException for primitive types
-- correct java/lang/Class.getRawAnnotations()[B and java/lang/Class.getRawTypeAnnotations()[B to return zero length in byte array when there are no annotations
+- correct java/lang/Class.getRawAnnotations()[B and java/lang/Class.getRawTypeAnnotations()[B to return zero length in
+  byte array when there are no annotations
 - correct multinewarray instruction
 - correct jdk.internal.misc.Unsafe put methods
 - correct private method invocation
@@ -997,6 +1206,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct java/lang/System.arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V
 
 ### Other
+
 - stub java/lang/invoke/DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;
 - stub java/lang/invoke/DelegatingMethodHandle$Holder.delegate([Ljava/lang/Object;)Ljava/lang/Object;
 - stub java/lang/invoke/Invokers$Holder.invoker([Ljava/lang/Object;)Ljava/lang/Object;
@@ -1007,24 +1217,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add timing to compatibility tests
 - add method and string integration tests
 
-## `ristretto_jit` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.23.0...ristretto_jit-v0.24.0) - 2025-07-22
+##
+`ristretto_jit` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.23.0...ristretto_jit-v0.24.0) - 2025-07-22
 
 ### Other
+
 - update jit and main readme
 
-## `ristretto_classloader` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.23.0...ristretto_classloader-v0.24.0) - 2025-07-22
+##
+`ristretto_classloader` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.23.0...ristretto_classloader-v0.24.0) - 2025-07-22
 
 ### Added
+
 - improve class loader reflection; initial class loader and module support
 
 ### Fixed
+
 - do not deep clone java.lang.Class objects
 - unbox primitives for constructor reflection
 - correct class loading hierarchy logic
-- correct java/lang/Class.getRawAnnotations()[B and java/lang/Class.getRawTypeAnnotations()[B to return zero length in byte array when there are no annotations
+- correct java/lang/Class.getRawAnnotations()[B and java/lang/Class.getRawTypeAnnotations()[B to return zero length in
+  byte array when there are no annotations
 - correct private method invocation
 
 ### Other
+
 - stub java/lang/invoke/DelegatingMethodHandle$Holder.reinvoke_L([Ljava/lang/Object;)Ljava/lang/Object;
 - stub java/lang/invoke/DelegatingMethodHandle$Holder.delegate([Ljava/lang/Object;)Ljava/lang/Object;
 - stub java/lang/invoke/Invokers$Holder.invoker([Ljava/lang/Object;)Ljava/lang/Object;
@@ -1033,77 +1250,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - upgrade default java version to 21.0.8.9.1
 - move primitive and array class creation into class loader
 
-## `ristretto_gc` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.23.0...ristretto_gc-v0.24.0) - 2025-07-22
+##
+`ristretto_gc` - [0.24.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.23.0...ristretto_gc-v0.24.0) - 2025-07-22
 
 ### Fixed
+
 - correct private method invocation
 - reduce gc memory utilization
 
 ### Other
+
 - remove use of custom garbage collector box
 
-## `ristretto_cli` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/v0.22.0...v0.23.0) - 2025-07-13
+## `ristretto_java` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/v0.22.0...v0.23.0) - 2025-07-13
 
 ### Added
+
 - add garbage collector
-- implement jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String; and jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;
+- implement jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String; and
+  jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;
 - add parallel garbage collection
 - add jit lookupswitch
 - add jit tableswitch
 
 ### Fixed
+
 - improve unsafe support for byte offsets
 
 ### Other
+
 - update Cargo.toml dependencies
 - remove unnecessary test classes
 - improve compatibility test messages
 
-## `ristretto_vm` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.22.0...ristretto_vm-v0.23.0) - 2025-07-13
+##
+`ristretto_vm` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.22.0...ristretto_vm-v0.23.0) - 2025-07-13
 
 ### Added
+
 - add garbage collector
-- implement jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String; and jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;
+- implement jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String; and
+  jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;
 
 ### Fixed
+
 - improve unsafe support for byte offsets
 
 ### Other
+
 - improve compatibility test messages
 - remove unnecessary test classes
 
-## `ristretto_jit` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.22.0...ristretto_jit-v0.23.0) - 2025-07-13
+##
+`ristretto_jit` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.22.0...ristretto_jit-v0.23.0) - 2025-07-13
 
 ### Added
+
 - add garbage collector
 - add jit lookupswitch
 - add jit tableswitch
 
-## `ristretto_classloader` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.22.0...ristretto_classloader-v0.23.0) - 2025-07-13
+##
+`ristretto_classloader` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.22.0...ristretto_classloader-v0.23.0) - 2025-07-13
 
 ### Added
+
 - add garbage collector
-- implement jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String; and jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;
+- implement jdk/internal/loader/BootLoader.getSystemPackageLocation(Ljava/lang/String;)Ljava/lang/String; and
+  jdk/internal/loader/BootLoader.getSystemPackageNames()[Ljava/lang/String;
 
-## `ristretto_gc` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.22.0...ristretto_gc-v0.23.0) - 2025-07-13
+##
+`ristretto_gc` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.22.0...ristretto_gc-v0.23.0) - 2025-07-13
 
 ### Added
+
 - add parallel garbage collection
 - add garbage collector
 
-## `ristretto_classfile` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.22.0...ristretto_classfile-v0.23.0) - 2025-07-13
+##
+`ristretto_classfile` - [0.23.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.22.0...ristretto_classfile-v0.23.0) - 2025-07-13
 
 ### Other
+
 - remove unnecessary test classes
 
-## `ristretto_cli` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/v0.21.0...v0.22.0) - 2025-07-07
+## `ristretto_java` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/v0.21.0...v0.22.0) - 2025-07-07
 
 ### Added
+
 - add Eq trait to class file attributes
-- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
+- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;,
+  java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;,
+  java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
 - implement jdk/internal/misc/Unsafe.park(ZJ)V and jdk/internal/misc/Unsafe.unpark(Ljava/lang/Object;)V
 - implement java/lang/ref/Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;
-- implement java/lang/ref/Reference.hasReferencePendingList()Z and java/lang/ref/Reference.waitForReferencePendingList()V
+- implement java/lang/ref/Reference.hasReferencePendingList()Z and java/lang/ref/Reference.waitForReferencePendingList()
+  V
 - implement java/lang/Thread.start0()V
 - implement jdk/internal/vm/ContinuationSupport.isSupported0()Z
 - implement java/lang/Thread.setPriority0(I)V
@@ -1112,10 +1354,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement java/lang/Thread.getThreads()[Ljava/lang/Thread;
 - implement java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V
 - implement jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z
-- implement jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
+- implement jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;,
+  jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(
+  Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
 - implement jdk/internal/misc/Unsafe.pageSize()I and sun/misc/Unsafe.pageSize()I
 
 ### Fixed
+
 - correct java/lang/Object.hashCode()I
 - correct if_icmpeq and if_icmpne instructions
 - correct field shadowing logic
@@ -1133,25 +1378,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - lookup classes using existing thread context instead of vm
 
 ### Other
+
 - update Cargo.toml dependencies
 - [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
 - reduced direct usages of Reference
 - remove fields from object instances
 - [**breaking**] refactor class and object fields
 - add eq trait to value and reference
-- [**breaking**] refactor VM invoke interfaces to combine method name and method descriptor argument into a single method signature argument
+- [**breaking**] refactor VM invoke interfaces to combine method name and method descriptor argument into a single
+  method signature argument
 - update compatibility tests to run in parallel
 - update to Rust 1.88.0
 - update JavaObject.to_object(&VM) -> JavaObject.to_object(&Thread)
 - refactored file handle management and created thread handles
 
-## `ristretto_vm` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.21.0...ristretto_vm-v0.22.0) - 2025-07-07
+##
+`ristretto_vm` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.21.0...ristretto_vm-v0.22.0) - 2025-07-07
 
 ### Added
-- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
+
+- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;,
+  java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;,
+  java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
 - implement jdk/internal/misc/Unsafe.park(ZJ)V and jdk/internal/misc/Unsafe.unpark(Ljava/lang/Object;)V
 - implement java/lang/ref/Reference.getAndClearReferencePendingList()Ljava/lang/ref/Reference;
-- implement java/lang/ref/Reference.hasReferencePendingList()Z and java/lang/ref/Reference.waitForReferencePendingList()V
+- implement java/lang/ref/Reference.hasReferencePendingList()Z and java/lang/ref/Reference.waitForReferencePendingList()
+  V
 - implement java/lang/Thread.start0()V
 - implement jdk/internal/vm/ContinuationSupport.isSupported0()Z
 - implement java/lang/Thread.setPriority0(I)V
@@ -1160,10 +1412,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement java/lang/Thread.getThreads()[Ljava/lang/Thread;
 - implement java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V
 - implement jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z
-- implement jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;, jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
+- implement jdk/internal/misc/Unsafe.staticFieldBase0(Ljava/lang/reflect/Field;)Ljava/lang/Object;,
+  jdk/internal/misc/Unsafe.staticFieldOffset0(Ljava/lang/reflect/Field;)J, sun/misc/Unsafe.staticFieldBase(
+  Ljava/lang/reflect/Field;)Ljava/lang/Object;, sun/misc/Unsafe.staticFieldOffset(Ljava/lang/reflect/Field;)J
 - implement jdk/internal/misc/Unsafe.pageSize()I and sun/misc/Unsafe.pageSize()I
 
 ### Fixed
+
 - correct java/lang/Object.hashCode()I
 - correct if_icmpeq and if_icmpne instructions
 - correct integer/long div/rem instructions when dividing by zero
@@ -1181,34 +1436,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()
 
 ### Other
+
 - reduced direct usages of Reference
 - update compatibility tests to run in parallel
 - [**breaking**] refactor class and object fields
 - update to Rust 1.88.0
 - update JavaObject.to_object(&VM) -> JavaObject.to_object(&Thread)
-- [**breaking**] refactor VM invoke interfaces to combine method name and method descriptor argument into a single method signature argument
+- [**breaking**] refactor VM invoke interfaces to combine method name and method descriptor argument into a single
+  method signature argument
 - refactored file handle management and created thread handles
 - [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
 
-## `ristretto_macros` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.21.0...ristretto_macros-v0.22.0) - 2025-07-07
+##
+`ristretto_macros` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.21.0...ristretto_macros-v0.22.0) - 2025-07-07
 
 ### Other
+
 - update Cargo.toml dependencies
 
-## `ristretto_jit` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.21.0...ristretto_jit-v0.22.0) - 2025-07-07
+##
+`ristretto_jit` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.21.0...ristretto_jit-v0.22.0) - 2025-07-07
 
 ### Fixed
+
 - correct and optimize class polymorphic method lookups
 
 ### Other
+
 - [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
 
-## `ristretto_classloader` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.21.0...ristretto_classloader-v0.22.0) - 2025-07-07
+##
+`ristretto_classloader` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.21.0...ristretto_classloader-v0.22.0) - 2025-07-07
 
 ### Added
-- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
+
+- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;,
+  java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;,
+  java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
 
 ### Fixed
+
 - correct java/lang/Object.hashCode()I
 - correct if_icmpeq and if_icmpne instructions
 - correct field shadowing logic
@@ -1217,24 +1484,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct field resolution logic in java/lang/invoke/MethodHandleNatives.resolve()
 
 ### Other
+
 - reduced direct usages of Reference
 - remove fields from object instances
 - [**breaking**] refactor class and object fields
 - add eq trait to value and reference
-- [**breaking**] refactor VM invoke interfaces to combine method name and method descriptor argument into a single method signature argument
+- [**breaking**] refactor VM invoke interfaces to combine method name and method descriptor argument into a single
+  method signature argument
 
-## `ristretto_classfile` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.21.0...ristretto_classfile-v0.22.0) - 2025-07-07
+##
+`ristretto_classfile` - [0.22.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.21.0...ristretto_classfile-v0.22.0) - 2025-07-07
 
 ### Added
+
 - add Eq trait to class file attributes
-- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;, java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
+- implement java/lang/invoke/MethodHandle.invoke([Ljava/lang/Object;)Ljava/lang/Object;,
+  java/lang/invoke/MethodHandle.invokeBasic([Ljava/lang/Object;)Ljava/lang/Object;,
+  java/lang/invoke/MethodHandle.invokeExact([Ljava/lang/Object;)Ljava/lang/Object;
 
 ### Other
+
 - [**breaking**] optimize Instruction enum by introducing TableSwitch and LookupSwitch structs
 
-## `ristretto_cli` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/v0.20.0...v0.21.0) - 2025-06-20
+## `ristretto_java` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/v0.20.0...v0.21.0) - 2025-06-20
 
 ### Added
+
 - add java.io.ObjectInputStream and java.io.ObjectOutputStream intrinsics
 - add intrinsic support for basic file io
 - add java/lang/ref/PhantomReference intrinsics
@@ -1242,18 +1517,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implemented java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z
 
 ### Fixed
+
 - correct mutf-8 class file string encoding/decoding as well as add utf-16 Java 9+ string support
 - add invokedynamic bootstrap method descriptor verification
 
 ### Other
+
 - [**breaking**] change VM parameter types from Vec<T> to &[T] for zero-allocation and improved ergonomics
 - optimize Reference enum memory
-- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to
+  return &str instead of &String. Updated Class to use the same class name reference from constant pool instead of
+  copying the string into the struct.
 - create compile time intrinsic method registry
 - add classfile attributes documentation
 - update rust doc formatting
 - add constants for java versions
-- optimize file reads by removing iterative type conversion from u8->i8. Optimized Reference Vec signed<->unsigned type conversions.
+- optimize file reads by removing iterative type conversion from u8->i8. Optimized Reference Vec signed<->unsigned type
+  conversions.
 - add java.lang.invoke.DirectMethodHandle$Holder trampoline methods on class definition
 - remove unnecessary version file parsing on startup when the full java version is specified
 - remove unnecessary call to obtain current directory on initialization
@@ -1262,89 +1542,119 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - remove unnecessary java version from intrinsics registry
 - correct clippy lints
 
-## `ristretto_vm` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.20.0...ristretto_vm-v0.21.0) - 2025-06-20
+##
+`ristretto_vm` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.20.0...ristretto_vm-v0.21.0) - 2025-06-20
 
 ### Added
+
 - add java/lang/ref/PhantomReference intrinsics
 - add OS specific file intrinsics
 - add java.io.ObjectInputStream and java.io.ObjectOutputStream intrinsics
 - implemented java.io.ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z
 
 ### Fixed
+
 - correct mutf-8 class file string encoding/decoding as well as add utf-16 Java 9+ string support
 - add invokedynamic bootstrap method descriptor verification
 
 ### Other
+
 - update to phf=0.12.1
 - [**breaking**] change VM parameter types from Vec<T> to &[T] for zero-allocation and improved ergonomics
 - optimize Reference enum memory
-- optimize file reads by removing iterative type conversion from u8->i8. Optimized Reference Vec signed<->unsigned type conversions.
+- optimize file reads by removing iterative type conversion from u8->i8. Optimized Reference Vec signed<->unsigned type
+  conversions.
 - remove lint warning on windows
 - add java.lang.invoke.DirectMethodHandle$Holder trampoline methods on class definition
-- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to
+  return &str instead of &String. Updated Class to use the same class name reference from constant pool instead of
+  copying the string into the struct.
 - remove unnecessary java version from intrinsics registry
 - create compile time intrinsic method registry
 - update rust doc formatting
 - correct clippy lints
 - add constants for java versions
 
-## `ristretto_macros` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.20.0...ristretto_macros-v0.21.0) - 2025-06-20
+##
+`ristretto_macros` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.20.0...ristretto_macros-v0.21.0) - 2025-06-20
 
 ### Other
-- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to
+  return &str instead of &String. Updated Class to use the same class name reference from constant pool instead of
+  copying the string into the struct.
 - create compile time intrinsic method registry
 
-## `ristretto_jit` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.20.0...ristretto_jit-v0.21.0) - 2025-06-20
+##
+`ristretto_jit` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.20.0...ristretto_jit-v0.21.0) - 2025-06-20
 
 ### Added
+
 - add intrinsic support for basic file io
 
 ### Other
+
 - update rust doc formatting
 
-## `ristretto_classloader` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.20.0...ristretto_classloader-v0.21.0) - 2025-06-20
+##
+`ristretto_classloader` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.20.0...ristretto_classloader-v0.21.0) - 2025-06-20
 
 ### Added
+
 - add java.io.ObjectInputStream and java.io.ObjectOutputStream intrinsics
 - add intrinsic support for basic file io
 
 ### Fixed
+
 - correct mutf-8 class file string encoding/decoding as well as add utf-16 Java 9+ string support
 
 ### Other
+
 - optimize Reference enum memory
-- optimize file reads by removing iterative type conversion from u8->i8. Optimized Reference Vec signed<->unsigned type conversions.
+- optimize file reads by removing iterative type conversion from u8->i8. Optimized Reference Vec signed<->unsigned type
+  conversions.
 - add java.lang.invoke.DirectMethodHandle$Holder trampoline methods on class definition
-- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to
+  return &str instead of &String. Updated Class to use the same class name reference from constant pool instead of
+  copying the string into the struct.
 - remove unnecessary version file parsing on startup when the full java version is specified
 - remove unnecessary call to obtain current directory on initialization
 - update rust doc formatting
 - add constants for java versions
 
-## `ristretto_classfile` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.20.0...ristretto_classfile-v0.21.0) - 2025-06-20
+##
+`ristretto_classfile` - [0.21.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.20.0...ristretto_classfile-v0.21.0) - 2025-06-20
 
 ### Fixed
+
 - correct mutf-8 class file string encoding/decoding as well as add utf-16 Java 9+ string support
 
 ### Other
-- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to return &str instead of &String.  Updated Class to use the same class name reference from constant pool instead of copying the string into the struct.
+
+- [**breaking**] update ConstantPool try_get_utf8, try_get_class, try_get_string, try_get_module, and try_get_package to
+  return &str instead of &String. Updated Class to use the same class name reference from constant pool instead of
+  copying the string into the struct.
 - create compile time intrinsic method registry
 - add classfile attributes documentation
 - update rust doc formatting
 - add constants for java versions
 
-## `ristretto_cli` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/v0.19.2...v0.20.0) - 2025-06-06
+## `ristretto_java` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/v0.19.2...v0.20.0) - 2025-06-06
 
 ### Added
+
 - add jit support for ret and ret_w
 
 ### Fixed
+
 - [**breaking**] update MaxLocals to correctly handle static/virtual methods and category 2 (long/double) types
 - update Version.supports() to take a reference to self
-- correct stack overflow error in java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;
+- correct stack overflow error in java/lang/invoke/MethodHandleNatives.resolve(
+  Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;
 - corrected jit bug where float was being treated as a double in ldc and ldc_w instructions
 
 ### Other
+
 - update Cargo.toml dependencies
 - improve attribute code coverage
 - improve classfile documentation
@@ -1354,101 +1664,131 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - stub java.lang.invoke.DirectMethodHandle$Holder
 - rename native_methods module to intrinsic_methods
 
-## `ristretto_vm` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.19.2...ristretto_vm-v0.20.0) - 2025-06-06
+##
+`ristretto_vm` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.19.2...ristretto_vm-v0.20.0) - 2025-06-06
 
 ### Added
+
 - add jit support for ret and ret_w
 
 ### Fixed
-- correct stack overflow error in java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;
+
+- correct stack overflow error in java/lang/invoke/MethodHandleNatives.resolve(
+  Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;
 
 ### Other
+
 - stub java.lang.invoke.DirectMethodHandle$Holder
 - improve classfile documentation
 - stub support for polymorphic intrinsic methods
 - rename native_methods module to intrinsic_methods
 
-## `ristretto_jit` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.19.2...ristretto_jit-v0.20.0) - 2025-06-06
+##
+`ristretto_jit` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.19.2...ristretto_jit-v0.20.0) - 2025-06-06
 
 ### Added
+
 - add jit support for ret and ret_w
 
 ### Fixed
+
 - corrected jit bug where float was being treated as a double in ldc and ldc_w instructions
 - [**breaking**] update MaxLocals to correctly handle static/virtual methods and category 2 (long/double) types
 
 ### Other
+
 - add jit ldc, ldc_w, and ldc2_w error tests
 - improve jit ret_w code coverage
 - stub java.lang.invoke.DirectMethodHandle$Holder
 - improve classfile documentation
 - stub support for polymorphic intrinsic methods
 
-## `ristretto_classloader` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.19.2...ristretto_classloader-v0.20.0) - 2025-06-06
+##
+`ristretto_classloader` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.19.2...ristretto_classloader-v0.20.0) - 2025-06-06
 
 ### Fixed
-- correct stack overflow error in java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;
+
+- correct stack overflow error in java/lang/invoke/MethodHandleNatives.resolve(
+  Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;
 
 ### Other
+
 - improve classfile documentation
 - stub support for polymorphic intrinsic methods
 
-## `ristretto_classfile` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.19.2...ristretto_classfile-v0.20.0) - 2025-06-06
+##
+`ristretto_classfile` - [0.20.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.19.2...ristretto_classfile-v0.20.0) - 2025-06-06
 
 ### Fixed
+
 - [**breaking**] update MaxLocals to correctly handle static/virtual methods and category 2 (long/double) types
 - update Version.supports() to take a reference to self
 
 ### Other
+
 - improve attribute code coverage
 - improve classfile documentation
 
-## `ristretto_cli` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/v0.19.1...v0.19.2) - 2025-05-27
+## `ristretto_java` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/v0.19.1...v0.19.2) - 2025-05-27
 
 ### Fixed
+
 - java/lang/Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method; set void return types to void class instead of null
 - correct invokedynamic get_method_type to handle descriptors without parameters
 
 ### Other
+
 - update Cargo.toml dependencies
 
-## `ristretto_vm` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.19.1...ristretto_vm-v0.19.2) - 2025-05-27
+##
+`ristretto_vm` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.19.1...ristretto_vm-v0.19.2) - 2025-05-27
 
 ### Fixed
+
 - java/lang/Class.getDeclaredMethods0(Z)[Ljava/lang/reflect/Method; set void return types to void class instead of null
 - correct invokedynamic get_method_type to handle descriptors without parameters
 
-## `ristretto_jit` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.19.1...ristretto_jit-v0.19.2) - 2025-05-27
+##
+`ristretto_jit` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.19.1...ristretto_jit-v0.19.2) - 2025-05-27
 
 ### Fixed
+
 - correct jit jsr and jsr_w instructions
 
 ### Other
+
 - add jit pop2 category2 test
 - add jit stack tests
 - add jit test coverage for dcmpg, dcmpl, fcmpg, fcmpl, lcmp
 
-## `ristretto_classloader` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.19.1...ristretto_classloader-v0.19.2) - 2025-05-27
+##
+`ristretto_classloader` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.19.1...ristretto_classloader-v0.19.2) - 2025-05-27
 
 ### Other
+
 - update Cargo.toml dependencies
 
-## `ristretto_classfile` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.19.1...ristretto_classfile-v0.19.2) - 2025-05-27
+##
+`ristretto_classfile` - [0.19.2](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.19.1...ristretto_classfile-v0.19.2) - 2025-05-27
 
 ### Other
+
 - update Cargo.toml dependencies
 
-## `ristretto_cli` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/v0.19.0...v0.19.1) - 2025-05-24
+## `ristretto_java` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/v0.19.0...v0.19.1) - 2025-05-24
 
 ### Added
+
 - add java.lang.invoke.MethodHandleNatives objectFieldOffset(..), staticFieldBase(..) and staticFieldOffset(..)
 - add java.lang.invoke.MethodHandleNatives setCallSiteTargetNormal(..) and setCallSiteTargetVolatile(..)
 
 ### Fixed
+
 - update jit dcmpg, dcmpl, fcmpg, fcmpl to correctly handle NaN
 - correct java.lang.invoke.MethodHandleNatives.resolve(..) field support
 
 ### Other
+
 - update Cargo.lock dependencies
 - update Cargo.toml dependencies
 - update default java version to 21.0.7.6.1
@@ -1458,17 +1798,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - expand invokedynamic stub by obtaining MethodType parameter for bootstrap method
 - stub invokedynamic bootstrap method lookup
 
-## `ristretto_vm` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.19.0...ristretto_vm-v0.19.1) - 2025-05-24
+##
+`ristretto_vm` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.19.0...ristretto_vm-v0.19.1) - 2025-05-24
 
 ### Added
+
 - add java.lang.invoke.MethodHandleNatives objectFieldOffset(..), staticFieldBase(..) and staticFieldOffset(..)
 - add java.lang.invoke.MethodHandleNatives setCallSiteTargetNormal(..) and setCallSiteTargetVolatile(..)
 
 ### Fixed
+
 - update jit dcmpg, dcmpl, fcmpg, fcmpl to correctly handle NaN
 - correct java.lang.invoke.MethodHandleNatives.resolve(..) field support
 
 ### Other
+
 - update to cranelift=0.120.0
 - stub invokedynamic caller method handle lookup
 - update default java version to 21.0.7.6.1
@@ -1476,13 +1820,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - expand invokedynamic stub by obtaining MethodType parameter for bootstrap method
 - stub invokedynamic bootstrap method lookup
 
-## `ristretto_jit` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.19.0...ristretto_jit-v0.19.1) - 2025-05-24
+##
+`ristretto_jit` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.19.0...ristretto_jit-v0.19.1) - 2025-05-24
 
 ### Fixed
+
 - correct jit dreturn and freturn
 - update jit dcmpg, dcmpl, fcmpg, fcmpl to correctly handle NaN
 
 ### Other
+
 - add jit double math tests
 - add jit long math tests
 - add jit float math tests
@@ -1495,36 +1842,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update cfg doc formatting
 - add jit test coverage
 
-## `ristretto_classloader` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.19.0...ristretto_classloader-v0.19.1) - 2025-05-24
+##
+`ristretto_classloader` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.19.0...ristretto_classloader-v0.19.1) - 2025-05-24
 
 ### Other
+
 - update default java version to 21.0.7.6.1
 
-## `ristretto_classfile` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.19.0...ristretto_classfile-v0.19.1) - 2025-05-24
+##
+`ristretto_classfile` - [0.19.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.19.0...ristretto_classfile-v0.19.1) - 2025-05-24
 
 ### Other
+
 - update Cargo.toml dependencies
 
-## `ristretto_cli` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/v0.18.1...v0.19.0) - 2025-05-18
+## `ristretto_java` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/v0.18.1...v0.19.0) - 2025-05-18
 
 ### Added
+
 - implement jit operand stack
 
 ### Other
+
 - update to Rust 1.87.0
 - update to clap=4.5.38, os_info=3.11.0, sysinfo=0.35.1, tempfile=3.20.0
 
-## `ristretto_vm` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.18.1...ristretto_vm-v0.19.0) - 2025-05-18
+##
+`ristretto_vm` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.18.1...ristretto_vm-v0.19.0) - 2025-05-18
 
 ### Added
+
 - implement jit operand stack
 
 ### Other
+
 - update to Rust 1.87.0
 
-## `ristretto_jit` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.18.1...ristretto_jit-v0.19.0) - 2025-05-18
+##
+`ristretto_jit` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.18.1...ristretto_jit-v0.19.0) - 2025-05-18
 
 ### Added
+
 - implement basic jit branch instructions
 - enable creation of jit control flow graph blocks
 - generate jit control flow graph using cranelift blocks
@@ -1534,6 +1892,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement jit operand stack
 
 ### Fixed
+
 - add jit cfg exception blocks
 - add jit block support for ifnull and ifnonnull
 - add jit control flow logic for if_acmpeq and if_acmpne
@@ -1543,6 +1902,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct jit field, invoke and stack simulation errors
 
 ### Other
+
 - minor jit readme update
 - simplify jit stack implementations
 - update to Rust 1.87.0
@@ -1551,191 +1911,250 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - update jit operand stack to use cranelift stack slot
 - only enable jit verifier when debug assertions are enabled
 
-## `ristretto_classloader` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.18.1...ristretto_classloader-v0.19.0) - 2025-05-18
+##
+`ristretto_classloader` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.18.1...ristretto_classloader-v0.19.0) - 2025-05-18
 
 ### Other
+
 - update to Rust 1.87.0
 - update to clap=4.5.38, os_info=3.11.0, sysinfo=0.35.1, tempfile=3.20.0
 
-## `ristretto_classfile` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.18.1...ristretto_classfile-v0.19.0) - 2025-05-18
+##
+`ristretto_classfile` - [0.19.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.18.1...ristretto_classfile-v0.19.0) - 2025-05-18
 
 ### Added
+
 - implement jit operand stack
 
-## `ristretto_cli` - [0.18.1](https://github.com/theseus-rs/ristretto/compare/v0.18.0...v0.18.1) - 2025-05-05
+## `ristretto_java` - [0.18.1](https://github.com/theseus-rs/ristretto/compare/v0.18.0...v0.18.1) - 2025-05-05
 
 ### Added
+
 - add jit <init> method support
 
-## `ristretto_vm` - [0.18.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.18.0...ristretto_vm-v0.18.1) - 2025-05-05
+##
+`ristretto_vm` - [0.18.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.18.0...ristretto_vm-v0.18.1) - 2025-05-05
 
 ### Added
+
 - add jit <init> method support
 
-## `ristretto_jit` - [0.18.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.18.0...ristretto_jit-v0.18.1) - 2025-05-05
+##
+`ristretto_jit` - [0.18.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.18.0...ristretto_jit-v0.18.1) - 2025-05-05
 
 ### Added
+
 - add jit <init> method support
 
-## `ristretto_cli` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/v0.17.0...v0.18.0) - 2025-05-05
+## `ristretto_java` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/v0.17.0...v0.18.0) - 2025-05-05
 
 ### Fixed
+
 - improve jit error handling
 - update JIT compiler to retain state between invocations and define unique function names
 - correct long and double jit locals
 
 ### Other
+
 - add java compatibility tests
 - update invokeinterface test to expect interface method
-- Fix bug where Instruction::stack_delta panics when processing an InvokeInterface because it calls the wrong try_get*ref function ([#319](https://github.com/theseus-rs/ristretto/pull/319))
+- Fix bug where Instruction::stack_delta panics when processing an InvokeInterface because it calls the wrong try_get*
+  ref function ([#319](https://github.com/theseus-rs/ristretto/pull/319))
 - add javac -parameters compiler flag to include parameter metadata in class files
 - update jit to track JVM locals as cranelift variables
 
-## `ristretto_vm` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.17.0...ristretto_vm-v0.18.0) - 2025-05-05
+##
+`ristretto_vm` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.17.0...ristretto_vm-v0.18.0) - 2025-05-05
 
 ### Fixed
+
 - update JIT compiler to retain state between invocations and define unique function names
 - improve jit error handling
 - correct long and double jit locals
 
 ### Other
+
 - add javac -parameters compiler flag to include parameter metadata in class files
 - update jit to track JVM locals as cranelift variables
 - add java compatibility tests
 
-## `ristretto_jit` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.17.0...ristretto_jit-v0.18.0) - 2025-05-05
+##
+`ristretto_jit` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.17.0...ristretto_jit-v0.18.0) - 2025-05-05
 
 ### Added
+
 - implement jit dcmpl, dcmpg, fcmpl, fcmpg
 - implement jit lcmp
 
 ### Fixed
+
 - update JIT compiler to retain state between invocations and define unique function names
 - improve jit error handling
 - correct long and double jit locals
 
 ### Other
+
 - update jit to track JVM locals as cranelift variables
 
-## `ristretto_classfile` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.17.0...ristretto_classfile-v0.18.0) - 2025-05-05
+##
+`ristretto_classfile` - [0.18.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.17.0...ristretto_classfile-v0.18.0) - 2025-05-05
 
 ### Other
-- update invokeinterface test to expect interface method
-- Fix bug where Instruction::stack_delta panics when processing an InvokeInterface because it calls the wrong try_get*ref function ([#319](https://github.com/theseus-rs/ristretto/pull/319))
 
-## `ristretto_cli` - [0.17.0](https://github.com/theseus-rs/ristretto/compare/v0.16.0...v0.17.0) - 2025-04-10
+- update invokeinterface test to expect interface method
+- Fix bug where Instruction::stack_delta panics when processing an InvokeInterface because it calls the wrong try_get*
+  ref function ([#319](https://github.com/theseus-rs/ristretto/pull/319))
+
+## `ristretto_java` - [0.17.0](https://github.com/theseus-rs/ristretto/compare/v0.16.0...v0.17.0) - 2025-04-10
 
 ### Added
+
 - add initial jit compilier
 
 ### Other
+
 - remove custom method optimizations
 
-## `ristretto_vm` - [0.17.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.16.0...ristretto_vm-v0.17.0) - 2025-04-10
+##
+`ristretto_vm` - [0.17.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.16.0...ristretto_vm-v0.17.0) - 2025-04-10
 
 ### Added
+
 - add initial jit compilier
 
 ### Other
+
 - remove custom method optimizations
 
 ## `ristretto_jit` - [0.17.0](https://github.com/theseus-rs/ristretto/releases/tag/ristretto_jit-v0.17.0) - 2025-04-10
 
 ### Added
+
 - add initial jit compilier
 
-## `ristretto_classloader` - [0.17.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.16.0...ristretto_classloader-v0.17.0) - 2025-04-10
+##
+`ristretto_classloader` - [0.17.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.16.0...ristretto_classloader-v0.17.0) - 2025-04-10
 
 ### Added
+
 - add initial jit compilier
 
-## `ristretto_classfile` - [0.17.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.16.0...ristretto_classfile-v0.17.0) - 2025-04-10
+##
+`ristretto_classfile` - [0.17.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.16.0...ristretto_classfile-v0.17.0) - 2025-04-10
 
 ### Added
+
 - add initial jit compilier
 
-## `ristretto_cli` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/v0.15.0...v0.16.0) - 2025-04-04
+## `ristretto_java` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/v0.15.0...v0.16.0) - 2025-04-04
 
 ### Added
+
 - add MaxLocals trait for calculating method max_locals values
 
 ### Other
+
 - update Cargo.lock dependencies
-- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(&ConstantPool) to more accurately calculate the maximum stack size
+- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(
+  &ConstantPool) to more accurately calculate the maximum stack size
 
-## `ristretto_vm` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.15.0...ristretto_vm-v0.16.0) - 2025-04-04
-
-### Other
-- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(&ConstantPool) to more accurately calculate the maximum stack size
-
-## `ristretto_classloader` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.15.0...ristretto_classloader-v0.16.0) - 2025-04-04
+##
+`ristretto_vm` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.15.0...ristretto_vm-v0.16.0) - 2025-04-04
 
 ### Other
-- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(&ConstantPool) to more accurately calculate the maximum stack size
 
-## `ristretto_classfile` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.15.0...ristretto_classfile-v0.16.0) - 2025-04-04
+- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(
+  &ConstantPool) to more accurately calculate the maximum stack size
+
+##
+`ristretto_classloader` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.15.0...ristretto_classloader-v0.16.0) - 2025-04-04
+
+### Other
+
+- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(
+  &ConstantPool) to more accurately calculate the maximum stack size
+
+##
+`ristretto_classfile` - [0.16.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.15.0...ristretto_classfile-v0.16.0) - 2025-04-04
 
 ### Added
+
 - add MaxLocals trait for calculating method max_locals values
 
 ### Other
-- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(&ConstantPool) to more accurately calculate the maximum stack size
 
-## `ristretto_cli` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/v0.14.0...v0.15.0) - 2025-04-04
+- [**breaking**] create MaxStack trait and refactor Instruction::stack_utilization() to Instruction::stack_delta(
+  &ConstantPool) to more accurately calculate the maximum stack size
+
+## `ristretto_java` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/v0.14.0...v0.15.0) - 2025-04-04
 
 ### Added
+
 - add Instruction::stack_utilization()
 - add memory usage in debug output
 - optimize obtaining invoke parameters from the stack
 
 ### Fixed
+
 - remove unnecessary Reference.class_name() string
 
 ### Other
+
 - update JVM specification links to point to Java 24
 - correct wasm build configuration
 - update to Rust 1.86.0
 - encapsulate use of ConcurrentVec
 - correct sysinfo physical_core_count() call
 
-## `ristretto_vm` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.14.0...ristretto_vm-v0.15.0) - 2025-04-04
+##
+`ristretto_vm` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.14.0...ristretto_vm-v0.15.0) - 2025-04-04
 
 ### Added
+
 - add memory usage in debug output
 - optimize obtaining invoke parameters from the stack
 
 ### Fixed
+
 - remove unnecessary Reference.class_name() string
 
 ### Other
+
 - update JVM specification links to point to Java 24
 - correct sysinfo physical_core_count() call
 - correct wasm build configuration
 - encapsulate use of ConcurrentVec
 
-## `ristretto_classloader` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.14.0...ristretto_classloader-v0.15.0) - 2025-04-04
+##
+`ristretto_classloader` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.14.0...ristretto_classloader-v0.15.0) - 2025-04-04
 
 ### Fixed
+
 - remove unnecessary Reference.class_name() string
 
 ### Other
+
 - update JVM specification links to point to Java 24
 - update to Rust 1.86.0
 - correct wasm build configuration
 - encapsulate use of ConcurrentVec
 
-## `ristretto_classfile` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.14.0...ristretto_classfile-v0.15.0) - 2025-04-04
+##
+`ristretto_classfile` - [0.15.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.14.0...ristretto_classfile-v0.15.0) - 2025-04-04
 
 ### Added
+
 - add Instruction::stack_utilization()
 
 ### Other
+
 - update JVM specification links to point to Java 24
 - update to Rust 1.86.0
 
-## `ristretto_cli` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/v0.13.1...v0.14.0) - 2025-03-04
+## `ristretto_java` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/v0.13.1...v0.14.0) - 2025-03-04
 
 ### Added
+
 - implement jdk.internal.reflect.ConstantPool
 - implement reflection constructors and methods
 - add java.lang.Class reflection annotations for fields, constructors and methods
@@ -1747,6 +2166,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement java.lang.Class getRawAnnotations()[B and getRawTypeAnnotations()[B
 
 ### Fixed
+
 - correct jdk.internal.misc.Unsafe get_reference_type() byte array types
 - udpate java.lang.Class.getSuperclass() to return null
 - correct field and method annotation length encoding
@@ -1758,11 +2178,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - correct bugs in java.lang.Class.getSuperclass()
 
 ### Other
+
 - update Cargo.toml dependencies
 
-## `ristretto_vm` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.13.1...ristretto_vm-v0.14.0) - 2025-03-04
+##
+`ristretto_vm` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.13.1...ristretto_vm-v0.14.0) - 2025-03-04
 
 ### Added
+
 - implement reflection constructors and methods
 - implement java.io.Console encoding() and istty()
 - add java.lang.Class reflection signatures for fields, constructors and methods
@@ -1774,6 +2197,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implement java.lang.Class getRawAnnotations()[B and getRawTypeAnnotations()[B
 
 ### Fixed
+
 - correct field and method annotation length encoding
 - return stub boot ModuleLayer
 - correct invokespecial to handle interface methods
@@ -1784,74 +2208,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - udpate java.lang.Class.getSuperclass() to return null
 - correct bugs in java.lang.Class.getSuperclass()
 
-## `ristretto_classloader` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.13.1...ristretto_classloader-v0.14.0) - 2025-03-04
+##
+`ristretto_classloader` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.13.1...ristretto_classloader-v0.14.0) - 2025-03-04
 
 ### Added
+
 - implement reflection constructors and methods
 - add java.lang.Class reflection annotations for fields, constructors and methods
 
-## `ristretto_classfile` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.13.1...ristretto_classfile-v0.14.0) - 2025-03-04
+##
+`ristretto_classfile` - [0.14.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.13.1...ristretto_classfile-v0.14.0) - 2025-03-04
 
 ### Added
+
 - implement jdk.internal.reflect.ConstantPool
 
 ### Fixed
+
 - correct jdk.internal.misc.Unsafe get_reference_type() byte array types
 - udpate java.lang.Class.getSuperclass() to return null
 
-## `ristretto_vm` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.13.0...ristretto_vm-v0.13.1) - 2025-02-20
+##
+`ristretto_vm` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.13.0...ristretto_vm-v0.13.1) - 2025-02-20
 
 ### Added
+
 - update to Rust 2024 edition
 - add bool support to parameters
 - add Java 24 support
 
 ### Fixed
+
 - update java.lang.invoke.MethodHandleNatives.resolve() to support fields
 - make class object singleton
 - correct if_acmpeq and if_acmpne instructions when comparing class references
 - remove unnecessary clone in values returned from frame
 
 ### Other
+
 - add internal thread print_stack_trace() function for debugging
 - update to getrandom=0.3.1
 - refactor Class constructor functions to return Arc<Class>
 - update dependencies
 
-## `ristretto_cli` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/v0.13.0...v0.13.1) - 2025-02-20
+## `ristretto_java` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/v0.13.0...v0.13.1) - 2025-02-20
 
 ### Added
+
 - update to Rust 2024 edition
 - add Java 24 support
 - add bool support to parameters
 
 ### Fixed
+
 - make class object singleton
 - update java.lang.invoke.MethodHandleNatives.resolve() to support fields
 - correct if_acmpeq and if_acmpne instructions when comparing class references
 - remove unnecessary clone in values returned from frame
 
 ### Other
+
 - refactor Class constructor functions to return Arc<Class>
 - add internal thread print_stack_trace() function for debugging
 - update to getrandom=0.3.1
 - update dependencies
 
-## `ristretto_classfile` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.13.0...ristretto_classfile-v0.13.1) - 2025-02-20
+##
+`ristretto_classfile` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.13.0...ristretto_classfile-v0.13.1) - 2025-02-20
 
 ### Added
+
 - update to Rust 2024 edition
 
-## `ristretto_classloader` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.13.0...ristretto_classloader-v0.13.1) - 2025-02-20
+##
+`ristretto_classloader` - [0.13.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.13.0...ristretto_classloader-v0.13.1) - 2025-02-20
 
 ### Added
+
 - update to Rust 2024 edition
 - add Java 24 support
 
 ### Fixed
+
 - make class object singleton
 
 ### Other
+
 - refactor Class constructor functions to return Arc<Class>
 
 ##
@@ -1872,7 +2314,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - move invokedynamic into separate module
 
 ##
-`ristretto_cli` - [0.13.0](https://github.com/theseus-rs/ristretto/compare/ristretto-v0.12.3...ristretto-v0.13.0) - 2025-01-24
+`ristretto_java` - [0.13.0](https://github.com/theseus-rs/ristretto/compare/ristretto-v0.12.3...ristretto-v0.13.0) - 2025-01-24
 
 ### Added
 
@@ -2376,7 +2818,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - update readme
 - update readme
-- update ristretto cli readme
+- update ristretto java readme
 
 ### Feat
 
@@ -2663,4 +3105,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - add missing tests to improve coverage
 - add missing tests to improve coverage
-

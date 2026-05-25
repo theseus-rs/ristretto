@@ -198,9 +198,9 @@ jobs:
           RUST_LOG: info
         run: |
           cross test --profile release-tests --workspace --all-features --target ${{ matrix.target }} \
-            --exclude embedded_jvm \
-            --exclude ristretto_cli \
             --exclude ristretto_intrinsics \
+            --exclude ristretto_java \
+            --exclude embedded_jvm \
             --exclude ristretto_vm
 
       - name: Tests
@@ -212,9 +212,9 @@ jobs:
           RUST_LOG: info
         run: |
           cross test --profile release-tests --workspace --all-features --target ${{ matrix.target }} \
-            --exclude embedded_jvm \
-            --exclude ristretto_cli \
             --exclude ristretto_intrinsics \
+            --exclude ristretto_java \
+            --exclude embedded_jvm \
             --exclude ristretto_jit \
             --exclude ristretto_vm
 

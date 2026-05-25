@@ -24,7 +24,7 @@ assignees: ''
 
 **How did you install ristretto `java`?**
 
-<!-- ristretto_cli-installer.sh, homebrew, GitHub release, etc. -->
+<!-- ristretto_java-installer.sh, homebrew, GitHub release, etc. -->
 
 ### Information about your environment
 
