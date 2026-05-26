@@ -2606,21 +2606,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ristretto_cli"
-version = "0.31.0"
-dependencies = [
- "ahash 0.8.12",
- "anstyle",
- "clap",
- "os_info",
- "ristretto_gc",
- "ristretto_vm",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "ristretto_gc"
 version = "0.31.0"
 dependencies = [
@@ -2671,6 +2656,21 @@ dependencies = [
  "windows-sys 0.61.2",
  "zerocopy",
  "zip",
+]
+
+[[package]]
+name = "ristretto_java"
+version = "0.31.0"
+dependencies = [
+ "ahash 0.8.12",
+ "anstyle",
+ "clap",
+ "os_info",
+ "ristretto_gc",
+ "ristretto_vm",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

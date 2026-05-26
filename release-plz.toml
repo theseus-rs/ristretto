@@ -6,7 +6,7 @@ pr_name = "ristretto-v{{ version }}"
 release_always = false
 
 [[package]]
-name = "ristretto_cli"
+name = "ristretto_java"
 changelog_update = true
 changelog_include = [
     "ristretto_classfile",

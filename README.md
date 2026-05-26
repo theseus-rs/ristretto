@@ -19,17 +19,17 @@ Embeddable Java Virtual Machine [JVM](https://docs.oracle.com/javase/specs/jvms/
 ### Linux / MacOS
 
 ```shell
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/theseus-rs/ristretto/releases/latest/download/ristretto_cli-installer.sh | sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/theseus-rs/ristretto/releases/latest/download/ristretto_java-installer.sh | sh
 ```
 
 ### Windows
 
 ```shell
-irm https://github.com/theseus-rs/ristretto/releases/latest/download/ristretto_cli-installer.ps1 | iex
+irm https://github.com/theseus-rs/ristretto/releases/latest/download/ristretto_java-installer.ps1 | iex
 ```
 
 For more information, and additional installations instructions (cargo, homebrew, msi),
-visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_cli/) site.
+visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_java/) site.
 
 ### Features
 

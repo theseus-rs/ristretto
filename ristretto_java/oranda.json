@@ -6,8 +6,8 @@
     "artifacts": {
       "package_managers": {
         "preferred": {
-          "cargo": "cargo install ristretto_cli",
-          "binstall": "cargo binstall ristretto_cli"
+          "cargo": "cargo install ristretto_java",
+          "binstall": "cargo binstall ristretto_java"
         }
       }
     },
