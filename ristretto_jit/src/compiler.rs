@@ -33,7 +33,7 @@ use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
 use crate::{JitValue, Result, control_flow_graph};
 use ahash::AHashMap;
-use cranelift::codegen::ir::UserFuncName;
+use cranelift::codegen::ir::{MemFlagsData, UserFuncName};
 use cranelift::codegen::isa::OwnedTargetIsa;
 use cranelift::codegen::settings::Flags;
 use cranelift::jit::{JITBuilder, JITModule};
@@ -383,9 +383,10 @@ impl Compiler {
             let native_type = Self::native_object_type();
             let variable = function_builder.declare_var(native_type);
             local_types.push(native_type);
-            let value = function_builder
-                .ins()
-                .load(native_type, MemFlags::trusted(), address, 8);
+            let value =
+                function_builder
+                    .ins()
+                    .load(native_type, MemFlagsData::trusted(), address, 8);
             function_builder.def_var(variable, value);
         }
 
@@ -401,9 +402,10 @@ impl Compiler {
             let native_type = Self::native_type(parameter_type);
             let variable = function_builder.declare_var(native_type);
             local_types.push(native_type);
-            let value = function_builder
-                .ins()
-                .load(native_type, MemFlags::trusted(), address, 8);
+            let value =
+                function_builder
+                    .ins()
+                    .load(native_type, MemFlagsData::trusted(), address, 8);
             function_builder.def_var(variable, value);
 
             // The JVM specification requires that Long and Double take two places in the

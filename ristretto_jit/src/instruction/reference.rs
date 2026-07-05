@@ -1,8 +1,8 @@
 use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::{Result, jit_value};
-use cranelift::codegen::ir::Value;
-use cranelift::prelude::{FunctionBuilder, InstBuilder, MemFlags, types};
+use cranelift::codegen::ir::{MemFlagsData, Value};
+use cranelift::prelude::{FunctionBuilder, InstBuilder, types};
 
 /// # References
 /// - [JVMS §6.5.aconst_null](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html#jvms-6.5.aconst_null)
@@ -181,10 +181,10 @@ pub(crate) fn areturn(
     let discriminant = function_builder.ins().iconst(types::I8, discriminant);
     function_builder
         .ins()
-        .store(MemFlags::new(), discriminant, return_pointer, 0);
+        .store(MemFlagsData::new(), discriminant, return_pointer, 0);
     function_builder
         .ins()
-        .store(MemFlags::new(), value, return_pointer, 8);
+        .store(MemFlagsData::new(), value, return_pointer, 8);
     function_builder.ins().return_(&[]);
     Ok(())
 }

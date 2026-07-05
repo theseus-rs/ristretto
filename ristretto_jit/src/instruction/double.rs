@@ -4,8 +4,9 @@ use crate::local_variables::LocalVariables;
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
 use crate::{Result, jit_value};
+use cranelift::codegen::ir::MemFlagsData;
 use cranelift::frontend::FunctionBuilder;
-use cranelift::prelude::{FloatCC, InstBuilder, MemFlags, Value, types};
+use cranelift::prelude::{FloatCC, InstBuilder, Value, types};
 
 /// # References
 ///
@@ -385,10 +386,10 @@ pub(crate) fn dreturn(
     let discriminate = function_builder.ins().iconst(types::I8, discriminate);
     function_builder
         .ins()
-        .store(MemFlags::new(), discriminate, return_pointer, 0);
+        .store(MemFlagsData::new(), discriminate, return_pointer, 0);
     function_builder
         .ins()
-        .store(MemFlags::new(), value, return_pointer, 8);
+        .store(MemFlagsData::new(), value, return_pointer, 8);
     function_builder.ins().return_(&[]);
     Ok(())
 }
