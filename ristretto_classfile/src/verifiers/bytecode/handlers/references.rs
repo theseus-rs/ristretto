@@ -138,7 +138,7 @@ impl<'a> ConstantPoolResolver<'a> {
         self.class_file
             .constant_pool
             .try_get_class(index)
-            .map(std::string::ToString::to_string)
+            .map(ToString::to_string)
             .map_err(|e| VerifyError::ClassFormatError(e.to_string()))
     }
 

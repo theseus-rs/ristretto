@@ -14,7 +14,7 @@ pub(crate) fn initialize() -> Result<()> {
 
     let enable_ansi = std::io::stdout().is_terminal();
 
-    let format = tracing_subscriber::fmt::format()
+    let format = fmt::format()
         .with_ansi(enable_ansi)
         .with_level(true)
         .with_target(false)
@@ -27,7 +27,7 @@ pub(crate) fn initialize() -> Result<()> {
         .parse()
         .map_err(|error| InternalError(format!("{error}")))?;
     let filter = EnvFilter::from_env(LOG_ENV_VAR).add_directive(cranelift_directive);
-    tracing_subscriber::fmt()
+    fmt()
         .with_env_filter(filter)
         .fmt_fields(fmt::format::DefaultFields::new())
         .event_format(format)

@@ -179,7 +179,7 @@ fn run_compatibility_test(
 /// Initializes the tracing subscriber for logging.
 #[cfg(not(target_family = "wasm"))]
 fn initialize_tracing() {
-    let format = tracing_subscriber::fmt::format()
+    let format = fmt::format()
         .with_level(true)
         .with_target(false)
         .with_thread_names(true)
@@ -192,7 +192,7 @@ fn initialize_tracing() {
         .add_directive("cranelift=warn".parse().expect("directive"))
         .add_directive("ristretto_classloader=warn".parse().expect("directive"))
         .add_directive("ristretto_vm=error".parse().expect("directive"));
-    tracing_subscriber::fmt()
+    fmt()
         .with_env_filter(filter)
         .fmt_fields(fmt::format::DefaultFields::new())
         .event_format(format)

@@ -14,13 +14,14 @@ use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::native_memory::NativeMemory;
 use ristretto_types::{Parameters, Result, VM};
+use std::mem::size_of;
 use std::sync::Arc;
 
 /// Parses an array of `IOVec` entries from native memory.
 /// Each entry matches the native `iovec` layout: a pointer-sized base address
 /// followed by a pointer-sized length (e.g. 16 bytes on 64-bit, 8 bytes on 32-bit).
 fn parse_iovecs(memory: &NativeMemory, address: i64, count: i32) -> Result<Vec<(i64, usize)>> {
-    let ptr_size = std::mem::size_of::<usize>();
+    let ptr_size = size_of::<usize>();
     let entry_size = ptr_size * 2;
     let entry_size_i64 = i64::try_from(entry_size).map_err(|e| InternalError(e.to_string()))?;
     let ptr_size_i64 = i64::try_from(ptr_size).map_err(|e| InternalError(e.to_string()))?;

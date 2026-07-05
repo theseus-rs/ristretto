@@ -740,7 +740,7 @@ mod tests {
         let java11_thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_11));
         assert!("latin".to_object(&*java11_thread).await?.is_object());
 
-        let fast_java_str = ristretto_classfile::JavaStr::try_from_str("fast")?;
+        let fast_java_str = JavaStr::try_from_str("fast")?;
         assert!(fast_java_str.to_object(&*java17_thread).await?.is_object());
 
         let slow_latin1 = JavaString::from("a\u{0}b");

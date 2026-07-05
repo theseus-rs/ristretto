@@ -2603,7 +2603,7 @@ mod tests {
         assert!(
             matches!(
                 result,
-                Err(ristretto_types::Error::Throwable(_) | ristretto_types::Error::InternalError(_))
+                Err(ristretto_types::Error::Throwable(_) | InternalError(_))
             ),
             "expected Throwable or InternalError, got {result:?}"
         );

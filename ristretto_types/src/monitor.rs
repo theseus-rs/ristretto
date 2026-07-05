@@ -119,11 +119,7 @@ impl Monitor {
     ///
     /// # Errors
     /// if the current thread does not own the monitor.
-    pub async fn wait_timeout(
-        &self,
-        thread_id: u64,
-        duration: std::time::Duration,
-    ) -> Result<bool> {
+    pub async fn wait_timeout(&self, thread_id: u64, duration: Duration) -> Result<bool> {
         self.wait_count.fetch_add(1, Ordering::SeqCst);
         let notified = self.notify.notified();
         tokio::pin!(notified);
@@ -182,7 +178,7 @@ impl Monitor {
     pub async fn wait_timeout_interruptibly<F>(
         &self,
         thread_id: u64,
-        duration: std::time::Duration,
+        duration: Duration,
         is_interrupted: F,
     ) -> Result<bool>
     where
@@ -205,7 +201,7 @@ impl Monitor {
             if remaining.is_zero() {
                 break; // Timed out
             }
-            let poll_duration = remaining.min(std::time::Duration::from_millis(10));
+            let poll_duration = remaining.min(Duration::from_millis(10));
             if let Ok(()) = tokio::time::timeout(poll_duration, notified.as_mut()).await {
                 break; // Notified
             }

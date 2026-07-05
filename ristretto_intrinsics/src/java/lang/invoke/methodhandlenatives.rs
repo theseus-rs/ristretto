@@ -1031,7 +1031,7 @@ fn resolve_holder_methods(
         let descriptor_to_use = JavaStr::cow_from_str(polymorphic_descriptor);
         let (parameters, return_type) = FieldType::parse_method_descriptor(&descriptor_to_use)?;
 
-        let method = ristretto_classloader::Method::new_synthetic(
+        let method = Method::new_synthetic(
             definition,
             method_name.to_string(),
             descriptor_to_use.to_string(),

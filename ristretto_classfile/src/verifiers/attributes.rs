@@ -985,7 +985,6 @@ mod tests {
     use crate::constant_pool::ConstantPool;
     use crate::field::Field;
     use crate::method::Method;
-    use crate::verifiers::error::VerifyError;
     use crate::{BaseType, FieldAccessFlags, FieldType};
     use {Attribute, InnerClass, LineNumber, LocalVariableTable, LocalVariableTypeTable};
 
@@ -1208,7 +1207,7 @@ mod tests {
                 std::slice::from_ref(&attribute),
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
 
         // Invalid class_info_index
@@ -1250,7 +1249,7 @@ mod tests {
         };
         assert!(matches!(
             verify(&class_file, &[attribute_invalid_name], context),
-            Err(VerifyError::InvalidConstantPoolIndexType(1))
+            Err(InvalidConstantPoolIndexType(1))
         ));
     }
 
@@ -2136,7 +2135,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
@@ -2180,7 +2179,7 @@ mod tests {
                 &[attribute],
                 AttributeContext::Method(&Method::default())
             ),
-            Err(VerifyError::VerificationError { .. })
+            Err(VerificationError { .. })
         ));
     }
 
@@ -2969,7 +2968,7 @@ mod tests {
                         flags: RequiresFlags::empty(),
                         version_index: module_version,
                     }],
-                    exports: vec![crate::attributes::Exports {
+                    exports: vec![Exports {
                         index: package_name,
                         flags: ExportsFlags::empty(),
                         to_index: Vec::new(),

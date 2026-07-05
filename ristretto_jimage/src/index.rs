@@ -252,7 +252,7 @@ mod tests {
         let image = Image::from_file(temp_file.path())?;
         assert!(matches!(
             Index::get_attribute_offset::<BigEndian>(&image, 1_000),
-            Err(crate::Error::InvalidIndex(_))
+            Err(InvalidIndex(_))
         ));
         Ok(())
     }

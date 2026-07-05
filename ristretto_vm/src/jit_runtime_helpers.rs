@@ -25,6 +25,7 @@ use ristretto_classfile::BaseType;
 use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_gc::sync::RwLock;
 use ristretto_gc::{GarbageCollector, Gc};
+use std::future::Future;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
 use tokio::runtime::Handle;
@@ -1599,11 +1600,9 @@ fn jit_multianewarray_impl(
 /// succeeds without leaking the relaxation onto native builds where `Send` is required to
 /// support multi-threaded executors.
 #[cfg(not(target_family = "wasm"))]
-type MultianewarrayFuture<'a> =
-    std::pin::Pin<Box<dyn std::future::Future<Output = Result<Value>> + Send + 'a>>;
+type MultianewarrayFuture<'a> = std::pin::Pin<Box<dyn Future<Output = Result<Value>> + Send + 'a>>;
 #[cfg(target_family = "wasm")]
-type MultianewarrayFuture<'a> =
-    std::pin::Pin<Box<dyn std::future::Future<Output = Result<Value>> + 'a>>;
+type MultianewarrayFuture<'a> = std::pin::Pin<Box<dyn Future<Output = Result<Value>> + 'a>>;
 
 /// Recursively allocate a multidimensional array, using the actual single-step component
 /// class at each level. When `dimension_sizes.len() < class.array_dimensions()`, inner

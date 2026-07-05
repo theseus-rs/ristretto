@@ -9,6 +9,8 @@ use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 #[cfg(target_os = "macos")]
 use std::ffi::CString;
+#[cfg(target_os = "macos")]
+use std::mem::size_of;
 use std::sync::Arc;
 
 #[cfg(target_os = "macos")]
@@ -456,7 +458,7 @@ fn set_attrlist_by_path(
         return Ok(());
     }
 
-    let buf_size = buf.len() * std::mem::size_of::<libc::timespec>();
+    let buf_size = buf.len() * size_of::<libc::timespec>();
     #[expect(unsafe_code)]
     let result = unsafe {
         setattrlist(
@@ -488,7 +490,7 @@ fn set_attrlist_by_fd(
         return Ok(());
     }
 
-    let buf_size = buf.len() * std::mem::size_of::<libc::timespec>();
+    let buf_size = buf.len() * size_of::<libc::timespec>();
     #[expect(unsafe_code)]
     let result = unsafe {
         fsetattrlist(

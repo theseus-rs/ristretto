@@ -1087,7 +1087,7 @@ impl Thread {
 
 impl ristretto_types::Thread for Thread {
     type Vm = VM;
-    type Frame = crate::Frame;
+    type Frame = Frame;
 
     fn id(&self) -> u64 {
         self.id
@@ -1113,7 +1113,7 @@ impl ristretto_types::Thread for Thread {
         Box::pin(async move { Thread::set_java_object(self, value).await })
     }
 
-    fn frames(&self) -> ristretto_types::BoxFuture<'_, Result<Vec<Arc<crate::Frame>>>> {
+    fn frames(&self) -> ristretto_types::BoxFuture<'_, Result<Vec<Arc<Frame>>>> {
         Box::pin(async move { Thread::frames(self).await })
     }
 
