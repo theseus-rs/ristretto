@@ -1684,7 +1684,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let module_system = ModuleSystem::new(&configuration, &std::path::PathBuf::new(), 21).await;
+        let module_system = ModuleSystem::new(&configuration, &PathBuf::new(), 21).await;
         assert!(module_system.is_ok());
 
         let module_system = module_system.unwrap();
@@ -1724,7 +1724,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let module_system = ModuleSystem::new(&configuration, &std::path::PathBuf::new(), 21).await;
+        let module_system = ModuleSystem::new(&configuration, &PathBuf::new(), 21).await;
         assert!(module_system.is_ok());
 
         let module_system = module_system.unwrap();
@@ -1754,7 +1754,7 @@ mod tests {
         let configuration = ConfigurationBuilder::new().build().unwrap();
 
         // Java 8 should use fallback configuration
-        let module_system = ModuleSystem::new(&configuration, &std::path::PathBuf::new(), 8).await;
+        let module_system = ModuleSystem::new(&configuration, &PathBuf::new(), 8).await;
         assert!(module_system.is_ok());
 
         let module_system = module_system.unwrap();

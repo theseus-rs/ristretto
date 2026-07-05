@@ -244,7 +244,7 @@ pub fn from_bytes(input: &[u8]) -> Result<String> {
     // no surrogate pairs). In that case, the bytes are already valid UTF-8.
     if !has_mutf8_special_sequences(input) {
         return std::str::from_utf8(input)
-            .map(std::borrow::ToOwned::to_owned)
+            .map(ToOwned::to_owned)
             .map_err(|e| FromUtf8Error(e.to_string()));
     }
 

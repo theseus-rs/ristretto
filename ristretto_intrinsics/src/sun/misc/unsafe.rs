@@ -1375,8 +1375,7 @@ mod tests {
     async fn test_store_fence() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
         let result =
-            crate::jdk::internal::misc::r#unsafe::store_fence(thread, Parameters::default())
-                .await?;
+            jdk::internal::misc::r#unsafe::store_fence(thread, Parameters::default()).await?;
         assert_eq!(result, None);
         Ok(())
     }

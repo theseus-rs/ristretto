@@ -1,5 +1,6 @@
 #![cfg(not(target_family = "wasm"))]
 #![allow(unsafe_code)]
+#![allow(clippy::items_after_statements)]
 
 use ristretto_gc::{GarbageCollector, Gc, Result, Trace};
 use std::sync::Mutex;

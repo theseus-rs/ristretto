@@ -251,7 +251,7 @@ impl JavaStr {
     ///
     /// # Errors
     /// Returns an error if the MUTF-8 bytes are malformed.
-    pub fn to_utf16(&self) -> crate::Result<Vec<u16>> {
+    pub fn to_utf16(&self) -> Result<Vec<u16>> {
         mutf8::to_utf16(&self.0)
     }
 

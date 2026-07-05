@@ -2,6 +2,7 @@
 //!
 //! Tests complex scenarios, edge cases, and integration between different components.
 #![cfg(not(target_family = "wasm"))]
+#![allow(clippy::items_after_statements)]
 
 use ristretto_gc::{Configuration, GarbageCollector, Gc, GcRootGuard, Result, Trace};
 use std::collections::{HashMap, HashSet};

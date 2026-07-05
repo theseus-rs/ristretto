@@ -217,7 +217,7 @@ mod test {
     #[test]
     fn test_success() {
         let (class_file, _method) = get_test_class_file_and_method();
-        assert_eq!(Ok(()), crate::verifiers::methods::verify(&class_file));
+        assert_eq!(Ok(()), verify(&class_file));
     }
 
     #[test]

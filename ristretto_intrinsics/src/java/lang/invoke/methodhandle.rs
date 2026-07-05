@@ -25,7 +25,7 @@ pub async fn invoke<T: Thread + 'static>(
     // For signature polymorphic methods, parameters are passed individually, not as an array
     let all_params = parameters.into_vec();
     if all_params.is_empty() {
-        return Err(ristretto_types::Error::InternalError(
+        return Err(InternalError(
             "invoke requires at least the method handle".to_string(),
         ));
     }
@@ -71,7 +71,7 @@ pub async fn invoke<T: Thread + 'static>(
         return Ok(Some(result));
     }
 
-    Err(ristretto_types::Error::InternalError(
+    Err(InternalError(
         "MethodHandle has neither vmentry nor member".to_string(),
     ))
 }
@@ -394,7 +394,7 @@ pub async fn invoke_basic<T: Thread + 'static>(
     // For signature polymorphic methods, parameters are passed individually, not as an array
     let all_params = parameters.into_vec();
     if all_params.is_empty() {
-        return Err(ristretto_types::Error::InternalError(
+        return Err(InternalError(
             "invokeBasic requires at least the method handle".to_string(),
         ));
     }
@@ -444,7 +444,7 @@ pub async fn invoke_basic<T: Thread + 'static>(
         return Ok(Some(result));
     }
 
-    Err(ristretto_types::Error::InternalError(
+    Err(InternalError(
         "MethodHandle has neither vmentry nor member".to_string(),
     ))
 }
@@ -468,7 +468,7 @@ pub async fn invoke_exact<T: Thread + 'static>(
     // We need to extract the method_handle first, then treat remaining parameters as arguments.
     let all_params = parameters.into_vec();
     if all_params.is_empty() {
-        return Err(ristretto_types::Error::InternalError(
+        return Err(InternalError(
             "invokeExact requires at least the method handle".to_string(),
         ));
     }
@@ -514,7 +514,7 @@ pub async fn invoke_exact<T: Thread + 'static>(
         return Ok(Some(result));
     }
 
-    Err(ristretto_types::Error::InternalError(
+    Err(InternalError(
         "MethodHandle has neither vmentry nor member".to_string(),
     ))
 }

@@ -669,7 +669,7 @@ pub async fn open<T: Thread + 'static>(
 
     // Read the file bytes
     let file_bytes = std::fs::read(&path).map_err(|e| {
-        if e.kind() == std::io::ErrorKind::NotFound {
+        if e.kind() == io::ErrorKind::NotFound {
             ristretto_types::JavaError::FileNotFoundException(format!("File not found: {path}"))
         } else {
             ristretto_types::JavaError::IoException(format!("Error reading file '{path}': {e}"))

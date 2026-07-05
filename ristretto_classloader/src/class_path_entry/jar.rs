@@ -310,7 +310,7 @@ mod tests {
     use std::path::PathBuf;
     use zip::write::SimpleFileOptions;
 
-    fn make_tempdir() -> std::io::Result<tempfile::TempDir> {
+    fn make_tempdir() -> io::Result<tempfile::TempDir> {
         ristretto_test_util::init_wasi_tempdir();
         tempfile::tempdir()
     }
@@ -418,7 +418,7 @@ mod tests {
 
         // Create a jar with a bad class file
         let jar_path = temp_dir.path().join("invalid.jar");
-        let mut archive = zip::ZipWriter::new(std::fs::File::create(&jar_path)?);
+        let mut archive = zip::ZipWriter::new(fs::File::create(&jar_path)?);
         archive.start_file("HelloWorld.class", SimpleFileOptions::default())?;
         archive.write_all(&[0x00, 0x01, 0x02])?;
         archive.finish()?;
@@ -444,7 +444,7 @@ mod tests {
 
         // Create a jar with an invalid class file
         let jar_path = temp_dir.path().join("invalid.jar");
-        let mut archive = zip::ZipWriter::new(std::fs::File::create(&jar_path)?);
+        let mut archive = zip::ZipWriter::new(fs::File::create(&jar_path)?);
         archive.start_file("HelloWorld.class", SimpleFileOptions::default())?;
         archive.write_all(bytes.as_slice())?;
         archive.finish()?;

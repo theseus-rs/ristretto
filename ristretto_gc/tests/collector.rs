@@ -2,6 +2,7 @@
 //!
 //! Tests collector configuration, statistics, collection cycles, and performance monitoring.
 #![cfg(not(target_family = "wasm"))]
+#![allow(clippy::items_after_statements)]
 
 use ristretto_gc::{Configuration, GarbageCollector, Gc, Result, Trace};
 use std::sync::Mutex;

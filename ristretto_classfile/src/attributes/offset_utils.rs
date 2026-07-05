@@ -69,7 +69,7 @@ pub(crate) fn lookup_byte_offset_le(pairs: &[(u16, u16)], byte_offset: u16) -> O
 /// sorted Vec of (`byte_offset`, `instruction_index`) pairs for binary search lookup.
 #[expect(clippy::type_complexity)]
 pub(crate) fn instructions_from_byte_reader(
-    reader: &mut crate::byte_reader::ByteReader<'_>,
+    reader: &mut ByteReader<'_>,
 ) -> Result<(Vec<(u16, u16)>, Vec<Instruction>)> {
     let total_len = reader.data().len() - reader.position();
     let base = reader.position();
