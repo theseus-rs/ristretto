@@ -4,8 +4,8 @@ use crate::instruction::{ThrowContext, emit_bci};
 use crate::jit_value;
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
-use cranelift::codegen::ir::{Block, BlockArg, Value};
-use cranelift::prelude::{FunctionBuilder, InstBuilder, MemFlags, types};
+use cranelift::codegen::ir::{Block, BlockArg, MemFlagsData, Value};
+use cranelift::prelude::{FunctionBuilder, InstBuilder, types};
 use ristretto_classfile::attributes::ExceptionTableEntry;
 
 /// Prepares a throw target for `throw_context.program_counter`.
@@ -240,7 +240,7 @@ pub(crate) fn emit_exception_return(function_builder: &mut FunctionBuilder, retu
         .iconst(types::I8, i64::from(jit_value::NONE));
     function_builder
         .ins()
-        .store(MemFlags::new(), none_discriminant, return_pointer, 0);
+        .store(MemFlagsData::new(), none_discriminant, return_pointer, 0);
     function_builder.ins().return_(&[]);
 }
 
