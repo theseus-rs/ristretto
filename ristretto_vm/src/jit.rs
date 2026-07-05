@@ -503,7 +503,7 @@ fn convert_to_vm(jit_value: &ristretto_jit::Value) -> Value {
         ristretto_jit::Value::F64(value) => Value::from(*value),
         ristretto_jit::Value::Ptr(0) => Value::Object(None),
         ristretto_jit::Value::Ptr(ptr) => {
-            let gc_ref = ristretto_gc::Gc::from_raw_i64(*ptr);
+            let gc_ref = Gc::from_raw_i64(*ptr);
             Value::Object(Some(gc_ref))
         }
     }

@@ -30,7 +30,7 @@ impl Drop for TestObject {
 }
 
 impl ristretto_gc::Trace for TestObject {
-    fn trace(&self, _collector: &ristretto_gc::GarbageCollector) {
+    fn trace(&self, _collector: &GarbageCollector) {
         // No GC references to trace
     }
 }
@@ -71,7 +71,7 @@ impl Finalize for TestObjectWithFinalizer {
 }
 
 impl ristretto_gc::Trace for TestObjectWithFinalizer {
-    fn trace(&self, _collector: &ristretto_gc::GarbageCollector) {
+    fn trace(&self, _collector: &GarbageCollector) {
         // No GC references to trace
     }
 }

@@ -105,7 +105,7 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     let tmp_dir = env::temp_dir();
     #[cfg(target_family = "wasm")]
     let tmp_dir =
-        std::path::PathBuf::from(std::env::var("TMPDIR").unwrap_or_else(|_| "/tmp".to_string()));
+        std::path::PathBuf::from(env::var("TMPDIR").unwrap_or_else(|_| "/tmp".to_string()));
     properties.insert(
         "java.io.tmpdir",
         tmp_dir.to_string_lossy().into_owned().into(),

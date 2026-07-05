@@ -676,10 +676,7 @@ mod tests {
         IntrinsicMethodData {
             function_name: function_name.to_string(),
             version_specification,
-            cfg_conditions: cfg_conditions
-                .iter()
-                .map(std::string::ToString::to_string)
-                .collect(),
+            cfg_conditions: cfg_conditions.iter().map(ToString::to_string).collect(),
         }
     }
 

@@ -8,11 +8,8 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
-use ristretto_types::{Parameters, Result};
+use ristretto_types::{JavaError, Parameters, Result};
 use std::sync::Arc;
-
-#[cfg(any(target_os = "linux", not(unix)))]
-use ristretto_types::JavaError;
 
 #[cfg(unix)]
 use ristretto_classloader::Reference;
@@ -24,6 +21,8 @@ use ristretto_types::VM;
 use ristretto_types::handles::{SocketHandle, SocketType};
 #[cfg(unix)]
 use socket2::Socket;
+#[cfg(unix)]
+use std::mem::size_of;
 #[cfg(unix)]
 use std::net::Ipv4Addr;
 #[cfg(unix)]
@@ -98,7 +97,7 @@ fn errno_msg(prefix: &str) -> String {
 #[cfg(unix)]
 #[expect(clippy::cast_possible_truncation)]
 fn sock_len<T>() -> libc::socklen_t {
-    std::mem::size_of::<T>() as libc::socklen_t
+    size_of::<T>() as libc::socklen_t
 }
 
 #[cfg(unix)]
@@ -315,7 +314,7 @@ pub async fn bindx<T: Thread + 'static>(
                 let bytes: &[u8] = unsafe {
                     std::slice::from_raw_parts(
                         std::ptr::from_ref(&sa).cast::<u8>(),
-                        std::mem::size_of::<libc::sockaddr_in6>(),
+                        size_of::<libc::sockaddr_in6>(),
                     )
                 };
                 buf.extend_from_slice(bytes);
@@ -447,7 +446,7 @@ pub async fn connect_0<T: Thread + 'static>(
         };
         if rc < 0 {
             let err = std::io::Error::last_os_error();
-            return Err(ristretto_types::JavaError::ConnectException(err.to_string()).into());
+            return Err(JavaError::ConnectException(err.to_string()).into());
         }
         Ok(Some(Value::Int(0)))
     }
@@ -518,11 +517,9 @@ pub async fn get_int_option_0<T: Thread + 'static>(
         let opt_name = parameters.pop_int()?;
         let fd = parameters.pop_int()?;
         let (level, opt) = map_int_option(opt_name).ok_or_else(|| {
-            ristretto_types::Error::JavaError(
-                ristretto_types::JavaError::UnsupportedOperationException(format!(
-                    "SCTP option {opt_name} not supported"
-                )),
-            )
+            ristretto_types::Error::JavaError(JavaError::UnsupportedOperationException(format!(
+                "SCTP option {opt_name} not supported"
+            )))
         })?;
         let vm = thread.vm()?;
         let raw = raw_fd_for(&vm, fd).await?;
@@ -635,7 +632,7 @@ pub async fn get_prim_addr_option_0<T: Thread + 'static>(
         let bytes: &[u8] = unsafe {
             std::slice::from_raw_parts(
                 std::ptr::from_ref(&prim.addr).cast::<u8>(),
-                std::mem::size_of::<libc::sockaddr_storage>(),
+                size_of::<libc::sockaddr_storage>(),
             )
         };
         let addrs = parse_sockaddrs(bytes, 1);
@@ -823,11 +820,9 @@ pub async fn set_int_option_0<T: Thread + 'static>(
         let opt_name = parameters.pop_int()?;
         let fd = parameters.pop_int()?;
         let (level, opt) = map_int_option(opt_name).ok_or_else(|| {
-            ristretto_types::Error::JavaError(
-                ristretto_types::JavaError::UnsupportedOperationException(format!(
-                    "SCTP option {opt_name} not supported"
-                )),
-            )
+            ristretto_types::Error::JavaError(JavaError::UnsupportedOperationException(format!(
+                "SCTP option {opt_name} not supported"
+            )))
         })?;
         let vm = thread.vm()?;
         let raw = raw_fd_for(&vm, fd).await?;
@@ -887,7 +882,7 @@ pub async fn set_peer_prim_addr_option_0<T: Thread + 'static>(
             std::ptr::copy_nonoverlapping(
                 std::ptr::from_ref(&sa).cast::<u8>(),
                 std::ptr::from_mut(&mut prim.addr).cast::<u8>(),
-                std::mem::size_of::<libc::sockaddr_in6>(),
+                size_of::<libc::sockaddr_in6>(),
             );
         }
         #[expect(unsafe_code)]
@@ -944,7 +939,7 @@ pub async fn set_prim_addr_option_0<T: Thread + 'static>(
             std::ptr::copy_nonoverlapping(
                 std::ptr::from_ref(&sa).cast::<u8>(),
                 std::ptr::from_mut(&mut prim.addr).cast::<u8>(),
-                std::mem::size_of::<libc::sockaddr_in6>(),
+                size_of::<libc::sockaddr_in6>(),
             );
         }
         #[expect(unsafe_code)]

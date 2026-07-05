@@ -7,6 +7,8 @@ use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM};
+#[cfg(any(unix, windows))]
+use std::mem::size_of;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6};
 use std::sync::Arc;
 
@@ -150,7 +152,7 @@ pub async fn disconnect_0<T: Thread + 'static>(
                 let _ = libc::connect(
                     cloned_socket.as_raw_fd(),
                     std::ptr::from_ref(&addr).cast::<libc::sockaddr>(),
-                    std::mem::size_of::<libc::sockaddr>() as libc::socklen_t,
+                    size_of::<libc::sockaddr>() as libc::socklen_t,
                 );
             }
         }
@@ -184,7 +186,7 @@ pub async fn disconnect_0<T: Thread + 'static>(
                 let _ = connect(
                     cloned_socket.as_raw_socket(),
                     std::ptr::from_ref(&addr),
-                    std::mem::size_of::<SockAddrStorage>() as i32,
+                    size_of::<SockAddrStorage>() as i32,
                 );
             }
         }

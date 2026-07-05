@@ -254,7 +254,7 @@ mod tests {
         params.push_long(10);
         let (_vm2, thread2) = crate::test::java17_thread().await?;
         // Reuse the original VM/thread for unmap to operate on the same registry.
-        let weak = std::sync::Arc::downgrade(&vm);
+        let weak = Arc::downgrade(&vm);
         let thread = ristretto_vm::Thread::new(&weak, 99);
         let _ = thread2;
         unmap_0(thread, params).await?;

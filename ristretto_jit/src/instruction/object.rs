@@ -27,7 +27,7 @@ pub(crate) fn array_load(
     context_pointer: Value,
     throw_context: &ThrowContext<'_>,
     helper: FuncRef,
-) -> crate::Result<cranelift::codegen::ir::Value> {
+) -> crate::Result<Value> {
     let index = stack.pop_int(function_builder)?;
     let array_ref = stack.pop_object(function_builder)?;
     emit_null_check(
@@ -67,7 +67,7 @@ pub(crate) fn array_store(
     context_pointer: Value,
     throw_context: &ThrowContext<'_>,
     helper: FuncRef,
-    value: cranelift::codegen::ir::Value,
+    value: Value,
 ) -> crate::Result<()> {
     let index = stack.pop_int(function_builder)?;
     let array_ref = stack.pop_object(function_builder)?;

@@ -682,7 +682,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_lookup_method_found_in_class() -> crate::Result<()> {
+    async fn test_lookup_method_found_in_class() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.lang.String").await?;
         let (resolved_class, method) = lookup_method(&class, "length", "()I")?;
@@ -692,7 +692,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_lookup_method_found_in_superclass() -> crate::Result<()> {
+    async fn test_lookup_method_found_in_superclass() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.util.ArrayList").await?;
         // toString is defined in AbstractCollection
@@ -703,7 +703,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_lookup_method_not_found() -> crate::Result<()> {
+    async fn test_lookup_method_not_found() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.lang.String").await?;
         let result = lookup_method(&class, "nonExistentMethod", "()V");
@@ -712,7 +712,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validate_class_kind_static_with_class() -> crate::Result<()> {
+    async fn test_validate_class_kind_static_with_class() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.lang.String").await?;
         // Non-interface class with MethodRef (not InterfaceMethodRef)
@@ -722,7 +722,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validate_class_kind_interface_requires_interface() -> crate::Result<()> {
+    async fn test_validate_class_kind_interface_requires_interface() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.lang.String").await?;
         // invokeinterface requires an interface
@@ -732,7 +732,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validate_method_for_invoke_static() -> crate::Result<()> {
+    async fn test_validate_method_for_invoke_static() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.lang.Integer").await?;
 
@@ -757,7 +757,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_validate_method_for_invoke_virtual() -> crate::Result<()> {
+    async fn test_validate_method_for_invoke_virtual() -> Result<()> {
         let vm = VM::default().await?;
         let class = vm.class("java.lang.Integer").await?;
 

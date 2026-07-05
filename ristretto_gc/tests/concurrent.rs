@@ -2,6 +2,7 @@
 //!
 //! Tests concurrent collection behavior, thread safety, and performance under concurrent load.
 #![cfg(not(target_family = "wasm"))]
+#![allow(clippy::items_after_statements)]
 
 use ristretto_gc::{GarbageCollector, Gc, Result, Trace};
 use std::sync::atomic::{AtomicUsize, Ordering};

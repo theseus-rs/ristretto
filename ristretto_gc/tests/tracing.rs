@@ -3,6 +3,7 @@
 //! Tests custom `GcTrace` implementations, object graphs, and tracing correctness.
 #![cfg(not(target_family = "wasm"))]
 #![allow(unsafe_code)]
+#![allow(clippy::items_after_statements)]
 
 use ristretto_gc::{GarbageCollector, Gc, GcRootGuard, Result, Trace};
 use std::collections::{HashMap, HashSet};
@@ -292,7 +293,7 @@ fn test_deep_nesting_trace() {
     collector.start();
 
     // Create deeply nested structure
-    let mut current: Option<ristretto_gc::GcRootGuard<Nested>> = None;
+    let mut current: Option<GcRootGuard<Nested>> = None;
     for level in (0..10).rev() {
         let inner = current.as_ref().map(GcRootGuard::clone_gc);
         current = Some(Gc::with_collector(&collector, Nested { level, inner }));

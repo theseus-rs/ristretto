@@ -240,7 +240,7 @@ impl Display for Method {
         let parameters = self
             .parameters
             .iter()
-            .map(std::string::ToString::to_string)
+            .map(ToString::to_string)
             .collect::<Vec<String>>()
             .join(", ");
         let return_type = match &self.return_type {
