@@ -65,7 +65,7 @@ byte-unit = "5.2.0"
 clap = "4.6.1"
 console = "0.16.3"
 core-foundation-sys = "0.8.7"
-cranelift = "0.131.1"
+cranelift = "0.133.1"
 criterion = { version = "0.8.2", default-features = false }
 dashmap = "6.1.0"
 dirs = "6.0.0"
