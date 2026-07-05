@@ -1,6 +1,6 @@
 use crate::Finalize;
 use crate::collector::{GarbageCollector, Trace};
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::pointers::SafePtr;
 use crate::root_guard::GcRootGuard;
 use std::borrow::Borrow;
@@ -11,6 +11,7 @@ use std::marker::PhantomData;
 use std::mem::size_of;
 use std::ops::Deref;
 use std::ptr::{self, NonNull};
+use std::sync::Arc;
 
 /// A garbage collected pointer type for `T`.
 ///
@@ -27,16 +28,15 @@ impl<T> Gc<T> {
     /// a `Gc<T>` wrapping the raw pointer along with the pointer and size needed
     /// for subsequent registration.
     fn allocate(collector: &GarbageCollector, data: T) -> (Self, *mut T, usize) {
-        let ptr = Box::into_raw(Box::new(data));
+        let ptr = NonNull::from(Box::leak(Box::new(data)));
         let size = size_of::<T>();
         collector.record_allocation(size);
 
-        let gc_ptr = NonNull::new(ptr).expect("Box::into_raw returned null pointer");
         let gc = Self {
-            ptr: gc_ptr,
+            ptr,
             phantom: PhantomData,
         };
-        (gc, ptr, size)
+        (gc, ptr.as_ptr(), size)
     }
 
     /// Constructs a new `Gc<T>` and registers it as a root.
@@ -44,7 +44,7 @@ impl<T> Gc<T> {
     /// This returns a `GcRootGuard<T>` which ensures the object is rooted.
     /// To get the inner `Gc<T>` for use in data structures, use `guard.clone_gc()`.
     #[expect(clippy::new_ret_no_self)]
-    pub fn new(collector: &GarbageCollector, data: T) -> GcRootGuard<T>
+    pub fn new(collector: &Arc<GarbageCollector>, data: T) -> GcRootGuard<T>
     where
         T: Send + Sync + Trace,
     {
@@ -67,7 +67,7 @@ impl<T> Gc<T> {
     }
 
     /// Constructs a new `Gc<T>` with finalization support and registers it as a root.
-    pub fn new_with_finalizer(collector: &GarbageCollector, data: T) -> GcRootGuard<T>
+    pub fn new_with_finalizer(collector: &Arc<GarbageCollector>, data: T) -> GcRootGuard<T>
     where
         T: Send + Sync + Finalize + Trace,
     {
@@ -80,10 +80,7 @@ impl<T> Gc<T> {
     /// This prevents a race condition where a concurrent GC cycle could unmark and sweep
     /// the object before its root is visible.
     ///
-    /// # Panics
-    ///
-    /// Panics if the collector fails to create a root guard.
-    pub fn with_collector(collector: &GarbageCollector, data: T) -> GcRootGuard<T>
+    pub fn with_collector(collector: &Arc<GarbageCollector>, data: T) -> GcRootGuard<T>
     where
         T: Send + Sync + Trace,
     {
@@ -92,9 +89,7 @@ impl<T> Gc<T> {
         // Register root BEFORE registering object to prevent race with GC cycle.
         // If the root exists first, any GC cycle will find the root during marking.
         // The object isn't in the tracking map yet, so it can't be swept.
-        let root_guard = collector
-            .create_root_guard(gc)
-            .expect("failed to create root guard");
+        let root_guard = collector.create_root_guard(gc);
 
         collector.register_object::<T>(ptr, size);
         root_guard
@@ -124,19 +119,17 @@ impl<T> Gc<T> {
     /// This prevents a race condition where a concurrent GC cycle could unmark and sweep
     /// the object before its root is visible.
     ///
-    /// # Panics
-    ///
-    /// Panics if the collector fails to create a root guard.
-    pub fn with_collector_and_finalizer(collector: &GarbageCollector, data: T) -> GcRootGuard<T>
+    pub fn with_collector_and_finalizer(
+        collector: &Arc<GarbageCollector>,
+        data: T,
+    ) -> GcRootGuard<T>
     where
         T: Send + Sync + Finalize + Trace,
     {
         let (gc, ptr, size) = Self::allocate(collector, data);
 
         // Register root BEFORE registering object (same rationale as with_collector)
-        let root_guard = collector
-            .create_root_guard(gc)
-            .expect("failed to create root guard");
+        let root_guard = collector.create_root_guard(gc);
 
         collector.register_object_with_finalizer::<T>(ptr, size);
         root_guard
@@ -195,15 +188,17 @@ impl<T> Gc<T> {
     /// The original `Gc` (or the GC root keeping the allocation alive) must still be valid.
     /// This does not create a new allocation or register with the garbage collector.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if the pointer is null.
-    #[must_use]
-    pub unsafe fn from_raw(ptr: *const T) -> Self {
-        Self {
-            ptr: NonNull::new(ptr.cast_mut()).expect("Gc::from_raw received null pointer"),
+    /// Returns an error if the pointer is null.
+    pub unsafe fn from_raw(ptr: *const T) -> Result<Self> {
+        let ptr = NonNull::new(ptr.cast_mut()).ok_or_else(|| {
+            Error::InvalidPointer("Gc::from_raw received null pointer".to_string())
+        })?;
+        Ok(Self {
+            ptr,
             phantom: PhantomData,
-        }
+        })
     }
 
     /// Constructs a `Gc<T>` from a raw pointer encoded as an `i64`.
@@ -212,13 +207,14 @@ impl<T> Gc<T> {
     /// obtained from a still live `Gc<T>`. This is intended for JIT interop where pointers
     /// are passed through compiled code as integer values.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if the pointer is null (0).
-    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    #[must_use]
-    pub fn from_raw_i64(ptr: i64) -> Self {
-        let raw = ptr as usize as *const T;
+    /// Returns an error if the pointer is null, negative, or cannot be represented as a pointer.
+    pub fn from_raw_i64(ptr: i64) -> Result<Self> {
+        let address = usize::try_from(ptr).map_err(|_| {
+            Error::InvalidPointer(format!("Gc::from_raw_i64 received negative pointer {ptr}"))
+        })?;
+        let raw = address as *const T;
         // Safety: The caller guarantees this pointer came from Gc::as_ptr() on a live Gc<T>.
         unsafe { Self::from_raw(raw) }
     }
@@ -249,11 +245,11 @@ impl<T> Gc<T> {
     /// # Errors
     ///
     /// If the collector is not initialized or if the object cannot be registered as a root.
-    pub fn as_root(&self, collector: &GarbageCollector) -> Result<GcRootGuard<T>>
+    pub fn as_root(&self, collector: &Arc<GarbageCollector>) -> Result<GcRootGuard<T>>
     where
         T: Trace,
     {
-        collector.create_root_guard(self.clone())
+        Ok(collector.create_root_guard(self.clone()))
     }
 
     /// Triggers a write barrier for this `Gc`.

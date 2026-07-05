@@ -1,3 +1,5 @@
+#[cfg(unix)]
+use crate::net_helpers::inet_address_ipv4;
 use ristretto_classfile::JAVA_8;
 #[cfg(target_os = "linux")]
 use ristretto_classfile::JAVA_11;
@@ -27,6 +29,12 @@ use std::mem::size_of;
 use std::net::Ipv4Addr;
 #[cfg(unix)]
 use std::os::fd::{FromRawFd, RawFd};
+
+#[cfg(unix)]
+fn read_array<const N: usize>(buf: &[u8], offset: usize) -> Option<[u8; N]> {
+    let end = offset.checked_add(N)?;
+    buf.get(offset..end)?.try_into().ok()
+}
 
 #[cfg(not(unix))]
 fn unsupported<T>() -> Result<T> {
@@ -111,24 +119,6 @@ async fn raw_fd_for<V: VM>(vm: &Arc<V>, fd: i32) -> Result<RawFd> {
 }
 
 #[cfg(unix)]
-fn inet_address_ipv4(value: &Value) -> Result<Ipv4Addr> {
-    let holder_value = {
-        let object = value.as_object_ref()?;
-        object.value("holder")?
-    };
-    let holder = holder_value.as_object_ref()?;
-    let address_int = holder.value("address")?.as_i32()?;
-    #[expect(clippy::cast_sign_loss)]
-    let bits = address_int as u32;
-    Ok(Ipv4Addr::new(
-        ((bits >> 24) & 0xFF) as u8,
-        ((bits >> 16) & 0xFF) as u8,
-        ((bits >> 8) & 0xFF) as u8,
-        (bits & 0xFF) as u8,
-    ))
-}
-
-#[cfg(unix)]
 fn make_sockaddr_in6(ipv4: Ipv4Addr, port: u16) -> libc::sockaddr_in6 {
     #[expect(unsafe_code)]
     // SAFETY: sockaddr_in6 is plain old data; zeroing it is valid.
@@ -145,37 +135,47 @@ fn parse_sockaddrs(buf: &[u8], count: usize) -> Vec<(Vec<u8>, u16)> {
     let mut result = Vec::with_capacity(count);
     let mut offset = 0usize;
     for _ in 0..count {
-        if offset + 2 > buf.len() {
+        let Some(family_bytes) = read_array::<2>(buf, offset) else {
             break;
-        }
-        let family = i32::from(u16::from_ne_bytes([buf[offset], buf[offset + 1]]));
+        };
+        let family = i32::from(u16::from_ne_bytes(family_bytes));
         if family == libc::AF_INET6 {
-            if offset + 28 > buf.len() {
+            let Some(next_offset) = offset.checked_add(28) else {
+                break;
+            };
+            if next_offset > buf.len() {
                 break;
             }
-            let port = u16::from_be_bytes([buf[offset + 2], buf[offset + 3]]);
-            let mut octets = [0u8; 16];
-            octets.copy_from_slice(&buf[offset + 8..offset + 24]);
+            let Some(port_bytes) = read_array::<2>(buf, offset + 2) else {
+                break;
+            };
+            let Some(octets) = read_array::<16>(buf, offset + 8) else {
+                break;
+            };
+            let port = u16::from_be_bytes(port_bytes);
             let v6 = std::net::Ipv6Addr::from(octets);
             if let Some(v4) = v6.to_ipv4_mapped() {
                 result.push((v4.octets().to_vec(), port));
             } else {
                 result.push((octets.to_vec(), port));
             }
-            offset += 28;
+            offset = next_offset;
         } else if family == libc::AF_INET {
-            if offset + 16 > buf.len() {
+            let Some(next_offset) = offset.checked_add(16) else {
+                break;
+            };
+            if next_offset > buf.len() {
                 break;
             }
-            let port = u16::from_be_bytes([buf[offset + 2], buf[offset + 3]]);
-            let octets = vec![
-                buf[offset + 4],
-                buf[offset + 5],
-                buf[offset + 6],
-                buf[offset + 7],
-            ];
-            result.push((octets, port));
-            offset += 16;
+            let Some(port_bytes) = read_array::<2>(buf, offset + 2) else {
+                break;
+            };
+            let Some(octets) = read_array::<4>(buf, offset + 4) else {
+                break;
+            };
+            let port = u16::from_be_bytes(port_bytes);
+            result.push((octets.to_vec(), port));
+            offset = next_offset;
         } else {
             break;
         }
@@ -490,11 +490,12 @@ pub async fn get_init_msg_option_0<T: Thread + 'static>(
             return Err(InternalError(errno_msg("sctp getInitMsg")));
         }
         let mut guard = out_array.as_reference_mut()?;
-        if let Reference::IntArray(arr) = &mut *guard
-            && arr.len() >= 2
-        {
-            arr[0] = i32::from(msg.sinit_num_ostreams);
-            arr[1] = i32::from(msg.sinit_max_instreams);
+        if let Reference::IntArray(arr) = &mut *guard {
+            let mut elements = arr.iter_mut();
+            if let (Some(out_streams), Some(in_streams)) = (elements.next(), elements.next()) {
+                *out_streams = i32::from(msg.sinit_num_ostreams);
+                *in_streams = i32::from(msg.sinit_max_instreams);
+            }
         }
         Ok(None)
     }
@@ -564,7 +565,10 @@ pub async fn get_local_addresses_0<T: Thread + 'static>(
         let vm = thread.vm()?;
         let raw = raw_fd_for(&vm, fd).await?;
         let mut buf = vec![0u8; 4096];
-        buf[0..4].copy_from_slice(&0i32.to_ne_bytes());
+        let Some(prefix) = buf.get_mut(..4) else {
+            return Err(InternalError("sctp getaddrs buffer too small".to_string()));
+        };
+        prefix.copy_from_slice(&0i32.to_ne_bytes());
         let mut len = libc::socklen_t::try_from(buf.len()).unwrap_or(libc::socklen_t::MAX);
         #[expect(unsafe_code)]
         // SAFETY: getsockopt writes into buf with declared length.
@@ -580,8 +584,15 @@ pub async fn get_local_addresses_0<T: Thread + 'static>(
         if rc < 0 {
             return Err(InternalError(errno_msg("sctp getaddrs")));
         }
-        let count = u32::from_ne_bytes([buf[4], buf[5], buf[6], buf[7]]) as usize;
-        let parsed = parse_sockaddrs(&buf[8..len as usize], count);
+        let count = read_array::<4>(&buf, 4)
+            .map(u32::from_ne_bytes)
+            .ok_or_else(|| InternalError("sctp getaddrs missing address count".to_string()))?
+            as usize;
+        let len = usize::try_from(len)?;
+        let body = buf
+            .get(8..len)
+            .ok_or_else(|| InternalError("sctp getaddrs invalid address buffer".to_string()))?;
+        let parsed = parse_sockaddrs(body, count);
         let value = build_socket_address_array(&thread, parsed).await?;
         Ok(Some(value))
     }
@@ -669,7 +680,10 @@ pub async fn get_remote_addresses_0<T: Thread + 'static>(
         let vm = thread.vm()?;
         let raw = raw_fd_for(&vm, fd).await?;
         let mut buf = vec![0u8; 4096];
-        buf[0..4].copy_from_slice(&assoc_id.to_ne_bytes());
+        let Some(prefix) = buf.get_mut(..4) else {
+            return Err(InternalError("sctp getaddrs buffer too small".to_string()));
+        };
+        prefix.copy_from_slice(&assoc_id.to_ne_bytes());
         let mut len = libc::socklen_t::try_from(buf.len()).unwrap_or(libc::socklen_t::MAX);
         #[expect(unsafe_code)]
         // SAFETY: getsockopt writes into buf with declared length.
@@ -685,8 +699,15 @@ pub async fn get_remote_addresses_0<T: Thread + 'static>(
         if rc < 0 {
             return Err(InternalError(errno_msg("sctp getaddrs")));
         }
-        let count = u32::from_ne_bytes([buf[4], buf[5], buf[6], buf[7]]) as usize;
-        let parsed = parse_sockaddrs(&buf[8..len as usize], count);
+        let count = read_array::<4>(&buf, 4)
+            .map(u32::from_ne_bytes)
+            .ok_or_else(|| InternalError("sctp getaddrs missing address count".to_string()))?
+            as usize;
+        let len = usize::try_from(len)?;
+        let body = buf
+            .get(8..len)
+            .ok_or_else(|| InternalError("sctp getaddrs invalid address buffer".to_string()))?;
+        let parsed = parse_sockaddrs(body, count);
         let value = build_socket_address_array(&thread, parsed).await?;
         Ok(Some(value))
     }

@@ -936,6 +936,14 @@ pub async fn windows_reg_set_value_ex_windows_v8_v2<T: Thread + 'static>(
 mod tests {
     use super::*;
 
+    fn successful_handle(arr: &[i64]) -> i64 {
+        let handle = arr.first().copied().expect("Expected handle field");
+        let status = arr.get(1).copied().expect("Expected status field");
+        assert_eq!(0, status, "Expected ERROR_SUCCESS");
+        assert_ne!(0, handle, "Expected valid handle");
+        handle
+    }
+
     #[tokio::test]
     async fn test_windows_reg_open_key() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
@@ -956,9 +964,7 @@ mod tests {
             let Reference::LongArray(arr) = &*result_ref else {
                 panic!("Expected LongArray result");
             };
-            assert_eq!(0, arr[1], "Expected ERROR_SUCCESS");
-            assert_ne!(0, arr[0], "Expected valid handle");
-            arr[0]
+            successful_handle(arr)
         };
         // Close the key we opened
         let mut close_params = Parameters::default();
@@ -994,9 +1000,7 @@ mod tests {
             let Reference::LongArray(arr) = &*result_ref else {
                 panic!("Expected LongArray result");
             };
-            assert_eq!(0, arr[1], "Expected ERROR_SUCCESS");
-            assert_ne!(0, arr[0], "Expected valid handle");
-            arr[0]
+            successful_handle(arr)
         };
 
         // Close the created key
@@ -1037,7 +1041,8 @@ mod tests {
             panic!("Expected LongArray result");
         };
         assert_eq!(5, arr.len());
-        assert_eq!(0, arr[1], "Expected ERROR_SUCCESS");
+        let status = arr.get(1).copied().expect("Expected status field");
+        assert_eq!(0, status, "Expected ERROR_SUCCESS");
         Ok(())
     }
 
@@ -1062,8 +1067,7 @@ mod tests {
         let handle = {
             let create_ref = create_result.as_reference()?;
             if let Reference::LongArray(arr) = &*create_ref {
-                assert_eq!(0, arr[1]);
-                arr[0]
+                successful_handle(arr)
             } else {
                 panic!("Expected LongArray");
             }
@@ -1092,8 +1096,7 @@ mod tests {
         let handle = {
             let open_ref = open_result.as_reference()?;
             if let Reference::LongArray(arr) = &*open_ref {
-                assert_eq!(0, arr[1]);
-                arr[0]
+                successful_handle(arr)
             } else {
                 panic!("Expected LongArray");
             }

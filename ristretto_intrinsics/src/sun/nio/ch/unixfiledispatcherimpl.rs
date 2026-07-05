@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::io::socketfiledescriptor::get_fd;
 use crate::java::nio::mapped_regions::{MapMode, MappedRegion, MappedRegions};
 use crate::sun::nio::fs::managed_files;
@@ -215,7 +216,8 @@ pub async fn pread_0<T: Thread + 'static>(
         .map_err(|e| InternalError(format!("pread0: {e}")))?;
 
     if n > 0 {
-        vm.native_memory().write_bytes(address, &buf[..n]);
+        let bytes = bounds::range_to(&buf, ..n, "pread0")?;
+        vm.native_memory().write_bytes(address, bytes);
     }
     // Return -1 for EOF per JVM spec
     let result = if n == 0 && count > 0 {
@@ -277,7 +279,8 @@ pub async fn read_0<T: Thread + 'static>(
     match managed_files::read(vm.file_handles(), fd, &mut buf).await {
         Ok(n) => {
             if n > 0 {
-                vm.native_memory().write_bytes(address, &buf[..n]);
+                let bytes = bounds::range_to(&buf, ..n, "read0")?;
+                vm.native_memory().write_bytes(address, bytes);
             }
             // Return -1 for EOF per JVM spec
             let result = if n == 0 && count > 0 {
@@ -344,12 +347,13 @@ pub async fn readv_0<T: Thread + 'static>(
 
     let mut total: i64 = 0;
     let mut remaining = n;
-    for (i, chunk) in returned_chunks.into_iter().enumerate() {
+    for (base, chunk) in iov_bases.iter().zip(returned_chunks) {
         if remaining == 0 {
             break;
         }
         let chunk_len = std::cmp::min(remaining, chunk.len());
-        native_memory.write_bytes(iov_bases[i], &chunk[..chunk_len]);
+        let bytes = bounds::range_to(&chunk, ..chunk_len, "readv0")?;
+        native_memory.write_bytes(*base, bytes);
         total += i64::try_from(chunk_len)?;
         remaining -= chunk_len;
     }

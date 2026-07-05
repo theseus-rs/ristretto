@@ -1,3 +1,4 @@
+use crate::bounds;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
@@ -42,7 +43,8 @@ pub async fn update<T: Thread + 'static>(
     let crc = crc ^ 0xffff_ffff;
     #[expect(clippy::cast_possible_truncation)]
     let index = ((crc as u8) ^ b) as usize;
-    let crc = CRC32_TABLE[index] ^ (crc >> 8);
+    let table_value = CRC32_TABLE.get(index).copied().unwrap_or_default();
+    let crc = table_value ^ (crc >> 8);
     let result = crc ^ 0xffff_ffff;
 
     #[expect(clippy::cast_possible_wrap)]
@@ -115,10 +117,16 @@ pub async fn update_bytes_0<T: Thread + 'static>(
     let guard = array_ref.read();
     let bytes = guard.as_byte_vec_ref()?;
 
-    if off >= bytes.len() || off + len > bytes.len() {
+    let end = off.checked_add(len).ok_or({
+        ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
+            index: i32::MAX,
+            length: bytes.len(),
+        }
+    })?;
+    if off >= bytes.len() || end > bytes.len() {
         return Err(ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
             #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-            index: (off + len) as i32,
+            index: end as i32,
             length: bytes.len(),
         }
         .into());
@@ -126,12 +134,13 @@ pub async fn update_bytes_0<T: Thread + 'static>(
 
     let mut crc = crc ^ 0xffff_ffff;
 
-    for &b in &bytes[off..off + len] {
+    for &b in bounds::range(bytes, off..end, "CRC32.updateBytes")? {
         #[expect(clippy::cast_sign_loss)]
         let byte = b as u8;
         #[expect(clippy::cast_possible_truncation)]
         let index = ((crc as u8) ^ byte) as usize;
-        crc = CRC32_TABLE[index] ^ (crc >> 8);
+        let table_value = CRC32_TABLE.get(index).copied().unwrap_or_default();
+        crc = table_value ^ (crc >> 8);
     }
 
     let result = crc ^ 0xffff_ffff;

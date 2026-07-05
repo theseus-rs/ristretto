@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::lang::class::get_class;
 use crate::java::lang::thread::{ThreadState, set_thread_status};
 use ristretto_classfile::ClassFile;
@@ -58,7 +59,7 @@ pub async fn allocate_instance<T: Thread + 'static>(
     let class = get_class(&thread, &class_object).await?;
     let object = Object::new(class)?;
     let vm = thread.vm()?;
-    let collector = &vm.garbage_collector();
+    let collector = vm.garbage_collector();
     Ok(Some(Value::from_object(collector, object)))
 }
 
@@ -324,10 +325,10 @@ pub async fn compare_and_exchange_reference<T: Thread + 'static>(
         Reference::Array(object_array) => {
             let offset = offset / REFERENCE_SIZE;
             let elements = &mut object_array.elements;
-            let Some(current_value) = elements.get(offset) else {
+            let Some(element) = elements.get_mut(offset) else {
                 return Err(InternalError("Invalid array index".to_string()));
             };
-            let current_value = current_value.clone();
+            let current_value = element.clone();
 
             let equal = match (&current_value, &expected_value) {
                 (Value::Object(Some(r1)), Value::Object(Some(r2))) => Gc::ptr_eq(r1, r2),
@@ -336,7 +337,7 @@ pub async fn compare_and_exchange_reference<T: Thread + 'static>(
             };
 
             if equal {
-                elements[offset] = new_value;
+                *element = new_value;
             }
             current_value
         }
@@ -525,7 +526,7 @@ pub async fn compare_and_set_reference<T: Thread + 'static>(
         Reference::Array(object_array) => {
             let offset = offset / REFERENCE_SIZE;
             let elements = &mut object_array.elements;
-            let Some(value) = elements.get(offset) else {
+            let Some(value) = elements.get_mut(offset) else {
                 return Err(InternalError(
                     "compareAndSetReference: Invalid reference index".to_string(),
                 ));
@@ -557,7 +558,7 @@ pub async fn compare_and_set_reference<T: Thread + 'static>(
                         actual: x.to_string(),
                     });
                 };
-                elements[offset] = Value::Object(x_reference);
+                *value = Value::Object(x_reference);
                 1
             } else {
                 0
@@ -623,8 +624,9 @@ pub async fn copy_memory_0<T: Thread + 'static>(
                 let src_off = usize::try_from(source_offset)?;
                 let copy_len = bytes.min(src_bytes.len().saturating_sub(src_off));
                 if copy_len > 0 {
-                    native_mem
-                        .write_bytes(destination_offset, &src_bytes[src_off..src_off + copy_len]);
+                    let source_bytes =
+                        bounds::range(src_bytes, src_off..src_off + copy_len, "copyMemory0")?;
+                    native_mem.write_bytes(destination_offset, source_bytes);
                 }
             }
         }
@@ -639,7 +641,10 @@ pub async fn copy_memory_0<T: Thread + 'static>(
                 let dst_off = usize::try_from(destination_offset)?;
                 let copy_len = bytes.min(dst_bytes.len().saturating_sub(dst_off));
                 if copy_len > 0 {
-                    dst_bytes[dst_off..dst_off + copy_len].copy_from_slice(&data[..copy_len]);
+                    let destination_bytes =
+                        bounds::range_mut(dst_bytes, dst_off..dst_off + copy_len, "copyMemory0")?;
+                    let source_bytes = bounds::range_to(&data, ..copy_len, "copyMemory0")?;
+                    destination_bytes.copy_from_slice(source_bytes);
                 }
             }
         }
@@ -703,16 +708,23 @@ pub async fn copy_swap_memory_0<T: Thread + 'static>(
     };
 
     // Validate source bounds
-    if src_offset + bytes > src_bytes.len() {
+    let Some(src_end) = src_offset.checked_add(bytes) else {
         return Err(ArrayIndexOutOfBoundsException {
-            index: i32::try_from(src_offset + bytes)?,
+            index: i32::try_from(src_offset)?,
+            length: src_bytes.len(),
+        }
+        .into());
+    };
+    if src_end > src_bytes.len() {
+        return Err(ArrayIndexOutOfBoundsException {
+            index: i32::try_from(src_end)?,
             length: src_bytes.len(),
         }
         .into());
     }
 
     // Swap bytes according to element size
-    let src_slice = &src_bytes[src_offset..src_offset + bytes];
+    let src_slice = bounds::range(&src_bytes, src_offset..src_end, "copySwapMemory0")?;
     let mut swapped = Vec::with_capacity(bytes);
     for chunk in src_slice.chunks(element_size) {
         swapped.extend(chunk.iter().rev());
@@ -732,14 +744,22 @@ pub async fn copy_swap_memory_0<T: Thread + 'static>(
         ));
     };
 
-    if dest_offset + bytes > dest_slice.len() {
+    let Some(dest_end) = dest_offset.checked_add(bytes) else {
         return Err(ArrayIndexOutOfBoundsException {
-            index: i32::try_from(dest_offset + bytes)?,
+            index: i32::try_from(dest_offset)?,
+            length: dest_slice.len(),
+        }
+        .into());
+    };
+    if dest_end > dest_slice.len() {
+        return Err(ArrayIndexOutOfBoundsException {
+            index: i32::try_from(dest_end)?,
             length: dest_slice.len(),
         }
         .into());
     }
-    dest_slice[dest_offset..dest_offset + bytes].copy_from_slice(&swapped);
+    let dest_slice = bounds::range_mut(dest_slice, dest_offset..dest_end, "copySwapMemory0")?;
+    dest_slice.copy_from_slice(&swapped);
 
     Ok(None)
 }
@@ -828,8 +848,12 @@ pub async fn define_class_0<T: Thread + 'static>(
     };
     let offset = usize::try_from(offset)?;
     let length = usize::try_from(length)?;
+    let end = offset
+        .checked_add(length)
+        .ok_or_else(|| InternalError("defineClass0 range overflow".to_string()))?;
+    let class_bytes = bounds::range(&bytes, offset..end, "Unsafe.defineClass0 bytes")?;
 
-    let class_file = match ClassFile::from_bytes(&bytes[offset..offset + length]) {
+    let class_file = match ClassFile::from_bytes(class_bytes) {
         Ok(class_file) => class_file,
         Err(error) => {
             error!("ClassFormatError in defineClass0: {error}");
@@ -1134,9 +1158,12 @@ async fn get_reference_type<T: Thread + 'static>(
 
                 // Create a zero-filled buffer and copy available bytes
                 let mut buffer = [0u8; 8];
-                let slice = &array[offset..];
+                let slice = bounds::range_from(array, offset.., "getReferenceType")?;
                 let available_bytes = slice.len().min(required_bytes);
-                buffer[..available_bytes].copy_from_slice(&slice[..available_bytes]);
+                let buffer_prefix =
+                    bounds::range_to_mut(&mut buffer, ..available_bytes, "getReferenceType")?;
+                let slice_prefix = bounds::range_to(slice, ..available_bytes, "getReferenceType")?;
+                buffer_prefix.copy_from_slice(slice_prefix);
 
                 let value = match base_type {
                     BaseType::Boolean | BaseType::Byte => {
@@ -1323,7 +1350,8 @@ async fn put_reference_type<T: Thread + 'static>(
                     }
                     .into());
                 }
-                array[offset..end].copy_from_slice(&bytes);
+                let destination = bounds::range_mut(array, offset..end, "putReferenceType")?;
+                destination.copy_from_slice(&bytes);
             }
         }
     }
@@ -1507,8 +1535,8 @@ pub async fn get_load_average_0<T: Thread + 'static>(
     }
     let nelems = usize::try_from(nelems)?;
     let count = std::cmp::min(nelems, std::cmp::min(3, array.len()));
-    for i in 0..count {
-        array[i] = averages[i];
+    for (slot, average) in array.iter_mut().zip(averages.iter()).take(count) {
+        *slot = *average;
     }
 
     Ok(Some(Value::Int(i32::try_from(count)?)))
@@ -2044,15 +2072,23 @@ pub async fn set_memory_0<T: Thread + 'static>(
         return Err(InternalError("setMemory0: Invalid object type".to_string()));
     };
 
-    if offset + bytes > slice.len() {
+    let Some(end) = offset.checked_add(bytes) else {
         return Err(ArrayIndexOutOfBoundsException {
-            index: i32::try_from(offset + bytes)?,
+            index: i32::try_from(offset)?,
+            length: slice.len(),
+        }
+        .into());
+    };
+    if end > slice.len() {
+        return Err(ArrayIndexOutOfBoundsException {
+            index: i32::try_from(end)?,
             length: slice.len(),
         }
         .into());
     }
 
-    slice[offset..offset + bytes].fill(value);
+    let slice = bounds::range_mut(slice, offset..end, "setMemory0")?;
+    slice.fill(value);
 
     Ok(None)
 }
@@ -2413,10 +2449,7 @@ mod tests {
         // After byte swap, 0x0102 becomes 0x0201, etc.
         let dest_guard = dest_value.as_reference()?;
         if let Reference::ShortArray(arr) = &*dest_guard {
-            assert_eq!(arr[0], 0x0201);
-            assert_eq!(arr[1], 0x0403);
-            assert_eq!(arr[2], 0x0605);
-            assert_eq!(arr[3], 0x0807);
+            assert!(arr.iter().copied().eq([0x0201, 0x0403, 0x0605, 0x0807]));
         }
 
         Ok(())
@@ -2532,18 +2565,7 @@ mod tests {
         let Reference::DoubleArray(array) = &*guard else {
             panic!("Expected DoubleArray");
         };
-        assert!(
-            array[0] >= 0.0,
-            "1-minute load average should be non-negative"
-        );
-        assert!(
-            array[1] >= 0.0,
-            "5-minute load average should be non-negative"
-        );
-        assert!(
-            array[2] >= 0.0,
-            "15-minute load average should be non-negative"
-        );
+        assert!(array.iter().all(|average| *average >= 0.0));
         Ok(())
     }
 
@@ -2663,9 +2685,7 @@ mod tests {
         // Verify the array was filled
         let guard = arr_value.as_reference()?;
         if let Reference::ByteArray(arr) = &*guard {
-            for i in 0..8 {
-                assert_eq!(arr[i], -1); // 0xFF as i8 is -1
-            }
+            assert!(arr.iter().copied().eq([-1; 8]));
         }
         Ok(())
     }

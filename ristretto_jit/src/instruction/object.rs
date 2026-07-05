@@ -1,5 +1,7 @@
 use crate::Error::InternalError;
-use crate::instruction::{ThrowContext, emit_bci, emit_null_check, emit_pending_exception_check};
+use crate::instruction::{
+    ThrowContext, emit_bci, emit_null_check, emit_pending_exception_check, single_inst_result,
+};
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
 use cranelift::codegen::ir::FuncRef;
@@ -42,7 +44,7 @@ pub(crate) fn array_load(
     let call = function_builder
         .ins()
         .call(helper, &[context_pointer, bci, array_ref, index]);
-    let value = function_builder.inst_results(call)[0];
+    let value = single_inst_result(function_builder, call)?;
     emit_pending_exception_check(
         function_builder,
         stack,
@@ -191,7 +193,7 @@ pub(crate) fn new_object(
     let call = function_builder
         .ins()
         .call(helpers.new_object, &[context_pointer, bci, class_index]);
-    let result = function_builder.inst_results(call)[0];
+    let result = single_inst_result(function_builder, call)?;
     stack.push_object(function_builder, result)?;
     emit_pending_exception_check(
         function_builder,
@@ -222,7 +224,7 @@ pub(crate) fn anewarray(
         helpers.anewarray,
         &[context_pointer, bci, class_index, count],
     );
-    let result = function_builder.inst_results(call)[0];
+    let result = single_inst_result(function_builder, call)?;
     stack.push_object(function_builder, result)?;
     emit_pending_exception_check(
         function_builder,
@@ -278,7 +280,7 @@ pub(crate) fn multianewarray(
         helpers.multianewarray,
         &[context_pointer, bci, class_index, dims_ptr, dims_len],
     );
-    let result = function_builder.inst_results(call)[0];
+    let result = single_inst_result(function_builder, call)?;
     stack.push_object(function_builder, result)?;
     emit_pending_exception_check(
         function_builder,
@@ -353,7 +355,7 @@ pub(crate) fn instanceof(
         helpers.instanceof,
         &[context_pointer, bci, object, class_index],
     );
-    let result = function_builder.inst_results(call)[0];
+    let result = single_inst_result(function_builder, call)?;
     stack.push_int(function_builder, result)?;
     emit_pending_exception_check(
         function_builder,

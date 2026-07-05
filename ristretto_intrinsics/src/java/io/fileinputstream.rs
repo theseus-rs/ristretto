@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use crate::java::io::filedescriptor::raw_file_descriptor;
@@ -320,22 +321,28 @@ pub async fn read_bytes<T: Thread + 'static>(
             let (data, n) = tokio::task::spawn_blocking(move || {
                 let mut stdin = stdin_lock.blocking_lock();
                 let mut buf = vec![0u8; length];
+                let buf_slice =
+                    bounds::range_mut(&mut buf, 0..length, "FileInputStream.read stdin")?;
                 let n = stdin
-                    .read(&mut buf[0..length])
+                    .read(buf_slice)
                     .map_err(|error| IoException(error.to_string()))?;
                 Ok::<_, ristretto_types::Error>((buf, n))
             })
             .await
             .map_err(|error| IoException(error.to_string()))??;
-            buffer[..n].copy_from_slice(&data[..n]);
+            let target = bounds::range_to_mut(&mut buffer, ..n, "FileInputStream.read buffer")?;
+            let source = bounds::range_to(&data, ..n, "FileInputStream.read source")?;
+            target.copy_from_slice(source);
             n
         }
 
         #[cfg(target_family = "wasm")]
         {
             let mut stdin = stdin_lock.lock().await;
+            let buffer_slice =
+                bounds::range_mut(&mut buffer, 0..length, "FileInputStream.read stdin")?;
             stdin
-                .read(&mut buffer[0..length])
+                .read(buffer_slice)
                 .map_err(|error| IoException(error.to_string()))?
         }
     } else {
@@ -354,13 +361,17 @@ pub async fn read_bytes<T: Thread + 'static>(
 
         #[cfg(target_os = "wasi")]
         {
-            file.read(&mut buffer[0..length])
+            let buffer_slice =
+                bounds::range_mut(&mut buffer, 0..length, "FileInputStream.read file")?;
+            file.read(buffer_slice)
                 .map_err(|error| IoException(error.to_string()))?
         }
 
         #[cfg(not(target_family = "wasm"))]
         {
-            file.read(&mut buffer[0..length])
+            let buffer_slice =
+                bounds::range_mut(&mut buffer, 0..length, "FileInputStream.read file")?;
+            file.read(buffer_slice)
                 .await
                 .map_err(|error| IoException(error.to_string()))?
         }
@@ -379,7 +390,12 @@ pub async fn read_bytes<T: Thread + 'static>(
     } else {
         let buffer: &[i8] = transmute_ref!(buffer.as_slice());
         if bytes_read > 0 {
-            bytes[offset..offset + bytes_read].copy_from_slice(&buffer[..bytes_read]);
+            let end = offset
+                .checked_add(bytes_read)
+                .ok_or_else(|| IoException("Read destination range overflow".to_string()))?;
+            let target = bounds::range_mut(bytes, offset..end, "FileInputStream.read destination")?;
+            let source = bounds::range_to(buffer, ..bytes_read, "FileInputStream.read source")?;
+            target.copy_from_slice(source);
         }
         i32::try_from(bytes_read)?
     };

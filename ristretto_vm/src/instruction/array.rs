@@ -1,4 +1,4 @@
-use crate::Error::InvalidStackValue;
+use crate::Error::{InternalError, InvalidStackValue};
 use crate::JavaError::{NegativeArraySizeException, NullPointerException};
 use crate::Result;
 use crate::frame::ExecutionResult::Continue;
@@ -136,9 +136,11 @@ async fn create_multidimensional_array(
     dimension_sizes: &[usize],
     depth: usize,
 ) -> Result<Value> {
-    let current_size = dimension_sizes[depth];
+    let current_size = *dimension_sizes
+        .get(depth)
+        .ok_or_else(|| InternalError(format!("Invalid array dimension depth: {depth}")))?;
 
-    if depth == dimension_sizes.len() - 1 {
+    if depth.checked_add(1) == Some(dimension_sizes.len()) {
         // This is the innermost dimension; create the actual array
         if component_type.len() == 1 {
             // Primitive array

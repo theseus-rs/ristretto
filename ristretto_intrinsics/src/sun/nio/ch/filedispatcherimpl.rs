@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
 #[cfg(target_os = "windows")]
 use crate::java::nio::mapped_regions::{MapMode, MappedRegion, MappedRegions};
@@ -298,7 +299,8 @@ async fn pread_internal<T: Thread + 'static>(
         .map_err(|e| InternalError(format!("pread0: {e}")))?;
 
     if n > 0 {
-        vm.native_memory().write_bytes(address, &buf[..n]);
+        let bytes = bounds::range_to(&buf, ..n, "pread0")?;
+        vm.native_memory().write_bytes(address, bytes);
     }
     let result = if n == 0 && count > 0 {
         -1
@@ -396,7 +398,8 @@ async fn read_internal<T: Thread + 'static>(
     match managed_files::read(vm.file_handles(), fd, &mut buf).await {
         Ok(n) => {
             if n > 0 {
-                vm.native_memory().write_bytes(address, &buf[..n]);
+                let bytes = bounds::range_to(&buf, ..n, "read0")?;
+                vm.native_memory().write_bytes(address, bytes);
             }
             let result = if n == 0 && count > 0 {
                 -1
@@ -482,12 +485,13 @@ async fn readv_internal<T: Thread + 'static>(
 
     let mut total: i64 = 0;
     let mut remaining = n;
-    for (i, chunk) in returned_chunks.into_iter().enumerate() {
+    for (base, chunk) in iov_bases.iter().zip(returned_chunks) {
         if remaining == 0 {
             break;
         }
         let chunk_len = std::cmp::min(remaining, chunk.len());
-        native_memory.write_bytes(iov_bases[i], &chunk[..chunk_len]);
+        let bytes = bounds::range_to(&chunk, ..chunk_len, "readv0")?;
+        native_memory.write_bytes(*base, bytes);
         total += i64::try_from(chunk_len)?;
         remaining -= chunk_len;
     }
@@ -958,7 +962,7 @@ async fn path_for_fd(
         return None;
     }
     let len = usize::try_from(len).ok()?.min(buf.len());
-    Some(String::from_utf16_lossy(&buf[..len]))
+    Some(String::from_utf16_lossy(buf.get(..len)?))
 }
 
 #[cfg(target_os = "windows")]
@@ -1028,13 +1032,15 @@ pub async fn transfer_from0<T: Thread + 'static>(
         managed_files::seek(file_handles, dst_fd, SeekFrom::End(0))
             .await
             .map_err(|e| InternalError(format!("transferFrom0: {e}")))?;
-        managed_files::write(file_handles, dst_fd, &buf[..n])
+        let bytes = bounds::range_to(&buf, ..n, "transferFrom0")?;
+        managed_files::write(file_handles, dst_fd, bytes)
             .await
             .map_err(|e| InternalError(format!("transferFrom0: {e}")))?
     } else {
         let offset = u64::try_from(position)
             .map_err(|_| InternalError("transferFrom0: negative position".to_string()))?;
-        managed_files::write_at(file_handles, dst_fd, &buf[..n], offset)
+        let bytes = bounds::range_to(&buf, ..n, "transferFrom0")?;
+        managed_files::write_at(file_handles, dst_fd, bytes, offset)
             .await
             .map_err(|e| InternalError(format!("transferFrom0: {e}")))?
     };

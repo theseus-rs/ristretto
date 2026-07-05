@@ -151,9 +151,9 @@ pub async fn accept_0<T: Thread + 'static>(
         .await?;
     let mut guard = isas.as_reference_mut()?;
     if let Reference::Array(object_array) = &mut *guard
-        && !object_array.elements.is_empty()
+        && let Some(first) = object_array.elements.first_mut()
     {
-        object_array.elements[0] = isa;
+        *first = isa;
     }
 
     Ok(Some(Value::Int(new_fd)))

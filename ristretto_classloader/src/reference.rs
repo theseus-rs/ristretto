@@ -799,7 +799,7 @@ impl From<Vec<f64>> for Reference {
 impl Reference {
     /// Create a new object array reference.
     pub fn new_array(
-        collector: &GarbageCollector,
+        collector: &Arc<GarbageCollector>,
         class: Arc<Class>,
         value: Vec<Option<Reference>>,
     ) -> Self {
@@ -850,7 +850,7 @@ mod tests {
     use std::hash::{DefaultHasher, Hasher};
     use std::sync::Arc;
 
-    fn test_ref(collector: &GarbageCollector, reference: impl Into<Reference>) -> Value {
+    fn test_ref(collector: &Arc<GarbageCollector>, reference: impl Into<Reference>) -> Value {
         Value::new_object(collector, reference.into())
     }
 

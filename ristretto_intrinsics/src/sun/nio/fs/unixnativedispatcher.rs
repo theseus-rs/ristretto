@@ -1735,7 +1735,10 @@ pub async fn read_0<T: Thread + 'static>(
     match managed_files::read(vm.file_handles(), i64::from(fd), &mut buf).await {
         Ok(n) => {
             if n > 0 {
-                vm.native_memory().write_bytes(address, &buf[..n]);
+                let Some(bytes) = buf.get(..n) else {
+                    return Err(throw_unix_exception(&thread, 5).await);
+                };
+                vm.native_memory().write_bytes(address, bytes);
             }
             Ok(Some(Value::Int(i32::try_from(n)?)))
         }

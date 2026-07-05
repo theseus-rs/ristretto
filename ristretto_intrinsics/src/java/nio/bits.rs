@@ -1,3 +1,4 @@
+use crate::bounds;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
@@ -68,14 +69,20 @@ pub async fn copy_swap_memory_0<T: Thread + 'static>(
                 "copySwapMemory0: invalid source type".to_string(),
             ));
         };
-        if src_off.saturating_add(bytes) > src_bytes.len() {
+        let src_end = src_off
+            .checked_add(bytes)
+            .ok_or(ArrayIndexOutOfBoundsException {
+                index: i32::MAX,
+                length: src_bytes.len(),
+            })?;
+        if src_end > src_bytes.len() {
             return Err(ArrayIndexOutOfBoundsException {
-                index: i32::try_from(src_off + bytes).unwrap_or(i32::MAX),
+                index: i32::try_from(src_end).unwrap_or(i32::MAX),
                 length: src_bytes.len(),
             }
             .into());
         }
-        src_bytes[src_off..src_off + bytes].to_vec()
+        bounds::range(src_bytes, src_off..src_end, "Bits.copySwapMemory0 source")?.to_vec()
     };
 
     // Swap byte order per element.
@@ -95,14 +102,25 @@ pub async fn copy_swap_memory_0<T: Thread + 'static>(
                 "copySwapMemory0: invalid destination type".to_string(),
             ));
         };
-        if dest_off.saturating_add(bytes) > dest_bytes.len() {
+        let dest_end = dest_off
+            .checked_add(bytes)
+            .ok_or(ArrayIndexOutOfBoundsException {
+                index: i32::MAX,
+                length: dest_bytes.len(),
+            })?;
+        if dest_end > dest_bytes.len() {
             return Err(ArrayIndexOutOfBoundsException {
-                index: i32::try_from(dest_off + bytes).unwrap_or(i32::MAX),
+                index: i32::try_from(dest_end).unwrap_or(i32::MAX),
                 length: dest_bytes.len(),
             }
             .into());
         }
-        dest_bytes[dest_off..dest_off + bytes].copy_from_slice(&swapped);
+        bounds::range_mut(
+            dest_bytes,
+            dest_off..dest_end,
+            "Bits.copySwapMemory0 destination",
+        )?
+        .copy_from_slice(&swapped);
     }
 
     Ok(None)

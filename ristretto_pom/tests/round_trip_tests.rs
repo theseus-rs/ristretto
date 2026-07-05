@@ -1,4 +1,9 @@
 #![cfg(not(target_family = "wasm"))]
+#![expect(
+    clippy::indexing_slicing,
+    clippy::panic_in_result_fn,
+    reason = "integration tests use direct fixture indexing and assertions with Result-returning tests"
+)]
 use ristretto_pom::{DependencyScope, Project, Result};
 use std::fs;
 use std::io::Write;

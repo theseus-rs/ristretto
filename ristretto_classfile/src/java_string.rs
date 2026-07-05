@@ -338,7 +338,7 @@ impl Iterator for Mutf8CharIter<'_> {
         if self.pos >= self.bytes.len() {
             return None;
         }
-        let byte1 = self.bytes[self.pos];
+        let byte1 = self.bytes.get(self.pos).copied()?;
         match byte1 {
             0x00 => {
                 self.pos += 1;
@@ -353,7 +353,7 @@ impl Iterator for Mutf8CharIter<'_> {
                     self.pos = self.bytes.len();
                     return Some('\u{FFFD}');
                 }
-                let byte2 = self.bytes[self.pos + 1];
+                let byte2 = self.bytes.get(self.pos + 1).copied().unwrap_or(0);
                 let code = u32::from(byte1 & 0x1F) << 6 | u32::from(byte2 & 0x3F);
                 self.pos += 2;
                 Some(char::from_u32(code).unwrap_or('\u{FFFD}'))
@@ -363,8 +363,8 @@ impl Iterator for Mutf8CharIter<'_> {
                     self.pos = self.bytes.len();
                     return Some('\u{FFFD}');
                 }
-                let byte2 = self.bytes[self.pos + 1];
-                let byte3 = self.bytes[self.pos + 2];
+                let byte2 = self.bytes.get(self.pos + 1).copied().unwrap_or(0);
+                let byte3 = self.bytes.get(self.pos + 2).copied().unwrap_or(0);
                 let ch = u32::from(byte1 & 0x0F) << 12
                     | u32::from(byte2 & 0x3F) << 6
                     | u32::from(byte3 & 0x3F);
@@ -372,11 +372,11 @@ impl Iterator for Mutf8CharIter<'_> {
                 let mut decoded = None;
                 // Check for surrogate pair
                 if (0xD800..=0xDBFF).contains(&ch) && self.pos + 5 < self.bytes.len() {
-                    let next1 = self.bytes[self.pos + 3];
+                    let next1 = self.bytes.get(self.pos + 3).copied().unwrap_or(0);
                     // MUTF-8 low surrogates always start with 0xED (1110 1101)
                     if next1 == 0xED {
-                        let next2 = self.bytes[self.pos + 4];
-                        let next3 = self.bytes[self.pos + 5];
+                        let next2 = self.bytes.get(self.pos + 4).copied().unwrap_or(0);
+                        let next3 = self.bytes.get(self.pos + 5).copied().unwrap_or(0);
                         let low = u32::from(next1 & 0x0F) << 12
                             | u32::from(next2 & 0x3F) << 6
                             | u32::from(next3 & 0x3F);

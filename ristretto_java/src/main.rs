@@ -1,6 +1,13 @@
 //! Ristretto CLI entry point.
 
 #![forbid(unsafe_code)]
+#![cfg_attr(
+    test,
+    expect(
+        clippy::panic_in_result_fn,
+        reason = "CLI unit tests use assertions in Result-returning async tests"
+    )
+)]
 
 mod argument;
 mod logging;

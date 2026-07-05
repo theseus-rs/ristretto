@@ -1182,9 +1182,11 @@ fn volume_information(path: &str) -> Option<(String, String, u32, u32)> {
         .iter()
         .position(|&c| c == 0)
         .unwrap_or(fs_name.len());
+    let fs_name = fs_name.get(..fs_len)?;
+    let vol_name = vol_name.get(..vol_len)?;
     Some((
-        String::from_utf16_lossy(&fs_name[..fs_len]),
-        String::from_utf16_lossy(&vol_name[..vol_len]),
+        String::from_utf16_lossy(fs_name),
+        String::from_utf16_lossy(vol_name),
         serial,
         flags,
     ))
@@ -1232,7 +1234,10 @@ fn volume_path_name(path: &str) -> String {
         return String::new();
     }
     let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
-    String::from_utf16_lossy(&buf[..len])
+    let Some(buf) = buf.get(..len) else {
+        return String::new();
+    };
+    String::from_utf16_lossy(buf)
 }
 
 #[cfg(not(target_family = "windows"))]

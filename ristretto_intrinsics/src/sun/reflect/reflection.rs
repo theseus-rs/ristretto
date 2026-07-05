@@ -23,7 +23,9 @@ pub async fn get_caller_class_1<T: Thread + 'static>(
         return Ok(Some(Value::Object(None)));
     }
     // current frame = len - 1, caller = len - 2, etc.
-    let caller_frame = &frames[frames.len() - 2];
+    let Some(caller_frame) = frames.get(frames.len() - 2) else {
+        return Ok(Some(Value::Object(None)));
+    };
     let class = caller_frame.class();
     let class_object = class.to_object(&thread).await?;
     Ok(Some(class_object))
@@ -45,7 +47,15 @@ pub async fn get_caller_class_2<T: Thread + 'static>(
     }
     // The frame at index (frames.len() - 1; depth) is the target
     // current frame = len - 1, caller = len - 2, etc.
-    let frame = &frames[frames.len() - 1 - depth];
+    let Some(index) = depth
+        .checked_add(1)
+        .and_then(|depth| frames.len().checked_sub(depth))
+    else {
+        return Ok(Some(Value::Object(None)));
+    };
+    let Some(frame) = frames.get(index) else {
+        return Ok(Some(Value::Object(None)));
+    };
     let class = frame.class();
     let class_object = class.to_object(&thread).await?;
     Ok(Some(class_object))

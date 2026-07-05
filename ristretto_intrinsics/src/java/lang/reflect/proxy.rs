@@ -1,3 +1,4 @@
+use crate::bounds;
 use ristretto_classfile::ClassFile;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
@@ -34,8 +35,12 @@ pub async fn define_class_0<T: Thread + 'static>(
     };
     let offset = usize::try_from(offset)?;
     let length = usize::try_from(length)?;
+    let end = offset.checked_add(length).ok_or_else(|| {
+        ristretto_types::Error::InternalError("defineClass0 range overflow".into())
+    })?;
+    let class_bytes = bounds::range(&bytes, offset..end, "Proxy.defineClass0 bytes")?;
 
-    let class_file = match ClassFile::from_bytes(&bytes[offset..offset + length]) {
+    let class_file = match ClassFile::from_bytes(class_bytes) {
         Ok(class_file) => class_file,
         Err(error) => {
             error!("ClassFormatError in Proxy.defineClass0: {error}");

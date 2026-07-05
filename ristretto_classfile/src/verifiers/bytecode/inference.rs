@@ -196,7 +196,10 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
 
         // Initialize frames array (dense vector for performance)
         let mut frames: Vec<Option<Frame>> = vec![None; self.code_info.instruction_count()];
-        frames[0] = Some(initial_frame);
+        let initial = frames
+            .get_mut(0)
+            .ok_or_else(|| VerifyError::VerifyError("Missing initial instruction".to_string()))?;
+        *initial = Some(initial_frame);
 
         // Worklist-based dataflow analysis
         let mut worklist = Worklist::new(self.code_info.instruction_count());
@@ -220,11 +223,14 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                     "Invalid worklist index".to_string(),
                 ))?;
 
-            let frame = frames[index]
-                .clone()
+            let frame = frames
+                .get(index)
+                .and_then(Clone::clone)
                 .ok_or(VerifyError::VerifyError("Missing frame".to_string()))?;
 
-            let instruction = &self.code[index];
+            let instruction = self.code.get(index).ok_or_else(|| {
+                VerifyError::VerifyError(format!("Invalid instruction index {index}"))
+            })?;
 
             // Log trace if enabled
             if self.trace.is_enabled() {
@@ -242,14 +248,17 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                     .index_at(successor_offset)
                     .ok_or(VerifyError::VerifyError("Invalid successor".to_string()))?;
 
-                if let Some(existing_frame) = &mut frames[successor_index] {
+                let successor_frame = frames.get_mut(successor_index).ok_or_else(|| {
+                    VerifyError::VerifyError(format!("Invalid successor index {successor_index}"))
+                })?;
+                if let Some(existing_frame) = successor_frame.as_mut() {
                     // Merge with existing frame
                     if existing_frame.merge(&next_frame, self.context)? {
                         worklist.add(successor_index);
                     }
                 } else {
                     // First time reaching this instruction
-                    frames[successor_index] = Some(next_frame.clone());
+                    *successor_frame = Some(next_frame.clone());
                     worklist.add(successor_index);
                 }
             }
@@ -514,8 +523,8 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
 
             // Copy locals from current frame
             for (i, local) in current_frame.locals.iter().enumerate() {
-                if i < handler_frame.locals.len() {
-                    handler_frame.locals[i] = local.clone();
+                if let Some(handler_local) = handler_frame.locals.get_mut(i) {
+                    *handler_local = local.clone();
                 }
             }
 
@@ -537,12 +546,15 @@ impl<'a, C: VerificationContext> InferenceVerifier<'a, C> {
                 VerifyError::VerifyError(format!("Invalid handler PC {}", handler.handler_pc))
             })?;
 
-            if let Some(existing) = &mut frames[handler_index] {
+            let handler = frames.get_mut(handler_index).ok_or_else(|| {
+                VerifyError::VerifyError(format!("Invalid handler index {handler_index}"))
+            })?;
+            if let Some(existing) = handler.as_mut() {
                 if existing.merge(&handler_frame, self.context)? {
                     worklist.add(handler_index);
                 }
             } else {
-                frames[handler_index] = Some(handler_frame);
+                *handler = Some(handler_frame);
                 worklist.add(handler_index);
             }
         }

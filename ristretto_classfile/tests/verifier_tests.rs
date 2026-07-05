@@ -3,6 +3,12 @@
 //! These tests validate the verifier against various bytecode patterns
 //! including control flow, exception handling, and type checking scenarios.
 
+#![expect(
+    clippy::expect_used,
+    clippy::panic_in_result_fn,
+    reason = "integration tests use assertions and expected-error checks with Result-returning tests"
+)]
+
 use ristretto_classfile::attributes::{
     Attribute, InnerClass, Instruction, MethodParameter, ModuleAccessFlags, NestedClassAccessFlags,
     Requires, RequiresFlags, StackFrame,

@@ -1,4 +1,10 @@
 #![cfg(not(target_family = "wasm"))]
+#![expect(
+    clippy::indexing_slicing,
+    clippy::panic_in_result_fn,
+    clippy::unwrap_in_result,
+    reason = "integration tests use direct fixture indexing, unwrap, and assertions with Result-returning tests"
+)]
 //! Tests for POM validation functionality.
 
 use ristretto_pom::{

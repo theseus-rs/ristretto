@@ -1,3 +1,8 @@
+#![expect(
+    clippy::panic_in_result_fn,
+    reason = "integration tests use assertions in Result-returning async tests"
+)]
+
 use ristretto_vm::{Result, VM};
 
 #[tokio::test]

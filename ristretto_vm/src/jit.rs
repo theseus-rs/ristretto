@@ -401,7 +401,7 @@ fn process_compilation_batch(
 pub(crate) fn execute(
     function: &Arc<Function>,
     parameters: &[Value],
-    gc: &GarbageCollector,
+    gc: &Arc<GarbageCollector>,
     vm: &Arc<VM>,
     thread: &Arc<Thread>,
     class: &Arc<Class>,
@@ -415,10 +415,15 @@ pub(crate) fn execute(
             if matches!(value, Value::Unused) {
                 continue;
             }
-            stack_buf[count] = convert_to_jit(value)?;
+            let slot = stack_buf
+                .get_mut(count)
+                .ok_or_else(|| InternalError(format!("Invalid JIT argument index {count}")))?;
+            *slot = convert_to_jit(value)?;
             count += 1;
         }
-        &stack_buf[..count]
+        stack_buf
+            .get(..count)
+            .ok_or_else(|| InternalError(format!("Invalid JIT argument count {count}")))?
     } else {
         // Fall back to Vec for unusually large parameter lists
         let vec = convert_parameters(parameters)?;
@@ -449,10 +454,10 @@ fn finish_execute(
     runtime_context.take_pending_exception_into(|pending| {
         if pending != 0 {
             let gc_ref: Gc<ristretto_gc::sync::RwLock<ristretto_classloader::Reference>> =
-                Gc::from_raw_i64(pending);
+                Gc::from_raw_i64(pending)?;
             return Err(crate::Error::Throwable(Value::Object(Some(gc_ref))));
         }
-        Ok(result.map(|v| convert_to_vm(&v)))
+        result.map(|v| convert_to_vm(&v)).transpose()
     })
 }
 
@@ -495,18 +500,19 @@ fn convert_to_jit(value: &Value) -> Result<ristretto_jit::Value> {
 ///
 /// For `Ptr` values, the raw pointer must still be valid (i.e., the original `Gc` reference
 /// must be kept alive by the caller for the duration of JIT execution).
-fn convert_to_vm(jit_value: &ristretto_jit::Value) -> Value {
-    match jit_value {
+fn convert_to_vm(jit_value: &ristretto_jit::Value) -> Result<Value> {
+    let value = match jit_value {
         ristretto_jit::Value::I32(value) => Value::from(*value),
         ristretto_jit::Value::I64(value) => Value::from(*value),
         ristretto_jit::Value::F32(value) => Value::from(*value),
         ristretto_jit::Value::F64(value) => Value::from(*value),
         ristretto_jit::Value::Ptr(0) => Value::Object(None),
         ristretto_jit::Value::Ptr(ptr) => {
-            let gc_ref = Gc::from_raw_i64(*ptr);
+            let gc_ref = Gc::from_raw_i64(*ptr)?;
             Value::Object(Some(gc_ref))
         }
-    }
+    };
+    Ok(value)
 }
 
 #[cfg(test)]
@@ -522,11 +528,15 @@ mod tests {
             Value::Double(4.2),
         ];
         let values = convert_parameters(&parameters)?;
-        assert_eq!(values.len(), 4);
-        assert_eq!(values[0], ristretto_jit::Value::I32(1));
-        assert_eq!(values[1], ristretto_jit::Value::I64(2));
-        assert_eq!(values[2], ristretto_jit::Value::F32(3.1));
-        assert_eq!(values[3], ristretto_jit::Value::F64(4.2));
+        assert_eq!(
+            values.as_slice(),
+            &[
+                ristretto_jit::Value::I32(1),
+                ristretto_jit::Value::I64(2),
+                ristretto_jit::Value::F32(3.1),
+                ristretto_jit::Value::F64(4.2),
+            ]
+        );
         Ok(())
     }
 
@@ -580,35 +590,35 @@ mod tests {
     #[test]
     fn test_convert_to_vm_i32() {
         let value = ristretto_jit::Value::I32(42);
-        let result = convert_to_vm(&value);
+        let result = convert_to_vm(&value).unwrap();
         assert_eq!(result, Value::Int(42));
     }
 
     #[test]
     fn test_convert_to_vm_i64() {
         let value = ristretto_jit::Value::I64(42);
-        let result = convert_to_vm(&value);
+        let result = convert_to_vm(&value).unwrap();
         assert_eq!(result, Value::Long(42));
     }
 
     #[test]
     fn test_convert_to_vm_f32() {
         let value = ristretto_jit::Value::F32(42.1);
-        let result = convert_to_vm(&value);
+        let result = convert_to_vm(&value).unwrap();
         assert_eq!(result, Value::Float(42.1));
     }
 
     #[test]
     fn test_convert_to_vm_f64() {
         let value = ristretto_jit::Value::F64(42.1);
-        let result = convert_to_vm(&value);
+        let result = convert_to_vm(&value).unwrap();
         assert_eq!(result, Value::Double(42.1));
     }
 
     #[test]
     fn test_convert_to_vm_null_ptr() {
         let value = ristretto_jit::Value::Ptr(0);
-        let result = convert_to_vm(&value);
+        let result = convert_to_vm(&value).unwrap();
         assert_eq!(result, Value::Object(None));
     }
 

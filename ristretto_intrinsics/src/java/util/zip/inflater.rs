@@ -1,3 +1,4 @@
+use crate::bounds;
 use flate2::{Decompress, FlushDecompress};
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
@@ -22,6 +23,38 @@ struct InflaterContext {
 struct InflaterState {
     handles: RwLock<HashMap<i64, InflaterContext>>,
     next_id: AtomicI64,
+}
+
+fn checked_array_end(offset: usize, len: usize, array_len: usize) -> Result<usize> {
+    let end = offset.checked_add(len).ok_or(
+        ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
+            index: i32::MAX,
+            length: array_len,
+        },
+    )?;
+    if offset > array_len || end > array_len {
+        return Err(ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
+            index: i32::try_from(end).unwrap_or(i32::MAX),
+            length: array_len,
+        }
+        .into());
+    }
+    Ok(end)
+}
+
+fn copy_output_bytes(
+    output_bytes: &mut [i8],
+    offset: usize,
+    output_buffer: &[u8],
+    bytes_written: usize,
+) -> Result<()> {
+    let output_end = checked_array_end(offset, bytes_written, output_bytes.len())?;
+    let output = bounds::range_mut(output_bytes, offset..output_end, "Inflater output")?;
+    let source = bounds::range_to(output_buffer, ..bytes_written, "Inflater output buffer")?;
+    for (slot, byte) in output.iter_mut().zip(source) {
+        *slot = i8::from_ne_bytes(byte.to_ne_bytes());
+    }
+    Ok(())
 }
 
 impl InflaterState {
@@ -155,20 +188,7 @@ pub async fn inflate_bytes<T: Thread + 'static>(
     if bytes_written > 0 {
         let mut guard = output_ref.write();
         let output_bytes = guard.as_byte_vec_mut()?;
-        if off >= output_bytes.len() || off + bytes_written > output_bytes.len() {
-            return Err(ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
-                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-                index: (off + bytes_written) as i32,
-                length: output_bytes.len(),
-            }
-            .into());
-        }
-        for (i, byte) in output_buffer[..bytes_written].iter().enumerate() {
-            #[expect(clippy::cast_possible_wrap)]
-            {
-                output_bytes[off + i] = *byte as i8;
-            }
-        }
+        copy_output_bytes(output_bytes, off, &output_buffer, bytes_written)?;
     }
 
     #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
@@ -232,18 +252,9 @@ pub async fn inflate_bytes_bytes<T: Thread + 'static>(
         // If input_len is 0, return empty vec (no data to process)
         if input_len == 0 {
             Vec::new()
-        } else if input_off >= bytes.len() || input_off + input_len > bytes.len() {
-            // Invalid bounds; this shouldn't happen with correct usage
-            // Return an error to avoid infinite loop
-            return Err(ristretto_types::JavaError::IndexOutOfBoundsException {
-                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-                index: input_off as i32,
-                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-                size: bytes.len() as i32,
-            }
-            .into());
         } else {
-            bytes[input_off..input_off + input_len]
+            let input_end = checked_array_end(input_off, input_len, bytes.len())?;
+            bounds::range(bytes, input_off..input_end, "Inflater input")?
                 .iter()
                 .map(|b| {
                     #[expect(clippy::cast_sign_loss)]
@@ -307,12 +318,8 @@ pub async fn inflate_bytes_bytes<T: Thread + 'static>(
         let mut guard = output_ref.write();
         let output_bytes = guard.as_byte_vec_mut()?;
         #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        for (i, byte) in output_buffer[..bytes_written as usize].iter().enumerate() {
-            #[expect(clippy::cast_possible_wrap)]
-            {
-                output_bytes[output_off + i] = *byte as i8;
-            }
-        }
+        let bytes_written = bytes_written as usize;
+        copy_output_bytes(output_bytes, output_off, &output_buffer, bytes_written)?;
     }
 
     // Return packed value according to JDK spec:
@@ -416,15 +423,9 @@ pub async fn set_dictionary<T: Thread + 'static>(
         let bytes = guard.as_byte_vec_ref()?;
         if len == 0 {
             Vec::new()
-        } else if off >= bytes.len() || off + len > bytes.len() {
-            return Err(ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
-                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-                index: (off + len) as i32,
-                length: bytes.len(),
-            }
-            .into());
         } else {
-            bytes[off..off + len]
+            let end = checked_array_end(off, len, bytes.len())?;
+            bounds::range(bytes, off..end, "Inflater dictionary")?
                 .iter()
                 .map(|b| {
                     #[expect(clippy::cast_sign_loss)]

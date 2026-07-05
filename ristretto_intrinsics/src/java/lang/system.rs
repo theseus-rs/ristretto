@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::lang::object::hash_code;
 use crate::properties;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
@@ -48,18 +49,33 @@ fn arraycopy_helper<T: Clone>(
     destination_position: usize,
     length: usize,
 ) -> Result<()> {
-    if source_position + length > source.len() {
+    let source_end = source_position
+        .checked_add(length)
+        .ok_or_else(|| IllegalArgumentException("source array index out of bounds".to_string()))?;
+    let destination_end = destination_position.checked_add(length).ok_or_else(|| {
+        IllegalArgumentException("destination array index out of bounds".to_string())
+    })?;
+    if source_end > source.len() {
         return Err(
             IllegalArgumentException("source array index out of bounds".to_string()).into(),
         );
     }
-    if destination_position + length > destination.len() {
+    if destination_end > destination.len() {
         return Err(
             IllegalArgumentException("destination array index out of bounds".to_string()).into(),
         );
     }
-    destination[destination_position..destination_position + length]
-        .clone_from_slice(&source[source_position..source_position + length]);
+    let source = bounds::range(
+        source,
+        source_position..source_end,
+        "System.arraycopy source",
+    )?;
+    let destination = bounds::range_mut(
+        destination,
+        destination_position..destination_end,
+        "System.arraycopy destination",
+    )?;
+    destination.clone_from_slice(source);
     Ok(())
 }
 
@@ -69,18 +85,34 @@ fn arraycopy_within_helper<T: Clone>(
     destination_position: usize,
     length: usize,
 ) -> Result<()> {
-    if source_position + length > array.len() {
+    let source_end = source_position
+        .checked_add(length)
+        .ok_or_else(|| IllegalArgumentException("source array index out of bounds".to_string()))?;
+    let destination_end = destination_position.checked_add(length).ok_or_else(|| {
+        IllegalArgumentException("destination array index out of bounds".to_string())
+    })?;
+    if source_end > array.len() {
         return Err(
             IllegalArgumentException("source array index out of bounds".to_string()).into(),
         );
     }
-    if destination_position + length > array.len() {
+    if destination_end > array.len() {
         return Err(
             IllegalArgumentException("destination array index out of bounds".to_string()).into(),
         );
     }
-    let temp = array[source_position..source_position + length].to_vec();
-    array[destination_position..destination_position + length].clone_from_slice(&temp);
+    let temp = bounds::range(
+        array,
+        source_position..source_end,
+        "System.arraycopy source",
+    )?
+    .to_vec();
+    let destination = bounds::range_mut(
+        array,
+        destination_position..destination_end,
+        "System.arraycopy destination",
+    )?;
+    destination.clone_from_slice(&temp);
     Ok(())
 }
 

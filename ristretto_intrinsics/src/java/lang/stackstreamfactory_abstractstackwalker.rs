@@ -13,7 +13,7 @@ use std::sync::Arc;
 /// Returns a Vec of `(class_mirror, rmn_value, method_name, descriptor, bci)` tuples.
 async fn build_frame_data<T: Thread + 'static>(
     thread: &Arc<T>,
-    gc: &GarbageCollector,
+    gc: &Arc<GarbageCollector>,
     filtered_frames: &[&Arc<T::Frame>],
 ) -> Result<Vec<(Value, Value, Value, Value, i32)>> {
     let resolved_method_name_class = thread.class("java/lang/invoke/ResolvedMethodName").await?;

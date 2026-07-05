@@ -29,8 +29,11 @@
 //! * `static` - Static field instructions
 //! * `wide` - Wide instruction prefix for accessing local variables with wider indices
 
+use crate::Error::InternalError;
+use crate::Result;
 use ahash::AHashMap;
-use cranelift::codegen::ir::Block;
+use cranelift::codegen::ir::{Block, Inst, Value};
+use cranelift::frontend::FunctionBuilder;
 use ristretto_classfile::attributes::ExceptionTableEntry;
 
 /// Bundles the context required to emit a branch to an exception handler (or propagate) when a
@@ -46,6 +49,14 @@ pub(crate) struct ThrowContext<'a> {
     pub exception_table: &'a [ExceptionTableEntry],
     /// The program counter of the instruction currently being emitted.
     pub program_counter: usize,
+}
+
+fn single_inst_result(function_builder: &FunctionBuilder<'_>, instruction: Inst) -> Result<Value> {
+    function_builder
+        .inst_results(instruction)
+        .first()
+        .copied()
+        .ok_or_else(|| InternalError("Cranelift instruction did not produce a result".to_string()))
 }
 
 mod array;
@@ -109,9 +120,9 @@ pub(crate) const TRAP_INTERNAL_ERROR: u8 = 127;
 /// argument of every throwing runtime helper. Capped at `i32::MAX` because BCIs are
 /// JVMS bounded to 16-bit method offsets.
 pub(crate) fn emit_bci(
-    function_builder: &mut cranelift::frontend::FunctionBuilder,
+    function_builder: &mut FunctionBuilder<'_>,
     throw_context: &ThrowContext<'_>,
-) -> cranelift::codegen::ir::Value {
+) -> Value {
     use cranelift::prelude::InstBuilder;
     function_builder.ins().iconst(
         cranelift::prelude::types::I32,

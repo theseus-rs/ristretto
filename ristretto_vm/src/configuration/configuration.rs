@@ -397,7 +397,7 @@ mod tests {
             .module_path(vec![PathBuf::from("/mods")])
             .build()?;
         assert_eq!(1, config.module_path().len());
-        assert_eq!(PathBuf::from("/mods"), config.module_path()[0]);
+        assert_eq!(Some(&PathBuf::from("/mods")), config.module_path().first());
         Ok(())
     }
 

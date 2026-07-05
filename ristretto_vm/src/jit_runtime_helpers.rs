@@ -17,13 +17,14 @@ use crate::assignable::Assignable;
 
 use crate::Error::{InternalError, JavaError};
 use crate::JavaError::{
-    ArrayStoreException, ClassCastException, NegativeArraySizeException, NullPointerException,
+    ArrayIndexOutOfBoundsException, ArrayStoreException, ClassCastException,
+    NegativeArraySizeException, NullPointerException,
 };
 use crate::instruction::convert_error_to_throwable;
 use crate::{Result, Thread, VM};
 use ristretto_classfile::BaseType;
 use ristretto_classloader::{Class, Object, Reference, Value};
-use ristretto_gc::sync::RwLock;
+use ristretto_gc::sync::{Mutex, RwLock};
 use ristretto_gc::{GarbageCollector, Gc};
 use std::future::Future;
 use std::sync::Arc;
@@ -94,15 +95,18 @@ impl CachedResolutionError {
 
 /// The first field of `RuntimeContext` MUST be a raw `*const u8` pointing at the
 /// `GarbageCollector` because [`GarbageCollector::from_context_struct_ptr`] relies on
-/// reading exactly that layout. The `vm` Arc below keeps the GC allocation alive for the
-/// duration of the context.
+/// reading exactly that layout. The `gc_owner` Arc below keeps the GC allocation alive for
+/// the duration of the context.
 #[repr(C)]
 pub(crate) struct RuntimeContext {
-    /// Raw pointer to the `GarbageCollector`. MUST be the first field;see the doc-comment
-    /// above. The collector is kept alive by the cloned `vm` Arc which owns the GC.
+    /// Raw pointer to the `GarbageCollector`. MUST be the first field; see the doc-comment
+    /// above. The collector is kept alive by `gc_owner`.
     gc: *const u8,
+    /// Strong owner for `gc`, allowing runtime helpers to create root guards without
+    /// reconstructing ownership from the raw context pointer.
+    gc_owner: Arc<GarbageCollector>,
     /// Cloned Arcs that own their respective targets so a future refactor moving the JIT call
-    /// into another task / thread cannot dangle these pointers. Cost: 3 atomic increments per
+    /// into another task / thread cannot dangle these pointers. Cost: 4 atomic increments per
     /// JIT call (negligible).
     vm: Arc<VM>,
     thread: Arc<Thread>,
@@ -131,6 +135,10 @@ pub(crate) struct RuntimeContext {
     pending_exception: AtomicI64,
     /// GC root id for `pending_exception` (0 == not currently rooted).
     pending_exception_root: AtomicUsize,
+    /// Short-lived roots for object pointers handed back to compiled code. Cranelift frames are
+    /// not currently scanned by the GC, so helpers that move a rooted pointer onto the JIT
+    /// operand stack must keep an explicit root until the compiled invocation returns.
+    transient_roots: Mutex<Vec<usize>>,
     /// BCI of the bytecode instruction currently invoking a runtime helper. Set by every
     /// throwing helper on entry so [`store_pending_error`] can stamp the JIT frame's
     /// program counter, producing accurate Java stack traces (BCI != 0 in
@@ -138,9 +146,8 @@ pub(crate) struct RuntimeContext {
     current_bci: std::sync::atomic::AtomicI32,
 }
 
-// SAFETY: All non-pointer fields are Send/Sync. The raw `gc` pointer is to a long-lived
-// `GarbageCollector` owned by the `vm` Arc, which is itself Send + Sync. We never observe the
-// raw pointer mutably and the underlying object outlives the context.
+// SAFETY: All non-pointer fields are Send/Sync. The raw `gc` pointer is owned by `gc_owner`.
+// We never observe the raw pointer mutably, and the underlying object outlives the context.
 unsafe impl Send for RuntimeContext {}
 unsafe impl Sync for RuntimeContext {}
 
@@ -151,7 +158,7 @@ impl RuntimeContext {
     /// throwable up-front so the throw path needs no async work and never aborts the host
     /// process when normal throwable construction fails.
     pub fn new(
-        gc: &GarbageCollector,
+        gc: &Arc<GarbageCollector>,
         vm: &Arc<VM>,
         thread: &Arc<Thread>,
         class: &Arc<Class>,
@@ -176,6 +183,7 @@ impl RuntimeContext {
         drop(sentinel_guard);
         Ok(Self {
             gc: std::ptr::from_ref::<GarbageCollector>(gc).cast::<u8>(),
+            gc_owner: Arc::clone(gc),
             vm: Arc::clone(vm),
             thread: Arc::clone(thread),
             class: Arc::clone(class),
@@ -186,6 +194,7 @@ impl RuntimeContext {
             class_cache: RwLock::new(ahash::AHashMap::new()),
             pending_exception: AtomicI64::new(0),
             pending_exception_root: AtomicUsize::new(0),
+            transient_roots: Mutex::new(Vec::new()),
             current_bci: std::sync::atomic::AtomicI32::new(-1),
         })
     }
@@ -193,6 +202,10 @@ impl RuntimeContext {
     /// Returns the context as a raw pointer suitable for passing to JIT-compiled code.
     pub fn as_ptr(&self) -> *const u8 {
         std::ptr::from_ref::<Self>(self).cast::<u8>()
+    }
+
+    fn garbage_collector(&self) -> &Arc<GarbageCollector> {
+        &self.gc_owner
     }
 
     /// Returns the current pending exception Gc pointer (0 if none).
@@ -210,8 +223,13 @@ impl RuntimeContext {
         // Install the new GC root *before* publishing the pointer so the slot never
         // refers to an unrooted allocation that a concurrent GC pass could reclaim.
         let new_root_id = if gc_ptr != 0 {
-            let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(gc_ptr);
-            gc_from_context(self.as_ptr()).add_root(&gc_ref)
+            match Gc::<RwLock<Reference>>::from_raw_i64(gc_ptr) {
+                Ok(gc_ref) => gc_from_context(self.as_ptr()).add_root(&gc_ref),
+                Err(error) => {
+                    tracing::error!("invalid pending exception pointer: {error}");
+                    return;
+                }
+            }
         } else {
             0
         };
@@ -225,8 +243,8 @@ impl RuntimeContext {
     }
 
     /// Reads and clears the pending exception. The associated GC root is removed by this
-    /// call; in JIT-emitted code the returned `i64` is consumed immediately on the operand
-    /// stack, which is implicitly scanned (see M4 contract notes on `jit_athrow`).
+    /// call. JIT-emitted code should use `jit_take_pending_exception`, which transfers the
+    /// pointer into this context's transient roots before releasing the pending-exception root.
     ///
     /// **Rust-side consumers must use [`Self::take_pending_exception_into`] instead.** That
     /// API holds the root alive across the consumer callback so the new owner has time to
@@ -257,10 +275,32 @@ impl RuntimeContext {
         }
         result
     }
+
+    /// Keeps an object reference rooted until this JIT invocation returns.
+    fn add_transient_root(&self, gc_ref: &Gc<RwLock<Reference>>) {
+        let root_id = gc_from_context(self.as_ptr()).add_root(gc_ref);
+        self.transient_roots.lock().push(root_id);
+    }
+
+    /// Keeps a raw object pointer rooted until this JIT invocation returns.
+    fn add_transient_root_ptr(&self, gc_ptr: i64) -> Result<()> {
+        if gc_ptr == 0 {
+            return Ok(());
+        }
+        let gc_ref = Gc::<RwLock<Reference>>::from_raw_i64(gc_ptr)?;
+        self.add_transient_root(&gc_ref);
+        Ok(())
+    }
 }
 
 impl Drop for RuntimeContext {
     fn drop(&mut self) {
+        let transient_roots = std::mem::take(self.transient_roots.get_mut());
+        for root_id in transient_roots {
+            if root_id != 0 {
+                gc_from_context(self.as_ptr()).remove_root_by_id(root_id);
+            }
+        }
         let root_id = self.pending_exception_root.load(Ordering::Acquire);
         if root_id != 0 {
             gc_from_context(self.as_ptr()).remove_root_by_id(root_id);
@@ -350,21 +390,65 @@ fn gc_from_context(context: *const u8) -> &'static GarbageCollector {
 
 /// Wraps a `Reference` in a `Gc<RwLock<Reference>>` and returns the raw pointer as i64.
 ///
-/// The object is allocated through the GC. The `GcRootGuard` returned by `Gc::new` is
-/// dropped at the end of this function, removing the root. This is safe because newly
-/// allocated objects start with `marked = true` (allocation-color-black), so they survive
-/// any in-flight GC cycle. By the next GC cycle, the pointer will either be reachable from
-/// a rooted object (e.g., stored in a field or on the operand stack traced from a root)
-/// or it is truly garbage and should be collected.
-fn alloc_reference(gc: &GarbageCollector, reference: Reference) -> i64 {
-    let guard = Gc::new(gc, RwLock::new(reference));
+/// The object is rooted twice while this function returns: first by the allocation guard,
+/// then by the `RuntimeContext` transient root list. The transient root covers the compiled
+/// frame, whose operand stack is not visible to the GC.
+fn alloc_reference(ctx: &RuntimeContext, reference: Reference) -> i64 {
+    let guard = Gc::new(ctx.garbage_collector(), RwLock::new(reference));
     let gc_ref = guard.clone_gc();
+    ctx.add_transient_root(&gc_ref);
     gc_ref.as_ptr_i64()
 }
 
 /// Reconstructs a `Gc<RwLock<Reference>>` from a raw i64 pointer.
-fn gc_ref_from_ptr(ptr: i64) -> Gc<RwLock<Reference>> {
-    Gc::from_raw_i64(ptr)
+fn gc_ref_from_ptr(ptr: i64) -> Result<Gc<RwLock<Reference>>> {
+    Ok(Gc::from_raw_i64(ptr)?)
+}
+
+fn gc_ref_from_ptr_or_pending(ctx: &RuntimeContext, ptr: i64) -> Option<Gc<RwLock<Reference>>> {
+    match gc_ref_from_ptr(ptr) {
+        Ok(gc_ref) => Some(gc_ref),
+        Err(error) => {
+            store_pending_error(ctx, error);
+            None
+        }
+    }
+}
+
+fn array_index_or_pending(ctx: &RuntimeContext, index: i32, length: usize) -> Option<usize> {
+    let Ok(index_usize) = usize::try_from(index) else {
+        store_pending_error(
+            ctx,
+            JavaError(ArrayIndexOutOfBoundsException { index, length }),
+        );
+        return None;
+    };
+    if index_usize >= length {
+        store_pending_error(
+            ctx,
+            JavaError(ArrayIndexOutOfBoundsException { index, length }),
+        );
+        return None;
+    }
+    Some(index_usize)
+}
+
+fn array_element_or_pending<'a, T>(
+    ctx: &RuntimeContext,
+    values: &'a [T],
+    index: i32,
+) -> Option<&'a T> {
+    let index = array_index_or_pending(ctx, index, values.len())?;
+    values.get(index)
+}
+
+fn array_element_mut_or_pending<'a, T>(
+    ctx: &RuntimeContext,
+    values: &'a mut [T],
+    index: i32,
+) -> Option<&'a mut T> {
+    let index = array_index_or_pending(ctx, index, values.len())?;
+    values.get_mut(index)
 }
 
 /// Wraps an extern "C" helper body in `catch_unwind`. If it panics, logs a diagnostic and
@@ -403,73 +487,73 @@ macro_rules! guarded {
 }
 
 extern "C" fn jit_new_bool_array(context: *const u8, count: i32) -> i64 {
-    let gc = gc_from_context(context);
+    let ctx = ctx_from_ptr(context);
     let count = count.max(0) as usize;
     alloc_reference(
-        gc,
+        ctx,
         Reference::BooleanArray(vec![0i8; count].into_boxed_slice()),
     )
 }
 
 extern "C" fn jit_new_byte_array(context: *const u8, count: i32) -> i64 {
-    let gc = gc_from_context(context);
+    let ctx = ctx_from_ptr(context);
     let count = count.max(0) as usize;
     alloc_reference(
-        gc,
+        ctx,
         Reference::ByteArray(vec![0i8; count].into_boxed_slice()),
     )
 }
 
 extern "C" fn jit_new_char_array(context: *const u8, count: i32) -> i64 {
-    let gc = gc_from_context(context);
+    let ctx = ctx_from_ptr(context);
     let count = count.max(0) as usize;
     alloc_reference(
-        gc,
+        ctx,
         Reference::CharArray(vec![0u16; count].into_boxed_slice()),
     )
 }
 
 extern "C" fn jit_new_short_array(context: *const u8, count: i32) -> i64 {
-    let gc = gc_from_context(context);
+    let ctx = ctx_from_ptr(context);
     let count = count.max(0) as usize;
     alloc_reference(
-        gc,
+        ctx,
         Reference::ShortArray(vec![0i16; count].into_boxed_slice()),
     )
 }
 
 extern "C" fn jit_new_int_array(context: *const u8, count: i32) -> i64 {
-    let gc = gc_from_context(context);
+    let ctx = ctx_from_ptr(context);
     let count = count.max(0) as usize;
     alloc_reference(
-        gc,
+        ctx,
         Reference::IntArray(vec![0i32; count].into_boxed_slice()),
     )
 }
 
 extern "C" fn jit_new_long_array(context: *const u8, count: i32) -> i64 {
-    let gc = gc_from_context(context);
+    let ctx = ctx_from_ptr(context);
     let count = count.max(0) as usize;
     alloc_reference(
-        gc,
+        ctx,
         Reference::LongArray(vec![0i64; count].into_boxed_slice()),
     )
 }
 
 extern "C" fn jit_new_float_array(context: *const u8, count: i32) -> i64 {
-    let gc = gc_from_context(context);
+    let ctx = ctx_from_ptr(context);
     let count = count.max(0) as usize;
     alloc_reference(
-        gc,
+        ctx,
         Reference::FloatArray(vec![0.0f32; count].into_boxed_slice()),
     )
 }
 
 extern "C" fn jit_new_double_array(context: *const u8, count: i32) -> i64 {
-    let gc = gc_from_context(context);
+    let ctx = ctx_from_ptr(context);
     let count = count.max(0) as usize;
     alloc_reference(
-        gc,
+        ctx,
         Reference::DoubleArray(vec![0.0f64; count].into_boxed_slice()),
     )
 }
@@ -488,7 +572,9 @@ extern "C" fn jit_arraylength(context: *const u8, bci: i32, array_ptr: i64) -> i
 fn jit_arraylength_inner(context: *const u8, bci: i32, array_ptr: i64) -> i32 {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let reference = gc_ref.read();
     match &*reference {
         Reference::BooleanArray(a) | Reference::ByteArray(a) => a.len() as i32,
@@ -526,10 +612,17 @@ extern "C" fn jit_baload(context: *const u8, bci: i32, array_ptr: i64, index: i3
 fn jit_baload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) -> i32 {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let reference = gc_ref.read();
     match &*reference {
-        Reference::ByteArray(a) | Reference::BooleanArray(a) => i32::from(a[index as usize]),
+        Reference::ByteArray(a) | Reference::BooleanArray(a) => {
+            array_element_or_pending(ctx, a, index)
+                .copied()
+                .map(i32::from)
+                .unwrap_or_default()
+        }
         other => {
             store_pending_error(
                 ctx,
@@ -554,11 +647,15 @@ extern "C" fn jit_bastore(context: *const u8, bci: i32, array_ptr: i64, index: i
 fn jit_bastore_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32, value: i32) {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let mut reference = gc_ref.write();
     match &mut *reference {
         Reference::ByteArray(a) | Reference::BooleanArray(a) => {
-            a[index as usize] = value as i8;
+            if let Some(element) = array_element_mut_or_pending(ctx, a, index) {
+                *element = value as i8;
+            }
         }
         other => {
             store_pending_error(
@@ -587,10 +684,15 @@ extern "C" fn jit_caload(context: *const u8, bci: i32, array_ptr: i64, index: i3
 fn jit_caload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) -> i32 {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let reference = gc_ref.read();
     match &*reference {
-        Reference::CharArray(a) => i32::from(a[index as usize]),
+        Reference::CharArray(a) => array_element_or_pending(ctx, a, index)
+            .copied()
+            .map(i32::from)
+            .unwrap_or_default(),
         other => {
             store_pending_error(
                 ctx,
@@ -615,11 +717,15 @@ extern "C" fn jit_castore(context: *const u8, bci: i32, array_ptr: i64, index: i
 fn jit_castore_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32, value: i32) {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let mut reference = gc_ref.write();
     match &mut *reference {
         Reference::CharArray(a) => {
-            a[index as usize] = value as u16;
+            if let Some(element) = array_element_mut_or_pending(ctx, a, index) {
+                *element = value as u16;
+            }
         }
         other => {
             store_pending_error(
@@ -648,10 +754,15 @@ extern "C" fn jit_saload(context: *const u8, bci: i32, array_ptr: i64, index: i3
 fn jit_saload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) -> i32 {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let reference = gc_ref.read();
     match &*reference {
-        Reference::ShortArray(a) => i32::from(a[index as usize]),
+        Reference::ShortArray(a) => array_element_or_pending(ctx, a, index)
+            .copied()
+            .map(i32::from)
+            .unwrap_or_default(),
         other => {
             store_pending_error(
                 ctx,
@@ -676,11 +787,15 @@ extern "C" fn jit_sastore(context: *const u8, bci: i32, array_ptr: i64, index: i
 fn jit_sastore_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32, value: i32) {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let mut reference = gc_ref.write();
     match &mut *reference {
         Reference::ShortArray(a) => {
-            a[index as usize] = value as i16;
+            if let Some(element) = array_element_mut_or_pending(ctx, a, index) {
+                *element = value as i16;
+            }
         }
         other => {
             store_pending_error(
@@ -709,10 +824,14 @@ extern "C" fn jit_iaload(context: *const u8, bci: i32, array_ptr: i64, index: i3
 fn jit_iaload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) -> i32 {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let reference = gc_ref.read();
     match &*reference {
-        Reference::IntArray(a) => a[index as usize],
+        Reference::IntArray(a) => array_element_or_pending(ctx, a, index)
+            .copied()
+            .unwrap_or_default(),
         other => {
             store_pending_error(
                 ctx,
@@ -737,11 +856,15 @@ extern "C" fn jit_iastore(context: *const u8, bci: i32, array_ptr: i64, index: i
 fn jit_iastore_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32, value: i32) {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let mut reference = gc_ref.write();
     match &mut *reference {
         Reference::IntArray(a) => {
-            a[index as usize] = value;
+            if let Some(element) = array_element_mut_or_pending(ctx, a, index) {
+                *element = value;
+            }
         }
         other => {
             store_pending_error(
@@ -770,10 +893,14 @@ extern "C" fn jit_laload(context: *const u8, bci: i32, array_ptr: i64, index: i3
 fn jit_laload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) -> i64 {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let reference = gc_ref.read();
     match &*reference {
-        Reference::LongArray(a) => a[index as usize],
+        Reference::LongArray(a) => array_element_or_pending(ctx, a, index)
+            .copied()
+            .unwrap_or_default(),
         other => {
             store_pending_error(
                 ctx,
@@ -798,11 +925,15 @@ extern "C" fn jit_lastore(context: *const u8, bci: i32, array_ptr: i64, index: i
 fn jit_lastore_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32, value: i64) {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let mut reference = gc_ref.write();
     match &mut *reference {
         Reference::LongArray(a) => {
-            a[index as usize] = value;
+            if let Some(element) = array_element_mut_or_pending(ctx, a, index) {
+                *element = value;
+            }
         }
         other => {
             store_pending_error(
@@ -831,10 +962,14 @@ extern "C" fn jit_faload(context: *const u8, bci: i32, array_ptr: i64, index: i3
 fn jit_faload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) -> f32 {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let reference = gc_ref.read();
     match &*reference {
-        Reference::FloatArray(a) => a[index as usize],
+        Reference::FloatArray(a) => array_element_or_pending(ctx, a, index)
+            .copied()
+            .unwrap_or_default(),
         other => {
             store_pending_error(
                 ctx,
@@ -859,11 +994,15 @@ extern "C" fn jit_fastore(context: *const u8, bci: i32, array_ptr: i64, index: i
 fn jit_fastore_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32, value: f32) {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let mut reference = gc_ref.write();
     match &mut *reference {
         Reference::FloatArray(a) => {
-            a[index as usize] = value;
+            if let Some(element) = array_element_mut_or_pending(ctx, a, index) {
+                *element = value;
+            }
         }
         other => {
             store_pending_error(
@@ -892,10 +1031,14 @@ extern "C" fn jit_daload(context: *const u8, bci: i32, array_ptr: i64, index: i3
 fn jit_daload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) -> f64 {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let reference = gc_ref.read();
     match &*reference {
-        Reference::DoubleArray(a) => a[index as usize],
+        Reference::DoubleArray(a) => array_element_or_pending(ctx, a, index)
+            .copied()
+            .unwrap_or_default(),
         other => {
             store_pending_error(
                 ctx,
@@ -920,11 +1063,15 @@ extern "C" fn jit_dastore(context: *const u8, bci: i32, array_ptr: i64, index: i
 fn jit_dastore_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32, value: f64) {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let mut reference = gc_ref.write();
     match &mut *reference {
         Reference::DoubleArray(a) => {
-            a[index as usize] = value;
+            if let Some(element) = array_element_mut_or_pending(ctx, a, index) {
+                *element = value;
+            }
         }
         other => {
             store_pending_error(
@@ -953,14 +1100,21 @@ extern "C" fn jit_aaload(context: *const u8, bci: i32, array_ptr: i64, index: i3
 fn jit_aaload_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32) -> i64 {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
     let reference = gc_ref.read();
     match &*reference {
         Reference::Array(obj_array) => {
-            let element = &obj_array.elements[index as usize];
+            let Some(element) = array_element_or_pending(ctx, &obj_array.elements, index) else {
+                return 0;
+            };
             match element {
                 Value::Object(None) => 0i64,
-                Value::Object(Some(gc)) => gc.as_ptr_i64(),
+                Value::Object(Some(gc)) => {
+                    ctx.add_transient_root(gc);
+                    gc.as_ptr_i64()
+                }
                 other => {
                     store_pending_error(
                         ctx,
@@ -999,7 +1153,9 @@ extern "C" fn jit_aastore(context: *const u8, bci: i32, array_ptr: i64, index: i
 fn jit_aastore_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32, value: i64) {
     let ctx = ctx_from_ptr(context);
     ctx.current_bci.store(bci, Ordering::Relaxed);
-    let gc_ref = gc_ref_from_ptr(array_ptr);
+    let Some(gc_ref) = gc_ref_from_ptr_or_pending(ctx, array_ptr) else {
+        return Default::default();
+    };
 
     if value != 0 {
         let component_name = {
@@ -1020,7 +1176,9 @@ fn jit_aastore_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32, v
         // `ArrayStoreException`. Checking non-emptiness covers both shapes.
         let needs_check = !component_name.is_empty();
         if needs_check {
-            let value_gc = gc_ref_from_ptr(value);
+            let Some(value_gc) = gc_ref_from_ptr_or_pending(ctx, value) else {
+                return;
+            };
             let value_class_name = {
                 let val_ref = value_gc.read();
                 val_ref.class_name().ok()
@@ -1053,18 +1211,24 @@ fn jit_aastore_inner(context: *const u8, bci: i32, array_ptr: i64, index: i32, v
     let mut reference = gc_ref.write();
     match &mut *reference {
         Reference::Array(obj_array) => {
-            let element = &mut obj_array.elements[index as usize];
+            let Some(element) = array_element_mut_or_pending(ctx, &mut obj_array.elements, index)
+            else {
+                return;
+            };
             if value == 0 {
                 *element = Value::Object(None);
             } else {
-                let gc: Gc<RwLock<Reference>> = Gc::from_raw_i64(value);
+                let Some(gc) = gc_ref_from_ptr_or_pending(ctx, value) else {
+                    return;
+                };
                 *element = Value::Object(Some(gc));
             }
         }
-        other => panic!(
-            "aastore: expected reference array (got reference variant {:?}, ptr={:#x})",
-            std::mem::discriminant(other),
-            array_ptr as u64
+        _ => store_pending_error(
+            ctx,
+            JavaError(ArrayStoreException(
+                "aastore target is not a reference array".to_string(),
+            )),
         ),
     }
 }
@@ -1382,9 +1546,12 @@ fn value_to_f64(value: &Value) -> Result<f64> {
 
 /// Extract an object reference from a `Value`. See [`value_to_i32`] for type-mismatch
 /// behavior. Null references (`Value::Object(None)`) are returned as `Ok(0)`.
-fn value_to_obj_ptr(value: &Value) -> Result<i64> {
+fn value_to_obj_ptr(ctx: &RuntimeContext, value: &Value) -> Result<i64> {
     match value {
-        Value::Object(Some(gc)) => Ok(gc.as_ptr_i64()),
+        Value::Object(Some(gc)) => {
+            ctx.add_transient_root(gc);
+            Ok(gc.as_ptr_i64())
+        }
         Value::Object(None) => Ok(0),
         other => Err(InternalError(format!(
             "expected Value::Object, found {other:?}"
@@ -1393,12 +1560,12 @@ fn value_to_obj_ptr(value: &Value) -> Result<i64> {
 }
 
 /// Convert a raw i64 GC pointer back to a `Value::Object`.
-fn obj_ptr_to_value(ptr: i64) -> Value {
+fn obj_ptr_to_value(ptr: i64) -> Result<Value> {
     if ptr == 0 {
-        Value::Object(None)
+        Ok(Value::Object(None))
     } else {
-        let gc: Gc<RwLock<Reference>> = Gc::from_raw_i64(ptr);
-        Value::Object(Some(gc))
+        let gc = Gc::from_raw_i64(ptr)?;
+        Ok(Value::Object(Some(gc)))
     }
 }
 
@@ -1445,8 +1612,7 @@ extern "C" fn jit_new(context: *const u8, bci: i32, cp_class_index: i32) -> i64 
 fn jit_new_impl(ctx: &RuntimeContext, cp_class_index: u16) -> Result<i64> {
     let class = resolve_class_ref(ctx, cp_class_index)?;
     let object = Object::new(class)?;
-    let gc = gc_from_context(ctx.as_ptr());
-    Ok(alloc_reference(gc, Reference::Object(object)))
+    Ok(alloc_reference(ctx, Reference::Object(object)))
 }
 
 extern "C" fn jit_anewarray(context: *const u8, bci: i32, cp_class_index: i32, count: i32) -> i64 {
@@ -1500,8 +1666,7 @@ fn jit_anewarray_impl(ctx: &RuntimeContext, cp_class_index: u16, count: i32) -> 
         InternalError(format!("anewarray: count out of range for usize: {error}"))
     })?;
     let reference = Reference::try_from((array_class, vec![Value::Object(None); count]))?;
-    let gc = gc_from_context(ctx.as_ptr());
-    Ok(alloc_reference(gc, reference))
+    Ok(alloc_reference(ctx, reference))
 }
 
 extern "C" fn jit_multianewarray(
@@ -1585,7 +1750,10 @@ fn jit_multianewarray_impl(
         build_multianewarray(thread, class.clone(), &dimension_sizes, 0).await
     })?;
     match array {
-        Value::Object(Some(gc)) => Ok(gc.as_ptr_i64()),
+        Value::Object(Some(gc)) => {
+            ctx.add_transient_root(&gc);
+            Ok(gc.as_ptr_i64())
+        }
         Value::Object(None) => Ok(0),
         other => Err(InternalError(format!(
             "multianewarray: expected object value, got {other:?}"
@@ -1615,8 +1783,10 @@ fn build_multianewarray<'a>(
     depth: usize,
 ) -> MultianewarrayFuture<'a> {
     Box::pin(async move {
-        let current_size = dimension_sizes[depth];
-        let is_last_dim = depth == dimension_sizes.len() - 1;
+        let current_size = *dimension_sizes.get(depth).ok_or_else(|| {
+            InternalError(format!("multianewarray: invalid dimension depth {depth}"))
+        })?;
+        let is_last_dim = depth.checked_add(1) == Some(dimension_sizes.len());
         let vm = thread.vm()?;
         let collector = vm.garbage_collector();
 
@@ -1830,7 +2000,7 @@ extern "C" fn jit_getstatic_object(context: *const u8, bci: i32, cp_index: i32) 
                 return Default::default();
             }
         };
-        match getstatic(ctx, cp_index).and_then(|v| value_to_obj_ptr(&v)) {
+        match getstatic(ctx, cp_index).and_then(|v| value_to_obj_ptr(ctx, &v)) {
             Ok(v) => v,
             Err(error) => {
                 store_pending_error(ctx, error);
@@ -1933,7 +2103,13 @@ extern "C" fn jit_putstatic_object(context: *const u8, bci: i32, cp_index: i32, 
                 return Default::default();
             }
         };
-        let value = obj_ptr_to_value(value);
+        let value = match obj_ptr_to_value(value) {
+            Ok(value) => value,
+            Err(error) => {
+                store_pending_error(ctx, error);
+                return Default::default();
+            }
+        };
         if let Err(error) = putstatic(ctx, cp_index, value) {
             store_pending_error(ctx, error);
         }
@@ -1949,7 +2125,7 @@ fn getfield_helper(ctx: &RuntimeContext, cp_index: u16, object_ptr: i64) -> Resu
         return Err(JavaError(NullPointerException(None)));
     }
     let resolved = resolve_field_ref(ctx, cp_index)?;
-    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(object_ptr);
+    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(object_ptr)?;
     let reference = gc_ref.read();
     match &*reference {
         Reference::Object(object) => {
@@ -1971,7 +2147,7 @@ fn putfield_helper(
         return Err(JavaError(NullPointerException(None)));
     }
     let resolved = resolve_field_ref(ctx, cp_index)?;
-    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(object_ptr);
+    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(object_ptr)?;
     let mut reference = gc_ref.write();
     match &mut *reference {
         Reference::Object(object) => {
@@ -2104,7 +2280,7 @@ extern "C" fn jit_getfield_object(
                 return Default::default();
             }
         };
-        match getfield_helper(ctx, cp_index, object_ptr).and_then(|v| value_to_obj_ptr(&v)) {
+        match getfield_helper(ctx, cp_index, object_ptr).and_then(|v| value_to_obj_ptr(ctx, &v)) {
             Ok(v) => v,
             Err(error) => {
                 store_pending_error(ctx, error);
@@ -2231,7 +2407,13 @@ extern "C" fn jit_putfield_object(
                 return Default::default();
             }
         };
-        let value = obj_ptr_to_value(value);
+        let value = match obj_ptr_to_value(value) {
+            Ok(value) => value,
+            Err(error) => {
+                store_pending_error(ctx, error);
+                return Default::default();
+            }
+        };
         if let Err(error) = putfield_helper(ctx, cp_index, object_ptr, value) {
             store_pending_error(ctx, error);
         }
@@ -2294,7 +2476,13 @@ extern "C" fn jit_checkcast(
         match jit_checkcast_impl(ctx, object_ptr, cp_class_index) {
             Ok(true) => 1,
             Ok(false) => {
-                let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(object_ptr);
+                let gc_ref = match gc_ref_from_ptr(object_ptr) {
+                    Ok(gc_ref) => gc_ref,
+                    Err(error) => {
+                        store_pending_error(ctx, error);
+                        return 0;
+                    }
+                };
                 let (source, target) = {
                     let reference = gc_ref.read();
                     let source = reference
@@ -2329,7 +2517,7 @@ extern "C" fn jit_checkcast(
 
 fn jit_checkcast_impl(ctx: &RuntimeContext, object_ptr: i64, cp_class_index: u16) -> Result<bool> {
     let target_class = resolve_class_ref(ctx, cp_class_index)?;
-    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(object_ptr);
+    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(object_ptr)?;
     let thread = thread_from_ctx(ctx);
     is_instance_of(thread, &gc_ref, &target_class)
 }
@@ -2411,7 +2599,7 @@ extern "C" fn jit_athrow(context: *const u8, bci: i32, exception_ptr: i64) {
 
 fn is_athrow_operand_throwable(ctx: &RuntimeContext, exception_ptr: i64) -> Result<bool> {
     let thread = thread_from_ctx(ctx);
-    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(exception_ptr);
+    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(exception_ptr)?;
     is_instance_of(thread, &gc_ref, &ctx.throwable_class)
 }
 
@@ -2434,7 +2622,14 @@ extern "C" fn jit_throw_npe(context: *const u8, bci: i32) {
 extern "C" fn jit_take_pending_exception(context: *const u8) -> i64 {
     guarded!("jit_take_pending_exception", {
         let ctx = ctx_from_ptr(context);
-        ctx.take_pending_exception()
+        ctx.take_pending_exception_into(|pending| {
+            if let Err(error) = ctx.add_transient_root_ptr(pending) {
+                tracing::error!("invalid pending exception pointer during JIT transfer: {error}");
+                0
+            } else {
+                pending
+            }
+        })
     })
 }
 
@@ -2469,7 +2664,7 @@ fn jit_exception_matches_impl(
     cp_class_index: u16,
 ) -> Result<bool> {
     let target_class = resolve_class_ref(ctx, cp_class_index)?;
-    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(exception_ptr);
+    let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(exception_ptr)?;
     let thread = thread_from_ctx(ctx);
     is_instance_of(thread, &gc_ref, &target_class)
 }
@@ -2648,7 +2843,7 @@ mod tests {
             Reference::Array(a) => a,
             other => panic!("expected outer Array, got {other:?}"),
         };
-        let Value::Object(Some(leaf_gc)) = &outer_array.elements[0] else {
+        let Some(Value::Object(Some(leaf_gc))) = outer_array.elements.first() else {
             panic!("expected non-null leaf")
         };
         let leaf = leaf_gc.read();
@@ -2883,11 +3078,11 @@ mod tests {
         // Allocate an Object[1] (slot 0 is initially null).
         let object_array_class = thread.class("[Ljava/lang/Object;").await?;
         let object_array = Reference::try_from((object_array_class, vec![Value::Object(None)]))?;
-        let array_ptr = alloc_reference(collector, object_array);
+        let array_ptr = alloc_reference(&ctx, object_array);
 
         // Allocate an int[3];this is a `java/lang/Object` (every array is).
         let int_array = Reference::IntArray(vec![1, 2, 3].into_boxed_slice());
-        let value_ptr = alloc_reference(collector, int_array);
+        let value_ptr = alloc_reference(&ctx, int_array);
 
         jit_aastore_inner(ctx.as_ptr(), 0, array_ptr, 0, value_ptr);
         assert_eq!(
@@ -2909,7 +3104,7 @@ mod tests {
         // Outer: Object[][1] (component type Object[]).
         let outer_class = thread.class("[[Ljava/lang/Object;").await?;
         let outer = Reference::try_from((outer_class, vec![Value::Object(None)]))?;
-        let array_ptr = alloc_reference(collector, outer);
+        let array_ptr = alloc_reference(&ctx, outer);
 
         // Value: String[2];subtype of Object[].
         let string_array_class = thread.class("[Ljava/lang/String;").await?;
@@ -2917,7 +3112,7 @@ mod tests {
             string_array_class,
             vec![Value::Object(None), Value::Object(None)],
         ))?;
-        let value_ptr = alloc_reference(collector, string_array);
+        let value_ptr = alloc_reference(&ctx, string_array);
 
         jit_aastore_inner(ctx.as_ptr(), 0, array_ptr, 0, value_ptr);
         assert_eq!(
@@ -2939,11 +3134,11 @@ mod tests {
         // Target: String[1].
         let string_array_class = thread.class("[Ljava/lang/String;").await?;
         let string_array = Reference::try_from((string_array_class, vec![Value::Object(None)]))?;
-        let array_ptr = alloc_reference(collector, string_array);
+        let array_ptr = alloc_reference(&ctx, string_array);
 
         // Value: a plain java/lang/Object instance.
         let object_class = thread.class("java/lang/Object").await?;
-        let object_value = alloc_reference(collector, Reference::from(Object::new(object_class)?));
+        let object_value = alloc_reference(&ctx, Reference::from(Object::new(object_class)?));
 
         assert_eq!(ctx.pending_exception(), 0, "precondition: no pending");
         jit_aastore_inner(ctx.as_ptr(), 0, array_ptr, 0, object_value);

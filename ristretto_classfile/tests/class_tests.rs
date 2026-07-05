@@ -1,5 +1,9 @@
 #![expect(clippy::missing_errors_doc)]
 #![expect(clippy::missing_panics_doc)]
+#![expect(
+    clippy::panic_in_result_fn,
+    reason = "integration tests use assertions with Result-returning helpers"
+)]
 use ristretto_classfile::{ClassFile, Result};
 
 pub fn test_class(class_bytes: &[u8]) -> Result<()> {

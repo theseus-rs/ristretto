@@ -130,8 +130,8 @@ impl LocalVariables {
         if index >= self.locals.capacity() {
             return Err(InvalidLocalVariableIndex(index));
         }
-        if index < self.locals.len() {
-            let _ = std::mem::replace(&mut self.locals[index], value);
+        if let Some(local) = self.locals.get_mut(index) {
+            *local = value;
         }
         Ok(())
     }

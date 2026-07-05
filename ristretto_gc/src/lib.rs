@@ -10,6 +10,13 @@
 //! reachability analysis algorithm with automatic cycle detection and collection.
 
 #![allow(unsafe_code)]
+#![cfg_attr(
+    test,
+    expect(
+        clippy::indexing_slicing,
+        reason = "unit tests assert fixture contents by index"
+    )
+)]
 
 mod collector;
 mod config;

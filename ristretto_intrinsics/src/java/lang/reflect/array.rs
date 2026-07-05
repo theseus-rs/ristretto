@@ -582,11 +582,18 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
         });
     }
 
-    let length = if dimensions[0] < 0 {
-        return Err(NegativeArraySizeException(dimensions[0].to_string()).into());
+    let Some((dimension, remaining_dimensions)) = dimensions.split_first() else {
+        return Err(InvalidOperand {
+            expected: "non-empty dimensions".to_string(),
+            actual: "empty dimensions".to_string(),
+        });
+    };
+
+    let length = if *dimension < 0 {
+        return Err(NegativeArraySizeException(dimension.to_string()).into());
     } else {
         #[expect(clippy::cast_sign_loss)]
-        let len = dimensions[0] as usize;
+        let len = *dimension as usize;
         len
     };
 
@@ -605,7 +612,7 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
                 let array_class_name = format!("[L{class_name};");
                 let class = thread.class(&array_class_name).await?;
                 let vm = thread.vm()?;
-                let collector = &vm.garbage_collector();
+                let collector = vm.garbage_collector();
                 Reference::new_array(collector, class, vec![None; length])
             }
         };
@@ -615,7 +622,7 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
         let mut elements = Vec::with_capacity(length);
         for _ in 0..length {
             let sub_array =
-                create_multi_dimensional_array(thread, class_name, &dimensions[1..]).await?;
+                create_multi_dimensional_array(thread, class_name, remaining_dimensions).await?;
             elements.push(Some(sub_array));
         }
 
@@ -638,7 +645,7 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
 
         let class = thread.class(&array_class_name).await?;
         let vm = thread.vm()?;
-        let collector = &vm.garbage_collector();
+        let collector = vm.garbage_collector();
         Ok(Reference::new_array(collector, class, elements))
     }
 }
@@ -661,7 +668,7 @@ pub async fn new_array<T: Thread + 'static>(
     let class_name = get_class_name(&parameters.pop()?)?;
 
     let vm = thread.vm()?;
-    let collector = &vm.garbage_collector();
+    let collector = vm.garbage_collector();
     let array = match class_name.as_str() {
         "boolean" => Value::new_object(collector, Reference::from(vec![false; length])),
         "byte" => Value::new_object(collector, Reference::from(vec![0i8; length])),

@@ -218,8 +218,8 @@ fn parse_imageable_area(ppd: &str, key: &str) -> Option<(f32, f32, f32, f32)> {
         let line = line.trim_start();
         if let Some(rest) = line.strip_prefix(&prefix) {
             let values = extract_quoted_values(rest);
-            if values.len() == 4 {
-                return Some((values[0], values[1], values[2], values[3]));
+            if let [llx, lly, urx, ury] = values.as_slice() {
+                return Some((*llx, *lly, *urx, *ury));
             }
         }
     }
@@ -233,8 +233,8 @@ fn parse_ppd_pair(ppd: &str, option: &str, key: &str) -> Option<(f32, f32)> {
         let line = line.trim_start();
         if let Some(rest) = line.strip_prefix(&prefix) {
             let values = extract_quoted_values(rest);
-            if values.len() == 2 {
-                return Some((values[0], values[1]));
+            if let [width, height] = values.as_slice() {
+                return Some((*width, *height));
             }
         }
     }

@@ -2,7 +2,13 @@
 //!
 //! Tests collector configuration, statistics, collection cycles, and performance monitoring.
 #![cfg(not(target_family = "wasm"))]
-#![allow(clippy::items_after_statements)]
+#![expect(
+    clippy::indexing_slicing,
+    clippy::items_after_statements,
+    clippy::panic_in_result_fn,
+    clippy::unwrap_in_result,
+    reason = "integration tests use local fixture types, direct fixture indexing, unwrap, and assertions with Result-returning tests"
+)]
 
 use ristretto_gc::{Configuration, GarbageCollector, Gc, Result, Trace};
 use std::sync::Mutex;

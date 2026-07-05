@@ -76,7 +76,7 @@ impl Attributes {
         while offset < limit {
             let end = offset.checked_add(1).ok_or(InvalidAttributeData)?;
             let bytes = byte_source.get_bytes(offset..end)?;
-            let data = bytes[0];
+            let data = bytes.first().copied().ok_or(InvalidAttributeData)?;
             let attribute_type = AttributeType::try_from(data >> 3)?;
             if attribute_type == AttributeType::End {
                 break;
@@ -98,7 +98,11 @@ impl Attributes {
         let end = offset.checked_add(length).ok_or(InvalidAttributeData)?;
         let bytes = byte_source.get_bytes(offset..end)?;
         let mut buffer = [0u8; 8];
-        buffer[8 - bytes.len()..].copy_from_slice(&bytes);
+        let start = 8usize
+            .checked_sub(bytes.len())
+            .ok_or(InvalidAttributeData)?;
+        let target = buffer.get_mut(start..).ok_or(InvalidAttributeData)?;
+        target.copy_from_slice(&bytes);
         let value = u64::from_be_bytes(buffer);
         let value = usize::try_from(value)?;
         Ok(value)

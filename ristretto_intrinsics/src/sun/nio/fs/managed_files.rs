@@ -468,7 +468,14 @@ pub(crate) async fn read_at(
         })
         .await
         .map_err(std::io::Error::other)??;
-        buf[..result.0].copy_from_slice(&result.1[..result.0]);
+        let destination = buf
+            .get_mut(..result.0)
+            .ok_or_else(|| std::io::Error::other("read_at destination buffer too small"))?;
+        let source = result
+            .1
+            .get(..result.0)
+            .ok_or_else(|| std::io::Error::other("read_at source buffer too small"))?;
+        destination.copy_from_slice(source);
         Ok(result.0)
     }
 
@@ -1097,8 +1104,11 @@ mod tests {
         let bufs = vec![vec![0u8; 6], vec![0u8; 5]];
         let (n, filled) = readv(fh, fd, bufs).await.expect("readv");
         assert_eq!(n, 11);
-        assert_eq!(&filled[0], b"hello ");
-        assert_eq!(&filled[1], b"world");
+        assert_eq!(
+            filled.first().map(Vec::as_slice),
+            Some(b"hello ".as_slice())
+        );
+        assert_eq!(filled.get(1).map(Vec::as_slice), Some(b"world".as_slice()));
 
         close(fh, fd).await;
         std::fs::remove_file(&path).ok();

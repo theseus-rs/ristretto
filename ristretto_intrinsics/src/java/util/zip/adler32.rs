@@ -1,3 +1,4 @@
+use crate::bounds;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
@@ -82,10 +83,16 @@ pub async fn update_bytes<T: Thread + 'static>(
     let guard = array_ref.read();
     let bytes = guard.as_byte_vec_ref()?;
 
-    if off >= bytes.len() || off + len > bytes.len() {
+    let end = off.checked_add(len).ok_or({
+        ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
+            index: i32::MAX,
+            length: bytes.len(),
+        }
+    })?;
+    if off >= bytes.len() || end > bytes.len() {
         return Err(ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
             #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-            index: (off + len) as i32,
+            index: end as i32,
             length: bytes.len(),
         }
         .into());
@@ -94,7 +101,7 @@ pub async fn update_bytes<T: Thread + 'static>(
     let mut s1 = adler & 0xffff;
     let mut s2 = (adler >> 16) & 0xffff;
 
-    for &b in &bytes[off..off + len] {
+    for &b in bounds::range(bytes, off..end, "Adler32.updateBytes")? {
         #[expect(clippy::cast_sign_loss)]
         let byte = b as u8;
         s1 = (s1 + u32::from(byte)) % ADLER32_MOD;

@@ -1,4 +1,10 @@
 #![cfg_attr(target_family = "wasm", allow(unused_imports, dead_code))]
+#![expect(
+    clippy::expect_used,
+    clippy::panic_in_result_fn,
+    clippy::unwrap_in_result,
+    reason = "compatibility harness uses assertions and setup expects in Result-returning tests"
+)]
 
 #[cfg(not(target_family = "wasm"))]
 use rayon::ThreadPoolBuilder;

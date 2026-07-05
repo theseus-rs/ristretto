@@ -20,6 +20,9 @@ pub enum Error {
     /// Collection phase error
     #[error("Garbage collection phase error: {0}")]
     CollectionPhaseError(String),
+    /// Invalid pointer value
+    #[error("Invalid garbage collection pointer: {0}")]
+    InvalidPointer(String),
     /// Lock acquisition error
     #[error("Failed to acquire lock: {0}")]
     LockError(String),

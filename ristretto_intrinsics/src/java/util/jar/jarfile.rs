@@ -198,9 +198,12 @@ mod tests {
         let (class, elements) = result.as_class_vec_ref()?;
         assert_eq!("[Ljava/lang/String;", class.name());
         assert_eq!(2, elements.len());
+        let [first, second] = &*elements else {
+            panic!("expected two META-INF entries");
+        };
 
-        let name0 = elements[0].as_string()?;
-        let name1 = elements[1].as_string()?;
+        let name0 = first.as_string()?;
+        let name1 = second.as_string()?;
         assert_eq!("META-INF/MANIFEST.MF", name0);
         assert_eq!("META-INF/services/com.example.Service", name1);
         Ok(())
@@ -227,9 +230,12 @@ mod tests {
         let result = result.expect("expected a value");
         let (_class, elements) = result.as_class_vec_ref()?;
         assert_eq!(2, elements.len());
+        let [first, second] = &*elements else {
+            panic!("expected two META-INF entries");
+        };
 
-        let name0 = elements[0].as_string()?;
-        let name1 = elements[1].as_string()?;
+        let name0 = first.as_string()?;
+        let name1 = second.as_string()?;
         assert_eq!("meta-inf/MANIFEST.MF", name0);
         assert_eq!("Meta-Inf/signatures/sig.sf", name1);
         Ok(())

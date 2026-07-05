@@ -19,6 +19,7 @@
 use crate::{Error, Result};
 use byteorder::ByteOrder;
 use std::io::ErrorKind;
+use std::ops::Range;
 
 /// The magic number for Image files.
 pub(crate) const IMAGE_MAGIC: [u8; 4] = [0xCA, 0xFE, 0xDA, 0xDA];
@@ -59,18 +60,18 @@ impl Header {
             .into());
         }
 
-        let version = T::read_u32(&bytes[4..8]);
+        let version = read_u32::<T>(bytes, 4..8)?;
         let version_major = u16::try_from(version >> 16)?;
         let version_minor = u16::try_from(version & 0xFFFF)?;
         if version_major != SUPPORTED_MAJOR_VERSION || version_minor != SUPPORTED_MINOR_VERSION {
             return Err(Error::VersionNotSupported(version_major, version_minor));
         }
 
-        let flags = T::read_u32(&bytes[8..12]);
-        let resource_count = T::read_u32(&bytes[12..16]) as usize;
-        let table_length = T::read_u32(&bytes[16..20]) as usize;
-        let locations_size = T::read_u32(&bytes[20..24]) as usize;
-        let strings_size = T::read_u32(&bytes[24..28]) as usize;
+        let flags = read_u32::<T>(bytes, 8..12)?;
+        let resource_count = read_u32::<T>(bytes, 12..16)? as usize;
+        let table_length = read_u32::<T>(bytes, 16..20)? as usize;
+        let locations_size = read_u32::<T>(bytes, 20..24)? as usize;
+        let strings_size = read_u32::<T>(bytes, 24..28)? as usize;
 
         let header = Self {
             version_major,
@@ -160,6 +161,13 @@ impl Header {
     pub(crate) fn data_offset(&self) -> usize {
         self.strings_offset() + self.strings_size()
     }
+}
+
+fn read_u32<T: ByteOrder>(bytes: &[u8], range: Range<usize>) -> Result<u32> {
+    let bytes = bytes.get(range).ok_or_else(|| {
+        std::io::Error::new(ErrorKind::UnexpectedEof, "Invalid Image header length")
+    })?;
+    Ok(T::read_u32(bytes))
 }
 
 #[cfg(test)]

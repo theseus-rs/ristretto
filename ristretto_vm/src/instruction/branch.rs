@@ -1,3 +1,4 @@
+use crate::Error::InternalError;
 use crate::Result;
 use crate::frame::ExecutionResult;
 use crate::frame::ExecutionResult::{Continue, ContinueAtPosition, Return};
@@ -268,7 +269,9 @@ pub(crate) fn tableswitch(
         default
     } else {
         let index = usize::try_from(key - low)?;
-        offsets[index]
+        *offsets.get(index).ok_or_else(|| {
+            InternalError(format!("tableswitch offset index {index} out of bounds"))
+        })?
     };
     let pc = i64::try_from(program_counter)?;
     let address = usize::try_from(pc + i64::from(offset))?;

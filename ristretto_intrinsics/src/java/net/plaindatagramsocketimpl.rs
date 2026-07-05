@@ -1,3 +1,10 @@
+use crate::bounds;
+use crate::java::io::socketfiledescriptor::get_impl_fd;
+#[cfg(target_family = "unix")]
+use crate::java::io::socketfiledescriptor::set_impl_fd;
+#[cfg(target_family = "unix")]
+use crate::net_helpers::boxed_int_value;
+use crate::net_helpers::{inet_address_int, ipv4_from_java_int};
 #[cfg(not(target_os = "windows"))]
 use ristretto_classfile::VersionSpecification::Equal;
 #[cfg(not(target_os = "windows"))]
@@ -21,7 +28,9 @@ use ristretto_types::{Parameters, Result, VM};
 use socket2::SockAddr;
 #[cfg(not(target_os = "windows"))]
 use socket2::{Domain, Protocol, Type};
-use std::net::{Ipv4Addr, SocketAddrV4};
+#[cfg(target_family = "unix")]
+use std::net::Ipv4Addr;
+use std::net::SocketAddrV4;
 use std::sync::Arc;
 #[cfg(not(target_os = "windows"))]
 use std::time::Duration;
@@ -37,50 +46,6 @@ const JAVA_SO_TIMEOUT: i32 = 0x1006;
 const JAVA_SO_SNDBUF: i32 = 0x1001;
 const JAVA_SO_RCVBUF: i32 = 0x1002;
 
-fn get_fd_from_this(this: &Value) -> Result<i32> {
-    let fd_value = {
-        let this_ref = this.as_object_ref()?;
-        this_ref.value("fd")?
-    };
-    let fd_ref = fd_value.as_object_ref()?;
-    Ok(fd_ref.value("fd")?.as_i32()?)
-}
-
-fn set_fd_on_this(this: &Value, fd: i32) -> Result<()> {
-    let fd_value = {
-        let this_ref = this.as_object_ref()?;
-        this_ref.value("fd")?
-    };
-    let mut fd_ref = fd_value.as_object_mut()?;
-    fd_ref.set_value("fd", Value::Int(fd))?;
-    Ok(())
-}
-
-fn get_inet_address_int(inet_addr: &Value) -> Result<i32> {
-    let holder_value = {
-        let object = inet_addr.as_object_ref()?;
-        object.value("holder")?
-    };
-    let holder = holder_value.as_object_ref()?;
-    Ok(holder.value("address")?.as_i32()?)
-}
-
-#[expect(clippy::cast_sign_loss)]
-fn ipv4_from_int(addr: i32) -> Ipv4Addr {
-    let bits = addr as u32;
-    Ipv4Addr::new(
-        ((bits >> 24) & 0xFF) as u8,
-        ((bits >> 16) & 0xFF) as u8,
-        ((bits >> 8) & 0xFF) as u8,
-        (bits & 0xFF) as u8,
-    )
-}
-
-fn get_int_from_object(value: &Value) -> Result<i32> {
-    let obj = value.as_object_ref()?;
-    Ok(obj.value("value")?.as_i32()?)
-}
-
 /// Send a UDP datagram from a `DatagramPacket` (shared by `send` and `send0`).
 async fn send_datagram<T: Thread + 'static>(
     thread: Arc<T>,
@@ -88,7 +53,7 @@ async fn send_datagram<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let packet = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
 
     let (data, addr) = {
         let pkt_ref = packet.as_object_ref()?;
@@ -99,15 +64,19 @@ async fn send_datagram<T: Thread + 'static>(
         let port = pkt_ref.value("port")?.as_i32()?;
 
         let buf_guard = buf_val.as_byte_vec_ref()?;
+        let start = usize::try_from(offset).map_err(|e| InternalError(e.to_string()))?;
+        let length = usize::try_from(length).map_err(|e| InternalError(e.to_string()))?;
+        let end = start
+            .checked_add(length)
+            .ok_or_else(|| InternalError("DatagramPacket range overflow".to_string()))?;
         #[expect(clippy::cast_sign_loss)]
-        let start = offset as usize;
-        #[expect(clippy::cast_sign_loss)]
-        let end = start + length as usize;
-        #[expect(clippy::cast_sign_loss)]
-        let data: Vec<u8> = buf_guard[start..end].iter().map(|&b| b as u8).collect();
+        let data: Vec<u8> = bounds::range(&buf_guard, start..end, "DatagramPacket buffer")?
+            .iter()
+            .map(|&b| b as u8)
+            .collect();
 
-        let addr_int = get_inet_address_int(&addr_val)?;
-        let ipv4 = ipv4_from_int(addr_int);
+        let addr_int = inet_address_int(&addr_val)?;
+        let ipv4 = ipv4_from_java_int(addr_int);
         #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         let target = SockAddr::from(SocketAddrV4::new(ipv4, port as u16));
         (data, target)
@@ -148,9 +117,9 @@ pub async fn bind_0<T: Thread + 'static>(
     let addr = parameters.pop()?;
     let port = parameters.pop_int()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
-    let addr_int = get_inet_address_int(&addr)?;
-    let ipv4 = ipv4_from_int(addr_int);
+    let fd = get_impl_fd(&this)?;
+    let addr_int = inet_address_int(&addr)?;
+    let ipv4 = ipv4_from_java_int(addr_int);
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     let sock_addr = SockAddr::from(SocketAddrV4::new(ipv4, port as u16));
     let vm = thread.vm()?;
@@ -193,9 +162,9 @@ pub async fn connect_0<T: Thread + 'static>(
     let port = parameters.pop_int()?;
     let addr = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
-    let addr_int = get_inet_address_int(&addr)?;
-    let ipv4 = ipv4_from_int(addr_int);
+    let fd = get_impl_fd(&this)?;
+    let addr_int = inet_address_int(&addr)?;
+    let ipv4 = ipv4_from_java_int(addr_int);
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
     let sock_addr = SockAddr::from(SocketAddrV4::new(ipv4, port as u16));
     let vm = thread.vm()?;
@@ -246,11 +215,11 @@ pub async fn datagram_socket_close<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     if fd >= 0 {
         let vm = thread.vm()?;
         vm.socket_handles().remove(&fd).await;
-        set_fd_on_this(&this, -1)?;
+        set_impl_fd(&this, -1)?;
     }
     Ok(None)
 }
@@ -273,7 +242,7 @@ pub async fn datagram_socket_create<T: Thread + 'static>(
         .map_err(|e| InternalError(e.to_string()))?;
     let vm = thread.vm()?;
     let fd = vm.next_nio_fd();
-    set_fd_on_this(&this, fd)?;
+    set_impl_fd(&this, fd)?;
     vm.socket_handles()
         .insert(fd, SocketHandle::new(SocketType::Raw(socket)))
         .await?;
@@ -321,7 +290,7 @@ pub async fn get_time_to_live<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
     let guard = vm
         .socket_handles()
@@ -361,9 +330,9 @@ pub async fn join<T: Thread + 'static>(
     let _network_interface = parameters.pop()?;
     let multicast_addr = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
-    let addr_int = get_inet_address_int(&multicast_addr)?;
-    let multicast_ip = ipv4_from_int(addr_int);
+    let fd = get_impl_fd(&this)?;
+    let addr_int = inet_address_int(&multicast_addr)?;
+    let multicast_ip = ipv4_from_java_int(addr_int);
     let vm = thread.vm()?;
     let guard = vm
         .socket_handles()
@@ -392,9 +361,9 @@ pub async fn leave<T: Thread + 'static>(
     let _network_interface = parameters.pop()?;
     let multicast_addr = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
-    let addr_int = get_inet_address_int(&multicast_addr)?;
-    let multicast_ip = ipv4_from_int(addr_int);
+    let fd = get_impl_fd(&this)?;
+    let addr_int = inet_address_int(&multicast_addr)?;
+    let multicast_ip = ipv4_from_java_int(addr_int);
     let vm = thread.vm()?;
     let guard = vm
         .socket_handles()
@@ -422,7 +391,7 @@ pub async fn peek<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let _inet_address = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
 
     let cloned_socket = {
@@ -463,7 +432,7 @@ pub async fn peek_data<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let packet = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
 
     let buf_len = {
         let pkt_ref = packet.as_object_ref()?;
@@ -510,8 +479,8 @@ pub async fn peek_data<T: Thread + 'static>(
         let mut buf_guard = buf_val.as_byte_vec_mut()?;
         #[expect(clippy::cast_possible_wrap)]
         for (i, &b) in data.iter().enumerate() {
-            if i < buf_guard.len() {
-                buf_guard[i] = b as i8;
+            if let Some(slot) = buf_guard.get_mut(i) {
+                *slot = b as i8;
             }
         }
     }
@@ -553,7 +522,7 @@ pub async fn receive_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let packet = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
 
     let buf_len = {
         let pkt_ref = packet.as_object_ref()?;
@@ -617,8 +586,8 @@ pub async fn receive_0<T: Thread + 'static>(
         let mut buf_guard = buf_val.as_byte_vec_mut()?;
         #[expect(clippy::cast_possible_wrap)]
         for (i, &b) in data.iter().enumerate() {
-            if i < buf_guard.len() {
-                buf_guard[i] = b as i8;
+            if let Some(slot) = buf_guard.get_mut(i) {
+                *slot = b as i8;
             }
         }
     }
@@ -686,7 +655,7 @@ pub async fn set_ttl<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let ttl = parameters.pop_int()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
     let guard = vm
         .socket_handles()
@@ -715,7 +684,7 @@ pub async fn set_time_to_live<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let ttl = parameters.pop_int()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
     let guard = vm
         .socket_handles()
@@ -744,7 +713,7 @@ pub async fn socket_get_option<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let opt = parameters.pop_int()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
 
     if opt == JAVA_SO_TIMEOUT {
@@ -816,8 +785,8 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
     let this = parameters.pop()?;
 
     if cmd == JAVA_SO_TIMEOUT {
-        let timeout_ms = get_int_from_object(&value).unwrap_or(0);
-        let fd = get_fd_from_this(&this)?;
+        let timeout_ms = boxed_int_value(&value).unwrap_or(0);
+        let fd = get_impl_fd(&this)?;
         let vm = thread.vm()?;
         #[expect(clippy::cast_sign_loss)]
         if let Some(mut guard) = vm.socket_handles().get_mut(&fd).await {
@@ -830,7 +799,7 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
         return Ok(None);
     }
 
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
     let guard = vm
         .socket_handles()
@@ -844,25 +813,25 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
     #[expect(clippy::cast_sign_loss)]
     match cmd {
         JAVA_SO_REUSEADDR => {
-            let on = get_int_from_object(&value)? != 0;
+            let on = boxed_int_value(&value)? != 0;
             socket
                 .set_reuse_address(on)
                 .map_err(|e| InternalError(e.to_string()))?;
         }
         JAVA_SO_SNDBUF => {
-            let size = get_int_from_object(&value)?;
+            let size = boxed_int_value(&value)?;
             socket
                 .set_send_buffer_size(size as usize)
                 .map_err(|e| InternalError(e.to_string()))?;
         }
         JAVA_SO_RCVBUF => {
-            let size = get_int_from_object(&value)?;
+            let size = boxed_int_value(&value)?;
             socket
                 .set_recv_buffer_size(size as usize)
                 .map_err(|e| InternalError(e.to_string()))?;
         }
         JAVA_IP_MULTICAST_LOOP => {
-            let on = get_int_from_object(&value)? != 0;
+            let on = boxed_int_value(&value)? != 0;
             socket
                 .set_multicast_loop_v4(on)
                 .map_err(|e| InternalError(e.to_string()))?;

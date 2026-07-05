@@ -80,7 +80,7 @@ pub async fn fork_and_exec<T: Thread + 'static>(
         // Skip the first argument if it matches the program name (it's the argv[0])
         let skip_first = args.first().is_some_and(|arg| *arg == program);
         if skip_first {
-            command.args(&args[1..]);
+            command.args(args.iter().skip(1));
         } else {
             command.args(&args);
         }
@@ -265,7 +265,7 @@ fn extract_null_separated_strings(
 #[expect(clippy::cast_sign_loss)]
 fn bytes_to_string_null_terminated(bytes: &[i8]) -> String {
     let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
-    let u8_bytes: Vec<u8> = bytes[..end].iter().map(|&b| b as u8).collect();
+    let u8_bytes: Vec<u8> = bytes.iter().take(end).map(|&b| b as u8).collect();
     String::from_utf8_lossy(&u8_bytes).into_owned()
 }
 
@@ -286,14 +286,24 @@ fn split_null_terminated(bytes: &[i8]) -> Vec<String> {
     for (i, &b) in bytes.iter().enumerate() {
         if b == 0 {
             if i > start {
-                let u8_bytes: Vec<u8> = bytes[start..i].iter().map(|&b| b as u8).collect();
+                let u8_bytes: Vec<u8> = bytes
+                    .get(start..i)
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|&b| b as u8)
+                    .collect();
                 result.push(String::from_utf8_lossy(&u8_bytes).into_owned());
             }
             start = i + 1;
         }
     }
     if start < bytes.len() {
-        let u8_bytes: Vec<u8> = bytes[start..].iter().map(|&b| b as u8).collect();
+        let u8_bytes: Vec<u8> = bytes
+            .get(start..)
+            .unwrap_or_default()
+            .iter()
+            .map(|&b| b as u8)
+            .collect();
         result.push(String::from_utf8_lossy(&u8_bytes).into_owned());
     }
     result
@@ -728,7 +738,7 @@ mod tests {
             }
         }
 
-        fn build(self, gc: &GarbageCollector) -> Parameters {
+        fn build(self, gc: &Arc<GarbageCollector>) -> Parameters {
             let file_ref = Value::new_object(gc, Reference::from(self.file_bytes));
             let arg_ref = Value::new_object(gc, Reference::from(self.arg_bytes));
             let env = self.env_ref.unwrap_or(Value::Object(None));
@@ -991,7 +1001,7 @@ mod tests {
     #[cfg(target_os = "windows")]
     async fn spawn_test_process<T: Thread + 'static>(
         thread: &Arc<T>,
-        gc: &GarbageCollector,
+        gc: &Arc<GarbageCollector>,
     ) -> Result<i64> {
         let cmd = make_string(thread, "cmd.exe /C exit 0").await?;
         let env = Value::Object(None);

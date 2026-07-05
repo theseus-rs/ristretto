@@ -1,3 +1,4 @@
+use crate::Error::InternalError;
 use crate::{JitValue, Result, Value};
 
 /// A structure representing a native function from the JIT compiler
@@ -27,7 +28,10 @@ impl Function {
         let mut result = JitValue::new();
         if arguments.len() <= stack_buf.len() {
             for (i, arg) in arguments.iter().enumerate() {
-                stack_buf[i] = JitValue::from(arg.clone());
+                let slot = stack_buf
+                    .get_mut(i)
+                    .ok_or_else(|| InternalError(format!("Invalid stack argument index {i}")))?;
+                *slot = JitValue::from(arg.clone());
             }
             (self.function)(
                 stack_buf.as_ptr(),

@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::lang::class::get_class;
 use crate::jdk::internal::misc::r#unsafe::STATIC_FIELD_OFFSET_MASK;
 use bitflags::bitflags;
@@ -149,8 +150,12 @@ pub async fn copy_out_bootstrap_arguments<T: Thread + 'static>(
         if pos >= buffer_array.len() {
             break;
         }
-        buffer_array[pos] = value;
-        pos += 1;
+        if let Some(slot) = buffer_array.get_mut(pos) {
+            *slot = value;
+            pos += 1;
+        } else {
+            break;
+        }
     }
 
     Ok(None)
@@ -772,9 +777,9 @@ pub async fn get_named_con<T: Thread + 'static>(
             let name_value = name.to_object(&thread).await?;
             let mut array_ref = box_array.as_reference_mut()?;
             if let Reference::Array(arr) = &mut *array_ref
-                && !arr.elements.is_empty()
+                && let Some(element) = arr.elements.first_mut()
             {
-                arr.elements[0] = name_value;
+                *element = name_value;
             }
         }
         Ok(Some(Value::Int(value)))
@@ -1043,8 +1048,7 @@ fn resolve_holder_methods(
     }
 
     // If not a holder class, return the original error
-    class.try_get_method(method_name, method_descriptor)?;
-    unreachable!()
+    Ok(class.try_get_method(method_name, method_descriptor)?)
 }
 
 #[intrinsic_method("java/lang/invoke/MethodHandleNatives.registerNatives()V", Any)]
@@ -1122,7 +1126,9 @@ fn get_potential_interfaces_from_method_name(method_name: &str) -> Vec<&'static 
         return Vec::new();
     }
 
-    let origin_method = parts[1];
+    let Some(&origin_method) = parts.get(1) else {
+        return Vec::new();
+    };
 
     // Map common method names to their likely interfaces
     match origin_method {
@@ -1406,7 +1412,8 @@ async fn resolve_method<T: Thread + 'static>(
             }
             // elements[0] is return type (Class)
             // elements[1..] are parameter types (Class)
-            let return_type = elements[0].as_object_ref()?;
+            let return_type =
+                bounds::index(elements, 0, "MethodHandleNatives return type")?.as_object_ref()?;
             let return_class_name = return_type.value("name")?.as_string()?;
             let return_descriptor = Class::convert_to_descriptor(&return_class_name);
 
@@ -2087,7 +2094,7 @@ mod tests {
             let array_value = Value::Object(Some(reference));
             let array: Vec<Value> = array_value.try_into().expect("array");
             assert_eq!(2, array.len());
-            assert!(matches!(array[0], Value::Object(Some(_))));
+            assert!(matches!(array.first(), Some(Value::Object(Some(_)))));
         } else {
             panic!("Expected Object array result");
         }

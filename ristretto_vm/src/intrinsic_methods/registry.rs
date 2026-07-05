@@ -161,19 +161,36 @@ impl MethodRegistry {
         if total_len <= STACK_BUFFER_SIZE {
             // Fast path: use stack buffer for small signatures
             let mut buffer = [0u8; STACK_BUFFER_SIZE];
-            let mut pos = 0;
+            let mut pos: usize = 0;
 
-            buffer[pos..pos + class_name.len()].copy_from_slice(class_name.as_bytes());
-            pos += class_name.len();
-            buffer[pos] = b'.';
-            pos += 1;
-            buffer[pos..pos + method_name.len()].copy_from_slice(method_name.as_bytes());
-            pos += method_name.len();
-            buffer[pos..pos + method_descriptor.len()]
+            let class_end = pos.checked_add(class_name.len())?;
+            buffer
+                .get_mut(pos..class_end)?
+                .copy_from_slice(class_name.as_bytes());
+            pos = class_end;
+
+            *buffer.get_mut(pos)? = b'.';
+            pos = pos.checked_add(1)?;
+
+            let method_end = pos.checked_add(method_name.len())?;
+            buffer
+                .get_mut(pos..method_end)?
+                .copy_from_slice(method_name.as_bytes());
+            pos = method_end;
+
+            let descriptor_end = pos.checked_add(method_descriptor.len())?;
+            buffer
+                .get_mut(pos..descriptor_end)?
                 .copy_from_slice(method_descriptor.as_bytes());
-            pos += method_descriptor.len();
+            pos = descriptor_end;
 
-            let Ok(method_signature) = std::str::from_utf8(&buffer[..pos]) else {
+            let Some(signature_bytes) = buffer.get(..pos) else {
+                error!(
+                    "Failed to construct method signature for {class_name}.{method_name}{method_descriptor}"
+                );
+                return None;
+            };
+            let Ok(method_signature) = std::str::from_utf8(signature_bytes) else {
                 error!(
                     "Failed to construct method signature for {class_name}.{method_name}{method_descriptor}"
                 );

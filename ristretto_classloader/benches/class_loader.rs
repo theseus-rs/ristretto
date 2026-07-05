@@ -1,3 +1,8 @@
+#![expect(
+    clippy::expect_used,
+    reason = "benchmarks use fixed class names and setup expectations"
+)]
+
 #[cfg(not(target_family = "wasm"))]
 mod inner {
     use criterion::{Criterion, criterion_group};

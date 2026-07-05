@@ -52,7 +52,10 @@ pub async fn buffered_copy_0<T: Thread + 'static>(
         if n == 0 {
             break;
         }
-        if let Err(e) = managed_files::write_all(file_handles, i64::from(dst), &buf[..n]).await {
+        let Some(bytes) = buf.get(..n) else {
+            return Err(throw_unix_exception(&thread, 5).await);
+        };
+        if let Err(e) = managed_files::write_all(file_handles, i64::from(dst), bytes).await {
             let errno = e.raw_os_error().unwrap_or(5);
             return Err(throw_unix_exception(&thread, errno).await);
         }

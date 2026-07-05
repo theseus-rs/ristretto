@@ -50,6 +50,13 @@
 //! ```
 
 #![deny(unsafe_code)]
+#![cfg_attr(
+    test,
+    expect(
+        clippy::panic_in_result_fn,
+        reason = "unit tests use assertions in Result-returning async tests"
+    )
+)]
 
 mod assignable;
 mod call_site_cache;

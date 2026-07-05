@@ -90,7 +90,7 @@ async fn load_constant_async(
             let class = thread.load_and_link_class(class_name).await?;
             class.to_object(&thread).await?
         }
-        _ => unreachable!(),
+        _ => return Err(InvalidConstantIndex(index)),
     };
     stack.push(value)?;
     Ok(Continue)

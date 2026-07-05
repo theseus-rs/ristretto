@@ -1,3 +1,4 @@
+use crate::net_helpers::{ipv4_from_java_bytes, ipv6_from_java_bytes};
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::{Reference, Value};
@@ -24,24 +25,9 @@ pub async fn get_host_by_addr<T: Thread + 'static>(
     let is_loopback = {
         let guard = array_ref.read();
         let bytes = guard.as_byte_vec_ref()?;
-        if bytes.len() == 4 {
-            #[expect(clippy::cast_sign_loss)]
-            let addr = Ipv4Addr::new(
-                bytes[0] as u8,
-                bytes[1] as u8,
-                bytes[2] as u8,
-                bytes[3] as u8,
-            );
+        if let Some(addr) = ipv4_from_java_bytes(bytes) {
             addr.is_loopback()
-        } else if bytes.len() == 16 {
-            #[expect(clippy::cast_sign_loss)]
-            let octets: [u8; 16] = bytes
-                .iter()
-                .map(|&b| b as u8)
-                .collect::<Vec<u8>>()
-                .try_into()
-                .map_err(|_| InternalError("Invalid IPv6 address length".to_string()))?;
-            let addr = Ipv6Addr::from(octets);
+        } else if let Some(addr) = ipv6_from_java_bytes(bytes) {
             addr.is_loopback()
         } else {
             false
@@ -90,29 +76,14 @@ pub async fn is_reachable_0<T: Thread + 'static>(
     let guard = addr_ref.read();
     let bytes = guard.as_byte_vec_ref()?;
 
-    if bytes.len() == 4 {
-        #[expect(clippy::cast_sign_loss)]
-        let addr = Ipv4Addr::new(
-            bytes[0] as u8,
-            bytes[1] as u8,
-            bytes[2] as u8,
-            bytes[3] as u8,
-        );
+    if let Some(addr) = ipv4_from_java_bytes(bytes) {
         if addr.is_loopback() {
             return Ok(Some(Value::Int(1)));
         }
-    } else if bytes.len() == 16 {
-        #[expect(clippy::cast_sign_loss)]
-        let octets: [u8; 16] = bytes
-            .iter()
-            .map(|&b| b as u8)
-            .collect::<Vec<u8>>()
-            .try_into()
-            .map_err(|_| InternalError("Invalid IPv6 address length".to_string()))?;
-        let addr = Ipv6Addr::from(octets);
-        if addr.is_loopback() {
-            return Ok(Some(Value::Int(1)));
-        }
+    } else if let Some(addr) = ipv6_from_java_bytes(bytes)
+        && addr.is_loopback()
+    {
+        return Ok(Some(Value::Int(1)));
     }
     Ok(Some(Value::Int(0)))
 }

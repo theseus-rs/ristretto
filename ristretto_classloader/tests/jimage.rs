@@ -1,4 +1,9 @@
 #![cfg(not(target_family = "wasm"))]
+#![expect(
+    clippy::expect_used,
+    clippy::panic_in_result_fn,
+    reason = "integration tests use assertions and environment setup expects"
+)]
 
 //! Integration tests for `ristretto_jimage` crate. The test are included in this crate in order to
 //! make use of the class loader utilities for locating the `JImage` files without cyclical

@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::io::filedescriptor;
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
@@ -207,11 +208,14 @@ pub async fn write_bytes<T: Thread + 'static>(
     };
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;
+    let end = offset
+        .checked_add(length)
+        .ok_or_else(|| IoException("Write source range overflow".to_string()))?;
 
     match fd {
         1 => {
             let stdout_lock = vm.stdout();
-            let data = bytes[offset..offset + length].to_vec();
+            let data = bounds::range(&bytes, offset..end, "FileOutputStream.stdout")?.to_vec();
             let mut stdout = stdout_lock.lock().await;
             stdout
                 .write_all(&data)
@@ -219,7 +223,7 @@ pub async fn write_bytes<T: Thread + 'static>(
         }
         2 => {
             let stderr_lock = vm.stderr();
-            let data = bytes[offset..offset + length].to_vec();
+            let data = bounds::range(&bytes, offset..end, "FileOutputStream.stderr")?.to_vec();
             let mut stderr = stderr_lock.lock().await;
             stderr
                 .write_all(&data)
@@ -240,13 +244,15 @@ pub async fn write_bytes<T: Thread + 'static>(
 
             #[cfg(target_os = "wasi")]
             {
-                file.write_all(&bytes[offset..offset + length])
+                let source = bounds::range(&bytes, offset..end, "FileOutputStream.write")?;
+                file.write_all(source)
                     .map_err(|error| IoException(error.to_string()))?;
             }
 
             #[cfg(not(target_family = "wasm"))]
             {
-                file.write_all(&bytes[offset..offset + length])
+                let source = bounds::range(&bytes, offset..end, "FileOutputStream.write")?;
+                file.write_all(source)
                     .await
                     .map_err(|error| IoException(error.to_string()))?;
             }

@@ -1,3 +1,4 @@
+use crate::bounds;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
@@ -677,7 +678,7 @@ pub async fn open<T: Thread + 'static>(
     })?;
 
     // Check if the file starts with a local file header signature (PK\x03\x04)
-    let starts_with_loc = file_bytes.len() >= 4 && file_bytes[0..4] == [0x50, 0x4B, 0x03, 0x04];
+    let starts_with_loc = file_bytes.starts_with(&[0x50, 0x4B, 0x03, 0x04]);
 
     // Parse the ZIP archive
     let cursor = io::Cursor::new(file_bytes);
@@ -825,19 +826,30 @@ pub async fn read<T: Thread + 'static>(
     {
         let mut guard = output_ref.write();
         let output_bytes = guard.as_byte_vec_mut()?;
-        if off + to_read > output_bytes.len() {
+        let output_end = off.checked_add(to_read).ok_or({
+            ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
+                index: i32::MAX,
+                length: output_bytes.len(),
+            }
+        })?;
+        if output_end > output_bytes.len() {
             return Err(ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
                 #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-                index: (off + to_read) as i32,
+                index: output_end as i32,
                 length: output_bytes.len(),
             }
             .into());
         }
-        for (i, &byte) in entry.data[pos..pos + to_read].iter().enumerate() {
-            #[expect(clippy::cast_possible_wrap)]
-            {
-                output_bytes[off + i] = byte as i8;
+        let input_end = pos.checked_add(to_read).ok_or({
+            ristretto_types::JavaError::ArrayIndexOutOfBoundsException {
+                index: i32::MAX,
+                length: entry.data.len(),
             }
+        })?;
+        let output = bounds::range_mut(output_bytes, off..output_end, "ZipFile.read output")?;
+        let input = bounds::range(&entry.data, pos..input_end, "ZipFile.read entry")?;
+        for (slot, byte) in output.iter_mut().zip(input) {
+            *slot = i8::from_ne_bytes(byte.to_ne_bytes());
         }
     }
 
@@ -944,7 +956,7 @@ mod tests {
 
     /// Helper: create a byte array reference (for entry name lookups).
     fn create_byte_array_ref(
-        gc: &ristretto_gc::GarbageCollector,
+        gc: &Arc<ristretto_gc::GarbageCollector>,
         bytes: &[u8],
     ) -> ristretto_gc::Gc<RwLock<Reference>> {
         let signed_bytes: Vec<i8> = bytes.iter().map(|&b| b.cast_signed()).collect();
@@ -1353,7 +1365,7 @@ mod tests {
         {
             let guard = wrapped_output.as_ref().expect("output ref").read();
             let bytes = guard.as_byte_vec_ref()?;
-            let data: Vec<u8> = bytes[..13].iter().map(|&b| b.cast_unsigned()).collect();
+            let data: Vec<u8> = bytes.iter().take(13).map(|&b| b.cast_unsigned()).collect();
             assert_eq!(b"Hello, World!", data.as_slice());
         }
 
@@ -1419,7 +1431,7 @@ mod tests {
         {
             let guard = wrapped_output.as_ref().expect("output ref").read();
             let bytes = guard.as_byte_vec_ref()?;
-            let data: Vec<u8> = bytes[..5].iter().map(|&b| b.cast_unsigned()).collect();
+            let data: Vec<u8> = bytes.iter().take(5).map(|&b| b.cast_unsigned()).collect();
             assert_eq!(b"World", data.as_slice());
         }
 
@@ -1681,7 +1693,7 @@ mod tests {
         {
             let guard = wrapped_output.as_ref().expect("output ref").read();
             let bytes = guard.as_byte_vec_ref()?;
-            let data: Vec<u8> = bytes[..45].iter().map(|&b| b.cast_unsigned()).collect();
+            let data: Vec<u8> = bytes.iter().take(45).map(|&b| b.cast_unsigned()).collect();
             assert_eq!(
                 b"This is compressed data for testing purposes.",
                 data.as_slice()

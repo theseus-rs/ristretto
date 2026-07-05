@@ -1,3 +1,4 @@
+use crate::bounds;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
@@ -103,13 +104,13 @@ pub async fn socket_read_0<T: Thread + 'static>(
         if n > 0 {
             let mut arr_guard = buf.as_reference_mut()?;
             if let Reference::ByteArray(byte_array) = &mut *arr_guard {
-                #[expect(clippy::cast_sign_loss)]
-                let off = off as usize;
+                let off = usize::try_from(off).map_err(|e| InternalError(e.to_string()))?;
                 for (i, &byte_val) in data.iter().enumerate() {
-                    #[expect(clippy::cast_possible_wrap)]
-                    {
-                        byte_array[off + i] = byte_val as i8;
-                    }
+                    let index = off
+                        .checked_add(i)
+                        .ok_or_else(|| InternalError("SocketInputStream range overflow".into()))?;
+                    *bounds::index_mut(byte_array, index, "SocketInputStream.read")? =
+                        i8::from_ne_bytes(byte_val.to_ne_bytes());
                 }
             }
         }
@@ -162,13 +163,13 @@ pub async fn socket_read_0<T: Thread + 'static>(
                 if n > 0 {
                     let mut arr_guard = buf.as_reference_mut()?;
                     if let Reference::ByteArray(byte_array) = &mut *arr_guard {
-                        #[expect(clippy::cast_sign_loss)]
-                        let off = off as usize;
+                        let off = usize::try_from(off).map_err(|e| InternalError(e.to_string()))?;
                         for (i, &byte_val) in data.iter().enumerate() {
-                            #[expect(clippy::cast_possible_wrap)]
-                            {
-                                byte_array[off + i] = byte_val as i8;
-                            }
+                            let index = off.checked_add(i).ok_or_else(|| {
+                                InternalError("SocketInputStream range overflow".into())
+                            })?;
+                            *bounds::index_mut(byte_array, index, "SocketInputStream.read")? =
+                                i8::from_ne_bytes(byte_val.to_ne_bytes());
                         }
                     }
                 }

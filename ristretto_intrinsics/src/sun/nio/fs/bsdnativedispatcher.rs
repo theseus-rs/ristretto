@@ -212,7 +212,9 @@ pub async fn fsstat_entry<T: Thread + 'static>(
             return Ok(Some(Value::Int(-1)));
         }
 
-        let entry = &state.entries[state.index];
+        let Some(entry) = state.entries.get(state.index) else {
+            return Ok(Some(Value::Int(-1)));
+        };
         state.index += 1;
 
         // Extract mount point name, device name, and fs type from statfs

@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::io::socketfiledescriptor::get_fd;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::JAVA_11;
@@ -107,7 +108,8 @@ pub async fn read_0<T: Thread + 'static>(
             match stream.try_read(&mut buf) {
                 Ok(0) => return Ok(Some(Value::Int(-1))),
                 Ok(n) => {
-                    vm.native_memory().write_bytes(address, &buf[..n]);
+                    let bytes = bounds::range_to(&buf, ..n, "SocketDispatcher.read0")?;
+                    vm.native_memory().write_bytes(address, bytes);
                     let n = i32::try_from(n).unwrap_or(i32::MAX);
                     return Ok(Some(Value::Int(n)));
                 }
@@ -212,8 +214,12 @@ pub async fn readv_0<T: Thread + 'static>(
                     for (base, len) in &iov_entries {
                         let to_copy = (*len).min(n.saturating_sub(offset));
                         if to_copy > 0 {
-                            vm.native_memory()
-                                .write_bytes(*base, &buf[offset..offset + to_copy]);
+                            let bytes = bounds::range(
+                                &buf,
+                                offset..offset + to_copy,
+                                "SocketDispatcher.readv0",
+                            )?;
+                            vm.native_memory().write_bytes(*base, bytes);
                             offset += to_copy;
                         }
                         if offset >= n {
@@ -272,8 +278,12 @@ pub async fn readv_0<T: Thread + 'static>(
                 for (base, len) in &iov_entries {
                     let to_copy = (*len).min(data_len.saturating_sub(offset));
                     if to_copy > 0 {
-                        vm.native_memory()
-                            .write_bytes(*base, &data[offset..offset + to_copy]);
+                        let bytes = bounds::range(
+                            &data,
+                            offset..offset + to_copy,
+                            "SocketDispatcher.readv0",
+                        )?;
+                        vm.native_memory().write_bytes(*base, bytes);
                         offset += to_copy;
                     }
                     if offset >= data_len {

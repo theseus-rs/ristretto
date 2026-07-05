@@ -63,10 +63,12 @@ impl Image {
     pub fn from_file(path: &Path) -> Result<Self> {
         let byte_source = ByteSource::from(path)?;
         let bytes = byte_source.get_bytes(0..28)?;
-        let endian = endian_from_magic(&bytes[..4])?;
+        let header_bytes = bytes.as_ref();
+        let magic = header_bytes.get(..4).ok_or(Error::InvalidIndex(0))?;
+        let endian = endian_from_magic(magic)?;
         let header = match endian {
-            Endian::Little => Header::from_bytes::<LittleEndian>(&bytes[..28])?,
-            Endian::Big => Header::from_bytes::<BigEndian>(&bytes[..28])?,
+            Endian::Little => Header::from_bytes::<LittleEndian>(header_bytes)?,
+            Endian::Big => Header::from_bytes::<BigEndian>(header_bytes)?,
         };
 
         let image = Self {
