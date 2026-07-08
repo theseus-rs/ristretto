@@ -64,8 +64,9 @@ pub async fn get_extended_npe_message<T: Thread + 'static>(
         return Ok(Some(Value::Object(None)));
     }
 
-    // Top frame is at index 0
-    let top_frame_value = &frames[0];
+    let Some(top_frame_value) = frames.first() else {
+        return Ok(Some(Value::Object(None)));
+    };
     let top_frame_info: Vec<Value> = if let Ok(v) = top_frame_value.clone().try_into() {
         v
     } else {
@@ -79,7 +80,9 @@ pub async fn get_extended_npe_message<T: Thread + 'static>(
 
     // 1. Class
     // The first element is a Class object (java.lang.Class).
-    let class_value = &top_frame_info[0];
+    let Some(class_value) = top_frame_info.first() else {
+        return Ok(Some(Value::Object(None)));
+    };
     let class_name_str = {
         let class_obj_ref = class_value.as_object_ref()?;
         // java.lang.Class has a "name" field which is a String.
@@ -91,13 +94,21 @@ pub async fn get_extended_npe_message<T: Thread + 'static>(
     let internal_class_name = class_name_str.replace('.', "/");
 
     // 2. Method Name (String)
-    let method_name = top_frame_info[1].as_string()?;
+    let Some(method_name_value) = top_frame_info.get(1) else {
+        return Ok(Some(Value::Object(None)));
+    };
+    let method_name = method_name_value.as_string()?;
 
     // 3. Descriptor (String)
-    let descriptor = top_frame_info[2].as_string()?;
+    let Some(descriptor_value) = top_frame_info.get(2) else {
+        return Ok(Some(Value::Object(None)));
+    };
+    let descriptor = descriptor_value.as_string()?;
 
     // 4. BCI (Integer)
-    let bci_value = &top_frame_info[3];
+    let Some(bci_value) = top_frame_info.get(3) else {
+        return Ok(Some(Value::Object(None)));
+    };
     // This is an Integer object.
     let bci = usize::try_from(bci_value.as_i32()?).unwrap_or(0);
 
@@ -160,6 +171,12 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
             class,
             method,
         }
+    }
+
+    fn stack_from_top(stack: &[Source], depth: usize) -> Option<&Source> {
+        let offset = depth.checked_add(1)?;
+        let index = stack.len().checked_sub(offset)?;
+        stack.get(index)
     }
 
     #[expect(clippy::too_many_lines)]
@@ -356,25 +373,27 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                     }
                 }
                 Instruction::Dup_x1 if stack.len() >= 2 => {
-                    let v1 = stack.pop().expect("stack checked");
-                    let v2 = stack.pop().expect("stack checked");
+                    let v1 = stack.pop()?;
+                    let v2 = stack.pop()?;
                     stack.push(v1.clone());
                     stack.push(v2);
                     stack.push(v1);
                 }
                 Instruction::Dup_x2 if stack.len() >= 3 => {
-                    let v1 = stack.pop().expect("stack checked");
-                    let v2 = stack.pop().expect("stack checked");
-                    let v3 = stack.pop().expect("stack checked");
+                    let v1 = stack.pop()?;
+                    let v2 = stack.pop()?;
+                    let v3 = stack.pop()?;
                     stack.push(v1.clone());
                     stack.push(v3);
                     stack.push(v2);
                     stack.push(v1);
                 }
                 Instruction::Dup2 if stack.len() >= 2 => {
-                    let len = stack.len();
-                    stack.push(stack[len - 2].clone());
-                    stack.push(stack[len - 1].clone());
+                    let values = stack
+                        .get(stack.len().saturating_sub(2)..)
+                        .unwrap_or_default()
+                        .to_vec();
+                    stack.extend(values);
                 }
                 Instruction::Swap if stack.len() >= 2 => {
                     let len = stack.len();
@@ -530,7 +549,7 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                     1
                 };
                 if stack.len() > offset {
-                    let source = &stack[stack.len() - 1 - offset];
+                    let source = Self::stack_from_top(&stack, offset)?;
                     let (_, field_name, _) = self.resolve_field(*idx);
                     let reason = self.describe_source(source);
                     return Some(format!(
@@ -542,7 +561,7 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                 let (class_name, method_name, descriptor) = self.resolve_method_ref(*idx);
                 let args_count = self.count_slots(&descriptor);
                 if stack.len() > args_count {
-                    let source = &stack[stack.len() - 1 - args_count];
+                    let source = Self::stack_from_top(&stack, args_count)?;
                     let reason = self.describe_source(source);
                     // Use simple class name for the message
                     let simple_class = class_name.rsplit('/').next().unwrap_or(&class_name);
@@ -560,56 +579,56 @@ impl<T: Send + Sync> NpeAnalyzer<T> {
                 }
             }
             Instruction::Iaload if stack.len() > 1 => {
-                let source = &stack[stack.len() - 2];
+                let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
                 return Some(format!(
                     "Cannot load from int array because {reason} is null"
                 ));
             }
             Instruction::Laload if stack.len() > 1 => {
-                let source = &stack[stack.len() - 2];
+                let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
                 return Some(format!(
                     "Cannot load from long array because {reason} is null"
                 ));
             }
             Instruction::Faload if stack.len() > 1 => {
-                let source = &stack[stack.len() - 2];
+                let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
                 return Some(format!(
                     "Cannot load from float array because {reason} is null"
                 ));
             }
             Instruction::Daload if stack.len() > 1 => {
-                let source = &stack[stack.len() - 2];
+                let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
                 return Some(format!(
                     "Cannot load from double array because {reason} is null"
                 ));
             }
             Instruction::Aaload if stack.len() > 1 => {
-                let source = &stack[stack.len() - 2];
+                let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
                 return Some(format!(
                     "Cannot load from object array because {reason} is null"
                 ));
             }
             Instruction::Baload if stack.len() > 1 => {
-                let source = &stack[stack.len() - 2];
+                let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
                 return Some(format!(
                     "Cannot load from byte/boolean array because {reason} is null"
                 ));
             }
             Instruction::Caload if stack.len() > 1 => {
-                let source = &stack[stack.len() - 2];
+                let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
                 return Some(format!(
                     "Cannot load from char array because {reason} is null"
                 ));
             }
             Instruction::Saload if stack.len() > 1 => {
-                let source = &stack[stack.len() - 2];
+                let source = Self::stack_from_top(&stack, 1)?;
                 let reason = self.describe_source(source);
                 return Some(format!(
                     "Cannot load from short array because {reason} is null"

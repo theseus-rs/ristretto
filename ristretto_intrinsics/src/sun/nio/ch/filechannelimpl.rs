@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
 use crate::java::nio::mapped_regions::{MapMode, MappedRegion, MappedRegions};
 use crate::sun::nio::fs::managed_files;
@@ -53,7 +54,7 @@ async fn do_map<V: VM>(vm: &Arc<V>, fd: i64, prot: i32, position: i64, length: i
         };
         // Truncate to the actual number of bytes read; everything past this remains zero.
         if n < length_usize {
-            for byte in &mut buf[n..] {
+            for byte in buf.iter_mut().skip(n) {
                 *byte = 0;
             }
         }
@@ -159,7 +160,8 @@ pub async fn transfer_to_0<T: Thread + 'static>(
     if n == 0 {
         return Ok(Some(Value::Long(0)));
     }
-    let written = managed_files::write(vm.file_handles(), dst_fd, &buf[..n])
+    let bytes = bounds::range_to(&buf, ..n, "transferTo0")?;
+    let written = managed_files::write(vm.file_handles(), dst_fd, bytes)
         .await
         .map_err(|e| IoException(format!("transferTo0: {e}")))?;
     Ok(Some(Value::Long(
@@ -297,8 +299,8 @@ mod tests {
         // Map more than the file contains; the tail is zero.
         let address = do_map(&vm, fd, 0, 0, 10).await?;
         let bytes = vm.native_memory().read_bytes(address, 10);
-        assert_eq!(&bytes[..5], b"hello");
-        assert_eq!(&bytes[5..], &[0u8; 5]);
+        assert_eq!(bytes.get(..5), Some(b"hello".as_slice()));
+        assert_eq!(bytes.get(5..), Some([0u8; 5].as_slice()));
         Ok(())
     }
 

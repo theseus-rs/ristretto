@@ -1,3 +1,4 @@
+use crate::bounds;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
@@ -40,12 +41,13 @@ pub async fn socket_write_0<T: Thread + 'static>(
     let data = {
         let arr_guard = buf.as_reference()?;
         if let Reference::ByteArray(byte_array) = &*arr_guard {
+            let off = usize::try_from(off).map_err(|e| InternalError(e.to_string()))?;
+            let len = usize::try_from(len).map_err(|e| InternalError(e.to_string()))?;
+            let end = off
+                .checked_add(len)
+                .ok_or_else(|| InternalError("SocketOutputStream range overflow".to_string()))?;
             #[expect(clippy::cast_sign_loss)]
-            let off = off as usize;
-            #[expect(clippy::cast_sign_loss)]
-            let len = len as usize;
-            #[expect(clippy::cast_sign_loss)]
-            let data: Vec<u8> = byte_array[off..off + len]
+            let data: Vec<u8> = bounds::range(byte_array, off..end, "SocketOutputStream.write")?
                 .iter()
                 .map(|&b| b as u8)
                 .collect::<Vec<u8>>();
@@ -81,7 +83,8 @@ pub async fn socket_write_0<T: Thread + 'static>(
             };
             let stream = stream.clone();
             drop(handle);
-            match stream.try_write(&data[written..]) {
+            let source = bounds::range_from(&data, written.., "SocketOutputStream.write")?;
+            match stream.try_write(source) {
                 Ok(n) => written += n,
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                     stream

@@ -58,7 +58,10 @@ impl ByteSource {
 
     fn get_bytes_range(&'_ self, start: usize, end: usize) -> Result<Cow<'_, [u8]>> {
         match self {
-            ByteSource::Bytes(bytes) => Ok(Cow::Borrowed(&bytes[start..end])),
+            ByteSource::Bytes(bytes) => {
+                let bytes = bytes.get(start..end).ok_or(InvalidIndex(start))?;
+                Ok(Cow::Borrowed(bytes))
+            }
             ByteSource::File(file) => {
                 let file = &mut lock_file(file)?;
                 file.seek(SeekFrom::Start(start as u64))?;
@@ -67,7 +70,10 @@ impl ByteSource {
                 Ok(Cow::Owned(buffer))
             }
             #[cfg(not(target_family = "wasm"))]
-            ByteSource::MemoryMap(mmap) => Ok(Cow::Borrowed(&mmap[start..end])),
+            ByteSource::MemoryMap(mmap) => {
+                let bytes = mmap.get(start..end).ok_or(InvalidIndex(start))?;
+                Ok(Cow::Borrowed(bytes))
+            }
         }
     }
 
@@ -80,10 +86,13 @@ impl ByteSource {
     pub(crate) fn get_bytes_to_null(&'_ self, start_index: usize) -> Result<Cow<'_, [u8]>> {
         match self {
             ByteSource::Bytes(bytes) => {
-                let bytes_slice = &bytes[start_index..];
+                let bytes_slice = bytes.get(start_index..).ok_or(InvalidIndex(start_index))?;
                 let length = memchr::memchr(0, bytes_slice).ok_or(InvalidIndex(start_index))?;
                 let end_index = start_index + length;
-                Ok(Cow::Borrowed(&bytes[start_index..end_index]))
+                let bytes = bytes
+                    .get(start_index..end_index)
+                    .ok_or(InvalidIndex(start_index))?;
+                Ok(Cow::Borrowed(bytes))
             }
             ByteSource::File(file) => {
                 let file = &mut lock_file(file)?;
@@ -97,22 +106,31 @@ impl ByteSource {
                         break;
                     }
 
-                    if let Some(null_position) = memchr::memchr(0, &read_buffer[..bytes_read]) {
-                        buffer.extend_from_slice(&read_buffer[..null_position]);
+                    let read_bytes = read_buffer
+                        .get(..bytes_read)
+                        .ok_or(InvalidIndex(start_index))?;
+                    if let Some(null_position) = memchr::memchr(0, read_bytes) {
+                        let prefix = read_bytes
+                            .get(..null_position)
+                            .ok_or(InvalidIndex(start_index))?;
+                        buffer.extend_from_slice(prefix);
                         return Ok(Cow::Owned(buffer));
                     }
 
-                    buffer.extend_from_slice(&read_buffer[..bytes_read]);
+                    buffer.extend_from_slice(read_bytes);
                 }
 
                 Err(InvalidIndex(start_index))
             }
             #[cfg(not(target_family = "wasm"))]
             ByteSource::MemoryMap(mmap) => {
-                let bytes_slice = &mmap[start_index..];
+                let bytes_slice = mmap.get(start_index..).ok_or(InvalidIndex(start_index))?;
                 let length = memchr::memchr(0, bytes_slice).ok_or(InvalidIndex(start_index))?;
                 let end_index = start_index + length;
-                Ok(Cow::Borrowed(&mmap[start_index..end_index]))
+                let bytes = mmap
+                    .get(start_index..end_index)
+                    .ok_or(InvalidIndex(start_index))?;
+                Ok(Cow::Borrowed(bytes))
             }
         }
     }

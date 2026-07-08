@@ -10,6 +10,14 @@
 #![deny(unsafe_code)]
 // The async_recursion macro adds Send bounds that overlap with the generic parameter bounds.
 #![expect(clippy::multiple_bound_locations)]
+#![cfg_attr(
+    test,
+    expect(
+        clippy::expect_used,
+        clippy::panic_in_result_fn,
+        reason = "intrinsic unit tests use assertions and fixture setup expects in Result-returning tests"
+    )
+)]
 
 #[cfg(test)]
 pub(crate) mod test;
@@ -18,6 +26,7 @@ pub(crate) mod test;
 pub mod apple;
 /// Filesystem helpers with platform-appropriate async backends.
 mod async_fs;
+mod bounds;
 /// Methods from the COM-related packages
 pub mod com;
 /// Core Java standard library methods
@@ -26,6 +35,7 @@ pub mod java;
 pub mod jdk;
 /// Host locale detection
 mod locale;
+mod net_helpers;
 /// Methods for handling Java properties
 pub mod properties;
 /// Methods from Sun packages

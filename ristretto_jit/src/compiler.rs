@@ -1,6 +1,6 @@
 use crate::Error::{
-    InternalError, InvalidBlockAddress, UnsupportedInstruction, UnsupportedTargetISA,
-    UnsupportedType,
+    InternalError, InvalidBlockAddress, InvalidLocalVariableIndex, UnsupportedInstruction,
+    UnsupportedTargetISA, UnsupportedType,
 };
 use crate::control_flow_graph::InstructionControlFlow;
 use crate::function::Function;
@@ -450,9 +450,14 @@ impl Compiler {
                 local_types.push(types::I8);
             }
 
-            let existing_type = local_types[index];
+            let existing_type = *local_types
+                .get(index)
+                .ok_or(InvalidLocalVariableIndex(index))?;
             if existing_type == types::I8 {
-                local_types[index] = native_type;
+                let local_type = local_types
+                    .get_mut(index)
+                    .ok_or(InvalidLocalVariableIndex(index))?;
+                *local_type = native_type;
             } else if existing_type != native_type {
                 // TODO: the jit compiler should handle this case gracefully and rewrite the
                 //       instructions to use unique local variables with types that do not conflict.

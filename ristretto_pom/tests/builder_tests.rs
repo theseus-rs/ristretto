@@ -1,4 +1,8 @@
 #![cfg(not(target_family = "wasm"))]
+#![expect(
+    clippy::indexing_slicing,
+    reason = "integration tests assert fixture positions by index"
+)]
 //! Tests for builder helpers and collection constructors.
 
 use ristretto_pom::{

@@ -204,9 +204,7 @@ mod tests {
         stack.push_int(3)?;
         stack.push_int(4)?;
         let values = stack.drain_last(2);
-        assert_eq!(values.len(), 2);
-        assert_eq!(values[0], Value::Int(3));
-        assert_eq!(values[1], Value::Int(4));
+        assert_eq!(values.as_slice(), &[Value::Int(3), Value::Int(4)]);
         Ok(())
     }
 

@@ -388,8 +388,11 @@ mod tests {
         let Reference::Array(array) = &*stack_trace_guard else {
             panic!("Expected array");
         };
-        assert!(!array.elements[0].is_null());
-        let element_ref = array.elements[0].as_object_ref()?;
+        let Some(element) = array.elements.first() else {
+            panic!("Expected stack trace element");
+        };
+        assert!(!element.is_null());
+        let element_ref = element.as_object_ref()?;
         let declaring_class = element_ref.value("declaringClass")?.as_string()?;
         assert_eq!(declaring_class, "java.lang.Object");
         Ok(())
@@ -411,7 +414,12 @@ mod tests {
         let Reference::Array(array) = &*stack_trace_guard else {
             panic!("Expected array");
         };
-        assert!(!array.elements[0].is_null());
+        assert!(
+            array
+                .elements
+                .first()
+                .is_some_and(|element| !element.is_null())
+        );
         Ok(())
     }
 
@@ -459,11 +467,8 @@ mod tests {
         let Reference::Array(array) = &*stack_trace_guard else {
             panic!("Expected array");
         };
-        for i in 0..count {
-            assert!(
-                !array.elements[i].is_null(),
-                "element {i} should not be null"
-            );
+        for (i, element) in array.elements.iter().take(count).enumerate() {
+            assert!(!element.is_null(), "element {i} should not be null");
         }
         Ok(())
     }
@@ -529,8 +534,11 @@ mod tests {
         let Reference::Array(array) = &*stack_trace_guard else {
             panic!("Expected array");
         };
-        assert!(!array.elements[0].is_null());
-        let element_ref = array.elements[0].as_object_ref()?;
+        let Some(element) = array.elements.first() else {
+            panic!("Expected stack trace element");
+        };
+        assert!(!element.is_null());
+        let element_ref = element.as_object_ref()?;
         let declaring_class = element_ref.value("declaringClass")?.as_string()?;
         assert_eq!(declaring_class, "java.lang.Object");
         let method_name = element_ref.value("methodName")?.as_string()?;
@@ -555,7 +563,12 @@ mod tests {
         let Reference::Array(array) = &*stack_trace_guard else {
             panic!("Expected array");
         };
-        assert!(!array.elements[0].is_null());
+        assert!(
+            array
+                .elements
+                .first()
+                .is_some_and(|element| !element.is_null())
+        );
         Ok(())
     }
 
@@ -592,11 +605,8 @@ mod tests {
         let Reference::Array(array) = &*stack_trace_guard else {
             panic!("Expected array");
         };
-        for i in 0..count {
-            assert!(
-                !array.elements[i].is_null(),
-                "element {i} should not be null"
-            );
+        for (i, element) in array.elements.iter().take(count).enumerate() {
+            assert!(!element.is_null(), "element {i} should not be null");
         }
         Ok(())
     }
@@ -631,7 +641,10 @@ mod tests {
         let Reference::Array(array) = &*stack_trace_guard else {
             panic!("Expected array");
         };
-        let element_ref = array.elements[0].as_object_ref()?;
+        let Some(element) = array.elements.first() else {
+            panic!("Expected stack trace element");
+        };
+        let element_ref = element.as_object_ref()?;
 
         // Verify declaringClass is set
         let declaring_class = element_ref.value("declaringClass")?.as_string()?;
@@ -671,7 +684,10 @@ mod tests {
         let Reference::Array(array) = &*stack_trace_guard else {
             panic!("Expected array");
         };
-        let element_ref = array.elements[0].as_object_ref()?;
+        let Some(element) = array.elements.first() else {
+            panic!("Expected stack trace element");
+        };
+        let element_ref = element.as_object_ref()?;
 
         // Verify declaringClass
         let declaring_class = element_ref.value("declaringClass")?.as_string()?;

@@ -81,6 +81,14 @@
 //! ```
 
 #![deny(unsafe_code)]
+#![cfg_attr(
+    test,
+    expect(
+        clippy::indexing_slicing,
+        clippy::panic_in_result_fn,
+        reason = "unit tests use direct fixture indexing and assertions with Result-returning tests"
+    )
+)]
 
 pub mod attributes;
 mod base_type;

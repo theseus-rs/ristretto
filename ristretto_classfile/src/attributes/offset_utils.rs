@@ -50,7 +50,11 @@ pub(crate) fn lookup_byte_offset(pairs: &[(u16, u16)], byte_offset: u16) -> Opti
     pairs
         .binary_search_by_key(&byte_offset, |&(k, _)| k)
         .ok()
-        .map(|idx| pairs[idx].1)
+        .and_then(|idx| {
+            pairs
+                .get(idx)
+                .map(|(_, instruction_index)| *instruction_index)
+        })
 }
 
 /// Look up the largest byte offset <= `byte_offset` in the sorted pairs.
@@ -58,7 +62,9 @@ pub(crate) fn lookup_byte_offset(pairs: &[(u16, u16)], byte_offset: u16) -> Opti
 pub(crate) fn lookup_byte_offset_le(pairs: &[(u16, u16)], byte_offset: u16) -> Option<u16> {
     let idx = pairs.partition_point(|&(k, _)| k <= byte_offset);
     if idx > 0 {
-        Some(pairs[idx - 1].1)
+        pairs
+            .get(idx - 1)
+            .map(|(_, instruction_index)| *instruction_index)
     } else {
         None
     }
@@ -92,12 +98,19 @@ pub(crate) fn instructions_from_byte_reader(
         byte_to_instruction_pairs
             .binary_search_by_key(&byte_offset, |&(k, _)| k)
             .ok()
-            .map(|idx| byte_to_instruction_pairs[idx].1)
+            .and_then(|idx| {
+                byte_to_instruction_pairs
+                    .get(idx)
+                    .map(|(_, instruction_index)| *instruction_index)
+            })
     };
 
     for (index, instruction) in instructions.iter_mut().enumerate() {
         // Get the byte position for this instruction from the pairs array
-        let instruction_byte_pos = byte_to_instruction_pairs[index].0;
+        let (instruction_byte_pos, _) = byte_to_instruction_pairs
+            .get(index)
+            .ok_or(InvalidInstructionOffset(u32::try_from(index)?))?;
+        let instruction_byte_pos = *instruction_byte_pos;
         match instruction {
             Instruction::Ifeq(offset)
             | Instruction::Ifne(offset)

@@ -1,4 +1,8 @@
 #![cfg(not(target_family = "wasm"))]
+#![expect(
+    clippy::expect_used,
+    reason = "serde round-trip helper should fail tests immediately on serialization errors"
+)]
 //! Serialization and deserialization tests for all types.
 
 use ristretto_pom::Project;

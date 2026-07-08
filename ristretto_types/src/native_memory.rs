@@ -67,11 +67,7 @@ impl NativeMemory {
         let offset = offset_from_base(address, base);
         let end = offset.checked_add(len)?;
         let buf = buf_lock.read();
-        if end <= buf.len() {
-            Some(buf[offset..end].to_vec())
-        } else {
-            None
-        }
+        buf.get(offset..end).map(<[u8]>::to_vec)
     }
 
     /// Reads a value from native memory using a closure, avoiding `Vec` allocation.
@@ -88,11 +84,7 @@ impl NativeMemory {
         let offset = offset_from_base(address, base);
         let end = offset.checked_add(len)?;
         let buf = buf_lock.read();
-        if end <= buf.len() {
-            Some(f(&buf[offset..end]))
-        } else {
-            None
-        }
+        buf.get(offset..end).map(f)
     }
 
     /// Reads a single `i8` from `address`.
@@ -150,9 +142,9 @@ impl NativeMemory {
             let offset = offset_from_base(address, base);
             let mut buf = buf_lock.write();
             if let Some(end) = offset.checked_add(data.len())
-                && end <= buf.len()
+                && let Some(destination) = buf.get_mut(offset..end)
             {
-                buf[offset..end].copy_from_slice(data);
+                destination.copy_from_slice(data);
             }
         }
     }
@@ -193,12 +185,12 @@ impl NativeMemory {
         if let Some((&base, buf_lock)) = guard.range(..=address).next_back() {
             let offset = offset_from_base(address, base);
             let buf = buf_lock.read();
-            if offset < buf.len() {
-                let end = buf[offset..]
+            if let Some(bytes) = buf.get(offset..) {
+                let end = bytes
                     .iter()
                     .position(|&b| b == 0)
-                    .map_or(buf.len(), |p| offset + p);
-                return buf[offset..end].to_vec();
+                    .map_or(bytes.len(), |position| position);
+                return bytes.get(..end).map_or_else(Vec::new, <[u8]>::to_vec);
             }
         }
         Vec::new()

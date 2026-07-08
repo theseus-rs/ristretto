@@ -281,7 +281,10 @@ mod tests {
         let (fd, err) = {
             let lock_result = result.as_reference()?;
             if let Reference::IntArray(arr) = &*lock_result {
-                (arr[0], arr[1])
+                let [fd, err] = arr.as_ref() else {
+                    panic!("Expected two-element IntArray result");
+                };
+                (*fd, *err)
             } else {
                 panic!("Expected IntArray result");
             }
@@ -320,7 +323,10 @@ mod tests {
         let (fd, err) = {
             let lock_result = result.as_reference()?;
             if let Reference::IntArray(arr) = &*lock_result {
-                (arr[0], arr[1])
+                let [fd, err] = arr.as_ref() else {
+                    panic!("Expected two-element IntArray result");
+                };
+                (*fd, *err)
             } else {
                 panic!("Expected IntArray result");
             }
@@ -355,8 +361,11 @@ mod tests {
         let result = lock_file_0(thread, parameters).await?.expect("value");
         let lock_result = result.as_reference()?;
         if let Reference::IntArray(arr) = &*lock_result {
-            assert_eq!(0, arr[0], "fd should be 0 for nonexistent file");
-            assert_ne!(0, arr[1], "errno should be non-zero");
+            let [fd, errno] = arr.as_ref() else {
+                panic!("Expected two-element IntArray result");
+            };
+            assert_eq!(0, *fd, "fd should be 0 for nonexistent file");
+            assert_ne!(0, *errno, "errno should be non-zero");
         } else {
             panic!("Expected IntArray result");
         }

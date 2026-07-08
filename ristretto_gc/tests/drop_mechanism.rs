@@ -1,6 +1,6 @@
 #![cfg(not(target_family = "wasm"))]
 
-use ristretto_gc::{Finalize, GarbageCollector, Gc};
+use ristretto_gc::{Finalize, GarbageCollector, Gc, Trace};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -29,7 +29,7 @@ impl Drop for TestObject {
     }
 }
 
-impl ristretto_gc::Trace for TestObject {
+impl Trace for TestObject {
     fn trace(&self, _collector: &GarbageCollector) {
         // No GC references to trace
     }
@@ -70,7 +70,7 @@ impl Finalize for TestObjectWithFinalizer {
     }
 }
 
-impl ristretto_gc::Trace for TestObjectWithFinalizer {
+impl Trace for TestObjectWithFinalizer {
     fn trace(&self, _collector: &GarbageCollector) {
         // No GC references to trace
     }

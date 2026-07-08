@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::lang::class::get_class;
 use ristretto_classfile::VerifyMode;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
@@ -60,7 +61,13 @@ async fn class_object_from_bytes<T: Thread + 'static>(
     length: i32,
 ) -> Result<Value> {
     let bytes_length = i32::try_from(bytes.len())?;
-    if offset < 0 || length < 0 || offset + length > bytes_length {
+    let end = offset
+        .checked_add(length)
+        .ok_or(IndexOutOfBoundsException {
+            index: offset,
+            size: bytes_length,
+        })?;
+    if offset < 0 || length < 0 || end > bytes_length {
         return Err(IndexOutOfBoundsException {
             index: offset,
             size: bytes_length,
@@ -69,7 +76,13 @@ async fn class_object_from_bytes<T: Thread + 'static>(
     }
     let offset = usize::try_from(offset)?;
     let length = usize::try_from(length)?;
-    let bytes = &bytes[offset..offset + length];
+    let end = offset
+        .checked_add(length)
+        .ok_or_else(|| IndexOutOfBoundsException {
+            index: i32::try_from(offset).unwrap_or(i32::MAX),
+            size: bytes_length,
+        })?;
+    let bytes = bounds::range(bytes, offset..end, "ClassLoader.defineClass bytes")?;
     let class_file = match ClassFile::from_bytes(bytes) {
         Ok(class_file) => class_file,
         Err(error) => return Err(ClassFormatError(error.to_string()).into()),
@@ -323,7 +336,7 @@ pub async fn find_bootstrap_class<T: Thread + 'static>(
     let vm = thread.vm()?;
     let class_loader_lock = vm.class_loader();
     let class_loader = class_loader_lock.read().await;
-    let bootstrap = class_loader.bootstrap().await;
+    let bootstrap = class_loader.bootstrap().await?;
     let class_name_jstr = JavaStr::cow_from_str(&class_name);
     let Ok(class) = bootstrap.load(&class_name_jstr).await else {
         return Ok(Some(Value::Object(None)));

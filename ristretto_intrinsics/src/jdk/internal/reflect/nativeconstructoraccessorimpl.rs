@@ -19,15 +19,15 @@ use std::sync::Arc;
 ///
 /// If the object is not a primitive or cannot be converted to a primitive.
 pub(crate) fn unbox_primitive(values: &mut [Value], index: usize) -> Result<()> {
-    let Some(value) = values.get(index) else {
+    let Some(value) = values.get_mut(index) else {
         return Err(InternalError(format!("index out of bounds: {index}")));
     };
-    let value = {
+    let unboxed_value = {
         let reference = value.as_reference()?;
         let object = reference.as_object_ref()?;
         object.value("value")?
     };
-    values[index] = value;
+    *value = unboxed_value;
     Ok(())
 }
 

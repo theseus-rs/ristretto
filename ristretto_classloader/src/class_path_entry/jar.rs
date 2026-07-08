@@ -306,7 +306,8 @@ mod tests {
     use super::*;
     use crate::Error::ClassFileError;
     use crate::class_path_entry::manifest::{MAIN_CLASS, MANIFEST_VERSION};
-    use std::io::Write;
+    use std::fs;
+    use std::io::{self, Write};
     use std::path::PathBuf;
     use zip::write::SimpleFileOptions;
 

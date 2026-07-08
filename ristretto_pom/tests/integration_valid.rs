@@ -1,4 +1,8 @@
 #![cfg(not(target_family = "wasm"))]
+#![expect(
+    clippy::panic_in_result_fn,
+    reason = "integration tests use assertions with Result-returning tests"
+)]
 use ristretto_pom::{Project, Result};
 use std::io::Write;
 use tempfile::NamedTempFile;

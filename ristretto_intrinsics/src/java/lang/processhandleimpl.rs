@@ -1,3 +1,5 @@
+#[cfg(not(target_family = "wasm"))]
+use crate::bounds;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 #[cfg(not(target_family = "wasm"))]
@@ -120,19 +122,22 @@ pub async fn get_process_pids_0<T: Thread + 'static>(
             system.refresh_processes(ProcessesToUpdate::All, true);
             let processes = system.processes();
             for (index, (pid, process)) in processes.iter().enumerate() {
-                // Determine if we have enough space to store the next pid
-                if index >= pids.len() {
+                let (Some(pid_slot), Some(ppid_slot), Some(start_time_slot)) = (
+                    pids.get_mut(index),
+                    ppids.get_mut(index),
+                    start_times.get_mut(index),
+                ) else {
                     break;
-                }
+                };
 
                 let pid = pid.as_u32();
                 let pid = i64::from(pid);
-                pids[index] = pid;
+                *pid_slot = pid;
                 let parent = process.parent().map(Pid::as_u32).unwrap_or_default();
                 let parent = i64::from(parent);
-                ppids[index] = parent;
+                *ppid_slot = parent;
                 let start_time = i64::try_from(process.start_time()).unwrap_or_default() * 1000;
-                start_times[index] = start_time;
+                *start_time_slot = start_time;
             }
             i32::try_from(processes.len())?
         } else {
@@ -143,12 +148,13 @@ pub async fn get_process_pids_0<T: Thread + 'static>(
                 if !pids.is_empty() {
                     let pid = pid.as_u32();
                     let pid = i64::from(pid);
-                    pids[0] = pid;
+                    *bounds::index_mut(pids, 0, "ProcessHandleImpl pids")? = pid;
                     let parent = process.parent().map(Pid::as_u32).unwrap_or_default();
                     let parent = i64::from(parent);
-                    ppids[0] = parent;
+                    *bounds::index_mut(ppids, 0, "ProcessHandleImpl ppids")? = parent;
                     let start_time = i64::try_from(process.start_time()).unwrap_or_default() * 1000;
-                    start_times[0] = start_time;
+                    *bounds::index_mut(start_times, 0, "ProcessHandleImpl start_times")? =
+                        start_time;
                 }
                 1
             } else {

@@ -413,7 +413,7 @@ fn has_mutf8_special_sequences(input: &[u8]) -> bool {
     let len = input.len();
     let mut i = 0;
     while i < len {
-        let b = input[i];
+        let b = input.get(i).copied().unwrap_or(0);
         if b < 0x80 {
             // ASCII byte
             i += 1;
@@ -422,14 +422,14 @@ fn has_mutf8_special_sequences(input: &[u8]) -> bool {
             return true;
         } else if b < 0xE0 {
             // 2-byte sequence: check for null encoding (0xC0 0x80) or overlong (0xC1)
-            let next = if i + 1 < len { input[i + 1] } else { 0 };
+            let next = input.get(i + 1).copied().unwrap_or(0);
             if (b == 0xC0 && next == 0x80) || b == 0xC1 {
                 return true;
             }
             i += 2;
         } else if b < 0xF0 {
             // 3-byte sequence: check for surrogates (0xED followed by 0xA0..0xBF)
-            let next = if i + 1 < len { input[i + 1] } else { 0 };
+            let next = input.get(i + 1).copied().unwrap_or(0);
             if b == 0xED && next >= 0xA0 {
                 return true;
             }
@@ -450,7 +450,7 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
     let len = input.len();
 
     while i < len {
-        let byte1 = input[i];
+        let byte1 = input.get(i).copied().unwrap_or(0);
         match byte1 {
             // 1-byte sequence (ASCII)
             0x00..=0x7F => {
@@ -462,7 +462,7 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
                 if i + 1 >= len {
                     return Err(FromUtf8Error("Invalid MUTF-8 byte sequence".to_string()));
                 }
-                let byte2 = input[i + 1];
+                let byte2 = input.get(i + 1).copied().unwrap_or(0);
                 if byte1 == 0xC0 && byte2 == 0x80 {
                     // Null character; encode as standard UTF-8 null
                     result.push(0);
@@ -478,8 +478,8 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
                 if i + 2 >= len {
                     return Err(FromUtf8Error("Invalid MUTF-8 byte sequence".to_string()));
                 }
-                let byte2 = input[i + 1];
-                let byte3 = input[i + 2];
+                let byte2 = input.get(i + 1).copied().unwrap_or(0);
+                let byte3 = input.get(i + 2).copied().unwrap_or(0);
                 let ch = u32::from(byte1 & 0x0F) << 12
                     | u32::from(byte2 & 0x3F) << 6
                     | u32::from(byte3 & 0x3F);
@@ -488,10 +488,10 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
                 if (0xD800..=0xDFFF).contains(&ch) {
                     // High surrogate; look for low surrogate
                     if (0xD800..=0xDBFF).contains(&ch) && i + 5 < len {
-                        let next1 = input[i + 3];
+                        let next1 = input.get(i + 3).copied().unwrap_or(0);
                         if next1 & 0xF0 == 0xE0 {
-                            let next2 = input[i + 4];
-                            let next3 = input[i + 5];
+                            let next2 = input.get(i + 4).copied().unwrap_or(0);
+                            let next3 = input.get(i + 5).copied().unwrap_or(0);
                             let low = u32::from(next1 & 0x0F) << 12
                                 | u32::from(next2 & 0x3F) << 6
                                 | u32::from(next3 & 0x3F);

@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::lang::invoke::methodhandlenatives::MemberNameFlags;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::ReferenceKind;
@@ -24,14 +25,11 @@ pub async fn invoke<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     // For signature polymorphic methods, parameters are passed individually, not as an array
     let all_params = parameters.into_vec();
-    if all_params.is_empty() {
-        return Err(InternalError(
-            "invoke requires at least the method handle".to_string(),
-        ));
-    }
-
-    let method_handle = all_params[0].clone();
-    let arguments: Vec<Value> = all_params[1..].to_vec();
+    let (method_handle, arguments) = all_params
+        .split_first()
+        .ok_or_else(|| InternalError("invoke requires at least the method handle".to_string()))?;
+    let method_handle = method_handle.clone();
+    let arguments = arguments.to_vec();
 
     // Try to get the LambdaForm's vmentry first
     let (form, member) = {
@@ -132,7 +130,7 @@ async fn interpret_lambda_form<T: Thread + 'static>(
     } else {
         let result_idx = usize::try_from(result_index)?;
         if result_idx < values.len() {
-            Ok(values[result_idx].clone())
+            Ok(bounds::index(&values, result_idx, "LambdaForm result")?.clone())
         } else {
             Err(InternalError(format!(
                 "LambdaForm result index {} out of bounds (values len={})",
@@ -254,13 +252,7 @@ fn resolve_lambda_form_argument(arg_val: &Value, values: &[Value]) -> Result<Val
             // It's a Name; get its index and look up the value
             let arg_ref = arg_val.as_object_ref()?;
             let index = usize::try_from(arg_ref.value("index")?.as_i32()?)?;
-            if index < values.len() {
-                return Ok(values[index].clone());
-            }
-            return Err(InternalError(format!(
-                "Name index {index} out of bounds (values len={})",
-                values.len()
-            )));
+            return Ok(bounds::index(values, index, "LambdaForm name")?.clone());
         }
         // It's a constant value; unbox if needed
         return unbox_if_wrapper(arg_val);
@@ -393,14 +385,11 @@ pub async fn invoke_basic<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     // For signature polymorphic methods, parameters are passed individually, not as an array
     let all_params = parameters.into_vec();
-    if all_params.is_empty() {
-        return Err(InternalError(
-            "invokeBasic requires at least the method handle".to_string(),
-        ));
-    }
-
-    let method_handle = all_params[0].clone();
-    let arguments: Vec<Value> = all_params[1..].to_vec();
+    let (method_handle, arguments) = all_params.split_first().ok_or_else(|| {
+        InternalError("invokeBasic requires at least the method handle".to_string())
+    })?;
+    let method_handle = method_handle.clone();
+    let arguments = arguments.to_vec();
 
     // Try to get the LambdaForm's vmentry first
     // This is the proper way to invoke a MethodHandle via its compiled LambdaForm
@@ -467,14 +456,11 @@ pub async fn invoke_exact<T: Thread + 'static>(
     //
     // We need to extract the method_handle first, then treat remaining parameters as arguments.
     let all_params = parameters.into_vec();
-    if all_params.is_empty() {
-        return Err(InternalError(
-            "invokeExact requires at least the method handle".to_string(),
-        ));
-    }
-
-    let method_handle = all_params[0].clone();
-    let arguments: Vec<Value> = all_params[1..].to_vec();
+    let (method_handle, arguments) = all_params.split_first().ok_or_else(|| {
+        InternalError("invokeExact requires at least the method handle".to_string())
+    })?;
+    let method_handle = method_handle.clone();
+    let arguments = arguments.to_vec();
 
     // Try to get the LambdaForm's vmentry first
     let (form, member) = {

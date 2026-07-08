@@ -431,7 +431,8 @@ impl StackFrame {
             }
             StackFrame::SameLocals1StackItemFrame { frame_type, stack } => {
                 bytes.write_u8(*frame_type)?;
-                stack[0].to_bytes(bytes)?;
+                let stack = stack.first().ok_or(InvalidStackFrameType(*frame_type))?;
+                stack.to_bytes(bytes)?;
             }
             StackFrame::SameLocals1StackItemFrameExtended {
                 frame_type,
@@ -440,7 +441,8 @@ impl StackFrame {
             } => {
                 bytes.write_u8(*frame_type)?;
                 bytes.write_u16::<BigEndian>(*offset_delta)?;
-                stack[0].to_bytes(bytes)?;
+                let stack = stack.first().ok_or(InvalidStackFrameType(*frame_type))?;
+                stack.to_bytes(bytes)?;
             }
             StackFrame::ChopFrame {
                 frame_type,

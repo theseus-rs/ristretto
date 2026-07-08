@@ -1,4 +1,5 @@
 use crate::java::io::socketfiledescriptor::get_fd;
+use crate::net_helpers::inet_address_ipv4;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
@@ -18,11 +19,16 @@ use std::sync::Arc;
 fn read_sockaddr(native_mem: &ristretto_types::NativeMemory, addr: i64) -> Result<(Vec<u8>, u16)> {
     // Detect address family from native sockaddr
     #[cfg(target_os = "macos")]
-    let family = native_mem.read_bytes(addr + 1, 1)[0];
+    let family = native_mem
+        .read_bytes(addr + 1, 1)
+        .first()
+        .copied()
+        .unwrap_or_default();
     #[cfg(not(target_os = "macos"))]
     let family = {
         let fam_bytes = native_mem.read_bytes(addr, 2);
-        u16::from_ne_bytes([fam_bytes[0], fam_bytes[1]])
+        let fam_bytes = <[u8; 2]>::try_from(fam_bytes.as_slice()).unwrap_or_default();
+        u16::from_ne_bytes(fam_bytes)
     };
 
     #[cfg(target_os = "macos")]
@@ -33,7 +39,8 @@ fn read_sockaddr(native_mem: &ristretto_types::NativeMemory, addr: i64) -> Resul
     let is_ipv6 = family == 23; // AF_INET6 on Windows and other platforms
 
     let port_bytes = native_mem.read_bytes(addr + 2, 2);
-    let port = u16::from_be_bytes([port_bytes[0], port_bytes[1]]);
+    let port_bytes = <[u8; 2]>::try_from(port_bytes.as_slice()).unwrap_or_default();
+    let port = u16::from_be_bytes(port_bytes);
 
     if is_ipv6 {
         // IPv6: skip flowinfo (4 bytes at offset 4), read 16 bytes at offset 8
@@ -57,8 +64,8 @@ fn read_sockaddr_v4(
     addr: i64,
 ) -> Result<(Ipv4Addr, u16)> {
     let (bytes, port) = read_sockaddr(native_mem, addr)?;
-    if bytes.len() == 4 {
-        Ok((Ipv4Addr::new(bytes[0], bytes[1], bytes[2], bytes[3]), port))
+    if let Ok(octets) = <[u8; 4]>::try_from(bytes.as_slice()) {
+        Ok((Ipv4Addr::from(octets), port))
     } else {
         // IPv6 bytes, but caller wants IPv4; return unspecified
         Ok((Ipv4Addr::UNSPECIFIED, port))
@@ -339,17 +346,7 @@ pub async fn send_0_0<T: Thread + 'static>(
     let fd = get_fd(&fd_value)?;
     let count = usize::try_from(len).map_err(|e| InternalError(e.to_string()))?;
 
-    // Extract IPv4 address from InetAddress holder
-    let ip = {
-        let holder_value = {
-            let object = addr_value.as_object_ref()?;
-            object.value("holder")?
-        };
-        let holder = holder_value.as_object_ref()?;
-        let addr_int = holder.value("address")?.as_i32()?;
-        #[expect(clippy::cast_sign_loss)]
-        Ipv4Addr::from(addr_int as u32)
-    };
+    let ip = inet_address_ipv4(&addr_value)?;
 
     let vm = thread.vm()?;
     let data = vm.native_memory().read_bytes(address, count);
@@ -415,7 +412,9 @@ pub async fn send_0_1<T: Thread + 'static>(
         .await
         .is_some_and(|guard| guard.is_ipv6);
     let target = if ip_bytes.len() == 4 {
-        let ip = Ipv4Addr::new(ip_bytes[0], ip_bytes[1], ip_bytes[2], ip_bytes[3]);
+        let ip_octets = <[u8; 4]>::try_from(ip_bytes.as_slice())
+            .map_err(|_| InternalError("invalid IPv4 target address".to_string()))?;
+        let ip = Ipv4Addr::from(ip_octets);
         if is_ipv6 {
             socket2::SockAddr::from(SocketAddrV6::new(ip.to_ipv6_mapped(), port, 0, 0))
         } else {

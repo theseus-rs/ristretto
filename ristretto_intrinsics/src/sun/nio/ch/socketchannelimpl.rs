@@ -1,21 +1,14 @@
+use crate::java::io::socketfiledescriptor::get_fd;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classfile::{JAVA_8, JAVA_11};
-use ristretto_classloader::{Reference, Value};
+use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
-
-fn get_fd(fd_value: &Value) -> Result<i32> {
-    let guard = fd_value.as_reference()?;
-    let Reference::Object(object) = &*guard else {
-        return Err(InternalError("not a FileDescriptor object".to_string()));
-    };
-    Ok(object.value("fd")?.as_i32()?)
-}
 
 #[intrinsic_method(
     "sun/nio/ch/SocketChannelImpl.checkConnect(Ljava/io/FileDescriptor;ZZ)I",

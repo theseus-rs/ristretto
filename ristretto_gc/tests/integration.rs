@@ -2,7 +2,12 @@
 //!
 //! Tests complex scenarios, edge cases, and integration between different components.
 #![cfg(not(target_family = "wasm"))]
-#![allow(clippy::items_after_statements)]
+#![expect(
+    clippy::indexing_slicing,
+    clippy::items_after_statements,
+    clippy::panic_in_result_fn,
+    reason = "integration tests use local fixture types, direct fixture indexing, and assertions with Result-returning tests"
+)]
 
 use ristretto_gc::{Configuration, GarbageCollector, Gc, GcRootGuard, Result, Trace};
 use std::collections::{HashMap, HashSet};

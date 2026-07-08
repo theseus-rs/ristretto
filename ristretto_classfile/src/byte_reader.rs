@@ -47,7 +47,7 @@ impl<'a> ByteReader<'a> {
     #[inline]
     #[must_use]
     pub fn remaining_slice(&self) -> &'a [u8] {
-        &self.data[self.pos..]
+        self.data.get(self.pos..).unwrap_or_default()
     }
 
     /// Read `N` bytes from the current position, advancing the position.

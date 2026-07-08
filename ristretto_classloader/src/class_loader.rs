@@ -1,4 +1,4 @@
-use crate::Error::ClassNotFound;
+use crate::Error::{ClassNotFound, InternalError};
 use crate::module::ResolvedConfiguration;
 use crate::{Class, ClassPath, Result, Value};
 use ahash::AHashMap;
@@ -355,15 +355,17 @@ impl ClassLoader {
 
     /// Traverse the classloader hierarchy to find the bootstrap (root) classloader.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if the classloader has already been dropped.
-    pub async fn bootstrap(&self) -> Arc<ClassLoader> {
-        let mut current = self.this.upgrade().expect("classloader already dropped");
+    /// Returns an error if the classloader has already been dropped.
+    pub async fn bootstrap(&self) -> Result<Arc<ClassLoader>> {
+        let mut current = self.this.upgrade().ok_or_else(|| {
+            InternalError("classloader self reference has already been dropped".to_string())
+        })?;
         loop {
             match current.parent().await {
                 Some(parent) => current = parent,
-                None => return current,
+                None => return Ok(current),
             }
         }
     }

@@ -1,4 +1,5 @@
 use crate::java::io::socketfiledescriptor::{get_fd, set_fd};
+use crate::net_helpers::{inet_address_int, ipv4_from_java_int, socket_from_type};
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::{Reference, Value};
@@ -14,22 +15,6 @@ use std::net::{Ipv4Addr, Ipv6Addr, Shutdown, SocketAddrV4, SocketAddrV6};
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::warn;
-
-/// Create a `socket2::Socket` from a `SocketType` for option operations.
-/// The returned Socket is wrapped in `ManuallyDrop` so it won't close the handle.
-#[expect(unsafe_code)]
-fn socket_from_type(socket_type: &SocketType) -> std::mem::ManuallyDrop<Socket> {
-    #[cfg(unix)]
-    {
-        use std::os::fd::FromRawFd;
-        std::mem::ManuallyDrop::new(unsafe { Socket::from_raw_fd(socket_type.raw_fd()) })
-    }
-    #[cfg(windows)]
-    {
-        use std::os::windows::io::FromRawSocket;
-        std::mem::ManuallyDrop::new(unsafe { Socket::from_raw_socket(socket_type.raw_socket()) })
-    }
-}
 
 /// Platform-specific socket option constants (macOS / BSD / Windows).
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -57,26 +42,6 @@ mod sock_const {
     pub const SO_RCVBUF: i32 = 8;
     pub const IPPROTO_TCP: i32 = 6;
     pub const TCP_NODELAY: i32 = 1;
-}
-
-fn get_inet_address_int(inet_addr: &Value) -> Result<i32> {
-    let holder_value = {
-        let object = inet_addr.as_object_ref()?;
-        object.value("holder")?
-    };
-    let holder = holder_value.as_object_ref()?;
-    Ok(holder.value("address")?.as_i32()?)
-}
-
-fn ipv4_from_int(addr: i32) -> Ipv4Addr {
-    #[expect(clippy::cast_sign_loss)]
-    let bits = addr as u32;
-    Ipv4Addr::new(
-        ((bits >> 24) & 0xFF) as u8,
-        ((bits >> 16) & 0xFF) as u8,
-        ((bits >> 8) & 0xFF) as u8,
-        (bits & 0xFF) as u8,
-    )
 }
 
 /// Create a `SockAddr` for the given socket, converting IPv4 to IPv4-mapped IPv6 if needed.
@@ -315,9 +280,9 @@ pub async fn accept<T: Thread + 'static>(
     // Store in isas[0]
     let mut guard = isas.as_reference_mut()?;
     if let Reference::Array(object_array) = &mut *guard
-        && !object_array.elements.is_empty()
+        && let Some(first) = object_array.elements.first_mut()
     {
-        object_array.elements[0] = isa;
+        *first = isa;
     }
 
     Ok(Some(Value::Int(new_fd)))
@@ -352,8 +317,8 @@ pub async fn bind_0<T: Thread + 'static>(
     let fd_value = parameters.pop()?;
     let vm = thread.vm()?;
     let fd = get_fd(&fd_value)?;
-    let address_int = get_inet_address_int(&inet_addr_obj)?;
-    let ipv4 = ipv4_from_int(address_int);
+    let address_int = inet_address_int(&inet_addr_obj)?;
+    let ipv4 = ipv4_from_java_int(address_int);
     let guard = vm
         .socket_handles()
         .get(&fd)
@@ -448,8 +413,8 @@ pub async fn connect_0<T: Thread + 'static>(
     let prefer_ipv6 = parameters.pop_bool()?;
     let vm = thread.vm()?;
     let fd = get_fd(&fd_value)?;
-    let address_int = get_inet_address_int(&inet_addr_obj)?;
-    let ipv4 = ipv4_from_int(address_int);
+    let address_int = inet_address_int(&inet_addr_obj)?;
+    let ipv4 = ipv4_from_java_int(address_int);
 
     // Take ownership of the raw socket from the handle map for the duration of connect.
     let raw_handle = vm

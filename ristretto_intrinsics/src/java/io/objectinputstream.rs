@@ -1,3 +1,4 @@
+use crate::bounds;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
@@ -40,13 +41,23 @@ pub async fn bytes_to_doubles<T: Thread + 'static>(
     }
 
     for i in 0..number_of_doubles {
-        let start = source_position.saturating_add(i.saturating_mul(8));
-        let end = start + 8;
+        let byte_offset = i
+            .checked_mul(8)
+            .ok_or_else(|| IllegalArgumentException("source index overflow".into()))?;
+        let start = source_position
+            .checked_add(byte_offset)
+            .ok_or_else(|| IllegalArgumentException("source index overflow".into()))?;
+        let end = start
+            .checked_add(8)
+            .ok_or_else(|| IllegalArgumentException("source index overflow".into()))?;
         let mut bytes = [0i8; 8];
-        bytes.copy_from_slice(&source[start..end]);
+        bytes.copy_from_slice(bounds::range(source, start..end, "bytesToDoubles source")?);
         let bytes: &[u8; 8] = zerocopy::transmute_ref!(&bytes);
         let value = f64::from_be_bytes(*bytes);
-        destination[destination_position + i] = value;
+        let destination_index = destination_position
+            .checked_add(i)
+            .ok_or_else(|| IllegalArgumentException("destination index overflow".into()))?;
+        *bounds::index_mut(destination, destination_index, "bytesToDoubles destination")? = value;
     }
     Ok(None)
 }
@@ -82,13 +93,23 @@ pub async fn bytes_to_floats<T: Thread + 'static>(
     }
 
     for i in 0..number_of_floats {
-        let start = source_position.saturating_add(i.saturating_mul(4));
-        let end = start + 4;
+        let byte_offset = i
+            .checked_mul(4)
+            .ok_or_else(|| IllegalArgumentException("source index overflow".into()))?;
+        let start = source_position
+            .checked_add(byte_offset)
+            .ok_or_else(|| IllegalArgumentException("source index overflow".into()))?;
+        let end = start
+            .checked_add(4)
+            .ok_or_else(|| IllegalArgumentException("source index overflow".into()))?;
         let mut bytes = [0i8; 4];
-        bytes.copy_from_slice(&source[start..end]);
+        bytes.copy_from_slice(bounds::range(source, start..end, "bytesToFloats source")?);
         let bytes: &[u8; 4] = zerocopy::transmute_ref!(&bytes);
         let value = f32::from_be_bytes(*bytes);
-        destination[destination_position + i] = value;
+        let destination_index = destination_position
+            .checked_add(i)
+            .ok_or_else(|| IllegalArgumentException("destination index overflow".into()))?;
+        *bounds::index_mut(destination, destination_index, "bytesToFloats destination")? = value;
     }
     Ok(None)
 }

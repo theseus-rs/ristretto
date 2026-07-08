@@ -306,14 +306,12 @@ impl Frame {
     ///
     /// - [JVMS §2.6.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.1)
     fn adjust_parameters(parameters: &mut Vec<Value>, max_size: usize) {
-        let mut index = parameters.len();
-        while index > 0 {
-            index -= 1;
-            match &parameters[index] {
-                Value::Long(_) | Value::Double(_) => {
-                    parameters.insert(index + 1, Value::Unused);
-                }
-                _ => {}
+        for index in (0..parameters.len()).rev() {
+            if matches!(
+                parameters.get(index),
+                Some(Value::Long(_) | Value::Double(_))
+            ) {
+                parameters.insert(index + 1, Value::Unused);
             }
         }
         if parameters.len() < max_size {

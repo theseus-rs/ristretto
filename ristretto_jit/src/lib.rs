@@ -27,6 +27,14 @@
 //!   `invokeinterface`, `invokedynamic`) are not yet supported
 
 #![allow(unsafe_code)]
+#![cfg_attr(
+    test,
+    expect(
+        clippy::indexing_slicing,
+        clippy::panic_in_result_fn,
+        reason = "unit tests use direct fixture indexing and assertions with Result-returning tests"
+    )
+)]
 #[cfg(not(target_family = "wasm"))]
 mod compiler;
 #[cfg(not(target_family = "wasm"))]

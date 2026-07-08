@@ -28,7 +28,9 @@ pub fn startup_trace_log(message: &str) {
     }
 
     let now = Instant::now();
-    let mut last_guard = LAST.lock().expect("failed to lock LAST");
+    let Ok(mut last_guard) = LAST.lock() else {
+        return;
+    };
     let start = START.get_or_init(|| {
         *last_guard = Some(now);
         now

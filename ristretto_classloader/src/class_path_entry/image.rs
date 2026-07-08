@@ -84,7 +84,10 @@ impl Image {
         let Some(&module_index) = self.packages.get(package) else {
             return Err(ClassNotFound(name.to_string()));
         };
-        let module = &self.modules[module_index as usize];
+        let module = self
+            .modules
+            .get(module_index as usize)
+            .ok_or_else(|| ClassNotFound(name.to_string()))?;
 
         // Construct the full resource name: /<module>/<name>.class
         let capacity = module.len() + name.len() + 8;

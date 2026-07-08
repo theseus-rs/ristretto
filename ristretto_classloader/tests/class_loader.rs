@@ -1,5 +1,9 @@
 //! Tests for the Ristretto `ClassLoader`
 #![cfg(not(target_family = "wasm"))]
+#![expect(
+    clippy::panic_in_result_fn,
+    reason = "integration tests use assertions in Result-returning test functions"
+)]
 
 use ristretto_classloader::{ClassLoader, ClassPath, JavaStr, Result};
 use std::path::PathBuf;

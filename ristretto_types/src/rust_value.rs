@@ -1,98 +1,99 @@
 use ristretto_classloader::{Reference, Value};
 use ristretto_gc::GarbageCollector;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 /// Trait for converting Rust values to `Value`.
 pub trait RustValue: Debug {
-    fn to_value(&self, collector: &GarbageCollector) -> Value;
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value;
 }
 
 impl RustValue for bool {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for char {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for i8 {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for u8 {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for i16 {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for u16 {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for i32 {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for u32 {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for i64 {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for u64 {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for isize {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for usize {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for f32 {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for f64 {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         Value::from(*self)
     }
 }
 
 impl RustValue for &str {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         use ristretto_classfile::{ClassFile, ConstantPool};
         use ristretto_classloader::{Class, Object};
 
@@ -114,50 +115,50 @@ impl RustValue for &str {
 }
 
 impl RustValue for String {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         self.as_str().to_value(collector)
     }
 }
 
 impl RustValue for Value {
-    fn to_value(&self, _collector: &GarbageCollector) -> Value {
+    fn to_value(&self, _collector: &Arc<GarbageCollector>) -> Value {
         self.clone()
     }
 }
 
 impl RustValue for Vec<bool> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         Value::new_object(collector, Reference::from(self.clone()))
     }
 }
 
 impl RustValue for Vec<char> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         Value::new_object(collector, Reference::from(self.clone()))
     }
 }
 
 impl RustValue for Vec<i8> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         Value::new_object(collector, Reference::from(self.clone()))
     }
 }
 
 impl RustValue for Vec<u8> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         let values: &[i8] = zerocopy::transmute_ref!(self.as_slice());
         Value::new_object(collector, Reference::from(values.to_vec()))
     }
 }
 
 impl RustValue for Vec<i16> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         Value::new_object(collector, Reference::from(self.clone()))
     }
 }
 
 impl RustValue for Vec<u16> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         let values: Vec<i64> = self.iter().map(|&x| i64::from(x)).collect();
 
         Value::new_object(collector, Reference::from(values))
@@ -165,33 +166,33 @@ impl RustValue for Vec<u16> {
 }
 
 impl RustValue for Vec<i32> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         Value::new_object(collector, Reference::from(self.clone()))
     }
 }
 
 impl RustValue for Vec<u32> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         let values: Vec<i64> = self.iter().map(|&x| i64::from(x)).collect();
         Value::new_object(collector, Reference::from(values))
     }
 }
 
 impl RustValue for Vec<i64> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         Value::new_object(collector, Reference::from(self.clone()))
     }
 }
 
 impl RustValue for Vec<u64> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         let values: &[i64] = zerocopy::transmute_ref!(self.as_slice());
         Value::new_object(collector, Reference::from(values.to_vec()))
     }
 }
 
 impl RustValue for Vec<isize> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         let values: Vec<i64> = self.iter().map(|&x| x as i64).collect();
         Value::new_object(collector, Reference::from(values))
     }
@@ -199,20 +200,20 @@ impl RustValue for Vec<isize> {
 
 impl RustValue for Vec<usize> {
     #[expect(clippy::cast_possible_wrap)]
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         let values: Vec<i64> = self.iter().map(|&x| x as i64).collect();
         Value::new_object(collector, Reference::from(values))
     }
 }
 
 impl RustValue for Vec<f32> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         Value::new_object(collector, Reference::from(self.clone()))
     }
 }
 
 impl RustValue for Vec<f64> {
-    fn to_value(&self, collector: &GarbageCollector) -> Value {
+    fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         Value::new_object(collector, Reference::from(self.clone()))
     }
 }

@@ -1,3 +1,4 @@
+use crate::bounds;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
@@ -40,11 +41,27 @@ pub async fn doubles_to_bytes<T: Thread + 'static>(
     }
 
     for i in 0..number_of_doubles {
-        let value = source[source_position + i];
+        let source_index = source_position
+            .checked_add(i)
+            .ok_or_else(|| IllegalArgumentException("source index overflow".into()))?;
+        let value = *bounds::index(source, source_index, "doublesToBytes source")?;
         let bytes = value.to_bits().to_be_bytes();
         let bytes: &[i8] = zerocopy::transmute_ref!(bytes.as_slice());
-        let dest_offset = destination_position.saturating_add(i.saturating_mul(8));
-        destination[dest_offset..dest_offset + 8].copy_from_slice(bytes);
+        let byte_offset = i
+            .checked_mul(8)
+            .ok_or_else(|| IllegalArgumentException("destination index overflow".into()))?;
+        let dest_offset = destination_position
+            .checked_add(byte_offset)
+            .ok_or_else(|| IllegalArgumentException("destination index overflow".into()))?;
+        let dest_end = dest_offset
+            .checked_add(8)
+            .ok_or_else(|| IllegalArgumentException("destination index overflow".into()))?;
+        bounds::range_mut(
+            destination,
+            dest_offset..dest_end,
+            "doublesToBytes destination",
+        )?
+        .copy_from_slice(bytes);
     }
     Ok(None)
 }
@@ -80,11 +97,27 @@ pub async fn floats_to_bytes<T: Thread + 'static>(
     }
 
     for i in 0..number_of_floats {
-        let value = source[source_position + i];
+        let source_index = source_position
+            .checked_add(i)
+            .ok_or_else(|| IllegalArgumentException("source index overflow".into()))?;
+        let value = *bounds::index(source, source_index, "floatsToBytes source")?;
         let bytes = value.to_bits().to_be_bytes();
         let bytes: &[i8] = zerocopy::transmute_ref!(bytes.as_slice());
-        let dest_offset = destination_position.saturating_add(i.saturating_mul(4));
-        destination[dest_offset..dest_offset + 4].copy_from_slice(bytes);
+        let byte_offset = i
+            .checked_mul(4)
+            .ok_or_else(|| IllegalArgumentException("destination index overflow".into()))?;
+        let dest_offset = destination_position
+            .checked_add(byte_offset)
+            .ok_or_else(|| IllegalArgumentException("destination index overflow".into()))?;
+        let dest_end = dest_offset
+            .checked_add(4)
+            .ok_or_else(|| IllegalArgumentException("destination index overflow".into()))?;
+        bounds::range_mut(
+            destination,
+            dest_offset..dest_end,
+            "floatsToBytes destination",
+        )?
+        .copy_from_slice(bytes);
     }
     Ok(None)
 }

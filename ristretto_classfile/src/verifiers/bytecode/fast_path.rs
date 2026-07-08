@@ -52,6 +52,12 @@ type CodeAttributeParts<'a> = (
     &'a Vec<ExceptionTableEntry>,
 );
 
+struct StackMapWorkState {
+    anchor_states: Vec<Option<Frame>>,
+    worklist: Vec<usize>,
+    visited: Vec<bool>,
+}
+
 /// Result of fast-path verification attempt.
 #[derive(Debug)]
 pub enum FastPathResult {
@@ -429,125 +435,207 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 
     /// Core verification using StackMapTable-driven algorithm.
     fn verify_with_stackmaps(&mut self, initial_frame: &Frame) -> Result<()> {
-        // State at each PC that is a merge point (jump target, handler entry, or stackmap frame)
+        let mut state = StackMapWorkState {
+            anchor_states: self.initialize_anchor_states(initial_frame)?,
+            worklist: vec![0],
+            visited: vec![false; self.code_info.instruction_count()],
+        };
+
+        while let Some(start_index) = state.worklist.pop() {
+            self.process_worklist_entry(start_index, &mut state)?;
+        }
+
+        Ok(())
+    }
+
+    fn initialize_anchor_states(&self, initial_frame: &Frame) -> Result<Vec<Option<Frame>>> {
         let mut anchor_states: Vec<Option<Frame>> = vec![None; self.code_info.instruction_count()];
+        let initial_anchor = anchor_states
+            .get_mut(0)
+            .ok_or_else(|| VerifyError::VerifyError("Missing initial instruction".to_string()))?;
+        *initial_anchor = Some(initial_frame.clone());
 
-        // Set initial frame at PC 0
-        anchor_states[0] = Some(initial_frame.clone());
-
-        // Pre-populate frames from StackMapTable
         for decoded in self.stack_map_table.frames() {
             if let Some(index) = self.code_info.index_at(decoded.offset) {
                 let frame = self
                     .stack_map_table
                     .to_frame(decoded, self.max_locals, self.max_stack);
-                anchor_states[index] = Some(frame);
+                let anchor = anchor_states.get_mut(index).ok_or_else(|| {
+                    VerifyError::VerifyError(format!("Invalid stack map index {index}"))
+                })?;
+                *anchor = Some(frame);
             }
         }
 
-        // Worklist of instruction indices to process
-        let mut worklist: Vec<usize> = vec![0];
-        let mut visited = vec![false; self.code_info.instruction_count()];
+        Ok(anchor_states)
+    }
 
-        while let Some(start_index) = worklist.pop() {
-            if visited[start_index] {
+    fn process_worklist_entry(
+        &mut self,
+        start_index: usize,
+        state: &mut StackMapWorkState,
+    ) -> Result<()> {
+        if Self::is_visited(&state.visited, start_index, "worklist")? {
+            return Ok(());
+        }
+
+        let start_frame = state
+            .anchor_states
+            .get(start_index)
+            .and_then(Clone::clone)
+            .ok_or(VerifyError::VerifyError("Missing frame".to_string()))?;
+
+        self.process_straight_line(start_index, start_frame, state)
+    }
+
+    fn process_straight_line(
+        &mut self,
+        start_index: usize,
+        start_frame: Frame,
+        state: &mut StackMapWorkState,
+    ) -> Result<()> {
+        let mut current_frame = start_frame;
+        let mut index = start_index;
+
+        while index < self.code.len() {
+            let offset = self.instruction_offset(index)?;
+            if index != start_index && self.is_anchor_point(offset) {
+                self.validate_and_queue_anchor(index, offset, &current_frame, state)?;
+                break;
+            }
+
+            Self::mark_visited(&mut state.visited, index)?;
+            self.log_pre_instruction_frame(offset, &current_frame);
+            let instruction = self.instruction_at(index)?;
+
+            let (next_frame, falls_through) = self.execute_instruction_step(
+                offset,
+                index,
+                instruction,
+                current_frame.clone(),
+                state,
+            )?;
+
+            if !falls_through {
+                break;
+            }
+            current_frame = next_frame;
+            index += 1;
+        }
+
+        Ok(())
+    }
+
+    fn validate_and_queue_anchor(
+        &self,
+        index: usize,
+        offset: u16,
+        current_frame: &Frame,
+        state: &mut StackMapWorkState,
+    ) -> Result<()> {
+        if let Some(decoded) = self.stack_map_table.get(offset) {
+            let expected = self
+                .stack_map_table
+                .to_frame(decoded, self.max_locals, self.max_stack);
+            self.validate_frame_compatibility(current_frame, &expected, offset)?;
+        }
+
+        if !Self::is_visited(&state.visited, index, "instruction")? {
+            state.worklist.push(index);
+        }
+        Ok(())
+    }
+
+    fn execute_instruction_step(
+        &self,
+        offset: u16,
+        index: usize,
+        instruction: &Instruction,
+        current_frame: Frame,
+        state: &mut StackMapWorkState,
+    ) -> Result<(Frame, bool)> {
+        let next_offset = self.next_offset(index);
+        let (next_frame, successors, falls_through) =
+            self.execute_instruction(offset, index, instruction, current_frame)?;
+
+        self.process_exception_handlers(
+            offset,
+            &next_frame,
+            &mut state.anchor_states,
+            &mut state.worklist,
+        )?;
+        self.queue_successors(&successors, next_offset, falls_through, &next_frame, state)?;
+
+        Ok((next_frame, falls_through))
+    }
+
+    fn queue_successors(
+        &self,
+        successors: &[u16],
+        next_offset: u16,
+        falls_through: bool,
+        next_frame: &Frame,
+        state: &mut StackMapWorkState,
+    ) -> Result<()> {
+        for succ_offset in successors {
+            if *succ_offset == next_offset && falls_through {
+                continue;
+            }
+            let succ_index = self
+                .code_info
+                .index_at(*succ_offset)
+                .ok_or(VerifyError::VerifyError("Invalid successor".to_string()))?;
+            if Self::is_visited(&state.visited, succ_index, "successor")? {
                 continue;
             }
 
-            // Get the frame at this anchor
-            let start_frame = anchor_states[start_index]
-                .clone()
-                .ok_or(VerifyError::VerifyError("Missing frame".to_string()))?;
-
-            // Process straight-line code from this anchor
-            let mut current_frame = start_frame;
-            let mut index = start_index;
-
-            while index < self.code.len() {
-                let offset = self
-                    .code_info
-                    .offset_at(index)
-                    .ok_or(VerifyError::VerifyError("Invalid index".to_string()))?;
-
-                // If this is an anchor point (not the start), validate and use StackMapTable frame
-                if index != start_index && self.is_anchor_point(offset) {
-                    // Validate current frame against StackMapTable frame
-                    if let Some(decoded) = self.stack_map_table.get(offset) {
-                        let expected =
-                            self.stack_map_table
-                                .to_frame(decoded, self.max_locals, self.max_stack);
-                        self.validate_frame_compatibility(&current_frame, &expected, offset)?;
-                    }
-
-                    // Add to worklist if not visited
-                    if !visited[index] {
-                        worklist.push(index);
-                    }
-                    break;
-                }
-
-                visited[index] = true;
-
-                let instruction = &self.code[index];
-
-                // Log trace if enabled
-                if self.trace.is_enabled() {
-                    let pre_frame = current_frame.clone();
-                    self.trace.log_anchor(offset, &pre_frame);
-                }
-
-                // Execute instruction
-                let next_offset = self
-                    .code_info
-                    .offset_at(index + 1)
-                    .unwrap_or(self.code_info.code_length());
-
-                let (next_frame, successors, falls_through) =
-                    self.execute_instruction(offset, index, instruction, current_frame.clone())?;
-
-                // Process exception handlers
-                let handler_result = self.process_exception_handlers(
-                    offset,
-                    &next_frame,
-                    &mut anchor_states,
-                    &mut worklist,
-                );
-                handler_result?;
-
-                // Handle successors
-                for succ_offset in &successors {
-                    if *succ_offset == next_offset && falls_through {
-                        continue;
-                    }
-                    // This is a branch target
-                    let succ_index = self
-                        .code_info
-                        .index_at(*succ_offset)
-                        .ok_or(VerifyError::VerifyError("Invalid successor".to_string()))?;
-                    if visited[succ_index] {
-                        continue;
-                    }
-
-                    let successor_result = self.handle_successor(
-                        succ_index,
-                        *succ_offset,
-                        &next_frame,
-                        &mut anchor_states,
-                    );
-                    successor_result?;
-                    worklist.push(succ_index);
-                }
-
-                // Continue straight-line execution if falls through
-                if falls_through {
-                    current_frame = next_frame;
-                    index += 1;
-                } else {
-                    break;
-                }
-            }
+            self.handle_successor(
+                succ_index,
+                *succ_offset,
+                next_frame,
+                &mut state.anchor_states,
+            )?;
+            state.worklist.push(succ_index);
         }
+        Ok(())
+    }
 
+    fn instruction_offset(&self, index: usize) -> Result<u16> {
+        self.code_info
+            .offset_at(index)
+            .ok_or(VerifyError::VerifyError("Invalid index".to_string()))
+    }
+
+    fn instruction_at(&self, index: usize) -> Result<&Instruction> {
+        self.code
+            .get(index)
+            .ok_or_else(|| VerifyError::VerifyError(format!("Invalid instruction index {index}")))
+    }
+
+    fn next_offset(&self, index: usize) -> u16 {
+        self.code_info
+            .offset_at(index + 1)
+            .unwrap_or(self.code_info.code_length())
+    }
+
+    fn log_pre_instruction_frame(&mut self, offset: u16, current_frame: &Frame) {
+        if self.trace.is_enabled() {
+            self.trace.log_anchor(offset, current_frame);
+        }
+    }
+
+    fn is_visited(visited: &[bool], index: usize, label: &str) -> Result<bool> {
+        visited
+            .get(index)
+            .copied()
+            .ok_or_else(|| VerifyError::VerifyError(format!("Invalid {label} index {index}")))
+    }
+
+    fn mark_visited(visited: &mut [bool], index: usize) -> Result<()> {
+        let visited_entry = visited.get_mut(index).ok_or_else(|| {
+            VerifyError::VerifyError(format!("Invalid instruction index {index}"))
+        })?;
+        *visited_entry = true;
         Ok(())
     }
 
@@ -572,12 +660,15 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
         anchor_states: &mut [Option<Frame>],
     ) -> Result<()> {
         // Check if there's a StackMapTable frame
+        let anchor_state = anchor_states.get_mut(succ_index).ok_or_else(|| {
+            VerifyError::VerifyError(format!("Invalid successor index {succ_index}"))
+        })?;
         if let Some(decoded) = self.stack_map_table.get(succ_offset) {
             let expected = self
                 .stack_map_table
                 .to_frame(decoded, self.max_locals, self.max_stack);
             self.validate_frame_compatibility(next_frame, &expected, succ_offset)?;
-            anchor_states[succ_index] = Some(expected);
+            *anchor_state = Some(expected);
         } else if self.is_merge_point(succ_offset) {
             // Merge point without StackMapTable frame
             if self.config.fallback_strategy
@@ -588,13 +679,13 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                 )));
             }
             // Store computed frame for merge
-            if let Some(existing) = &mut anchor_states[succ_index] {
+            if let Some(existing) = anchor_state.as_mut() {
                 existing.merge(next_frame, self.context)?;
             } else {
-                anchor_states[succ_index] = Some(next_frame.clone());
+                *anchor_state = Some(next_frame.clone());
             }
         } else {
-            anchor_states[succ_index] = Some(next_frame.clone());
+            *anchor_state = Some(next_frame.clone());
         }
         Ok(())
     }
@@ -628,10 +719,13 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 
         // Validate local types are assignable (for used locals)
         let min_locals = computed.locals.len().min(expected.locals.len());
-        for i in 0..min_locals {
-            let comp_type = &computed.locals[i];
-            let exp_type = &expected.locals[i];
-
+        for (i, (comp_type, exp_type)) in computed
+            .locals
+            .iter()
+            .zip(&expected.locals)
+            .take(min_locals)
+            .enumerate()
+        {
             // Top is compatible with anything
             if *comp_type == VerificationType::Top || *exp_type == VerificationType::Top {
                 continue;
@@ -870,8 +964,8 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
 
             // Copy locals from current frame
             for (i, local) in current_frame.locals.iter().enumerate() {
-                if i < handler_frame.locals.len() {
-                    handler_frame.locals[i] = local.clone();
+                if let Some(handler_local) = handler_frame.locals.get_mut(i) {
+                    *handler_local = local.clone();
                 }
             }
 
@@ -892,9 +986,17 @@ impl<'a, C: VerificationContext> FastPathVerifier<'a, C> {
                     );
                     return Err(VerifyError::VerifyError(message));
                 }
-                anchor_states[handler_index] = Some(expected);
-            } else if anchor_states[handler_index].is_none() {
-                anchor_states[handler_index] = Some(handler_frame);
+                let anchor_state = anchor_states.get_mut(handler_index).ok_or_else(|| {
+                    VerifyError::VerifyError(format!("Invalid handler index {handler_index}"))
+                })?;
+                *anchor_state = Some(expected);
+            } else {
+                let anchor_state = anchor_states.get_mut(handler_index).ok_or_else(|| {
+                    VerifyError::VerifyError(format!("Invalid handler index {handler_index}"))
+                })?;
+                if anchor_state.is_none() {
+                    *anchor_state = Some(handler_frame);
+                }
             }
 
             worklist.push(handler_index);

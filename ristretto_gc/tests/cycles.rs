@@ -1,6 +1,10 @@
 #![cfg(not(target_family = "wasm"))]
 #![allow(unsafe_code)]
-#![allow(clippy::items_after_statements)]
+#![expect(
+    clippy::items_after_statements,
+    clippy::panic_in_result_fn,
+    reason = "integration tests use local fixture types and assertions with Result-returning tests"
+)]
 
 use ristretto_gc::{GarbageCollector, Gc, Result, Trace};
 use std::sync::Mutex;

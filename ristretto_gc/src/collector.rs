@@ -62,7 +62,7 @@ pub struct GarbageCollector {
     this: Weak<Self>,
     configuration: Configuration,
     #[cfg(not(target_family = "wasm"))]
-    thread_pool: ThreadPool,
+    thread_pool: Option<ThreadPool>,
     statistics: Arc<RwLock<Statistics>>,
     roots: Arc<DashMap<usize, TracePtr>>,
     next_root_id: AtomicUsize,
@@ -93,10 +93,6 @@ impl GarbageCollector {
     }
 
     /// Creates a new garbage collector with custom configuration.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the thread pool cannot be created.
     #[must_use]
     pub fn with_config(configuration: Configuration) -> Arc<Self> {
         #[cfg(not(target_family = "wasm"))]
@@ -120,9 +116,12 @@ impl GarbageCollector {
             .thread_name(|thread_index| format!("gc-{thread_index}"))
             .build()
         {
-            Ok(thread_pool) => thread_pool,
+            Ok(thread_pool) => Some(thread_pool),
             Err(error) => {
-                panic!("Failed to create thread pool for GC: {error}");
+                warn!(
+                    "failed to create private GC thread pool; parallel GC work will run sequentially: {error}"
+                );
+                None
             }
         };
 
@@ -415,18 +414,10 @@ impl GarbageCollector {
     }
 
     /// Creates a new root guard that automatically manages the lifetime of a `Gc<T>` root.
-    /// The returned guard will automatically remove the root when dropped.
-    ///
-    /// # Errors
-    ///
-    /// If the garbage collector cannot be upgraded from a Weak reference.
-    pub fn create_root_guard<T: Trace>(&self, root: Gc<T>) -> Result<GcRootGuard<T>> {
-        let Some(collector) = self.this.upgrade() else {
-            return Err(Error::SyncError(
-                "Failed to upgrade Weak reference to GarbageCollector".to_string(),
-            ));
-        };
-        Ok(GcRootGuard::new(collector, root))
+    /// The returned guard will automatically remove the root when dropped.fm
+    pub fn create_root_guard<T: Trace>(self: &Arc<Self>, root: Gc<T>) -> GcRootGuard<T> {
+        let root_id = self.add_root(&root);
+        GcRootGuard::new(Arc::clone(self), root_id, root)
     }
 
     /// Internal method to remove a root by its ID.
@@ -735,12 +726,19 @@ impl GarbageCollector {
         {
             let configuration = &collector.configuration;
             if number_of_objects > configuration.parallel_threshold {
-                debug!("unmarking {number_of_objects} objects (parallel)");
-                collector.thread_pool.install(|| {
-                    objects.par_iter().for_each(|entry| {
-                        entry.value().unmark();
+                if let Some(thread_pool) = &collector.thread_pool {
+                    debug!("unmarking {number_of_objects} objects (parallel)");
+                    thread_pool.install(|| {
+                        objects.par_iter().for_each(|entry| {
+                            entry.value().unmark();
+                        });
                     });
-                });
+                } else {
+                    debug!("unmarking {number_of_objects} objects (sequential)");
+                    for entry in objects.iter() {
+                        entry.value().unmark();
+                    }
+                }
             } else if number_of_objects > 0 {
                 debug!("unmarking {number_of_objects} objects (sequential)");
                 for entry in objects.iter() {

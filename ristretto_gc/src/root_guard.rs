@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 /// `GcRootGuard` acts like an Rc-like smart pointer; it can be cloned to create multiple handles
 /// to the same root, and the root is only removed when all guards are dropped.
 pub struct GcRootGuard<T: Trace> {
-    gc: Arc<GarbageCollector>,
+    collector: Arc<GarbageCollector>,
     root: Gc<T>,
     root_id: usize,
     ref_count: Arc<AtomicUsize>,
@@ -28,11 +28,10 @@ pub struct GcRootGuard<T: Trace> {
 impl<T: Trace> GcRootGuard<T> {
     /// Creates a new root guard that adds the given object as a root. Returns the guard which will
     /// automatically remove the root when dropped.
-    pub(crate) fn new(gc: Arc<GarbageCollector>, root: Gc<T>) -> Self {
-        let root_id = gc.add_root(&root);
+    pub(crate) fn new(collector: Arc<GarbageCollector>, root_id: usize, root: Gc<T>) -> Self {
         let ref_count = Arc::new(AtomicUsize::new(1));
         Self {
-            gc,
+            collector,
             root,
             root_id,
             ref_count,
@@ -56,7 +55,7 @@ impl<T: Trace> Clone for GcRootGuard<T> {
         // Increment reference count
         self.ref_count.fetch_add(1, Ordering::Relaxed);
         Self {
-            gc: Arc::clone(&self.gc),
+            collector: Arc::clone(&self.collector),
             root: self.root.clone(),
             root_id: self.root_id,
             ref_count: Arc::clone(&self.ref_count),
@@ -91,8 +90,7 @@ impl<T: Trace> Drop for GcRootGuard<T> {
 
         // If this was the last reference, remove the root
         if old_count == 1 {
-            // Ignore errors during cleanup; we can't handle them in Drop
-            self.gc.remove_root_by_id(self.root_id);
+            self.collector.remove_root_by_id(self.root_id);
         }
     }
 }

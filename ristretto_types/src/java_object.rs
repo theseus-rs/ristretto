@@ -664,7 +664,7 @@ impl<T: Thread + 'static> JavaObject<T> for Arc<Class> {
 mod tests {
     use super::*;
     use crate::test_utils;
-    use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_25, JavaString};
+    use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_25, JavaStr, JavaString};
     use ristretto_classloader::ClassPath;
 
     fn class_with_loader(name: &str, class_loader: &Arc<ClassLoader>) -> Result<Arc<Class>> {

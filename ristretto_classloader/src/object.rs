@@ -178,7 +178,14 @@ impl Object {
                 }
 
                 // First, check if the accessing class itself has the field (for shadowing)
-                let accessing_class_fields = class_hierarchy[accessing_index].object_fields();
+                let accessing_class_entry =
+                    class_hierarchy
+                        .get(accessing_index)
+                        .ok_or_else(|| FieldNotFound {
+                            class_name: accessing_class.name().to_string(),
+                            field_name: key.to_string(),
+                        })?;
+                let accessing_class_fields = accessing_class_entry.object_fields();
                 for (local_index, field) in accessing_class_fields.iter().enumerate() {
                     if key.matches_field(field) {
                         let global_index = field_offset + local_index;
@@ -192,7 +199,10 @@ impl Object {
                 // object's actual class)
                 let mut current_offset = field_offset + accessing_class_fields.len();
                 for i in (0..accessing_index).rev() {
-                    let current_class_fields = class_hierarchy[i].object_fields();
+                    let Some(current_class) = class_hierarchy.get(i) else {
+                        continue;
+                    };
+                    let current_class_fields = current_class.object_fields();
                     for (local_index, field) in current_class_fields.iter().enumerate() {
                         if key.matches_field(field) {
                             let global_index = current_offset + local_index;
@@ -574,15 +584,23 @@ impl Object {
                 let coder = self.value("coder")?.as_i32()?;
                 if coder == 0 {
                     // Latin-1 encoded string
-                    #[expect(clippy::cast_sign_loss)]
-                    let value = bytes.iter().map(|&byte| char::from(byte as u8)).collect();
+                    let value = bytes
+                        .iter()
+                        .map(|&byte| char::from(byte.cast_unsigned()))
+                        .collect();
                     Ok(value)
                 } else {
                     // UTF-16 encoded string
-                    #[expect(clippy::cast_sign_loss)]
-                    let code_units = bytes
-                        .chunks(2)
-                        .map(|chunk| u16::from_be_bytes([chunk[0] as u8, chunk[1] as u8]))
+                    let chunks = bytes.chunks_exact(2);
+                    if !chunks.remainder().is_empty() {
+                        return Err(ParseError("Invalid UTF-16 byte length".to_string()));
+                    }
+                    let code_units = chunks
+                        .map(|chunk| {
+                            let high = chunk.first().copied().unwrap_or_default().cast_unsigned();
+                            let low = chunk.get(1).copied().unwrap_or_default().cast_unsigned();
+                            u16::from_be_bytes([high, low])
+                        })
                         .collect::<Vec<u16>>();
                     let value = String::from_utf16(&code_units)
                         .map_err(|error| ParseError(error.to_string()))?;
@@ -718,7 +736,7 @@ mod tests {
     use ristretto_classfile::JavaStr;
     use std::hash::DefaultHasher;
 
-    fn test_ref(collector: &GarbageCollector, reference: impl Into<Reference>) -> Value {
+    fn test_ref(collector: &Arc<GarbageCollector>, reference: impl Into<Reference>) -> Value {
         Value::new_object(collector, reference.into())
     }
 

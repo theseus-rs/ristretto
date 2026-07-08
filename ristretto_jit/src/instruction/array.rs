@@ -1,5 +1,7 @@
 use crate::Result;
-use crate::instruction::{ThrowContext, emit_bci, emit_null_check, emit_pending_exception_check};
+use crate::instruction::{
+    ThrowContext, emit_bci, emit_null_check, emit_pending_exception_check, single_inst_result,
+};
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
 use cranelift::codegen::ir::Value;
@@ -32,7 +34,7 @@ pub(crate) fn newarray(
     let call = function_builder
         .ins()
         .call(helper, &[context_pointer, count]);
-    let array_ptr = function_builder.inst_results(call)[0];
+    let array_ptr = single_inst_result(function_builder, call)?;
 
     // Push as object reference (Gc pointer encoded as i64)
     stack.push_object(function_builder, array_ptr)?;
@@ -62,7 +64,7 @@ pub(crate) fn arraylength(
     let call = function_builder
         .ins()
         .call(helpers.arraylength, &[context_pointer, bci, array_ref]);
-    let length = function_builder.inst_results(call)[0];
+    let length = single_inst_result(function_builder, call)?;
     emit_pending_exception_check(
         function_builder,
         stack,

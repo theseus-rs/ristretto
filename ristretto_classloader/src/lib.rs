@@ -43,6 +43,15 @@
 //! | `url`     | Enables url class path entries | No       |
 
 #![deny(unsafe_code)]
+#![cfg_attr(
+    test,
+    expect(
+        clippy::indexing_slicing,
+        clippy::panic_in_result_fn,
+        clippy::unreachable,
+        reason = "unit tests use direct fixture indexing, assertions with Result-returning tests, and unreachable pattern guards"
+    )
+)]
 
 mod class;
 mod class_loader;

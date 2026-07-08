@@ -26,6 +26,15 @@
 //! }
 //! ```
 
+#![cfg_attr(
+    test,
+    expect(
+        clippy::indexing_slicing,
+        clippy::panic_in_result_fn,
+        reason = "unit tests use direct fixture indexing and assertions with Result-returning tests"
+    )
+)]
+
 mod attribute;
 mod byte_source;
 mod error;

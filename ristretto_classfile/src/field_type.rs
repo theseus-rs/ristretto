@@ -288,8 +288,10 @@ impl FieldType {
         match code {
             b'L' => {
                 let len = bytes.len();
-                if len >= 3 && bytes[len - 1] == b';' {
-                    let class_bytes = &bytes[1..len - 1];
+                if len >= 3 && bytes.last().copied() == Some(b';') {
+                    let class_bytes = bytes
+                        .get(1..len - 1)
+                        .ok_or_else(|| InvalidFieldTypeDescriptor(display_desc.to_string()))?;
                     // Store as JavaString (MUTF-8) to avoid lossy UTF-8 conversion
                     let class_name = match JavaStr::from_mutf8(class_bytes) {
                         Ok(java_str) => java_str.to_java_string(),
@@ -301,7 +303,8 @@ impl FieldType {
                 }
             }
             b'[' => {
-                let component_type = Self::parse_bytes(&bytes[1..], display_desc)?;
+                let component_bytes = bytes.get(1..).unwrap_or_default();
+                let component_type = Self::parse_bytes(component_bytes, display_desc)?;
                 Ok(FieldType::Array(component_type.into()))
             }
             _ => {
@@ -391,11 +394,14 @@ impl FieldType {
         pos += 1;
 
         while pos < bytes.len() {
-            if bytes[pos] == b')' {
+            if bytes.get(pos).copied() == Some(b')') {
                 pos += 1;
                 break;
             }
-            let (ft, consumed) = Self::parse_field_type_bytes(&bytes[pos..], display_desc)?;
+            let field_bytes = bytes
+                .get(pos..)
+                .ok_or_else(|| InvalidMethodDescriptor(display_desc.to_string()))?;
+            let (ft, consumed) = Self::parse_field_type_bytes(field_bytes, display_desc)?;
             parameters.push(ft);
             pos += consumed;
         }
@@ -403,7 +409,10 @@ impl FieldType {
         match bytes.get(pos).copied() {
             Some(b'V') => {}
             Some(_) => {
-                let (ft, _) = Self::parse_field_type_bytes(&bytes[pos..], display_desc)?;
+                let field_bytes = bytes
+                    .get(pos..)
+                    .ok_or_else(|| InvalidMethodDescriptor(display_desc.to_string()))?;
+                let (ft, _) = Self::parse_field_type_bytes(field_bytes, display_desc)?;
                 return_type = Some(ft);
             }
             None => return Err(InvalidMethodDescriptor(display_desc.to_string())),
@@ -421,7 +430,7 @@ impl FieldType {
             Some(b'L') => {
                 let mut end = 1;
                 while end < bytes.len() {
-                    if bytes[end] == b';' {
+                    if bytes.get(end).copied() == Some(b';') {
                         break;
                     }
                     end += 1;
@@ -429,7 +438,9 @@ impl FieldType {
                 if end == bytes.len() {
                     return Err(InvalidFieldTypeDescriptor(display_desc.to_string()));
                 }
-                let class_bytes = &bytes[1..end];
+                let class_bytes = bytes
+                    .get(1..end)
+                    .ok_or_else(|| InvalidFieldTypeDescriptor(display_desc.to_string()))?;
                 // Store as JavaString (MUTF-8) to avoid lossy UTF-8 conversion
                 let class_name = match JavaStr::from_mutf8(class_bytes) {
                     Ok(java_str) => java_str.to_java_string(),
@@ -438,8 +449,11 @@ impl FieldType {
                 Ok((FieldType::Object(class_name), end + 1)) // +1 for ';'
             }
             Some(b'[') => {
+                let field_bytes = bytes
+                    .get(1..)
+                    .ok_or_else(|| InvalidFieldTypeDescriptor(display_desc.to_string()))?;
                 let (component_type, consumed) =
-                    Self::parse_field_type_bytes(&bytes[1..], display_desc)?;
+                    Self::parse_field_type_bytes(field_bytes, display_desc)?;
                 Ok((FieldType::Array(Box::new(component_type)), 1 + consumed))
             }
             Some(code) => {

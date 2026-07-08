@@ -188,8 +188,8 @@ impl DecodedStackMapTable {
 
         // Copy locals, padding with Top if needed
         for (i, ty) in decoded.locals.iter().enumerate() {
-            if i < frame.locals.len() {
-                frame.locals[i] = ty.clone();
+            if let Some(local) = frame.locals.get_mut(i) {
+                *local = ty.clone();
             }
         }
 

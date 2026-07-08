@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::io::filedescriptor;
 use crate::java::io::filedescriptor::file_descriptor_from_java_object;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
@@ -344,15 +345,19 @@ pub async fn read_bytes_0<T: Thread + 'static>(
 
     #[cfg(target_os = "wasi")]
     {
+        let buffer_slice =
+            bounds::range_mut(&mut buffer, 0..length, "RandomAccessFile.read buffer")?;
         bytes_read = file
-            .read(&mut buffer[0..length])
+            .read(buffer_slice)
             .map_err(|error| IoException(error.to_string()))?;
     }
 
     #[cfg(not(target_family = "wasm"))]
     {
+        let buffer_slice =
+            bounds::range_mut(&mut buffer, 0..length, "RandomAccessFile.read buffer")?;
         bytes_read = file
-            .read(&mut buffer[0..length])
+            .read(buffer_slice)
             .await
             .map_err(|error| IoException(error.to_string()))?;
     }
@@ -369,7 +374,13 @@ pub async fn read_bytes_0<T: Thread + 'static>(
     } else {
         let buffer: &[i8] = transmute_ref!(buffer.as_slice());
         if bytes_read > 0 {
-            bytes[offset..offset + bytes_read].copy_from_slice(&buffer[..bytes_read]);
+            let end = offset
+                .checked_add(bytes_read)
+                .ok_or_else(|| IoException("Read destination range overflow".to_string()))?;
+            let target =
+                bounds::range_mut(bytes, offset..end, "RandomAccessFile.read destination")?;
+            let source = bounds::range_to(buffer, ..bytes_read, "RandomAccessFile.read source")?;
+            target.copy_from_slice(source);
         }
         i32::try_from(bytes_read)?
     };
@@ -533,13 +544,25 @@ pub async fn write_bytes_0<T: Thread + 'static>(
     }
 
     #[cfg(target_os = "wasi")]
-    file.write_all(&bytes[offset..offset + length])
-        .map_err(|error| IoException(error.to_string()))?;
+    {
+        let end = offset
+            .checked_add(length)
+            .ok_or_else(|| IoException("Write source range overflow".to_string()))?;
+        let source = bounds::range(&bytes, offset..end, "RandomAccessFile.write")?;
+        file.write_all(source)
+            .map_err(|error| IoException(error.to_string()))?;
+    }
 
     #[cfg(not(target_family = "wasm"))]
-    file.write_all(&bytes[offset..offset + length])
-        .await
-        .map_err(|error| IoException(error.to_string()))?;
+    {
+        let end = offset
+            .checked_add(length)
+            .ok_or_else(|| IoException("Write source range overflow".to_string()))?;
+        let source = bounds::range(&bytes, offset..end, "RandomAccessFile.write")?;
+        file.write_all(source)
+            .await
+            .map_err(|error| IoException(error.to_string()))?;
+    }
 
     match mode {
         FileModeFlags::READ_ONLY => {

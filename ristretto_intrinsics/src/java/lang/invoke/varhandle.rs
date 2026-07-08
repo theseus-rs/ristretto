@@ -1,3 +1,4 @@
+use crate::bounds;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
@@ -132,14 +133,9 @@ async fn invoke_var_handle_access_mode<T: Thread + 'static>(
     access_mode: AccessMode,
 ) -> Result<Option<Value>> {
     let all_params = parameters.into_vec();
-    if all_params.is_empty() {
-        return Err(InternalError(
-            "VarHandle access mode requires at least the VarHandle".to_string(),
-        ));
-    }
-
-    let var_handle = &all_params[0];
-    let remaining_args = &all_params[1..];
+    let (var_handle, remaining_args) = all_params.split_first().ok_or_else(|| {
+        InternalError("VarHandle access mode requires at least the VarHandle".to_string())
+    })?;
     let storage = classify_var_handle(var_handle);
 
     debug!(
@@ -807,8 +803,11 @@ async fn invoke_via_method_handle<T: Thread + 'static>(
     all_params: Vec<Value>,
     access_mode: AccessMode,
 ) -> Result<Option<Value>> {
-    let var_handle = all_params[0].clone();
-    let remaining_args: Vec<Value> = all_params[1..].to_vec();
+    let (var_handle, remaining_args) = all_params.split_first().ok_or_else(|| {
+        InternalError("VarHandle fallback requires at least the VarHandle".to_string())
+    })?;
+    let var_handle = var_handle.clone();
+    let remaining_args = remaining_args.to_vec();
 
     let access_mode_ordinal = access_mode as i32;
 
@@ -833,7 +832,7 @@ async fn invoke_via_method_handle<T: Thread + 'static>(
                 "AccessMode ordinal {ordinal} out of bounds"
             )));
         }
-        elements[ordinal].clone()
+        bounds::index(elements, ordinal, "VarHandle access mode")?.clone()
     };
 
     let var_handle_class = thread.class("java/lang/invoke/VarHandle").await?;

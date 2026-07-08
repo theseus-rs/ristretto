@@ -1436,15 +1436,27 @@ impl PartialEq for Class {
         }
 
         // TODO: This is a very basic equality check. It should be extended to include static_values
+        let (Ok(self_parent), Ok(other_parent)) = (self.parent.read(), other.parent.read()) else {
+            return false;
+        };
+        let (Ok(self_interfaces), Ok(other_interfaces)) =
+            (self.interfaces.read(), other.interfaces.read())
+        else {
+            return false;
+        };
+        let (Ok(self_object), Ok(other_object)) = (self.object.read(), other.object.read()) else {
+            return false;
+        };
+
         self.name() == other.name()
             && self.source_file == other.source_file
             && self.class_file == other.class_file
-            && *self.parent.read().expect("parent") == *other.parent.read().expect("parent")
-            && *self.interfaces.read().expect("parent") == *other.interfaces.read().expect("parent")
+            && *self_parent == *other_parent
+            && *self_interfaces == *other_interfaces
             && self.static_fields == other.static_fields
             && self.object_fields == other.object_fields
             && self.methods == other.methods
-            && *self.object.read().expect("parent") == *other.object.read().expect("parent")
+            && *self_object == *other_object
     }
 }
 

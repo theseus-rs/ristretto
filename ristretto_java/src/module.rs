@@ -3,6 +3,14 @@
 //! This module contains parsing logic for converting CLI string arguments
 //! into module configuration settings applied to `ConfigurationBuilder`.
 
+#![cfg_attr(
+    test,
+    expect(
+        clippy::indexing_slicing,
+        reason = "module parser tests index vectors after asserting parsed lengths"
+    )
+)]
+
 use crate::argument::Arguments;
 use ahash::AHashSet;
 use ristretto_vm::{
@@ -79,12 +87,8 @@ pub fn apply_module_configuration(
 /// Returns `None` if the format is invalid.
 #[must_use]
 fn parse_read(spec: &str) -> Option<ModuleRead> {
-    let parts: Vec<&str> = spec.splitn(2, '=').collect();
-    if parts.len() == 2 {
-        Some(ModuleRead::new(parts[0], parts[1]))
-    } else {
-        None
-    }
+    let (source, target) = spec.split_once('=')?;
+    Some(ModuleRead::new(source, target))
 }
 
 /// Parses a `SOURCE/PACKAGE=TARGET` specification into a `ModuleExport`.
@@ -92,16 +96,9 @@ fn parse_read(spec: &str) -> Option<ModuleRead> {
 /// Returns `None` if the format is invalid.
 #[must_use]
 fn parse_export(spec: &str) -> Option<ModuleExport> {
-    let parts: Vec<&str> = spec.splitn(2, '=').collect();
-    if parts.len() != 2 {
-        return None;
-    }
-    let target = parts[1];
-    let source_parts: Vec<&str> = parts[0].splitn(2, '/').collect();
-    if source_parts.len() != 2 {
-        return None;
-    }
-    Some(ModuleExport::new(source_parts[0], source_parts[1], target))
+    let (source, target) = spec.split_once('=')?;
+    let (module, package) = source.split_once('/')?;
+    Some(ModuleExport::new(module, package, target))
 }
 
 /// Parses a `SOURCE/PACKAGE=TARGET` specification into a `ModuleOpens`.
@@ -109,16 +106,9 @@ fn parse_export(spec: &str) -> Option<ModuleExport> {
 /// Returns `None` if the format is invalid.
 #[must_use]
 fn parse_opens(spec: &str) -> Option<ModuleOpens> {
-    let parts: Vec<&str> = spec.splitn(2, '=').collect();
-    if parts.len() != 2 {
-        return None;
-    }
-    let target = parts[1];
-    let source_parts: Vec<&str> = parts[0].splitn(2, '/').collect();
-    if source_parts.len() != 2 {
-        return None;
-    }
-    Some(ModuleOpens::new(source_parts[0], source_parts[1], target))
+    let (source, target) = spec.split_once('=')?;
+    let (module, package) = source.split_once('/')?;
+    Some(ModuleOpens::new(module, package, target))
 }
 
 /// Parses a `MODULE=PATH` specification into a `ModulePatch`.
@@ -126,12 +116,8 @@ fn parse_opens(spec: &str) -> Option<ModuleOpens> {
 /// Returns `None` if the format is invalid.
 #[must_use]
 fn parse_patch(spec: &str) -> Option<ModulePatch> {
-    let parts: Vec<&str> = spec.splitn(2, '=').collect();
-    if parts.len() == 2 {
-        Some(ModulePatch::new(parts[0], parts[1]))
-    } else {
-        None
-    }
+    let (module, path) = spec.split_once('=')?;
+    Some(ModulePatch::new(module, path))
 }
 
 #[cfg(test)]

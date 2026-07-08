@@ -5,6 +5,14 @@
 //! method implementations.
 
 #![forbid(unsafe_code)]
+#![cfg_attr(
+    test,
+    expect(
+        clippy::panic_in_result_fn,
+        clippy::unwrap_in_result,
+        reason = "tests use assertions and small fixtures returning Result for concise setup"
+    )
+)]
 
 mod assignable;
 mod error;

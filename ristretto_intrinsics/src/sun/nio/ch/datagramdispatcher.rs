@@ -1,3 +1,4 @@
+use crate::bounds;
 use crate::java::io::socketfiledescriptor::get_fd;
 #[cfg(not(target_os = "windows"))]
 use ristretto_classfile::JAVA_21;
@@ -186,8 +187,9 @@ pub async fn readv_0<T: Thread + 'static>(
         for (base, len) in &iov_entries {
             let to_copy = (*len).min(data_len.saturating_sub(offset));
             if to_copy > 0 {
-                vm.native_memory()
-                    .write_bytes(*base, &data[offset..offset + to_copy]);
+                let bytes =
+                    bounds::range(&data, offset..offset + to_copy, "DatagramDispatcher.readv0")?;
+                vm.native_memory().write_bytes(*base, bytes);
                 offset += to_copy;
             }
             if offset >= data_len {

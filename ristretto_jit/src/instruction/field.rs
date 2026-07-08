@@ -1,6 +1,8 @@
 use crate::Error::InternalError;
 use crate::Result;
-use crate::instruction::{ThrowContext, emit_bci, emit_pending_exception_check};
+use crate::instruction::{
+    ThrowContext, emit_bci, emit_pending_exception_check, single_inst_result,
+};
 use crate::operand_stack::OperandStack;
 use crate::runtime_helpers::RuntimeHelpers;
 use cranelift::codegen::ir::{FuncRef, Value};
@@ -89,7 +91,7 @@ pub(crate) fn getfield(
     let call = function_builder
         .ins()
         .call(helper, &[context_pointer, bci, field_ref, object]);
-    let result = function_builder.inst_results(call)[0];
+    let result = single_inst_result(function_builder, call)?;
     match kind {
         FieldKind::Int => stack.push_int(function_builder, result)?,
         FieldKind::Long => stack.push_long(function_builder, result)?,

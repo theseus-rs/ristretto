@@ -230,7 +230,7 @@ mod platform {
             return None;
         }
         let len = usize::try_from(written).ok()?.saturating_sub(1);
-        let value = String::from_utf16(&buffer[..len]).ok()?;
+        let value = String::from_utf16(buffer.get(..len)?).ok()?;
         if value.is_empty() { None } else { Some(value) }
     }
 }

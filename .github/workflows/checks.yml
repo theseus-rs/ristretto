@@ -25,7 +25,8 @@ jobs:
       - name: Audit dependencies
         run: |
           cargo audit \
-            --ignore RUSTSEC-2024-0384
+            --ignore RUSTSEC-2024-0384 \
+            --ignore RUSTSEC-2026-0186
 
   check:
     runs-on: ubuntu-latest

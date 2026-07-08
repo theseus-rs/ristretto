@@ -242,7 +242,10 @@ impl Frame {
                 "Stack depth {depth} exceeds stack size {len}"
             )));
         }
-        Ok(&self.stack[len - 1 - depth])
+        let index = len - 1 - depth;
+        self.stack.get(index).ok_or_else(|| {
+            VerifyError::VerifyError(format!("Stack depth {depth} exceeds stack size {len}"))
+        })
     }
 
     /// Clears the operand stack.
@@ -271,7 +274,12 @@ impl Frame {
                 self.locals.len()
             )));
         }
-        Ok(&self.locals[idx])
+        self.locals.get(idx).ok_or_else(|| {
+            VerifyError::VerifyError(format!(
+                "Local variable index {index} out of bounds (max {})",
+                self.locals.len()
+            ))
+        })
     }
 
     /// Sets the type at a local variable index.
@@ -292,7 +300,13 @@ impl Frame {
                 self.locals.len()
             )));
         }
-        self.locals[idx] = ty;
+        let max = self.locals.len();
+        let local = self.locals.get_mut(idx).ok_or_else(|| {
+            VerifyError::VerifyError(format!(
+                "Local variable index {index} out of bounds (max {max})"
+            ))
+        })?;
+        *local = ty;
         Ok(())
     }
 
@@ -316,8 +330,20 @@ impl Frame {
                 "Local variable index {index} + 1 out of bounds for category 2 type"
             )));
         }
-        self.locals[idx] = ty;
-        self.locals[idx + 1] = VerificationType::Top;
+        let max = self.locals.len();
+        let first = self.locals.get_mut(idx).ok_or_else(|| {
+            VerifyError::VerifyError(format!(
+                "Local variable index {index} out of bounds (max {max})"
+            ))
+        })?;
+        *first = ty;
+        let second = self.locals.get_mut(idx + 1).ok_or_else(|| {
+            VerifyError::VerifyError(format!(
+                "Local variable index {} out of bounds (max {max})",
+                index + 1
+            ))
+        })?;
+        *second = VerificationType::Top;
         Ok(())
     }
 
@@ -343,13 +369,17 @@ impl Frame {
                 "Local variable index {index} + 1 out of bounds for category 2 type"
             )));
         }
-        let ty = &self.locals[idx];
+        let ty = self.locals.get(idx).ok_or_else(|| {
+            VerifyError::VerifyError(format!("Local variable index {index} out of bounds"))
+        })?;
         if !ty.is_category2() {
             return Err(VerifyError::VerifyError(format!(
                 "Expected category 2 type at local {index}, got {ty}"
             )));
         }
-        let second = &self.locals[idx + 1];
+        let second = self.locals.get(idx + 1).ok_or_else(|| {
+            VerifyError::VerifyError(format!("Local variable index {} out of bounds", index + 1))
+        })?;
         if *second != VerificationType::Top {
             return Err(VerifyError::VerifyError(format!(
                 "Expected Top at local {} for category 2, got {second}",

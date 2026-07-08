@@ -101,7 +101,7 @@ pub async fn clone<T: Thread + 'static>(
             };
             Reference::Array(object_array)
         }
-        Reference::Object(_) => unreachable!("Handled above"),
+        Reference::Object(object) => Reference::Object(object.clone()),
     };
     let value = Value::new_object(thread.vm()?.garbage_collector(), reference);
     Ok(Some(value))

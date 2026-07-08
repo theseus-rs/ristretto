@@ -1,4 +1,9 @@
 #![cfg(not(target_family = "wasm"))]
+#![expect(
+    clippy::expect_used,
+    clippy::panic_in_result_fn,
+    reason = "memory leak integration test uses assertions and UTF-8 output setup expects"
+)]
 
 use ristretto_classloader::DEFAULT_JAVA_VERSION;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};

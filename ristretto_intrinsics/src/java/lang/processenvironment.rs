@@ -30,7 +30,7 @@ pub async fn environ<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let mut values = Vec::new();
     let vm = thread.vm()?;
-    let collector = &vm.garbage_collector();
+    let collector = vm.garbage_collector();
     for (key, value) in std::env::vars() {
         let key_bytes = mutf8::to_bytes(&key)?;
         let key_bytes: &[i8] = transmute_ref!(key_bytes.as_slice());

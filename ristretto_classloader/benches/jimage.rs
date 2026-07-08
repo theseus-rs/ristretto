@@ -1,3 +1,9 @@
+#![expect(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "benchmarks use fixed runtime setup and classfile parsing expectations"
+)]
+
 #[cfg(not(target_family = "wasm"))]
 mod inner {
     use criterion::{Criterion, criterion_group};

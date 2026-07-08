@@ -1,3 +1,7 @@
+#[cfg(target_family = "unix")]
+use crate::java::io::socketfiledescriptor::{get_impl_fd, set_impl_fd};
+#[cfg(target_family = "unix")]
+use crate::net_helpers::{boxed_int_value, inet_address_int, ipv4_from_java_int, socket_from_type};
 #[cfg(target_os = "windows")]
 use ristretto_classfile::VersionSpecification::Between;
 #[cfg(not(target_os = "windows"))]
@@ -15,34 +19,16 @@ use ristretto_types::Thread;
 use ristretto_types::VM;
 #[cfg(not(target_os = "windows"))]
 use ristretto_types::handles::SocketHandle;
+#[cfg(target_family = "unix")]
 use ristretto_types::handles::SocketType;
 use ristretto_types::{JavaError, Parameters, Result};
 #[cfg(not(target_os = "windows"))]
 use socket2::{Domain, Protocol, SockAddr, Type};
-use std::net::Ipv4Addr;
 #[cfg(not(target_os = "windows"))]
 use std::net::{Shutdown, SocketAddrV4};
 use std::sync::Arc;
 #[cfg(not(target_os = "windows"))]
 use std::time::Duration;
-
-/// Create a `socket2::Socket` from a `SocketType` for option operations.
-/// The returned Socket is wrapped in `ManuallyDrop` so it won't close the handle.
-#[expect(unsafe_code)]
-fn socket_from_type(socket_type: &SocketType) -> std::mem::ManuallyDrop<socket2::Socket> {
-    #[cfg(unix)]
-    {
-        use std::os::fd::FromRawFd;
-        std::mem::ManuallyDrop::new(unsafe { socket2::Socket::from_raw_fd(socket_type.raw_fd()) })
-    }
-    #[cfg(windows)]
-    {
-        use std::os::windows::io::FromRawSocket;
-        std::mem::ManuallyDrop::new(unsafe {
-            socket2::Socket::from_raw_socket(socket_type.raw_socket())
-        })
-    }
-}
 
 /// Java socket option IDs (from java.net.SocketOptions interface)
 const JAVA_TCP_NODELAY: i32 = 0x0001;
@@ -55,50 +41,6 @@ const JAVA_SO_SNDBUF: i32 = 0x1001;
 const JAVA_SO_RCVBUF: i32 = 0x1002;
 const JAVA_SO_OOBINLINE: i32 = 0x1003;
 const JAVA_SO_TIMEOUT: i32 = 0x1006;
-
-fn get_fd_from_this(this: &Value) -> Result<i32> {
-    let fd_value = {
-        let this_ref = this.as_object_ref()?;
-        this_ref.value("fd")?
-    };
-    let fd_ref = fd_value.as_object_ref()?;
-    Ok(fd_ref.value("fd")?.as_i32()?)
-}
-
-fn set_fd_on_this(this: &Value, fd: i32) -> Result<()> {
-    let fd_value = {
-        let this_ref = this.as_object_ref()?;
-        this_ref.value("fd")?
-    };
-    let mut fd_ref = fd_value.as_object_mut()?;
-    fd_ref.set_value("fd", Value::Int(fd))?;
-    Ok(())
-}
-
-fn get_inet_address_int(inet_addr: &Value) -> Result<i32> {
-    let holder_value = {
-        let object = inet_addr.as_object_ref()?;
-        object.value("holder")?
-    };
-    let holder = holder_value.as_object_ref()?;
-    Ok(holder.value("address")?.as_i32()?)
-}
-
-#[expect(clippy::cast_sign_loss)]
-fn ipv4_from_int(addr: i32) -> Ipv4Addr {
-    let bits = addr as u32;
-    Ipv4Addr::new(
-        ((bits >> 24) & 0xFF) as u8,
-        ((bits >> 16) & 0xFF) as u8,
-        ((bits >> 8) & 0xFF) as u8,
-        (bits & 0xFF) as u8,
-    )
-}
-
-fn get_int_from_object(value: &Value) -> Result<i32> {
-    let obj = value.as_object_ref()?;
-    Ok(obj.value("value")?.as_i32()?)
-}
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method("java/net/PlainSocketImpl.initProto()V", LessThanOrEqual(JAVA_17))]
@@ -123,7 +65,7 @@ pub async fn socket_accept<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let socket_impl = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
 
     // Check variant and get timeout, then release lock before blocking accept
@@ -254,7 +196,7 @@ pub async fn socket_accept<T: Thread + 'static>(
     };
 
     let new_fd = vm.next_nio_fd();
-    set_fd_on_this(&socket_impl, new_fd)?;
+    set_impl_fd(&socket_impl, new_fd)?;
 
     if let Some(stream) = tokio_stream {
         vm.socket_handles()
@@ -338,9 +280,9 @@ pub async fn socket_bind<T: Thread + 'static>(
     let port = parameters.pop_int()?;
     let address = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
-    let addr_int = get_inet_address_int(&address)?;
-    let ipv4 = ipv4_from_int(addr_int);
+    let fd = get_impl_fd(&this)?;
+    let addr_int = inet_address_int(&address)?;
+    let ipv4 = ipv4_from_java_int(addr_int);
     let vm = thread.vm()?;
     let is_ipv6 = vm
         .socket_handles()
@@ -399,11 +341,11 @@ pub async fn socket_close_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let _use_deferred = parameters.pop_bool()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     if fd >= 0 {
         let vm = thread.vm()?;
         vm.socket_handles().remove(&fd).await;
-        set_fd_on_this(&this, -1)?;
+        set_impl_fd(&this, -1)?;
     }
     Ok(None)
 }
@@ -422,9 +364,9 @@ pub async fn socket_connect<T: Thread + 'static>(
     let port = parameters.pop_int()?;
     let address = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
-    let addr_int = get_inet_address_int(&address)?;
-    let ipv4 = ipv4_from_int(addr_int);
+    let fd = get_impl_fd(&this)?;
+    let addr_int = inet_address_int(&address)?;
+    let ipv4 = ipv4_from_java_int(addr_int);
     let vm = thread.vm()?;
     let is_ipv6 = vm
         .socket_handles()
@@ -531,7 +473,7 @@ pub async fn socket_create_0<T: Thread + 'static>(
         .map_err(|e| InternalError(e.to_string()))?;
     let vm = thread.vm()?;
     let fd = vm.next_nio_fd();
-    set_fd_on_this(&this, fd)?;
+    set_impl_fd(&this, fd)?;
     vm.socket_handles()
         .insert(fd, SocketHandle::new(SocketType::Raw(socket)))
         .await?;
@@ -568,7 +510,7 @@ pub async fn socket_create_1<T: Thread + 'static>(
         .map_err(|e| InternalError(e.to_string()))?;
     let vm = thread.vm()?;
     let fd = vm.next_nio_fd();
-    set_fd_on_this(&this, fd)?;
+    set_impl_fd(&this, fd)?;
     let mut handle = SocketHandle::new(SocketType::Raw(socket));
     if prefer_ipv6 {
         handle.is_ipv6 = true;
@@ -590,7 +532,7 @@ pub async fn socket_get_option<T: Thread + 'static>(
     let _ia_container = parameters.pop()?;
     let opt = parameters.pop_int()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
 
     if opt == JAVA_SO_TIMEOUT {
@@ -658,7 +600,7 @@ pub async fn socket_listen<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let backlog = parameters.pop_int()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
 
     // Remove raw socket, listen, then convert to TcpListener
@@ -705,7 +647,7 @@ pub async fn socket_send_urgent_data<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let data = parameters.pop_int()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
 
     #[expect(clippy::cast_sign_loss)]
@@ -768,8 +710,8 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
     let this = parameters.pop()?;
 
     if cmd == JAVA_SO_TIMEOUT {
-        let timeout_ms = get_int_from_object(&value).unwrap_or(0);
-        let fd = get_fd_from_this(&this)?;
+        let timeout_ms = boxed_int_value(&value).unwrap_or(0);
+        let fd = get_impl_fd(&this)?;
         let vm = thread.vm()?;
         #[expect(clippy::cast_sign_loss)]
         if let Some(mut guard) = vm.socket_handles().get_mut(&fd).await {
@@ -782,7 +724,7 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
         return Ok(None);
     }
 
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
     let guard = vm
         .socket_handles()
@@ -807,7 +749,7 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
             .map_err(|e: std::io::Error| InternalError(e.to_string()))?,
         JAVA_SO_LINGER => {
             if on {
-                let secs = get_int_from_object(&value)?;
+                let secs = boxed_int_value(&value)?;
                 socket
                     .set_linger(Some(Duration::from_secs(secs as u64)))
                     .map_err(|e: std::io::Error| InternalError(e.to_string()))?;
@@ -818,13 +760,13 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
             }
         }
         JAVA_SO_SNDBUF => {
-            let size = get_int_from_object(&value)?;
+            let size = boxed_int_value(&value)?;
             socket
                 .set_send_buffer_size(size as usize)
                 .map_err(|e: std::io::Error| InternalError(e.to_string()))?;
         }
         JAVA_SO_RCVBUF => {
-            let size = get_int_from_object(&value)?;
+            let size = boxed_int_value(&value)?;
             socket
                 .set_recv_buffer_size(size as usize)
                 .map_err(|e: std::io::Error| InternalError(e.to_string()))?;
@@ -846,7 +788,7 @@ pub async fn socket_shutdown<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let how = parameters.pop_int()?;
     let this = parameters.pop()?;
-    let fd = get_fd_from_this(&this)?;
+    let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
     let guard = vm
         .socket_handles()

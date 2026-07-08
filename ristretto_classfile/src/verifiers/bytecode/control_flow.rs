@@ -520,8 +520,10 @@ impl Worklist {
 
     /// Adds an instruction index to the worklist if not already present.
     pub fn add(&mut self, index: usize) {
-        if index < self.in_worklist.len() && !self.in_worklist[index] {
-            self.in_worklist[index] = true;
+        if let Some(in_worklist) = self.in_worklist.get_mut(index)
+            && !*in_worklist
+        {
+            *in_worklist = true;
             self.queue.push(index);
         }
     }
@@ -530,7 +532,9 @@ impl Worklist {
     #[must_use]
     pub fn pop(&mut self) -> Option<usize> {
         let idx = self.queue.pop()?;
-        self.in_worklist[idx] = false;
+        if let Some(in_worklist) = self.in_worklist.get_mut(idx) {
+            *in_worklist = false;
+        }
         Some(idx)
     }
 

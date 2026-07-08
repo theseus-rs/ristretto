@@ -2680,9 +2680,12 @@ mod tests {
         let (_class, values) = components.as_class_vec_ref()?;
 
         assert_eq!(values.len(), 2);
+        let [first_component, second_component] = &*values else {
+            panic!("expected exactly two record components");
+        };
 
         // Verify first component (id)
-        let comp1 = values[0].as_object_ref()?;
+        let comp1 = first_component.as_object_ref()?;
         let name_val = comp1.value("name")?;
         assert_eq!(name_val.as_string()?, "id");
         let type_val = comp1.value("type")?;
@@ -2691,7 +2694,7 @@ mod tests {
         assert_eq!(type_name, "int");
 
         // Verify second component (name)
-        let comp2 = values[1].as_object_ref()?;
+        let comp2 = second_component.as_object_ref()?;
         assert_eq!(comp2.value("name")?.as_string()?, "name");
         let type_val2 = comp2.value("type")?;
         let type_obj2 = type_val2.as_object_ref()?;

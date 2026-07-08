@@ -1,3 +1,16 @@
+#![expect(
+    clippy::expect_used,
+    clippy::panic,
+    reason = "procedural macro registry uses panics to report compile-time input and generation errors"
+)]
+#![cfg_attr(
+    test,
+    expect(
+        clippy::indexing_slicing,
+        reason = "unit tests assert fixture positions by index"
+    )
+)]
+
 use ahash::AHashMap;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;

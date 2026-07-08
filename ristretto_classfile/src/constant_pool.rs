@@ -1670,8 +1670,8 @@ impl<'a, 'b> Iterator for ConstantPoolIterator<'a, 'b> {
     /// - The iterator advances through the constant pool until it either finds a constant or
     ///   reaches the end of the pool
     fn next(&mut self) -> Option<Self::Item> {
-        while self.index < self.constant_pool.constants.len() {
-            match &self.constant_pool.constants[self.index] {
+        while let Some(entry) = self.constant_pool.constants.get(self.index) {
+            match entry {
                 ConstantEntry::Constant(constant) => {
                     self.index += 1;
                     return Some(constant);

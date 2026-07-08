@@ -416,7 +416,7 @@ impl Thread {
             let super_class_index = class.class_file().super_class;
             if super_class_index == 0 {
                 // Default to java/lang/Object; zero-copy via try_from_str on static ASCII
-                let object_name = JavaStr::try_from_str("java/lang/Object").expect("valid ASCII");
+                let object_name = JavaStr::try_from_str("java/lang/Object")?;
                 let super_class = self.load_and_link_class(object_name).await?;
                 class.set_parent(Some(super_class))?;
             } else {

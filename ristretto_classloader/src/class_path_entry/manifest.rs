@@ -150,7 +150,7 @@ fn find_utf8_split(bytes: &[u8], max_pos: usize) -> usize {
     }
     let mut pos = max_pos;
     // Walk backwards to find a valid UTF-8 char boundary
-    while pos > 0 && is_utf8_continuation(bytes[pos]) {
+    while pos > 0 && bytes.get(pos).copied().is_some_and(is_utf8_continuation) {
         pos -= 1;
     }
     pos

@@ -663,7 +663,7 @@ fn derive_automatic_module_name(jar_name: &str) -> Result<String> {
 fn strip_version_suffix(name: &str) -> &str {
     let bytes = name.as_bytes();
     for i in (0..bytes.len().saturating_sub(1)).rev() {
-        if bytes[i] == b'-' && bytes.get(i + 1).is_some_and(u8::is_ascii_digit) {
+        if bytes.get(i).copied() == Some(b'-') && bytes.get(i + 1).is_some_and(u8::is_ascii_digit) {
             return &name[..i];
         }
     }

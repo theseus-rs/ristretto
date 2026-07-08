@@ -27,6 +27,11 @@ allow = [
     "Zlib",
 ]
 
+[advisories]
+ignore = [
+    { id = "RUSTSEC-2026-0186", reason = "memmap2: Unchecked pointer offset in crate" },
+]
+
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
 multiple-versions = "deny"

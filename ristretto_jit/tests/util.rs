@@ -7,6 +7,11 @@
     clippy::ptr_as_ptr,
     reason = "JIT FFI stubs intentionally use raw pointer casts matching JVM semantics"
 )]
+#![expect(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "test helper uses fixture indexing and immediate failure for poisoned test locks"
+)]
 
 use ahash::AHashMap;
 use ristretto_classfile::attributes::{Attribute, Instruction, MaxLocals, MaxStack};

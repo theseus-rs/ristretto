@@ -1,3 +1,8 @@
+#![expect(
+    clippy::expect_used,
+    reason = "integration test validates known UTF-8 process output"
+)]
+
 use ristretto_classloader::{
     JAVA_8_VERSION, JAVA_11_VERSION, JAVA_17_VERSION, JAVA_21_VERSION, JAVA_25_VERSION,
 };

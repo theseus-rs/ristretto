@@ -23,12 +23,12 @@ pub enum Value {
 
 impl Value {
     /// Create a new object value.
-    pub fn new_object(collector: &GarbageCollector, reference: Reference) -> Self {
+    pub fn new_object(collector: &Arc<GarbageCollector>, reference: Reference) -> Self {
         Value::Object(Some(Gc::new(collector, RwLock::new(reference)).clone_gc()))
     }
 
     /// Create a new nullable object value.
-    pub fn new_opt_object(collector: &GarbageCollector, reference: Option<Reference>) -> Self {
+    pub fn new_opt_object(collector: &Arc<GarbageCollector>, reference: Option<Reference>) -> Self {
         match reference {
             Some(reference) => Self::new_object(collector, reference),
             None => Value::Object(None),
@@ -36,7 +36,7 @@ impl Value {
     }
 
     /// Create a new object value from an Object.
-    pub fn from_object(collector: &GarbageCollector, object: Object) -> Self {
+    pub fn from_object(collector: &Arc<GarbageCollector>, object: Object) -> Self {
         Self::new_object(collector, Reference::from(object))
     }
 
@@ -778,11 +778,11 @@ mod tests {
     use std::hash::DefaultHasher;
     use std::sync::Arc;
 
-    fn test_ref(collector: &GarbageCollector, reference: impl Into<Reference>) -> Value {
+    fn test_ref(collector: &Arc<GarbageCollector>, reference: impl Into<Reference>) -> Value {
         Value::new_object(collector, reference.into())
     }
 
-    fn test_opt_ref(collector: &GarbageCollector, reference: Option<Reference>) -> Value {
+    fn test_opt_ref(collector: &Arc<GarbageCollector>, reference: Option<Reference>) -> Value {
         Value::new_opt_object(collector, reference)
     }
 

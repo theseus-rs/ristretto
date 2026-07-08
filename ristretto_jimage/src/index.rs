@@ -19,7 +19,7 @@
 use crate::Error::InvalidIndex;
 use crate::attribute::Attributes;
 use crate::header::KEY_SIZE;
-use crate::{Image, Result};
+use crate::{Error, Image, Result};
 use byteorder::ByteOrder;
 use std::borrow::Cow;
 
@@ -197,7 +197,10 @@ impl Index {
 
         let length = attributes.compressed_size();
         let _bytes = byte_source.get_bytes(offset..(offset + length))?;
-        todo!("compressed jimage support");
+        Err(Error::IoError(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "compressed jimage resources are not supported",
+        )))
     }
 }
 
@@ -258,14 +261,24 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "not yet implemented: compressed jimage support")]
-    fn test_get_data_panics_for_compressed_resource() {
+    fn test_get_data_returns_error_for_compressed_resource() {
         let temp_file = write_standard_big_endian_image().expect("image should be written");
         let image = Image::from_file(temp_file.path()).expect("image should load");
         let bytes = [48, 1, 56, 1, 0];
         let byte_source = crate::byte_source::ByteSource::Bytes(bytes.to_vec());
         let attributes =
             Attributes::from_bytes(&byte_source, 0, bytes.len()).expect("attributes should parse");
-        let _ = Index::get_data(&image, &attributes);
+        let error = Index::get_data(&image, &attributes).expect_err("compressed data should fail");
+
+        match error {
+            Error::IoError(error) => {
+                assert_eq!(error.kind(), std::io::ErrorKind::Unsupported);
+                assert_eq!(
+                    error.to_string(),
+                    "compressed jimage resources are not supported"
+                );
+            }
+            error => panic!("expected unsupported IO error, got {error:?}"),
+        }
     }
 }

@@ -249,7 +249,12 @@ pub async fn invoke_0<T: Thread + 'static>(
                 "Instance method invocation requires a receiver".to_string(),
             ));
         }
-        let receiver = arguments[0].as_object_ref()?;
+        let Some(receiver) = arguments.first() else {
+            return Err(ristretto_types::Error::InternalError(
+                "Instance method invocation requires a receiver".to_string(),
+            ));
+        };
+        let receiver = receiver.as_object_ref()?;
         let receiver_class = receiver.class().clone();
 
         // Search for the method starting from the receiver's class. This handles interface methods,
