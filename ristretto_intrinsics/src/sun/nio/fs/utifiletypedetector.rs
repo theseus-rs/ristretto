@@ -31,10 +31,8 @@ pub async fn probe_0<T: Thread + 'static>(
 }
 
 fn mime_type_for_extension(path: &str) -> Option<&'static str> {
-    let ext = match path.rfind('.') {
-        Some(pos) => &path[pos + 1..],
-        None => return None,
-    };
+    let pos = path.rfind('.')?;
+    let ext = &path[pos + 1..];
     if ext.is_empty() {
         return None;
     }

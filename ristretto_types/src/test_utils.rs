@@ -871,7 +871,10 @@ async fn test_mock_vm_thread_and_module_system_methods() -> Result<()> {
     assert_eq!(vm.next_thread_id()?, 1);
     assert_eq!(vm.next_hidden_class_suffix()?, 1);
     assert_eq!(vm.next_nio_fd(), 3);
-    assert!(vm.class("java/lang/Object").await?.name() == "java/lang/Object");
+    assert_eq!(
+        vm.class("java/lang/Object").await?.name(),
+        "java/lang/Object"
+    );
     assert_eq!(
         vm.invoke_main(&["arg"]).await?.expect("main result"),
         Value::Int(0)

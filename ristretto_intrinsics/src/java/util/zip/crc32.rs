@@ -177,7 +177,7 @@ mod tests {
         // Update with 'a', 'b', 'c'
         let mut crc = 0i32;
 
-        for byte in [b'a', b'b', b'c'] {
+        for byte in *b"abc" {
             let mut parameters = Parameters::default();
             parameters.push_int(crc);
             parameters.push_int(i32::from(byte));

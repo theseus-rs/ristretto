@@ -470,7 +470,7 @@ impl fmt::Display for ClassFile<'_> {
         writeln!(f, "}}")?;
 
         for attribute in &self.attributes {
-            writeln!(f, "{}", &attribute.to_string())?;
+            writeln!(f, "{attribute}")?;
         }
         Ok(())
     }

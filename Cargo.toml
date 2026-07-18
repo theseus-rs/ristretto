@@ -36,7 +36,7 @@ edition = "2024"
 keywords = ["java", "jvm"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/theseus-rs/ristretto"
-rust-version = "1.96.0"
+rust-version = "1.97.1"
 version = "0.31.0"
 
 [workspace.lints.rust]
