@@ -369,7 +369,20 @@ impl ConfigurationBuilder {
             jar: self.jar,
             java_home,
             java_version,
-            system_properties: self.system_properties,
+            system_properties: {
+                #[cfg_attr(not(target_family = "wasm"), expect(unused_mut))]
+                let mut system_properties = self.system_properties;
+                // On WASM the runtime image (lib/modules) cannot be opened through the unix
+                // `FileChannel`/`open0` syscalls, but it can be read via the memory-mapped
+                // `NativeImageBuffer.getNativeMap` path. `jdk.image.map.all` forces the JDK's
+                // `BasicImageReader` to use that mapping (the default is off for 32-bit data
+                // models, which WASM reports), enabling boot-module resource loading on WASM.
+                #[cfg(target_family = "wasm")]
+                system_properties
+                    .entry("jdk.image.map.all".to_string())
+                    .or_insert_with(|| "true".to_string());
+                system_properties
+            },
             interpreted: self.interpreted,
             batch_compilation: self.batch_compilation,
             preview_features: self.preview_features,
@@ -527,6 +540,20 @@ mod tests {
             .system_properties(props)
             .build()
             .unwrap();
+        assert_eq!(
+            Some(&"v1".to_string()),
+            config.system_properties().get("k1")
+        );
+        assert_eq!(
+            Some(&"v2".to_string()),
+            config.system_properties().get("k2")
+        );
+        #[cfg(target_family = "wasm")]
+        assert_eq!(
+            Some(&"true".to_string()),
+            config.system_properties().get("jdk.image.map.all")
+        );
+        #[cfg(not(target_family = "wasm"))]
         assert_eq!(2, config.system_properties().len());
     }
 

@@ -206,22 +206,34 @@ mod platform {
     }
 }
 
-/// WASM-specific implementations (no filesystem access).
+/// WASM-specific implementations.
+///
+/// WASI runs a single sandboxed JVM process, so `OpenJDK`'s advisory file locking (used only to
+/// coordinate preference writes between concurrent JVM processes) is unnecessary; reporting a
+/// successful lock is therefore semantically correct. Likewise, POSIX `chmod` is not portably
+/// available on WASI and file access is governed by the capability/preopen sandbox rather than
+/// Unix permission bits, so reporting success lets `FileSystemPreferences` persist `prefs.xml`
+/// through normal Java file I/O instead of throwing `BackingStoreException`.
 #[cfg(target_family = "wasm")]
 mod platform {
+    /// Opaque, non-zero lock handle returned to `FileSystemPreferences`. `OpenJDK` only checks that
+    /// the handle is non-zero and passes it back to `unlockFile0` (which ignores it on WASM); it
+    /// must never be interpreted as a real host file descriptor.
+    const WASM_FAKE_LOCK_HANDLE: i32 = 1;
+
     #[expect(clippy::unused_async)]
     pub async fn chmod(_filename: &str, _permission: i32) -> i32 {
-        -1
+        0
     }
 
     #[expect(clippy::unused_async)]
     pub async fn lock_file(_filename: &str, _permission: i32, _shared: bool) -> [i32; 2] {
-        [0, -1]
+        [WASM_FAKE_LOCK_HANDLE, 0]
     }
 
     #[expect(clippy::unused_async)]
     pub async fn unlock_file(_fd: i32) -> i32 {
-        -1
+        0
     }
 }
 

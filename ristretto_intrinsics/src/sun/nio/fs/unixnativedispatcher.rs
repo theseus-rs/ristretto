@@ -1,21 +1,23 @@
 use bitflags::bitflags;
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
+use ristretto_classfile::JAVA_21;
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 #[cfg(target_family = "unix")]
-use ristretto_classfile::VersionSpecification::{
-    Any, Between, Equal, GreaterThanOrEqual, LessThanOrEqual,
-};
+use ristretto_classfile::VersionSpecification::{Between, Equal, LessThanOrEqual};
 #[cfg(target_family = "unix")]
-use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21, JAVA_25};
-#[cfg(target_family = "unix")]
+use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_25};
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 use ristretto_macros::async_method;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 use ristretto_types::JavaError::NullPointerException;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 use ristretto_types::Parameters;
 use ristretto_types::Result;
 use ristretto_types::VM;
@@ -23,12 +25,12 @@ use ristretto_types::VM;
 use std::ffi::CString;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::MetadataExt;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 use std::sync::Arc;
 
 #[cfg(target_family = "unix")]
 use super::managed_files;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 use ristretto_types::Thread;
 
 bitflags! {
@@ -72,25 +74,64 @@ fn set_unix_metadata_fields(
     Ok(())
 }
 
+/// Convert a [`std::time::SystemTime`] into seconds/nanoseconds since the Unix epoch.
 #[cfg(not(target_family = "unix"))]
+fn system_time_parts(time: std::io::Result<std::time::SystemTime>) -> (i64, i64) {
+    use std::time::UNIX_EPOCH;
+    match time.ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()) {
+        #[expect(clippy::cast_possible_wrap)]
+        Some(duration) => (
+            duration.as_secs() as i64,
+            i64::from(duration.subsec_nanos()),
+        ),
+        None => (0, 0),
+    }
+}
+
+/// Populate the `UnixFileAttributes` fields on platforms without a native `stat`
+/// (for example WASM/WASI and Windows).
+///
+/// The JDK's `sun.nio.fs` code classifies a file by inspecting the type bits of
+/// `st_mode` (`S_IFMT`) and reads `st_size` for the file length. Deriving these
+/// from the portable [`std::fs::Metadata`] lets file-type detection (such as the
+/// run-time image probe `Files.isRegularFile(<java.home>/lib/modules)`) work on
+/// WASM, where the unix `stat0` syscall is unavailable.
+#[cfg(not(target_family = "unix"))]
+#[expect(clippy::cast_possible_wrap)]
 fn set_unix_metadata_fields(
     object: &mut ristretto_classloader::Object,
-    _metadata: &std::fs::Metadata,
+    metadata: &std::fs::Metadata,
 ) -> Result<()> {
-    object.set_value("st_mode", Value::Int(0))?;
+    const S_IFDIR: i32 = 0o040_000;
+    const S_IFREG: i32 = 0o100_000;
+    const S_IFLNK: i32 = 0o120_000;
+
+    let file_type = metadata.file_type();
+    let mode = if file_type.is_dir() {
+        S_IFDIR | 0o755
+    } else if file_type.is_symlink() {
+        S_IFLNK | 0o777
+    } else {
+        S_IFREG | 0o644
+    };
+
+    let access_time = system_time_parts(metadata.accessed());
+    let modify_time = system_time_parts(metadata.modified());
+
+    object.set_value("st_mode", Value::Int(mode))?;
     object.set_value("st_ino", Value::Long(0))?;
     object.set_value("st_dev", Value::Long(0))?;
     object.set_value("st_rdev", Value::Long(0))?;
-    object.set_value("st_nlink", Value::Int(0))?;
+    object.set_value("st_nlink", Value::Int(1))?;
     object.set_value("st_uid", Value::Int(0))?;
     object.set_value("st_gid", Value::Int(0))?;
-    object.set_value("st_size", Value::Long(0))?;
-    object.set_value("st_atime_sec", Value::Long(0))?;
-    object.set_value("st_atime_nsec", Value::Long(0))?;
-    object.set_value("st_mtime_sec", Value::Long(0))?;
-    object.set_value("st_mtime_nsec", Value::Long(0))?;
-    object.set_value("st_ctime_sec", Value::Long(0))?;
-    object.set_value("st_ctime_nsec", Value::Long(0))?;
+    object.set_value("st_size", Value::Long(metadata.len() as i64))?;
+    object.set_value("st_atime_sec", Value::Long(access_time.0))?;
+    object.set_value("st_atime_nsec", Value::Long(access_time.1))?;
+    object.set_value("st_mtime_sec", Value::Long(modify_time.0))?;
+    object.set_value("st_mtime_nsec", Value::Long(modify_time.1))?;
+    object.set_value("st_ctime_sec", Value::Long(modify_time.0))?;
+    object.set_value("st_ctime_nsec", Value::Long(modify_time.1))?;
     Ok(())
 }
 
@@ -105,6 +146,23 @@ fn read_native_path<V: VM>(vm: &V, address: i64) -> Result<String> {
 #[cfg(target_family = "unix")]
 fn last_errno() -> i32 {
     std::io::Error::last_os_error().raw_os_error().unwrap_or(5)
+}
+
+/// Translate a Rust I/O error into a Linux-style `errno` value.
+///
+/// On WASM/WASI `std::io::Error::raw_os_error` reports WASI error numbers (for example
+/// `ENOENT` is 44), but the cached Linux JDK class files interpret the `errno` returned by these
+/// intrinsics as Linux values (`ENOENT` is 2). Mapping through `ErrorKind` lets the portable
+/// `std::fs` based intrinsics return the constants the JDK's Unix `sun.nio.fs` code expects.
+#[cfg(target_family = "wasm")]
+fn wasm_linux_errno(error: &std::io::Error) -> i32 {
+    use std::io::ErrorKind;
+    match error.kind() {
+        ErrorKind::NotFound => 2,          // ENOENT
+        ErrorKind::PermissionDenied => 13, // EACCES
+        ErrorKind::AlreadyExists => 17,    // EEXIST
+        _ => error.raw_os_error().unwrap_or(2),
+    }
 }
 
 #[cfg(target_family = "unix")]
@@ -1099,7 +1157,7 @@ pub async fn futimes_0<T: Thread + 'static>(
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.getcwd()[B", Any)]
 #[async_method]
 pub async fn getcwd<T: Thread + 'static>(
@@ -1306,7 +1364,7 @@ pub async fn getpwuid<T: Thread + 'static>(
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.init()I", Any)]
 #[async_method]
 pub async fn init<T: Thread + 'static>(
@@ -1979,7 +2037,7 @@ pub async fn stat_0_0<T: Thread + 'static>(
     Ok(None)
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 #[intrinsic_method(
     "sun/nio/fs/UnixNativeDispatcher.stat0(JLsun/nio/fs/UnixFileAttributes;)I",
     GreaterThanOrEqual(JAVA_21)
@@ -2004,6 +2062,9 @@ pub async fn stat_0_1<T: Thread + 'static>(
     let metadata = match std::fs::metadata(path_str) {
         Ok(m) => m,
         Err(error) => {
+            #[cfg(target_family = "wasm")]
+            let errno = wasm_linux_errno(&error);
+            #[cfg(not(target_family = "wasm"))]
             let errno = error.raw_os_error().unwrap_or(2);
             return Ok(Some(Value::Int(errno)));
         }
@@ -2135,7 +2196,7 @@ pub async fn statvfs_0<T: Thread + 'static>(
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.strerror(I)[B", Any)]
 #[async_method]
 pub async fn strerror<T: Thread + 'static>(
