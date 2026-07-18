@@ -81,6 +81,9 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v6
 
+      - name: Install Rust
+        run: rustup toolchain install --target ${{ matrix.target }} --no-self-update
+
       - name: Install cross-compilation tools
         if: ${{ startsWith(matrix.os, 'ubuntu') }}
         uses: taiki-e/setup-cross-toolchain-action@v1
