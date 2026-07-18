@@ -535,9 +535,12 @@ pub async fn fdopendir<T: Thread + 'static>(
             return Err(throw_unix_exception(&thread, last_errno()).await);
         }
         #[expect(clippy::cast_possible_wrap)]
-        {
-            Ok(Some(Value::Long(dir as usize as i64)))
+        let dir = dir as usize as i64;
+        let vm = thread.vm()?;
+        if let Some(handle) = vm.file_handles().remove(&i64::from(fd)).await {
+            std::mem::forget(handle);
         }
+        Ok(Some(Value::Long(dir)))
     }
     #[cfg(not(target_family = "unix"))]
     {

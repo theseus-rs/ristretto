@@ -25,6 +25,7 @@ pub use descriptor::{
     RequiresFlags,
 };
 pub use error::{ModuleError, Result};
+pub(crate) use finder::ModuleDescriptorCache;
 pub use finder::{ModuleFinder, ModuleFinderChain, ModulePathFinder, SystemModuleFinder};
 pub use graph::ModuleGraph;
 pub use layer::ModuleLayer;

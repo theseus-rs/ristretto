@@ -13,6 +13,38 @@ pub(crate) async fn open(
     flags: i32,
     mode: i32,
 ) -> std::io::Result<i64> {
+    open_inner(file_handles, resource_manager, path, flags, mode, None).await
+}
+
+/// Opens a file using the sharing mode and flags supplied to Win32 `CreateFile`.
+pub(crate) async fn open_with_windows_options(
+    file_handles: &HandleManager<i64, FileHandle>,
+    resource_manager: &ResourceManager,
+    path: &str,
+    flags: i32,
+    mode: i32,
+    share_mode: i32,
+    flags_and_attributes: i32,
+) -> std::io::Result<i64> {
+    open_inner(
+        file_handles,
+        resource_manager,
+        path,
+        flags,
+        mode,
+        Some((share_mode, flags_and_attributes)),
+    )
+    .await
+}
+
+async fn open_inner(
+    file_handles: &HandleManager<i64, FileHandle>,
+    resource_manager: &ResourceManager,
+    path: &str,
+    flags: i32,
+    mode: i32,
+    windows_options: Option<(i32, i32)>,
+) -> std::io::Result<i64> {
     // O_RDONLY=0, O_WRONLY=1, O_RDWR=2
     let access_mode = flags & 0x3;
     #[cfg(target_family = "unix")]
@@ -72,6 +104,17 @@ pub(crate) async fn open(
         open_options.append(true);
     }
 
+    #[cfg(target_os = "windows")]
+    {
+        let (share_mode, flags_and_attributes) = windows_options.unwrap_or((0x7, 0));
+        // FILE_FLAG_BACKUP_SEMANTICS (0x02000000) allows opening directories via CreateFile.
+        // It is benign for regular files.
+        open_options.custom_flags(0x0200_0000 | flags_and_attributes.cast_unsigned());
+        open_options.share_mode(share_mode.cast_unsigned());
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = windows_options;
+
     #[cfg(not(target_family = "wasm"))]
     let file = open_options.open(path).await?;
     #[cfg(target_os = "wasi")]
@@ -97,7 +140,11 @@ pub(crate) async fn open(
     let file_handle = FileHandle {
         file,
         append,
-        mode: FileModeFlags::empty(),
+        mode: if access_mode == 0 {
+            FileModeFlags::READ_ONLY
+        } else {
+            FileModeFlags::READ_WRITE
+        },
     };
     file_handles
         .insert(fd, file_handle)
@@ -220,13 +267,16 @@ pub(crate) async fn close(file_handles: &HandleManager<i64, FileHandle>, fd: i64
     if let Some(mut handle) = file_handles.remove(&fd).await {
         #[cfg(not(target_family = "wasm"))]
         {
-            let _ = handle.file.flush().await;
-            let _ = handle.file.shutdown().await;
+            if handle.mode != FileModeFlags::READ_ONLY {
+                let _ = handle.file.flush().await;
+            }
         }
         #[cfg(target_os = "wasi")]
         {
             use std::io::Write;
-            let _ = handle.file.flush();
+            if handle.mode != FileModeFlags::READ_ONLY {
+                let _ = handle.file.flush();
+            }
         }
     }
 }
@@ -591,12 +641,61 @@ pub(crate) async fn readv(
         tokio::task::spawn_blocking(move || {
             use std::io::Read;
             let mut std_file = std_file;
-            let mut io_slices: Vec<std::io::IoSliceMut<'_>> = chunks
-                .iter_mut()
-                .map(|c| std::io::IoSliceMut::new(c))
-                .collect();
-            let n = std_file.read_vectored(&mut io_slices)?;
-            Ok((n, chunks))
+
+            #[cfg(target_family = "unix")]
+            let total = {
+                use std::io::IoSliceMut;
+                let mut buffers = chunks
+                    .iter_mut()
+                    .map(|chunk| IoSliceMut::new(chunk))
+                    .collect::<Vec<_>>();
+                loop {
+                    match std_file.read_vectored(&mut buffers) {
+                        Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+                        result => break result?,
+                    }
+                }
+            };
+
+            // Windows has no general-purpose file readv operation. Read once into a
+            // contiguous staging buffer so pipes retain single-operation semantics,
+            // then scatter only the bytes actually returned by the host.
+            #[cfg(windows)]
+            let total = {
+                let capacity = chunks.iter().try_fold(0usize, |total, chunk| {
+                    total.checked_add(chunk.len()).ok_or_else(|| {
+                        std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            "readv buffer size overflow",
+                        )
+                    })
+                })?;
+                let mut buffer = vec![0; capacity];
+                let total = loop {
+                    match std_file.read(&mut buffer) {
+                        Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+                        result => break result?,
+                    }
+                };
+                let mut copied = 0;
+                for chunk in &mut chunks {
+                    let remaining = total.saturating_sub(copied);
+                    let to_copy = remaining.min(chunk.len());
+                    if to_copy == 0 {
+                        break;
+                    }
+                    let destination = chunk.get_mut(..to_copy).ok_or_else(|| {
+                        std::io::Error::other("readv destination range out of bounds")
+                    })?;
+                    let source = buffer
+                        .get(copied..copied + to_copy)
+                        .ok_or_else(|| std::io::Error::other("readv source range out of bounds"))?;
+                    destination.copy_from_slice(source);
+                    copied += to_copy;
+                }
+                total
+            };
+            Ok((total, chunks))
         })
         .await
         .map_err(std::io::Error::other)?
@@ -604,17 +703,24 @@ pub(crate) async fn readv(
 
     #[cfg(target_os = "wasi")]
     {
-        use std::io::Read;
+        use std::io::{IoSliceMut, Read};
         let mut file_handle = file_handles
             .get_mut(&fd)
             .await
             .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "bad fd"))?;
-        let mut io_slices: Vec<std::io::IoSliceMut<'_>> = chunks
-            .iter_mut()
-            .map(|c| std::io::IoSliceMut::new(c))
-            .collect();
-        let n = file_handle.file.read_vectored(&mut io_slices)?;
-        Ok((n, chunks))
+        let total = {
+            let mut buffers = chunks
+                .iter_mut()
+                .map(|chunk| IoSliceMut::new(chunk))
+                .collect::<Vec<_>>();
+            loop {
+                match file_handle.file.read_vectored(&mut buffers) {
+                    Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+                    result => break result?,
+                }
+            }
+        };
+        Ok((total, chunks))
     }
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -647,9 +753,26 @@ pub(crate) async fn writev(
         tokio::task::spawn_blocking(move || {
             use std::io::Write;
             let mut std_file = std_file;
-            let io_slices: Vec<std::io::IoSlice<'_>> =
-                chunks.iter().map(|c| std::io::IoSlice::new(c)).collect();
-            std_file.write_vectored(&io_slices)
+
+            #[cfg(target_family = "unix")]
+            let buffers = chunks
+                .iter()
+                .map(|chunk| std::io::IoSlice::new(chunk))
+                .collect::<Vec<_>>();
+
+            // Windows has no general-purpose file writev operation. Coalescing the
+            // slices preserves a single host write for pipes and its partial count.
+            #[cfg(windows)]
+            let buffer = chunks.concat();
+            #[cfg(windows)]
+            let buffers = [std::io::IoSlice::new(&buffer)];
+
+            loop {
+                match std_file.write_vectored(&buffers) {
+                    Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+                    result => break result,
+                }
+            }
         })
         .await
         .map_err(std::io::Error::other)?
@@ -657,14 +780,21 @@ pub(crate) async fn writev(
 
     #[cfg(target_os = "wasi")]
     {
-        use std::io::Write;
+        use std::io::{IoSlice, Write};
         let mut file_handle = file_handles
             .get_mut(&fd)
             .await
             .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "bad fd"))?;
-        let io_slices: Vec<std::io::IoSlice<'_>> =
-            chunks.iter().map(|c| std::io::IoSlice::new(c)).collect();
-        file_handle.file.write_vectored(&io_slices)
+        let buffers = chunks
+            .iter()
+            .map(|chunk| IoSlice::new(chunk))
+            .collect::<Vec<_>>();
+        loop {
+            match file_handle.file.write_vectored(&buffers) {
+                Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+                result => break result,
+            }
+        }
     }
 
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
@@ -1075,7 +1205,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(target_family = "unix")]
+    #[cfg(any(target_family = "unix", target_os = "windows"))]
     async fn test_readv_writev() {
         let (vm, _hold) = test_vm().await;
         let path = temp_path("_test_mf_readv_writev.tmp");
@@ -1083,15 +1213,13 @@ mod tests {
 
         let fh = vm.file_handles();
         let rm = vm.resource_manager();
-        let fd = open(
-            fh,
-            rm,
-            path.to_str().unwrap(),
-            libc::O_CREAT | libc::O_RDWR | libc::O_TRUNC,
-            0o644,
-        )
-        .await
-        .expect("open");
+        #[cfg(target_family = "unix")]
+        let flags = libc::O_CREAT | libc::O_RDWR | libc::O_TRUNC;
+        #[cfg(target_os = "windows")]
+        let flags = 0x40 | 0x2 | 0x200;
+        let fd = open(fh, rm, path.to_str().unwrap(), flags, 0o644)
+            .await
+            .expect("open");
 
         let chunks = vec![b"hello ".to_vec(), b"world".to_vec()];
         let n = writev(fh, fd, chunks).await.expect("writev");
@@ -1112,6 +1240,120 @@ mod tests {
 
         close(fh, fd).await;
         std::fs::remove_file(&path).ok();
+    }
+
+    #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn test_readv_returns_after_one_partial_socket_read() {
+        use std::io::Write as _;
+        use std::os::fd::{AsRawFd, OwnedFd};
+        use std::os::unix::net::UnixStream;
+        use std::time::Duration;
+
+        let (reader, mut writer) = UnixStream::pair().expect("socket pair");
+        writer.write_all(b"abc").expect("write available bytes");
+
+        let owned: OwnedFd = reader.into();
+        let std_file: std::fs::File = owned.into();
+        let fd = i64::from(std_file.as_raw_fd());
+        let file = tokio::fs::File::from_std(std_file);
+        let (vm, _hold) = test_vm().await;
+        let file_handles = vm.file_handles();
+        file_handles
+            .insert(
+                fd,
+                FileHandle {
+                    file,
+                    append: false,
+                    mode: FileModeFlags::READ_ONLY,
+                },
+            )
+            .await
+            .expect("insert socket handle");
+
+        let (read, chunks) = tokio::time::timeout(
+            Duration::from_secs(1),
+            readv(file_handles, fd, vec![vec![0; 2], vec![0; 3]]),
+        )
+        .await
+        .expect("readv must not wait for the remaining bytes")
+        .expect("readv");
+        assert_eq!(3, read);
+        assert_eq!(b"ab", chunks[0].as_slice());
+        assert_eq!(b'c', chunks[1][0]);
+
+        close(file_handles, fd).await;
+    }
+
+    #[tokio::test]
+    #[cfg(target_os = "windows")]
+    async fn test_open_forwards_windows_share_mode() {
+        let (vm, _hold) = test_vm().await;
+        let path = temp_path("_test_mf_windows_sharing.tmp");
+        std::fs::write(&path, b"sharing").expect("create shared file");
+
+        let file_handles = vm.file_handles();
+        let resource_manager = vm.resource_manager();
+        let first = open_with_windows_options(
+            file_handles,
+            resource_manager,
+            path.to_str().expect("utf-8 path"),
+            2,
+            0,
+            0x7,
+            0,
+        )
+        .await
+        .expect("first open");
+        let second = open_with_windows_options(
+            file_handles,
+            resource_manager,
+            path.to_str().expect("utf-8 path"),
+            2,
+            0,
+            0x7,
+            0,
+        )
+        .await
+        .expect("second writable open");
+
+        std::fs::remove_file(&path).expect("share-delete open");
+        close(file_handles, first).await;
+        close(file_handles, second).await;
+    }
+
+    #[tokio::test]
+    #[cfg(target_os = "windows")]
+    async fn test_open_forwards_open_reparse_point_flag() {
+        use std::os::windows::fs::{MetadataExt, symlink_file};
+
+        let (vm, _hold) = test_vm().await;
+        let directory = tempfile::tempdir().expect("temp directory");
+        let target = directory.path().join("target");
+        let link = directory.path().join("link");
+        std::fs::write(&target, b"target").expect("create target");
+        if let Err(error) = symlink_file(&target, &link) {
+            // Local Windows accounts may lack SeCreateSymbolicLinkPrivilege. GitHub-hosted
+            // runners with Developer Mode exercise the full assertion below.
+            assert_eq!(Some(1314), error.raw_os_error());
+            return;
+        }
+
+        let file_handles = vm.file_handles();
+        let fd = open_with_windows_options(
+            file_handles,
+            vm.resource_manager(),
+            link.to_str().expect("utf-8 path"),
+            0,
+            0,
+            0x7,
+            0x0020_0000, // FILE_FLAG_OPEN_REPARSE_POINT
+        )
+        .await
+        .expect("open reparse point");
+        let metadata = metadata(file_handles, fd).await.expect("link metadata");
+        assert_ne!(0, metadata.file_attributes() & 0x0000_0400);
+        close(file_handles, fd).await;
     }
 
     #[tokio::test]

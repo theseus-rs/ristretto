@@ -1,5 +1,5 @@
 use crate::Error::{ClassNotFound, InternalError};
-use crate::module::ResolvedConfiguration;
+use crate::module::{ModuleDescriptor, ModuleDescriptorCache, ResolvedConfiguration};
 use crate::{Class, ClassPath, Result, Value};
 use ahash::AHashMap;
 use ristretto_classfile::{
@@ -7,6 +7,7 @@ use ristretto_classfile::{
 };
 use std::borrow::Cow;
 use std::fmt::Display;
+use std::path::Path;
 use std::sync::{Arc, Weak};
 use tokio::sync::RwLock;
 
@@ -30,6 +31,8 @@ pub struct ClassLoader {
     /// When set, the class loader will determine module names from packages during class loading.
     /// Uses a synchronous lock to avoid async overhead on every class load.
     module_configuration: Arc<ModuleConfigLock>,
+    /// System module descriptors cached for the lifetime of this class loader.
+    module_descriptor_cache: Arc<ModuleDescriptorCache>,
 }
 
 impl ClassLoader {
@@ -43,6 +46,7 @@ impl ClassLoader {
             classes: Arc::new(RwLock::new(AHashMap::default())),
             object: Arc::new(RwLock::new(None)),
             module_configuration: Arc::new(ModuleConfigLock::new(None)),
+            module_descriptor_cache: Arc::new(ModuleDescriptorCache::default()),
         })
     }
 
@@ -304,6 +308,21 @@ impl ClassLoader {
         *config_guard = config;
     }
 
+    /// Reads and caches a system module descriptor for this class loader.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the jimage or module descriptor cannot be read.
+    pub async fn read_module_descriptor(
+        &self,
+        jimage_path: &Path,
+        module_name: &str,
+    ) -> crate::module::Result<ModuleDescriptor> {
+        Arc::clone(&self.module_descriptor_cache)
+            .read_descriptor(jimage_path, module_name)
+            .await
+    }
+
     /// Get all loaded classes.
     pub async fn loaded_classes(&self) -> Vec<Arc<Class>> {
         let classes = self.classes.read().await;
@@ -382,6 +401,7 @@ impl Clone for ClassLoader {
             classes: Arc::clone(&self.classes),
             object: Arc::clone(&self.object),
             module_configuration: Arc::clone(&self.module_configuration),
+            module_descriptor_cache: Arc::clone(&self.module_descriptor_cache),
         }
     }
 }
@@ -630,6 +650,16 @@ mod tests {
         assert!(class_loader.module_configuration().is_some());
 
         Ok(())
+    }
+
+    #[test]
+    fn test_module_descriptor_cache_lifecycle() {
+        let class_loader = ClassLoader::new("test", ClassPath::from(&["."]));
+        let descriptor_cache = Arc::downgrade(&class_loader.module_descriptor_cache);
+
+        assert!(descriptor_cache.upgrade().is_some());
+        drop(class_loader);
+        assert!(descriptor_cache.upgrade().is_none());
     }
 
     #[test]

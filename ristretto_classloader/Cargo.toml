@@ -16,6 +16,7 @@ workspace = true
 [dependencies]
 ahash = { workspace = true }
 bytemuck = { workspace = true }
+dashmap = { workspace = true }
 flate2 = { workspace = true }
 indexmap = { workspace = true }
 memchr = { workspace = true }

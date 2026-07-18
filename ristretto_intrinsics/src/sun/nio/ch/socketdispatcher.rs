@@ -1,5 +1,6 @@
 use crate::bounds;
 use crate::java::io::socketfiledescriptor::get_fd;
+use crate::sun::nio::fs::managed_files;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
@@ -73,6 +74,77 @@ fn parse_iovecs(memory: &NativeMemory, address: i64, count: i32) -> Result<Vec<(
     Ok(entries)
 }
 
+async fn read_file_descriptor<V: VM>(
+    vm: &V,
+    fd: i32,
+    address: i64,
+    count: usize,
+) -> Result<Option<Value>> {
+    let mut buf = vec![0u8; count];
+    match managed_files::read(vm.file_handles(), i64::from(fd), &mut buf).await {
+        Ok(0) if count > 0 => Ok(Some(Value::Int(-1))),
+        Ok(n) => {
+            if n > 0 {
+                let bytes = bounds::range_to(&buf, ..n, "SocketDispatcher.read0")?;
+                vm.native_memory().write_bytes(address, bytes);
+            }
+            Ok(Some(Value::Int(i32::try_from(n)?)))
+        }
+        Err(e) => Err(InternalError(format!("SocketDispatcher.read0: {e}"))),
+    }
+}
+
+async fn readv_file_descriptor<V: VM>(
+    vm: &V,
+    fd: i32,
+    iov_entries: &[(i64, usize)],
+) -> Result<Option<Value>> {
+    let chunks: Vec<Vec<u8>> = iov_entries.iter().map(|(_, len)| vec![0u8; *len]).collect();
+    if chunks.is_empty() {
+        return Ok(Some(Value::Long(0)));
+    }
+
+    let (n, returned_chunks) = managed_files::readv(vm.file_handles(), i64::from(fd), chunks)
+        .await
+        .map_err(|e| InternalError(format!("SocketDispatcher.readv0: {e}")))?;
+    if n == 0 {
+        return Ok(Some(Value::Long(-1)));
+    }
+
+    let mut remaining = n;
+    let mut total = 0i64;
+    for ((address, _length), chunk) in iov_entries.iter().zip(returned_chunks) {
+        if remaining == 0 {
+            break;
+        }
+        let chunk_len = remaining.min(chunk.len());
+        if chunk_len > 0 {
+            let bytes = bounds::range_to(&chunk, ..chunk_len, "SocketDispatcher.readv0")?;
+            vm.native_memory().write_bytes(*address, bytes);
+            total += i64::try_from(chunk_len)?;
+            remaining -= chunk_len;
+        }
+    }
+    Ok(Some(Value::Long(total)))
+}
+
+async fn write_file_descriptor<V: VM>(vm: &V, fd: i32, data: &[u8]) -> Result<Option<Value>> {
+    let n = managed_files::write(vm.file_handles(), i64::from(fd), data)
+        .await
+        .map_err(|e| InternalError(format!("SocketDispatcher.write0: {e}")))?;
+    Ok(Some(Value::Int(i32::try_from(n)?)))
+}
+
+async fn writev_file_descriptor<V: VM>(vm: &V, fd: i32, data: &[u8]) -> Result<Option<Value>> {
+    if data.is_empty() {
+        return Ok(Some(Value::Long(0)));
+    }
+    let n = managed_files::write(vm.file_handles(), i64::from(fd), data)
+        .await
+        .map_err(|e| InternalError(format!("SocketDispatcher.writev0: {e}")))?;
+    Ok(Some(Value::Long(i64::try_from(n)?)))
+}
+
 #[intrinsic_method(
     "sun/nio/ch/SocketDispatcher.read0(Ljava/io/FileDescriptor;JI)I",
     GreaterThanOrEqual(JAVA_17)
@@ -97,11 +169,9 @@ pub async fn read_0<T: Thread + 'static>(
 
     // For TcpStream: loop with try_read, dropping guard between retries to avoid deadlock
     loop {
-        let handle = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+        let Some(handle) = vm.socket_handles().get(&fd).await else {
+            return read_file_descriptor(&*vm, fd, address, count).await;
+        };
 
         if let Some(stream) = handle.socket_type.as_tcp_stream() {
             let mut buf = vec![0u8; count];
@@ -176,8 +246,8 @@ pub async fn read_0<T: Thread + 'static>(
     "sun/nio/ch/SocketDispatcher.readv0(Ljava/io/FileDescriptor;JI)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 #[expect(clippy::too_many_lines)]
+#[async_method]
 pub async fn readv_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -198,11 +268,9 @@ pub async fn readv_0<T: Thread + 'static>(
 
     // Loop with try_read, dropping guard between retries to avoid deadlock
     loop {
-        let handle = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+        let Some(handle) = vm.socket_handles().get(&fd).await else {
+            return readv_file_descriptor(&*vm, fd, &iov_entries).await;
+        };
 
         if let Some(stream) = handle.socket_type.as_tcp_stream() {
             let mut buf = vec![0u8; total_len];
@@ -325,11 +393,9 @@ pub async fn write_0<T: Thread + 'static>(
 
     // Loop with try_write, dropping guard between retries to avoid deadlock
     loop {
-        let handle = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+        let Some(handle) = vm.socket_handles().get(&fd).await else {
+            return write_file_descriptor(&*vm, fd, &data).await;
+        };
 
         if let Some(stream) = handle.socket_type.as_tcp_stream() {
             match stream.try_write(&data) {
@@ -398,11 +464,9 @@ pub async fn writev_0<T: Thread + 'static>(
 
     // Loop with try_write, dropping guard between retries to avoid deadlock
     loop {
-        let handle = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
+        let Some(handle) = vm.socket_handles().get(&fd).await else {
+            return writev_file_descriptor(&*vm, fd, &data).await;
+        };
 
         if let Some(stream) = handle.socket_type.as_tcp_stream() {
             match stream.try_write(&data) {
@@ -563,6 +627,10 @@ pub async fn writev0_windows_le_v17<T: Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(not(target_family = "wasm"))]
+    use ristretto_types::handles::FileHandle;
+    #[cfg(not(target_family = "wasm"))]
+    use std::io::SeekFrom;
 
     #[tokio::test]
     async fn test_read_0() {
@@ -590,6 +658,73 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = writev_0(thread, Parameters::default()).await;
         assert!(result.is_err());
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[tokio::test]
+    async fn test_file_descriptor_fallback_helpers() -> Result<()> {
+        let (vm, _thread) = crate::test::java17_thread().await?;
+        let temp_file = tempfile::NamedTempFile::new()?;
+        std::fs::write(temp_file.path(), b"abcdef")?;
+        let file = tokio::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(temp_file.path())
+            .await?;
+        let fd = 4242;
+        vm.file_handles()
+            .insert(i64::from(fd), FileHandle::from((file, false)))
+            .await?;
+
+        let address = vm.native_memory().allocate(6);
+        assert_eq!(
+            read_file_descriptor(&*vm, fd, address, 6).await?,
+            Some(Value::Int(6))
+        );
+        assert_eq!(vm.native_memory().read_bytes(address, 6), b"abcdef");
+        assert_eq!(
+            read_file_descriptor(&*vm, fd, address, 1).await?,
+            Some(Value::Int(-1))
+        );
+
+        managed_files::seek(vm.file_handles(), i64::from(fd), SeekFrom::Start(0)).await?;
+        let first = vm.native_memory().allocate(2);
+        let second = vm.native_memory().allocate(4);
+        let entries = [(first, 2), (second, 4)];
+        assert_eq!(
+            readv_file_descriptor(&*vm, fd, &entries).await?,
+            Some(Value::Long(6))
+        );
+        assert_eq!(vm.native_memory().read_bytes(first, 2), b"ab");
+        assert_eq!(vm.native_memory().read_bytes(second, 4), b"cdef");
+        assert_eq!(
+            readv_file_descriptor(&*vm, fd, &entries).await?,
+            Some(Value::Long(-1))
+        );
+        assert_eq!(
+            readv_file_descriptor(&*vm, fd, &[]).await?,
+            Some(Value::Long(0))
+        );
+
+        managed_files::seek(vm.file_handles(), i64::from(fd), SeekFrom::Start(0)).await?;
+        assert_eq!(
+            write_file_descriptor(&*vm, fd, b"123").await?,
+            Some(Value::Int(3))
+        );
+        assert_eq!(
+            writev_file_descriptor(&*vm, fd, b"45").await?,
+            Some(Value::Long(2))
+        );
+        assert_eq!(
+            writev_file_descriptor(&*vm, fd, &[]).await?,
+            Some(Value::Long(0))
+        );
+
+        assert!(read_file_descriptor(&*vm, -1, address, 1).await.is_err());
+        assert!(readv_file_descriptor(&*vm, -1, &entries).await.is_err());
+        assert!(write_file_descriptor(&*vm, -1, b"x").await.is_err());
+        assert!(writev_file_descriptor(&*vm, -1, b"x").await.is_err());
+        Ok(())
     }
 
     #[cfg(target_os = "windows")]

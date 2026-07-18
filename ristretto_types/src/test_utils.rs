@@ -125,17 +125,21 @@ pub(crate) struct MockModuleSystem {
     package_modules: Mutex<AHashMap<String, Value>>,
     boot_unnamed_module: Mutex<Option<Value>>,
     resolved_configuration: ResolvedConfiguration,
-    lightweight_mode: AtomicBool,
 }
 
 impl MockModuleSystem {
     pub(crate) fn new() -> Self {
+        Self::with_resolved_configuration(ResolvedConfiguration::empty())
+    }
+
+    pub(crate) fn with_resolved_configuration(
+        resolved_configuration: ResolvedConfiguration,
+    ) -> Self {
         Self {
             modules: Mutex::new(AHashMap::default()),
             package_modules: Mutex::new(AHashMap::default()),
             boot_unnamed_module: Mutex::new(None),
-            resolved_configuration: ResolvedConfiguration::empty(),
-            lightweight_mode: AtomicBool::new(false),
+            resolved_configuration,
         }
     }
 
@@ -144,10 +148,6 @@ impl MockModuleSystem {
             .lock()
             .expect("package modules lock")
             .insert(package.to_string(), module);
-    }
-
-    pub(crate) fn set_lightweight_mode(&self, value: bool) {
-        self.lightweight_mode.store(value, Ordering::SeqCst);
     }
 }
 
@@ -245,10 +245,6 @@ impl ModuleAccess for MockModuleSystem {
         &self.resolved_configuration
     }
 
-    fn is_lightweight_mode(&self) -> bool {
-        self.lightweight_mode.load(Ordering::SeqCst)
-    }
-
     fn all_defined_packages(&self) -> Vec<String> {
         self.modules
             .lock()
@@ -287,6 +283,13 @@ pub(crate) struct MockVm {
 
 impl MockVm {
     pub(crate) fn new(version: Version) -> Arc<Self> {
+        Self::with_resolved_configuration(version, ResolvedConfiguration::empty())
+    }
+
+    pub(crate) fn with_resolved_configuration(
+        version: Version,
+        resolved_configuration: ResolvedConfiguration,
+    ) -> Arc<Self> {
         Arc::new(Self {
             garbage_collector: GarbageCollector::new(),
             java_home: PathBuf::from("/mock/java/home"),
@@ -297,7 +300,7 @@ impl MockVm {
             next_thread_id: AtomicU64::new(1),
             next_hidden_class_suffix: AtomicU64::new(1),
             next_nio_fd: AtomicUsize::new(3),
-            module_system: MockModuleSystem::new(),
+            module_system: MockModuleSystem::with_resolved_configuration(resolved_configuration),
             class_path: ClassPath::new(Vec::new()),
             stdin: Arc::new(TokioMutex::new(Cursor::new(Vec::new()))),
             stdout: Arc::new(TokioMutex::new(Cursor::new(Vec::new()))),
@@ -342,7 +345,23 @@ impl MockVm {
                 ("coder", "I"),
                 ("hashIsZero", "I"),
             ],
-            "java/lang/Module" => &[("loader", "Ljava/lang/ClassLoader;")],
+            "java/lang/Module" => &[
+                ("name", "Ljava/lang/String;"),
+                ("loader", "Ljava/lang/ClassLoader;"),
+                ("descriptor", "Ljava/lang/module/ModuleDescriptor;"),
+            ],
+            "java/lang/module/ModuleDescriptor" => &[
+                ("name", "Ljava/lang/String;"),
+                ("modifiers", "Ljava/util/Set;"),
+                ("open", "Z"),
+                ("automatic", "Z"),
+                ("requires", "Ljava/util/Set;"),
+                ("exports", "Ljava/util/Set;"),
+                ("opens", "Ljava/util/Set;"),
+                ("uses", "Ljava/util/Set;"),
+                ("provides", "Ljava/util/Map;"),
+                ("packages", "Ljava/util/Set;"),
+            ],
             "java/lang/ClassLoader" | "jdk/internal/loader/BuiltinClassLoader" => {
                 &[("unnamedModule", "Ljava/lang/Module;")]
             }
@@ -756,7 +775,6 @@ async fn test_mock_vm_thread_and_module_system_methods() -> Result<()> {
     let vm = MockVm::new(JAVA_17);
     let thread = MockThread::new(vm.clone());
     let _default_module_system = MockModuleSystem::default();
-    assert!(!MockVm::module_system(vm.as_ref()).is_lightweight_mode());
     assert!(Arc::strong_count(MockVm::garbage_collector(vm.as_ref())) >= 1);
     assert_eq!(thread.id(), 7);
     assert_eq!(thread.vm()?.java_version(), "mock-java");
@@ -914,9 +932,6 @@ async fn test_mock_vm_thread_and_module_system_methods() -> Result<()> {
     module_system.set_module_for_package("pkg", module_value);
     assert!(module_system.get_module_for_package("pkg").is_some());
     assert!(module_system.resolved_configuration().is_empty());
-    assert!(!module_system.is_lightweight_mode());
-    module_system.set_lightweight_mode(true);
-    assert!(module_system.is_lightweight_mode());
     assert_eq!(
         module_system.all_defined_packages(),
         vec!["pkg".to_string()]

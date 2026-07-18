@@ -42,7 +42,7 @@ impl TryFrom<u8> for AttributeType {
 }
 
 /// Represents the attributes of a resource in an Image file.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct Attributes {
     /// The module offset.
     module_offset: usize,
@@ -61,6 +61,36 @@ pub(crate) struct Attributes {
 }
 
 impl Attributes {
+    /// Parses attributes directly from an encoded attributes slice.
+    pub(crate) fn from_slice(bytes: &[u8], mut offset: usize) -> Result<Self> {
+        let mut attributes = Self::default();
+        while offset < bytes.len() {
+            let data = *bytes.get(offset).ok_or(InvalidAttributeData)?;
+            let attribute_type = AttributeType::try_from(data >> 3)?;
+            if attribute_type == AttributeType::End {
+                break;
+            }
+
+            let length = (data as usize & 0x7) + 1;
+            offset = offset.checked_add(1).ok_or(InvalidAttributeData)?;
+            let end = offset.checked_add(length).ok_or(InvalidAttributeData)?;
+            let value_bytes = bytes.get(offset..end).ok_or(InvalidAttributeData)?;
+            let mut buffer = [0u8; 8];
+            let start = buffer
+                .len()
+                .checked_sub(value_bytes.len())
+                .ok_or(InvalidAttributeData)?;
+            buffer
+                .get_mut(start..)
+                .ok_or(InvalidAttributeData)?
+                .copy_from_slice(value_bytes);
+            let value = usize::try_from(u64::from_be_bytes(buffer))?;
+            attributes.apply_attribute(attribute_type, value);
+            offset = end;
+        }
+        Ok(attributes)
+    }
+
     /// Parses attributes from a byte slice.
     pub fn from_bytes(byte_source: &ByteSource, mut offset: usize, limit: usize) -> Result<Self> {
         let mut attributes = Attributes {
@@ -211,6 +241,7 @@ mod tests {
         let bytes = vec![
             9, 1, 191, 18, 7, 214, 127, 26, 7, 215, 162, 32, 1, 43, 6, 224, 205, 170, 57, 3, 160, 0,
         ];
+        assert_eq!(Attributes::from_slice(&bytes, 0)?.module_offset(), 447);
         let byte_source = ByteSource::Bytes(bytes);
         let attributes = Attributes::from_bytes(&byte_source, 0, byte_source.len()?)?;
         assert_eq!(attributes.module_offset(), 447);

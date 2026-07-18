@@ -264,8 +264,13 @@ public class Test {
             System.out.println("  String-Int map: " + readStringIntMap);
             System.out.println("  Person set size: " + readPersonSet.size());
 
+            ArrayList<String> personStrings = new ArrayList<>();
             for (TestPerson person : readPersonSet) {
-                System.out.println("    " + person);
+                personStrings.add(person.toString());
+            }
+            Collections.sort(personStrings);
+            for (String personString : personStrings) {
+                System.out.println("    " + personString);
             }
 
             // Verify equality

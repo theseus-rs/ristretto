@@ -10,6 +10,7 @@ use crate::rust_value::process_values;
 use crate::{Frame, Result, VM, jit};
 #[cfg(not(target_family = "wasm"))]
 use byte_unit::{Byte, UnitType};
+use parking_lot::RwLock as ParkingRwLock;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{FieldAccessFlags, FieldType, JavaStr, MethodAccessFlags};
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
@@ -58,7 +59,7 @@ pub struct Thread {
     thread: Weak<Thread>,
     name: Arc<RwLock<String>>,
     java_object: Arc<RwLock<Value>>,
-    frames: Arc<RwLock<Vec<Arc<Frame>>>>,
+    frames: Arc<ParkingRwLock<Vec<Arc<Frame>>>>,
     /// Tracks class names currently being loaded via a Java classloader on this
     /// thread, preventing infinite recursion when `loadClass()` internally
     /// triggers further class resolution.
@@ -80,7 +81,7 @@ impl Thread {
             thread: thread.clone(),
             name: Arc::new(RwLock::new(name)),
             java_object: Arc::new(RwLock::new(java_object)),
-            frames: Arc::new(RwLock::new(Vec::new())),
+            frames: Arc::new(ParkingRwLock::new(Vec::new())),
             java_cl_loading: Mutex::new(HashSet::new()),
             park_state: ParkState::new(),
         })
@@ -133,8 +134,8 @@ impl Thread {
     /// # Errors
     ///
     /// if the frames cannot be accessed.
-    pub async fn frames(&self) -> Result<Vec<Arc<Frame>>> {
-        let frames = self.frames.read().await;
+    pub fn frames(&self) -> Result<Vec<Arc<Frame>>> {
+        let frames = self.frames.read();
         Ok(frames.clone())
     }
 
@@ -143,8 +144,8 @@ impl Thread {
     /// # Errors
     ///
     /// if the current frame cannot be accessed.
-    pub async fn current_frame(&self) -> Result<Arc<Frame>> {
-        let frames = self.frames.read().await;
+    pub fn current_frame(&self) -> Result<Arc<Frame>> {
+        let frames = self.frames.read();
         let frame = frames.last().ok_or(InternalError("No frame".to_string()))?;
         Ok(frame.clone())
     }
@@ -488,7 +489,7 @@ impl Thread {
         // We must drop the frames lock before invoking any Java methods to avoid
         // deadlocks (execute() modifies frames).
         let java_classloader = {
-            let frames = self.frames.read().await;
+            let frames = self.frames.read();
             let mut found = None;
             for frame in frames.iter().rev() {
                 let class = frame.class();
@@ -889,7 +890,7 @@ impl Thread {
             };
             let frame = Arc::new(Frame::new(&self.thread, class, method));
             {
-                let mut frames = self.frames.write().await;
+                let mut frames = self.frames.write();
                 frames.push(frame.clone());
             }
             let result = jit::execute(&jit_method, &parameters, gc, &vm, &thread, class);
@@ -924,7 +925,7 @@ impl Thread {
             // is necessary because java.lang.Thread (e.g. countStackFrames) needs to be able to
             // access the thread's frames without causing a deadlock.
             {
-                let mut frames = self.frames.write().await;
+                let mut frames = self.frames.write();
                 frames.push(frame.clone());
             }
             let result = frame.execute(parameters).await;
@@ -953,7 +954,7 @@ impl Thread {
         }
 
         if frame_added {
-            let mut frames = self.frames.write().await;
+            let mut frames = self.frames.write();
             frames.pop();
         }
 
@@ -1041,18 +1042,15 @@ impl Thread {
             )));
         };
 
+        let parameters = process_values(self, parameters).await?;
         let mut constructor_parameters = Vec::with_capacity(parameters.len() + 1);
         let object = Value::new_object(
             self.vm()?.garbage_collector(),
             Reference::Object(Object::new(class.clone())?),
         );
-        constructor_parameters.insert(0, object.clone());
-        for parameter in parameters {
-            let value = parameter.to_value(self.vm()?.garbage_collector());
-            constructor_parameters.push(value);
-        }
-        let parameters = process_values(self, &constructor_parameters).await?;
-        Box::pin(self.execute(&class, &constructor, &parameters)).await?;
+        constructor_parameters.push(object.clone());
+        constructor_parameters.extend(parameters);
+        Box::pin(self.execute(&class, &constructor, &constructor_parameters)).await?;
         Ok(object)
     }
 
@@ -1060,7 +1058,7 @@ impl Thread {
     pub(crate) async fn print_stack_trace(&self) {
         let name = self.name().await;
         eprintln!("Thread: {name}");
-        let frames = self.frames.read().await;
+        let frames = self.frames.read();
         for frame in frames.iter().rev() {
             let class = frame.class();
             let class_name = class.name();
@@ -1114,7 +1112,7 @@ impl ristretto_types::Thread for Thread {
     }
 
     fn frames(&self) -> ristretto_types::BoxFuture<'_, Result<Vec<Arc<Frame>>>> {
-        Box::pin(async move { Thread::frames(self).await })
+        Box::pin(std::future::ready(Thread::frames(self)))
     }
 
     fn interrupt(&self) {

@@ -3,12 +3,85 @@
 use crate::module::descriptor::ModuleDescriptor;
 use crate::module::error::{ModuleError, Result};
 use crate::module::reference::{ModuleReference, ModuleSource};
-use ahash::AHashMap;
+use parking_lot::RwLock;
 use ristretto_classfile::ClassFile;
 use ristretto_jimage::Image as JImage;
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, OnceLock};
 use zip::ZipArchive;
+
+type DescriptorCache = HashMap<(PathBuf, String), ModuleDescriptor>;
+
+fn shared_descriptor_cache() -> &'static RwLock<DescriptorCache> {
+    static CACHE: OnceLock<RwLock<DescriptorCache>> = OnceLock::new();
+    CACHE.get_or_init(|| RwLock::new(HashMap::new()))
+}
+
+/// Cache for system module descriptors owned by a class loader.
+#[derive(Debug, Default)]
+pub(crate) struct ModuleDescriptorCache {
+    descriptors: RwLock<DescriptorCache>,
+}
+
+impl ModuleDescriptorCache {
+    /// Reads one module descriptor directly from a jimage without scanning every resource.
+    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    pub(crate) async fn read_descriptor(
+        self: Arc<Self>,
+        jimage_path: &Path,
+        module_name: &str,
+    ) -> Result<ModuleDescriptor> {
+        #[cfg(not(target_family = "wasm"))]
+        {
+            let path = jimage_path.to_path_buf();
+            let module_name = module_name.to_string();
+            tokio::task::spawn_blocking(move || {
+                self.read_descriptor_from_jimage(&path, &module_name)
+            })
+            .await
+            .map_err(|error| ModuleError::IoError(error.to_string()))?
+        }
+
+        #[cfg(target_family = "wasm")]
+        self.read_descriptor_from_jimage(jimage_path, module_name)
+    }
+
+    fn read_descriptor_from_jimage(
+        &self,
+        jimage_path: &Path,
+        module_name: &str,
+    ) -> Result<ModuleDescriptor> {
+        let cache_key = (jimage_path.to_path_buf(), module_name.to_string());
+        if let Some(descriptor) = self.descriptors.read().get(&cache_key) {
+            return Ok(descriptor.clone());
+        }
+
+        if let Some(descriptor) = shared_descriptor_cache().read().get(&cache_key) {
+            self.descriptors
+                .write()
+                .insert(cache_key, descriptor.clone());
+            return Ok(descriptor.clone());
+        }
+
+        let image = JImage::from_file(jimage_path)
+            .map_err(|error| ModuleError::IoError(error.to_string()))?;
+        let resource_name = format!("/{module_name}/module-info.class");
+        let resource = image
+            .get_resource(&resource_name)
+            .map_err(|error| ModuleError::IoError(error.to_string()))?;
+        let class_file = ClassFile::from_bytes(resource.data())
+            .map_err(|error| ModuleError::DescriptorParseError(error.to_string()))?;
+        let descriptor = ModuleDescriptor::from_class_file(&class_file)?;
+        self.descriptors
+            .write()
+            .insert(cache_key.clone(), descriptor.clone());
+        shared_descriptor_cache()
+            .write()
+            .insert(cache_key, descriptor.clone());
+        Ok(descriptor)
+    }
+}
 
 /// A finder for modules in a specific location or set of locations.
 pub trait ModuleFinder: Send + Sync {
@@ -115,88 +188,24 @@ impl SystemModuleFinder {
     fn load_from_jimage(jimage_path: &Path) -> Result<HashMap<String, ModuleReference>> {
         let image =
             JImage::from_file(jimage_path).map_err(|e| ModuleError::IoError(e.to_string()))?;
+        let module_names = image
+            .module_names()
+            .map_err(|e| ModuleError::IoError(e.to_string()))?;
+        let mut modules = HashMap::with_capacity(module_names.len());
 
-        let mut module_packages: HashMap<String, BTreeSet<String>> = HashMap::new();
-        let mut module_infos: HashMap<String, Vec<u8>> = HashMap::new();
-
-        // Single pass: collect packages and module-info.class data simultaneously
-        for resource in &image {
-            let resource = resource.map_err(|e| ModuleError::IoError(e.to_string()))?;
-            let module_name = resource.module().to_string();
-            if module_name.is_empty() {
-                continue;
-            }
-
-            if resource.extension() == "class" {
-                if resource.base() == "module-info" {
-                    module_infos.insert(module_name, resource.data().to_vec());
-                } else {
-                    let package = resource.parent().to_string();
-                    module_packages
-                        .entry(module_name)
-                        .or_default()
-                        .insert(package);
-                }
-            }
-        }
-
-        // Build module references from collected data
-        let mut modules: HashMap<String, ModuleReference> =
-            HashMap::with_capacity(module_infos.len());
-
-        for (module_name, data) in &module_infos {
-            let class_file = ClassFile::from_bytes(data)
+        for module_name in module_names {
+            let resource_name = format!("/{module_name}/module-info.class");
+            let resource = image
+                .get_resource(&resource_name)
+                .map_err(|e| ModuleError::IoError(format!("{resource_name}: {e}")))?;
+            let class_file = ClassFile::from_bytes(resource.data())
                 .map_err(|e| ModuleError::DescriptorParseError(e.to_string()))?;
-
-            let mut descriptor = ModuleDescriptor::from_class_file(&class_file)?;
-
-            // Add packages discovered from class files
-            if let Some(packages) = module_packages.get(module_name) {
-                for pkg in packages {
-                    descriptor.packages.insert(pkg.clone());
-                }
-            }
-
+            let descriptor = ModuleDescriptor::from_class_file(&class_file)?;
             let reference = ModuleReference::new(descriptor, ModuleSource::System, None);
-            modules.insert(module_name.clone(), reference);
+            modules.insert(module_name, reference);
         }
 
         Ok(modules)
-    }
-
-    /// Extracts only the package-to-module mapping from a jimage file.
-    /// This is a lightweight alternative to `load_from_jimage` that skips parsing
-    /// module-info.class files, making it much faster for classpath applications
-    /// that only need module name assignment during class loading.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the jimage cannot be read.
-    pub fn package_map_from_jimage(jimage_path: &Path) -> Result<AHashMap<String, String>> {
-        let image =
-            JImage::from_file(jimage_path).map_err(|e| ModuleError::IoError(e.to_string()))?;
-
-        let mut package_to_module: AHashMap<String, String> = AHashMap::default();
-
-        for resource in &image {
-            let resource = resource.map_err(|e| ModuleError::IoError(e.to_string()))?;
-            let module_name = resource.module();
-            if module_name.is_empty() {
-                continue;
-            }
-
-            if resource.extension() == "class" && resource.base() != "module-info" {
-                let package = resource.parent();
-                if !package.is_empty() {
-                    // Use entry API to avoid duplicate insertions
-                    package_to_module
-                        .entry(package.to_string())
-                        .or_insert_with(|| module_name.to_string());
-                }
-            }
-        }
-
-        Ok(package_to_module)
     }
 
     /// Creates a finder with pre-built module references.
@@ -473,9 +482,65 @@ impl ModuleFinder for EmptyModuleFinder {
     }
 }
 
+fn is_package_path(path: &str) -> bool {
+    !path.is_empty() && path.split('/').all(is_package_segment)
+}
+
+fn is_package_segment(segment: &str) -> bool {
+    let mut chars = segment.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    (first == '_' || first == '$' || first.is_alphabetic())
+        && chars.all(|character| {
+            character == '_'
+                || character == '$'
+                || character.is_alphabetic()
+                || character.is_ascii_digit()
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(not(target_family = "wasm"))]
+    #[tokio::test]
+    async fn test_read_system_module_descriptor() -> Result<()> {
+        let (java_home, _java_version, _class_loader) = crate::runtime::default_class_loader()
+            .await
+            .map_err(|error| ModuleError::IoError(error.to_string()))?;
+        let jimage_path = java_home.join("lib").join("modules");
+        let descriptor_cache = Arc::new(ModuleDescriptorCache::default());
+        let descriptor = Arc::clone(&descriptor_cache)
+            .read_descriptor(&jimage_path, "java.base")
+            .await?;
+        assert_eq!("java.base", descriptor.name);
+        assert!(descriptor.packages.contains("java/lang"));
+        let cache_key = (jimage_path.clone(), "java.base".to_string());
+        assert_eq!(
+            Some(&descriptor),
+            descriptor_cache.descriptors.read().get(&cache_key)
+        );
+        let cached_descriptor = Arc::clone(&descriptor_cache)
+            .read_descriptor(&jimage_path, "java.base")
+            .await?;
+        assert_eq!(descriptor, cached_descriptor);
+        Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[tokio::test]
+    async fn test_system_module_finder() -> Result<()> {
+        let (java_home, _java_version, _class_loader) = crate::runtime::default_class_loader()
+            .await
+            .map_err(|error| ModuleError::IoError(error.to_string()))?;
+        let finder = SystemModuleFinder::new(&java_home.join("lib").join("modules")).await?;
+        let java_base = finder.find("java.base").expect("java.base module");
+        assert!(java_base.descriptor().packages.contains("java/lang"));
+        assert!(finder.find_all().len() > 1);
+        Ok(())
+    }
 
     #[test]
     fn test_empty_finder() {

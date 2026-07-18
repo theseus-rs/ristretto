@@ -66,6 +66,23 @@ impl ClassPathEntry {
         }
     }
 
+    /// Read a resource from the class path entry.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    pub async fn read_resource<S: AsRef<str>>(
+        &self,
+        module: Option<&str>,
+        name: S,
+    ) -> Result<Option<Vec<u8>>> {
+        match self {
+            ClassPathEntry::Directory(directory) => directory.read_resource(name).await,
+            ClassPathEntry::Image(image) => image.read_resource(module, name).await,
+            ClassPathEntry::Jar(jar) => jar.read_resource(name).await,
+        }
+    }
+
     /// Get the class names in the class path entry.
     ///
     /// # Errors
@@ -124,6 +141,40 @@ mod tests {
             classes_directory.to_string_lossy()
         );
         assert_eq!("HelloWorld", class_file.class_name()?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_read_resource_entries() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_directory = cargo_manifest.join("..").join("classes");
+        let directory = ClassPathEntry::new(classes_directory);
+        assert!(
+            directory
+                .read_resource(None, "HelloWorld.class")
+                .await?
+                .is_some()
+        );
+
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
+        let jar = ClassPathEntry::new(classes_jar);
+        assert!(jar.read_resource(None, "HelloWorld.class").await?.is_some());
+
+        let (java_home, _java_version, _class_loader) =
+            crate::runtime::default_class_loader().await?;
+        let image_path = java_home.join("lib").join("modules");
+        if image_path.exists() {
+            let image = ClassPathEntry::Image(Image::new(image_path)?);
+            assert!(
+                image
+                    .read_resource(Some("java.base"), "java/lang/Object.class")
+                    .await?
+                    .is_some()
+            );
+        }
         Ok(())
     }
 

@@ -6,6 +6,14 @@ use std::sync::Arc;
 /// Trait for converting Rust values to `Value`.
 pub trait RustValue: Debug {
     fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value;
+
+    /// Return the underlying Rust string when this value needs conversion to a Java string.
+    ///
+    /// Most values return `None`, allowing the VM's normal invocation path to avoid inspecting
+    /// object arguments just to distinguish Rust strings from Java objects.
+    fn as_rust_string(&self) -> Option<&str> {
+        None
+    }
 }
 
 impl RustValue for bool {
@@ -112,11 +120,19 @@ impl RustValue for &str {
                 Value::from_object(collector, object)
             })
     }
+
+    fn as_rust_string(&self) -> Option<&str> {
+        Some(self)
+    }
 }
 
 impl RustValue for String {
     fn to_value(&self, collector: &Arc<GarbageCollector>) -> Value {
         self.as_str().to_value(collector)
+    }
+
+    fn as_rust_string(&self) -> Option<&str> {
+        Some(self)
     }
 }
 
@@ -311,6 +327,7 @@ mod tests {
     #[test]
     fn test_str() {
         let collector = GarbageCollector::new();
+        assert_eq!(Some("foo"), "foo".as_rust_string());
         let value = "foo".to_value(&collector);
         let object = value.as_object_ref().expect("object ref");
         let class_name = object.class().name();
@@ -320,7 +337,9 @@ mod tests {
     #[test]
     fn test_string() {
         let collector = GarbageCollector::new();
-        let value = "foo".to_string().to_value(&collector);
+        let string = "foo".to_string();
+        assert_eq!(Some("foo"), string.as_rust_string());
+        let value = string.to_value(&collector);
         let object = value.as_object_ref().expect("object ref");
         let class_name = object.class().name();
         assert_eq!("str:foo", class_name);
@@ -330,6 +349,7 @@ mod tests {
     fn test_value() {
         let collector = GarbageCollector::new();
         let value = Value::from(42);
+        assert_eq!(None, value.as_rust_string());
         assert_eq!(value.to_value(&collector), value);
     }
 

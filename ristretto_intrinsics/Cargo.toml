@@ -53,7 +53,18 @@ core-foundation-sys = { workspace = true }
 
 [target.'cfg(target_family = "windows")'.dependencies]
 os_pipe = { workspace = true }
-windows-sys = { workspace = true, features = ["Win32_Globalization"] }
+windows-sys = { workspace = true, features = [
+    "Win32_Globalization",
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_IO",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_System_WindowsProgramming",
+] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 tokio = { workspace = true }

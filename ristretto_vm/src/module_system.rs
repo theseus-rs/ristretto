@@ -29,7 +29,9 @@ use ristretto_classloader::module::{
 };
 use ristretto_gc::sync::RwLock;
 use ristretto_types::ModuleAccess;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, OnceLock};
 use tracing::debug;
 
 // Re-export AccessCheckResult from classloader; this is the canonical location
@@ -47,6 +49,27 @@ pub const ALL_MODULES: &str = "ALL";
 /// The `java.base` module name; implicitly readable by all modules.
 pub const JAVA_BASE_MODULE: &str = "java.base";
 
+type ResolvedConfigurationCell = tokio::sync::OnceCell<Arc<ResolvedConfiguration>>;
+type ResolvedConfigurationCache = RwLock<HashMap<PathBuf, Arc<ResolvedConfigurationCell>>>;
+
+fn resolved_configuration_cache() -> &'static ResolvedConfigurationCache {
+    static CACHE: OnceLock<ResolvedConfigurationCache> = OnceLock::new();
+    CACHE.get_or_init(|| RwLock::new(HashMap::new()))
+}
+
+fn resolved_configuration_cell(jimage_path: &Path) -> Arc<ResolvedConfigurationCell> {
+    if let Some(cell) = resolved_configuration_cache().read().get(jimage_path) {
+        return Arc::clone(cell);
+    }
+
+    let mut cache = resolved_configuration_cache().write();
+    Arc::clone(
+        cache
+            .entry(jimage_path.to_path_buf())
+            .or_insert_with(|| Arc::new(ResolvedConfigurationCell::new())),
+    )
+}
+
 /// Complete module system combining static configuration and dynamic runtime state.
 ///
 /// This structure provides:
@@ -58,15 +81,7 @@ pub const JAVA_BASE_MODULE: &str = "java.base";
 #[derive(Debug)]
 pub struct ModuleSystem {
     /// Static module configuration from resolution at startup.
-    resolved_configuration: ResolvedConfiguration,
-
-    /// Java home path, stored for lazy full resolution when needed.
-    java_home: Option<PathBuf>,
-
-    /// Whether the lightweight fast path was used and lazy resolution should NOT be done.
-    /// When true, `ModuleBootstrap.boot()` will create an empty layer instead of
-    /// performing expensive full resolution. This is set for simple classpath apps.
-    lightweight_mode: bool,
+    resolved_configuration: Arc<ResolvedConfiguration>,
 
     /// Dynamic exports: `source_module` -> (package -> set of target modules).
     /// An entry means the package is exported from `source_module` to the targets.
@@ -100,11 +115,6 @@ impl ModuleSystem {
     /// 2. Loads modules from the module path (if specified)
     /// 3. Resolves the module graph starting from root modules
     /// 4. Applies command-line overrides (--add-reads, --add-exports, --add-opens)
-    ///
-    /// For simple classpath-based applications (no module path, no main module), this skips
-    /// expensive module resolution and uses a fast path that only builds the package-to-module
-    /// mapping for class loading.
-    ///
     /// # Errors
     ///
     /// Returns an error if module resolution fails.
@@ -122,38 +132,43 @@ impl ModuleSystem {
         if java_major_version <= 8 {
             debug!("Java 8 or earlier; module system disabled");
             module_system.resolved_configuration =
-                Self::create_fallback_configuration(configuration);
+                Arc::new(Self::create_fallback_configuration(configuration));
             return Ok(module_system);
         }
 
-        // Fast path: Skip expensive module resolution for simple classpath applications
-        // that don't use JPMS features. We still build the package-to-module mapping so
-        // that classes get correct module names assigned during loading.
-        // Full resolution can be triggered lazily by ModuleBootstrap.boot() if needed.
-        if Self::is_simple_classpath_app(configuration) {
-            debug!("Simple classpath application; using lightweight module configuration");
+        // A classpath VM has the same immutable boot module graph as every other classpath VM
+        // using this runtime image. Resolve it once per process, while preserving the complete
+        // JPMS reads/exports/opens information required by access checks.
+        if Self::is_cacheable_classpath_app(configuration) {
             let jimage_path = java_home.join("lib").join("modules");
-            if jimage_path.exists() {
-                module_system.resolved_configuration =
-                    Self::create_lightweight_configuration(configuration, &jimage_path).await;
-                module_system.java_home = Some(java_home.to_path_buf());
-                module_system.lightweight_mode = true;
-            } else {
-                module_system.resolved_configuration =
-                    Self::create_fallback_configuration(configuration);
-            }
+            let cell = resolved_configuration_cell(&jimage_path);
+            module_system.resolved_configuration = Arc::clone(
+                cell.get_or_init(|| async {
+                    Arc::new(Self::resolve_configuration(configuration, java_home, &resolver).await)
+                })
+                .await,
+            );
             return Ok(module_system);
         }
 
+        module_system.resolved_configuration =
+            Arc::new(Self::resolve_configuration(configuration, java_home, &resolver).await);
+
+        Ok(module_system)
+    }
+
+    async fn resolve_configuration(
+        configuration: &Configuration,
+        java_home: &Path,
+        resolver: &Resolver,
+    ) -> ResolvedConfiguration {
         // Build the module finder chain (always load system modules for Java 9+)
         let finder_chain = Self::build_finder_chain(configuration, java_home).await;
 
         // Check if we have a valid finder chain (needs system modules)
         if finder_chain.find("java.base").is_none() {
             debug!("No system modules found, using fallback configuration");
-            module_system.resolved_configuration =
-                Self::create_fallback_configuration(configuration);
-            return Ok(module_system);
+            return Self::create_fallback_configuration(configuration);
         }
 
         // Determine root modules for resolution
@@ -162,8 +177,7 @@ impl ModuleSystem {
         debug!("Resolving modules with roots: {root_modules:?}");
 
         // Resolve the module graph
-        module_system.resolved_configuration = match resolver.resolve(&root_modules, &finder_chain)
-        {
+        match resolver.resolve(&root_modules, &finder_chain) {
             Ok(config) => {
                 debug!(
                     "Resolved {} modules with {} packages",
@@ -179,19 +193,20 @@ impl ModuleSystem {
                 debug!("Module resolution failed: {error}, using fallback configuration");
                 Self::create_fallback_configuration(configuration)
             }
-        };
-
-        Ok(module_system)
+        }
     }
 
-    /// Returns true if this is a simple classpath application that doesn't need
-    /// full JPMS module resolution.
-    fn is_simple_classpath_app(configuration: &Configuration) -> bool {
+    /// Returns true when the boot module graph is determined entirely by the runtime image.
+    fn is_cacheable_classpath_app(configuration: &Configuration) -> bool {
         configuration.module_path().is_empty()
             && configuration.main_module().is_none()
             && configuration.limit_modules().is_empty()
             && configuration.upgrade_module_path().is_empty()
             && configuration.add_modules().is_empty()
+            && configuration.add_reads().is_empty()
+            && configuration.add_exports().is_empty()
+            && configuration.add_opens().is_empty()
+            && configuration.patch_modules().is_empty()
     }
 
     /// Creates a new empty module system with no static configuration.
@@ -201,9 +216,7 @@ impl ModuleSystem {
     #[must_use]
     pub fn empty() -> Self {
         Self {
-            resolved_configuration: ResolvedConfiguration::empty(),
-            java_home: None,
-            lightweight_mode: false,
+            resolved_configuration: Arc::new(ResolvedConfiguration::empty()),
             exports: RwLock::new(AHashMap::default()),
             opens: RwLock::new(AHashMap::default()),
             reads: RwLock::new(AHashMap::default()),
@@ -215,21 +228,13 @@ impl ModuleSystem {
     /// Returns the resolved configuration.
     #[must_use]
     pub fn resolved_configuration(&self) -> &ResolvedConfiguration {
-        &self.resolved_configuration
+        self.resolved_configuration.as_ref()
     }
 
-    /// Returns true if the module system is using lightweight mode (fast path).
-    /// In this mode, `ModuleBootstrap.boot()` should create an empty boot layer
-    /// instead of performing expensive full resolution.
+    /// Returns a shared reference to the resolved configuration.
     #[must_use]
-    pub fn is_lightweight_mode(&self) -> bool {
-        self.lightweight_mode
-    }
-
-    /// Returns the java home path if stored for lazy resolution.
-    #[must_use]
-    pub fn java_home_path(&self) -> Option<&Path> {
-        self.java_home.as_deref()
+    pub fn resolved_configuration_arc(&self) -> Arc<ResolvedConfiguration> {
+        Arc::clone(&self.resolved_configuration)
     }
 
     /// Builds the resolver with command-line overrides and populates initial dynamic state.
@@ -522,72 +527,6 @@ impl ModuleSystem {
             add_exports,
             add_opens,
         )
-    }
-
-    /// Creates a lightweight configuration by scanning jimage for package-to-module mapping
-    /// only, without full module resolution. This is much faster than full resolution.
-    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
-    async fn create_lightweight_configuration(
-        configuration: &Configuration,
-        jimage_path: &Path,
-    ) -> ResolvedConfiguration {
-        let path = jimage_path.to_path_buf();
-        let package_map = {
-            #[cfg(not(target_family = "wasm"))]
-            {
-                tokio::task::spawn_blocking(move || {
-                    SystemModuleFinder::package_map_from_jimage(&path)
-                })
-                .await
-                .ok()
-                .and_then(std::result::Result::ok)
-            }
-            #[cfg(target_family = "wasm")]
-            {
-                SystemModuleFinder::package_map_from_jimage(&path).ok()
-            }
-        };
-
-        if let Some(package_to_module) = package_map {
-            debug!(
-                "Loaded {} package-to-module mappings from jimage (lightweight)",
-                package_to_module.len()
-            );
-
-            // Apply any command-line overrides
-            let add_exports: AHashMap<String, AHashMap<String, AHashSet<String>>> = configuration
-                .add_exports()
-                .iter()
-                .fold(AHashMap::default(), |mut acc, export| {
-                    acc.entry(export.source.clone())
-                        .or_default()
-                        .entry(export.package.clone())
-                        .or_default()
-                        .insert(export.target.clone());
-                    acc
-                });
-
-            let add_opens: AHashMap<String, AHashMap<String, AHashSet<String>>> = configuration
-                .add_opens()
-                .iter()
-                .fold(AHashMap::default(), |mut acc, opens| {
-                    acc.entry(opens.source.clone())
-                        .or_default()
-                        .entry(opens.package.clone())
-                        .or_default()
-                        .insert(opens.target.clone());
-                    acc
-                });
-
-            ResolvedConfiguration::new(
-                std::collections::BTreeMap::new(),
-                package_to_module,
-                add_exports,
-                add_opens,
-            )
-        } else {
-            Self::create_fallback_configuration(configuration)
-        }
     }
 
     /// Checks if access from one module to a class in another module is allowed.
@@ -1251,8 +1190,8 @@ impl ModuleAccess for ModuleSystem {
         ModuleSystem::resolved_configuration(self)
     }
 
-    fn is_lightweight_mode(&self) -> bool {
-        ModuleSystem::is_lightweight_mode(self)
+    fn resolved_configuration_arc(&self) -> Arc<ResolvedConfiguration> {
+        ModuleSystem::resolved_configuration_arc(self)
     }
 
     fn all_defined_packages(&self) -> Vec<String> {
@@ -1278,6 +1217,24 @@ mod tests {
         assert!(!module_system.is_exported("java.base", "java/lang", "my.module"));
         assert!(!module_system.is_opened("java.base", "java/lang", "my.module"));
         assert!(!module_system.can_read("my.module", "java.sql"));
+    }
+
+    // WASIp2 does not implement `std::env::temp_dir`, which `tempfile::tempdir` requires.
+    #[cfg(not(target_os = "wasi"))]
+    #[tokio::test]
+    async fn test_classpath_configuration_is_reused() {
+        let configuration = ConfigurationBuilder::new().build().unwrap();
+        let java_home = tempfile::tempdir().unwrap();
+        let first = ModuleSystem::new(&configuration, java_home.path(), 21)
+            .await
+            .unwrap();
+        let second = ModuleSystem::new(&configuration, java_home.path(), 21)
+            .await
+            .unwrap();
+        assert!(Arc::ptr_eq(
+            &first.resolved_configuration_arc(),
+            &second.resolved_configuration_arc()
+        ));
     }
 
     #[test]
@@ -1797,6 +1754,9 @@ mod tests {
         let module_system = ModuleSystem::empty();
         let config = module_system.resolved_configuration();
         assert!(config.is_empty());
+        let first = module_system.resolved_configuration_arc();
+        let second = module_system.resolved_configuration_arc();
+        assert!(Arc::ptr_eq(&first, &second));
     }
 
     #[tokio::test]

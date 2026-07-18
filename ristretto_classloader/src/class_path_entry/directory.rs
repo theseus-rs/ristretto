@@ -66,6 +66,33 @@ impl Directory {
         Ok(class_file)
     }
 
+    /// Read a resource from the directory.
+    ///
+    /// # Errors
+    ///
+    /// if the resource cannot be read.
+    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    pub async fn read_resource<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
+        let name = name.as_ref();
+        let path = self.path.join(name);
+
+        #[cfg(not(target_family = "wasm"))]
+        let bytes = match tokio::fs::read(path).await {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(crate::Error::IoError(error)),
+        };
+
+        #[cfg(target_family = "wasm")]
+        let bytes = match std::fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(crate::Error::IoError(error)),
+        };
+
+        Ok(Some(bytes))
+    }
+
     /// Get the class names in the directory.
     ///
     /// # Errors
@@ -153,6 +180,16 @@ mod tests {
         let directory = Directory::new(classes_directory);
         let result = directory.read_class("Foo").await;
         assert!(matches!(result, Err(ClassNotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_read_resource() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_directory = cargo_manifest.join("..").join("classes");
+        let directory = Directory::new(classes_directory);
+        assert!(directory.read_resource("HelloWorld.class").await?.is_some());
+        assert!(directory.read_resource("missing.resource").await?.is_none());
+        Ok(())
     }
 
     #[tokio::test]

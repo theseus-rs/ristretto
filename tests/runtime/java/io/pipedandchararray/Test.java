@@ -79,23 +79,27 @@ public class Test {
             "Message 3: Piped streams work across threads",
             "Message 4: Final message"
         };
+        final String[] readMessages = new String[messages.length];
+        final int[] messageCount = {0};
+        final boolean[] writerCompleted = {false};
+        final boolean[] readerCompleted = {false};
+        final String[] writerError = {null};
+        final String[] readerError = {null};
 
         // Writer thread
         Thread writerThread = new Thread(new Runnable() {
             public void run() {
                 try {
-                    System.out.println("Writer thread started");
                     for (String message : messages) {
                         pos.write(message.getBytes());
                         pos.write('\n');
                         pos.flush();
-                        System.out.println("Wrote: " + message);
                         Thread.sleep(100); // Small delay
                     }
                     pos.close();
-                    System.out.println("Writer thread finished");
+                    writerCompleted[0] = true;
                 } catch (Exception e) {
-                    System.out.println("Writer thread error: " + e.getMessage());
+                    writerError[0] = e.getMessage();
                 }
             }
         });
@@ -104,18 +108,18 @@ public class Test {
         Thread readerThread = new Thread(new Runnable() {
             public void run() {
                 try {
-                    System.out.println("Reader thread started");
                     BufferedReader br = new BufferedReader(new InputStreamReader(pis));
                     String line;
-                    int messageCount = 0;
                     while ((line = br.readLine()) != null) {
-                        System.out.println("Read: " + line);
-                        messageCount++;
+                        if (messageCount[0] < readMessages.length) {
+                            readMessages[messageCount[0]] = line;
+                        }
+                        messageCount[0]++;
                     }
-                    System.out.println("Reader thread finished, read " + messageCount + " messages");
                     br.close();
+                    readerCompleted[0] = true;
                 } catch (Exception e) {
-                    System.out.println("Reader thread error: " + e.getMessage());
+                    readerError[0] = e.getMessage();
                 }
             }
         });
@@ -128,6 +132,18 @@ public class Test {
         writerThread.join(5000); // 5 second timeout
         readerThread.join(5000);
 
+        System.out.println("Writer thread completed: " + writerCompleted[0]);
+        System.out.println("Reader thread completed: " + readerCompleted[0]);
+        System.out.println("Read message count: " + messageCount[0]);
+        for (int i = 0; i < messages.length; i++) {
+            System.out.println("Message " + (i + 1) + " transferred: " + messages[i].equals(readMessages[i]));
+        }
+        if (writerError[0] != null) {
+            System.out.println("Writer thread error: " + writerError[0]);
+        }
+        if (readerError[0] != null) {
+            System.out.println("Reader thread error: " + readerError[0]);
+        }
         System.out.println("Threaded piped streams test completed");
     }
 

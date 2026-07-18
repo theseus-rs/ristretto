@@ -304,7 +304,6 @@ mod tests {
             vm_ref.invoke_main(&["arg"]).await?.expect("main result"),
             Value::Int(0)
         );
-        assert!(!vm_ref.module_system().is_lightweight_mode());
         assert!(vm_ref.class_path().iter().next().is_none());
         assert_eq!(vm_ref.verify_mode(), VerifyMode::Remote);
         assert!(!vm_ref.preview_features());

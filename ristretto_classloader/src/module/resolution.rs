@@ -541,62 +541,6 @@ impl ResolvedConfiguration {
             add_opens,
         }
     }
-
-    /// Creates a configuration with only a package-to-module mapping (no resolved modules).
-    /// This is used as a lightweight configuration for classpath applications that need
-    /// module name assignment during class loading but don't require full JPMS resolution.
-    #[must_use]
-    pub fn from_package_map(package_to_module: AHashMap<String, String>) -> Self {
-        Self {
-            resolved: BTreeMap::new(),
-            package_to_module,
-            add_exports: AHashMap::default(),
-            add_opens: AHashMap::default(),
-        }
-    }
-
-    /// Performs full module resolution from a jimage file.
-    ///
-    /// This resolves all system modules with unqualified exports as root modules,
-    /// producing a fully populated configuration suitable for creating a boot layer.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the jimage cannot be read or resolution fails.
-    pub async fn resolve_from_jimage(jimage_path: &std::path::Path) -> Result<Self> {
-        use crate::module::finder::{ModuleFinder, ModuleFinderChain, SystemModuleFinder};
-
-        let system_finder = SystemModuleFinder::new(jimage_path).await?;
-        let mut finder_chain = ModuleFinderChain::new();
-        finder_chain.add(Box::new(system_finder));
-
-        if finder_chain.find("java.base").is_none() {
-            return Ok(Self::empty());
-        }
-
-        // Determine default root modules (all modules with unqualified exports)
-        let mut root_modules = vec!["java.base".to_string()];
-        for reference in finder_chain.find_all() {
-            let name = reference.name().to_string();
-            if root_modules.contains(&name) || name.starts_with("jdk.incubator.") {
-                continue;
-            }
-            let has_unqualified_exports = reference
-                .descriptor()
-                .exports
-                .iter()
-                .any(|e| e.targets.is_none());
-            if has_unqualified_exports {
-                root_modules.push(name);
-            }
-        }
-
-        let resolver = Resolver::new();
-        match resolver.resolve(&root_modules, &finder_chain) {
-            Ok(config) => Ok(config),
-            Err(_) => Ok(Self::empty()),
-        }
-    }
 }
 
 impl ResolvedConfiguration {
@@ -627,6 +571,21 @@ impl ResolvedConfiguration {
     #[must_use]
     pub fn find_module_for_package(&self, package: &str) -> Option<&str> {
         self.package_to_module.get(package).map(String::as_str)
+    }
+
+    /// Returns all packages belonging to the given module.
+    #[must_use]
+    pub fn packages_for_module(&self, module_name: &str) -> Vec<&str> {
+        self.package_to_module
+            .iter()
+            .filter_map(|(package, module)| {
+                if module == module_name {
+                    Some(package.as_str())
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     /// Returns true if module `from` reads module `to`.

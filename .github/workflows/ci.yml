@@ -109,7 +109,7 @@ jobs:
           cargo clippy --workspace --target ${{ matrix.target }} -- -D warnings
 
       - name: Run clippy
-        if: ${{ matrix.platform != 'wasm32-unknown' && matrix.platform != 'linux-riscv64' && matrix.platform != 'linux-s390x' && matrix.platform != 'wasm32-wasi' }}
+        if: ${{ matrix.platform == 'linux-x64' || matrix.platform == 'macos-arm' || matrix.platform == 'windows-arm' }}
         env:
           CARGO_TERM_COLOR: always
         run: |
@@ -150,17 +150,6 @@ jobs:
         run: |
           cross build --workspace --target ${{ matrix.target }}
 
-      - name: Build
-        if: ${{ matrix.platform != 'wasm32-unknown' && matrix.platform != 'wasm32-wasi' && matrix.platform != 'linux-riscv64' && matrix.platform != 'linux-s390x' }}
-        env:
-          CARGO_TERM_COLOR: always
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          RUST_BACKTRACE: 1
-          RUST_LOG: info
-        run: |
-          rustup target install ${{ matrix.target }}
-          cargo build --workspace --target ${{ matrix.target }}
-
       - name: Install wasmtime
         if: ${{ matrix.platform == 'wasm32-wasi' }}
         uses: taiki-e/install-action@v2
@@ -180,14 +169,56 @@ jobs:
           cargo test --workspace --tests --exclude ristretto_classfile --target ${{ matrix.target }} -- --test-threads=1
 
       - name: Tests
-        if: ${{ !startsWith(matrix.platform, 'wasm32') && matrix.platform != 'linux-riscv64' && matrix.platform != 'linux-s390x' && matrix.platform != 'macos-arm' }}
+        if: ${{ !startsWith(matrix.platform, 'wasm32') && matrix.platform != 'linux-arm' && matrix.platform != 'linux-riscv64' && matrix.platform != 'linux-s390x' && matrix.platform != 'macos-arm' && matrix.platform != 'macos-x64' }}
+        env:
+          CARGO_TERM_COLOR: always
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RISTRETTO_COMPATIBILITY_THREADS: "4"
+          RUST_BACKTRACE: 1
+          RUST_LOG: info
+        run: |
+          cargo test --profile release-tests --workspace --all-features
+
+      # linux-x64 provides the full Linux compatibility pass. Avoid compiling the rest of the
+      # Linux ARM suite with expensive full LTO or running the same 786 compatibility cases twice.
+      - name: Tests
+        if: ${{ matrix.platform == 'linux-arm' }}
+        env:
+          CARGO_TERM_COLOR: always
+          CARGO_PROFILE_RELEASE_TESTS_CODEGEN_UNITS: "256"
+          CARGO_PROFILE_RELEASE_TESTS_LTO: "false"
+          CARGO_PROFILE_RELEASE_TESTS_OPT_LEVEL: "2"
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RUST_BACKTRACE: 1
+          RUST_LOG: info
+        run: |
+          cargo test --profile release-tests --workspace --all-features -- --skip compatibility_tests
+
+      # The runtime download tests exercise shared external services. Run them once instead of
+      # concurrently on every matrix target, which can trigger GitHub's secondary rate limit.
+      - name: Network tests
+        if: ${{ matrix.platform == 'linux-x64' }}
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
           RUST_BACKTRACE: 1
           RUST_LOG: info
         run: |
-          cargo test --profile release-tests --workspace --all-features
+          cargo test --profile release-tests -p ristretto_classloader runtime::util::tests -- --ignored
+          cargo test --profile release-tests -p runtime_class_loader -- --ignored
+
+      - name: Tests
+        if: ${{ matrix.platform == 'macos-x64' }}
+        env:
+          CARGO_TERM_COLOR: always
+          CARGO_PROFILE_RELEASE_TESTS_CODEGEN_UNITS: "256"
+          CARGO_PROFILE_RELEASE_TESTS_LTO: "false"
+          CARGO_PROFILE_RELEASE_TESTS_OPT_LEVEL: "2"
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RUST_BACKTRACE: 1
+          RUST_LOG: info
+        run: |
+          cargo test --profile release-tests --workspace --all-features -- --skip compatibility_tests
 
       - name: Tests
         if: ${{ matrix.platform == 'linux-riscv64' }}
@@ -229,6 +260,7 @@ jobs:
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          RISTRETTO_COMPATIBILITY_THREADS: "4"
           RUST_BACKTRACE: 1
           RUST_LOG: info
           RUST_LOG_SPAN_EVENTS: full

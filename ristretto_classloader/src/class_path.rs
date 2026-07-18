@@ -80,6 +80,25 @@ impl ClassPath {
         Err(ClassNotFound(name.to_string()))
     }
 
+    /// Read a resource from the class path.
+    ///
+    /// # Errors
+    ///
+    /// if a matching resource cannot be read.
+    pub async fn read_resource<S: AsRef<str>>(
+        &self,
+        module: Option<&str>,
+        name: S,
+    ) -> Result<Option<Vec<u8>>> {
+        let name = name.as_ref();
+        for class_path_entry in self.iter() {
+            if let Some(bytes) = class_path_entry.read_resource(module, name).await? {
+                return Ok(Some(bytes));
+            }
+        }
+        Ok(None)
+    }
+
     /// Get the class names in the class path.
     ///
     /// # Errors
@@ -221,6 +240,30 @@ mod tests {
                 class_file.class_name()?
             );
         }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_read_resource() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let missing_directory = cargo_manifest.join("missing");
+        let classes_directory = cargo_manifest.join("..").join("classes");
+        let class_path = ClassPath::new(vec![
+            ClassPathEntry::new(missing_directory),
+            ClassPathEntry::new(classes_directory),
+        ]);
+        assert!(
+            class_path
+                .read_resource(None, "HelloWorld.class")
+                .await?
+                .is_some()
+        );
+        assert!(
+            class_path
+                .read_resource(None, "missing.resource")
+                .await?
+                .is_none()
+        );
         Ok(())
     }
 

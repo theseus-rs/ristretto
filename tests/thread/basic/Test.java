@@ -26,17 +26,37 @@ public class Test {
 
     private static void testThreadStates() {
         System.out.println("Test 2: Thread states");
+        Object lock = new Object();
+        boolean[] ready = {false};
+        boolean[] proceed = {false};
         Thread stateThread = new Thread(() -> {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                System.out.println("Sleep interrupted");
+            synchronized (lock) {
+                ready[0] = true;
+                lock.notifyAll();
+                try {
+                    while (!proceed[0]) {
+                        lock.wait();
+                    }
+                } catch (InterruptedException e) {
+                    System.out.println("Wait interrupted");
+                }
             }
         });
 
         System.out.println("State before start: " + stateThread.getState());
-        stateThread.start();
-        System.out.println("State after start: " + stateThread.getState());
+        synchronized (lock) {
+            stateThread.start();
+            try {
+                while (!ready[0]) {
+                    lock.wait();
+                }
+                System.out.println("State after start: " + stateThread.getState());
+                proceed[0] = true;
+                lock.notifyAll();
+            } catch (InterruptedException e) {
+                System.out.println("Wait interrupted");
+            }
+        }
 
         try {
             stateThread.join();

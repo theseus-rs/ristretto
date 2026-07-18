@@ -103,7 +103,12 @@ impl Compiler {
     /// This performs a fast scan of the method's bytecode instructions to check
     /// for unsupported opcodes without doing any expensive compilation work.
     ///
-    /// Methods with non-empty exception tables are currently rejected. The
+    /// Production execution is currently limited to static, straight-line primitive methods.
+    /// Reference operations, runtime-helper calls, and general control flow remain available to
+    /// focused compiler tests, but are not safe to execute in a live VM until compiled frames can
+    /// participate fully in GC root tracing and the remaining control-flow gaps are resolved.
+    ///
+    /// Methods with non-empty exception tables are also rejected. The
     /// exception-handler dispatch codegen (in `instruction::exception` and
     /// `populate_dispatch_block`) is implemented and unit-tested via the synthetic
     /// `athrow_caught_by_catch_all_handler` test, but enabling it for production
@@ -120,6 +125,9 @@ impl Compiler {
     /// dispatch path being exercised by integration tests.
     #[must_use]
     pub fn can_compile(method: &Method) -> bool {
+        if !method.access_flags.contains(MethodAccessFlags::STATIC) {
+            return false;
+        }
         let Some((instructions, exception_table)) =
             method.attributes.iter().find_map(|attribute| {
                 if let Attribute::Code {
@@ -140,6 +148,9 @@ impl Compiler {
             return false;
         }
         Self::first_unsupported_instruction(instructions).is_none()
+            && instructions
+                .iter()
+                .all(Self::is_production_safe_instruction)
     }
 
     /// Compiles the given bytecode into native code.
@@ -292,9 +303,9 @@ impl Compiler {
 
         let code = jit_module.get_finalized_function(function);
         let function = unsafe {
-            let function: fn(*const JitValue, usize, *mut JitValue, *const u8) =
+            let function: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8) =
                 mem::transmute(code);
-            Function::new(function)
+            Function::with_module(function, jit_module)
         };
         Ok(function)
     }
@@ -539,6 +550,153 @@ impl Compiler {
                     | Instruction::Invokedynamic(..)
             )
         })
+    }
+
+    /// Returns whether an instruction is safe for production JIT execution. Keeping this as a
+    /// positive allowlist makes new bytecodes interpreter-only until their native safety is
+    /// explicitly reviewed.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "the explicit bytecode allowlist is easier to audit as one exhaustive policy"
+    )]
+    fn is_production_safe_instruction(instruction: &Instruction) -> bool {
+        matches!(
+            instruction,
+            Instruction::Nop
+                | Instruction::Iconst_m1
+                | Instruction::Iconst_0
+                | Instruction::Iconst_1
+                | Instruction::Iconst_2
+                | Instruction::Iconst_3
+                | Instruction::Iconst_4
+                | Instruction::Iconst_5
+                | Instruction::Lconst_0
+                | Instruction::Lconst_1
+                | Instruction::Fconst_0
+                | Instruction::Fconst_1
+                | Instruction::Fconst_2
+                | Instruction::Dconst_0
+                | Instruction::Dconst_1
+                | Instruction::Bipush(_)
+                | Instruction::Sipush(_)
+                | Instruction::Ldc2_w(_)
+                | Instruction::Iload(_)
+                | Instruction::Lload(_)
+                | Instruction::Fload(_)
+                | Instruction::Dload(_)
+                | Instruction::Iload_0
+                | Instruction::Iload_1
+                | Instruction::Iload_2
+                | Instruction::Iload_3
+                | Instruction::Lload_0
+                | Instruction::Lload_1
+                | Instruction::Lload_2
+                | Instruction::Lload_3
+                | Instruction::Fload_0
+                | Instruction::Fload_1
+                | Instruction::Fload_2
+                | Instruction::Fload_3
+                | Instruction::Dload_0
+                | Instruction::Dload_1
+                | Instruction::Dload_2
+                | Instruction::Dload_3
+                | Instruction::Istore(_)
+                | Instruction::Lstore(_)
+                | Instruction::Fstore(_)
+                | Instruction::Dstore(_)
+                | Instruction::Istore_0
+                | Instruction::Istore_1
+                | Instruction::Istore_2
+                | Instruction::Istore_3
+                | Instruction::Lstore_0
+                | Instruction::Lstore_1
+                | Instruction::Lstore_2
+                | Instruction::Lstore_3
+                | Instruction::Fstore_0
+                | Instruction::Fstore_1
+                | Instruction::Fstore_2
+                | Instruction::Fstore_3
+                | Instruction::Dstore_0
+                | Instruction::Dstore_1
+                | Instruction::Dstore_2
+                | Instruction::Dstore_3
+                | Instruction::Pop
+                | Instruction::Pop2
+                | Instruction::Dup
+                | Instruction::Dup_x1
+                | Instruction::Dup_x2
+                | Instruction::Dup2
+                | Instruction::Dup2_x1
+                | Instruction::Dup2_x2
+                | Instruction::Swap
+                | Instruction::Iadd
+                | Instruction::Ladd
+                | Instruction::Fadd
+                | Instruction::Dadd
+                | Instruction::Isub
+                | Instruction::Lsub
+                | Instruction::Fsub
+                | Instruction::Dsub
+                | Instruction::Imul
+                | Instruction::Lmul
+                | Instruction::Fmul
+                | Instruction::Dmul
+                | Instruction::Fdiv
+                | Instruction::Ddiv
+                | Instruction::Frem
+                | Instruction::Drem
+                | Instruction::Ineg
+                | Instruction::Lneg
+                | Instruction::Fneg
+                | Instruction::Dneg
+                | Instruction::Ishl
+                | Instruction::Lshl
+                | Instruction::Ishr
+                | Instruction::Lshr
+                | Instruction::Iushr
+                | Instruction::Lushr
+                | Instruction::Iand
+                | Instruction::Land
+                | Instruction::Ior
+                | Instruction::Lor
+                | Instruction::Ixor
+                | Instruction::Lxor
+                | Instruction::Iinc(_, _)
+                | Instruction::I2l
+                | Instruction::I2f
+                | Instruction::I2d
+                | Instruction::L2i
+                | Instruction::L2f
+                | Instruction::L2d
+                | Instruction::F2i
+                | Instruction::F2l
+                | Instruction::F2d
+                | Instruction::D2i
+                | Instruction::D2l
+                | Instruction::D2f
+                | Instruction::I2b
+                | Instruction::I2c
+                | Instruction::I2s
+                | Instruction::Lcmp
+                | Instruction::Fcmpl
+                | Instruction::Fcmpg
+                | Instruction::Dcmpl
+                | Instruction::Dcmpg
+                | Instruction::Ireturn
+                | Instruction::Lreturn
+                | Instruction::Freturn
+                | Instruction::Dreturn
+                | Instruction::Return
+                | Instruction::Iload_w(_)
+                | Instruction::Lload_w(_)
+                | Instruction::Fload_w(_)
+                | Instruction::Dload_w(_)
+                | Instruction::Istore_w(_)
+                | Instruction::Lstore_w(_)
+                | Instruction::Fstore_w(_)
+                | Instruction::Dstore_w(_)
+                | Instruction::Iinc_w(_, _)
+        )
     }
 
     #[expect(clippy::too_many_arguments)]
@@ -1035,6 +1193,28 @@ mod tests {
     fn test_compiler_new() {
         let result = Compiler::new();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_production_safe_instruction_policy() {
+        for instruction in [
+            Instruction::Iload_0,
+            Instruction::Iconst_1,
+            Instruction::Iadd,
+            Instruction::Ireturn,
+        ] {
+            assert!(Compiler::is_production_safe_instruction(&instruction));
+        }
+
+        for instruction in [
+            Instruction::Aload_0,
+            Instruction::Getfield(1),
+            Instruction::Iaload,
+            Instruction::Ifeq(1),
+            Instruction::Invokestatic(1),
+        ] {
+            assert!(!Compiler::is_production_safe_instruction(&instruction));
+        }
     }
 
     #[test]

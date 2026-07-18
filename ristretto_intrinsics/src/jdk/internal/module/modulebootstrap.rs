@@ -2,11 +2,11 @@ use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::attributes::RequiresFlags;
 use ristretto_classloader::module::ModuleDescriptor;
 use ristretto_classloader::module::{Exports, Opens, Provides, Requires, ResolvedConfiguration};
-use ristretto_classloader::{Class, Object, Value};
+use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::module_access::ModuleAccess;
-use ristretto_types::{DefinedModule, JavaObject, Thread, VM};
+use ristretto_types::{DefinedModule, Thread, VM};
 use ristretto_types::{Parameters, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -35,38 +35,9 @@ pub async fn boot<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     let module_system = vm.module_system();
-    let resolved_config = module_system.resolved_configuration().clone();
+    let resolved_config = module_system.resolved_configuration_arc();
 
     if resolved_config.is_empty() {
-        // If in lightweight mode (simple classpath app), create an empty layer without
-        // performing expensive lazy resolution. This keeps startup fast for apps that
-        // don't need module introspection.
-        if module_system.is_lightweight_mode() {
-            debug!("Lightweight mode; creating empty boot layer for classpath app");
-            return create_empty_layer(&thread).await;
-        }
-
-        // Attempt lazy full resolution from jimage if a java_home is available.
-        // This handles the case where no module resolution was done at startup
-        // but the application needs a populated boot layer.
-        let java_home = vm.java_home();
-        let jimage_path = java_home.join("lib").join("modules");
-        if jimage_path.exists() {
-            debug!("Performing lazy full module resolution from jimage");
-            match ResolvedConfiguration::resolve_from_jimage(&jimage_path).await {
-                Ok(full_config) if !full_config.is_empty() => {
-                    debug!("Lazy-resolved {} modules for boot layer", full_config.len());
-                    let layer = create_populated_layer(&thread, &full_config).await?;
-                    return Ok(Some(layer));
-                }
-                Ok(_) => {
-                    debug!("Lazy resolution returned empty config; creating empty boot layer");
-                }
-                Err(e) => {
-                    warn!("Lazy module resolution failed: {e}; creating empty boot layer");
-                }
-            }
-        }
         debug!("No resolved modules; creating empty boot layer");
         return create_empty_layer(&thread).await;
     }
@@ -153,13 +124,16 @@ async fn create_populated_layer<T: Thread + 'static>(
         &layer_value,
     )
     .await?;
+    debug!("Created {} module objects", module_map.len());
 
     // Populate reads, exportedPackages, and openPackages on Module objects
     populate_module_edges(thread, resolved_config, &module_class, &module_map).await?;
+    debug!("Populated module edges");
 
     // Create Configuration and set ModuleLayer fields
     let config_value =
         create_configuration_object(thread, resolved_config, &java_descriptors).await?;
+    debug!("Created module configuration");
     set_layer_fields(
         thread,
         &layer_value,
@@ -195,16 +169,14 @@ async fn create_module_objects<T: Thread + 'static>(
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
 
-    let name_to_module = thread
-        .object("java/util/HashMap", "", &[] as &[Value])
-        .await?;
     let mut module_map: HashMap<String, Value> = HashMap::new();
+    let mut name_entries = Vec::with_capacity(resolved_config.len());
 
     for rm in resolved_config.modules() {
         let desc = rm.descriptor();
         let mut module_object = Object::new(module_class.clone())?;
 
-        let name_str = desc.name.as_str().to_object(thread).await?;
+        let name_str = thread.intern_string(&desc.name).await?;
         module_object.set_value_unchecked("name", name_str.clone())?;
         module_object.set_value_unchecked("layer", layer_value.clone())?;
         // Boot-loaded modules have a null class loader (bootstrap loader).
@@ -215,13 +187,7 @@ async fn create_module_objects<T: Thread + 'static>(
 
         let module_value = Value::from_object(gc, module_object);
 
-        thread
-            .invoke(
-                "java.util.HashMap",
-                "put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-                &[name_to_module.clone(), name_str, module_value.clone()],
-            )
-            .await?;
+        name_entries.push((string_hash_code(&desc.name), name_str, module_value.clone()));
 
         // Register with the VM module system
         let mut defined = DefinedModule::new(desc.name.clone(), desc.is_open());
@@ -235,6 +201,7 @@ async fn create_module_objects<T: Thread + 'static>(
         module_map.insert(desc.name.clone(), module_value);
     }
 
+    let name_to_module = create_hashed_map(thread, name_entries).await?;
     Ok((name_to_module, module_map))
 }
 
@@ -250,24 +217,17 @@ async fn populate_module_edges<T: Thread + 'static>(
     // Populate reads sets
     for rm in resolved_config.modules() {
         if let Some(module_value) = module_map.get(rm.name()) {
-            let reads_set = thread
-                .object("java/util/HashSet", "", &[] as &[Value])
-                .await?;
-            for read_name in rm.reads() {
-                if let Some(read_module) = module_map.get(read_name) {
-                    thread
-                        .invoke(
-                            "java.util.HashSet",
-                            "add(Ljava/lang/Object;)Z",
-                            &[reads_set.clone(), read_module.clone()],
-                        )
-                        .await?;
-                }
-            }
+            let reads = rm
+                .reads()
+                .iter()
+                .filter_map(|read_name| module_map.get(read_name))
+                .collect::<Vec<_>>();
+            let reads_set = create_java_set_from_values(thread, reads.into_iter()).await?;
             let mut module_ref = module_value.as_object_mut()?;
             module_ref.set_value_unchecked("reads", reads_set)?;
         }
     }
+    debug!("Populated module reads");
 
     // Read Module.EVERYONE_MODULE sentinel. Filter out null object values so that
     // unqualified exports/opens are not silently broken if the field is uninitialised.
@@ -311,7 +271,6 @@ async fn populate_module_edges<T: Thread + 'static>(
 ///
 /// Always creates and sets the map even when there are no exports so that
 /// `Module.isExported()` never encounters a null field.
-#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 async fn populate_exported_packages<T: Thread + 'static>(
     thread: &Arc<T>,
     module_value: &Value,
@@ -319,25 +278,15 @@ async fn populate_exported_packages<T: Thread + 'static>(
     module_map: &HashMap<String, Value>,
     everyone_module: Option<&Value>,
 ) -> Result<()> {
-    let exports_map = thread
-        .object(
-            "java/util/HashMap",
-            "I",
-            &[Value::Int(desc.exports.len() as i32)],
-        )
-        .await?;
+    let mut entries = Vec::with_capacity(desc.exports.len());
     for export in &desc.exports {
-        let pkg_name = to_dotted(&export.package).to_object(thread).await?;
+        let package_name = to_dotted(&export.package);
+        let package = thread.intern_string(&package_name).await?;
         let target_set =
             build_target_set(thread, export.targets.as_ref(), module_map, everyone_module).await?;
-        thread
-            .invoke(
-                "java.util.HashMap",
-                "put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-                &[exports_map.clone(), pkg_name, target_set],
-            )
-            .await?;
+        entries.push((string_hash_code(&package_name), package, target_set));
     }
+    let exports_map = create_hashed_map(thread, entries).await?;
     let mut module_ref = module_value.as_object_mut()?;
     module_ref.set_value_unchecked("exportedPackages", exports_map)?;
     Ok(())
@@ -347,7 +296,6 @@ async fn populate_exported_packages<T: Thread + 'static>(
 ///
 /// Always creates and sets the map even when there are no opens so that
 /// `Module.isOpen()` never encounters a null field.
-#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 async fn populate_open_packages<T: Thread + 'static>(
     thread: &Arc<T>,
     module_value: &Value,
@@ -355,25 +303,15 @@ async fn populate_open_packages<T: Thread + 'static>(
     module_map: &HashMap<String, Value>,
     everyone_module: Option<&Value>,
 ) -> Result<()> {
-    let opens_map = thread
-        .object(
-            "java/util/HashMap",
-            "I",
-            &[Value::Int(desc.opens.len() as i32)],
-        )
-        .await?;
+    let mut entries = Vec::with_capacity(desc.opens.len());
     for open in &desc.opens {
-        let pkg_name = to_dotted(&open.package).to_object(thread).await?;
+        let package_name = to_dotted(&open.package);
+        let package = thread.intern_string(&package_name).await?;
         let target_set =
             build_target_set(thread, open.targets.as_ref(), module_map, everyone_module).await?;
-        thread
-            .invoke(
-                "java.util.HashMap",
-                "put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-                &[opens_map.clone(), pkg_name, target_set],
-            )
-            .await?;
+        entries.push((string_hash_code(&package_name), package, target_set));
     }
+    let opens_map = create_hashed_map(thread, entries).await?;
     let mut module_ref = module_value.as_object_mut()?;
     module_ref.set_value_unchecked("openPackages", opens_map)?;
     Ok(())
@@ -390,37 +328,17 @@ async fn build_target_set<T: Thread + 'static>(
     module_map: &HashMap<String, Value>,
     everyone_module: Option<&Value>,
 ) -> Result<Value> {
-    let target_set = thread
-        .object("java/util/HashSet", "", &[] as &[Value])
-        .await?;
-    match targets {
+    let values = match targets {
         None => {
-            // Unqualified: add EVERYONE_MODULE sentinel
-            if let Some(everyone) = everyone_module {
-                thread
-                    .invoke(
-                        "java.util.HashSet",
-                        "add(Ljava/lang/Object;)Z",
-                        &[target_set.clone(), everyone.clone()],
-                    )
-                    .await?;
-            }
+            // Unqualified: add EVERYONE_MODULE sentinel.
+            everyone_module.into_iter().collect::<Vec<_>>()
         }
-        Some(targets) => {
-            for target in targets {
-                if let Some(target_mod) = module_map.get(target) {
-                    thread
-                        .invoke(
-                            "java.util.HashSet",
-                            "add(Ljava/lang/Object;)Z",
-                            &[target_set.clone(), target_mod.clone()],
-                        )
-                        .await?;
-                }
-            }
-        }
-    }
-    Ok(target_set)
+        Some(targets) => targets
+            .iter()
+            .filter_map(|target| module_map.get(target))
+            .collect(),
+    };
+    create_java_set_from_values(thread, values.into_iter()).await
 }
 
 /// Creates the `java.lang.module.Configuration` Java object with `ResolvedModule` entries.
@@ -441,9 +359,6 @@ async fn create_configuration_object<T: Thread + 'static>(
         create_resolved_modules(thread, resolved_config, java_descriptors, &config_value).await?;
 
     // Boot layer configuration's parent is Configuration.empty().
-    let config_parents = thread
-        .object("java/util/ArrayList", "", &[] as &[Value])
-        .await?;
     let empty_config = thread
         .invoke(
             "java.lang.module.Configuration",
@@ -451,15 +366,7 @@ async fn create_configuration_object<T: Thread + 'static>(
             &[] as &[Value],
         )
         .await?;
-    if let Some(ec) = empty_config {
-        thread
-            .invoke(
-                "java.util.ArrayList",
-                "add(Ljava/lang/Object;)Z",
-                &[config_parents.clone(), ec],
-            )
-            .await?;
-    }
+    let config_parents = create_array_list(thread, empty_config.into_iter().collect()).await?;
 
     // Create modules set and graph for Configuration
     let config_modules_set =
@@ -488,14 +395,17 @@ async fn create_resolved_modules<T: Thread + 'static>(
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
 
-    let config_name_to_module = thread
-        .object("java/util/HashMap", "", &[] as &[Value])
-        .await?;
-
-    let mref_class = thread.class("java/lang/module/ModuleReference").await.ok();
+    let mref_class = match thread
+        .class("jdk/internal/module/ModuleReferenceImpl")
+        .await
+    {
+        Ok(class) => Some(class),
+        Err(_) => thread.class("java/lang/module/ModuleReference").await.ok(),
+    };
     let resolved_module_class = thread.class("java/lang/module/ResolvedModule").await.ok();
 
     let mut resolved_module_map: HashMap<String, Value> = HashMap::new();
+    let mut name_entries = Vec::with_capacity(resolved_config.len());
 
     if let (Some(mref_cls), Some(rm_cls)) = (mref_class.as_ref(), resolved_module_class.as_ref()) {
         for rm in resolved_config.modules() {
@@ -509,6 +419,21 @@ async fn create_resolved_modules<T: Thread + 'static>(
             if let Some(java_desc) = java_descriptors.get(&desc.name) {
                 mref_object.set_value_unchecked("descriptor", java_desc.clone())?;
             }
+            // JDK 17+ caches a descriptor-derived hash in ModuleReferenceImpl. Populate it
+            // directly so Configuration graph construction does not interpret hashCode for
+            // every reference. JDK 11 uses a different modifier hash and stays on the Java path.
+            if vm.java_major_version() >= 17
+                && mref_cls.name() == "jdk/internal/module/ModuleReferenceImpl"
+            {
+                let hash = module_descriptor_hash_code(desc)
+                    .wrapping_mul(43)
+                    .wrapping_mul(43);
+                let hash = match hash {
+                    0 => -1,
+                    hash => hash,
+                };
+                mref_object.set_value_unchecked("hash", Value::Int(hash))?;
+            }
             let mref_value = Value::from_object(gc, mref_object);
 
             let mut rm_object = Object::new(rm_cls.clone())?;
@@ -518,85 +443,53 @@ async fn create_resolved_modules<T: Thread + 'static>(
 
             resolved_module_map.insert(desc.name.clone(), rm_value.clone());
 
-            let name_str = desc.name.as_str().to_object(thread).await?;
-            thread
-                .invoke(
-                    "java.util.HashMap",
-                    "put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-                    &[config_name_to_module.clone(), name_str, rm_value],
-                )
-                .await?;
+            let name_str = thread.intern_string(&desc.name).await?;
+            name_entries.push((string_hash_code(&desc.name), name_str, rm_value));
         }
     }
 
+    let config_name_to_module = create_hashed_map(thread, name_entries).await?;
     Ok((config_name_to_module, resolved_module_map))
 }
 
 /// Creates a `HashSet` Java object from an iterator of Values.
-#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 async fn create_java_set_from_values<'a, T: Thread + 'static>(
     thread: &Arc<T>,
     values: impl ExactSizeIterator<Item = &'a Value>,
 ) -> Result<Value> {
-    let set = thread
-        .object("java/util/HashSet", "I", &[Value::Int(values.len() as i32)])
-        .await?;
+    let mut hashed_values = Vec::with_capacity(values.len());
     for value in values {
-        thread
-            .invoke(
-                "java.util.HashSet",
-                "add(Ljava/lang/Object;)Z",
-                &[set.clone(), value.clone()],
-            )
-            .await?;
+        hashed_values.push((value_hash_code(thread, value).await?, value.clone()));
     }
-    Ok(set)
+    create_hashed_set(thread, hashed_values).await
 }
 
 /// Creates the graph map for `Configuration` (`Map<ResolvedModule, Set<ResolvedModule>>`).
-#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 async fn create_configuration_graph<T: Thread + 'static>(
     thread: &Arc<T>,
     resolved_config: &ResolvedConfiguration,
     resolved_module_map: &HashMap<String, Value>,
 ) -> Result<Value> {
-    let config_graph = thread
-        .object(
-            "java/util/HashMap",
-            "I",
-            &[Value::Int(resolved_module_map.len() as i32)],
-        )
-        .await?;
+    let mut entries = Vec::with_capacity(resolved_module_map.len());
     for rm in resolved_config.modules() {
         if let Some(rm_value) = resolved_module_map.get(rm.name()) {
-            let reads_set = thread
-                .object("java/util/HashSet", "", &[] as &[Value])
-                .await?;
-            for read_name in rm.reads() {
-                if let Some(read_rm) = resolved_module_map.get(read_name) {
-                    thread
-                        .invoke(
-                            "java.util.HashSet",
-                            "add(Ljava/lang/Object;)Z",
-                            &[reads_set.clone(), read_rm.clone()],
-                        )
-                        .await?;
-                }
-            }
-            thread
-                .invoke(
-                    "java.util.HashMap",
-                    "put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-                    &[config_graph.clone(), rm_value.clone(), reads_set],
-                )
-                .await?;
+            let reads = rm
+                .reads()
+                .iter()
+                .filter_map(|read_name| resolved_module_map.get(read_name))
+                .collect::<Vec<_>>();
+            let reads_set = create_java_set_from_values(thread, reads.into_iter()).await?;
+            entries.push((
+                value_hash_code(thread, rm_value).await?,
+                rm_value.clone(),
+                reads_set,
+            ));
         }
     }
-    Ok(config_graph)
+    create_hashed_map(thread, entries).await
 }
 
 /// Sets fields on the `ModuleLayer` Java object.
-#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 async fn set_layer_fields<T: Thread + 'static>(
     thread: &Arc<T>,
     layer_value: &Value,
@@ -605,29 +498,11 @@ async fn set_layer_fields<T: Thread + 'static>(
     module_map: &HashMap<String, Value>,
 ) -> Result<()> {
     // Create modules set for ModuleLayer (Set<Module>)
-    let layer_modules_set = thread
-        .object(
-            "java/util/HashSet",
-            "I",
-            &[Value::Int(module_map.len() as i32)],
-        )
-        .await?;
-    for module_value in module_map.values() {
-        thread
-            .invoke(
-                "java.util.HashSet",
-                "add(Ljava/lang/Object;)Z",
-                &[layer_modules_set.clone(), module_value.clone()],
-            )
-            .await?;
-    }
+    let layer_modules_set = create_java_set_from_values(thread, module_map.values()).await?;
 
     // Boot layer's parent is ModuleLayer.empty().
     // Invoke the public ModuleLayer.empty() method which both triggers <clinit>
     // and returns the singleton, rather than reading the private static field directly.
-    let parents_list = thread
-        .object("java/util/ArrayList", "", &[] as &[Value])
-        .await?;
     let empty_layer = thread
         .invoke(
             "java.lang.ModuleLayer",
@@ -635,15 +510,7 @@ async fn set_layer_fields<T: Thread + 'static>(
             &[] as &[Value],
         )
         .await?;
-    if let Some(el) = empty_layer {
-        thread
-            .invoke(
-                "java.util.ArrayList",
-                "add(Ljava/lang/Object;)Z",
-                &[parents_list.clone(), el],
-            )
-            .await?;
-    }
+    let parents_list = create_array_list(thread, empty_layer.into_iter().collect()).await?;
     {
         let mut layer_ref = layer_value.as_object_mut()?;
         layer_ref.set_value_unchecked("cf", config_value.clone())?;
@@ -691,63 +558,34 @@ async fn register_services_catalog_on_layer<T: Thread + 'static>(
             .class("jdk/internal/module/ServicesCatalog$ServiceProvider")
             .await?;
 
+        let mut providers_by_service: HashMap<String, Vec<Value>> = HashMap::new();
         for (name, module_value) in module_map {
-            if let Some(rm) = resolved_config
-                .modules()
-                .find(|rm| rm.name() == name.as_str())
-            {
+            if let Some(rm) = resolved_config.get(name) {
                 for provides in &rm.descriptor().provides {
-                    let service_key = to_dotted(&provides.service).to_object(thread).await?;
-
-                    // Check if a provider list already exists for this service.
-                    // Multiple modules may provide the same service interface, so we
-                    // must append to the existing list rather than overwriting it.
-                    let existing = thread
-                        .invoke(
-                            "java.util.concurrent.ConcurrentHashMap",
-                            "get(Ljava/lang/Object;)Ljava/lang/Object;",
-                            &[chm_value.clone(), service_key.clone()],
-                        )
-                        .await?
-                        .unwrap_or(Value::Object(None));
-
-                    let provider_list = if existing.is_null() {
-                        let new_list = thread
-                            .object(
-                                "java/util/concurrent/CopyOnWriteArrayList",
-                                "",
-                                &[] as &[Value],
-                            )
-                            .await?;
-                        thread
-                            .invoke(
-                                "java.util.concurrent.ConcurrentHashMap",
-                                "put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
-                                &[chm_value.clone(), service_key, new_list.clone()],
-                            )
-                            .await?;
-                        new_list
-                    } else {
-                        existing
-                    };
-
+                    let service = to_dotted(&provides.service);
+                    let service_providers = providers_by_service.entry(service).or_default();
                     for provider_name in &provides.implementations {
                         let mut sp_obj = Object::new(sp_class.clone())?;
                         sp_obj.set_value_unchecked("module", module_value.clone())?;
-                        let pn_str: Value = to_dotted(provider_name).to_object(thread).await?;
+                        let pn_str = thread.intern_string(&to_dotted(provider_name)).await?;
                         sp_obj.set_value_unchecked("providerName", pn_str)?;
                         let sp_val = Value::from_object(gc, sp_obj);
-
-                        thread
-                            .invoke(
-                                "java.util.concurrent.CopyOnWriteArrayList",
-                                "add(Ljava/lang/Object;)Z",
-                                &[provider_list.clone(), sp_val],
-                            )
-                            .await?;
+                        service_providers.push(sp_val);
                     }
                 }
             }
+        }
+
+        for (service, providers) in providers_by_service {
+            let service_key = thread.intern_string(&service).await?;
+            let provider_list = create_copy_on_write_array_list(thread, providers).await?;
+            thread
+                .invoke(
+                    "java.util.concurrent.ConcurrentHashMap",
+                    "put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;",
+                    &[chm_value.clone(), service_key, provider_list],
+                )
+                .await?;
         }
 
         // Set the catalog on the boot ModuleLayer
@@ -868,11 +706,7 @@ async fn create_empty_layer<T: Thread + 'static>(thread: &Arc<T>) -> Result<Opti
 /// setting its fields, bypassing the Builder API to avoid bootstrap circularity
 /// and thousands of Java method invocations.
 #[expect(clippy::too_many_arguments)]
-#[expect(
-    clippy::too_many_lines,
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap
-)]
+#[expect(clippy::too_many_lines)]
 async fn create_module_descriptor_direct<T: Thread + 'static>(
     thread: &Arc<T>,
     desc: &ModuleDescriptor,
@@ -890,7 +724,7 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
     let mut md_object = Object::new(descriptor_class.clone())?;
 
     // Set name
-    let name_val = desc.name.as_str().to_object(thread).await?;
+    let name_val = thread.intern_string(&desc.name).await?;
     md_object.set_value_unchecked("name", name_val)?;
 
     // Set open and automatic flags
@@ -918,25 +752,22 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
     if desc.requires.is_empty() {
         md_object.set_value_unchecked("requires", empty_set.clone())?;
     } else {
-        let req_set = thread
-            .object(
-                "java/util/HashSet",
-                "I",
-                &[Value::Int(desc.requires.len() as i32)],
-            )
-            .await?;
+        let mut values = Vec::with_capacity(desc.requires.len());
         for req in &desc.requires {
             let req_obj =
                 create_requires_direct(thread, req, requires_class, empty_set, version_cache)
                     .await?;
-            thread
-                .invoke(
-                    "java.util.HashSet",
-                    "add(Ljava/lang/Object;)Z",
-                    &[req_set.clone(), req_obj],
-                )
-                .await?;
+            values.push((requires_hash_code(req), req_obj));
         }
+        let req_set = if vm.java_major_version() >= 17 {
+            create_hashed_set(thread, values).await?
+        } else {
+            let values = values
+                .into_iter()
+                .map(|(_, value)| value)
+                .collect::<Vec<_>>();
+            create_java_set_from_values(thread, values.iter()).await?
+        };
         md_object.set_value_unchecked("requires", req_set)?;
     }
 
@@ -944,23 +775,20 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
     if desc.exports.is_empty() {
         md_object.set_value_unchecked("exports", empty_set.clone())?;
     } else {
-        let exp_set = thread
-            .object(
-                "java/util/HashSet",
-                "I",
-                &[Value::Int(desc.exports.len() as i32)],
-            )
-            .await?;
+        let mut values = Vec::with_capacity(desc.exports.len());
         for export in &desc.exports {
             let exp_obj = create_exports_direct(thread, export, exports_class, empty_set).await?;
-            thread
-                .invoke(
-                    "java.util.HashSet",
-                    "add(Ljava/lang/Object;)Z",
-                    &[exp_set.clone(), exp_obj],
-                )
-                .await?;
+            values.push((exports_hash_code(export), exp_obj));
         }
+        let exp_set = if vm.java_major_version() >= 17 {
+            create_hashed_set(thread, values).await?
+        } else {
+            let values = values
+                .into_iter()
+                .map(|(_, value)| value)
+                .collect::<Vec<_>>();
+            create_java_set_from_values(thread, values.iter()).await?
+        };
         md_object.set_value_unchecked("exports", exp_set)?;
     }
 
@@ -968,23 +796,20 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
     if desc.opens.is_empty() {
         md_object.set_value_unchecked("opens", empty_set.clone())?;
     } else {
-        let opens_set = thread
-            .object(
-                "java/util/HashSet",
-                "I",
-                &[Value::Int(desc.opens.len() as i32)],
-            )
-            .await?;
+        let mut values = Vec::with_capacity(desc.opens.len());
         for open in &desc.opens {
             let open_obj = create_opens_direct(thread, open, opens_class, empty_set).await?;
-            thread
-                .invoke(
-                    "java.util.HashSet",
-                    "add(Ljava/lang/Object;)Z",
-                    &[opens_set.clone(), open_obj],
-                )
-                .await?;
+            values.push((opens_hash_code(open), open_obj));
         }
+        let opens_set = if vm.java_major_version() >= 17 {
+            create_hashed_set(thread, values).await?
+        } else {
+            let values = values
+                .into_iter()
+                .map(|(_, value)| value)
+                .collect::<Vec<_>>();
+            create_java_set_from_values(thread, values.iter()).await?
+        };
         md_object.set_value_unchecked("opens", opens_set)?;
     }
 
@@ -1004,30 +829,27 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
     if desc.provides.is_empty() {
         md_object.set_value_unchecked("provides", empty_set.clone())?;
     } else {
-        let provides_set = thread
-            .object(
-                "java/util/HashSet",
-                "I",
-                &[Value::Int(desc.provides.len() as i32)],
-            )
-            .await?;
+        let mut values = Vec::with_capacity(desc.provides.len());
         for prov in &desc.provides {
             let prov_obj = create_provides_direct(thread, prov, provides_class).await?;
-            thread
-                .invoke(
-                    "java.util.HashSet",
-                    "add(Ljava/lang/Object;)Z",
-                    &[provides_set.clone(), prov_obj],
-                )
-                .await?;
+            values.push((provides_hash_code(prov), prov_obj));
         }
+        let provides_set = if vm.java_major_version() >= 17 {
+            create_hashed_set(thread, values).await?
+        } else {
+            let values = values
+                .into_iter()
+                .map(|(_, value)| value)
+                .collect::<Vec<_>>();
+            create_java_set_from_values(thread, values.iter()).await?
+        };
         md_object.set_value_unchecked("provides", provides_set)?;
     }
 
     // Set version
     if let Some(ref ver) = desc.version {
         let ver_string = ver.clone();
-        let ver_str = ver_string.as_str().to_object(thread).await?;
+        let ver_str = thread.intern_string(&ver_string).await?;
         if let Err(e) = md_object.set_value_unchecked("rawVersionString", ver_str) {
             debug!("Failed to set ModuleDescriptor.rawVersionString: {e}");
         }
@@ -1035,7 +857,7 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
         let version_obj = if let Some(cached) = version_cache.get(&ver_string) {
             cached.clone()
         } else {
-            let ver_str_for_parse = ver_string.as_str().to_object(thread).await?;
+            let ver_str_for_parse = thread.intern_string(&ver_string).await?;
             let parsed = thread
                 .invoke(
                     "java.lang.module.ModuleDescriptor$Version",
@@ -1057,10 +879,16 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
 
     // Set main class (convert '/' to '.')
     if let Some(ref mc) = desc.main_class {
-        let mc_str = to_dotted(mc).to_object(thread).await?;
+        let mc_str = thread.intern_string(&to_dotted(mc)).await?;
         if let Err(e) = md_object.set_value_unchecked("mainClass", mc_str) {
             debug!("Failed to set ModuleDescriptor.mainClass: {e}");
         }
+    }
+
+    // ModuleDescriptor uses this exact cached hash scheme on JDK 17 and later.
+    // JDK 11 hashes enum modifier sets by identity, so it must compute the value in Java.
+    if vm.java_major_version() >= 17 {
+        md_object.set_value_unchecked("hash", Value::Int(module_descriptor_hash_code(desc)))?;
     }
 
     Ok(Value::from_object(gc, md_object))
@@ -1079,7 +907,7 @@ async fn create_requires_direct<T: Thread + 'static>(
 
     let mut obj = Object::new(requires_class.clone())?;
 
-    let name_val = req.name.as_str().to_object(thread).await?;
+    let name_val = thread.intern_string(&req.name).await?;
     obj.set_value_unchecked("name", name_val)?;
 
     // Set modifier set
@@ -1093,7 +921,7 @@ async fn create_requires_direct<T: Thread + 'static>(
     // Set compiled version
     if let Some(ref ver) = req.version {
         let ver_string = ver.clone();
-        let ver_str = ver_string.as_str().to_object(thread).await?;
+        let ver_str = thread.intern_string(&ver_string).await?;
         if let Err(e) = obj.set_value_unchecked("rawCompiledVersion", ver_str) {
             debug!("Failed to set Requires.rawCompiledVersion: {e}");
         }
@@ -1101,7 +929,7 @@ async fn create_requires_direct<T: Thread + 'static>(
         let version_obj = if let Some(cached) = version_cache.get(&ver_string) {
             cached.clone()
         } else {
-            let ver_str_for_parse = ver_string.as_str().to_object(thread).await?;
+            let ver_str_for_parse = thread.intern_string(&ver_string).await?;
             let parsed = thread
                 .invoke(
                     "java.lang.module.ModuleDescriptor$Version",
@@ -1136,7 +964,7 @@ async fn create_exports_direct<T: Thread + 'static>(
 
     let mut obj = Object::new(exports_class.clone())?;
 
-    let source_val = to_dotted(&export.package).to_object(thread).await?;
+    let source_val = thread.intern_string(&to_dotted(&export.package)).await?;
     obj.set_value_unchecked("source", source_val)?;
 
     // Set modifiers (empty for now)
@@ -1168,7 +996,7 @@ async fn create_opens_direct<T: Thread + 'static>(
 
     let mut obj = Object::new(opens_class.clone())?;
 
-    let source_val = to_dotted(&open.package).to_object(thread).await?;
+    let source_val = thread.intern_string(&to_dotted(&open.package)).await?;
     obj.set_value_unchecked("source", source_val)?;
 
     // Set modifiers (empty for now)
@@ -1189,7 +1017,6 @@ async fn create_opens_direct<T: Thread + 'static>(
 }
 
 /// Creates a `ModuleDescriptor$Provides` object directly.
-#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 async fn create_provides_direct<T: Thread + 'static>(
     thread: &Arc<T>,
     prov: &Provides,
@@ -1200,27 +1027,16 @@ async fn create_provides_direct<T: Thread + 'static>(
 
     let mut obj = Object::new(provides_class.clone())?;
 
-    let svc_val = to_dotted(&prov.service).to_object(thread).await?;
+    let svc_val = thread.intern_string(&to_dotted(&prov.service)).await?;
     obj.set_value_unchecked("service", svc_val)?;
 
     // Create providers list
-    let providers_list = thread
-        .object(
-            "java/util/ArrayList",
-            "I",
-            &[Value::Int(prov.implementations.len() as i32)],
-        )
-        .await?;
+    let mut providers = Vec::with_capacity(prov.implementations.len());
     for impl_class in &prov.implementations {
-        let impl_str = to_dotted(impl_class).to_object(thread).await?;
-        thread
-            .invoke(
-                "java.util.ArrayList",
-                "add(Ljava/lang/Object;)Z",
-                &[providers_list.clone(), impl_str],
-            )
-            .await?;
+        let impl_str = thread.intern_string(&to_dotted(impl_class)).await?;
+        providers.push(impl_str);
     }
+    let providers_list = create_array_list(thread, providers).await?;
     obj.set_value_unchecked("providers", providers_list)?;
 
     Ok(Value::from_object(gc, obj))
@@ -1234,96 +1050,325 @@ async fn create_requires_modifier_set<T: Thread + 'static>(
     let mod_class = thread
         .class("java/lang/module/ModuleDescriptor$Requires$Modifier")
         .await?;
-    let set = thread
-        .object("java/util/HashSet", "", &[] as &[Value])
-        .await?;
+    let mut modifiers = Vec::with_capacity(4);
 
     if flags.contains(RequiresFlags::TRANSITIVE) {
         let val = mod_class.static_value("TRANSITIVE")?;
-        thread
-            .invoke(
-                "java.util.HashSet",
-                "add(Ljava/lang/Object;)Z",
-                &[set.clone(), val],
-            )
-            .await?;
+        modifiers.push((identity_hash_code(&val)?, val));
     }
     if flags.contains(RequiresFlags::STATIC_PHASE) {
         let val = mod_class.static_value("STATIC")?;
-        thread
-            .invoke(
-                "java.util.HashSet",
-                "add(Ljava/lang/Object;)Z",
-                &[set.clone(), val],
-            )
-            .await?;
+        modifiers.push((identity_hash_code(&val)?, val));
     }
     if flags.contains(RequiresFlags::SYNTHETIC) {
         let val = mod_class.static_value("SYNTHETIC")?;
-        thread
-            .invoke(
-                "java.util.HashSet",
-                "add(Ljava/lang/Object;)Z",
-                &[set.clone(), val],
-            )
-            .await?;
+        modifiers.push((identity_hash_code(&val)?, val));
     }
     if flags.contains(RequiresFlags::MANDATED) {
         let val = mod_class.static_value("MANDATED")?;
-        thread
-            .invoke(
-                "java.util.HashSet",
-                "add(Ljava/lang/Object;)Z",
-                &[set.clone(), val],
-            )
-            .await?;
+        modifiers.push((identity_hash_code(&val)?, val));
     }
 
-    Ok(set)
+    create_hashed_set(thread, modifiers).await
 }
 
 /// Creates a `HashSet<String>` from a `BTreeSet<String>` (strings already in dotted format).
-#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 async fn create_string_set_dotted<T: Thread + 'static>(
     thread: &Arc<T>,
     items: &std::collections::BTreeSet<String>,
 ) -> Result<Value> {
-    let set = thread
-        .object("java/util/HashSet", "I", &[Value::Int(items.len() as i32)])
-        .await?;
+    let mut values = Vec::with_capacity(items.len());
     for item in items {
-        let str_val = to_dotted(item).to_object(&**thread).await?;
-        thread
-            .invoke(
-                "java.util.HashSet",
-                "add(Ljava/lang/Object;)Z",
-                &[set.clone(), str_val],
-            )
-            .await?;
+        let item = to_dotted(item);
+        let value = thread.intern_string(&item).await?;
+        values.push((string_hash_code(&item), value));
     }
-    Ok(set)
+    create_hashed_set(thread, values).await
 }
 
 /// Creates a `HashSet<String>` from a `Vec<String>`.
-#[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 async fn create_string_set_from_vec<T: Thread + 'static>(
     thread: &Arc<T>,
     items: &[String],
 ) -> Result<Value> {
-    let set = thread
-        .object("java/util/HashSet", "I", &[Value::Int(items.len() as i32)])
-        .await?;
+    let mut values = Vec::with_capacity(items.len());
     for item in items {
-        let str_val = item.as_str().to_object(&**thread).await?;
-        thread
-            .invoke(
-                "java.util.HashSet",
-                "add(Ljava/lang/Object;)Z",
-                &[set.clone(), str_val],
-            )
-            .await?;
+        let value = thread.intern_string(item).await?;
+        values.push((string_hash_code(item), value));
     }
-    Ok(set)
+    create_hashed_set(thread, values).await
+}
+
+async fn create_array_list<T: Thread + 'static>(
+    thread: &Arc<T>,
+    values: Vec<Value>,
+) -> Result<Value> {
+    let size = i32::try_from(values.len())?;
+    let array_class = thread.class("[Ljava/lang/Object;").await?;
+    let list_class = thread.class("java/util/ArrayList").await?;
+    let vm = thread.vm()?;
+    let gc = vm.garbage_collector();
+    let elements = Value::new_object(gc, Reference::try_from((array_class, values))?);
+    let mut list = Object::new(list_class)?;
+    list.set_value_unchecked("elementData", elements)?;
+    list.set_value_unchecked("size", Value::Int(size))?;
+    Ok(Value::from_object(gc, list))
+}
+
+async fn create_copy_on_write_array_list<T: Thread + 'static>(
+    thread: &Arc<T>,
+    values: Vec<Value>,
+) -> Result<Value> {
+    let array_class = thread.class("[Ljava/lang/Object;").await?;
+    let list_class = thread
+        .class("java/util/concurrent/CopyOnWriteArrayList")
+        .await?;
+    let lock_class = thread.class("java/lang/Object").await?;
+    let vm = thread.vm()?;
+    let gc = vm.garbage_collector();
+    let elements = Value::new_object(gc, Reference::try_from((array_class, values))?);
+    let lock = Value::from_object(gc, Object::new(lock_class)?);
+    let mut list = Object::new(list_class)?;
+    list.set_value_unchecked("lock", lock)?;
+    list.set_value_unchecked("array", elements)?;
+    Ok(Value::from_object(gc, list))
+}
+
+async fn create_hashed_set<T: Thread + 'static>(
+    thread: &Arc<T>,
+    values: Vec<(i32, Value)>,
+) -> Result<Value> {
+    let hash_set_class = thread.class("java/util/HashSet").await?;
+    let present = hash_set_class.static_value("PRESENT")?;
+    let entries = values
+        .into_iter()
+        .map(|(hash, key)| (hash, key, present.clone()))
+        .collect();
+    let map = create_hashed_map(thread, entries).await?;
+
+    let vm = thread.vm()?;
+    let mut set = Object::new(hash_set_class)?;
+    set.set_value_unchecked("map", map)?;
+    Ok(Value::from_object(vm.garbage_collector(), set))
+}
+
+async fn create_hashed_map<T: Thread + 'static>(
+    thread: &Arc<T>,
+    entries: Vec<(i32, Value, Value)>,
+) -> Result<Value> {
+    let map_class = thread.class("java/util/HashMap").await?;
+    let vm = thread.vm()?;
+    let mut map = Object::new(map_class)?;
+    map.set_value_unchecked("loadFactor", Value::Float(0.75))?;
+    let map = Value::from_object(vm.garbage_collector(), map);
+    populate_hashed_map(thread, &map, entries).await?;
+    Ok(map)
+}
+
+async fn populate_hashed_map<T: Thread + 'static>(
+    thread: &Arc<T>,
+    map: &Value,
+    entries: Vec<(i32, Value, Value)>,
+) -> Result<()> {
+    let size = entries.len();
+    if entries.is_empty() {
+        return Ok(());
+    }
+
+    let node_class = thread.class("java/util/HashMap$Node").await?;
+    let node_array_class = thread.class("[Ljava/util/HashMap$Node;").await?;
+    let vm = thread.vm()?;
+    let gc = vm.garbage_collector();
+
+    let minimum_capacity = size.saturating_mul(4).div_ceil(3).max(1);
+    let capacity = minimum_capacity
+        .checked_next_power_of_two()
+        .unwrap_or(1 << 30)
+        .min(1 << 30);
+    let mut buckets = vec![Value::Object(None); capacity];
+
+    for (hash, key, value) in entries {
+        let hash = spread_hash(hash);
+        let bucket_index = usize::try_from(hash.cast_unsigned())? & (capacity - 1);
+        let bucket = buckets.get_mut(bucket_index).ok_or_else(|| {
+            ristretto_types::Error::InternalError("invalid hash bucket".to_string())
+        })?;
+        let next = std::mem::replace(bucket, Value::Object(None));
+        let mut node = Object::new(node_class.clone())?;
+        node.set_value_unchecked("hash", Value::Int(hash))?;
+        node.set_value_unchecked("key", key)?;
+        node.set_value_unchecked("value", value)?;
+        node.set_value_unchecked("next", next)?;
+        *bucket = Value::from_object(gc, node);
+    }
+
+    let table = Reference::try_from((node_array_class, buckets))?;
+    let table = Value::new_object(gc, table);
+    let mut map_object = map.as_object_mut()?;
+    map_object.set_value_unchecked("table", table)?;
+    map_object.set_value_unchecked("size", Value::Int(i32::try_from(size)?))?;
+    map_object.set_value_unchecked("modCount", Value::Int(0))?;
+    map_object.set_value_unchecked(
+        "threshold",
+        Value::Int(i32::try_from(capacity.saturating_mul(3) / 4)?),
+    )?;
+    drop(map_object);
+    Ok(())
+}
+
+fn string_hash_code(value: &str) -> i32 {
+    value.encode_utf16().fold(0_i32, |hash, character| {
+        hash.wrapping_mul(31).wrapping_add(i32::from(character))
+    })
+}
+
+fn combine_hash_code(hash: i32, value: i32) -> i32 {
+    hash.wrapping_mul(43).wrapping_add(value)
+}
+
+fn string_set_hash_code<'a>(values: impl IntoIterator<Item = &'a String>) -> i32 {
+    values.into_iter().fold(0_i32, |hash, value| {
+        hash.wrapping_add(string_hash_code(value))
+    })
+}
+
+fn dotted_string_set_hash_code<'a>(values: impl IntoIterator<Item = &'a String>) -> i32 {
+    values.into_iter().fold(0_i32, |hash, value| {
+        hash.wrapping_add(string_hash_code(&to_dotted(value)))
+    })
+}
+
+fn requires_modifiers_hash_code(flags: RequiresFlags) -> i32 {
+    let mut hash = 0_i32;
+    if flags.contains(RequiresFlags::TRANSITIVE) {
+        hash = hash.wrapping_add(string_hash_code("TRANSITIVE"));
+    }
+    if flags.contains(RequiresFlags::STATIC_PHASE) {
+        hash = hash.wrapping_add(string_hash_code("STATIC"));
+    }
+    if flags.contains(RequiresFlags::SYNTHETIC) {
+        hash = hash.wrapping_add(string_hash_code("SYNTHETIC"));
+    }
+    if flags.contains(RequiresFlags::MANDATED) {
+        hash = hash.wrapping_add(string_hash_code("MANDATED"));
+    }
+    hash
+}
+
+fn requires_hash_code(requires: &Requires) -> i32 {
+    let mut hash = combine_hash_code(
+        string_hash_code(&requires.name),
+        requires_modifiers_hash_code(requires.flags),
+    );
+    if let Some(version) = &requires.version {
+        let version_hash = string_hash_code(version);
+        hash = combine_hash_code(hash, version_hash);
+        hash = combine_hash_code(hash, version_hash);
+    }
+    hash
+}
+
+fn exports_hash_code(exports: &Exports) -> i32 {
+    let source_hash = string_hash_code(&to_dotted(&exports.package));
+    let targets_hash = exports.targets.as_ref().map_or(0, string_set_hash_code);
+    combine_hash_code(source_hash, targets_hash)
+}
+
+fn opens_hash_code(opens: &Opens) -> i32 {
+    let source_hash = string_hash_code(&to_dotted(&opens.package));
+    let targets_hash = opens.targets.as_ref().map_or(0, string_set_hash_code);
+    combine_hash_code(source_hash, targets_hash)
+}
+
+fn provides_hash_code(provides: &Provides) -> i32 {
+    let providers_hash = provides
+        .implementations
+        .iter()
+        .fold(1_i32, |hash, provider| {
+            hash.wrapping_mul(31)
+                .wrapping_add(string_hash_code(&to_dotted(provider)))
+        });
+    combine_hash_code(
+        string_hash_code(&to_dotted(&provides.service)),
+        providers_hash,
+    )
+}
+
+fn module_descriptor_hash_code(descriptor: &ModuleDescriptor) -> i32 {
+    let requires_hash = descriptor.requires.iter().fold(0_i32, |hash, requires| {
+        hash.wrapping_add(requires_hash_code(requires))
+    });
+    let exports_hash = descriptor.exports.iter().fold(0_i32, |hash, exports| {
+        hash.wrapping_add(exports_hash_code(exports))
+    });
+    let opens_hash = descriptor.opens.iter().fold(0_i32, |hash, opens| {
+        hash.wrapping_add(opens_hash_code(opens))
+    });
+    let provides_hash = descriptor.provides.iter().fold(0_i32, |hash, provides| {
+        hash.wrapping_add(provides_hash_code(provides))
+    });
+    let version_hash = descriptor.version.as_deref().map_or(0, string_hash_code);
+    let main_class_hash = descriptor
+        .main_class
+        .as_deref()
+        .map_or(0, |main_class| string_hash_code(&to_dotted(main_class)));
+
+    let mut hash = string_hash_code(&descriptor.name);
+    hash = combine_hash_code(hash, 0); // modifiers
+    hash = combine_hash_code(hash, requires_hash);
+    hash = combine_hash_code(hash, dotted_string_set_hash_code(&descriptor.packages));
+    hash = combine_hash_code(hash, exports_hash);
+    hash = combine_hash_code(hash, opens_hash);
+    hash = combine_hash_code(hash, dotted_string_set_hash_code(&descriptor.uses));
+    hash = combine_hash_code(hash, provides_hash);
+    hash = combine_hash_code(hash, version_hash);
+    hash = combine_hash_code(hash, version_hash); // rawVersionString
+    hash = combine_hash_code(hash, main_class_hash);
+    if hash == 0 { -1 } else { hash }
+}
+
+async fn value_hash_code<T: Thread + 'static>(thread: &Arc<T>, value: &Value) -> Result<i32> {
+    let mut class = value.as_object_ref()?.class().clone();
+    let class_name = loop {
+        if class.try_get_method("hashCode", "()I").is_ok() {
+            break class.name().to_string();
+        }
+        class = class.parent()?.ok_or_else(|| {
+            ristretto_types::Error::InternalError("hashCode method not found".to_string())
+        })?;
+    };
+
+    if class_name == "java/lang/Object" {
+        return identity_hash_code(value);
+    }
+
+    let result = match thread
+        .invoke(&class_name, "hashCode()I", std::slice::from_ref(value))
+        .await
+    {
+        Ok(result) => result,
+        Err(error) => {
+            debug!("Failed to compute hashCode for {class_name}: {error:?}");
+            return Err(error);
+        }
+    }
+    .ok_or_else(|| {
+        ristretto_types::Error::InternalError("hashCode returned no value".to_string())
+    })?;
+    Ok(result.as_i32()?)
+}
+
+fn identity_hash_code(value: &Value) -> Result<i32> {
+    let hash_code = value.as_reference()?.hash_code() as u64;
+    #[expect(clippy::cast_possible_truncation)]
+    let hash_code = (hash_code ^ (hash_code >> 32)) as u32;
+    Ok(zerocopy::transmute!(hash_code))
+}
+
+fn spread_hash(hash: i32) -> i32 {
+    let hash = u32::from_ne_bytes(hash.to_ne_bytes());
+    let hash = hash ^ (hash >> 16);
+    i32::from_ne_bytes(hash.to_ne_bytes())
 }
 
 /// Converts JVM internal name format ('/' separated) to Java dotted format ('.' separated).
@@ -1338,12 +1383,56 @@ mod tests {
     #[tokio::test]
     async fn test_boot() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = boot(thread, Parameters::default())
+        let result = boot(Arc::clone(&thread), Parameters::default())
             .await?
             .expect("module layer");
         let object = result.as_object_ref()?;
         let class = object.class();
         assert_eq!("java/lang/ModuleLayer", class.name());
+        drop(object);
+
+        let direct_hash = value_hash_code(&thread, &result).await?;
+        let invoked_hash = thread
+            .invoke(
+                "java.lang.Object",
+                "hashCode()I",
+                std::slice::from_ref(&result),
+            )
+            .await?
+            .expect("hash code")
+            .as_i32()?;
+        assert_eq!(invoked_hash, direct_hash);
+
+        let vm = thread.vm()?;
+        let resolved_configuration = vm.module_system().resolved_configuration_arc();
+        for resolved_module in resolved_configuration.modules() {
+            let descriptor = vm
+                .module_system()
+                .get_module(resolved_module.name())
+                .and_then(|module| module.module_object)
+                .expect("module")
+                .as_object_ref()?
+                .value("descriptor")?
+                .clone();
+            descriptor
+                .as_object_mut()?
+                .set_value_unchecked("hash", Value::Int(0))?;
+            let java_hash = thread
+                .invoke(
+                    "java.lang.module.ModuleDescriptor",
+                    "hashCode()I",
+                    std::slice::from_ref(&descriptor),
+                )
+                .await?
+                .expect("descriptor hash")
+                .as_i32()?;
+            assert_eq!(
+                module_descriptor_hash_code(resolved_module.descriptor()),
+                java_hash,
+                "{} descriptor hash",
+                resolved_module.name()
+            );
+        }
         Ok(())
     }
 }

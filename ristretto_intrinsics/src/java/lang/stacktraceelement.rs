@@ -210,6 +210,10 @@ async fn init_stack_trace_elements_impl<T: Thread + 'static>(
         stack_element.set_value("methodName", method_name_value)?;
         stack_element.set_value("fileName", source_file)?;
         stack_element.set_value("lineNumber", Value::Int(line_number))?;
+        if let Some(module_name) = actual_class.module_name()? {
+            let module_name_obj = module_name.to_object(&thread).await?;
+            stack_element.set_value("moduleName", module_name_obj)?;
+        }
 
         // Store in stack trace array
         let mut stack_trace_guard = stack_trace_ref.write();

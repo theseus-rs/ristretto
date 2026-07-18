@@ -102,33 +102,21 @@ impl Compiler {
     /// or `None` if the target ISA is not supported.
     #[must_use]
     pub fn new(batch_compilation: bool, interpreted: bool) -> Option<Self> {
-        // The cranelift riscv64 and s390x backends produce code that interacts poorly with the
-        // GC and tokio runtime under qemu user-mode emulation, leading to heap corruption.
-        // Disable JIT compilation on these hosts and fall back to the interpreter.
-        #[cfg(any(target_arch = "riscv64", target_arch = "s390x"))]
-        {
-            debug!("JIT compiler is disabled on riscv64 and s390x; falling back to interpreter");
-            let _ = (batch_compilation, interpreted);
-            None
-        }
-        #[cfg(not(any(target_arch = "riscv64", target_arch = "s390x")))]
-        {
-            let jit_compiler = match ristretto_jit::Compiler::new() {
-                Ok(compiler) => compiler,
-                Err(error) => {
-                    debug!("JIT compiler not available: {error:?}");
-                    return None;
-                }
-            };
+        let jit_compiler = match ristretto_jit::Compiler::new() {
+            Ok(compiler) => compiler,
+            Err(error) => {
+                debug!("JIT compiler not available: {error:?}");
+                return None;
+            }
+        };
 
-            Some(Self {
-                jit_compiler,
-                function_cache: Arc::new(DashMap::new()),
-                compilation_queue: Mutex::new(None),
-                batch_compilation_enabled: batch_compilation,
-                interpreted,
-            })
-        }
+        Some(Self {
+            jit_compiler,
+            function_cache: Arc::new(DashMap::new()),
+            compilation_queue: Mutex::new(None),
+            batch_compilation_enabled: batch_compilation,
+            interpreted,
+        })
     }
 
     /// Gets a cached function by its cache key.
@@ -286,7 +274,6 @@ impl Compiler {
 
             let jit_compiler = self.jit_compiler.clone();
             let function_cache = self.function_cache.clone();
-
             tokio::spawn(async move {
                 let mut batch = Vec::new();
 
