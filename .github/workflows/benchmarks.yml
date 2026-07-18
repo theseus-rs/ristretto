@@ -13,7 +13,7 @@ permissions:
 jobs:
   benchmark:
     name: Run Benchmarks
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-26.04-arm
     permissions:
       pull-requests: write
     steps:
@@ -21,10 +21,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          components: 'llvm-tools-preview'
-          toolchain: stable
+        run: rustup toolchain install --component llvm-tools-preview --no-self-update
 
       - name: Install benchmarking tools
         uses: bencherdev/bencher@main

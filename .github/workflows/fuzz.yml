@@ -12,7 +12,7 @@ jobs:
     name: ${{ matrix.target }}
     runs-on: ubuntu-latest
     env:
-      RUSTUP_TOOLCHAIN: nightly
+      RUSTC_BOOTSTRAP: 1
     strategy:
       fail-fast: false
       matrix:
@@ -69,7 +69,7 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v6
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@nightly
+        run: rustup toolchain install --no-self-update
       - name: Install cargo fuzz
         run: cargo install cargo-fuzz
       - name: Fuzz Tests

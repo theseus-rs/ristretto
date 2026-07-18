@@ -17,9 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
+        run: rustup toolchain install --no-self-update
       - name: Install cargo audit
         run: cargo install cargo-audit
       - name: Audit dependencies
@@ -34,9 +32,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
+        run: rustup toolchain install --no-self-update
       - name: Check the project
         run: |
           cargo check --workspace --all-targets --all-features
@@ -47,9 +43,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
+        run: rustup toolchain install --no-self-update
       - name: Install cargo deny
         run: cargo install cargo-deny
       - name: Check licenses
@@ -61,9 +55,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
+        run: rustup toolchain install --no-self-update
       - name: Check documentation
         env:
           RUSTDOCFLAGS: -D warnings
@@ -75,9 +67,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-          components: rustfmt
+        run: rustup toolchain install --component rustfmt --no-self-update
       - name: Check formatting
         run: cargo fmt --all --check
