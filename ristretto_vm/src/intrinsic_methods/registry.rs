@@ -315,6 +315,13 @@ mod tests {
                     .to_string(),
             );
         }
+        // Early Java 11 updates used this NativeLibrary signature. The runtime used by this test
+        // is a later update, but the registry must retain the intrinsic for older Java 11 homes.
+        if version_major == 11 {
+            required_methods.push(
+                "java/lang/ClassLoader$NativeLibrary.load0(Ljava/lang/String;Z)Z".to_string(),
+            );
+        }
         // Ristretto-specific intrinsic needed to mask ACC_SUPER from class modifiers; the
         // JDK exposes this as a non-native method in Java 25+, but we still require the
         // intrinsic dispatch.

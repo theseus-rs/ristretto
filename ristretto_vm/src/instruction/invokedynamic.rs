@@ -335,7 +335,8 @@ async fn get_private_lookup(thread: &Thread, caller_class: &Arc<Class>) -> Resul
     // bootstrap method invocation where the lookup needs access to JDK internals.
     let mut lookup_instance = ristretto_classloader::Object::new(lookup_class.clone())?;
     lookup_instance.set_value("lookupClass", caller_class_object.clone())?;
-    lookup_instance.set_value("prevLookupClass", Value::Object(None))?;
+    // prevLookupClass was added after Java 11; it is absent from older Lookup layouts.
+    let _ = lookup_instance.set_value("prevLookupClass", Value::Object(None));
     lookup_instance.set_value("allowedModes", Value::Int(-1))?;
 
     debug!(
@@ -510,7 +511,7 @@ pub async fn get_method_handle(
             // Fallback: create a trusted lookup directly
             let mut trusted_lookup = ristretto_classloader::Object::new(lookup_class.clone())?;
             trusted_lookup.set_value("lookupClass", class_object.clone())?;
-            trusted_lookup.set_value("prevLookupClass", Value::Object(None))?;
+            let _ = trusted_lookup.set_value("prevLookupClass", Value::Object(None));
             trusted_lookup.set_value("allowedModes", Value::Int(-1))?;
             Value::from_object(thread.vm()?.garbage_collector(), trusted_lookup)
         } else {
@@ -520,7 +521,7 @@ pub async fn get_method_handle(
         // Fallback: create a trusted lookup directly
         let mut trusted_lookup = ristretto_classloader::Object::new(lookup_class.clone())?;
         trusted_lookup.set_value("lookupClass", class_object.clone())?;
-        trusted_lookup.set_value("prevLookupClass", Value::Object(None))?;
+        let _ = trusted_lookup.set_value("prevLookupClass", Value::Object(None));
         trusted_lookup.set_value("allowedModes", Value::Int(-1))?;
         Value::from_object(thread.vm()?.garbage_collector(), trusted_lookup)
     };

@@ -832,6 +832,9 @@ pub async fn define_anonymous_class_0<T: Thread + 'static>(
             return Err(InternalError(format!("Class::from failed: {error}")));
         }
     };
+    // An anonymous class is defined in the runtime package and module of its host class. This is
+    // required for module-aware reflection used by the Java 11 lambda metafactory.
+    class.set_module_name(host_class.module_name()?)?;
 
     // Register the class with the class loader so it can be found later
     if let Some(loader) = class_loader {
@@ -2583,11 +2586,13 @@ mod tests {
         parameters.push(bytes_value);
         parameters.push(Value::Object(None)); // cp_patches (null)
 
-        let result = define_anonymous_class_0(thread, parameters).await?;
+        let result = define_anonymous_class_0(thread.clone(), parameters).await?;
         assert!(result.is_some());
         // The result should be a Class object
         let class_value = result.expect("class");
         assert!(matches!(class_value, Value::Object(Some(_))));
+        let anonymous_class = get_class(&thread, &class_value).await?;
+        assert_eq!(host_class.module_name()?, anonymous_class.module_name()?);
         Ok(())
     }
 
