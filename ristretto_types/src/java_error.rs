@@ -157,6 +157,12 @@ pub enum JavaError {
     /// - [IOException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/io/IOException.html)
     #[error("{0}")]
     IoException(String),
+    /// `NoRouteToHostException`
+    ///
+    /// # References
+    /// - [NoRouteToHostException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/NoRouteToHostException.html)
+    #[error("{0}")]
+    NoRouteToHostException(String),
     /// `NoClassDefFoundError`
     ///
     /// # References
@@ -187,6 +193,12 @@ pub enum JavaError {
     /// - [NullPointerException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/NullPointerException.html)
     #[error("{}", .0.as_deref().unwrap_or("null"))]
     NullPointerException(Option<String>),
+    /// `ProtocolException`
+    ///
+    /// # References
+    /// - [ProtocolException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/ProtocolException.html)
+    #[error("{0}")]
+    ProtocolException(String),
     /// `RuntimeException`
     ///
     /// # References
@@ -261,12 +273,14 @@ impl JavaError {
             JavaError::IndexOutOfBoundsException { .. } => "java.lang.IndexOutOfBoundsException",
             JavaError::InterruptedException(_) => "java.lang.InterruptedException",
             JavaError::IoException(_) => "java.io.IOException",
+            JavaError::NoRouteToHostException(_) => "java.net.NoRouteToHostException",
             JavaError::NoClassDefFoundError(_) => "java.lang.NoClassDefFoundError",
             JavaError::NoSuchFieldError(_) => "java.lang.NoSuchFieldError",
             JavaError::NoSuchMethodError(_) => "java.lang.NoSuchMethodError",
             JavaError::ArrayStoreException(_) => "java.lang.ArrayStoreException",
             JavaError::NegativeArraySizeException(_) => "java.lang.NegativeArraySizeException",
             JavaError::NullPointerException(_) => "java.lang.NullPointerException",
+            JavaError::ProtocolException(_) => "java.net.ProtocolException",
             JavaError::RuntimeException(_) => "java.lang.RuntimeException",
             JavaError::SocketException(_) => "java.net.SocketException",
             JavaError::SocketTimeoutException(_) => "java.net.SocketTimeoutException",
@@ -481,6 +495,13 @@ mod tests {
     }
 
     #[test]
+    fn test_no_route_to_host_exception() {
+        let error = JavaError::NoRouteToHostException("No route to host".to_string());
+        assert_eq!(error.class_name(), "java.net.NoRouteToHostException");
+        assert_eq!(error.message(), "No route to host");
+    }
+
+    #[test]
     fn test_no_class_def_found_error() {
         let error = JavaError::NoClassDefFoundError("java.lang.String".to_string());
         assert_eq!(error.class_name(), "java.lang.NoClassDefFoundError");
@@ -513,6 +534,13 @@ mod tests {
         let error = JavaError::NullPointerException(Some("null".to_string()));
         assert_eq!(error.class_name(), "java.lang.NullPointerException");
         assert_eq!(error.message(), "null");
+    }
+
+    #[test]
+    fn test_protocol_exception() {
+        let error = JavaError::ProtocolException("Protocol error".to_string());
+        assert_eq!(error.class_name(), "java.net.ProtocolException");
+        assert_eq!(error.message(), "Protocol error");
     }
 
     #[test]

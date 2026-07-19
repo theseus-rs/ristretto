@@ -1836,23 +1836,20 @@ pub async fn resolve_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    // Correct parameter order: pop MemberName first, then caller (Class)
-    let caller = match parameters.pop() {
-        Ok(caller) => {
-            let caller = get_class(&thread, &caller).await?;
-            Some(caller)
-        }
-        Err(_) => None,
+    let caller = parameters.pop()?;
+    let caller = if caller.is_null() {
+        None
+    } else {
+        Some(get_class(&thread, &caller).await?)
     };
     let member_self = parameters.pop()?;
-    resolve(
-        thread,
-        member_self,
-        caller,
-        &LookupModeFlags::empty(),
-        false,
-    )
-    .await
+    // Java 8 represents a trusted lookup by passing a null caller.
+    let lookup_mode = if caller.is_none() {
+        LookupModeFlags::TRUSTED
+    } else {
+        LookupModeFlags::empty()
+    };
+    resolve(thread, member_self, caller, &lookup_mode, false).await
 }
 
 #[intrinsic_method(
@@ -1873,11 +1870,18 @@ pub async fn resolve_1<T: Thread + 'static>(
         Some(caller)
     };
     let member_self = parameters.pop()?;
+    // Before Java 17 the native contract did not carry lookup modes. The JDK represents a
+    // trusted lookup by passing a null caller (Lookup.lookupClassOrNull()).
+    let lookup_mode = if caller.is_none() {
+        LookupModeFlags::TRUSTED
+    } else {
+        LookupModeFlags::empty()
+    };
     resolve(
         thread,
         member_self,
         caller,
-        &LookupModeFlags::empty(),
+        &lookup_mode,
         speculative_resolve,
     )
     .await
