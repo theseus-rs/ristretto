@@ -1279,8 +1279,8 @@ mod tests {
         .expect("readv must not wait for the remaining bytes")
         .expect("readv");
         assert_eq!(3, read);
-        assert_eq!(b"ab", chunks[0].as_slice());
-        assert_eq!(b'c', chunks[1][0]);
+        assert_eq!(Some(b"ab".as_slice()), chunks.first().map(Vec::as_slice));
+        assert_eq!(Some(&b'c'), chunks.get(1).and_then(|chunk| chunk.first()));
 
         close(file_handles, fd).await;
     }

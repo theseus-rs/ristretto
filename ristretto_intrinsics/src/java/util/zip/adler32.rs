@@ -143,7 +143,7 @@ mod tests {
         // Update with 'a', then 'b', then 'c'
         let mut adler = 1i32;
 
-        for byte in [b'a', b'b', b'c'] {
+        for byte in *b"abc" {
             let mut parameters = Parameters::default();
             parameters.push_int(adler);
             parameters.push_int(i32::from(byte));

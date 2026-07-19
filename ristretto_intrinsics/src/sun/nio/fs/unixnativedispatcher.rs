@@ -286,7 +286,7 @@ pub async fn chown_0<T: Thread + 'static>(
     #[cfg(target_family = "unix")]
     {
         let c_path = to_cstring(&path_str)?;
-        #[expect(clippy::cast_sign_loss, unsafe_code)]
+        #[expect(unsafe_code)]
         let result =
             unsafe { libc::chown(c_path.as_ptr(), uid as libc::uid_t, gid as libc::gid_t) };
         if result < 0 {
@@ -559,7 +559,6 @@ pub async fn fchown_0<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
-        #[expect(clippy::cast_sign_loss)]
         #[expect(unsafe_code)]
         let result = unsafe { libc::fchown(fd, uid as libc::uid_t, gid as libc::gid_t) };
         if result < 0 {
@@ -1187,7 +1186,6 @@ pub async fn getgrgid<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
-        #[expect(clippy::cast_sign_loss)]
         #[expect(unsafe_code)]
         let gr = unsafe { libc::getgrgid(gid as libc::gid_t) };
         if gr.is_null() {
@@ -1339,7 +1337,6 @@ pub async fn getpwuid<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
-        #[expect(clippy::cast_sign_loss)]
         #[expect(unsafe_code)]
         let pw = unsafe { libc::getpwuid(uid as libc::uid_t) };
         if pw.is_null() {
@@ -1417,7 +1414,7 @@ pub async fn lchown_0<T: Thread + 'static>(
     #[cfg(target_family = "unix")]
     {
         let c_path = to_cstring(&path_str)?;
-        #[expect(clippy::cast_sign_loss, unsafe_code)]
+        #[expect(unsafe_code)]
         let result =
             unsafe { libc::lchown(c_path.as_ptr(), uid as libc::uid_t, gid as libc::gid_t) };
         if result < 0 {

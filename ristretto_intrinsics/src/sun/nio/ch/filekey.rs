@@ -336,7 +336,10 @@ mod tests {
             panic!("expected long array");
         };
         // st_ino should be non-zero for a real file on a real filesystem.
-        assert!(values[1] != 0, "expected non-zero st_ino, got {values:?}");
+        assert!(
+            matches!(values.get(1), Some(st_ino) if *st_ino != 0),
+            "expected non-zero st_ino, got {values:?}"
+        );
         Ok(())
     }
 

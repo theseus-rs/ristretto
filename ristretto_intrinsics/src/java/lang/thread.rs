@@ -204,7 +204,7 @@ pub async fn get_threads<T: Thread + 'static>(
     let thread_handles = vm.thread_handles().read().await;
     let mut threads = Vec::new();
 
-    for (_id, vm_thread_handle) in thread_handles.iter() {
+    for vm_thread_handle in thread_handles.values() {
         let vm_thread = &vm_thread_handle.thread;
         let thread_object = vm_thread.java_object().await;
         threads.push(thread_object);
