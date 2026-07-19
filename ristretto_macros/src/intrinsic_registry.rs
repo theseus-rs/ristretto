@@ -135,7 +135,7 @@ const OS_VARIANTS: [&str; 3] = ["macos", "linux", "windows"];
 fn get_intrinsic_methods(
     source_path: &PathBuf,
 ) -> Result<AHashMap<String, Vec<IntrinsicMethodData>>, Box<dyn std::error::Error>> {
-    // First pass: collect cfg-gated module paths from mod.rs and lib.rs files.
+    // First pass: collect cfg-gated module paths from module files.
     // Maps module path -> list of cfg condition strings.
     let mut cfg_gated_modules: AHashMap<String, Vec<String>> = AHashMap::default();
     for entry in WalkDir::new(source_path.clone())
@@ -143,7 +143,7 @@ fn get_intrinsic_methods(
         .filter_map(Result::ok)
     {
         let file_name = entry.file_name().to_string_lossy();
-        if file_name == "mod.rs" || file_name == "lib.rs" {
+        if file_name.ends_with(".rs") {
             collect_cfg_gated_modules(source_path, &entry, &mut cfg_gated_modules)?;
         }
     }
@@ -164,7 +164,7 @@ fn get_intrinsic_methods(
     Ok(intrinsic_methods)
 }
 
-/// Collects module names that have `#[cfg(...)]` attributes from mod.rs and lib.rs files.
+/// Collects module names that have `#[cfg(...)]` attributes from Rust module files.
 fn collect_cfg_gated_modules(
     source_path: &PathBuf,
     entry: &walkdir::DirEntry,
@@ -174,13 +174,22 @@ fn collect_cfg_gated_modules(
     let mut file = File::open(entry.path())?;
     file.read_to_string(&mut file_content)?;
 
-    let relative_dir = entry
+    let relative_path = entry
         .path()
-        .parent()
-        .unwrap_or(entry.path())
         .strip_prefix(source_path)
-        .unwrap_or(entry.path().parent().unwrap_or(entry.path()));
-    let dir_module = relative_dir.to_string_lossy().replace(['/', '\\'], "::");
+        .unwrap_or(entry.path());
+    let file_name = relative_path
+        .file_name()
+        .and_then(|file_name| file_name.to_str());
+    let module_path = if matches!(file_name, Some("lib.rs" | "main.rs" | "mod.rs")) {
+        relative_path
+            .parent()
+            .unwrap_or(relative_path)
+            .to_path_buf()
+    } else {
+        relative_path.with_extension("")
+    };
+    let current_module = module_path.to_string_lossy().replace(['/', '\\'], "::");
 
     if let Ok(syn_file) = syn::parse_file(&file_content) {
         for item in &syn_file.items {
@@ -194,10 +203,10 @@ fn collect_cfg_gated_modules(
 
                 if !cfg_conditions.is_empty() {
                     let mod_name = item_mod.ident.to_string();
-                    let full_path = if dir_module.is_empty() {
+                    let full_path = if current_module.is_empty() {
                         mod_name
                     } else {
-                        format!("{dir_module}::{mod_name}")
+                        format!("{current_module}::{mod_name}")
                     };
                     gated_modules.insert(full_path, cfg_conditions);
                 }
@@ -782,7 +791,7 @@ mod tests {
         );
         write_file(
             root,
-            "nested/mod.rs",
+            "nested.rs",
             r#"
                 #[cfg(target_os = "linux")]
                 pub mod child;
@@ -797,7 +806,7 @@ mod tests {
                 pub fn child() {}
             "#,
         );
-        write_file(root, "broken/mod.rs", "pub mod ;");
+        write_file(root, "broken.rs", "pub mod ;");
         write_file(root, "broken_file.rs", "fn broken(");
         write_file(root, "not_rust.txt", "ignored");
         temp_dir
