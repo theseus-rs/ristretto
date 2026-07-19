@@ -23,6 +23,7 @@ pub async fn close0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousFileChannelImpl.lockFile(JJJZJ)I", Any)]
 #[async_method]
 pub async fn lock_file<T: Thread + 'static>(
@@ -39,6 +40,7 @@ pub async fn lock_file<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousFileChannelImpl.readFile(JJIJJ)I", Any)]
 #[async_method]
 pub async fn read_file<T: Thread + 'static>(
@@ -55,6 +57,7 @@ pub async fn read_file<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousFileChannelImpl.writeFile(JJIJJ)I", Any)]
 #[async_method]
 pub async fn write_file<T: Thread + 'static>(

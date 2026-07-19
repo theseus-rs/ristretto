@@ -22,6 +22,7 @@ pub async fn closesocket0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/nio/ch/WindowsAsynchronousSocketChannelImpl.connect0(JZLjava/net/InetAddress;IJ)I",
     Any
@@ -42,6 +43,7 @@ pub async fn connect0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousSocketChannelImpl.initIDs()V", Any)]
 #[async_method]
 pub async fn init_ids<T: Thread + 'static>(
@@ -53,6 +55,7 @@ pub async fn init_ids<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousSocketChannelImpl.read0(JIJJ)I", Any)]
 #[async_method]
 pub async fn read0<T: Thread + 'static>(
@@ -68,6 +71,7 @@ pub async fn read0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousSocketChannelImpl.shutdown0(JI)V", Any)]
 #[async_method]
 pub async fn shutdown0<T: Thread + 'static>(
@@ -81,6 +85,7 @@ pub async fn shutdown0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/nio/ch/WindowsAsynchronousSocketChannelImpl.updateConnectContext(J)V",
     Any
@@ -96,6 +101,7 @@ pub async fn update_connect_context<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousSocketChannelImpl.write0(JIJJ)I", Any)]
 #[async_method]
 pub async fn write0<T: Thread + 'static>(

@@ -16,6 +16,7 @@ pub async fn eventfd0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EventFD.eventfd0()I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EventFD.set0(I)I", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn set0<T: Thread + 'static>(

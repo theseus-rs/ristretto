@@ -25,6 +25,7 @@ pub async fn accept0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/nio/ch/WindowsAsynchronousServerSocketChannelImpl.closesocket0(J)V",
     Any
@@ -40,6 +41,7 @@ pub async fn closesocket0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/nio/ch/WindowsAsynchronousServerSocketChannelImpl.initIDs()V",
     Any
@@ -54,6 +56,7 @@ pub async fn init_ids<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method(
     "sun/nio/ch/WindowsAsynchronousServerSocketChannelImpl.updateAcceptContext(JJ)V",
     Any

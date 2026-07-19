@@ -16,6 +16,7 @@ pub async fn create<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPoll.create()I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPoll.ctl(IIII)I", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
 pub async fn ctl<T: Thread + 'static>(
@@ -28,6 +29,7 @@ pub async fn ctl<T: Thread + 'static>(
     let _epfd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPoll.ctl(IIII)I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPoll.dataOffset()I", Any)]
 #[async_method]
 pub async fn data_offset<T: Thread + 'static>(
@@ -36,6 +38,7 @@ pub async fn data_offset<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPoll.dataOffset()I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPoll.epollCreate()I", Equal(JAVA_8))]
 #[async_method]
 pub async fn epoll_create<T: Thread + 'static>(
@@ -44,6 +47,7 @@ pub async fn epoll_create<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPoll.epollCreate()I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPoll.epollCtl(IIII)I", Equal(JAVA_8))]
 #[async_method]
 pub async fn epoll_ctl<T: Thread + 'static>(
@@ -56,6 +60,7 @@ pub async fn epoll_ctl<T: Thread + 'static>(
     let _epfd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPoll.epollCtl(IIII)I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPoll.epollWait(IJI)I", Equal(JAVA_8))]
 #[async_method]
 pub async fn epoll_wait<T: Thread + 'static>(
@@ -67,6 +72,7 @@ pub async fn epoll_wait<T: Thread + 'static>(
     let _epfd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPoll.epollWait(IJI)I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPoll.eventSize()I", Any)]
 #[async_method]
 pub async fn event_size<T: Thread + 'static>(
@@ -75,6 +81,7 @@ pub async fn event_size<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPoll.eventSize()I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPoll.eventsOffset()I", Any)]
 #[async_method]
 pub async fn events_offset<T: Thread + 'static>(
@@ -83,6 +90,7 @@ pub async fn events_offset<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPoll.eventsOffset()I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPoll.wait(IJII)I", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
 pub async fn wait<T: Thread + 'static>(
