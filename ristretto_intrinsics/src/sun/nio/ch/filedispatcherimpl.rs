@@ -243,6 +243,8 @@ async fn lock_internal<T: Thread + 'static>(
     let shared = parameters.pop_int()? != 0;
     let size = parameters.pop_long()?;
     let pos = parameters.pop_long()?;
+    #[cfg(not(target_os = "windows"))]
+    let _ = (size, pos);
     let blocking = parameters.pop_int()? != 0;
     let fd_value = parameters.pop()?;
     let vm = thread.vm()?;
@@ -556,6 +558,8 @@ async fn release_internal<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let size = parameters.pop_long()?;
     let pos = parameters.pop_long()?;
+    #[cfg(not(target_os = "windows"))]
+    let _ = (size, pos);
     let fd_value = parameters.pop()?;
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
