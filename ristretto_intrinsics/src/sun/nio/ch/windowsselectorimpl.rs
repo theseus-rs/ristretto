@@ -23,6 +23,7 @@ pub async fn discard_urgent_data<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/nio/ch/WindowsSelectorImpl.resetWakeupSocket0(I)V", Any)]
 #[async_method]
 pub async fn reset_wakeup_socket0<T: Thread + 'static>(
@@ -35,6 +36,7 @@ pub async fn reset_wakeup_socket0<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/nio/ch/WindowsSelectorImpl.setWakeupSocket0(I)V", Any)]
 #[async_method]
 pub async fn set_wakeup_socket0<T: Thread + 'static>(

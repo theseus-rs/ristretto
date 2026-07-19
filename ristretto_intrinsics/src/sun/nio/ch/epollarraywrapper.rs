@@ -19,6 +19,7 @@ pub async fn epoll_create<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/nio/ch/EPollArrayWrapper.epollCtl(IIII)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn epoll_ctl<T: Thread + 'static>(
@@ -34,6 +35,7 @@ pub async fn epoll_ctl<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/nio/ch/EPollArrayWrapper.epollWait(JIJI)I", Equal(JAVA_8))]
 #[async_method]
 pub async fn epoll_wait<T: Thread + 'static>(
@@ -49,6 +51,7 @@ pub async fn epoll_wait<T: Thread + 'static>(
     )
     .into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPollArrayWrapper.init()V", Equal(JAVA_8))]
 #[async_method]
 pub async fn init<T: Thread + 'static>(
@@ -57,6 +60,7 @@ pub async fn init<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPollArrayWrapper.init()V".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPollArrayWrapper.interrupt(I)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn interrupt<T: Thread + 'static>(
@@ -69,6 +73,7 @@ pub async fn interrupt<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/nio/ch/EPollArrayWrapper.offsetofData()I", Equal(JAVA_8))]
 #[async_method]
 pub async fn offsetof_data<T: Thread + 'static>(
@@ -80,6 +85,7 @@ pub async fn offsetof_data<T: Thread + 'static>(
             .into(),
     )
 }
+
 #[intrinsic_method("sun/nio/ch/EPollArrayWrapper.sizeofEPollEvent()I", Equal(JAVA_8))]
 #[async_method]
 pub async fn sizeof_epoll_event<T: Thread + 'static>(

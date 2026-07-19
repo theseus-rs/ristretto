@@ -17,6 +17,7 @@ pub async fn close<T: Thread + 'static>(
     let _h = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/WEPoll.close(J)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/WEPoll.create()J", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn create<T: Thread + 'static>(
@@ -25,6 +26,7 @@ pub async fn create<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/WEPoll.create()J".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/WEPoll.ctl(JIJI)I", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn ctl<T: Thread + 'static>(
@@ -37,6 +39,7 @@ pub async fn ctl<T: Thread + 'static>(
     let _h = parameters.pop_long()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/WEPoll.ctl(JIJI)I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/WEPoll.dataOffset()I", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn data_offset<T: Thread + 'static>(
@@ -45,6 +48,7 @@ pub async fn data_offset<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/WEPoll.dataOffset()I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/WEPoll.eventSize()I", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn event_size<T: Thread + 'static>(
@@ -53,6 +57,7 @@ pub async fn event_size<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/WEPoll.eventSize()I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/WEPoll.eventsOffset()I", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn events_offset<T: Thread + 'static>(
@@ -61,6 +66,7 @@ pub async fn events_offset<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/WEPoll.eventsOffset()I".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/WEPoll.wait(JJII)I", GreaterThanOrEqual(JAVA_17))]
 #[async_method]
 pub async fn wait<T: Thread + 'static>(

@@ -17,6 +17,7 @@ pub async fn close0<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPollPort.close0(I)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPollPort.drain1(I)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn drain1<T: Thread + 'static>(
@@ -26,6 +27,7 @@ pub async fn drain1<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPollPort.drain1(I)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPollPort.interrupt(I)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn interrupt<T: Thread + 'static>(
@@ -35,6 +37,7 @@ pub async fn interrupt<T: Thread + 'static>(
     let _fd = parameters.pop_int()?;
     Err(JavaError::UnsatisfiedLinkError("sun/nio/ch/EPollPort.interrupt(I)V".to_string()).into())
 }
+
 #[intrinsic_method("sun/nio/ch/EPollPort.socketpair([I)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn socketpair<T: Thread + 'static>(
