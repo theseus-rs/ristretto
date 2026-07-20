@@ -4,42 +4,347 @@ use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
-use ristretto_types::{JavaError, Parameters, Result, Thread, VM};
-use std::ffi::c_void;
-use std::ptr::{null, null_mut};
-use std::sync::Arc;
-use windows_sys::Win32::Foundation::{CloseHandle, GetLastError, HANDLE};
+use ristretto_types::JavaError;
+use ristretto_types::Thread;
+use ristretto_types::{Parameters, Result, VM};
+use std::collections::HashMap;
+use std::ptr::null;
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use windows_sys::Win32::System::Diagnostics::Debug::{
     FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS, FormatMessageW,
 };
-use windows_sys::Win32::System::IO::{
-    CreateIoCompletionPort, GetQueuedCompletionStatus, OVERLAPPED, PostQueuedCompletionStatus,
-};
-use windows_sys::Win32::System::Threading::INFINITE;
+
+const INVALID_HANDLE_VALUE: i64 = -1;
+const ERROR_INVALID_FUNCTION: i32 = 1;
+const ERROR_INVALID_HANDLE: i32 = 6;
+const ERROR_INVALID_PARAMETER: i32 = 87;
+
+/// Completion packet consumed by the Java `Iocp` event-handler threads.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct CompletionPacket {
+    pub(crate) error: i32,
+    pub(crate) bytes_transferred: i32,
+    pub(crate) completion_key: i32,
+    pub(crate) overlapped: i64,
+}
 
 #[derive(Debug)]
-struct CompletionStatus {
-    error: i32,
-    bytes_transferred: i32,
+struct CompletionPort {
+    sender: tokio::sync::mpsc::UnboundedSender<CompletionPacket>,
+    receiver: tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<CompletionPacket>>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Association {
+    port: i64,
     completion_key: i32,
+    closed: bool,
+    pending: usize,
+    generation: u64,
+}
+
+/// Immutable IOCP route captured when an overlapped operation is initiated.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct CompletionTarget {
+    handle: i64,
+    port: i64,
+    completion_key: i32,
+    generation: u64,
+}
+
+/// Per-VM emulation of the Windows I/O completion-port namespace.
+///
+/// Java-visible file and socket handles in Ristretto are managed identifiers. Keeping the IOCP
+/// registry beside those identifiers avoids treating them as raw Win32 handles and also isolates
+/// independent VM instances used by the test harness.
+#[derive(Debug)]
+pub(crate) struct IocpState {
+    next_port: AtomicI64,
+    next_generation: AtomicU64,
+    ports: Mutex<HashMap<i64, Arc<CompletionPort>>>,
+    associations: Mutex<HashMap<i64, Association>>,
+}
+
+impl IocpState {
+    fn new() -> Self {
+        Self {
+            next_port: AtomicI64::new(1),
+            next_generation: AtomicU64::new(1),
+            ports: Mutex::new(HashMap::new()),
+            associations: Mutex::new(HashMap::new()),
+        }
+    }
+
+    fn create_or_associate(
+        &self,
+        handle: i64,
+        existing_port: i64,
+        completion_key: i32,
+    ) -> std::result::Result<i64, i32> {
+        let mut associations = if handle == INVALID_HANDLE_VALUE {
+            None
+        } else {
+            let associations = self
+                .associations
+                .lock()
+                .map_err(|_| ERROR_INVALID_FUNCTION)?;
+            if associations
+                .get(&handle)
+                .is_some_and(|association| !association.closed)
+            {
+                return Err(ERROR_INVALID_PARAMETER);
+            }
+            Some(associations)
+        };
+        let port_handle = if existing_port == 0 {
+            let handle = self.next_port.fetch_add(1, Ordering::Relaxed);
+            let (sender, receiver) = tokio::sync::mpsc::unbounded_channel();
+            let port = Arc::new(CompletionPort {
+                sender,
+                receiver: tokio::sync::Mutex::new(receiver),
+            });
+            self.ports
+                .lock()
+                .map_err(|_| ERROR_INVALID_FUNCTION)?
+                .insert(handle, port);
+            handle
+        } else {
+            if !self
+                .ports
+                .lock()
+                .map_err(|_| ERROR_INVALID_FUNCTION)?
+                .contains_key(&existing_port)
+            {
+                return Err(ERROR_INVALID_HANDLE);
+            }
+            existing_port
+        };
+
+        // INVALID_HANDLE_VALUE creates a completion port without associating an object.
+        if let Some(associations) = associations.as_mut() {
+            // Windows may reuse a numeric handle after close. A closed association remains long
+            // enough to route cancellation packets, then is replaced when that value is reused.
+            associations.insert(
+                handle,
+                Association {
+                    port: port_handle,
+                    completion_key,
+                    closed: false,
+                    pending: 0,
+                    generation: self.next_generation.fetch_add(1, Ordering::Relaxed),
+                },
+            );
+        }
+
+        Ok(port_handle)
+    }
+
+    fn port(&self, handle: i64) -> std::result::Result<Arc<CompletionPort>, i32> {
+        self.ports
+            .lock()
+            .map_err(|_| ERROR_INVALID_FUNCTION)?
+            .get(&handle)
+            .cloned()
+            .ok_or(ERROR_INVALID_HANDLE)
+    }
+
+    fn close(&self, handle: i64) -> bool {
+        let removed = self
+            .ports
+            .lock()
+            .is_ok_and(|mut ports| ports.remove(&handle).is_some());
+        if removed && let Ok(mut associations) = self.associations.lock() {
+            associations.retain(|_, association| association.port != handle);
+        }
+        removed
+    }
+
+    fn post_to_port(
+        &self,
+        port_handle: i64,
+        packet: CompletionPacket,
+    ) -> std::result::Result<(), i32> {
+        let port = self.port(port_handle)?;
+        port.sender.send(packet).map_err(|_| ERROR_INVALID_HANDLE)
+    }
+
+    fn post_for_handle(
+        &self,
+        handle: i64,
+        error: i32,
+        bytes_transferred: i32,
+        overlapped: i64,
+    ) -> std::result::Result<(), i32> {
+        let association = self
+            .associations
+            .lock()
+            .map_err(|_| ERROR_INVALID_FUNCTION)?
+            .get(&handle)
+            .copied()
+            .ok_or(ERROR_INVALID_HANDLE)?;
+        self.post_to_port(
+            association.port,
+            CompletionPacket {
+                error,
+                bytes_transferred,
+                completion_key: association.completion_key,
+                overlapped,
+            },
+        )
+    }
+
+    fn is_associated(&self, handle: i64) -> bool {
+        self.associations.lock().is_ok_and(|associations| {
+            associations
+                .get(&handle)
+                .is_some_and(|association| !association.closed)
+        })
+    }
+
+    fn begin_operation(&self, handle: i64) -> std::result::Result<CompletionTarget, i32> {
+        let mut associations = self
+            .associations
+            .lock()
+            .map_err(|_| ERROR_INVALID_FUNCTION)?;
+        let association = associations
+            .get_mut(&handle)
+            .filter(|association| !association.closed)
+            .ok_or(ERROR_INVALID_HANDLE)?;
+        association.pending = association
+            .pending
+            .checked_add(1)
+            .ok_or(ERROR_INVALID_FUNCTION)?;
+        Ok(CompletionTarget {
+            handle,
+            port: association.port,
+            completion_key: association.completion_key,
+            generation: association.generation,
+        })
+    }
+
+    fn operation_is_open(&self, target: CompletionTarget) -> bool {
+        self.associations.lock().is_ok_and(|associations| {
+            associations.get(&target.handle).is_some_and(|association| {
+                association.generation == target.generation && !association.closed
+            })
+        })
+    }
+
+    fn finish_operation(&self, target: CompletionTarget) {
+        if let Ok(mut associations) = self.associations.lock() {
+            let remove = if let Some(association) = associations.get_mut(&target.handle)
+                && association.generation == target.generation
+            {
+                association.pending = association.pending.saturating_sub(1);
+                association.closed && association.pending == 0
+            } else {
+                false
+            };
+            if remove {
+                associations.remove(&target.handle);
+            }
+        }
+    }
+
+    fn mark_closed(&self, handle: i64) {
+        if let Ok(mut associations) = self.associations.lock() {
+            let remove = if let Some(association) = associations.get_mut(&handle) {
+                association.closed = true;
+                association.pending == 0
+            } else {
+                false
+            };
+            if remove {
+                associations.remove(&handle);
+            }
+        }
+    }
+}
+
+fn state<V: VM + ?Sized>(vm: &V) -> Result<Arc<IocpState>> {
+    vm.resource_manager().get_or_init(IocpState::new)
+}
+
+/// Returns whether `handle` is currently associated with an open IOCP.
+pub(crate) fn is_associated<V: VM + ?Sized>(vm: &V, handle: i64) -> Result<bool> {
+    Ok(state(vm)?.is_associated(handle))
+}
+
+/// Captures the completion route and accounts for one pending overlapped operation.
+pub(crate) fn begin_operation<V: VM + ?Sized>(vm: &V, handle: i64) -> Result<CompletionTarget> {
+    state(vm)?.begin_operation(handle).map_err(windows_error)
+}
+
+/// Returns whether the object generation that initiated `target` is still open.
+pub(crate) fn operation_is_open<V: VM + ?Sized>(vm: &V, target: CompletionTarget) -> Result<bool> {
+    Ok(state(vm)?.operation_is_open(target))
+}
+
+/// Marks an associated object closed while retaining its route for cancellation completions.
+pub(crate) fn mark_closed<V: VM + ?Sized>(vm: &V, handle: i64) {
+    if let Ok(state) = state(vm) {
+        state.mark_closed(handle);
+    }
+}
+
+/// Posts one operation result to the route captured by [`begin_operation`].
+pub(crate) fn post_operation<V: VM + ?Sized>(
+    vm: &V,
+    target: CompletionTarget,
+    error: i32,
+    bytes_transferred: usize,
     overlapped: i64,
+) -> Result<()> {
+    let bytes_transferred = u32::try_from(bytes_transferred).unwrap_or(u32::MAX);
+    let bytes_transferred = i32::from_ne_bytes(bytes_transferred.to_ne_bytes());
+    let state = state(vm)?;
+    let result = state
+        .post_to_port(
+            target.port,
+            CompletionPacket {
+                error,
+                bytes_transferred,
+                completion_key: target.completion_key,
+                overlapped,
+            },
+        )
+        .map_err(windows_error);
+    state.finish_operation(target);
+    result
 }
 
-/// Converts the `jlong` representation used by `OpenJDK` into a Win32 handle.
-#[expect(
-    clippy::cast_possible_truncation,
-    reason = "jlong_to_ptr has the same pointer-width truncation on 32-bit Windows"
-)]
-fn handle_from_jlong(handle: i64) -> HANDLE {
-    handle as isize as *mut c_void
+/// Posts the completion of an overlapped operation issued against `handle`.
+pub(crate) fn post_completion<V: VM + ?Sized>(
+    vm: &V,
+    handle: i64,
+    error: i32,
+    bytes_transferred: usize,
+    overlapped: i64,
+) -> Result<()> {
+    let bytes_transferred = u32::try_from(bytes_transferred).unwrap_or(u32::MAX);
+    let bytes_transferred = i32::from_ne_bytes(bytes_transferred.to_ne_bytes());
+    state(vm)?
+        .post_for_handle(handle, error, bytes_transferred, overlapped)
+        .map_err(windows_error)
 }
 
-/// Converts a Win32 handle into the `jlong` representation used by `OpenJDK`.
-fn handle_to_jlong(handle: HANDLE) -> i64 {
-    handle as isize as i64
+/// Converts an I/O error into the integer error delivered in an IOCP packet.
+pub(crate) fn io_error_code(error: &std::io::Error) -> i32 {
+    error.raw_os_error().unwrap_or(ERROR_INVALID_FUNCTION)
 }
 
-/// Formats a Win32 system message using the same fixed-size buffer as `OpenJDK`.
+fn windows_error(code: i32) -> ristretto_types::Error {
+    let error_code = u32::from_ne_bytes(code.to_ne_bytes());
+    let message =
+        format_system_message::<256>(error_code, true, true).unwrap_or_else(|| format_error(code));
+    JavaError::IoException(message).into()
+}
+
+fn format_error(code: i32) -> String {
+    std::io::Error::from_raw_os_error(code).to_string()
+}
+
 #[expect(unsafe_code)]
 fn format_system_message<const BUFFER_LENGTH: usize>(
     error_code: u32,
@@ -81,140 +386,30 @@ fn format_system_message<const BUFFER_LENGTH: usize>(
     Some(String::from_utf16_lossy(message.get(..length)?))
 }
 
-fn io_exception(error_code: u32, default_message: &str) -> ristretto_types::Error {
-    // OpenJDK's Windows last-error helper uses a 256-wide-character buffer.
-    let message = format_system_message::<256>(error_code, true, true)
-        .unwrap_or_else(|| default_message.to_string());
-    JavaError::IoException(message).into()
-}
+async fn is_valid_io_handle<T: Thread + 'static>(thread: &Arc<T>, handle: i64) -> Result<bool> {
+    if handle == INVALID_HANDLE_VALUE {
+        return Ok(true);
+    }
 
-/// Resolves Ristretto's synthetic socket descriptor to the Win32 `SOCKET` value expected by
-/// `CreateIoCompletionPort`. File handles are already stored as their native Win32 values.
-async fn native_io_handle<T: Thread + 'static>(thread: &Arc<T>, handle: i64) -> Result<i64> {
-    let Ok(socket_descriptor) = i32::try_from(handle) else {
-        return Ok(handle);
-    };
     let vm = thread.vm()?;
-    // Native file handles can be numerically small enough to overlap the VM's synthetic socket
-    // descriptor range. A registered file handle is already native and must take precedence.
     if vm.file_handles().get(&handle).await.is_some() {
-        return Ok(handle);
+        return Ok(true);
     }
-    let Some(socket) = vm.socket_handles().get(&socket_descriptor).await else {
-        return Ok(handle);
+    let Ok(socket_descriptor) = i32::try_from(handle) else {
+        return Ok(false);
     };
-    #[expect(
-        clippy::cast_possible_wrap,
-        reason = "Win32 SOCKET bits are passed through a Java long"
-    )]
-    let native_handle = socket.socket_type.raw_socket() as i64;
-    Ok(native_handle)
-}
-
-#[expect(unsafe_code)]
-fn create_port(
-    handle: i64,
-    existing_port: i64,
-    completion_key: i32,
-    concurrency: i32,
-) -> Result<i64> {
-    // C's conversion from jint to ULONG_PTR sign-extends a negative completion key before
-    // converting it to the pointer-sized unsigned value.
-    #[expect(
-        clippy::cast_sign_loss,
-        reason = "matches OpenJDK's jint-to-ULONG_PTR conversion"
-    )]
-    let completion_key = completion_key as isize as usize;
-    let concurrency = u32::from_ne_bytes(concurrency.to_ne_bytes());
-    let port = unsafe {
-        CreateIoCompletionPort(
-            handle_from_jlong(handle),
-            handle_from_jlong(existing_port),
-            completion_key,
-            concurrency,
-        )
-    };
-    if port.is_null() {
-        let error_code = unsafe { GetLastError() };
-        return Err(io_exception(error_code, "CreateIoCompletionPort failed"));
-    }
-    Ok(handle_to_jlong(port))
-}
-
-#[expect(unsafe_code)]
-fn close_handle(handle: i64) {
-    // OpenJDK deliberately ignores CloseHandle's result for this native method.
-    unsafe {
-        CloseHandle(handle_from_jlong(handle));
-    }
-}
-
-#[expect(unsafe_code)]
-fn wait_for_completion(completion_port: i64) -> std::result::Result<CompletionStatus, u32> {
-    let mut bytes_transferred = 0_u32;
-    let mut completion_key = 0_usize;
-    let mut overlapped: *mut OVERLAPPED = null_mut();
-    let succeeded = unsafe {
-        GetQueuedCompletionStatus(
-            handle_from_jlong(completion_port),
-            &raw mut bytes_transferred,
-            &raw mut completion_key,
-            &raw mut overlapped,
-            INFINITE,
-        )
-    };
-    let error_code = if succeeded == 0 {
-        unsafe { GetLastError() }
-    } else {
-        0
-    };
-
-    // A null OVERLAPPED on failure means that no completion packet was dequeued. If an
-    // OVERLAPPED is present, the API call successfully dequeued a failed I/O operation and its
-    // error code belongs in CompletionStatus rather than being thrown here.
-    if succeeded == 0 && overlapped.is_null() {
-        return Err(error_code);
-    }
-
-    #[expect(
-        clippy::cast_possible_truncation,
-        clippy::cast_possible_wrap,
-        reason = "OpenJDK stores the pointer-sized completion key in a jint field"
-    )]
-    let completion_key = completion_key as i32;
-    Ok(CompletionStatus {
-        error: i32::from_ne_bytes(error_code.to_ne_bytes()),
-        bytes_transferred: i32::from_ne_bytes(bytes_transferred.to_ne_bytes()),
-        completion_key,
-        overlapped: overlapped as isize as i64,
-    })
-}
-
-#[expect(unsafe_code)]
-fn post_completion(completion_port: i64, completion_key: i32) -> std::result::Result<(), u32> {
-    let completion_key = u32::from_ne_bytes(completion_key.to_ne_bytes());
-    let succeeded = unsafe {
-        PostQueuedCompletionStatus(
-            handle_from_jlong(completion_port),
-            0,
-            completion_key as usize,
-            null(),
-        )
-    };
-    if succeeded == 0 {
-        return Err(unsafe { GetLastError() });
-    }
-    Ok(())
+    Ok(vm.socket_handles().get(&socket_descriptor).await.is_some())
 }
 
 #[intrinsic_method("sun/nio/ch/Iocp.close0(J)V", Any)]
 #[async_method]
 pub async fn close0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let handle = parameters.pop_long()?;
-    close_handle(handle);
+    // OpenJDK deliberately ignores CloseHandle's result for this native method.
+    state(thread.vm()?.as_ref())?.close(handle);
     Ok(None)
 }
 
@@ -224,11 +419,16 @@ pub async fn create_io_completion_port<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let concurrency = parameters.pop_int()?;
+    let _concurrency = parameters.pop_int()?;
     let completion_key = parameters.pop_int()?;
     let existing_port = parameters.pop_long()?;
-    let handle = native_io_handle(&thread, parameters.pop_long()?).await?;
-    let port = create_port(handle, existing_port, completion_key, concurrency)?;
+    let handle = parameters.pop_long()?;
+    if !is_valid_io_handle(&thread, handle).await? {
+        return Err(windows_error(ERROR_INVALID_HANDLE));
+    }
+    let port = state(thread.vm()?.as_ref())?
+        .create_or_associate(handle, existing_port, completion_key)
+        .map_err(windows_error)?;
     Ok(Some(Value::Long(port)))
 }
 
@@ -239,11 +439,11 @@ pub async fn get_error_message<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let error_code = parameters.pop_int()?;
-    let error_code = u32::from_ne_bytes(error_code.to_ne_bytes());
+    let native_error_code = u32::from_ne_bytes(error_code.to_ne_bytes());
     // JDK 8 through 13 returned FormatMessageW's trailing punctuation/newlines. JDK 14 and newer
     // remove a final period followed by CR/LF.
     let trim_suffix = thread.vm()?.java_class_file_version() >= &JAVA_14;
-    let Some(message) = format_system_message::<255>(error_code, false, trim_suffix) else {
+    let Some(message) = format_system_message::<255>(native_error_code, false, trim_suffix) else {
         return Ok(Some(Value::Object(None)));
     };
     Ok(Some(thread.intern_string(&message).await?))
@@ -255,36 +455,37 @@ pub async fn get_error_message<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_queued_completion_status<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let status = parameters.pop_reference()?;
+    let status = parameters
+        .pop_reference()?
+        .ok_or(JavaError::NullPointerException(None))?;
     let completion_port = parameters.pop_long()?;
-    let completion = tokio::task::spawn_blocking(move || wait_for_completion(completion_port))
+    let port = state(thread.vm()?.as_ref())?
+        .port(completion_port)
+        .map_err(windows_error)?;
+    let packet = port
+        .receiver
+        .lock()
         .await
-        .map_err(|error| {
-            InternalError(format!(
-                "GetQueuedCompletionStatus blocking task failed: {error}"
-            ))
-        })?
-        .map_err(|error_code| io_exception(error_code, "GetQueuedCompletionStatus failed"))?;
+        .recv()
+        .await
+        .ok_or_else(|| windows_error(ERROR_INVALID_HANDLE))?;
 
-    let status = status.ok_or(JavaError::NullPointerException(None))?;
     let mut guard = status.write();
     let Reference::Object(object) = &mut *guard else {
         return Err(InternalError(
             "Iocp.getQueuedCompletionStatus: status is not an object".to_string(),
         ));
     };
-    object.set_value("error", Value::Int(completion.error))?;
-    object.set_value("bytesTransferred", Value::Int(completion.bytes_transferred))?;
-    object.set_value("completionKey", Value::Int(completion.completion_key))?;
-    object.set_value("overlapped", Value::Long(completion.overlapped))?;
+    object.set_value("error", Value::Int(packet.error))?;
+    object.set_value("bytesTransferred", Value::Int(packet.bytes_transferred))?;
+    object.set_value("completionKey", Value::Int(packet.completion_key))?;
+    object.set_value("overlapped", Value::Long(packet.overlapped))?;
     Ok(None)
 }
 
-/// `OpenJDK` uses this method only to cache JNI field identifiers. Ristretto resolves fields by
-/// name when writing the completion status, so no initialization is required.
 #[intrinsic_method("sun/nio/ch/Iocp.initIDs()V", Any)]
 #[async_method]
 pub async fn init_ids<T: Thread + 'static>(
@@ -297,13 +498,22 @@ pub async fn init_ids<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/ch/Iocp.postQueuedCompletionStatus(JI)V", Any)]
 #[async_method]
 pub async fn post_queued_completion_status<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let completion_key = parameters.pop_int()?;
     let completion_port = parameters.pop_long()?;
-    post_completion(completion_port, completion_key)
-        .map_err(|error_code| io_exception(error_code, "PostQueuedCompletionStatus"))?;
+    state(thread.vm()?.as_ref())?
+        .post_to_port(
+            completion_port,
+            CompletionPacket {
+                error: 0,
+                bytes_transferred: 0,
+                completion_key,
+                overlapped: 0,
+            },
+        )
+        .map_err(windows_error)?;
     Ok(None)
 }
 
@@ -326,7 +536,7 @@ mod tests {
         let port = create_io_completion_port(
             thread,
             Parameters::new(vec![
-                Value::Long(-1),
+                Value::Long(INVALID_HANDLE_VALUE),
                 Value::Long(0),
                 Value::Int(0),
                 Value::Int(1),
@@ -341,17 +551,10 @@ mod tests {
     #[tokio::test]
     async fn test_close0_ignores_invalid_handle() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = close0(thread, Parameters::new(vec![Value::Long(0)])).await?;
-        assert_eq!(None, result);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_create_and_close_io_completion_port() -> Result<()> {
-        let (_vm, thread) = crate::test::thread().await?;
-        let port = new_port(thread.clone()).await?;
-        assert_ne!(0, port);
-        close0(thread, Parameters::new(vec![Value::Long(port)])).await?;
+        assert_eq!(
+            None,
+            close0(thread, Parameters::new(vec![Value::Long(0)])).await?
+        );
         Ok(())
     }
 
@@ -468,10 +671,19 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_init_ids() -> Result<()> {
+    async fn test_get_queued_completion_status_null_status() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
-        assert_eq!(None, result);
+        let result = get_queued_completion_status(
+            thread,
+            Parameters::new(vec![Value::Long(0), Value::Object(None)]),
+        )
+        .await;
+        assert!(matches!(
+            result,
+            Err(ristretto_types::Error::JavaError(
+                JavaError::NullPointerException(_)
+            ))
+        ));
         Ok(())
     }
 
@@ -487,6 +699,140 @@ mod tests {
             result,
             Err(ristretto_types::Error::JavaError(JavaError::IoException(_)))
         ));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_create_post_and_close_completion_port() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let port = create_io_completion_port(
+            thread.clone(),
+            Parameters::new(vec![
+                Value::Long(INVALID_HANDLE_VALUE),
+                Value::Long(0),
+                Value::Int(0),
+                Value::Int(1),
+            ]),
+        )
+        .await?
+        .expect("port")
+        .as_i64()?;
+        assert!(port > 0);
+
+        post_queued_completion_status(
+            thread.clone(),
+            Parameters::new(vec![Value::Long(port), Value::Int(42)]),
+        )
+        .await?;
+
+        let port_state = state(thread.vm()?.as_ref())?
+            .port(port)
+            .map_err(windows_error)?;
+        let packet = port_state
+            .receiver
+            .lock()
+            .await
+            .recv()
+            .await
+            .expect("packet");
+        assert_eq!(42, packet.completion_key);
+        assert_eq!(0, packet.overlapped);
+
+        close0(thread, Parameters::new(vec![Value::Long(port)])).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_associated_completion() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let vm = thread.vm()?;
+        let state = state(vm.as_ref())?;
+        let port = state
+            .create_or_associate(INVALID_HANDLE_VALUE, 0, 0)
+            .map_err(windows_error)?;
+        state
+            .create_or_associate(123, port, 7)
+            .map_err(windows_error)?;
+        post_completion(vm.as_ref(), 123, 0, 9, 456)?;
+        let packet = state
+            .port(port)
+            .map_err(windows_error)?
+            .receiver
+            .lock()
+            .await
+            .recv()
+            .await
+            .expect("packet");
+        assert_eq!(
+            CompletionPacket {
+                error: 0,
+                bytes_transferred: 9,
+                completion_key: 7,
+                overlapped: 456,
+            },
+            packet
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_association_close_and_handle_reuse() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let vm = thread.vm()?;
+        let state = state(vm.as_ref())?;
+        let first_port = state
+            .create_or_associate(INVALID_HANDLE_VALUE, 0, 0)
+            .map_err(windows_error)?;
+        state
+            .create_or_associate(321, first_port, 11)
+            .map_err(windows_error)?;
+        assert_eq!(
+            Err(ERROR_INVALID_PARAMETER),
+            state.create_or_associate(321, first_port, 12)
+        );
+
+        let pending = begin_operation(vm.as_ref(), 321)?;
+        mark_closed(vm.as_ref(), 321);
+        assert!(!is_associated(vm.as_ref(), 321)?);
+        post_operation(vm.as_ref(), pending, ERROR_INVALID_HANDLE, 0, 654)?;
+        let cancellation = state
+            .port(first_port)
+            .map_err(windows_error)?
+            .receiver
+            .lock()
+            .await
+            .recv()
+            .await
+            .expect("cancellation packet");
+        assert_eq!(11, cancellation.completion_key);
+        assert_eq!(654, cancellation.overlapped);
+
+        let second_port = state
+            .create_or_associate(INVALID_HANDLE_VALUE, 0, 0)
+            .map_err(windows_error)?;
+        state
+            .create_or_associate(321, second_port, 22)
+            .map_err(windows_error)?;
+        assert!(is_associated(vm.as_ref(), 321)?);
+        post_completion(vm.as_ref(), 321, 0, 1, 987)?;
+        let reused = state
+            .port(second_port)
+            .map_err(windows_error)?
+            .receiver
+            .lock()
+            .await
+            .recv()
+            .await
+            .expect("reused-handle packet");
+        assert_eq!(22, reused.completion_key);
+        assert_eq!(987, reused.overlapped);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        assert_eq!(None, init_ids(thread, Parameters::default()).await?);
         Ok(())
     }
 }
