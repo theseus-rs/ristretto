@@ -1,6 +1,7 @@
 #![cfg(not(target_family = "wasm"))]
 
-mod utilities;
+#[path = "utilities/jar.rs"]
+mod jar;
 
 use anyhow::{Result, anyhow};
 use flate2::read::GzDecoder;
@@ -15,7 +16,7 @@ async fn verify() -> Result<()> {
     let archive = client.get(url).send().await?.bytes().await?.to_vec();
     let jar_bytes = get_runtime_jar(&archive)?;
 
-    utilities::jar::verify(jar_bytes)?;
+    jar::verify(jar_bytes)?;
 
     Ok(())
 }

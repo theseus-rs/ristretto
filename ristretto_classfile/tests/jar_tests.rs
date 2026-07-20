@@ -1,6 +1,7 @@
 #![cfg(not(target_family = "wasm"))]
 
-mod utilities;
+#[path = "utilities/jar.rs"]
+mod jar;
 
 use reqwest::Client;
 use std::error::Error;
@@ -8,7 +9,7 @@ use std::error::Error;
 async fn verify_jar(url: &str) -> Result<(), Box<dyn Error>> {
     let client = Client::new();
     let jar_bytes = client.get(url).send().await?.bytes().await?.to_vec();
-    utilities::jar::verify(jar_bytes)?;
+    jar::verify(jar_bytes)?;
     Ok(())
 }
 
