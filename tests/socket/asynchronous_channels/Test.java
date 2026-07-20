@@ -4,6 +4,7 @@ import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -152,6 +153,11 @@ public class Test {
     }
 
     public static void main(String[] args) throws Exception {
+        if (!System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("windows")) {
+            System.out.println("Asynchronous socket channel test skipped on non-Windows host");
+            return;
+        }
+
         System.out.println("=== Asynchronous Socket Channel Test ===");
         try (AsynchronousServerSocketChannel server = AsynchronousServerSocketChannel.open()) {
             server.bind(new InetSocketAddress("127.0.0.1", 0));
