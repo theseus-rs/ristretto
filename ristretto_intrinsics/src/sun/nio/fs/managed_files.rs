@@ -877,6 +877,187 @@ pub(crate) async fn unlock(
     }
 }
 
+#[cfg(target_os = "windows")]
+pub(crate) async fn clone_file(
+    file_handles: &HandleManager<i64, FileHandle>,
+    fd: i64,
+) -> std::io::Result<tokio::fs::File> {
+    let file_handle = file_handles
+        .get(&fd)
+        .await
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "bad fd"))?;
+    let file = file_handle.file.try_clone().await?;
+    drop(file_handle);
+    Ok(file)
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) async fn read_at_file(
+    file: tokio::fs::File,
+    mut buffer: Vec<u8>,
+    offset: u64,
+) -> std::io::Result<(usize, Vec<u8>)> {
+    let std_file = file.into_std().await;
+    tokio::task::spawn_blocking(move || {
+        use std::io::{Seek, SeekFrom};
+        use std::os::windows::fs::FileExt;
+        let mut std_file = std_file;
+        let saved_pos = std_file.stream_position()?;
+        let bytes_read = std_file.seek_read(&mut buffer, offset)?;
+        std_file.seek(SeekFrom::Start(saved_pos))?;
+        Ok((bytes_read, buffer))
+    })
+    .await
+    .map_err(std::io::Error::other)?
+}
+
+#[cfg(target_os = "windows")]
+pub(crate) async fn write_at_file(
+    file: tokio::fs::File,
+    data: Vec<u8>,
+    offset: u64,
+) -> std::io::Result<usize> {
+    let std_file = file.into_std().await;
+    tokio::task::spawn_blocking(move || {
+        use std::io::{Seek, SeekFrom};
+        use std::os::windows::fs::FileExt;
+        let mut std_file = std_file;
+        let saved_pos = std_file.stream_position()?;
+        let bytes_written = std_file.seek_write(&data, offset)?;
+        std_file.seek(SeekFrom::Start(saved_pos))?;
+        Ok(bytes_written)
+    })
+    .await
+    .map_err(std::io::Error::other)?
+}
+
+/// Acquires a Windows byte-range lock with the same offset and length semantics as `LockFileEx`.
+#[cfg(target_os = "windows")]
+pub(crate) async fn lock_range(
+    file_handles: &HandleManager<i64, FileHandle>,
+    fd: i64,
+    position: u64,
+    size: u64,
+    shared: bool,
+    blocking: bool,
+) -> std::io::Result<i32> {
+    let file = clone_file(file_handles, fd).await?;
+    lock_range_file(&file, position, size, shared, blocking).await
+}
+
+#[cfg(target_os = "windows")]
+#[expect(clippy::cast_possible_truncation, unsafe_code)]
+pub(crate) async fn lock_range_file(
+    file: &tokio::fs::File,
+    position: u64,
+    size: u64,
+    shared: bool,
+    blocking: bool,
+) -> std::io::Result<i32> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::{ERROR_LOCK_VIOLATION, HANDLE};
+    use windows_sys::Win32::Storage::FileSystem::{
+        LOCKFILE_EXCLUSIVE_LOCK, LOCKFILE_FAIL_IMMEDIATELY, LockFileEx,
+    };
+    use windows_sys::Win32::System::IO::{OVERLAPPED, OVERLAPPED_0, OVERLAPPED_0_0};
+
+    let std_file = file.try_clone().await?.into_std().await;
+    tokio::task::spawn_blocking(move || {
+        let mut flags = if shared { 0 } else { LOCKFILE_EXCLUSIVE_LOCK };
+        if !blocking {
+            flags |= LOCKFILE_FAIL_IMMEDIATELY;
+        }
+        let mut overlapped = OVERLAPPED {
+            Internal: 0,
+            InternalHigh: 0,
+            Anonymous: OVERLAPPED_0 {
+                Anonymous: OVERLAPPED_0_0 {
+                    Offset: position as u32,
+                    OffsetHigh: (position >> 32) as u32,
+                },
+            },
+            hEvent: std::ptr::null_mut(),
+        };
+        let result = unsafe {
+            LockFileEx(
+                std_file.as_raw_handle() as HANDLE,
+                flags,
+                0,
+                size as u32,
+                (size >> 32) as u32,
+                &raw mut overlapped,
+            )
+        };
+        if result != 0 {
+            return Ok(0);
+        }
+        let error = std::io::Error::last_os_error();
+        if !blocking && error.raw_os_error() == Some(ERROR_LOCK_VIOLATION.cast_signed()) {
+            Ok(-1)
+        } else {
+            Err(error)
+        }
+    })
+    .await
+    .map_err(std::io::Error::other)?
+}
+
+/// Releases the exact Windows byte range previously locked with [`lock_range`].
+#[cfg(target_os = "windows")]
+pub(crate) async fn unlock_range(
+    file_handles: &HandleManager<i64, FileHandle>,
+    fd: i64,
+    position: u64,
+    size: u64,
+) -> std::io::Result<()> {
+    let file = clone_file(file_handles, fd).await?;
+    unlock_range_file(&file, position, size).await
+}
+
+#[cfg(target_os = "windows")]
+#[expect(clippy::cast_possible_truncation, unsafe_code)]
+pub(crate) async fn unlock_range_file(
+    file: &tokio::fs::File,
+    position: u64,
+    size: u64,
+) -> std::io::Result<()> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::Storage::FileSystem::UnlockFileEx;
+    use windows_sys::Win32::System::IO::{OVERLAPPED, OVERLAPPED_0, OVERLAPPED_0_0};
+
+    let std_file = file.try_clone().await?.into_std().await;
+    tokio::task::spawn_blocking(move || {
+        let mut overlapped = OVERLAPPED {
+            Internal: 0,
+            InternalHigh: 0,
+            Anonymous: OVERLAPPED_0 {
+                Anonymous: OVERLAPPED_0_0 {
+                    Offset: position as u32,
+                    OffsetHigh: (position >> 32) as u32,
+                },
+            },
+            hEvent: std::ptr::null_mut(),
+        };
+        let result = unsafe {
+            UnlockFileEx(
+                std_file.as_raw_handle() as HANDLE,
+                0,
+                size as u32,
+                (size >> 32) as u32,
+                &raw mut overlapped,
+            )
+        };
+        if result == 0 {
+            Err(std::io::Error::last_os_error())
+        } else {
+            Ok(())
+        }
+    })
+    .await
+    .map_err(std::io::Error::other)?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -890,6 +1071,60 @@ mod tests {
 
     fn temp_path(name: &str) -> std::path::PathBuf {
         std::env::current_dir().expect("current dir").join(name)
+    }
+
+    #[cfg(target_os = "windows")]
+    #[tokio::test]
+    async fn test_windows_range_locks() {
+        let (vm, _hold) = test_vm().await;
+        let temp_file = tempfile::NamedTempFile::new().expect("temp file");
+        let first = tokio::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(temp_file.path())
+            .await
+            .expect("first file");
+        let second = tokio::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(temp_file.path())
+            .await
+            .expect("second file");
+        let first_fd = 9_901;
+        let second_fd = 9_902;
+        vm.file_handles()
+            .insert(first_fd, FileHandle::from((first, false)))
+            .await
+            .expect("first handle");
+        vm.file_handles()
+            .insert(second_fd, FileHandle::from((second, false)))
+            .await
+            .expect("second handle");
+
+        assert_eq!(
+            0,
+            lock_range(vm.file_handles(), first_fd, 0, 1, false, false)
+                .await
+                .expect("first lock")
+        );
+        assert_eq!(
+            -1,
+            lock_range(vm.file_handles(), second_fd, 0, 1, false, false)
+                .await
+                .expect("conflicting lock")
+        );
+        assert_eq!(
+            0,
+            lock_range(vm.file_handles(), second_fd, 1, 1, false, false)
+                .await
+                .expect("disjoint lock")
+        );
+        unlock_range(vm.file_handles(), first_fd, 0, 1)
+            .await
+            .expect("first unlock");
+        unlock_range(vm.file_handles(), second_fd, 1, 1)
+            .await
+            .expect("second unlock");
     }
 
     #[tokio::test]

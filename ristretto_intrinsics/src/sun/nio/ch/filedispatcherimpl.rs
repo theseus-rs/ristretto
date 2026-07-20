@@ -3,6 +3,8 @@ use crate::java::io::filedescriptor::file_descriptor_from_java_object;
 use crate::java::nio::mapped_regions::MappedRegions;
 #[cfg(target_os = "windows")]
 use crate::java::nio::mapped_regions::{MapMode, MappedRegion};
+#[cfg(target_os = "windows")]
+use crate::sun::nio::ch::iocp::mark_closed;
 use crate::sun::nio::fs::managed_files;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::JAVA_8;
@@ -55,6 +57,8 @@ async fn close_internal<T: Thread + 'static>(
     if let Ok(regions) = vm.resource_manager().get_or_init(MappedRegions::new) {
         regions.remove_fd(fd);
     }
+    #[cfg(target_os = "windows")]
+    mark_closed(vm.as_ref(), fd);
     managed_files::close(vm.file_handles(), fd).await;
     // NIO SocketChannel/ServerSocketChannel route their close through
     // FileDispatcherImpl, so also clean up any socket-related state to
@@ -237,13 +241,27 @@ async fn lock_internal<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let shared = parameters.pop_int()? != 0;
-    let _size = parameters.pop_long()?;
-    let _pos = parameters.pop_long()?;
+    let size = parameters.pop_long()?;
+    let pos = parameters.pop_long()?;
+    #[cfg(not(target_os = "windows"))]
+    let _ = (size, pos);
     let blocking = parameters.pop_int()? != 0;
     let fd_value = parameters.pop()?;
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
 
+    #[cfg(target_os = "windows")]
+    let value = managed_files::lock_range(
+        vm.file_handles(),
+        fd,
+        u64::try_from(pos).map_err(|_| InternalError("lock0: negative position".to_string()))?,
+        u64::try_from(size).map_err(|_| InternalError("lock0: negative size".to_string()))?,
+        shared,
+        blocking,
+    )
+    .await
+    .map_err(|e| InternalError(format!("lock0: {e}")))?;
+    #[cfg(not(target_os = "windows"))]
     let value = managed_files::lock(vm.file_handles(), fd, shared, blocking)
         .await
         .map_err(|e| InternalError(format!("lock0: {e}")))?;
@@ -538,12 +556,24 @@ async fn release_internal<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _size = parameters.pop_long()?;
-    let _pos = parameters.pop_long()?;
+    let size = parameters.pop_long()?;
+    let pos = parameters.pop_long()?;
+    #[cfg(not(target_os = "windows"))]
+    let _ = (size, pos);
     let fd_value = parameters.pop()?;
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
 
+    #[cfg(target_os = "windows")]
+    managed_files::unlock_range(
+        vm.file_handles(),
+        fd,
+        u64::try_from(pos).map_err(|_| InternalError("release0: negative position".to_string()))?,
+        u64::try_from(size).map_err(|_| InternalError("release0: negative size".to_string()))?,
+    )
+    .await
+    .map_err(|e| InternalError(format!("release0: {e}")))?;
+    #[cfg(not(target_os = "windows"))]
     managed_files::unlock(vm.file_handles(), fd)
         .await
         .map_err(|e| InternalError(format!("release0: {e}")))?;
@@ -852,6 +882,7 @@ pub async fn close_by_handle<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let handle = parameters.pop_long()?;
     let vm = thread.vm()?;
+    mark_closed(vm.as_ref(), handle);
     managed_files::close(vm.file_handles(), handle).await;
     #[expect(clippy::cast_possible_truncation)]
     vm.socket_handles().remove(&(handle as i32)).await;
