@@ -45,7 +45,7 @@ pub use resource_manager::ResourceManager;
 pub use rust_value::RustValue;
 use std::pin::Pin;
 pub use thread::Thread;
-pub use vm::VM;
+pub use vm::{FIRST_NIO_FD, VM};
 
 /// A boxed future type that is `Send` on non-wasm targets and not `Send` on wasm targets.
 #[cfg(not(target_family = "wasm"))]

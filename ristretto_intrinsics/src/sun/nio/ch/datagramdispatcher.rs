@@ -1,12 +1,11 @@
 use crate::bounds;
 use crate::java::io::socketfiledescriptor::get_fd;
+use crate::sun::nio::ch::socketdispatcher::{native_bytes, parse_iovecs, write_native_bytes};
 #[cfg(not(target_os = "windows"))]
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::Any;
 #[cfg(not(target_os = "windows"))]
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
-#[cfg(not(target_os = "windows"))]
-use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -27,34 +26,38 @@ pub async fn dup_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let new_fd_value = parameters.pop()?;
-    let fd_value = parameters.pop()?;
-    let fd = get_fd(&fd_value)?;
+    let target_fd_value = parameters.pop()?;
+    let source_fd_value = parameters.pop()?;
+    let source_fd = get_fd(&source_fd_value)?;
+    let target_fd = get_fd(&target_fd_value)?;
     let vm = thread.vm()?;
 
     let guard = vm
         .socket_handles()
-        .get(&fd)
+        .get(&source_fd)
         .await
-        .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
+        .ok_or_else(|| InternalError(format!("socket not found for fd {source_fd}")))?;
     let Some(socket) = guard.socket_type.as_raw() else {
         return Err(InternalError("expected raw socket".to_string()));
     };
     let cloned = socket
         .try_clone()
         .map_err(|e| InternalError(format!("dup: clone: {e}")))?;
+    let timeout = guard.timeout;
+    let is_ipv6 = guard.is_ipv6;
+    let is_unix = guard.is_unix;
+    let non_blocking = guard.non_blocking;
     drop(guard);
 
-    let new_fd = vm.next_nio_fd();
-    {
-        let mut new_fd_guard = new_fd_value.as_reference_mut()?;
-        if let Reference::Object(object) = &mut *new_fd_guard {
-            object.set_value("fd", Value::Int(new_fd))?;
-        }
-    }
-    vm.socket_handles()
-        .insert(new_fd, SocketHandle::new(SocketType::Raw(cloned)))
-        .await?;
+    let mut handle = SocketHandle::new(SocketType::Raw(cloned));
+    handle.timeout = timeout;
+    handle.is_ipv6 = is_ipv6;
+    handle.is_unix = is_unix;
+    handle.non_blocking = non_blocking;
+    // DatagramDispatcher.dup0 has dup2 semantics: replace the target descriptor
+    // while retaining its Java-visible descriptor value. Dropping the replaced
+    // socket before DatagramChannelImpl rebinds is especially important on macOS.
+    vm.socket_handles().insert(target_fd, handle).await?;
     Ok(None)
 }
 
@@ -72,9 +75,12 @@ pub async fn read_0<T: Thread + 'static>(
     let fd_value = parameters.pop()?;
     let fd = get_fd(&fd_value)?;
     let count = usize::try_from(count).map_err(|e| InternalError(e.to_string()))?;
+    if count == 0 {
+        return Ok(Some(Value::Int(0)));
+    }
 
     let vm = thread.vm()?;
-    let cloned_socket = {
+    let (cloned_socket, non_blocking) = {
         let handle = vm
             .socket_handles()
             .get(&fd)
@@ -83,31 +89,41 @@ pub async fn read_0<T: Thread + 'static>(
         let Some(socket) = handle.socket_type.as_raw() else {
             return Err(InternalError("expected raw socket".to_string()));
         };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("read: clone: {e}")))?
+        (
+            socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("read: clone: {e}")))?,
+            handle.non_blocking,
+        )
     };
+    if !non_blocking {
+        let status = super::socketdispatcher::wait_raw_socket(&thread, fd, false).await?;
+        if status < 0 {
+            return Ok(Some(Value::Int(i32::try_from(status)?)));
+        }
+    }
 
     let result = tokio::task::spawn_blocking(move || {
-        let mut buf = vec![0u8; count];
-        match std::io::Read::read(&mut &cloned_socket, &mut buf) {
-            Ok(0) => Ok((-1i32, Vec::new())),
-            Ok(n) => {
-                buf.truncate(n);
-                let n = i32::try_from(n).unwrap_or(i32::MAX);
-                Ok((n, buf))
-            }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => Ok((-2, Vec::new())),
-            Err(e) => Err(e),
-        }
+        super::datagramchannelimpl::receive_connected_datagram(&cloned_socket, count)
     })
     .await
-    .map_err(|e| InternalError(format!("read: spawn: {e}")))?
-    .map_err(|e| InternalError(format!("DatagramDispatcher.read0: {e}")))?;
+    .map_err(|e| InternalError(format!("read: spawn: {e}")))?;
 
-    let (n, data) = result;
+    let (n, data) = match result {
+        Ok((n, data)) => (i32::try_from(n)?, data),
+        Err(error) => {
+            return Ok(Some(Value::Int(i32::try_from(
+                super::datagramchannelimpl::datagram_io_status(&error)?,
+            )?)));
+        }
+    };
     if n > 0 {
-        vm.native_memory().write_bytes(address, &data);
+        write_native_bytes(
+            vm.native_memory(),
+            address,
+            &data,
+            "DatagramDispatcher.read0",
+        )?;
     }
     Ok(Some(Value::Int(n)))
 }
@@ -127,28 +143,17 @@ pub async fn readv_0<T: Thread + 'static>(
     let fd = get_fd(&fd_value)?;
 
     let vm = thread.vm()?;
-    let mut total_len: usize = 0;
-    let mut iov_entries = Vec::new();
-    for i in 0..iov_count {
-        let entry_addr = iov_address + i64::from(i) * 16;
-        let base_bytes = vm.native_memory().read_bytes(entry_addr, 8);
-        let len_bytes = vm.native_memory().read_bytes(entry_addr + 8, 8);
-        let base = i64::from_ne_bytes(
-            base_bytes
-                .try_into()
-                .map_err(|_| InternalError("iov base".into()))?,
-        );
-        let len = i64::from_ne_bytes(
-            len_bytes
-                .try_into()
-                .map_err(|_| InternalError("iov len".into()))?,
-        );
-        let len_usize = usize::try_from(len).map_err(|e| InternalError(e.to_string()))?;
-        iov_entries.push((base, len_usize));
-        total_len += len_usize;
+    let iov_entries = parse_iovecs(vm.native_memory(), iov_address, iov_count)?;
+    let total_len = iov_entries.iter().try_fold(0_usize, |total, (_, length)| {
+        total
+            .checked_add(*length)
+            .ok_or_else(|| InternalError("iovec total length overflow".to_string()))
+    })?;
+    if total_len == 0 {
+        return Ok(Some(Value::Long(0)));
     }
 
-    let cloned_socket = {
+    let (cloned_socket, non_blocking) = {
         let handle = vm
             .socket_handles()
             .get(&fd)
@@ -157,30 +162,34 @@ pub async fn readv_0<T: Thread + 'static>(
         let Some(socket) = handle.socket_type.as_raw() else {
             return Err(InternalError("expected raw socket".to_string()));
         };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("readv: clone: {e}")))?
+        (
+            socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("readv: clone: {e}")))?,
+            handle.non_blocking,
+        )
     };
+    if !non_blocking {
+        let status = super::socketdispatcher::wait_raw_socket(&thread, fd, false).await?;
+        if status < 0 {
+            return Ok(Some(Value::Long(status)));
+        }
+    }
 
     let result = tokio::task::spawn_blocking(move || {
-        let mut buf = vec![0u8; total_len];
-        match std::io::Read::read(&mut &cloned_socket, &mut buf) {
-            Ok(0) => Ok((-1i64, Vec::new())),
-            #[expect(clippy::cast_possible_wrap)]
-            Ok(n) => {
-                buf.truncate(n);
-                Ok((n as i64, buf))
-            }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => Ok((-2, Vec::new())),
-            Err(ref e) if e.kind() == std::io::ErrorKind::ConnectionReset => Ok((-1, Vec::new())),
-            Err(e) => Err(e),
-        }
+        super::datagramchannelimpl::receive_connected_datagram(&cloned_socket, total_len)
     })
     .await
-    .map_err(|e| InternalError(format!("readv: spawn: {e}")))?
-    .map_err(|e| InternalError(format!("DatagramDispatcher.readv0: {e}")))?;
+    .map_err(|e| InternalError(format!("readv: spawn: {e}")))?;
 
-    let (n, data) = result;
+    let (n, data) = match result {
+        Ok((n, data)) => (i64::try_from(n)?, data),
+        Err(error) => {
+            return Ok(Some(Value::Long(
+                super::datagramchannelimpl::datagram_io_status(&error)?,
+            )));
+        }
+    };
     if n > 0 {
         let mut offset = 0usize;
         let data_len = data.len();
@@ -189,7 +198,12 @@ pub async fn readv_0<T: Thread + 'static>(
             if to_copy > 0 {
                 let bytes =
                     bounds::range(&data, offset..offset + to_copy, "DatagramDispatcher.readv0")?;
-                vm.native_memory().write_bytes(*base, bytes);
+                write_native_bytes(
+                    vm.native_memory(),
+                    *base,
+                    bytes,
+                    "DatagramDispatcher.readv0",
+                )?;
                 offset += to_copy;
             }
             if offset >= data_len {
@@ -216,9 +230,14 @@ pub async fn write_0<T: Thread + 'static>(
     let count = usize::try_from(count).map_err(|e| InternalError(e.to_string()))?;
 
     let vm = thread.vm()?;
-    let data = vm.native_memory().read_bytes(address, count);
+    let data = native_bytes(
+        vm.native_memory(),
+        address,
+        count,
+        "DatagramDispatcher.write0",
+    )?;
 
-    let cloned_socket = {
+    let (cloned_socket, non_blocking) = {
         let handle = vm
             .socket_handles()
             .get(&fd)
@@ -227,18 +246,31 @@ pub async fn write_0<T: Thread + 'static>(
         let Some(socket) = handle.socket_type.as_raw() else {
             return Err(InternalError("expected raw socket".to_string()));
         };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("write: clone: {e}")))?
+        (
+            socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("write: clone: {e}")))?,
+            handle.non_blocking,
+        )
     };
+    if !non_blocking {
+        let status = super::socketdispatcher::wait_raw_socket(&thread, fd, true).await?;
+        if status < 0 {
+            return Ok(Some(Value::Int(i32::try_from(status)?)));
+        }
+    }
 
-    let n = tokio::task::spawn_blocking(move || std::io::Write::write(&mut &cloned_socket, &data))
-        .await
-        .map_err(|e| InternalError(format!("write: spawn: {e}")))?
-        .map_err(|e| InternalError(format!("DatagramDispatcher.write0: {e}")))?;
+    let result =
+        tokio::task::spawn_blocking(move || std::io::Write::write(&mut &cloned_socket, &data))
+            .await
+            .map_err(|e| InternalError(format!("write: spawn: {e}")))?;
 
-    let n = i32::try_from(n).map_err(|e| InternalError(e.to_string()))?;
-    Ok(Some(Value::Int(n)))
+    match result {
+        Ok(n) => Ok(Some(Value::Int(i32::try_from(n)?))),
+        Err(error) => Ok(Some(Value::Int(i32::try_from(
+            super::datagramchannelimpl::datagram_io_status(&error)?,
+        )?))),
+    }
 }
 
 #[intrinsic_method(
@@ -256,27 +288,26 @@ pub async fn writev_0<T: Thread + 'static>(
     let fd = get_fd(&fd_value)?;
 
     let vm = thread.vm()?;
+    let iov_entries = parse_iovecs(vm.native_memory(), iov_address, iov_count)?;
+    let total_len = iov_entries.iter().try_fold(0_usize, |total, (_, length)| {
+        total
+            .checked_add(*length)
+            .ok_or_else(|| InternalError("iovec total length overflow".to_string()))
+    })?;
     let mut data = Vec::new();
-    for i in 0..iov_count {
-        let entry_addr = iov_address + i64::from(i) * 16;
-        let base_bytes = vm.native_memory().read_bytes(entry_addr, 8);
-        let len_bytes = vm.native_memory().read_bytes(entry_addr + 8, 8);
-        let base = i64::from_ne_bytes(
-            base_bytes
-                .try_into()
-                .map_err(|_| InternalError("iov base".into()))?,
-        );
-        let len = i64::from_ne_bytes(
-            len_bytes
-                .try_into()
-                .map_err(|_| InternalError("iov len".into()))?,
-        );
-        let len_usize = usize::try_from(len).map_err(|e| InternalError(e.to_string()))?;
-        let chunk = vm.native_memory().read_bytes(base, len_usize);
+    data.try_reserve_exact(total_len)
+        .map_err(|error| InternalError(format!("writev allocation failed: {error}")))?;
+    for (base, length) in iov_entries {
+        let chunk = native_bytes(
+            vm.native_memory(),
+            base,
+            length,
+            "DatagramDispatcher.writev0",
+        )?;
         data.extend_from_slice(&chunk);
     }
 
-    let cloned_socket = {
+    let (cloned_socket, non_blocking) = {
         let handle = vm
             .socket_handles()
             .get(&fd)
@@ -285,18 +316,31 @@ pub async fn writev_0<T: Thread + 'static>(
         let Some(socket) = handle.socket_type.as_raw() else {
             return Err(InternalError("expected raw socket".to_string()));
         };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("writev: clone: {e}")))?
+        (
+            socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("writev: clone: {e}")))?,
+            handle.non_blocking,
+        )
     };
+    if !non_blocking {
+        let status = super::socketdispatcher::wait_raw_socket(&thread, fd, true).await?;
+        if status < 0 {
+            return Ok(Some(Value::Long(status)));
+        }
+    }
 
-    let n = tokio::task::spawn_blocking(move || std::io::Write::write(&mut &cloned_socket, &data))
-        .await
-        .map_err(|e| InternalError(format!("writev: spawn: {e}")))?
-        .map_err(|e| InternalError(format!("DatagramDispatcher.writev0: {e}")))?;
+    let result =
+        tokio::task::spawn_blocking(move || std::io::Write::write(&mut &cloned_socket, &data))
+            .await
+            .map_err(|e| InternalError(format!("writev: spawn: {e}")))?;
 
-    #[expect(clippy::cast_possible_wrap)]
-    Ok(Some(Value::Long(n as i64)))
+    match result {
+        Ok(n) => Ok(Some(Value::Long(i64::try_from(n)?))),
+        Err(error) => Ok(Some(Value::Long(
+            super::datagramchannelimpl::datagram_io_status(&error)?,
+        ))),
+    }
 }
 
 #[cfg(all(test, target_family = "unix", not(target_family = "wasm")))]

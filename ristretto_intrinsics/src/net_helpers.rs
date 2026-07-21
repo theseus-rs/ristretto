@@ -1,6 +1,12 @@
 use ristretto_classloader::Value;
+#[cfg(not(target_family = "wasm"))]
+use ristretto_types::Error::InternalError;
 use ristretto_types::Result;
+#[cfg(not(target_family = "wasm"))]
+use socket2::SockAddr;
 use std::net::{Ipv4Addr, Ipv6Addr};
+#[cfg(not(target_family = "wasm"))]
+use std::net::{SocketAddrV4, SocketAddrV6};
 
 #[cfg(not(target_family = "wasm"))]
 use ristretto_types::handles::SocketType;
@@ -48,6 +54,55 @@ pub(crate) fn inet_address_int(inet_addr: &Value) -> Result<i32> {
 /// Reads a Java `InetAddress` holder and converts its packed IPv4 value.
 pub(crate) fn inet_address_ipv4(inet_addr: &Value) -> Result<Ipv4Addr> {
     Ok(ipv4_from_java_int(inet_address_int(inet_addr)?))
+}
+
+/// Converts a Java `InetAddress` to the address family used by a native socket.
+/// IPv4 addresses are mapped when the socket is dual-stack; an IPv6 address can
+/// only be used with an IPv4 socket when it is itself IPv4-mapped.
+#[cfg(not(target_family = "wasm"))]
+pub(crate) fn inet_socket_address(
+    inet_address: &Value,
+    use_ipv6: bool,
+    port: u16,
+) -> Result<SockAddr> {
+    let is_ipv6_address = inet_address
+        .as_object_ref()?
+        .class()
+        .name()
+        .ends_with("Inet6Address");
+    if is_ipv6_address {
+        let holder_value = inet_address.as_object_ref()?.value("holder6")?;
+        let holder = holder_value.as_object_ref()?;
+        let bytes_value = holder.value("ipaddress")?;
+        let bytes = bytes_value.as_byte_vec_ref()?;
+        let address = ipv6_from_java_bytes(&bytes).ok_or_else(|| {
+            InternalError("Inet6Address.ipaddress must have 16 bytes".to_string())
+        })?;
+        let scope_id = u32::try_from(holder.value("scope_id")?.as_i32()?).unwrap_or(0);
+        if use_ipv6 {
+            return Ok(SockAddr::from(SocketAddrV6::new(
+                address, port, 0, scope_id,
+            )));
+        }
+        let address = address.to_ipv4_mapped().ok_or_else(|| {
+            ristretto_types::JavaError::SocketException(
+                "IPv6 address cannot be used with an IPv4 socket".to_string(),
+            )
+        })?;
+        return Ok(SockAddr::from(SocketAddrV4::new(address, port)));
+    }
+
+    let address = inet_address_ipv4(inet_address)?;
+    if use_ipv6 {
+        let address = if address.is_unspecified() {
+            Ipv6Addr::UNSPECIFIED
+        } else {
+            address.to_ipv6_mapped()
+        };
+        Ok(SockAddr::from(SocketAddrV6::new(address, port, 0, 0)))
+    } else {
+        Ok(SockAddr::from(SocketAddrV4::new(address, port)))
+    }
 }
 
 /// Reads the `value` field from a boxed Java integer-like object.

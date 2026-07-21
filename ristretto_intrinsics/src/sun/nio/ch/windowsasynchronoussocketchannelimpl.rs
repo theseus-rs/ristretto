@@ -290,6 +290,7 @@ pub async fn connect0<T: Thread + 'static>(
                     socket_type: SocketType::TcpStream(Arc::new(probe)),
                     timeout,
                     is_ipv6,
+                    is_unix: false,
                     non_blocking: true,
                 };
                 if vm.socket_handles().insert(fd, replacement).await.is_err() {

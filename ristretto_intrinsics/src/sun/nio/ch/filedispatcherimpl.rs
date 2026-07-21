@@ -28,11 +28,22 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::io::SeekFrom;
 use std::sync::Arc;
+
+fn io_status(operation: &str, error: &std::io::Error) -> Result<i64> {
+    #[cfg(target_family = "unix")]
+    match error.kind() {
+        std::io::ErrorKind::WouldBlock => return Ok(-2),
+        std::io::ErrorKind::Interrupted => return Ok(-3),
+        _ => {}
+    }
+    Err(JavaError::IoException(format!("{operation}: {error}")).into())
+}
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
@@ -60,6 +71,11 @@ async fn close_internal<T: Thread + 'static>(
     #[cfg(target_os = "windows")]
     mark_closed(vm.as_ref(), fd);
     managed_files::close(vm.file_handles(), fd).await;
+    #[cfg(target_family = "unix")]
+    {
+        #[expect(clippy::cast_possible_truncation)]
+        let _ = super::posix::close_descriptor(&*vm, fd as i32)?;
+    }
     // NIO SocketChannel/ServerSocketChannel route their close through
     // FileDispatcherImpl, so also clean up any socket-related state to
     // prevent leaking SocketHandle, SocketMode, SocketTimeout, and
@@ -113,6 +129,7 @@ pub async fn close_int_fd<T: Thread + 'static>(
         regions.remove_fd(i64::from(fd));
     }
     managed_files::close(vm.file_handles(), i64::from(fd)).await;
+    let _ = super::posix::close_descriptor(&*vm, fd)?;
     #[cfg(not(target_family = "wasm"))]
     vm.socket_handles().remove(&fd).await;
     Ok(None)
@@ -135,7 +152,7 @@ pub async fn dup_0<T: Thread + 'static>(
 
     let new_fd = managed_files::try_clone(vm.file_handles(), vm.resource_manager(), src_fd)
         .await
-        .map_err(|e| InternalError(format!("dup0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("dup0: {e}")))?;
 
     let new_fd_int = i32::try_from(new_fd)
         .map_err(|_| InternalError("dup0: new fd out of i32 range".to_string()))?;
@@ -174,11 +191,11 @@ pub async fn force_0<T: Thread + 'static>(
     if metadata_only {
         managed_files::sync_data(file_handles, fd)
             .await
-            .map_err(|e| InternalError(format!("force0: {e}")))?;
+            .map_err(|e| JavaError::IoException(format!("force0: {e}")))?;
     } else {
         managed_files::sync_all(file_handles, fd)
             .await
-            .map_err(|e| InternalError(format!("force0: {e}")))?;
+            .map_err(|e| JavaError::IoException(format!("force0: {e}")))?;
     }
     Ok(Some(Value::Int(0)))
 }
@@ -207,11 +224,11 @@ pub async fn force_0_linux<T: Thread + 'static>(
     if metadata_only {
         managed_files::sync_data(file_handles, fd)
             .await
-            .map_err(|e| InternalError(format!("force0: {e}")))?;
+            .map_err(|e| JavaError::IoException(format!("force0: {e}")))?;
     } else {
         managed_files::sync_all(file_handles, fd)
             .await
-            .map_err(|e| InternalError(format!("force0: {e}")))?;
+            .map_err(|e| JavaError::IoException(format!("force0: {e}")))?;
     }
     Ok(Some(Value::Int(0)))
 }
@@ -243,14 +260,14 @@ async fn lock_internal<T: Thread + 'static>(
     let shared = parameters.pop_int()? != 0;
     let size = parameters.pop_long()?;
     let pos = parameters.pop_long()?;
-    #[cfg(not(target_os = "windows"))]
-    let _ = (size, pos);
     let blocking = parameters.pop_int()? != 0;
     let fd_value = parameters.pop()?;
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
+    #[cfg(not(any(target_family = "unix", target_os = "windows")))]
+    let _ = (pos, size);
 
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_family = "unix", target_os = "windows"))]
     let value = managed_files::lock_range(
         vm.file_handles(),
         fd,
@@ -260,11 +277,11 @@ async fn lock_internal<T: Thread + 'static>(
         blocking,
     )
     .await
-    .map_err(|e| InternalError(format!("lock0: {e}")))?;
-    #[cfg(not(target_os = "windows"))]
+    .map_err(|e| JavaError::IoException(format!("lock0: {e}")))?;
+    #[cfg(not(any(target_family = "unix", target_os = "windows")))]
     let value = managed_files::lock(vm.file_handles(), fd, shared, blocking)
         .await
-        .map_err(|e| InternalError(format!("lock0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("lock0: {e}")))?;
 
     Ok(Some(Value::Int(value)))
 }
@@ -324,7 +341,7 @@ async fn pread_internal<T: Thread + 'static>(
     let mut buf = vec![0u8; count];
     let n = managed_files::read_at(vm.file_handles(), fd, &mut buf, offset)
         .await
-        .map_err(|e| InternalError(format!("pread0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("pread0: {e}")))?;
 
     if n > 0 {
         let bytes = bounds::range_to(&buf, ..n, "pread0")?;
@@ -380,7 +397,7 @@ async fn pwrite_internal<T: Thread + 'static>(
         .map_err(|_| InternalError("pwrite0: negative position".to_string()))?;
     let n = managed_files::write_at(vm.file_handles(), fd, &data, offset)
         .await
-        .map_err(|e| InternalError(format!("pwrite0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("pwrite0: {e}")))?;
 
     Ok(Some(Value::Int(i32::try_from(n)?)))
 }
@@ -436,12 +453,10 @@ async fn read_internal<T: Thread + 'static>(
             };
             Ok(Some(Value::Int(result)))
         }
-        Err(e) => {
-            let errno = e.raw_os_error().unwrap_or(5 /* EIO */);
-            Err(InternalError(format!(
-                "FileDispatcherImpl.read0: errno={errno}"
-            )))
-        }
+        Err(error) => Ok(Some(Value::Int(i32::try_from(io_status(
+            "FileDispatcherImpl.read0",
+            &error,
+        )?)?))),
     }
 }
 
@@ -507,9 +522,19 @@ async fn readv_internal<T: Thread + 'static>(
         return Ok(Some(Value::Long(0)));
     }
 
-    let (n, returned_chunks) = managed_files::readv(file_handles, fd, chunks)
-        .await
-        .map_err(|e| InternalError(format!("readv0: {e}")))?;
+    let (n, returned_chunks) = match managed_files::readv(file_handles, fd, chunks).await {
+        Ok(result) => result,
+        Err(error) => {
+            return Ok(Some(Value::Long(io_status(
+                "FileDispatcherImpl.readv0",
+                &error,
+            )?)));
+        }
+    };
+
+    if n == 0 {
+        return Ok(Some(Value::Long(-1)));
+    }
 
     let mut total: i64 = 0;
     let mut remaining = n;
@@ -558,13 +583,13 @@ async fn release_internal<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let size = parameters.pop_long()?;
     let pos = parameters.pop_long()?;
-    #[cfg(not(target_os = "windows"))]
-    let _ = (size, pos);
     let fd_value = parameters.pop()?;
     let vm = thread.vm()?;
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
+    #[cfg(not(any(target_family = "unix", target_os = "windows")))]
+    let _ = (pos, size);
 
-    #[cfg(target_os = "windows")]
+    #[cfg(any(target_family = "unix", target_os = "windows"))]
     managed_files::unlock_range(
         vm.file_handles(),
         fd,
@@ -572,11 +597,11 @@ async fn release_internal<T: Thread + 'static>(
         u64::try_from(size).map_err(|_| InternalError("release0: negative size".to_string()))?,
     )
     .await
-    .map_err(|e| InternalError(format!("release0: {e}")))?;
-    #[cfg(not(target_os = "windows"))]
+    .map_err(|e| JavaError::IoException(format!("release0: {e}")))?;
+    #[cfg(not(any(target_family = "unix", target_os = "windows")))]
     managed_files::unlock(vm.file_handles(), fd)
         .await
-        .map_err(|e| InternalError(format!("release0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("release0: {e}")))?;
 
     Ok(None)
 }
@@ -619,13 +644,13 @@ async fn seek_internal<T: Thread + 'static>(
         // Return current position
         managed_files::seek(vm.file_handles(), fd, SeekFrom::Current(0))
             .await
-            .map_err(|e| InternalError(format!("seek0: {e}")))?
+            .map_err(|e| JavaError::IoException(format!("seek0: {e}")))?
     } else {
         let offset = u64::try_from(pos)
             .map_err(|_| InternalError("seek0: negative position".to_string()))?;
         managed_files::seek(vm.file_handles(), fd, SeekFrom::Start(offset))
             .await
-            .map_err(|e| InternalError(format!("seek0: {e}")))?
+            .map_err(|e| JavaError::IoException(format!("seek0: {e}")))?
     };
     Ok(Some(Value::Long(i64::try_from(result)?)))
 }
@@ -677,7 +702,7 @@ async fn size_internal<T: Thread + 'static>(
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
     let size = managed_files::metadata(vm.file_handles(), fd)
         .await
-        .map_err(|e| InternalError(format!("size0: {e}")))?
+        .map_err(|e| JavaError::IoException(format!("size0: {e}")))?
         .len();
     Ok(Some(Value::Long(i64::try_from(size)?)))
 }
@@ -732,7 +757,7 @@ async fn truncate_internal<T: Thread + 'static>(
         u64::try_from(size).map_err(|_| InternalError("truncate0: negative size".to_string()))?;
     managed_files::set_len(vm.file_handles(), fd, size)
         .await
-        .map_err(|e| InternalError(format!("truncate0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("truncate0: {e}")))?;
     Ok(Some(Value::Int(0)))
 }
 
@@ -782,12 +807,10 @@ pub async fn write_0<T: Thread + 'static>(
 
     match managed_files::write(vm.file_handles(), fd, &data).await {
         Ok(n) => Ok(Some(Value::Int(i32::try_from(n)?))),
-        Err(e) => {
-            let errno = e.raw_os_error().unwrap_or(5 /* EIO */);
-            Err(InternalError(format!(
-                "FileDispatcherImpl.write0: errno={errno}"
-            )))
-        }
+        Err(error) => Ok(Some(Value::Int(i32::try_from(io_status(
+            "FileDispatcherImpl.write0",
+            &error,
+        )?)?))),
     }
 }
 
@@ -829,9 +852,15 @@ pub async fn writev_0<T: Thread + 'static>(
         return Ok(Some(Value::Long(0)));
     }
 
-    let n = managed_files::writev(file_handles, fd, chunks)
-        .await
-        .map_err(|e| InternalError(format!("writev0: {e}")))?;
+    let n = match managed_files::writev(file_handles, fd, chunks).await {
+        Ok(n) => n,
+        Err(error) => {
+            return Ok(Some(Value::Long(io_status(
+                "FileDispatcherImpl.writev0",
+                &error,
+            )?)));
+        }
+    };
 
     Ok(Some(Value::Long(i64::try_from(n)?)))
 }
@@ -864,10 +893,10 @@ pub async fn available0<T: Thread + 'static>(
     let fd = file_descriptor_from_java_object(&vm, &Value::from(fd_value))?;
     let metadata = managed_files::metadata(vm.file_handles(), fd)
         .await
-        .map_err(|e| InternalError(format!("available0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("available0: {e}")))?;
     let pos = managed_files::seek(vm.file_handles(), fd, SeekFrom::Current(0))
         .await
-        .map_err(|e| InternalError(format!("available0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("available0: {e}")))?;
     let remaining = metadata.len().saturating_sub(pos);
     let result = i32::try_from(remaining).unwrap_or(i32::MAX);
     Ok(Some(Value::Int(result)))
@@ -893,12 +922,15 @@ pub async fn close_by_handle<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/ch/FileDispatcherImpl.duplicateHandle(J)J", Any)]
 #[async_method]
 pub async fn duplicate_handle<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let handle = parameters.pop_long()?;
-    // Return the same handle; we don't separately reference-count handles.
-    Ok(Some(Value::Long(handle)))
+    let vm = thread.vm()?;
+    let duplicate = managed_files::try_clone(vm.file_handles(), vm.resource_manager(), handle)
+        .await
+        .map_err(|error| JavaError::IoException(format!("duplicateHandle: {error}")))?;
+    Ok(Some(Value::Long(duplicate)))
 }
 
 #[cfg(target_os = "windows")]
@@ -916,7 +948,7 @@ pub async fn is_other0<T: Thread + 'static>(
     let fd = file_descriptor_from_java_object(&vm, &fd_value)?;
     let metadata = managed_files::metadata(vm.file_handles(), fd)
         .await
-        .map_err(|e| InternalError(format!("isOther0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("isOther0: {e}")))?;
     let is_other = !metadata.is_file() && !metadata.is_dir() && !metadata.is_symlink();
     Ok(Some(Value::Int(i32::from(is_other))))
 }
@@ -951,7 +983,7 @@ pub async fn map0<T: Thread + 'static>(
     if len > 0 {
         let _ = managed_files::read_at(file_handles, fd, &mut buf, position)
             .await
-            .map_err(|e| InternalError(format!("map0: {e}")))?;
+            .map_err(|e| JavaError::IoException(format!("map0: {e}")))?;
     }
     let address = vm.native_memory().allocate(len.max(1));
     if len > 0 {
@@ -1065,7 +1097,7 @@ pub async fn transfer_from0<T: Thread + 'static>(
     let mut buf = vec![0u8; count_usize];
     let n = managed_files::read(file_handles, src_fd, &mut buf)
         .await
-        .map_err(|e| InternalError(format!("transferFrom0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("transferFrom0: {e}")))?;
     if n == 0 {
         // IOStatus.EOF
         return Ok(Some(Value::Long(-1)));
@@ -1073,18 +1105,18 @@ pub async fn transfer_from0<T: Thread + 'static>(
     let written = if append {
         managed_files::seek(file_handles, dst_fd, SeekFrom::End(0))
             .await
-            .map_err(|e| InternalError(format!("transferFrom0: {e}")))?;
+            .map_err(|e| JavaError::IoException(format!("transferFrom0: {e}")))?;
         let bytes = bounds::range_to(&buf, ..n, "transferFrom0")?;
         managed_files::write(file_handles, dst_fd, bytes)
             .await
-            .map_err(|e| InternalError(format!("transferFrom0: {e}")))?
+            .map_err(|e| JavaError::IoException(format!("transferFrom0: {e}")))?
     } else {
         let offset = u64::try_from(position)
             .map_err(|_| InternalError("transferFrom0: negative position".to_string()))?;
         let bytes = bounds::range_to(&buf, ..n, "transferFrom0")?;
         managed_files::write_at(file_handles, dst_fd, bytes, offset)
             .await
-            .map_err(|e| InternalError(format!("transferFrom0: {e}")))?
+            .map_err(|e| JavaError::IoException(format!("transferFrom0: {e}")))?
     };
     Ok(Some(Value::Long(i64::try_from(written)?)))
 }
@@ -1144,11 +1176,8 @@ pub async fn write0<T: Thread + 'static>(
 
     match managed_files::write(vm.file_handles(), fd, &data).await {
         Ok(n) => Ok(Some(Value::Int(i32::try_from(n)?))),
-        Err(e) => {
-            let errno = e.raw_os_error().unwrap_or(5 /* EIO */);
-            Err(InternalError(format!(
-                "FileDispatcherImpl.write0: errno={errno}"
-            )))
+        Err(error) => {
+            Err(JavaError::IoException(format!("FileDispatcherImpl.write0: {error}")).into())
         }
     }
 }
@@ -1198,7 +1227,7 @@ pub async fn writev0<T: Thread + 'static>(
 
     let n = managed_files::writev(file_handles, fd, chunks)
         .await
-        .map_err(|e| InternalError(format!("writev0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("writev0: {e}")))?;
 
     Ok(Some(Value::Long(i64::try_from(n)?)))
 }
@@ -1397,10 +1426,29 @@ mod tests {
 
     #[cfg(target_os = "windows")]
     #[tokio::test]
-    async fn test_duplicate_handle() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = duplicate_handle(thread, Parameters::new(vec![Value::Long(0)])).await;
-        assert_eq!(Some(Value::Long(0)), result.unwrap());
+    async fn test_duplicate_handle() -> Result<()> {
+        use ristretto_types::handles::FileHandle;
+
+        let (vm, thread) = crate::test::thread().await?;
+        let directory = tempfile::tempdir()?;
+        let path = directory.path().join("duplicate-handle");
+        let file = tokio::fs::File::create(path).await?;
+        let original = 42;
+        vm.file_handles()
+            .insert(original, FileHandle::from((file, false)))
+            .await?;
+
+        let result = duplicate_handle(thread, Parameters::new(vec![Value::Long(original)])).await?;
+        let Some(Value::Long(duplicate)) = result else {
+            return Err(InternalError(
+                "duplicateHandle returned no handle".to_string(),
+            ));
+        };
+        assert_ne!(original, duplicate);
+        assert!(vm.file_handles().get(&duplicate).await.is_some());
+        managed_files::close(vm.file_handles(), original).await;
+        managed_files::close(vm.file_handles(), duplicate).await;
+        Ok(())
     }
 
     #[cfg(target_os = "windows")]

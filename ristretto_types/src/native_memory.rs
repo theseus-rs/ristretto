@@ -282,6 +282,16 @@ mod tests {
     }
 
     #[test]
+    fn test_try_write_bytes_checks_full_range() {
+        let mem = NativeMemory::new();
+        let addr = mem.allocate(4);
+        assert!(mem.try_write_bytes(addr + 1, &[1, 2, 3]));
+        assert!(!mem.try_write_bytes(addr + 2, &[4, 5, 6]));
+        assert!(!mem.try_write_bytes(addr + 8, &[7]));
+        assert_eq!(mem.read_bytes(addr, 4), vec![0, 1, 2, 3]);
+    }
+
+    #[test]
     fn test_free() {
         let mem = NativeMemory::new();
         let addr = mem.allocate(8);

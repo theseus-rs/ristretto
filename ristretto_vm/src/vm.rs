@@ -195,7 +195,7 @@ impl VM {
                 compiler,
                 hidden_class_counter: AtomicU64::new(1),
                 next_thread_id: AtomicU64::new(1),
-                next_nio_fd: AtomicI32::new(1),
+                next_nio_fd: AtomicI32::new(ristretto_types::FIRST_NIO_FD),
                 native_memory: NativeMemory::new(),
                 resource_manager: ResourceManager::new(),
                 thread_handles: HandleManager::new(),

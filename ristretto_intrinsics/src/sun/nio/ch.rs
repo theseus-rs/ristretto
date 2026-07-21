@@ -34,6 +34,8 @@ pub mod net;
 pub mod pollarraywrapper;
 #[cfg(target_family = "unix")]
 pub mod pollselectorimpl;
+#[cfg(target_family = "unix")]
+mod posix;
 pub mod sctp;
 #[cfg(not(target_family = "wasm"))]
 pub mod serversocketchannelimpl;
@@ -47,6 +49,7 @@ pub mod unixasynchronousserversocketchannelimpl;
 pub mod unixasynchronoussocketchannelimpl;
 #[cfg(target_family = "unix")]
 pub mod unixdispatcher;
+#[cfg(not(target_family = "wasm"))]
 pub mod unixdomainsockets;
 #[cfg(target_family = "unix")]
 pub mod unixfiledispatcherimpl;
@@ -62,3 +65,6 @@ pub mod windowsasynchronoussocketchannelimpl;
 pub mod windowsselectorimpl;
 #[cfg(target_os = "windows")]
 pub mod windowsselectorimpl_subselector;
+
+pub(crate) const IOS_INTERRUPTED: i32 = -3;
+pub(crate) const IOS_UNAVAILABLE: i32 = -2;

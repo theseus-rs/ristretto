@@ -104,6 +104,7 @@ pub async fn accept0<T: Thread + 'static>(
                                 socket_type: SocketType::TcpStream(Arc::new(stream)),
                                 timeout,
                                 is_ipv6,
+                                is_unix: false,
                                 non_blocking: true,
                             };
                             if vm.socket_handles().insert(accept_fd, connected).await.is_err() {

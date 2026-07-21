@@ -45,8 +45,8 @@ pub async fn init_0<T: Thread + 'static>(
     #[cfg(target_family = "wasm")]
     {
         let _ = (fd_value, this);
-        return Err(JavaError::UnsatisfiedLinkError(
-            "sun.nio.ch.FileKey.init(Ljava/io/FileDescriptor;)V".to_string(),
+        return Err(JavaError::UnsupportedOperationException(
+            "File keys are not available on WebAssembly".to_string(),
         )
         .into());
     }
@@ -396,7 +396,7 @@ mod wasm_tests {
         )
         .await;
         assert_eq!(
-            "sun.nio.ch.FileKey.init(Ljava/io/FileDescriptor;)V",
+            "File keys are not available on WebAssembly",
             result.unwrap_err().to_string()
         );
     }

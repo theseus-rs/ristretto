@@ -299,7 +299,9 @@ impl MockVm {
             system_properties: AHashMap::default(),
             next_thread_id: AtomicU64::new(1),
             next_hidden_class_suffix: AtomicU64::new(1),
-            next_nio_fd: AtomicUsize::new(3),
+            next_nio_fd: AtomicUsize::new(
+                usize::try_from(crate::FIRST_NIO_FD).expect("positive NIO descriptor base"),
+            ),
             module_system: MockModuleSystem::with_resolved_configuration(resolved_configuration),
             class_path: ClassPath::new(Vec::new()),
             stdin: Arc::new(TokioMutex::new(Cursor::new(Vec::new()))),
@@ -870,7 +872,7 @@ async fn test_mock_vm_thread_and_module_system_methods() -> Result<()> {
     assert!(vm.system_properties().is_empty());
     assert_eq!(vm.next_thread_id()?, 1);
     assert_eq!(vm.next_hidden_class_suffix()?, 1);
-    assert_eq!(vm.next_nio_fd(), 3);
+    assert_eq!(vm.next_nio_fd(), crate::FIRST_NIO_FD);
     assert_eq!(
         vm.class("java/lang/Object").await?.name(),
         "java/lang/Object"

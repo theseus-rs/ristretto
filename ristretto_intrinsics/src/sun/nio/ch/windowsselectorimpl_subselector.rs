@@ -6,19 +6,45 @@ use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM};
-use std::os::windows::io::AsRawSocket;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
+use windows_sys::Win32::Foundation::HANDLE;
 use windows_sys::Win32::Networking::WinSock::{
-    POLLERR as WSA_POLLERR, POLLHUP as WSA_POLLHUP, POLLIN as WSA_POLLIN, POLLNVAL as WSA_POLLNVAL,
-    POLLOUT as WSA_POLLOUT, POLLPRI as WSA_POLLPRI, SOCKET_ERROR, WSAGetLastError, WSAPOLLFD,
-    WSAPoll,
+    FD_ACCEPT, FD_CLOSE, FD_CONNECT, FD_OOB, FD_READ, FD_WRITE, FIONBIO, POLLIN as WSA_POLLIN,
+    POLLOUT as WSA_POLLOUT, SOCKET, SOCKET_ERROR, WSA_INVALID_EVENT, WSA_MAXIMUM_WAIT_EVENTS,
+    WSA_WAIT_FAILED, WSA_WAIT_TIMEOUT, WSACloseEvent, WSACreateEvent, WSAEVENT,
+    WSAEnumNetworkEvents, WSAEventSelect, WSAGetLastError, WSANETWORKEVENTS,
+    WSAWaitForMultipleEvents, ioctlsocket,
 };
 
-const JAVA_POLLIN: i16 = 0x0001;
-const JAVA_POLLOUT: i16 = 0x0004;
+const JAVA_POLLIN: i16 = WSA_POLLIN;
+const JAVA_POLLOUT: i16 = WSA_POLLOUT;
 const MAX_SELECTABLE_FDS: i32 = 1024;
 const POLLFD_SIZE: i64 = 8;
 const POLLFD_EVENTS_OFFSET: i64 = 4;
+const SELECT_RETRY_DELAY: Duration = Duration::from_millis(1);
+
+struct RegisteredSocketEvent {
+    fd: i32,
+    interests: i16,
+    raw_socket: SOCKET,
+    event: WSAEVENT,
+    non_blocking: bool,
+}
+
+#[expect(unsafe_code)]
+impl Drop for RegisteredSocketEvent {
+    fn drop(&mut self) {
+        let mut non_blocking = u32::from(self.non_blocking);
+        // SAFETY: The socket and event remain valid until this cleanup runs.
+        // Removing the event association must precede restoring blocking mode.
+        unsafe {
+            WSAEventSelect(self.raw_socket, WSA_INVALID_EVENT, 0);
+            ioctlsocket(self.raw_socket, FIONBIO, &raw mut non_blocking);
+            WSACloseEvent(self.event);
+        }
+    }
+}
 
 fn io_exception(operation: &str, error: impl std::fmt::Display) -> ristretto_types::Error {
     JavaError::IoException(format!("{operation} failed: {error}")).into()
@@ -91,59 +117,150 @@ pub async fn poll0<T: Thread + 'static>(
             .get(&fd)
             .await
             .ok_or_else(|| io_exception("select", format!("invalid socket {fd}")))?;
-        let socket = crate::net_helpers::socket_from_type(&handle.socket_type)
-            .try_clone()
-            .map_err(|error| io_exception("select", error))?;
-        sockets.push((fd, events, socket));
+        let raw_socket = handle.socket_type.raw_socket();
+        sockets.push((fd, events, raw_socket, handle.is_unix, handle.non_blocking));
     }
 
-    let poll_result = tokio::task::spawn_blocking(move || {
-        let mut poll_descriptors: Vec<WSAPOLLFD> = sockets
-            .iter()
-            .map(|(_, events, socket)| WSAPOLLFD {
-                fd: usize::try_from(socket.as_raw_socket()).unwrap_or(usize::MAX),
-                events: (if events & JAVA_POLLIN != 0 {
-                    WSA_POLLIN
-                } else {
-                    0
-                }) | (if events & JAVA_POLLOUT != 0 {
-                    WSA_POLLOUT
-                } else {
-                    0
-                }),
-                revents: 0,
-            })
-            .collect();
-        let mut remaining_timeout = timeout;
-        loop {
-            let poll_timeout = if remaining_timeout < 0 {
-                -1
-            } else {
-                i32::try_from(remaining_timeout).unwrap_or(i32::MAX)
-            };
-            let result = unsafe {
-                WSAPoll(
-                    poll_descriptors.as_mut_ptr(),
-                    u32::try_from(poll_descriptors.len()).unwrap_or(u32::MAX),
-                    poll_timeout,
-                )
-            };
+    let selected = tokio::task::spawn_blocking(move || {
+        let mut registered = Vec::with_capacity(sockets.len());
+        for (fd, interests, raw_socket, is_unix, non_blocking) in sockets {
+            let raw_socket = usize::try_from(raw_socket).unwrap_or(usize::MAX);
+            // SAFETY: WSACreateEvent has no pointer arguments.
+            let event = unsafe { WSACreateEvent() };
+            if event == WSA_INVALID_EVENT {
+                // SAFETY: WSAGetLastError has no pointer arguments.
+                let error = unsafe { WSAGetLastError() };
+                tracing::error!(fd, error, "Windows selector event creation failed");
+                return Err(error);
+            }
+
+            let mut network_events = 0_u32;
+            if interests & JAVA_POLLIN != 0 {
+                network_events |= FD_READ | FD_ACCEPT | FD_CLOSE;
+            }
+            if interests & JAVA_POLLOUT != 0 {
+                network_events |= FD_WRITE | FD_CONNECT | FD_CLOSE;
+            }
+            // Microsoft's AF_UNIX provider rejects FD_OOB with WSAEINVAL.
+            if !is_unix {
+                network_events |= FD_OOB;
+            }
+            // SAFETY: raw_socket is owned by the VM and event is valid for this worker.
+            let result = unsafe { WSAEventSelect(raw_socket, event, network_events.cast_signed()) };
             if result == SOCKET_ERROR {
-                return Err(unsafe { WSAGetLastError() });
+                // SAFETY: WSAGetLastError has no pointer arguments, and event was
+                // created successfully but was not registered.
+                let error = unsafe { WSAGetLastError() };
+                tracing::error!(
+                    fd,
+                    error,
+                    network_events,
+                    "Windows selector event registration failed"
+                );
+                unsafe { WSACloseEvent(event) };
+                return Err(error);
             }
-            if result != 0 || remaining_timeout <= i64::from(i32::MAX) {
-                break;
-            }
-            remaining_timeout -= i64::from(i32::MAX);
-            for descriptor in &mut poll_descriptors {
-                descriptor.revents = 0;
-            }
+            registered.push(RegisteredSocketEvent {
+                fd,
+                interests,
+                raw_socket,
+                event,
+                non_blocking,
+            });
         }
-        Ok(sockets
-            .into_iter()
-            .zip(poll_descriptors)
-            .map(|((fd, events, _socket), descriptor)| (fd, events, descriptor.revents))
-            .collect::<Vec<_>>())
+        let event_handles: Vec<HANDLE> = registered
+            .iter()
+            .map(|entry| entry.event as HANDLE)
+            .collect();
+
+        let started = Instant::now();
+        let deadline = if timeout < 0 {
+            None
+        } else {
+            let duration = Duration::from_millis(u64::try_from(timeout).unwrap_or(u64::MAX));
+            started.checked_add(duration)
+        };
+        loop {
+            let mut signaled = false;
+            for handles in event_handles.chunks(WSA_MAXIMUM_WAIT_EVENTS as usize) {
+                // SAFETY: handles contains valid Winsock event handles.
+                let result = unsafe {
+                    WSAWaitForMultipleEvents(
+                        u32::try_from(handles.len()).unwrap_or(WSA_MAXIMUM_WAIT_EVENTS),
+                        handles.as_ptr(),
+                        0,
+                        0,
+                        0,
+                    )
+                };
+                if result == WSA_WAIT_FAILED {
+                    // SAFETY: WSAGetLastError has no pointer arguments.
+                    let error = unsafe { WSAGetLastError() };
+                    tracing::error!(error, "Windows selector event wait failed");
+                    return Err(error);
+                }
+                if result != WSA_WAIT_TIMEOUT {
+                    signaled = true;
+                }
+            }
+
+            if signaled {
+                let mut selected = Vec::with_capacity(registered.len());
+                for entry in &registered {
+                    let mut network_events = WSANETWORKEVENTS::default();
+                    // SAFETY: The socket, event, and output pointer are valid.
+                    let result = unsafe {
+                        WSAEnumNetworkEvents(
+                            entry.raw_socket,
+                            entry.event,
+                            std::ptr::from_mut(&mut network_events),
+                        )
+                    };
+                    if result == SOCKET_ERROR {
+                        // SAFETY: WSAGetLastError has no pointer arguments.
+                        let error = unsafe { WSAGetLastError() };
+                        tracing::error!(
+                            fd = entry.fd,
+                            error,
+                            "Windows selector event enumeration failed"
+                        );
+                        return Err(error);
+                    }
+
+                    let occurred = network_events.lNetworkEvents.cast_unsigned();
+                    let has_error = network_events.iErrorCode.iter().any(|error| *error != 0);
+                    let readable = entry.interests & JAVA_POLLIN != 0
+                        && occurred & (FD_READ | FD_ACCEPT | FD_CLOSE) != 0;
+                    let writable = entry.interests & JAVA_POLLOUT != 0
+                        && occurred & (FD_WRITE | FD_CONNECT) != 0
+                        && !has_error;
+                    let exceptional = has_error
+                        || occurred & FD_OOB != 0
+                        || (occurred & FD_CLOSE != 0 && !readable);
+                    selected.push((entry.fd, readable, writable, exceptional));
+                }
+                return Ok(selected);
+            }
+            if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+                return Ok(registered
+                    .iter()
+                    .map(|entry| (entry.fd, false, false, false))
+                    .collect());
+            }
+
+            let delay = deadline.map_or(SELECT_RETRY_DELAY, |deadline| {
+                deadline
+                    .saturating_duration_since(Instant::now())
+                    .min(SELECT_RETRY_DELAY)
+            });
+            if delay.is_zero() {
+                return Ok(registered
+                    .iter()
+                    .map(|entry| (entry.fd, false, false, false))
+                    .collect());
+            }
+            std::thread::sleep(delay);
+        }
     })
     .await
     .map_err(|error| InternalError(format!("select worker failed: {error}")))?
@@ -152,17 +269,14 @@ pub async fn poll0<T: Thread + 'static>(
     let mut readable = Vec::new();
     let mut writable = Vec::new();
     let mut exceptional = Vec::new();
-    for (fd, events, returned) in poll_result {
-        if returned & WSA_POLLNVAL != 0 {
-            return Err(io_exception("select", format!("invalid socket {fd}")));
-        }
-        if events & JAVA_POLLIN != 0 && returned & (WSA_POLLIN | WSA_POLLHUP) != 0 {
+    for (fd, is_readable, is_writable, is_exceptional) in selected {
+        if is_readable {
             readable.push(fd);
         }
-        if events & JAVA_POLLOUT != 0 && returned & WSA_POLLOUT != 0 {
+        if is_writable {
             writable.push(fd);
         }
-        if returned & (WSA_POLLERR | WSA_POLLPRI) != 0 {
+        if is_exceptional {
             exceptional.push(fd);
         }
     }

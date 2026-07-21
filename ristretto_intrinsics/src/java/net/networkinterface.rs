@@ -5,6 +5,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM};
+use std::net::{Ipv4Addr, Ipv6Addr};
 use std::sync::Arc;
 
 /// Check if the given interface name represents a loopback interface.
@@ -40,10 +41,10 @@ async fn create_loopback_interface<T: Thread + 'static>(thread: &Arc<T>) -> Resu
     let name_value = thread.intern_string(lo_name).await?;
     let display_name_value = thread.intern_string(lo_name).await?;
 
-    // Create InetAddress for 127.0.0.1
+    // Create the IPv4 and IPv6 loopback addresses exposed by the interface.
     let loopback_bytes: Box<[i8]> = vec![127, 0, 0, 1].into_boxed_slice();
     let byte_array_value = Value::new_object(gc, Reference::ByteArray(loopback_bytes));
-    let inet_addr = thread
+    let ipv4_loopback_address = thread
         .invoke(
             "java.net.InetAddress",
             "getByAddress(Ljava/lang/String;[B)Ljava/net/InetAddress;",
@@ -51,10 +52,26 @@ async fn create_loopback_interface<T: Thread + 'static>(thread: &Arc<T>) -> Resu
         )
         .await?
         .unwrap_or(Value::Object(None));
+    let ipv6_loopback: Box<[i8]> = Ipv6Addr::LOCALHOST
+        .octets()
+        .map(|byte| i8::from_ne_bytes([byte]))
+        .into();
+    let ipv6_bytes = Value::new_object(gc, Reference::ByteArray(ipv6_loopback));
+    let ipv6_loopback_address = thread
+        .invoke(
+            "java.net.InetAddress",
+            "getByAddress(Ljava/lang/String;[B)Ljava/net/InetAddress;",
+            &[Value::Object(None), ipv6_bytes],
+        )
+        .await?
+        .unwrap_or(Value::Object(None));
 
     // Create InetAddress[] for addrs
     let inet_addr_class = thread.class("[Ljava/net/InetAddress;").await?;
-    let addrs_ref = Reference::try_from((inet_addr_class, vec![inet_addr]))?;
+    let addrs_ref = Reference::try_from((
+        inet_addr_class,
+        vec![ipv4_loopback_address, ipv6_loopback_address],
+    ))?;
     let addrs_value = Value::new_object(gc, addrs_ref);
 
     // Create empty NetworkInterface[] for childs
@@ -121,11 +138,15 @@ pub async fn get_all<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_by_index_0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _index = parameters.pop_int()?;
-    Ok(Some(Value::Object(None)))
+    let index = parameters.pop_int()?;
+    if index == 1 {
+        Ok(Some(create_loopback_interface(&thread).await?))
+    } else {
+        Ok(Some(Value::Object(None)))
+    }
 }
 
 #[intrinsic_method(
@@ -134,11 +155,33 @@ pub async fn get_by_index_0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_by_inet_address_0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _addr = parameters.pop_reference()?;
-    Ok(Some(Value::Object(None)))
+    let address = parameters.pop()?;
+    let is_loopback = {
+        let object = address.as_object_ref()?;
+        if object.class().name().ends_with("Inet6Address") {
+            let holder = object.value("holder6")?;
+            let holder = holder.as_object_ref()?;
+            let bytes = holder.value("ipaddress")?;
+            let bytes = bytes.as_byte_vec_ref()?;
+            bytes
+                .iter()
+                .map(|byte| u8::from_ne_bytes(byte.to_ne_bytes()))
+                .eq(Ipv6Addr::LOCALHOST.octets())
+        } else {
+            let holder = object.value("holder")?;
+            let holder = holder.as_object_ref()?;
+            let bits = holder.value("address")?.as_i32()?;
+            Ipv4Addr::from(u32::from_ne_bytes(bits.to_ne_bytes())).is_loopback()
+        }
+    };
+    if is_loopback {
+        Ok(Some(create_loopback_interface(&thread).await?))
+    } else {
+        Ok(Some(Value::Object(None)))
+    }
 }
 
 #[intrinsic_method(
@@ -147,11 +190,15 @@ pub async fn get_by_inet_address_0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_by_name_0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _name = parameters.pop()?;
-    Ok(Some(Value::Object(None)))
+    let name = parameters.pop()?.as_string()?;
+    if is_loopback_name(&name) {
+        Ok(Some(create_loopback_interface(&thread).await?))
+    } else {
+        Ok(Some(Value::Object(None)))
+    }
 }
 
 #[intrinsic_method("java/net/NetworkInterface.getMTU0(Ljava/lang/String;I)I", Any)]
