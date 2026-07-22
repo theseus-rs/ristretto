@@ -295,7 +295,7 @@ impl Compiler {
         emit_exception_return(&mut function_builder, return_pointer);
 
         function_builder.seal_all_blocks();
-        function_builder.finalize();
+        function_builder.finalize(jit_module.target_config());
 
         jit_module.define_function(function, &mut module_context)?;
         jit_module.clear_context(&mut module_context);

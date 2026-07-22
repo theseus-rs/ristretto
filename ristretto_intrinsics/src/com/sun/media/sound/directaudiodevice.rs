@@ -287,32 +287,32 @@ pub async fn n_open<T: ristretto_types::Thread + 'static>(
                     .and_then(|mut configs| {
                         configs.find(|c| {
                             c.channels() >= channels_u16
-                                && c.min_sample_rate().0 <= sample_rate_u32
-                                && c.max_sample_rate().0 >= sample_rate_u32
+                                && c.min_sample_rate() <= sample_rate_u32
+                                && c.max_sample_rate() >= sample_rate_u32
                         })
                     });
 
             let (actual_channels, actual_sample_rate) = if let Some(sc) = &supported_config {
                 (
                     sc.channels(),
-                    sample_rate_u32.clamp(sc.min_sample_rate().0, sc.max_sample_rate().0),
+                    sample_rate_u32.clamp(sc.min_sample_rate(), sc.max_sample_rate()),
                 )
             } else if let Some(dc) = &default_config {
-                (dc.channels(), dc.sample_rate().0)
+                (dc.channels(), dc.sample_rate())
             } else {
                 (channels_u16, sample_rate_u32)
             };
 
             let config = cpal::StreamConfig {
                 channels: actual_channels,
-                sample_rate: cpal::SampleRate(actual_sample_rate),
+                sample_rate: actual_sample_rate,
                 buffer_size: cpal::BufferSize::Default,
             };
 
             let source_channels = channels_u16;
             let stream = if is_source_bool {
                 device.build_output_stream(
-                    &config,
+                    config,
                     move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
                         if !running_clone.load(Ordering::Relaxed) {
                             data.fill(0.0);
@@ -391,7 +391,7 @@ pub async fn n_open<T: ristretto_types::Thread + 'static>(
                 )
             } else {
                 device.build_input_stream(
-                    &config,
+                    config,
                     move |data: &[f32], _: &cpal::InputCallbackInfo| {
                         if !running_clone.load(Ordering::Relaxed) {
                             return;

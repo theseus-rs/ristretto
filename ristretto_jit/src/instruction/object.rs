@@ -262,12 +262,14 @@ pub(crate) fn multianewarray(
     for _ in 0..dimensions {
         popped.push(stack.pop_int(function_builder)?);
     }
+    let ptr_type = function_builder.func.dfg.value_type(context_pointer);
     // The last popped value is the outermost dimension. Store outermost first (index 0).
     for (i, value) in popped.iter().rev().enumerate() {
         let offset = i32::try_from(i * 4).map_err(|error| InternalError(format!("{error:?}")))?;
-        function_builder.ins().stack_store(*value, slot, offset);
+        function_builder
+            .ins()
+            .stack_store(ptr_type, *value, slot, offset);
     }
-    let ptr_type = function_builder.func.dfg.value_type(context_pointer);
     let dims_ptr = function_builder.ins().stack_addr(ptr_type, slot, 0);
     let bci = emit_bci(function_builder, throw_context);
     let class_index = function_builder

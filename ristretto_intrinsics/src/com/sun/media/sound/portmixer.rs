@@ -153,7 +153,10 @@ pub async fn n_open<T: ristretto_types::Thread + 'static>(
     {
         use cpal::traits::DeviceTrait;
         if let Some(device) = super::audio_state::get_audio_device_by_index(index as usize) {
-            let name = device.name().unwrap_or_else(|_| format!("Port {index}"));
+            let name = device.description().map_or_else(
+                |_| format!("Port {index}"),
+                |description| description.name().to_string(),
+            );
             let audio = thread
                 .vm()?
                 .resource_manager()
