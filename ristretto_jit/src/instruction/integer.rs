@@ -431,7 +431,7 @@ pub(crate) fn iinc(
     let index = usize::from(index);
     let value = locals.get_int(function_builder, index)?;
     let constant = i64::from(constant);
-    let value = function_builder.ins().iadd_imm(value, constant);
+    let value = function_builder.ins().iadd_imm_s(value, constant);
     locals.set_int(function_builder, index, value)?;
     Ok(())
 }
@@ -448,7 +448,7 @@ pub(crate) fn iinc_w(
     let index = usize::from(index);
     let value = locals.get_int(function_builder, index)?;
     let constant = i64::from(constant);
-    let value = function_builder.ins().iadd_imm(value, constant);
+    let value = function_builder.ins().iadd_imm_s(value, constant);
     locals.set_int(function_builder, index, value)?;
     Ok(())
 }
