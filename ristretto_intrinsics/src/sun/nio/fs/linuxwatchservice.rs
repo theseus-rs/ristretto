@@ -124,7 +124,14 @@ pub async fn inotify_add_watch<T: Thread + 'static>(
     #[cfg(target_os = "linux")]
     {
         let vm = thread.vm()?;
-        let path_bytes = vm.native_memory().read_cstring(path_address);
+        let path_bytes = vm
+            .native_memory()
+            .try_read_cstring(path_address)
+            .ok_or_else(|| {
+                ristretto_types::Error::InternalError(
+                    "inotifyAddWatch: invalid path address".to_string(),
+                )
+            })?;
         let c_path = std::ffi::CString::new(path_bytes).map_err(|error| {
             ristretto_types::Error::InternalError(format!("Invalid path: {error}"))
         })?;
@@ -236,15 +243,7 @@ pub async fn poll<T: Thread + 'static>(
                     }
                     return Err(err);
                 }
-                // Mirror JDK behavior: if fd2 is signalled, return 1, else 0.
-                let mut ret = 0;
-                if fds[1].revents & libc::POLLIN != 0 {
-                    ret |= 1 << 1;
-                }
-                if fds[0].revents & libc::POLLIN != 0 {
-                    ret |= 1 << 0;
-                }
-                return Ok(ret);
+                return Ok(n);
             }
         })
         .await
@@ -278,6 +277,19 @@ pub async fn socketpair<T: Thread + 'static>(
 
     #[cfg(target_os = "linux")]
     {
+        let array = sv_ref.ok_or_else(|| {
+            ristretto_types::Error::InternalError("socketpair: null int[]".to_string())
+        })?;
+        let array_value = Value::from(array);
+        {
+            let int_vec = array_value.as_int_vec_ref()?;
+            if int_vec.len() < 2 {
+                return Err(ristretto_types::Error::InternalError(
+                    "socketpair: int[] too small".to_string(),
+                ));
+            }
+        }
+
         let mut sv: [i32; 2] = [0; 2];
         #[expect(unsafe_code)]
         let result = unsafe {
@@ -293,20 +305,30 @@ pub async fn socketpair<T: Thread + 'static>(
         }
         let [first_fd, second_fd] = sv;
         register_raw_fd(&thread, first_fd).await?;
-        register_raw_fd(&thread, second_fd).await?;
+        if let Err(error) = register_raw_fd(&thread, second_fd).await {
+            let vm = thread.vm()?;
+            super::managed_files::close(vm.file_handles(), i64::from(first_fd)).await;
+            return Err(error);
+        }
         // Write the two fds into the int[] argument.
-        let array = sv_ref.ok_or_else(|| {
-            ristretto_types::Error::InternalError("socketpair: null int[]".to_string())
-        })?;
-        let array_value = Value::from(array);
-        let mut int_vec = array_value.as_int_vec_mut()?;
-        let [first_value, second_value, ..] = int_vec.as_mut() else {
-            return Err(ristretto_types::Error::InternalError(
-                "socketpair: int[] too small".to_string(),
-            ));
+        let assigned = {
+            let mut int_vec = array_value.as_int_vec_mut()?;
+            if let Some([first_value, second_value]) = int_vec.get_mut(..2) {
+                *first_value = first_fd;
+                *second_value = second_fd;
+                true
+            } else {
+                false
+            }
         };
-        *first_value = first_fd;
-        *second_value = second_fd;
+        if !assigned {
+            let vm = thread.vm()?;
+            super::managed_files::close(vm.file_handles(), i64::from(first_fd)).await;
+            super::managed_files::close(vm.file_handles(), i64::from(second_fd)).await;
+            return Err(ristretto_types::Error::InternalError(
+                "socketpair: int[] became too small".to_string(),
+            ));
+        }
         Ok(None)
     }
 

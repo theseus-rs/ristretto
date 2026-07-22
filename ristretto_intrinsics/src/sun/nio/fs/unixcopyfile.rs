@@ -17,7 +17,7 @@ pub async fn transfer<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _cancel_address = parameters.pop_long()?;
+    let cancel_address = parameters.pop_long()?;
     let src = parameters.pop_int()?;
     let dst = parameters.pop_int()?;
 
@@ -26,6 +26,14 @@ pub async fn transfer<T: Thread + 'static>(
     let mut buf = vec![0u8; 8192];
 
     loop {
+        if cancel_address != 0 {
+            let Some(cancelled) = vm.native_memory().read_i32(cancel_address) else {
+                return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+            };
+            if cancelled != 0 {
+                return Err(throw_unix_exception(&thread, libc::ECANCELED).await);
+            }
+        }
         let n = match managed_files::read(file_handles, i64::from(src), &mut buf).await {
             Ok(n) => n,
             Err(e) => {
@@ -77,12 +85,9 @@ mod tests {
     #[cfg(target_family = "unix")]
     async fn test_transfer_success() {
         let (vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let src_path = std::env::current_dir()
-            .unwrap()
-            .join("_test_transfer_src.tmp");
-        let dst_path = std::env::current_dir()
-            .unwrap()
-            .join("_test_transfer_dst.tmp");
+        let directory = tempfile::tempdir().expect("temp directory");
+        let src_path = directory.path().join("source");
+        let dst_path = directory.path().join("destination");
         std::fs::write(&src_path, b"transfer content").unwrap();
 
         let file_handles = vm.file_handles();
@@ -123,8 +128,5 @@ mod tests {
 
         let content = std::fs::read(&dst_path).unwrap();
         assert_eq!(content, b"transfer content");
-
-        std::fs::remove_file(&src_path).ok();
-        std::fs::remove_file(&dst_path).ok();
     }
 }

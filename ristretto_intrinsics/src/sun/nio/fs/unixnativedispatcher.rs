@@ -24,12 +24,16 @@ use ristretto_types::VM;
 #[cfg(target_family = "unix")]
 use std::ffi::CString;
 #[cfg(target_family = "unix")]
+use std::os::unix::ffi::OsStrExt;
+#[cfg(target_family = "unix")]
 use std::os::unix::fs::MetadataExt;
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
 use std::sync::Arc;
 
 #[cfg(target_family = "unix")]
 use super::managed_files;
+#[cfg(target_family = "unix")]
+use super::native_resources;
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
 use ristretto_types::Thread;
 
@@ -72,6 +76,168 @@ fn set_unix_metadata_fields(
     object.set_value("st_ctime_sec", Value::Long(metadata.ctime()))?;
     object.set_value("st_ctime_nsec", Value::Long(metadata.ctime_nsec()))?;
     Ok(())
+}
+
+#[cfg(target_family = "unix")]
+#[cfg_attr(target_os = "macos", expect(clippy::cast_possible_wrap))]
+fn set_stat_fields(object: &mut ristretto_classloader::Object, stat: &libc::stat) -> Result<()> {
+    #[cfg(target_os = "macos")]
+    let (mode, inode, device, raw_device, link_count, user_id, group_id) = (
+        i32::from(stat.st_mode),
+        stat.st_ino as i64,
+        i64::from(stat.st_dev),
+        i64::from(stat.st_rdev),
+        i32::from(stat.st_nlink),
+        stat.st_uid as i32,
+        stat.st_gid as i32,
+    );
+    #[cfg(not(target_os = "macos"))]
+    let (mode, inode, device, raw_device, link_count, user_id, group_id) = (
+        wrapping_i32_from_unsigned(stat.st_mode),
+        wrapping_i64_from_unsigned(stat.st_ino),
+        wrapping_i64_from_unsigned(stat.st_dev),
+        wrapping_i64_from_unsigned(stat.st_rdev),
+        wrapping_i32_from_unsigned(stat.st_nlink),
+        wrapping_i32_from_unsigned(stat.st_uid),
+        wrapping_i32_from_unsigned(stat.st_gid),
+    );
+    object.set_value("st_mode", Value::Int(mode))?;
+    object.set_value("st_ino", Value::Long(inode))?;
+    object.set_value("st_dev", Value::Long(device))?;
+    object.set_value("st_rdev", Value::Long(raw_device))?;
+    object.set_value("st_nlink", Value::Int(link_count))?;
+    object.set_value("st_uid", Value::Int(user_id))?;
+    object.set_value("st_gid", Value::Int(group_id))?;
+    object.set_value("st_size", Value::Long(stat.st_size))?;
+    object.set_value("st_atime_sec", Value::Long(stat.st_atime))?;
+    object.set_value("st_atime_nsec", Value::Long(stat.st_atime_nsec))?;
+    object.set_value("st_mtime_sec", Value::Long(stat.st_mtime))?;
+    object.set_value("st_mtime_nsec", Value::Long(stat.st_mtime_nsec))?;
+    object.set_value("st_ctime_sec", Value::Long(stat.st_ctime))?;
+    object.set_value("st_ctime_nsec", Value::Long(stat.st_ctime_nsec))?;
+    #[cfg(target_os = "macos")]
+    set_birthtime_fields(object, stat.st_birthtime, stat.st_birthtime_nsec, true)?;
+    #[cfg(not(target_os = "macos"))]
+    set_birthtime_fields(object, 0, 0, false)?;
+    Ok(())
+}
+
+#[cfg(all(target_family = "unix", not(target_os = "macos")))]
+fn wrapping_i32_from_unsigned<T: Into<u64>>(value: T) -> i32 {
+    truncating_i32_from_u64(value.into())
+}
+
+#[cfg(all(target_family = "unix", not(target_os = "macos")))]
+fn wrapping_i64_from_unsigned<T: Into<u64>>(value: T) -> i64 {
+    wrapping_i64_from_u64(value.into())
+}
+
+#[cfg(all(target_family = "unix", not(target_os = "macos")))]
+#[expect(clippy::cast_possible_truncation)]
+const fn truncating_i32_from_u64(value: u64) -> i32 {
+    value as i32
+}
+
+#[cfg(all(target_family = "unix", not(target_os = "macos")))]
+#[expect(clippy::cast_possible_wrap)]
+const fn wrapping_i64_from_u64(value: u64) -> i64 {
+    value as i64
+}
+
+fn set_optional_field(
+    object: &mut ristretto_classloader::Object,
+    name: &str,
+    value: Value,
+) -> Result<()> {
+    let fields = object.class().all_object_fields()?;
+    if fields.iter().any(|field| field.name() == name) {
+        object.set_value(name, value)?;
+    }
+    Ok(())
+}
+
+fn set_birthtime_fields(
+    object: &mut ristretto_classloader::Object,
+    seconds: i64,
+    nanoseconds: i64,
+    available: bool,
+) -> Result<()> {
+    object.set_value("st_birthtime_sec", Value::Long(seconds))?;
+    set_optional_field(object, "st_birthtime_nsec", Value::Long(nanoseconds))?;
+    set_optional_field(object, "birthtime_available", Value::from(available))
+}
+
+#[cfg(all(target_os = "linux", target_env = "gnu"))]
+fn linux_statx_supported() -> bool {
+    static SUPPORTED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+    *SUPPORTED.get_or_init(|| {
+        #[expect(unsafe_code)]
+        let mut attributes: libc::statx = unsafe { std::mem::zeroed() };
+        #[expect(unsafe_code)]
+        let result = unsafe {
+            libc::syscall(
+                libc::SYS_statx,
+                libc::AT_FDCWD,
+                c".".as_ptr(),
+                libc::AT_STATX_SYNC_AS_STAT,
+                libc::STATX_BASIC_STATS | libc::STATX_BTIME,
+                &raw mut attributes,
+            )
+        };
+        result == 0
+    })
+}
+
+#[cfg(all(target_os = "linux", not(target_env = "gnu")))]
+const fn linux_statx_supported() -> bool {
+    false
+}
+
+#[cfg(all(target_os = "linux", target_env = "gnu"))]
+fn set_linux_birthtime_fields(
+    object: &mut ristretto_classloader::Object,
+    directory_fd: i32,
+    path: &std::ffi::CStr,
+    flags: i32,
+) -> Result<()> {
+    if !linux_statx_supported() {
+        return set_birthtime_fields(object, 0, 0, false);
+    }
+    #[expect(unsafe_code)]
+    let mut attributes: libc::statx = unsafe { std::mem::zeroed() };
+    #[expect(unsafe_code)]
+    let result = unsafe {
+        libc::syscall(
+            libc::SYS_statx,
+            directory_fd,
+            path.as_ptr(),
+            flags | libc::AT_STATX_SYNC_AS_STAT,
+            libc::STATX_BTIME,
+            &raw mut attributes,
+        )
+    };
+    let available = result == 0 && attributes.stx_mask & libc::STATX_BTIME != 0;
+    if available {
+        set_birthtime_fields(
+            object,
+            attributes.stx_btime.tv_sec,
+            i64::from(attributes.stx_btime.tv_nsec),
+            true,
+        )
+    } else {
+        set_birthtime_fields(object, 0, 0, false)
+    }
+}
+
+#[cfg(all(target_os = "linux", not(target_env = "gnu")))]
+fn set_linux_birthtime_fields(
+    object: &mut ristretto_classloader::Object,
+    _directory_fd: i32,
+    _path: &std::ffi::CStr,
+    _flags: i32,
+) -> Result<()> {
+    set_birthtime_fields(object, 0, 0, false)
 }
 
 /// Convert a [`std::time::SystemTime`] into seconds/nanoseconds since the Unix epoch.
@@ -135,11 +301,155 @@ fn set_unix_metadata_fields(
     Ok(())
 }
 
-/// Read a null-terminated path from native memory
-fn read_native_path<V: VM>(vm: &V, address: i64) -> Result<String> {
-    let path_bytes = vm.native_memory().read_cstring(address);
-    String::from_utf8(path_bytes)
-        .map_err(|error| InternalError(format!("Invalid path encoding: {error}")))
+/// Read a null-terminated path from native memory without applying UTF-8 conversion. Unix file
+/// names are byte strings and `OpenJDK` uses `sun.jnu.encoding` only at the Java boundary.
+fn read_native_path<V: VM>(vm: &V, address: i64) -> Result<Vec<u8>> {
+    vm.native_memory()
+        .try_read_cstring(address)
+        .ok_or_else(|| InternalError(format!("Invalid native path address: {address}")))
+}
+
+#[cfg(target_family = "unix")]
+fn path_from_bytes(path: &[u8]) -> std::path::PathBuf {
+    use std::os::unix::ffi::OsStringExt;
+    std::ffi::OsString::from_vec(path.to_vec()).into()
+}
+
+#[cfg(not(target_family = "unix"))]
+fn path_from_bytes(path: &[u8]) -> std::path::PathBuf {
+    std::path::PathBuf::from(String::from_utf8_lossy(path).into_owned())
+}
+
+#[cfg(target_family = "unix")]
+fn lookup_group_by_gid(gid: libc::gid_t) -> std::result::Result<Option<Vec<u8>>, i32> {
+    let mut size = 1024usize;
+    loop {
+        #[expect(unsafe_code)]
+        let mut group: libc::group = unsafe { std::mem::zeroed() };
+        let mut result = std::ptr::null_mut();
+        let mut buffer = vec![0u8; size];
+        #[expect(unsafe_code)]
+        let status = unsafe {
+            libc::getgrgid_r(
+                gid,
+                &raw mut group,
+                buffer.as_mut_ptr().cast(),
+                buffer.len(),
+                &raw mut result,
+            )
+        };
+        if status == libc::ERANGE && size < 1024 * 1024 {
+            size *= 2;
+            continue;
+        }
+        if status != 0 {
+            return Err(status);
+        }
+        if result.is_null() {
+            return Ok(None);
+        }
+        #[expect(unsafe_code)]
+        return Ok(Some(
+            unsafe { std::ffi::CStr::from_ptr(group.gr_name) }
+                .to_bytes()
+                .to_vec(),
+        ));
+    }
+}
+
+#[cfg(target_family = "unix")]
+fn lookup_group_by_name(name: &CString) -> std::result::Result<Option<libc::gid_t>, i32> {
+    let mut size = 1024usize;
+    loop {
+        #[expect(unsafe_code)]
+        let mut group: libc::group = unsafe { std::mem::zeroed() };
+        let mut result = std::ptr::null_mut();
+        let mut buffer = vec![0u8; size];
+        #[expect(unsafe_code)]
+        let status = unsafe {
+            libc::getgrnam_r(
+                name.as_ptr(),
+                &raw mut group,
+                buffer.as_mut_ptr().cast(),
+                buffer.len(),
+                &raw mut result,
+            )
+        };
+        if status == libc::ERANGE && size < 1024 * 1024 {
+            size *= 2;
+            continue;
+        }
+        if status != 0 {
+            return Err(status);
+        }
+        return Ok((!result.is_null()).then_some(group.gr_gid));
+    }
+}
+
+#[cfg(target_family = "unix")]
+fn lookup_user_by_uid(uid: libc::uid_t) -> std::result::Result<Option<Vec<u8>>, i32> {
+    let mut size = 1024usize;
+    loop {
+        #[expect(unsafe_code)]
+        let mut passwd: libc::passwd = unsafe { std::mem::zeroed() };
+        let mut result = std::ptr::null_mut();
+        let mut buffer = vec![0u8; size];
+        #[expect(unsafe_code)]
+        let status = unsafe {
+            libc::getpwuid_r(
+                uid,
+                &raw mut passwd,
+                buffer.as_mut_ptr().cast(),
+                buffer.len(),
+                &raw mut result,
+            )
+        };
+        if status == libc::ERANGE && size < 1024 * 1024 {
+            size *= 2;
+            continue;
+        }
+        if status != 0 {
+            return Err(status);
+        }
+        if result.is_null() {
+            return Ok(None);
+        }
+        #[expect(unsafe_code)]
+        return Ok(Some(
+            unsafe { std::ffi::CStr::from_ptr(passwd.pw_name) }
+                .to_bytes()
+                .to_vec(),
+        ));
+    }
+}
+
+#[cfg(target_family = "unix")]
+fn lookup_user_by_name(name: &CString) -> std::result::Result<Option<libc::uid_t>, i32> {
+    let mut size = 1024usize;
+    loop {
+        #[expect(unsafe_code)]
+        let mut passwd: libc::passwd = unsafe { std::mem::zeroed() };
+        let mut result = std::ptr::null_mut();
+        let mut buffer = vec![0u8; size];
+        #[expect(unsafe_code)]
+        let status = unsafe {
+            libc::getpwnam_r(
+                name.as_ptr(),
+                &raw mut passwd,
+                buffer.as_mut_ptr().cast(),
+                buffer.len(),
+                &raw mut result,
+            )
+        };
+        if status == libc::ERANGE && size < 1024 * 1024 {
+            size *= 2;
+            continue;
+        }
+        if status != 0 {
+            return Err(status);
+        }
+        return Ok((!result.is_null()).then_some(passwd.pw_uid));
+    }
 }
 
 /// Get errno from last OS error
@@ -147,6 +457,28 @@ fn read_native_path<V: VM>(vm: &V, address: i64) -> Result<String> {
 fn last_errno() -> i32 {
     std::io::Error::last_os_error().raw_os_error().unwrap_or(5)
 }
+
+#[cfg(target_os = "linux")]
+#[expect(unsafe_code)]
+fn clear_errno() {
+    unsafe {
+        *libc::__errno_location() = 0;
+    }
+}
+
+#[cfg(target_os = "macos")]
+#[expect(unsafe_code)]
+fn clear_errno() {
+    unsafe {
+        *libc::__error() = 0;
+    }
+}
+
+#[cfg(all(
+    target_family = "unix",
+    not(any(target_os = "linux", target_os = "macos"))
+))]
+fn clear_errno() {}
 
 /// Translate a Rust I/O error into a Linux-style `errno` value.
 ///
@@ -165,14 +497,13 @@ fn wasm_linux_errno(error: &std::io::Error) -> i32 {
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_family = "wasm"))]
 use super::common::throw_unix_exception;
 
 /// Convert a path string to a `CString` for libc calls
 #[cfg(target_family = "unix")]
-fn to_cstring(path: &str) -> Result<CString> {
-    CString::new(path.as_bytes())
-        .map_err(|e| InternalError(format!("Invalid path (contains null byte): {e}")))
+fn to_cstring(path: &[u8]) -> Result<CString> {
+    CString::new(path).map_err(|e| InternalError(format!("Invalid path (contains null byte): {e}")))
 }
 
 #[cfg(target_family = "unix")]
@@ -221,19 +552,15 @@ pub async fn access_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _mode = parameters.pop_int()?;
+    let mode = parameters.pop_int()?;
     let path_address = parameters.pop_long()?;
 
     let vm = thread.vm()?;
-    let path_bytes = vm.native_memory().read_cstring(path_address);
-    let path_str = String::from_utf8(path_bytes)
-        .map_err(|error| InternalError(format!("Invalid path encoding: {error}")))?;
-
-    if std::path::Path::new(&path_str).exists() {
-        Ok(Some(Value::Int(0)))
-    } else {
-        Ok(Some(Value::Int(-1)))
-    }
+    let path_bytes = read_native_path(&*vm, path_address)?;
+    let path = to_cstring(&path_bytes)?;
+    #[expect(unsafe_code)]
+    let result = unsafe { libc::access(path.as_ptr(), mode) };
+    Ok(Some(Value::Int(result)))
 }
 
 #[cfg(target_family = "unix")]
@@ -325,7 +652,9 @@ pub async fn close_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let fd = parameters.pop_int()?;
     let vm = thread.vm()?;
-    managed_files::close(vm.file_handles(), i64::from(fd)).await;
+    if !managed_files::close(vm.file_handles(), i64::from(fd)).await {
+        return Err(throw_unix_exception(&thread, libc::EBADF).await);
+    }
     Ok(None)
 }
 
@@ -333,20 +662,21 @@ pub async fn close_0<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.closedir(J)V", Any)]
 #[async_method]
 pub async fn closedir<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let dir = parameters.pop_long()?;
 
     #[cfg(target_family = "unix")]
     {
-        if dir != 0 {
-            #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-            let dir_ptr = dir as usize as *mut libc::DIR;
-            #[expect(unsafe_code)]
-            unsafe {
-                libc::closedir(dir_ptr)
-            };
+        let vm = thread.vm()?;
+        let Some(pointer) = native_resources::take_directory(&*vm, dir)? else {
+            return Err(throw_unix_exception(&thread, libc::EBADF).await);
+        };
+        #[expect(unsafe_code)]
+        let result = unsafe { libc::closedir(pointer as *mut libc::DIR) };
+        if result < 0 {
+            return Err(throw_unix_exception(&thread, last_errno()).await);
         }
         Ok(None)
     }
@@ -370,12 +700,17 @@ pub async fn dup<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
-        #[expect(unsafe_code)]
-        let result = unsafe { libc::dup(fd) };
-        if result < 0 {
-            return Err(throw_unix_exception(&thread, last_errno()).await);
+        let vm = thread.vm()?;
+        match managed_files::try_clone(vm.file_handles(), vm.resource_manager(), i64::from(fd))
+            .await
+        {
+            Ok(result) => Ok(Some(Value::Int(i32::try_from(result)?))),
+            Err(error) => Err(throw_unix_exception(
+                &thread,
+                error.raw_os_error().unwrap_or(libc::EBADF),
+            )
+            .await),
         }
-        Ok(Some(Value::Int(result)))
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -399,7 +734,7 @@ pub async fn exists_0<T: Thread + 'static>(
     let path_address = parameters.pop_long()?;
     let vm = thread.vm()?;
     let path_str = read_native_path(&*vm, path_address)?;
-    let exists = std::path::Path::new(&path_str).exists();
+    let exists = path_from_bytes(&path_str).exists();
     Ok(Some(Value::from(exists)))
 }
 
@@ -414,12 +749,14 @@ pub async fn fclose_1<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
-        if fp != 0 {
-            #[expect(unsafe_code, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-            let result = unsafe { libc::fclose(fp as usize as *mut libc::FILE) };
-            if result != 0 {
-                return Err(throw_unix_exception(&thread, last_errno()).await);
-            }
+        let vm = thread.vm()?;
+        let Some(pointer) = native_resources::take_file(&*vm, fp)? else {
+            return Err(throw_unix_exception(&thread, libc::EBADF).await);
+        };
+        #[expect(unsafe_code)]
+        let result = unsafe { libc::fclose(pointer as *mut libc::FILE) };
+        if result != 0 {
+            return Err(throw_unix_exception(&thread, last_errno()).await);
         }
     }
     #[cfg(not(target_family = "unix"))]
@@ -586,18 +923,18 @@ pub async fn fdopendir<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
+        let vm = thread.vm()?;
         #[expect(unsafe_code)]
-        let dir = unsafe { libc::fdopendir(fd) };
-        if dir.is_null() {
+        let dir_pointer = unsafe { libc::fdopendir(fd) };
+        if dir_pointer.is_null() {
             return Err(throw_unix_exception(&thread, last_errno()).await);
         }
-        #[expect(clippy::cast_possible_wrap)]
-        let dir = dir as usize as i64;
-        let vm = thread.vm()?;
+        let dir_pointer = dir_pointer as usize;
         if let Some(handle) = vm.file_handles().remove(&i64::from(fd)).await {
             std::mem::forget(handle);
         }
-        Ok(Some(Value::Long(dir)))
+        let handle = native_resources::insert_directory(&*vm, dir_pointer as *mut libc::DIR)?;
+        Ok(Some(Value::Long(handle)))
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -626,41 +963,67 @@ pub async fn fgetxattr_0<T: Thread + 'static>(
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))]
     let name_str = read_native_path(&*vm, name_address)?;
 
+    if value_len < 0 {
+        return Err(throw_unix_exception(&thread, libc::EINVAL).await);
+    }
+    let value_len = usize::try_from(value_len)?;
+    if value_len > 0
+        && vm
+            .native_memory()
+            .try_read_bytes(value_address, value_len)
+            .is_none()
+    {
+        return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+    }
+    let mut value = vec![0_u8; value_len];
+    let value_pointer = if value_len == 0 {
+        std::ptr::null_mut()
+    } else {
+        value.as_mut_ptr().cast::<libc::c_void>()
+    };
+
     #[cfg(target_os = "macos")]
     {
         let c_name = to_cstring(&name_str)?;
-        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         #[expect(unsafe_code)]
-        let result = unsafe {
-            libc::fgetxattr(
-                fd,
-                c_name.as_ptr(),
-                value_address as usize as *mut libc::c_void,
-                value_len as usize,
-                0,
-                0,
-            )
-        };
+        let result =
+            unsafe { libc::fgetxattr(fd, c_name.as_ptr(), value_pointer, value_len, 0, 0) };
         if result < 0 {
             return Err(throw_unix_exception(&thread, last_errno()).await);
+        }
+        let result = usize::try_from(result)?;
+        if value_len > 0
+            && result > 0
+            && !vm.native_memory().try_write_bytes(
+                value_address,
+                value.get(..result).ok_or_else(|| {
+                    InternalError("fgetxattr returned more bytes than requested".to_string())
+                })?,
+            )
+        {
+            return Err(throw_unix_exception(&thread, libc::EFAULT).await);
         }
         Ok(Some(Value::Int(i32::try_from(result)?)))
     }
     #[cfg(all(target_family = "unix", not(target_os = "macos")))]
     {
         let c_name = to_cstring(&name_str)?;
-        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         #[expect(unsafe_code)]
-        let result = unsafe {
-            libc::fgetxattr(
-                fd,
-                c_name.as_ptr(),
-                value_address as usize as *mut libc::c_void,
-                value_len as usize,
-            )
-        };
+        let result = unsafe { libc::fgetxattr(fd, c_name.as_ptr(), value_pointer, value_len) };
         if result < 0 {
             return Err(throw_unix_exception(&thread, last_errno()).await);
+        }
+        let result = usize::try_from(result)?;
+        if value_len > 0
+            && result > 0
+            && !vm.native_memory().try_write_bytes(
+                value_address,
+                value.get(..result).ok_or_else(|| {
+                    InternalError("fgetxattr returned more bytes than requested".to_string())
+                })?,
+            )
+        {
+            return Err(throw_unix_exception(&thread, libc::EFAULT).await);
         }
         Ok(Some(Value::Int(i32::try_from(result)?)))
     }
@@ -686,37 +1049,66 @@ pub async fn flistxattr<T: Thread + 'static>(
     let size = parameters.pop_int()?;
     let list_address = parameters.pop_long()?;
     let fd = parameters.pop_int()?;
+    let vm = thread.vm()?;
+
+    if size < 0 {
+        return Err(throw_unix_exception(&thread, libc::EINVAL).await);
+    }
+    let size = usize::try_from(size)?;
+    if size > 0
+        && vm
+            .native_memory()
+            .try_read_bytes(list_address, size)
+            .is_none()
+    {
+        return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+    }
+    let mut list = vec![0_u8; size];
+    let list_pointer = if size == 0 {
+        std::ptr::null_mut()
+    } else {
+        list.as_mut_ptr().cast::<libc::c_char>()
+    };
 
     #[cfg(target_os = "macos")]
     {
-        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         #[expect(unsafe_code)]
-        let result = unsafe {
-            libc::flistxattr(
-                fd,
-                list_address as usize as *mut libc::c_char,
-                size as usize,
-                0,
-            )
-        };
+        let result = unsafe { libc::flistxattr(fd, list_pointer, size, 0) };
         if result < 0 {
             return Err(throw_unix_exception(&thread, last_errno()).await);
+        }
+        let result = usize::try_from(result)?;
+        if size > 0
+            && result > 0
+            && !vm.native_memory().try_write_bytes(
+                list_address,
+                list.get(..result).ok_or_else(|| {
+                    InternalError("flistxattr returned more bytes than requested".to_string())
+                })?,
+            )
+        {
+            return Err(throw_unix_exception(&thread, libc::EFAULT).await);
         }
         Ok(Some(Value::Int(i32::try_from(result)?)))
     }
     #[cfg(all(target_family = "unix", not(target_os = "macos")))]
     {
-        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         #[expect(unsafe_code)]
-        let result = unsafe {
-            libc::flistxattr(
-                fd,
-                list_address as usize as *mut libc::c_char,
-                size as usize,
-            )
-        };
+        let result = unsafe { libc::flistxattr(fd, list_pointer, size) };
         if result < 0 {
             return Err(throw_unix_exception(&thread, last_errno()).await);
+        }
+        let result = usize::try_from(result)?;
+        if size > 0
+            && result > 0
+            && !vm.native_memory().try_write_bytes(
+                list_address,
+                list.get(..result).ok_or_else(|| {
+                    InternalError("flistxattr returned more bytes than requested".to_string())
+                })?,
+            )
+        {
+            return Err(throw_unix_exception(&thread, libc::EFAULT).await);
         }
         Ok(Some(Value::Int(i32::try_from(result)?)))
     }
@@ -756,10 +1148,7 @@ pub async fn fopen_0<T: Thread + 'static>(
         if fp.is_null() {
             return Err(throw_unix_exception(&thread, last_errno()).await);
         }
-        #[expect(clippy::cast_possible_wrap)]
-        {
-            Ok(Some(Value::Long(fp as usize as i64)))
-        }
+        Ok(Some(Value::Long(native_resources::insert_file(&*vm, fp)?)))
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -784,6 +1173,7 @@ pub async fn fpathconf<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
+        clear_errno();
         #[expect(unsafe_code)]
         let result = unsafe { libc::fpathconf(fd, name) };
         if result == -1 {
@@ -865,22 +1255,29 @@ pub async fn fsetxattr_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     #[cfg_attr(not(target_family = "unix"), expect(unused_variables))]
     let name_str = read_native_path(&*vm, name_address)?;
+    if value_len < 0 {
+        return Err(throw_unix_exception(&thread, libc::EINVAL).await);
+    }
+    let value_len = usize::try_from(value_len)?;
+    let value = if value_len == 0 {
+        Vec::new()
+    } else if let Some(value) = vm.native_memory().try_read_bytes(value_address, value_len) {
+        value
+    } else {
+        return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+    };
+    let value_pointer = if value_len == 0 {
+        std::ptr::null()
+    } else {
+        value.as_ptr().cast::<libc::c_void>()
+    };
 
     #[cfg(target_os = "macos")]
     {
         let c_name = to_cstring(&name_str)?;
-        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         #[expect(unsafe_code)]
-        let result = unsafe {
-            libc::fsetxattr(
-                fd,
-                c_name.as_ptr(),
-                value_address as usize as *const libc::c_void,
-                value_len as usize,
-                0,
-                0,
-            )
-        };
+        let result =
+            unsafe { libc::fsetxattr(fd, c_name.as_ptr(), value_pointer, value_len, 0, 0) };
         if result < 0 {
             return Err(throw_unix_exception(&thread, last_errno()).await);
         }
@@ -889,17 +1286,8 @@ pub async fn fsetxattr_0<T: Thread + 'static>(
     #[cfg(all(target_family = "unix", not(target_os = "macos")))]
     {
         let c_name = to_cstring(&name_str)?;
-        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         #[expect(unsafe_code)]
-        let result = unsafe {
-            libc::fsetxattr(
-                fd,
-                c_name.as_ptr(),
-                value_address as usize as *const libc::c_void,
-                value_len as usize,
-                0,
-            )
-        };
+        let result = unsafe { libc::fsetxattr(fd, c_name.as_ptr(), value_pointer, value_len, 0) };
         if result < 0 {
             return Err(throw_unix_exception(&thread, last_errno()).await);
         }
@@ -964,16 +1352,20 @@ pub async fn fstat_0<T: Thread + 'static>(
     #[cfg(target_os = "macos")]
     {
         use std::os::macos::fs::MetadataExt as MacMetadataExt;
-        object.set_value("st_birthtime_sec", Value::Long(metadata.st_birthtime()))?;
-        object.set_value(
-            "st_birthtime_nsec",
-            Value::Long(metadata.st_birthtime_nsec()),
+        set_birthtime_fields(
+            object,
+            metadata.st_birthtime(),
+            metadata.st_birthtime_nsec(),
+            true,
         )?;
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     {
-        object.set_value("st_birthtime_sec", Value::Long(0))?;
-        object.set_value("st_birthtime_nsec", Value::Long(0))?;
+        set_linux_birthtime_fields(object, fd, c"", libc::AT_EMPTY_PATH)?;
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        set_birthtime_fields(object, 0, 0, false)?;
     }
 
     Ok(None)
@@ -1002,28 +1394,14 @@ pub async fn fstatat_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let path_str = read_native_path(&*vm, path_address)?;
 
-    // Determine whether to follow symlinks based on the AT_SYMLINK_NOFOLLOW flag.
-    // The dfd parameter is ignored; the path is expected to be absolute.
-    #[cfg(target_family = "unix")]
-    let follow_links = flag & libc::AT_SYMLINK_NOFOLLOW == 0;
-    #[cfg(not(target_family = "unix"))]
-    let follow_links = true;
-
-    let _ = dfd;
-
-    let metadata = if follow_links {
-        std::fs::metadata(&path_str)
-    } else {
-        std::fs::symlink_metadata(&path_str)
-    };
-
-    let metadata = match metadata {
-        Ok(m) => m,
-        Err(e) => {
-            let errno = e.raw_os_error().unwrap_or(2);
-            return Err(throw_unix_exception(&thread, errno).await);
-        }
-    };
+    let path = to_cstring(&path_str)?;
+    #[expect(unsafe_code)]
+    let mut stat: libc::stat = unsafe { std::mem::zeroed() };
+    #[expect(unsafe_code)]
+    let result = unsafe { libc::fstatat(dfd, path.as_ptr(), &raw mut stat, flag) };
+    if result < 0 {
+        return Err(throw_unix_exception(&thread, last_errno()).await);
+    }
 
     let mut guard = attributes.as_reference_mut()?;
     let Reference::Object(object) = &mut *guard else {
@@ -1032,22 +1410,10 @@ pub async fn fstatat_0<T: Thread + 'static>(
         ));
     };
 
-    set_unix_metadata_fields(object, &metadata)?;
+    set_stat_fields(object, &stat)?;
 
-    #[cfg(target_os = "macos")]
-    {
-        use std::os::macos::fs::MetadataExt as MacMetadataExt;
-        object.set_value("st_birthtime_sec", Value::Long(metadata.st_birthtime()))?;
-        object.set_value(
-            "st_birthtime_nsec",
-            Value::Long(metadata.st_birthtime_nsec()),
-        )?;
-    }
-    #[cfg(not(target_os = "macos"))]
-    {
-        object.set_value("st_birthtime_sec", Value::Long(0))?;
-        object.set_value("st_birthtime_nsec", Value::Long(0))?;
-    }
+    #[cfg(target_os = "linux")]
+    set_linux_birthtime_fields(object, dfd, &path, flag)?;
 
     Ok(None)
 }
@@ -1163,10 +1529,18 @@ pub async fn getcwd<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let current_dir_path =
-        std::env::current_dir().map_err(|error| InternalError(format!("getcwd: {error}")))?;
-    let current_dir_str = current_dir_path.to_string_lossy();
-    let current_dir_bytes = current_dir_str.as_bytes();
+    let current_dir_path = match std::env::current_dir() {
+        Ok(path) => path,
+        Err(error) => {
+            return Err(throw_unix_exception(&thread, error.raw_os_error().unwrap_or(5)).await);
+        }
+    };
+    #[cfg(target_family = "unix")]
+    let current_dir_bytes = current_dir_path.as_os_str().as_bytes();
+    #[cfg(not(target_family = "unix"))]
+    let current_dir_owned = current_dir_path.to_string_lossy().into_owned().into_bytes();
+    #[cfg(not(target_family = "unix"))]
+    let current_dir_bytes = current_dir_owned.as_slice();
     let current_dir: &[i8] = zerocopy::transmute_ref!(current_dir_bytes);
     let current_dir_bytes = Value::new_object(
         thread.vm()?.garbage_collector(),
@@ -1186,15 +1560,12 @@ pub async fn getgrgid<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
-        #[expect(unsafe_code)]
-        let gr = unsafe { libc::getgrgid(gid as libc::gid_t) };
-        if gr.is_null() {
-            return Ok(Some(Value::Object(None)));
-        }
-        #[expect(unsafe_code)]
-        let name = unsafe { std::ffi::CStr::from_ptr((*gr).gr_name) };
-        let name_bytes = name.to_bytes();
-        let name_i8: &[i8] = zerocopy::transmute_ref!(name_bytes);
+        let name_bytes = match lookup_group_by_gid(gid.cast_unsigned()) {
+            Ok(Some(name)) => name,
+            Ok(None) => return Ok(Some(Value::Object(None))),
+            Err(errno) => return Err(throw_unix_exception(&thread, errno).await),
+        };
+        let name_i8: &[i8] = zerocopy::transmute_ref!(name_bytes.as_slice());
         let vm = thread.vm()?;
         Ok(Some(Value::new_object(
             vm.garbage_collector(),
@@ -1225,14 +1596,13 @@ pub async fn getgrnam_0<T: Thread + 'static>(
     #[cfg(target_family = "unix")]
     {
         let c_name = to_cstring(&name_str)?;
-        #[expect(unsafe_code)]
-        let gr = unsafe { libc::getgrnam(c_name.as_ptr()) };
-        if gr.is_null() {
-            return Err(throw_unix_exception(&thread, last_errno()).await);
-        }
+        let gid = match lookup_group_by_name(&c_name) {
+            Ok(Some(gid)) => gid,
+            Ok(None) => return Err(throw_unix_exception(&thread, 0).await),
+            Err(errno) => return Err(throw_unix_exception(&thread, errno).await),
+        };
         #[expect(clippy::cast_possible_wrap)]
-        #[expect(unsafe_code)]
-        let gid = unsafe { (*gr).gr_gid as i32 };
+        let gid = gid as i32;
         Ok(Some(Value::Int(gid)))
     }
     #[cfg(not(target_family = "unix"))]
@@ -1250,39 +1620,37 @@ pub async fn getgrnam_0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn getlinelen<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let fp = parameters.pop_long()?;
 
     #[cfg(target_family = "unix")]
     {
-        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-        let fp_ptr = fp as usize as *mut libc::FILE;
-        let mut line_buf: *mut libc::c_char = std::ptr::null_mut();
-        let mut line_len: libc::size_t = 0;
+        let vm = thread.vm()?;
         #[expect(unsafe_code)]
-        let result = unsafe {
-            libc::getline(
-                std::ptr::from_mut(&mut line_buf),
-                std::ptr::from_mut(&mut line_len),
-                fp_ptr,
-            )
+        let outcome = native_resources::with_file(&*vm, fp, |pointer| unsafe {
+            let mut line_buffer = std::ptr::null_mut::<libc::c_char>();
+            let mut capacity = 0_usize;
+            let result = libc::getline(&raw mut line_buffer, &raw mut capacity, pointer);
+            let error = last_errno();
+            let eof = libc::feof(pointer) != 0;
+            libc::free(line_buffer.cast::<libc::c_void>());
+            (result, error, eof)
+        })?;
+        let Some((result, error, eof)) = outcome else {
+            return Err(throw_unix_exception(&thread, libc::EBADF).await);
         };
-        let len = if result == -1 {
-            -1
-        } else {
-            #[expect(unsafe_code)]
-            let len = unsafe { libc::strlen(line_buf) };
-            i32::try_from(len).unwrap_or(-1)
-        };
-        if !line_buf.is_null() {
-            #[expect(unsafe_code)]
-            unsafe {
-                libc::free(line_buf.cast::<libc::c_void>());
-            };
+        if result < 0 {
+            if eof {
+                return Ok(Some(Value::Int(-1)));
+            }
+            return Err(throw_unix_exception(&thread, error).await);
         }
-        Ok(Some(Value::Int(len)))
+        let Ok(length) = i32::try_from(result) else {
+            return Err(throw_unix_exception(&thread, libc::EOVERFLOW).await);
+        };
+        Ok(Some(Value::Int(length)))
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -1308,14 +1676,13 @@ pub async fn getpwnam_0<T: Thread + 'static>(
     #[cfg(target_family = "unix")]
     {
         let c_name = to_cstring(&name_str)?;
-        #[expect(unsafe_code)]
-        let pw = unsafe { libc::getpwnam(c_name.as_ptr()) };
-        if pw.is_null() {
-            return Err(throw_unix_exception(&thread, last_errno()).await);
-        }
+        let uid = match lookup_user_by_name(&c_name) {
+            Ok(Some(uid)) => uid,
+            Ok(None) => return Err(throw_unix_exception(&thread, 0).await),
+            Err(errno) => return Err(throw_unix_exception(&thread, errno).await),
+        };
         #[expect(clippy::cast_possible_wrap)]
-        #[expect(unsafe_code)]
-        let uid = unsafe { (*pw).pw_uid as i32 };
+        let uid = uid as i32;
         Ok(Some(Value::Int(uid)))
     }
     #[cfg(not(target_family = "unix"))]
@@ -1337,15 +1704,12 @@ pub async fn getpwuid<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
-        #[expect(unsafe_code)]
-        let pw = unsafe { libc::getpwuid(uid as libc::uid_t) };
-        if pw.is_null() {
-            return Ok(Some(Value::Object(None)));
-        }
-        #[expect(unsafe_code)]
-        let name = unsafe { std::ffi::CStr::from_ptr((*pw).pw_name) };
-        let name_bytes = name.to_bytes();
-        let name_i8: &[i8] = zerocopy::transmute_ref!(name_bytes);
+        let name_bytes = match lookup_user_by_uid(uid.cast_unsigned()) {
+            Ok(Some(name)) => name,
+            Ok(None) => return Ok(Some(Value::Object(None))),
+            Err(errno) => return Err(throw_unix_exception(&thread, errno).await),
+        };
+        let name_i8: &[i8] = zerocopy::transmute_ref!(name_bytes.as_slice());
         let vm = thread.vm()?;
         Ok(Some(Value::new_object(
             vm.garbage_collector(),
@@ -1364,10 +1728,27 @@ pub async fn getpwuid<T: Thread + 'static>(
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.init()I", Any)]
 #[async_method]
+#[cfg(target_family = "unix")]
 pub async fn init<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let vm = thread.vm()?;
+    if vm.java_class_file_version() >= &JAVA_25 {
+        // JDK 25 removed the futimes/futimens/lutimes capability bits and reassigned
+        // bit 3 to extended attributes.
+        let capabilities = SupportsFlags::OPENAT.bits() | (1 << 3);
+        #[cfg(target_os = "linux")]
+        let capabilities = if linux_statx_supported() {
+            capabilities | SupportsFlags::BIRTHTIME.bits()
+        } else {
+            capabilities
+        };
+        #[cfg(target_os = "macos")]
+        let capabilities = capabilities | SupportsFlags::BIRTHTIME.bits();
+        return Ok(Some(Value::Int(capabilities)));
+    }
+
     #[cfg_attr(
         not(any(target_family = "unix", target_os = "macos", target_os = "linux")),
         expect(unused_mut)
@@ -1395,6 +1776,17 @@ pub async fn init<T: Thread + 'static>(
     }
 
     Ok(Some(Value::Int(capabilities.bits())))
+}
+
+#[cfg(target_family = "wasm")]
+#[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.init()I", Any)]
+#[async_method]
+pub async fn init<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    // WASI does not expose the openat, timestamp, birthtime, or xattr syscall families.
+    Ok(Some(Value::Int(0)))
 }
 
 #[cfg(target_family = "unix")]
@@ -1444,7 +1836,8 @@ pub async fn link_0<T: Thread + 'static>(
     let existing_path = read_native_path(&*vm, existing_address)?;
     let new_path = read_native_path(&*vm, new_address)?;
 
-    if let Err(e) = std::fs::hard_link(&existing_path, &new_path) {
+    if let Err(e) = std::fs::hard_link(path_from_bytes(&existing_path), path_from_bytes(&new_path))
+    {
         let errno = e.raw_os_error().unwrap_or(5);
         return Err(throw_unix_exception(&thread, errno).await);
     }
@@ -1471,7 +1864,7 @@ pub async fn lstat_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let path_str = read_native_path(&*vm, path_address)?;
 
-    let metadata = match std::fs::symlink_metadata(&path_str) {
+    let metadata = match std::fs::symlink_metadata(path_from_bytes(&path_str)) {
         Ok(m) => m,
         Err(e) => {
             let errno = e.raw_os_error().unwrap_or(2);
@@ -1491,16 +1884,21 @@ pub async fn lstat_0<T: Thread + 'static>(
     #[cfg(target_os = "macos")]
     {
         use std::os::macos::fs::MetadataExt as MacMetadataExt;
-        object.set_value("st_birthtime_sec", Value::Long(metadata.st_birthtime()))?;
-        object.set_value(
-            "st_birthtime_nsec",
-            Value::Long(metadata.st_birthtime_nsec()),
+        set_birthtime_fields(
+            object,
+            metadata.st_birthtime(),
+            metadata.st_birthtime_nsec(),
+            true,
         )?;
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     {
-        object.set_value("st_birthtime_sec", Value::Long(0))?;
-        object.set_value("st_birthtime_nsec", Value::Long(0))?;
+        let path = to_cstring(&path_str)?;
+        set_linux_birthtime_fields(object, libc::AT_FDCWD, &path, libc::AT_SYMLINK_NOFOLLOW)?;
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        set_birthtime_fields(object, 0, 0, false)?;
     }
 
     Ok(None)
@@ -1634,24 +2032,17 @@ pub async fn open_0<T: Thread + 'static>(
     let path_address = parameters.pop_long()?;
 
     let vm = thread.vm()?;
-    // Read the null-terminated path from managed native memory
-    let path_bytes = vm.native_memory().read_cstring(path_address);
-    let path_str = String::from_utf8(path_bytes)
-        .map_err(|error| InternalError(format!("Invalid path encoding: {error}")))?;
-
-    match managed_files::open(
-        vm.file_handles(),
-        vm.resource_manager(),
-        &path_str,
-        flags,
-        mode,
-    )
-    .await
-    {
+    let path_bytes = read_native_path(&*vm, path_address)?;
+    let path = to_cstring(&path_bytes)?;
+    #[expect(unsafe_code)]
+    let fd = unsafe { libc::open(path.as_ptr(), flags, mode.cast_unsigned()) };
+    if fd < 0 {
+        return Err(throw_unix_exception(&thread, last_errno()).await);
+    }
+    match managed_files::adopt_raw_fd(vm.file_handles(), fd, flags).await {
         Ok(fd) => Ok(Some(Value::Int(i32::try_from(fd)?))),
         Err(error) => {
-            let errno = error.raw_os_error().unwrap_or(2);
-            Err(throw_unix_exception(&thread, errno).await)
+            Err(throw_unix_exception(&thread, error.raw_os_error().unwrap_or(libc::EIO)).await)
         }
     }
 }
@@ -1680,7 +2071,12 @@ pub async fn openat_0<T: Thread + 'static>(
         if result < 0 {
             return Err(throw_unix_exception(&thread, last_errno()).await);
         }
-        Ok(Some(Value::Int(result)))
+        match managed_files::adopt_raw_fd(vm.file_handles(), result, flags).await {
+            Ok(fd) => Ok(Some(Value::Int(i32::try_from(fd)?))),
+            Err(error) => {
+                Err(throw_unix_exception(&thread, error.raw_os_error().unwrap_or(libc::EIO)).await)
+            }
+        }
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -1711,10 +2107,9 @@ pub async fn opendir_0<T: Thread + 'static>(
         if dir.is_null() {
             return Err(throw_unix_exception(&thread, last_errno()).await);
         }
-        #[expect(clippy::cast_possible_wrap)]
-        {
-            Ok(Some(Value::Long(dir as usize as i64)))
-        }
+        Ok(Some(Value::Long(native_resources::insert_directory(
+            &*vm, dir,
+        )?)))
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -1743,6 +2138,7 @@ pub async fn pathconf_0<T: Thread + 'static>(
     #[cfg(target_family = "unix")]
     {
         let c_path = to_cstring(&path_str)?;
+        clear_errno();
         #[expect(unsafe_code)]
         let result = unsafe { libc::pathconf(c_path.as_ptr(), name) };
         if result == -1 {
@@ -1786,17 +2182,33 @@ pub async fn read_0<T: Thread + 'static>(
     let address = parameters.pop_long()?;
     let fd = parameters.pop_int()?;
 
-    let count = usize::try_from(count)?;
-    let mut buf = vec![0u8; count];
-
+    let Ok(count) = usize::try_from(count) else {
+        return Err(throw_unix_exception(&thread, libc::EINVAL).await);
+    };
     let vm = thread.vm()?;
+    if count > 0
+        && vm
+            .native_memory()
+            .remaining_len(address)
+            .is_none_or(|remaining| remaining < count)
+    {
+        return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+    }
+    let mut buf = Vec::new();
+    if buf.try_reserve_exact(count).is_err() {
+        return Err(throw_unix_exception(&thread, libc::ENOMEM).await);
+    }
+    buf.resize(count, 0);
+
     match managed_files::read(vm.file_handles(), i64::from(fd), &mut buf).await {
         Ok(n) => {
             if n > 0 {
                 let Some(bytes) = buf.get(..n) else {
                     return Err(throw_unix_exception(&thread, 5).await);
                 };
-                vm.native_memory().write_bytes(address, bytes);
+                if !vm.native_memory().try_write_bytes(address, bytes) {
+                    return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+                }
             }
             Ok(Some(Value::Int(i32::try_from(n)?)))
         }
@@ -1834,18 +2246,33 @@ pub async fn readdir_0<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
-        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-        let dir_ptr = dir as usize as *mut libc::DIR;
-        #[expect(unsafe_code)]
-        let entry = unsafe { libc::readdir(dir_ptr) };
-        if entry.is_null() {
-            return Ok(Some(Value::Object(None)));
-        }
-        #[expect(unsafe_code)]
-        let d_name = unsafe { std::ffi::CStr::from_ptr((*entry).d_name.as_ptr()) };
-        let name_bytes = d_name.to_bytes();
-        let name_i8: &[i8] = zerocopy::transmute_ref!(name_bytes);
         let vm = thread.vm()?;
+        #[expect(unsafe_code)]
+        let entry = native_resources::with_directory(&*vm, dir, |dir_pointer| unsafe {
+            clear_errno();
+            let entry = libc::readdir(dir_pointer);
+            if entry.is_null() {
+                let error = last_errno();
+                if error == 0 { Ok(None) } else { Err(error) }
+            } else {
+                Ok(Some(
+                    std::ffi::CStr::from_ptr((*entry).d_name.as_ptr())
+                        .to_bytes()
+                        .to_vec(),
+                ))
+            }
+        })?;
+        let Some(name_bytes) = entry else {
+            return Err(throw_unix_exception(&thread, libc::EBADF).await);
+        };
+        let name_bytes = match name_bytes {
+            Ok(name) => name,
+            Err(error) => return Err(throw_unix_exception(&thread, error).await),
+        };
+        let Some(name_bytes) = name_bytes else {
+            return Ok(Some(Value::Object(None)));
+        };
+        let name_i8: &[i8] = zerocopy::transmute_ref!(name_bytes.as_slice());
         Ok(Some(Value::new_object(
             vm.garbage_collector(),
             Reference::from(name_i8.to_vec()),
@@ -1871,7 +2298,7 @@ pub async fn readlink_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let path_str = read_native_path(&*vm, path_address)?;
 
-    let target = match std::fs::read_link(&path_str) {
+    let target = match std::fs::read_link(path_from_bytes(&path_str)) {
         Ok(t) => t,
         Err(e) => {
             let errno = e.raw_os_error().unwrap_or(22);
@@ -1879,7 +2306,7 @@ pub async fn readlink_0<T: Thread + 'static>(
         }
     };
 
-    let target_bytes = target.to_string_lossy().into_owned().into_bytes();
+    let target_bytes = target.as_os_str().as_bytes().to_vec();
     let target_i8: &[i8] = zerocopy::transmute_ref!(target_bytes.as_slice());
     Ok(Some(Value::new_object(
         vm.garbage_collector(),
@@ -1897,11 +2324,9 @@ pub async fn realpath_0<T: Thread + 'static>(
     let path_address = parameters.pop_long()?;
 
     let vm = thread.vm()?;
-    let path_bytes = vm.native_memory().read_cstring(path_address);
-    let path_str = String::from_utf8(path_bytes)
-        .map_err(|error| InternalError(format!("Invalid path encoding: {error}")))?;
+    let path_bytes = read_native_path(&*vm, path_address)?;
 
-    let canonical = match std::fs::canonicalize(&path_str) {
+    let canonical = match std::fs::canonicalize(path_from_bytes(&path_bytes)) {
         Ok(c) => c,
         Err(error) => {
             let errno = error.raw_os_error().unwrap_or(2);
@@ -1909,7 +2334,7 @@ pub async fn realpath_0<T: Thread + 'static>(
         }
     };
 
-    let canonical_bytes = canonical.to_string_lossy().into_owned().into_bytes();
+    let canonical_bytes = canonical.as_os_str().as_bytes().to_vec();
     let canonical_i8: &[i8] = zerocopy::transmute_ref!(canonical_bytes.as_slice());
     Ok(Some(Value::new_object(
         thread.vm()?.garbage_collector(),
@@ -1930,7 +2355,7 @@ pub async fn rename_0<T: Thread + 'static>(
     let from_path = read_native_path(&*vm, from_address)?;
     let to_path = read_native_path(&*vm, to_address)?;
 
-    if let Err(e) = std::fs::rename(&from_path, &to_path) {
+    if let Err(e) = std::fs::rename(path_from_bytes(&from_path), path_from_bytes(&to_path)) {
         let errno = e.raw_os_error().unwrap_or(5);
         return Err(throw_unix_exception(&thread, errno).await);
     }
@@ -1978,26 +2403,28 @@ pub async fn renameat_0<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.rewind(J)V", Any)]
 #[async_method]
 pub async fn rewind<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let dir = parameters.pop_long()?;
+    let stream = parameters.pop_long()?;
 
     #[cfg(target_family = "unix")]
     {
-        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-        let dir_ptr = dir as usize as *mut libc::DIR;
+        let vm = thread.vm()?;
         #[expect(unsafe_code)]
-        unsafe {
-            libc::rewinddir(dir_ptr);
-        };
+        let found = native_resources::with_file(&*vm, stream, |pointer| unsafe {
+            libc::rewind(pointer);
+        })?;
+        if found.is_none() {
+            return Err(throw_unix_exception(&thread, libc::EBADF).await);
+        }
         Ok(None)
     }
     #[cfg(not(target_family = "unix"))]
     {
-        let _ = dir;
+        let _ = stream;
         Err(InternalError(
-            "rewinddir is not supported on this platform".to_string(),
+            "rewind is not supported on this platform".to_string(),
         ))
     }
 }
@@ -2013,7 +2440,7 @@ pub async fn rmdir_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let path_str = read_native_path(&*vm, path_address)?;
 
-    if let Err(e) = std::fs::remove_dir(&path_str) {
+    if let Err(e) = std::fs::remove_dir(path_from_bytes(&path_str)) {
         let errno = e.raw_os_error().unwrap_or(5);
         return Err(throw_unix_exception(&thread, errno).await);
     }
@@ -2030,8 +2457,11 @@ pub async fn stat_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _ = stat_0_1(thread, parameters).await?;
-    Ok(None)
+    match stat_0_1(thread.clone(), parameters).await? {
+        Some(Value::Int(0)) => Ok(None),
+        Some(Value::Int(errno)) => Err(throw_unix_exception(&thread, errno).await),
+        _ => Err(InternalError("stat0: invalid result".to_string())),
+    }
 }
 
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
@@ -2050,13 +2480,10 @@ pub async fn stat_0_1<T: Thread + 'static>(
     }
     let path_address = parameters.pop_long()?;
 
-    // Read the null-terminated path from managed native memory
     let vm = thread.vm()?;
-    let path_bytes = vm.native_memory().read_cstring(path_address);
-    let path_str = String::from_utf8(path_bytes)
-        .map_err(|error| InternalError(format!("Invalid path encoding: {error}")))?;
+    let path_bytes = read_native_path(&*vm, path_address)?;
 
-    let metadata = match std::fs::metadata(path_str) {
+    let metadata = match std::fs::metadata(path_from_bytes(&path_bytes)) {
         Ok(m) => m,
         Err(error) => {
             #[cfg(target_family = "wasm")]
@@ -2080,16 +2507,21 @@ pub async fn stat_0_1<T: Thread + 'static>(
     #[cfg(target_os = "macos")]
     {
         use std::os::macos::fs::MetadataExt as MacMetadataExt;
-        object.set_value("st_birthtime_sec", Value::Long(metadata.st_birthtime()))?;
-        object.set_value(
-            "st_birthtime_nsec",
-            Value::Long(metadata.st_birthtime_nsec()),
+        set_birthtime_fields(
+            object,
+            metadata.st_birthtime(),
+            metadata.st_birthtime_nsec(),
+            true,
         )?;
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     {
-        object.set_value("st_birthtime_sec", Value::Long(0))?;
-        object.set_value("st_birthtime_nsec", Value::Long(0))?;
+        let path = to_cstring(&path_bytes)?;
+        set_linux_birthtime_fields(object, libc::AT_FDCWD, &path, 0)?;
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+    {
+        set_birthtime_fields(object, 0, 0, false)?;
     }
 
     Ok(Some(Value::Int(0)))
@@ -2106,7 +2538,7 @@ pub async fn stat_1<T: Thread + 'static>(
     let vm = thread.vm()?;
     let path_str = read_native_path(&*vm, path_address)?;
 
-    let metadata = match std::fs::metadata(&path_str) {
+    let metadata = match std::fs::metadata(path_from_bytes(&path_str)) {
         Ok(m) => m,
         Err(e) => {
             let errno = e.raw_os_error().unwrap_or(2);
@@ -2202,14 +2634,27 @@ pub async fn strerror<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let errno = parameters.pop_int()?;
 
-    let error = std::io::Error::from_raw_os_error(errno);
-    let msg = error.to_string();
-    let msg_bytes = msg.into_bytes();
-    let msg_i8: &[i8] = zerocopy::transmute_ref!(msg_bytes.as_slice());
+    #[cfg(target_family = "unix")]
+    let msg_bytes = {
+        #[expect(unsafe_code)]
+        let pointer = unsafe { libc::strerror(errno) };
+        if pointer.is_null() {
+            Vec::new()
+        } else {
+            #[expect(unsafe_code)]
+            unsafe {
+                std::ffi::CStr::from_ptr(pointer).to_bytes().to_vec()
+            }
+        }
+    };
+    #[cfg(not(target_family = "unix"))]
+    let msg_bytes = std::io::Error::from_raw_os_error(errno)
+        .to_string()
+        .into_bytes();
     let vm = thread.vm()?;
     Ok(Some(Value::new_object(
         vm.garbage_collector(),
-        Reference::from(msg_i8.to_vec()),
+        Reference::from(msg_bytes),
     )))
 }
 
@@ -2230,7 +2675,9 @@ pub async fn symlink_0<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
-        if let Err(e) = std::os::unix::fs::symlink(&target_path, &link_path) {
+        if let Err(e) =
+            std::os::unix::fs::symlink(path_from_bytes(&target_path), path_from_bytes(&link_path))
+        {
             let errno = e.raw_os_error().unwrap_or(5);
             return Err(throw_unix_exception(&thread, errno).await);
         }
@@ -2255,7 +2702,7 @@ pub async fn unlink_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let path_str = read_native_path(&*vm, path_address)?;
 
-    if let Err(e) = std::fs::remove_file(&path_str) {
+    if let Err(e) = std::fs::remove_file(path_from_bytes(&path_str)) {
         let errno = e.raw_os_error().unwrap_or(5);
         return Err(throw_unix_exception(&thread, errno).await);
     }
@@ -2413,9 +2860,13 @@ pub async fn write_0<T: Thread + 'static>(
     let address = parameters.pop_long()?;
     let fd = parameters.pop_int()?;
 
-    let count = usize::try_from(count)?;
+    let Ok(count) = usize::try_from(count) else {
+        return Err(throw_unix_exception(&thread, libc::EINVAL).await);
+    };
     let vm = thread.vm()?;
-    let data = vm.native_memory().read_bytes(address, count);
+    let Some(data) = vm.native_memory().try_read_bytes(address, count) else {
+        return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+    };
 
     match managed_files::write(vm.file_handles(), i64::from(fd), &data).await {
         Ok(n) => Ok(Some(Value::Int(i32::try_from(n)?))),
@@ -2548,42 +2999,32 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_close_0_invalid_fd() -> Result<()> {
+    async fn test_close_0_invalid_fd() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::new(vec![]);
         params.push_int(99999);
-        let result = close_0(thread, params).await?;
-        assert_eq!(result, None);
-        Ok(())
+        let result = close_0(thread, params).await;
+        assert!(matches!(result, Err(ristretto_types::Error::Throwable(_))));
     }
 
     #[tokio::test]
     #[cfg(target_family = "unix")]
-    async fn test_closedir() -> Result<()> {
+    async fn test_closedir() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::new(vec![]);
         parameters.push_long(0);
-        let result = closedir(thread, parameters).await?;
-        assert_eq!(result, None);
-        Ok(())
+        let result = closedir(thread, parameters).await;
+        assert!(matches!(result, Err(ristretto_types::Error::Throwable(_))));
     }
 
     #[tokio::test]
     #[cfg(target_family = "unix")]
-    async fn test_dup() -> Result<()> {
+    async fn test_dup() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut parameters = Parameters::new(vec![]);
         parameters.push_int(1);
-        let result = dup(thread, parameters).await?;
-        let fd = result.unwrap();
-        if let Value::Int(new_fd) = fd {
-            assert!(new_fd > 0);
-            #[expect(unsafe_code)]
-            unsafe {
-                libc::close(new_fd)
-            };
-        }
-        Ok(())
+        let result = dup(thread, parameters).await;
+        assert!(matches!(result, Err(ristretto_types::Error::Throwable(_))));
     }
 
     #[tokio::test]
@@ -2638,13 +3079,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fclose_1_null_fp() -> Result<()> {
+    async fn test_fclose_1_null_fp() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
         let mut parameters = Parameters::new(vec![]);
         parameters.push_long(0);
-        let result = fclose_1(thread, parameters).await?;
-        assert_eq!(result, None);
-        Ok(())
+        let result = fclose_1(thread, parameters).await;
+        assert!(matches!(result, Err(ristretto_types::Error::Throwable(_))));
     }
 
     #[tokio::test]
@@ -2740,6 +3180,25 @@ mod tests {
             matches!(result, Err(ristretto_types::Error::ParametersUnderflow)),
             "expected ParametersUnderflow, got {result:?}"
         );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_fpathconf_clears_stale_errno() -> Result<()> {
+        use std::os::fd::AsRawFd;
+
+        let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
+        let directory = std::fs::File::open(".")?;
+        #[expect(unsafe_code)]
+        unsafe {
+            *libc::__errno_location() = libc::EIO;
+        }
+        let mut parameters = Parameters::default();
+        parameters.push_int(directory.as_raw_fd());
+        parameters.push_int(libc::_PC_ASYNC_IO);
+        let result = fpathconf(thread, parameters).await?;
+        assert_eq!(result, Some(Value::Long(-1)));
+        Ok(())
     }
 
     #[tokio::test]
@@ -3084,6 +3543,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_read_0_rejects_invalid_range_before_allocating() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let mut parameters = Parameters::default();
+        parameters.push_int(0);
+        parameters.push_long(0);
+        parameters.push_int(i32::MAX);
+
+        let result = read_0(thread, parameters).await;
+        assert!(
+            matches!(result, Err(ristretto_types::Error::Throwable(_))),
+            "expected UnixException, got {result:?}"
+        );
+    }
+
+    #[tokio::test]
     async fn test_write_default_params() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = write(thread, Parameters::default()).await;
@@ -3223,6 +3697,23 @@ mod tests {
             panic!("expected Long from pathconf_0")
         };
         assert!(value > 0, "NAME_MAX should be positive, got {value}");
+        Ok(())
+    }
+
+    #[cfg(target_os = "linux")]
+    #[tokio::test]
+    async fn test_pathconf_0_clears_stale_errno() -> Result<()> {
+        let (vm, thread) = crate::test::java11_thread().await.expect("thread");
+        let path_addr = write_cstring_to_native(&*vm, ".");
+        #[expect(unsafe_code)]
+        unsafe {
+            *libc::__errno_location() = libc::EIO;
+        }
+        let mut parameters = Parameters::default();
+        parameters.push_long(path_addr);
+        parameters.push_int(libc::_PC_ASYNC_IO);
+        let result = pathconf_0(thread, parameters).await?;
+        assert_eq!(result, Some(Value::Long(-1)));
         Ok(())
     }
 
@@ -3370,8 +3861,8 @@ mod tests {
             .object("sun.nio.fs.UnixFileAttributes", "", &[] as &[Value])
             .await?;
         let parameters = Parameters::new(vec![Value::Long(0), unix_file_attributes]);
-        let result = stat_0_0(thread, parameters).await?;
-        assert_eq!(result, None);
+        let result = stat_0_0(thread, parameters).await;
+        assert!(result.is_err());
         Ok(())
     }
 
@@ -3383,9 +3874,8 @@ mod tests {
             .object("sun.nio.fs.UnixFileAttributes", "", &[] as &[Value])
             .await?;
         let parameters = Parameters::new(vec![Value::Long(0), unix_file_attributes]);
-        let result = stat_0_1(thread, parameters).await?;
-        // With address 0, path resolves to empty string; stat returns an errno
-        assert!(result.is_some());
+        let result = stat_0_1(thread, parameters).await;
+        assert!(result.is_err());
         Ok(())
     }
 
@@ -3526,6 +4016,68 @@ mod tests {
         let mut params = Parameters::new(vec![]);
         params.push_long(dir_ptr);
         closedir(thread, params).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[cfg(target_family = "unix")]
+    async fn test_open_dup_fdopendir_readdir_closedir() -> Result<()> {
+        let (vm, thread) = crate::test::java8_thread().await.expect("thread");
+        let directory = std::env::current_dir()
+            .unwrap()
+            .join("_test_fdopendir_readdir_tmp");
+        let child = directory.join("child");
+        let _ = std::fs::remove_dir_all(&directory);
+        std::fs::create_dir(&directory)?;
+        std::fs::create_dir(&child)?;
+
+        let path_addr = write_cstring_to_native(&*vm, directory.to_str().unwrap());
+        let mut params = Parameters::new(vec![]);
+        params.push_long(path_addr);
+        params.push_int(libc::O_RDONLY);
+        params.push_int(0);
+        let Some(Value::Int(directory_fd)) = open_0(thread.clone(), params).await? else {
+            panic!("expected directory fd")
+        };
+
+        let mut params = Parameters::new(vec![]);
+        params.push_int(directory_fd);
+        let Some(Value::Int(duplicate_fd)) = dup(thread.clone(), params).await? else {
+            panic!("expected duplicate fd")
+        };
+
+        let mut params = Parameters::new(vec![]);
+        params.push_int(directory_fd);
+        let Some(Value::Long(directory_handle)) = fdopendir(thread.clone(), params).await? else {
+            panic!("expected directory handle")
+        };
+
+        let mut saw_child = false;
+        for _ in 0..16 {
+            let mut params = Parameters::new(vec![]);
+            params.push_long(directory_handle);
+            match readdir(thread.clone(), params).await? {
+                Some(Value::Object(Some(reference))) => {
+                    let reference = reference.read();
+                    let Reference::ByteArray(name) = &*reference else {
+                        panic!("expected byte array")
+                    };
+                    let name: Vec<u8> = name.iter().map(|byte| byte.cast_unsigned()).collect();
+                    saw_child |= name == b"child";
+                }
+                Some(Value::Object(None)) => break,
+                value => panic!("unexpected readdir value: {value:?}"),
+            }
+        }
+        assert!(saw_child, "fdopendir missed the child entry");
+
+        let mut params = Parameters::new(vec![]);
+        params.push_long(directory_handle);
+        closedir(thread.clone(), params).await?;
+        let mut params = Parameters::new(vec![]);
+        params.push_int(duplicate_fd);
+        close_0(thread, params).await?;
+        std::fs::remove_dir_all(directory)?;
         Ok(())
     }
 

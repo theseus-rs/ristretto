@@ -20,16 +20,23 @@ pub async fn direct_copy_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _cancel_address = parameters.pop_long()?;
+    let cancel_address = parameters.pop_long()?;
     let src = parameters.pop_int()?;
     let dst = parameters.pop_int()?;
 
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
-    let mut total: i64 = 0;
     let mut buf = vec![0u8; 8192];
 
     loop {
+        if cancel_address != 0 {
+            let Some(cancelled) = vm.native_memory().read_i32(cancel_address) else {
+                return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+            };
+            if cancelled != 0 {
+                return Err(throw_unix_exception(&thread, libc::ECANCELED).await);
+            }
+        }
         let n = match managed_files::read(file_handles, i64::from(src), &mut buf).await {
             Ok(n) => n,
             Err(e) => {
@@ -47,14 +54,9 @@ pub async fn direct_copy_0<T: Thread + 'static>(
             let errno = e.raw_os_error().unwrap_or(5);
             return Err(throw_unix_exception(&thread, errno).await);
         }
-        #[expect(clippy::cast_possible_wrap)]
-        {
-            total = total.saturating_add(n as i64);
-        }
     }
 
-    let result = i32::try_from(total).unwrap_or(i32::MAX);
-    Ok(Some(Value::Int(result)))
+    Ok(Some(Value::Int(0)))
 }
 
 #[cfg(test)]
@@ -86,12 +88,9 @@ mod tests {
     #[cfg(target_family = "unix")]
     async fn test_direct_copy_0_success() {
         let (vm, thread) = crate::test::thread().await.expect("thread");
-        let src_path = std::env::current_dir()
-            .unwrap()
-            .join("_test_direct_copy_src.tmp");
-        let dst_path = std::env::current_dir()
-            .unwrap()
-            .join("_test_direct_copy_dst.tmp");
+        let directory = tempfile::tempdir().expect("temp directory");
+        let src_path = directory.path().join("source");
+        let dst_path = directory.path().join("destination");
         std::fs::write(&src_path, b"hello direct copy").unwrap();
 
         let file_handles = vm.file_handles();
@@ -126,11 +125,10 @@ mod tests {
         let result = direct_copy_0(thread, params).await;
         assert!(result.is_ok());
         let value = result.unwrap();
-        assert_eq!(value, Some(Value::Int(17))); // "hello direct copy" is 17 bytes
+        assert_eq!(value, Some(Value::Int(0)));
+        assert_eq!(std::fs::read(&dst_path).unwrap(), b"hello direct copy");
 
         managed_files::close(file_handles, src_fd).await;
         managed_files::close(file_handles, dst_fd).await;
-        std::fs::remove_file(&src_path).ok();
-        std::fs::remove_file(&dst_path).ok();
     }
 }

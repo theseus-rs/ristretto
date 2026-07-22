@@ -75,6 +75,16 @@ impl NativeMemory {
         buf.get(offset..end).map(<[u8]>::to_vec)
     }
 
+    /// Returns the number of bytes from `address` to the end of its allocation.
+    #[must_use]
+    pub fn remaining_len(&self, address: i64) -> Option<usize> {
+        let guard = self.memory.read();
+        let (&base, buf_lock) = guard.range(..=address).next_back()?;
+        let offset = offset_from_base(address, base);
+        let buf = buf_lock.read();
+        buf.len().checked_sub(offset)
+    }
+
     /// Reads a value from native memory using a closure, avoiding `Vec` allocation.
     ///
     /// # Returns
@@ -142,6 +152,16 @@ impl NativeMemory {
 
     /// Writes `data` starting at `address`.
     pub fn write_bytes(&self, address: i64, data: &[u8]) {
+        let _written = self.try_write_bytes(address, data);
+    }
+
+    /// Tries to write `data` starting at `address`.
+    ///
+    /// Returns `false` when the complete destination range is not contained in a live
+    /// allocation. Native intrinsics use this form so an invalid guest pointer cannot be
+    /// mistaken for a successful OS operation.
+    #[must_use]
+    pub fn try_write_bytes(&self, address: i64, data: &[u8]) -> bool {
         let guard = self.memory.read();
         if let Some((&base, buf_lock)) = guard.range(..=address).next_back() {
             let offset = offset_from_base(address, base);
@@ -150,8 +170,10 @@ impl NativeMemory {
                 && let Some(destination) = buf.get_mut(offset..end)
             {
                 destination.copy_from_slice(data);
+                return true;
             }
         }
+        false
     }
 
     /// Writes a single `i8` to `address`.
@@ -186,6 +208,14 @@ impl NativeMemory {
 
     /// Reads a null-terminated C string starting at `address`.
     pub fn read_cstring(&self, address: i64) -> Vec<u8> {
+        self.try_read_cstring(address).unwrap_or_default()
+    }
+
+    /// Tries to read a null-terminated C string starting at `address`.
+    ///
+    /// Unlike [`Self::read_cstring`], this distinguishes an invalid address from a valid empty
+    /// string. The string is bounded by the allocation containing `address`.
+    pub fn try_read_cstring(&self, address: i64) -> Option<Vec<u8>> {
         let guard = self.memory.read();
         if let Some((&base, buf_lock)) = guard.range(..=address).next_back() {
             let offset = offset_from_base(address, base);
@@ -195,10 +225,10 @@ impl NativeMemory {
                     .iter()
                     .position(|&b| b == 0)
                     .map_or(bytes.len(), |position| position);
-                return bytes.get(..end).map_or_else(Vec::new, <[u8]>::to_vec);
+                return bytes.get(..end).map(<[u8]>::to_vec);
             }
         }
-        Vec::new()
+        None
     }
 
     /// Checks if the given address falls within any managed allocation.
@@ -277,6 +307,17 @@ mod tests {
         mem.write_bytes(addr + 4, b"test\0");
         let s = mem.read_cstring(addr + 4);
         assert_eq!(s, b"test");
+    }
+
+    #[test]
+    fn test_fallible_access_distinguishes_invalid_ranges() {
+        let mem = NativeMemory::new();
+        let addr = mem.allocate(4);
+        assert!(mem.try_write_bytes(addr, b"abc\0"));
+        assert_eq!(mem.try_read_cstring(addr), Some(b"abc".to_vec()));
+        assert!(!mem.try_write_bytes(addr + 2, b"toolong"));
+        assert_eq!(mem.try_read_cstring(addr + 100), None);
+        assert_eq!(mem.try_read_bytes(addr + 2, 4), None);
     }
 
     #[test]

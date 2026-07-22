@@ -1,21 +1,72 @@
+use core_foundation_sys::base::{CFRange, CFRelease};
+use core_foundation_sys::string::{
+    CFStringAppendCharacters, CFStringCreateMutable, CFStringGetCharacters, CFStringGetLength,
+    CFStringNormalize,
+};
 use ristretto_classfile::VersionSpecification::Any;
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
+use ristretto_types::{Thread, VM};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/fs/MacOSXNativeDispatcher.normalizepath([CI)[C", Any)]
 #[async_method]
 pub async fn normalizepath<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _form = parameters.pop_int()?;
+    let form = parameters.pop_int()?;
     let path = parameters.pop()?;
-    // Return the path as-is; JVM char arrays are already in valid Unicode form
-    Ok(Some(path))
+    let chars = {
+        let reference = path.as_reference()?;
+        let Reference::CharArray(chars) = &*reference else {
+            return Err(ristretto_types::Error::InternalError(
+                "normalizepath: path is not a char array".to_string(),
+            ));
+        };
+        chars.to_vec()
+    };
+    let char_count = isize::try_from(chars.len()).map_err(|_| {
+        ristretto_types::Error::InternalError("normalizepath: path is too long".to_string())
+    })?;
+    let normalization_form = isize::try_from(form).map_err(|_| {
+        ristretto_types::Error::InternalError(
+            "normalizepath: invalid normalization form".to_string(),
+        )
+    })?;
+
+    #[expect(unsafe_code)]
+    let normalized = unsafe {
+        let string = CFStringCreateMutable(std::ptr::null(), 0);
+        if string.is_null() {
+            return Err(ristretto_types::Error::InternalError(
+                "normalizepath: CoreFoundation allocation failed".to_string(),
+            ));
+        }
+        CFStringAppendCharacters(string, chars.as_ptr(), char_count);
+        CFStringNormalize(string, normalization_form);
+        let cf_length = CFStringGetLength(string);
+        let Ok(length) = usize::try_from(cf_length) else {
+            CFRelease(string.cast());
+            return Err(ristretto_types::Error::InternalError(
+                "normalizepath: invalid normalized path length".to_string(),
+            ));
+        };
+        let mut result = vec![0u16; length];
+        if length != 0 {
+            CFStringGetCharacters(string, CFRange::init(0, cf_length), result.as_mut_ptr());
+        }
+        CFRelease(string.cast());
+        result
+    };
+
+    let vm = thread.vm()?;
+    Ok(Some(Value::new_object(
+        vm.garbage_collector(),
+        Reference::CharArray(normalized.into_boxed_slice()),
+    )))
 }
 
 #[cfg(test)]

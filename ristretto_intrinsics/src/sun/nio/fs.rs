@@ -14,6 +14,8 @@ pub mod macosxnativedispatcher;
 #[cfg(target_os = "linux")]
 pub mod magicfiletypedetector;
 pub(crate) mod managed_files;
+#[cfg(target_family = "unix")]
+pub(crate) mod native_resources;
 #[cfg(target_os = "windows")]
 pub mod registryfiletypedetector;
 #[cfg(target_family = "unix")]

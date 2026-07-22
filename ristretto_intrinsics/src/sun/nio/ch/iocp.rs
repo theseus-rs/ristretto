@@ -16,6 +16,9 @@ use windows_sys::Win32::System::Diagnostics::Debug::{
 };
 
 const INVALID_HANDLE_VALUE: i64 = -1;
+// Keep emulated completion-port handles disjoint from the native Win32 handles used as managed
+// file identifiers. In Windows' real kernel handle table those namespaces cannot collide either.
+const FIRST_COMPLETION_PORT: i64 = 0x6100_0000_0000_0000;
 const ERROR_INVALID_FUNCTION: i32 = 1;
 const ERROR_INVALID_HANDLE: i32 = 6;
 const ERROR_INVALID_PARAMETER: i32 = 87;
@@ -69,7 +72,7 @@ pub(crate) struct IocpState {
 impl IocpState {
     fn new() -> Self {
         Self {
-            next_port: AtomicI64::new(1),
+            next_port: AtomicI64::new(FIRST_COMPLETION_PORT),
             next_generation: AtomicU64::new(1),
             ports: Mutex::new(HashMap::new()),
             associations: Mutex::new(HashMap::new()),
@@ -266,6 +269,45 @@ fn state<V: VM + ?Sized>(vm: &V) -> Result<Arc<IocpState>> {
     vm.resource_manager().get_or_init(IocpState::new)
 }
 
+/// Creates a completion port or associates an existing VM handle with one.
+pub(crate) fn create_or_associate<V: VM + ?Sized>(
+    vm: &V,
+    handle: i64,
+    existing_port: i64,
+    completion_key: i32,
+) -> Result<i64> {
+    state(vm)?
+        .create_or_associate(handle, existing_port, completion_key)
+        .map_err(windows_error)
+}
+
+/// Removes a VM completion port. Windows' close wrappers deliberately ignore invalid handles.
+pub(crate) fn close_port<V: VM + ?Sized>(vm: &V, handle: i64) -> Result<bool> {
+    Ok(state(vm)?.close(handle))
+}
+
+/// Receives the next packet from a VM completion port.
+pub(crate) async fn receive<V: VM + ?Sized>(vm: &V, port_handle: i64) -> Result<CompletionPacket> {
+    let port = state(vm)?.port(port_handle).map_err(windows_error)?;
+    port.receiver
+        .lock()
+        .await
+        .recv()
+        .await
+        .ok_or_else(|| windows_error(ERROR_INVALID_HANDLE))
+}
+
+/// Posts an explicit packet to a VM completion port.
+pub(crate) fn post_to_port<V: VM + ?Sized>(
+    vm: &V,
+    port_handle: i64,
+    packet: CompletionPacket,
+) -> Result<()> {
+    state(vm)?
+        .post_to_port(port_handle, packet)
+        .map_err(windows_error)
+}
+
 /// Returns whether `handle` is currently associated with an open IOCP.
 pub(crate) fn is_associated<V: VM + ?Sized>(vm: &V, handle: i64) -> Result<bool> {
     Ok(state(vm)?.is_associated(handle))
@@ -312,6 +354,12 @@ pub(crate) fn post_operation<V: VM + ?Sized>(
         .map_err(windows_error);
     state.finish_operation(target);
     result
+}
+
+/// Finishes accounting for an operation that could not be issued and therefore has no packet.
+pub(crate) fn abandon_operation<V: VM + ?Sized>(vm: &V, target: CompletionTarget) -> Result<()> {
+    state(vm)?.finish_operation(target);
+    Ok(())
 }
 
 /// Posts the completion of an overlapped operation issued against `handle`.
