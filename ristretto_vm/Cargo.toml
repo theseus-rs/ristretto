@@ -29,7 +29,7 @@ indexmap = { workspace = true }
 jiff = { workspace = true }
 parking_lot = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.31.0" }
-ristretto_classloader = { path = "../ristretto_classloader", version = "0.31.0" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.31.0", default-features = false }
 ristretto_gc = { path = "../ristretto_gc", version = "0.31.0" }
 ristretto_intrinsics = { path = "../ristretto_intrinsics", version = "0.31.0", default-features = false }
 ristretto_jit = { path = "../ristretto_jit", version = "0.31.0" }
@@ -73,15 +73,18 @@ rayon = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
-default = ["audio", "rustls-tls"]
+default = ["audio", "tls-rustls-ring"]
 audio = [
     "ristretto_intrinsics/audio",
 ]
-native-tls = [
-    "ristretto_classloader/native-tls",
+tls-native-tls = [
+    "ristretto_classloader/tls-native-tls",
 ]
-rustls-tls = [
-    "ristretto_classloader/rustls-tls",
+tls-rustls-aws-lc-rs = [
+    "ristretto_classloader/tls-rustls-aws-lc-rs",
+]
+tls-rustls-ring = [
+    "ristretto_classloader/tls-rustls-ring",
 ]
 startup-trace = []
 url = [

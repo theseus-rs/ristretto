@@ -39,9 +39,16 @@ fn main() -> Result<()> {
 
 ## Feature flags
 
+`ristretto_classloader` uses feature flags to address compile time and binary size uses.
+
 The following features are available:
 
-| Name  | Description                    | Default? |
-|-------|--------------------------------|----------|
-| `url` | Enables url class path entries | No       |
+| Name                       | Description                                    | Default? |
+|----------------------------|------------------------------------------------|----------|
+| `tls-native-tls`           | Enables Native TLS support                     | No       |
+| `tls-rustls-aws-lc-rs`     | Enables Rustls with the AWS-LC crypto provider | No       |
+| `tls-rustls-ring`          | Enables Rustls with the Ring crypto provider   | Yes      |
+| `url`                      | Enables URL class path entries                 | No       |
 
+The TLS backend features are alternatives. To select a non-default backend without compiling Ring,
+disable default features and enable `tls-native-tls` or `tls-rustls-aws-lc-rs`.

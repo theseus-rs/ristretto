@@ -32,7 +32,8 @@ zerocopy = { workspace = true }
 zip = { workspace = true, features = ["deflate"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-reqwest = { workspace = true, features = ["json", "query"] }
+reqwest = { workspace = true, default-features = false, features = ["http2", "json", "query"] }
+rustls = { workspace = true, features = ["ring"], optional = true }
 tokio = { workspace = true, features = ["fs"] }
 
 [target.'cfg(not(all(target_family = "wasm", target_os = "unknown")))'.dependencies]
@@ -60,13 +61,17 @@ tokio = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
-default = ["rustls-tls"]
-native-tls = [
+default = ["tls-rustls-ring"]
+tls-native-tls = [
     "reqwest/native-tls",
     "reqwest/native-tls-vendored",
 ]
-rustls-tls = [
+tls-rustls-aws-lc-rs = [
     "reqwest/rustls",
+]
+tls-rustls-ring = [
+    "dep:rustls",
+    "reqwest/rustls-no-provider",
 ]
 url = []
 
@@ -77,4 +82,3 @@ name = "class_loader"
 [[bench]]
 harness = false
 name = "jimage"
-

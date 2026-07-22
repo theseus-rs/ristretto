@@ -17,7 +17,6 @@ pub(crate) async fn get_bytes(
     headers: &Headers,
     query: &[(&str, &str)],
 ) -> Result<Vec<u8>> {
-    use reqwest::Client;
     use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 
     let mut header_map = HeaderMap::new();
@@ -28,7 +27,7 @@ pub(crate) async fn get_bytes(
             .map_err(|error| Error::ParseError(error.to_string()))?;
         header_map.insert(name, value);
     }
-    let response = Client::new()
+    let response = crate::tls::reqwest_client()?
         .get(url)
         .headers(header_map)
         .query(query)
