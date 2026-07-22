@@ -3,8 +3,6 @@ use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::JavaError;
-use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
@@ -13,14 +11,11 @@ use std::sync::Arc;
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn n_get_extra_libraries<T: Thread + 'static>(
+pub async fn n_get_extra_libraries<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "com.sun.media.sound.Platform.nGetExtraLibraries()Ljava/lang/String;".to_string(),
-    )
-    .into())
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method(
@@ -28,20 +23,16 @@ pub async fn n_get_extra_libraries<T: Thread + 'static>(
     LessThanOrEqual(JAVA_8)
 )]
 #[async_method]
-pub async fn n_get_library_for_feature<T: Thread + 'static>(
+pub async fn n_get_library_for_feature<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
-    mut parameters: Parameters,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _feature = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "com.sun.media.sound.Platform.nGetLibraryForFeature(I)I".to_string(),
-    )
-    .into())
+    Ok(Some(Value::Int(0)))
 }
 
 #[intrinsic_method("com/sun/media/sound/Platform.nIsBigEndian()Z", Any)]
 #[async_method]
-pub async fn n_is_big_endian<T: Thread + 'static>(
+pub async fn n_is_big_endian<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -51,14 +42,11 @@ pub async fn n_is_big_endian<T: Thread + 'static>(
 
 #[intrinsic_method("com/sun/media/sound/Platform.nIsSigned8()Z", LessThanOrEqual(JAVA_8))]
 #[async_method]
-pub async fn n_is_signed_8<T: Thread + 'static>(
+pub async fn n_is_signed_8<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(
-        JavaError::UnsatisfiedLinkError("com.sun.media.sound.Platform.nIsSigned8()Z".to_string())
-            .into(),
-    )
+    Ok(Some(Value::from(false)))
 }
 
 #[cfg(test)]
@@ -66,23 +54,19 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_n_get_extra_libraries() {
-        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = n_get_extra_libraries(thread, Parameters::default()).await;
-        assert_eq!(
-            "com.sun.media.sound.Platform.nGetExtraLibraries()Ljava/lang/String;",
-            result.unwrap_err().to_string()
-        );
+    async fn test_n_get_extra_libraries() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = n_get_extra_libraries(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Object(None)));
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_n_get_library_for_feature() {
-        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = n_get_library_for_feature(thread, Parameters::new(vec![Value::Int(0)])).await;
-        assert_eq!(
-            "com.sun.media.sound.Platform.nGetLibraryForFeature(I)I",
-            result.unwrap_err().to_string()
-        );
+    async fn test_n_get_library_for_feature() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = n_get_library_for_feature(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::Int(0)));
+        Ok(())
     }
 
     #[tokio::test]
@@ -95,12 +79,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_n_is_signed_8() {
-        let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = n_is_signed_8(thread, Parameters::default()).await;
-        assert_eq!(
-            "com.sun.media.sound.Platform.nIsSigned8()Z",
-            result.unwrap_err().to_string()
-        );
+    async fn test_n_is_signed_8() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = n_is_signed_8(thread, Parameters::default()).await?;
+        assert_eq!(result, Some(Value::from(false)));
+        Ok(())
     }
 }

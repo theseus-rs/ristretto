@@ -53,6 +53,7 @@ The following features are available:
 
 | Name            | Description                    | Default? |
 |-----------------|--------------------------------|----------|
+| `audio`         | Enables `javax.sound` support  | Yes      |
 | `native-tls`    | Enables native TLS support     | No       |
 | `rustls-tls`    | Enables rustls TLS support     | Yes      |
 | `startup-trace` | Enables startup tracing        | No       |

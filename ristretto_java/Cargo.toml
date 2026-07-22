@@ -30,7 +30,7 @@ ahash = { workspace = true }
 anstyle = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 ristretto_gc = { path = "../ristretto_gc", version = "0.31.0" }
-ristretto_vm = { path = "../ristretto_vm", version = "0.31.0" }
+ristretto_vm = { path = "../ristretto_vm", version = "0.31.0", default-features = false }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
@@ -42,7 +42,10 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 tokio = { workspace = true, features = ["rt"] }
 
 [features]
-default = ["rustls-tls"]
+default = ["audio", "rustls-tls"]
+audio = [
+    "ristretto_vm/audio",
+]
 native-tls = [
     "ristretto_vm/native-tls",
 ]
