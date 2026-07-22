@@ -1,52 +1,85 @@
-use crate::bounds;
 use crate::java::io::socketfiledescriptor::get_impl_fd;
 #[cfg(target_family = "unix")]
 use crate::java::io::socketfiledescriptor::set_impl_fd;
 #[cfg(target_family = "unix")]
-use crate::net_helpers::boxed_int_value;
-use crate::net_helpers::{inet_address_int, ipv4_from_java_int};
-#[cfg(not(target_os = "windows"))]
-use ristretto_classfile::VersionSpecification::Equal;
+use crate::java::net::datagram_ops;
+#[cfg(target_family = "unix")]
+use crate::java::net::socket_ops;
+#[cfg(target_family = "unix")]
+use crate::net_helpers::{
+    InetAddressValue, boxed_int_value, close_socket, inet_address_from_socket, inet_address_value,
+    java_inet_address, std_socket_address,
+};
 #[cfg(not(target_os = "windows"))]
 use ristretto_classfile::VersionSpecification::{Between, LessThanOrEqual};
 #[cfg(not(target_os = "windows"))]
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
-#[cfg(not(target_os = "windows"))]
-use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
 #[cfg(not(target_os = "windows"))]
 use ristretto_macros::async_method;
 #[cfg(not(target_os = "windows"))]
 use ristretto_macros::intrinsic_method;
-use ristretto_types::Error::InternalError;
 #[cfg(not(target_os = "windows"))]
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
-#[cfg(not(target_os = "windows"))]
-use ristretto_types::handles::{SocketHandle, SocketType};
 use ristretto_types::{Parameters, Result, VM};
-use socket2::SockAddr;
-#[cfg(not(target_os = "windows"))]
-use socket2::{Domain, Protocol, Type};
 #[cfg(target_family = "unix")]
 use std::net::Ipv4Addr;
-use std::net::SocketAddrV4;
 use std::sync::Arc;
-#[cfg(not(target_os = "windows"))]
-use std::time::Duration;
 
 /// Java socket option IDs (from java.net.SocketOptions interface)
 const JAVA_IP_TOS: i32 = 0x0003;
 const JAVA_SO_REUSEADDR: i32 = 0x04;
+const JAVA_SO_REUSEPORT: i32 = 0x000e;
 const JAVA_SO_BINDADDR: i32 = 0x000F;
 const JAVA_IP_MULTICAST_IF: i32 = 0x10;
 const JAVA_IP_MULTICAST_LOOP: i32 = 0x12;
-const JAVA_SO_LINGER: i32 = 0x0080;
+const JAVA_IP_MULTICAST_IF2: i32 = 0x001f;
+const JAVA_SO_BROADCAST: i32 = 0x0020;
 const JAVA_SO_TIMEOUT: i32 = 0x1006;
 const JAVA_SO_SNDBUF: i32 = 0x1001;
 const JAVA_SO_RCVBUF: i32 = 0x1002;
 
+#[cfg(target_family = "unix")]
+fn multicast_interface_index(network_interface: &Value) -> Result<u32> {
+    if network_interface.is_null() {
+        return Ok(0);
+    }
+    let interface = network_interface.as_object_ref()?;
+    Ok(u32::try_from(interface.value("index")?.as_i32()?).unwrap_or(0))
+}
+
+#[cfg(target_family = "unix")]
+fn multicast_interface_v4(network_interface: &Value) -> Result<Ipv4Addr> {
+    if network_interface.is_null() {
+        return Ok(Ipv4Addr::UNSPECIFIED);
+    }
+    let addresses = {
+        let interface = network_interface.as_object_ref()?;
+        interface.value("addrs")?
+    };
+    let (_, addresses) = addresses.as_class_vec_ref()?;
+    for address in addresses.iter() {
+        if let InetAddressValue::V4(address) = inet_address_value(address)? {
+            return Ok(address);
+        }
+    }
+    Ok(Ipv4Addr::UNSPECIFIED)
+}
+
+#[cfg(target_family = "unix")]
+async fn receive_datagram<T: Thread + 'static>(
+    thread: &Arc<T>,
+    fd: i32,
+    packet: &Value,
+    timeout_millis: Option<i32>,
+    peek: bool,
+) -> Result<i32> {
+    datagram_ops::receive_packet(thread, fd, packet, timeout_millis, peek).await
+}
+
 /// Send a UDP datagram from a `DatagramPacket` (shared by `send` and `send0`).
+#[cfg(target_family = "unix")]
 async fn send_datagram<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -54,53 +87,7 @@ async fn send_datagram<T: Thread + 'static>(
     let packet = parameters.pop()?;
     let this = parameters.pop()?;
     let fd = get_impl_fd(&this)?;
-
-    let (data, addr) = {
-        let pkt_ref = packet.as_object_ref()?;
-        let buf_val = pkt_ref.value("buf")?;
-        let offset = pkt_ref.value("offset")?.as_i32()?;
-        let length = pkt_ref.value("length")?.as_i32()?;
-        let addr_val = pkt_ref.value("address")?;
-        let port = pkt_ref.value("port")?.as_i32()?;
-
-        let buf_guard = buf_val.as_byte_vec_ref()?;
-        let start = usize::try_from(offset).map_err(|e| InternalError(e.to_string()))?;
-        let length = usize::try_from(length).map_err(|e| InternalError(e.to_string()))?;
-        let end = start
-            .checked_add(length)
-            .ok_or_else(|| InternalError("DatagramPacket range overflow".to_string()))?;
-        #[expect(clippy::cast_sign_loss)]
-        let data: Vec<u8> = bounds::range(&buf_guard, start..end, "DatagramPacket buffer")?
-            .iter()
-            .map(|&b| b as u8)
-            .collect();
-
-        let addr_int = inet_address_int(&addr_val)?;
-        let ipv4 = ipv4_from_java_int(addr_int);
-        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-        let target = SockAddr::from(SocketAddrV4::new(ipv4, port as u16));
-        (data, target)
-    };
-
-    let vm = thread.vm()?;
-    let cloned_socket = {
-        let guard = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-        let Some(socket) = guard.socket_type.as_raw() else {
-            return Err(InternalError("expected raw socket".to_string()));
-        };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("send: clone: {e}")))?
-    };
-
-    tokio::task::spawn_blocking(move || cloned_socket.send_to(&data, &addr))
-        .await
-        .map_err(|e| InternalError(format!("send: spawn: {e}")))?
-        .map_err(|e| InternalError(format!("send: {e}")))?;
+    datagram_ops::send_packet(&thread, fd, &packet).await?;
     Ok(None)
 }
 
@@ -118,31 +105,16 @@ pub async fn bind_0<T: Thread + 'static>(
     let port = parameters.pop_int()?;
     let this = parameters.pop()?;
     let fd = get_impl_fd(&this)?;
-    let addr_int = inet_address_int(&addr)?;
-    let ipv4 = ipv4_from_java_int(addr_int);
-    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    let sock_addr = SockAddr::from(SocketAddrV4::new(ipv4, port as u16));
     let vm = thread.vm()?;
-
-    let local_port = {
-        let guard = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-        let Some(socket) = guard.socket_type.as_raw() else {
-            return Err(InternalError("expected raw socket".to_string()));
-        };
-        socket
-            .bind(&sock_addr)
-            .map_err(|e| InternalError(e.to_string()))?;
-        let local_addr = socket
-            .local_addr()
-            .map_err(|e| InternalError(e.to_string()))?;
-        local_addr
-            .as_socket_ipv4()
-            .map_or(port, |a| i32::from(a.port()))
-    };
+    let is_ipv6 = vm
+        .socket_handles()
+        .get(&fd)
+        .await
+        .is_some_and(|handle| handle.is_ipv6);
+    let sock_addr = std_socket_address(inet_address_value(&addr)?, port, is_ipv6)?;
+    socket_ops::bind(vm.as_ref(), fd, sock_addr).await?;
+    let local_port = i32::from(socket_ops::local_address(vm.as_ref(), fd).await?.port());
+    socket_ops::ensure_udp(vm.as_ref(), fd).await?;
 
     let mut this_ref = this.as_object_mut()?;
     this_ref.set_value("localPort", Value::Int(local_port))?;
@@ -163,30 +135,8 @@ pub async fn connect_0<T: Thread + 'static>(
     let addr = parameters.pop()?;
     let this = parameters.pop()?;
     let fd = get_impl_fd(&this)?;
-    let addr_int = inet_address_int(&addr)?;
-    let ipv4 = ipv4_from_java_int(addr_int);
-    #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    let sock_addr = SockAddr::from(SocketAddrV4::new(ipv4, port as u16));
     let vm = thread.vm()?;
-
-    let cloned_socket = {
-        let guard = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-        let Some(socket) = guard.socket_type.as_raw() else {
-            return Err(InternalError("expected raw socket".to_string()));
-        };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("connect: clone: {e}")))?
-    };
-
-    tokio::task::spawn_blocking(move || cloned_socket.connect(&sock_addr))
-        .await
-        .map_err(|e| InternalError(format!("connect: spawn: {e}")))?
-        .map_err(|e| InternalError(format!("connect: {e}")))?;
+    datagram_ops::connect(vm.as_ref(), fd, inet_address_value(&addr)?, port).await?;
     Ok(None)
 }
 
@@ -197,11 +147,14 @@ pub async fn connect_0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn data_available<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _this = parameters.pop()?;
-    Ok(Some(Value::Int(0)))
+    let this = parameters.pop()?;
+    let fd = get_impl_fd(&this)?;
+    Ok(Some(Value::Int(
+        socket_ops::available(thread.vm()?.as_ref(), fd).await?,
+    )))
 }
 
 #[cfg(target_family = "unix")]
@@ -218,7 +171,7 @@ pub async fn datagram_socket_close<T: Thread + 'static>(
     let fd = get_impl_fd(&this)?;
     if fd >= 0 {
         let vm = thread.vm()?;
-        vm.socket_handles().remove(&fd).await;
+        close_socket(vm.as_ref(), fd).await;
         set_impl_fd(&this, -1)?;
     }
     Ok(None)
@@ -235,17 +188,9 @@ pub async fn datagram_socket_create<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let this = parameters.pop()?;
-    let socket = socket2::Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))
-        .map_err(|e| InternalError(e.to_string()))?;
-    socket
-        .set_reuse_address(true)
-        .map_err(|e| InternalError(e.to_string()))?;
     let vm = thread.vm()?;
-    let fd = vm.next_nio_fd();
+    let fd = socket_ops::create_preferred(vm.as_ref(), false).await?;
     set_impl_fd(&this, fd)?;
-    vm.socket_handles()
-        .insert(fd, SocketHandle::new(SocketType::Raw(socket)))
-        .await?;
     Ok(None)
 }
 
@@ -256,11 +201,13 @@ pub async fn datagram_socket_create<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn disconnect_0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let _family = parameters.pop_int()?;
-    let _this = parameters.pop()?;
+    let this = parameters.pop()?;
+    let fd = get_impl_fd(&this)?;
+    socket_ops::disconnect_udp(thread.vm()?.as_ref(), fd).await?;
     Ok(None)
 }
 
@@ -292,19 +239,9 @@ pub async fn get_time_to_live<T: Thread + 'static>(
     let this = parameters.pop()?;
     let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
-    let guard = vm
-        .socket_handles()
-        .get(&fd)
-        .await
-        .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-    let Some(socket) = guard.socket_type.as_raw() else {
-        return Err(InternalError("expected raw socket".to_string()));
-    };
-    let ttl = socket
-        .multicast_ttl_v4()
-        .map_err(|e| InternalError(e.to_string()))?;
-    #[expect(clippy::cast_possible_wrap)]
-    Ok(Some(Value::Int(ttl as i32)))
+    Ok(Some(Value::Int(
+        datagram_ops::get_ttl(vm.as_ref(), fd).await?,
+    )))
 }
 
 #[cfg(target_family = "unix")]
@@ -327,24 +264,18 @@ pub async fn join<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _network_interface = parameters.pop()?;
+    let network_interface = parameters.pop()?;
     let multicast_addr = parameters.pop()?;
     let this = parameters.pop()?;
     let fd = get_impl_fd(&this)?;
-    let addr_int = inet_address_int(&multicast_addr)?;
-    let multicast_ip = ipv4_from_java_int(addr_int);
-    let vm = thread.vm()?;
-    let guard = vm
-        .socket_handles()
-        .get(&fd)
-        .await
-        .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-    let Some(socket) = guard.socket_type.as_raw() else {
-        return Err(InternalError("expected raw socket".to_string()));
-    };
-    socket
-        .join_multicast_v4(&multicast_ip, &Ipv4Addr::UNSPECIFIED)
-        .map_err(|e| InternalError(e.to_string()))?;
+    datagram_ops::multicast(
+        thread.vm()?.as_ref(),
+        fd,
+        inet_address_value(&multicast_addr)?,
+        &network_interface,
+        true,
+    )
+    .await?;
     Ok(None)
 }
 
@@ -358,24 +289,18 @@ pub async fn leave<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _network_interface = parameters.pop()?;
+    let network_interface = parameters.pop()?;
     let multicast_addr = parameters.pop()?;
     let this = parameters.pop()?;
     let fd = get_impl_fd(&this)?;
-    let addr_int = inet_address_int(&multicast_addr)?;
-    let multicast_ip = ipv4_from_java_int(addr_int);
-    let vm = thread.vm()?;
-    let guard = vm
-        .socket_handles()
-        .get(&fd)
-        .await
-        .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-    let Some(socket) = guard.socket_type.as_raw() else {
-        return Err(InternalError("expected raw socket".to_string()));
-    };
-    socket
-        .leave_multicast_v4(&multicast_ip, &Ipv4Addr::UNSPECIFIED)
-        .map_err(|e| InternalError(e.to_string()))?;
+    datagram_ops::multicast(
+        thread.vm()?.as_ref(),
+        fd,
+        inet_address_value(&multicast_addr)?,
+        &network_interface,
+        false,
+    )
+    .await?;
     Ok(None)
 }
 
@@ -389,35 +314,14 @@ pub async fn peek<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _inet_address = parameters.pop()?;
+    let inet_address = parameters.pop()?;
     let this = parameters.pop()?;
     let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
-
-    let cloned_socket = {
-        let guard = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-        let Some(socket) = guard.socket_type.as_raw() else {
-            return Err(InternalError("expected raw socket".to_string()));
-        };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("peek: clone: {e}")))?
-    };
-
-    let port = tokio::task::spawn_blocking(move || {
-        let udp: std::net::UdpSocket = cloned_socket.into();
-        let mut buf = [0u8; 1];
-        udp.peek_from(&mut buf)
-            .map(|(_, addr)| i32::from(addr.port()))
-    })
-    .await
-    .map_err(|e| InternalError(format!("peek: spawn: {e}")))?
-    .map_err(|e| InternalError(format!("peek: {e}")))?;
-    Ok(Some(Value::Int(port)))
+    let timeout = datagram_ops::implementation_timeout(&this)?;
+    Ok(Some(Value::Int(
+        datagram_ops::peek_address(vm.as_ref(), fd, &inet_address, timeout).await?,
+    )))
 }
 
 #[cfg(target_family = "unix")]
@@ -432,82 +336,9 @@ pub async fn peek_data<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let packet = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_impl_fd(&this)?;
-
-    let buf_len = {
-        let pkt_ref = packet.as_object_ref()?;
-        pkt_ref.value("bufLength")?.as_i32()?
-    };
-
-    let vm = thread.vm()?;
-    let cloned_socket = {
-        let guard = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-        let Some(socket) = guard.socket_type.as_raw() else {
-            return Err(InternalError("expected raw socket".to_string()));
-        };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("peekData: clone: {e}")))?
-    };
-
-    #[expect(clippy::cast_sign_loss)]
-    let capacity = buf_len as usize;
-    let (n, data, from_port, from_ip) = tokio::task::spawn_blocking(move || {
-        let udp: std::net::UdpSocket = cloned_socket.into();
-        let mut buf = vec![0u8; capacity];
-        let (n, addr) = udp.peek_from(&mut buf)?;
-        buf.truncate(n);
-        let port = i32::from(addr.port());
-        let ip = match addr {
-            std::net::SocketAddr::V4(v4) => v4.ip().octets(),
-            std::net::SocketAddr::V6(_) => [0u8; 4],
-        };
-        Ok::<_, std::io::Error>((n, buf, port, ip))
-    })
-    .await
-    .map_err(|e| InternalError(format!("peekData: spawn: {e}")))?
-    .map_err(|e| InternalError(format!("peekData: {e}")))?;
-
-    // Fill the DatagramPacket
-    {
-        let pkt_ref = packet.as_object_ref()?;
-        let buf_val = pkt_ref.value("buf")?;
-        let mut buf_guard = buf_val.as_byte_vec_mut()?;
-        #[expect(clippy::cast_possible_wrap)]
-        for (i, &b) in data.iter().enumerate() {
-            if let Some(slot) = buf_guard.get_mut(i) {
-                *slot = b as i8;
-            }
-        }
-    }
-
-    #[expect(clippy::cast_possible_wrap)]
-    let byte_array: Box<[i8]> = from_ip.iter().map(|&b| b as i8).collect();
-    let byte_array_value =
-        Value::new_object(vm.garbage_collector(), Reference::ByteArray(byte_array));
-    let null_string = Value::Object(None);
-    let inet_addr = thread
-        .invoke(
-            "java.net.InetAddress",
-            "getByAddress(Ljava/lang/String;[B)Ljava/net/InetAddress;",
-            &[null_string, byte_array_value],
-        )
-        .await?
-        .ok_or_else(|| InternalError("getByAddress returned null".to_string()))?;
-
-    {
-        let mut pkt_mut = packet.as_object_mut()?;
-        #[expect(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-        pkt_mut.set_value("length", Value::Int(n as i32))?;
-        pkt_mut.set_value("address", inet_addr)?;
-        pkt_mut.set_value("port", Value::Int(from_port))?;
-    }
-
-    Ok(Some(Value::Int(from_port)))
+    let timeout = datagram_ops::implementation_timeout_millis(&this)?;
+    let port = receive_datagram(&thread, get_impl_fd(&this)?, &packet, timeout, true).await?;
+    Ok(Some(Value::Int(port)))
 }
 
 #[cfg(target_family = "unix")]
@@ -522,105 +353,15 @@ pub async fn receive_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let packet = parameters.pop()?;
     let this = parameters.pop()?;
-    let fd = get_impl_fd(&this)?;
-
-    let buf_len = {
-        let pkt_ref = packet.as_object_ref()?;
-        pkt_ref.value("bufLength")?.as_i32()?
-    };
-
-    let vm = thread.vm()?;
-    let timeout = vm
-        .socket_handles()
-        .get(&fd)
-        .await
-        .and_then(|guard| guard.timeout);
-
-    let cloned_socket = {
-        let guard = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-        let Some(socket) = guard.socket_type.as_raw() else {
-            return Err(InternalError("expected raw socket".to_string()));
-        };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("receive: clone: {e}")))?
-    };
-
-    #[expect(clippy::cast_sign_loss)]
-    let capacity = buf_len as usize;
-    let (n, data, from_port, from_ip) = tokio::task::spawn_blocking(move || {
-        let udp: std::net::UdpSocket = cloned_socket.into();
-        // Apply SO_TIMEOUT as read timeout
-        udp.set_read_timeout(timeout)
-            .map_err(|e| std::io::Error::other(e.to_string()))?;
-        let mut buf = vec![0u8; capacity];
-        let (n, addr) = udp.recv_from(&mut buf)?;
-        buf.truncate(n);
-        let port = i32::from(addr.port());
-        let ip = match addr {
-            std::net::SocketAddr::V4(v4) => v4.ip().octets(),
-            std::net::SocketAddr::V6(_) => [0u8; 4],
-        };
-        Ok::<_, std::io::Error>((n, buf, port, ip))
-    })
-    .await
-    .map_err(|e| InternalError(format!("receive: spawn: {e}")))?
-    .map_err(|e| {
-        if e.kind() == std::io::ErrorKind::TimedOut || e.kind() == std::io::ErrorKind::WouldBlock {
-            ristretto_types::Error::JavaError(JavaError::SocketTimeoutException(
-                "Receive timed out".to_string(),
-            ))
-        } else {
-            InternalError(format!("receive: {e}"))
-        }
-    })?;
-
-    // Fill the DatagramPacket buffer
-    {
-        let pkt_ref = packet.as_object_ref()?;
-        let buf_val = pkt_ref.value("buf")?;
-        let mut buf_guard = buf_val.as_byte_vec_mut()?;
-        #[expect(clippy::cast_possible_wrap)]
-        for (i, &b) in data.iter().enumerate() {
-            if let Some(slot) = buf_guard.get_mut(i) {
-                *slot = b as i8;
-            }
-        }
-    }
-
-    #[expect(clippy::cast_possible_wrap)]
-    let byte_array: Box<[i8]> = from_ip.iter().map(|&b| b as i8).collect();
-    let byte_array_value =
-        Value::new_object(vm.garbage_collector(), Reference::ByteArray(byte_array));
-    let null_string = Value::Object(None);
-    let inet_addr = thread
-        .invoke(
-            "java.net.InetAddress",
-            "getByAddress(Ljava/lang/String;[B)Ljava/net/InetAddress;",
-            &[null_string, byte_array_value],
-        )
-        .await?
-        .ok_or_else(|| InternalError("getByAddress returned null".to_string()))?;
-
-    {
-        let mut pkt_mut = packet.as_object_mut()?;
-        #[expect(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-        pkt_mut.set_value("length", Value::Int(n as i32))?;
-        pkt_mut.set_value("address", inet_addr)?;
-        pkt_mut.set_value("port", Value::Int(from_port))?;
-    }
-
+    let timeout = datagram_ops::implementation_timeout_millis(&this)?;
+    receive_datagram(&thread, get_impl_fd(&this)?, &packet, timeout, false).await?;
     Ok(None)
 }
 
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "java/net/PlainDatagramSocketImpl.send(Ljava/net/DatagramPacket;)V",
-    Equal(JAVA_8)
+    Between(JAVA_8, JAVA_11)
 )]
 #[async_method]
 pub async fn send<T: Thread + 'static>(
@@ -657,18 +398,8 @@ pub async fn set_ttl<T: Thread + 'static>(
     let this = parameters.pop()?;
     let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
-    let guard = vm
-        .socket_handles()
-        .get(&fd)
-        .await
-        .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-    let Some(socket) = guard.socket_type.as_raw() else {
-        return Err(InternalError("expected raw socket".to_string()));
-    };
-    #[expect(clippy::cast_sign_loss)]
-    socket
-        .set_multicast_ttl_v4(ttl as u32)
-        .map_err(|e| InternalError(e.to_string()))?;
+    // The byte overload is unsigned in the Java API.
+    datagram_ops::set_ttl(vm.as_ref(), fd, ttl & 0xff).await?;
     Ok(None)
 }
 
@@ -686,18 +417,7 @@ pub async fn set_time_to_live<T: Thread + 'static>(
     let this = parameters.pop()?;
     let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
-    let guard = vm
-        .socket_handles()
-        .get(&fd)
-        .await
-        .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-    let Some(socket) = guard.socket_type.as_raw() else {
-        return Err(InternalError("expected raw socket".to_string()));
-    };
-    #[expect(clippy::cast_sign_loss)]
-    socket
-        .set_multicast_ttl_v4(ttl as u32)
-        .map_err(|e| InternalError(e.to_string()))?;
+    datagram_ops::set_ttl(vm.as_ref(), fd, ttl).await?;
     Ok(None)
 }
 
@@ -723,49 +443,70 @@ pub async fn socket_get_option<T: Thread + 'static>(
             .await
             .map_or(0, |guard| guard.timeout_millis());
         let result = thread
-            .object("java.lang.Integer", "(I)V", &[Value::Int(timeout_ms)])
+            .object("java.lang.Integer", "I", &[Value::Int(timeout_ms)])
             .await?;
         return Ok(Some(result));
     }
 
-    let guard = vm
-        .socket_handles()
-        .get(&fd)
-        .await
-        .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-    let Some(socket) = guard.socket_type.as_raw() else {
-        return Err(InternalError("expected raw socket".to_string()));
-    };
+    if opt == JAVA_SO_BINDADDR {
+        let address = socket_ops::local_address(vm.as_ref(), fd).await?;
+        return Ok(Some(
+            java_inet_address(&thread, inet_address_from_socket(address), None).await?,
+        ));
+    }
 
-    #[expect(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    if opt == JAVA_IP_MULTICAST_IF {
+        let is_ipv6 = vm
+            .socket_handles()
+            .get(&fd)
+            .await
+            .is_some_and(|handle| handle.is_ipv6);
+        let address = if is_ipv6 {
+            let index =
+                datagram_ops::get_int_option(vm.as_ref(), fd, JAVA_IP_MULTICAST_IF2).await?;
+            super::networkinterface::interface_address_by_index(index)
+                .unwrap_or(InetAddressValue::V4(Ipv4Addr::UNSPECIFIED))
+        } else {
+            let value = datagram_ops::get_int_option(vm.as_ref(), fd, opt).await?;
+            InetAddressValue::V4(Ipv4Addr::from(u32::from_ne_bytes(value.to_ne_bytes())))
+        };
+        return Ok(Some(java_inet_address(&thread, address, None).await?));
+    }
+
+    if opt == JAVA_IP_MULTICAST_IF2 {
+        let index = datagram_ops::get_int_option(vm.as_ref(), fd, opt).await?;
+        return Ok(Some(
+            super::networkinterface::interface_by_index(&thread, index).await?,
+        ));
+    }
+
+    if matches!(
+        opt,
+        JAVA_SO_REUSEADDR | JAVA_SO_REUSEPORT | JAVA_SO_BROADCAST | JAVA_IP_MULTICAST_LOOP
+    ) {
+        let mut value = datagram_ops::get_int_option(vm.as_ref(), fd, opt).await? != 0;
+        if opt == JAVA_IP_MULTICAST_LOOP {
+            // The legacy SocketOptions contract reports whether loopback is disabled.
+            value = !value;
+        }
+        return Ok(Some(
+            thread
+                .object("java.lang.Boolean", "Z", &[Value::Int(i32::from(value))])
+                .await?,
+        ));
+    }
+
     let value = match opt {
-        JAVA_SO_REUSEADDR => i32::from(
-            socket
-                .reuse_address()
-                .map_err(|e| InternalError(e.to_string()))?,
-        ),
-        JAVA_SO_SNDBUF => socket
-            .send_buffer_size()
-            .map_err(|e| InternalError(e.to_string()))? as i32,
-        JAVA_SO_RCVBUF => socket
-            .recv_buffer_size()
-            .map_err(|e| InternalError(e.to_string()))? as i32,
-        JAVA_IP_TOS | JAVA_SO_BINDADDR | JAVA_IP_MULTICAST_IF => 0,
-        JAVA_IP_MULTICAST_LOOP => i32::from(
-            socket
-                .multicast_loop_v4()
-                .map_err(|e| InternalError(e.to_string()))?,
-        ),
-        JAVA_SO_LINGER => socket
-            .linger()
-            .map_err(|e| InternalError(e.to_string()))?
-            .map_or(-1, |d| d.as_secs() as i32),
-        _ => -1,
+        JAVA_IP_TOS | JAVA_SO_SNDBUF | JAVA_SO_RCVBUF => {
+            datagram_ops::get_int_option(vm.as_ref(), fd, opt).await?
+        }
+        _ => {
+            return Err(JavaError::SocketException(format!("Invalid socket option: {opt}")).into());
+        }
     };
-    drop(guard);
 
     let result = thread
-        .object("java.lang.Integer", "(I)V", &[Value::Int(value)])
+        .object("java.lang.Integer", "I", &[Value::Int(value)])
         .await?;
     Ok(Some(result))
 }
@@ -785,58 +526,86 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
     let this = parameters.pop()?;
 
     if cmd == JAVA_SO_TIMEOUT {
-        let timeout_ms = boxed_int_value(&value).unwrap_or(0);
+        let timeout_ms = boxed_int_value(&value)?;
         let fd = get_impl_fd(&this)?;
         let vm = thread.vm()?;
-        #[expect(clippy::cast_sign_loss)]
-        if let Some(mut guard) = vm.socket_handles().get_mut(&fd).await {
-            guard.timeout = if timeout_ms == 0 {
-                None
-            } else {
-                Some(Duration::from_millis(timeout_ms as u64))
-            };
-        }
+        socket_ops::set_timeout(vm.as_ref(), fd, timeout_ms).await?;
         return Ok(None);
     }
 
     let fd = get_impl_fd(&this)?;
     let vm = thread.vm()?;
-    let guard = vm
-        .socket_handles()
-        .get(&fd)
-        .await
-        .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-    let Some(socket) = guard.socket_type.as_raw() else {
-        return Err(InternalError("expected raw socket".to_string()));
-    };
-
-    #[expect(clippy::cast_sign_loss)]
     match cmd {
-        JAVA_SO_REUSEADDR => {
-            let on = boxed_int_value(&value)? != 0;
-            socket
-                .set_reuse_address(on)
-                .map_err(|e| InternalError(e.to_string()))?;
+        JAVA_SO_BINDADDR => {
+            return Err(JavaError::SocketException("Cannot re-bind Socket".to_string()).into());
         }
-        JAVA_SO_SNDBUF => {
-            let size = boxed_int_value(&value)?;
-            socket
-                .set_send_buffer_size(size as usize)
-                .map_err(|e| InternalError(e.to_string()))?;
+        JAVA_IP_MULTICAST_IF => {
+            let address = inet_address_value(&value)?;
+            let is_ipv6 = vm
+                .socket_handles()
+                .get(&fd)
+                .await
+                .is_some_and(|handle| handle.is_ipv6);
+            let option = match (is_ipv6, address) {
+                (true, InetAddressValue::V4(address)) if address.is_unspecified() => {
+                    (JAVA_IP_MULTICAST_IF2, 0)
+                }
+                (true, address) => {
+                    let index = match address {
+                        InetAddressValue::V6(_, scope) if scope != 0 => {
+                            i32::try_from(scope).unwrap_or(i32::MAX)
+                        }
+                        _ => super::networkinterface::interface_index_by_address(address)
+                            .ok_or_else(|| {
+                                JavaError::SocketException(
+                                    "Network interface not found for multicast address".to_string(),
+                                )
+                            })?,
+                    };
+                    (JAVA_IP_MULTICAST_IF2, index)
+                }
+                (false, InetAddressValue::V4(address)) => {
+                    let encoded = i32::from_ne_bytes(u32::from(address).to_ne_bytes());
+                    (JAVA_IP_MULTICAST_IF, encoded)
+                }
+                (false, InetAddressValue::V6(_, scope)) => (
+                    JAVA_IP_MULTICAST_IF2,
+                    i32::try_from(scope).unwrap_or(i32::MAX),
+                ),
+            };
+            datagram_ops::set_int_option(vm.as_ref(), fd, option.0, option.1).await?;
         }
-        JAVA_SO_RCVBUF => {
-            let size = boxed_int_value(&value)?;
-            socket
-                .set_recv_buffer_size(size as usize)
-                .map_err(|e| InternalError(e.to_string()))?;
+        JAVA_IP_MULTICAST_IF2 => {
+            let is_ipv6 = vm
+                .socket_handles()
+                .get(&fd)
+                .await
+                .is_some_and(|handle| handle.is_ipv6);
+            let (option, interface) = if is_ipv6 {
+                (
+                    JAVA_IP_MULTICAST_IF2,
+                    i32::try_from(multicast_interface_index(&value)?).unwrap_or(i32::MAX),
+                )
+            } else {
+                let address = multicast_interface_v4(&value)?;
+                (
+                    JAVA_IP_MULTICAST_IF,
+                    i32::from_ne_bytes(u32::from(address).to_ne_bytes()),
+                )
+            };
+            datagram_ops::set_int_option(vm.as_ref(), fd, option, interface).await?;
         }
         JAVA_IP_MULTICAST_LOOP => {
-            let on = boxed_int_value(&value)? != 0;
-            socket
-                .set_multicast_loop_v4(on)
-                .map_err(|e| InternalError(e.to_string()))?;
+            let disabled = boxed_int_value(&value)? != 0;
+            datagram_ops::set_int_option(vm.as_ref(), fd, cmd, i32::from(!disabled)).await?;
         }
-        _ => {}
+        JAVA_IP_TOS | JAVA_SO_REUSEADDR | JAVA_SO_REUSEPORT | JAVA_SO_BROADCAST
+        | JAVA_SO_SNDBUF | JAVA_SO_RCVBUF => {
+            datagram_ops::set_int_option(vm.as_ref(), fd, cmd, boxed_int_value(&value)?).await?;
+        }
+        _ => {
+            return Err(JavaError::SocketException(format!("Invalid socket option: {cmd}")).into());
+        }
     }
     Ok(None)
 }
@@ -844,6 +613,23 @@ pub async fn socket_set_option_0<T: Thread + 'static>(
 #[cfg(all(test, target_family = "unix", not(target_family = "wasm")))]
 mod tests {
     use super::*;
+    use ristretto_classloader::{Object, Reference};
+    use ristretto_types::Error;
+
+    async fn boxed_integer<T: Thread + 'static>(thread: &Arc<T>, value: i32) -> Result<Value> {
+        thread
+            .object("java.lang.Integer", "I", &[Value::Int(value)])
+            .await
+    }
+
+    fn is_darwin_invalid_argument(error: &Error) -> bool {
+        cfg!(target_os = "macos")
+            && matches!(
+                error,
+                Error::JavaError(JavaError::SocketException(message))
+                    if message.contains("Invalid argument")
+            )
+    }
 
     #[tokio::test]
     async fn test_bind_0() {
@@ -984,5 +770,264 @@ mod tests {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = socket_set_option_0(thread, Parameters::default()).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    #[expect(clippy::too_many_lines)]
+    async fn implementation_lifecycle_and_option_wrappers() -> Result<()> {
+        let (vm, thread) = crate::test::java17_thread().await?;
+        let implementation_class = thread.class("java.net.PlainDatagramSocketImpl").await?;
+        let implementation = Value::new_object(
+            vm.garbage_collector(),
+            Reference::Object(Object::new(implementation_class)?),
+        );
+        let file_descriptor = thread.object("java.io.FileDescriptor", "", &[]).await?;
+        implementation
+            .as_object_mut()?
+            .set_value("fd", file_descriptor)?;
+        implementation
+            .as_object_mut()?
+            .set_value("timeout", Value::Int(25))?;
+        assert_eq!(
+            Some(25),
+            datagram_ops::implementation_timeout_millis(&implementation)?
+        );
+        assert_eq!(
+            Some(std::time::Duration::from_millis(25)),
+            datagram_ops::implementation_timeout(&implementation)?
+        );
+        assert_eq!(
+            None,
+            datagram_socket_create(
+                thread.clone(),
+                Parameters::new(vec![implementation.clone()])
+            )
+            .await?
+        );
+        let fd = get_impl_fd(&implementation)?;
+        assert!(fd >= 0);
+
+        let loopback =
+            java_inet_address(&thread, InetAddressValue::V4(Ipv4Addr::LOCALHOST), None).await?;
+        assert_eq!(
+            None,
+            bind_0(
+                thread.clone(),
+                Parameters::new(vec![
+                    implementation.clone(),
+                    Value::Int(0),
+                    loopback.clone()
+                ])
+            )
+            .await?
+        );
+        let local_port = implementation
+            .as_object_ref()?
+            .value("localPort")?
+            .as_i32()?;
+        assert!(local_port > 0);
+        assert_eq!(
+            Some(Value::Int(0)),
+            data_available(
+                thread.clone(),
+                Parameters::new(vec![implementation.clone()])
+            )
+            .await?
+        );
+
+        for (option, value) in [
+            (JAVA_SO_TIMEOUT, 25),
+            (JAVA_SO_REUSEADDR, 1),
+            (JAVA_SO_BROADCAST, 1),
+            (JAVA_SO_SNDBUF, 8192),
+            (JAVA_SO_RCVBUF, 8192),
+            (JAVA_IP_TOS, 0x10),
+            (JAVA_IP_MULTICAST_LOOP, 0),
+        ] {
+            assert_eq!(
+                None,
+                socket_set_option_0(
+                    thread.clone(),
+                    Parameters::new(vec![
+                        implementation.clone(),
+                        Value::Int(option),
+                        boxed_integer(&thread, value).await?
+                    ])
+                )
+                .await?
+            );
+            assert!(
+                socket_get_option(
+                    thread.clone(),
+                    Parameters::new(vec![implementation.clone(), Value::Int(option)])
+                )
+                .await?
+                .is_some()
+            );
+        }
+        assert!(
+            socket_get_option(
+                thread.clone(),
+                Parameters::new(vec![implementation.clone(), Value::Int(JAVA_SO_BINDADDR)])
+            )
+            .await?
+            .is_some()
+        );
+        assert!(
+            socket_get_option(
+                thread.clone(),
+                Parameters::new(vec![implementation.clone(), Value::Int(-1)])
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            socket_set_option_0(
+                thread.clone(),
+                Parameters::new(vec![
+                    implementation.clone(),
+                    Value::Int(JAVA_SO_BINDADDR),
+                    boxed_integer(&thread, 0).await?
+                ])
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            socket_set_option_0(
+                thread.clone(),
+                Parameters::new(vec![
+                    implementation.clone(),
+                    Value::Int(-1),
+                    boxed_integer(&thread, 0).await?
+                ])
+            )
+            .await
+            .is_err()
+        );
+
+        assert_eq!(
+            None,
+            set_ttl(
+                thread.clone(),
+                Parameters::new(vec![implementation.clone(), Value::Int(-1)])
+            )
+            .await?
+        );
+        assert_eq!(
+            Some(Value::Int(-1)),
+            get_ttl(
+                thread.clone(),
+                Parameters::new(vec![implementation.clone()])
+            )
+            .await?
+        );
+        assert_eq!(
+            None,
+            set_time_to_live(
+                thread.clone(),
+                Parameters::new(vec![implementation.clone(), Value::Int(17)])
+            )
+            .await?
+        );
+        assert_eq!(
+            Some(Value::Int(17)),
+            get_time_to_live(
+                thread.clone(),
+                Parameters::new(vec![implementation.clone()])
+            )
+            .await?
+        );
+
+        let interface = Value::Object(None);
+        assert_eq!(0, multicast_interface_index(&interface)?);
+        assert_eq!(Ipv4Addr::UNSPECIFIED, multicast_interface_v4(&interface)?);
+
+        let group = java_inet_address(
+            &thread,
+            InetAddressValue::V4(Ipv4Addr::new(224, 0, 0, 251)),
+            None,
+        )
+        .await?;
+        let join_result = join(
+            thread.clone(),
+            Parameters::new(vec![
+                implementation.clone(),
+                group.clone(),
+                interface.clone(),
+            ]),
+        )
+        .await;
+        match join_result {
+            Ok(result) => {
+                assert_eq!(None, result);
+                match leave(
+                    thread.clone(),
+                    Parameters::new(vec![implementation.clone(), group, interface.clone()]),
+                )
+                .await
+                {
+                    Ok(result) => assert_eq!(None, result),
+                    Err(error) if is_darwin_invalid_argument(&error) => {}
+                    Err(error) => return Err(error),
+                }
+            }
+            Err(error) if is_darwin_invalid_argument(&error) => {}
+            Err(error) => return Err(error),
+        }
+
+        for (option, value) in [
+            (JAVA_IP_MULTICAST_IF2, interface),
+            (JAVA_IP_MULTICAST_IF, loopback.clone()),
+        ] {
+            match socket_set_option_0(
+                thread.clone(),
+                Parameters::new(vec![implementation.clone(), Value::Int(option), value]),
+            )
+            .await
+            {
+                Ok(result) => assert_eq!(None, result),
+                Err(error) if is_darwin_invalid_argument(&error) => {}
+                Err(error) => return Err(error),
+            }
+        }
+
+        let peer = tokio::net::UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).await?;
+        assert_eq!(
+            None,
+            connect_0(
+                thread.clone(),
+                Parameters::new(vec![
+                    implementation.clone(),
+                    loopback,
+                    Value::Int(i32::from(peer.local_addr()?.port()))
+                ])
+            )
+            .await?
+        );
+        assert_eq!(
+            None,
+            disconnect_0(
+                thread.clone(),
+                Parameters::new(vec![implementation.clone(), Value::Int(1)])
+            )
+            .await?
+        );
+
+        assert_eq!(
+            None,
+            datagram_socket_close(
+                thread.clone(),
+                Parameters::new(vec![implementation.clone()])
+            )
+            .await?
+        );
+        assert_eq!(-1, get_impl_fd(&implementation)?);
+        assert_eq!(
+            None,
+            datagram_socket_close(thread, Parameters::new(vec![implementation])).await?
+        );
+        assert!(vm.socket_handles().get(&fd).await.is_none());
+        Ok(())
     }
 }

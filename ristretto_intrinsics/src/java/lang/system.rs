@@ -298,6 +298,17 @@ pub async fn init_properties<T: Thread + 'static>(
             .execute(&properties_class, &set_property_method, &parameters)
             .await?;
     }
+    // Configuration properties model command-line -D options. Install them after the platform
+    // defaults so they are visible through System.getProperty and override default values, as they
+    // do in HotSpot. Java 17+ receives these through SystemProps$Raw.vmProperties instead.
+    for (key, value) in thread.vm()?.system_properties() {
+        let key = key.to_object(&thread).await?;
+        let value = value.to_object(&thread).await?;
+        let parameters = vec![properties.clone(), key, value];
+        thread
+            .execute(&properties_class, &set_property_method, &parameters)
+            .await?;
+    }
     Ok(Some(properties))
 }
 

@@ -252,6 +252,7 @@ async fn finish_connect<V: VM>(vm: &V, fd: i32) -> Result<bool> {
         is_ipv6,
         is_unix,
         non_blocking,
+        lifecycle,
     } = handle;
     let SocketType::Raw(socket) = socket_type else {
         vm.socket_handles()
@@ -263,6 +264,7 @@ async fn finish_connect<V: VM>(vm: &V, fd: i32) -> Result<bool> {
                     is_ipv6,
                     is_unix,
                     non_blocking,
+                    lifecycle,
                 },
             )
             .await?;
@@ -278,6 +280,7 @@ async fn finish_connect<V: VM>(vm: &V, fd: i32) -> Result<bool> {
                     is_ipv6,
                     is_unix,
                     non_blocking,
+                    lifecycle,
                 },
             )
             .await?;
@@ -297,6 +300,7 @@ async fn finish_connect<V: VM>(vm: &V, fd: i32) -> Result<bool> {
                 is_ipv6,
                 is_unix,
                 non_blocking,
+                lifecycle,
             },
         )
         .await?;
@@ -1467,6 +1471,7 @@ pub async fn listen<T: Thread + 'static>(
         is_ipv6,
         is_unix,
         non_blocking,
+        lifecycle,
     } = raw_handle;
     let SocketType::Raw(socket) = socket_type else {
         return Err(InternalError("expected raw socket for listen".to_string()));
@@ -1482,6 +1487,7 @@ pub async fn listen<T: Thread + 'static>(
                     is_ipv6,
                     is_unix,
                     non_blocking,
+                    lifecycle,
                 },
             )
             .await?;
@@ -1501,6 +1507,7 @@ pub async fn listen<T: Thread + 'static>(
                     is_ipv6,
                     is_unix,
                     non_blocking,
+                    lifecycle,
                 },
             )
             .await?;
@@ -1523,6 +1530,7 @@ pub async fn listen<T: Thread + 'static>(
                 is_ipv6,
                 is_unix,
                 non_blocking,
+                lifecycle,
             },
         )
         .await?;

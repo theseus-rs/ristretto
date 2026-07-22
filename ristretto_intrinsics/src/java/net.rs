@@ -1,5 +1,7 @@
 pub mod abstractplaindatagramsocketimpl;
 pub mod abstractplainsocketimpl;
+#[cfg(not(target_family = "wasm"))]
+pub(crate) mod datagram_ops;
 pub mod datagrampacket;
 #[cfg(target_os = "windows")]
 pub mod dualstackplaindatagramsocketimpl;
@@ -12,10 +14,12 @@ pub mod inet6addressimpl;
 pub mod inetaddress;
 pub mod inetaddressimplfactory;
 pub mod networkinterface;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(target_family = "unix")]
 pub mod plaindatagramsocketimpl;
 #[cfg(not(target_family = "wasm"))]
 pub mod plainsocketimpl;
+#[cfg(not(target_family = "wasm"))]
+pub(crate) mod socket_ops;
 pub mod socketcleanable;
 #[cfg(not(target_family = "wasm"))]
 pub mod socketinputstream;

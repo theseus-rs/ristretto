@@ -157,6 +157,9 @@ pub enum JavaError {
     /// - [InterruptedException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/InterruptedException.html)
     #[error("{0}")]
     InterruptedException(String),
+    /// `InterruptedIOException`
+    #[error("{0}")]
+    InterruptedIoException(String),
     /// `IOException`
     ///
     /// # References
@@ -247,6 +250,9 @@ pub enum JavaError {
     /// - [UnsupportedOperationException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/UnsupportedOperationException.html)
     #[error("{0}")]
     UnsupportedOperationException(String),
+    /// `UnknownHostException`
+    #[error("{0}")]
+    UnknownHostException(String),
     /// `VerifyError`
     /// See: <https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/VerifyError.html>
     #[error("{0}")]
@@ -285,6 +291,7 @@ impl JavaError {
             JavaError::IncompatibleClassChangeError(_) => "java.lang.IncompatibleClassChangeError",
             JavaError::IndexOutOfBoundsException { .. } => "java.lang.IndexOutOfBoundsException",
             JavaError::InterruptedException(_) => "java.lang.InterruptedException",
+            JavaError::InterruptedIoException(_) => "java.io.InterruptedIOException",
             JavaError::IoException(_) => "java.io.IOException",
             JavaError::NoRouteToHostException(_) => "java.net.NoRouteToHostException",
             JavaError::PortUnreachableException(_) => "java.net.PortUnreachableException",
@@ -303,6 +310,7 @@ impl JavaError {
             JavaError::UnsupportedOperationException(_) => {
                 "java.lang.UnsupportedOperationException"
             }
+            JavaError::UnknownHostException(_) => "java.net.UnknownHostException",
             JavaError::VerifyError(_) => "java.lang.VerifyError",
         }
     }

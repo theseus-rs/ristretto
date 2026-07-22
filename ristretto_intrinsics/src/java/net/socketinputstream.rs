@@ -1,4 +1,5 @@
 use crate::bounds;
+use crate::net_helpers::socket_io_error;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
@@ -23,7 +24,6 @@ pub async fn init<T: Thread + 'static>(
     LessThanOrEqual(JAVA_17)
 )]
 #[async_method]
-#[expect(clippy::too_many_lines)]
 pub async fn socket_read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -42,149 +42,71 @@ pub async fn socket_read_0<T: Thread + 'static>(
 
     let vm = thread.vm()?;
     let len_usize = usize::try_from(len).map_err(|e| InternalError(e.to_string()))?;
-
-    // Check variant first, then handle accordingly
-    let is_tcp_stream = {
+    let offset = usize::try_from(off).map_err(|e| InternalError(e.to_string()))?;
+    if len_usize == 0 {
+        return Ok(Some(Value::Int(0)));
+    }
+    let (stream, lifecycle) = {
         let handle = vm
             .socket_handles()
             .get(&fd)
             .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
-        handle.socket_type.as_tcp_stream().is_some()
+            .ok_or_else(|| JavaError::SocketException("Socket closed".to_string()))?;
+        (
+            handle
+                .socket_type
+                .as_tcp_stream()
+                .ok_or_else(|| JavaError::SocketException("Socket is not connected".to_string()))?
+                .clone(),
+            handle.lifecycle.clone(),
+        )
     };
-
-    if is_tcp_stream {
-        // Async read from TcpStream with optional timeout, dropping guard between retries
-        let mut read_buf = vec![0u8; len_usize];
-        let read_future = async {
-            loop {
-                let handle = vm
-                    .socket_handles()
-                    .get(&fd)
-                    .await
-                    .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
-                let Some(stream) = handle.socket_type.as_tcp_stream() else {
-                    return Err(InternalError("expected TcpStream".to_string()));
-                };
-                let stream = stream.clone();
-                drop(handle);
-                match stream.try_read(&mut read_buf) {
-                    Ok(0) => return Ok((-1i32, Vec::new())),
-                    Ok(n) => {
-                        read_buf.truncate(n);
-                        return Ok((i32::try_from(n).unwrap_or(i32::MAX), read_buf));
-                    }
-                    Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                        stream
-                            .readable()
-                            .await
-                            .map_err(|e| InternalError(format!("socketRead0: {e}")))?;
-                    }
-                    Err(ref e) if e.kind() == std::io::ErrorKind::ConnectionReset => {
-                        return Ok((-1, Vec::new()));
-                    }
-                    Err(e) => return Err(InternalError(format!("socketRead0: {e}"))),
-                }
-            }
-        };
-
-        let result = if timeout > 0 {
-            #[expect(clippy::cast_sign_loss)]
-            let dur = std::time::Duration::from_millis(timeout as u64);
-            tokio::time::timeout(dur, read_future).await.map_err(|_| {
-                ristretto_types::Error::from(JavaError::SocketTimeoutException(
-                    "Read timed out".to_string(),
-                ))
-            })?
-        } else {
-            read_future.await
-        }?;
-
-        let (n, data) = result;
-        if n > 0 {
-            let mut arr_guard = buf.as_reference_mut()?;
-            if let Reference::ByteArray(byte_array) = &mut *arr_guard {
-                let off = usize::try_from(off).map_err(|e| InternalError(e.to_string()))?;
-                for (i, &byte_val) in data.iter().enumerate() {
-                    let index = off
-                        .checked_add(i)
-                        .ok_or_else(|| InternalError("SocketInputStream range overflow".into()))?;
-                    *bounds::index_mut(byte_array, index, "SocketInputStream.read")? =
-                        i8::from_ne_bytes(byte_val.to_ne_bytes());
-                }
-            }
-        }
-        Ok(Some(Value::Int(n)))
-    } else {
-        // Raw socket fallback
-        let handle = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
-        let Some(socket) = handle.socket_type.as_raw() else {
-            return Err(InternalError(
-                "expected TcpStream or Raw socket for read".to_string(),
-            ));
-        };
-        // Fallback: spawn_blocking for raw sockets
-        if timeout > 0 {
-            #[expect(clippy::cast_sign_loss)]
-            let dur = std::time::Duration::from_millis(timeout as u64);
-            let _ = socket.set_read_timeout(Some(dur));
-        }
-        let cloned = socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("read: clone: {e}")))?;
-        drop(handle);
-
-        let result = tokio::task::spawn_blocking(move || {
-            let mut read_buf = vec![0u8; len_usize];
-            match std::io::Read::read(&mut &cloned, &mut read_buf) {
-                Ok(0) => Ok((-1i32, Vec::new())),
+    let mut read_buf = vec![0u8; len_usize];
+    let read_future = async {
+        loop {
+            match stream.try_read(&mut read_buf) {
+                Ok(0) => return Ok((-1i32, Vec::new())),
                 Ok(n) => {
                     read_buf.truncate(n);
-                    Ok((i32::try_from(n).unwrap_or(i32::MAX), read_buf))
+                    return Ok((i32::try_from(n).unwrap_or(i32::MAX), read_buf));
                 }
-                Err(ref e)
-                    if e.kind() == std::io::ErrorKind::TimedOut
-                        || e.kind() == std::io::ErrorKind::WouldBlock =>
-                {
-                    Err(JavaError::SocketTimeoutException("Read timed out".to_string()).into())
-                }
-                Err(e) => Err(InternalError(format!("socketRead0: {e}"))),
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => stream
+                    .readable()
+                    .await
+                    .map_err(|error| socket_io_error("read", error))?,
+                Err(error) => return Err(socket_io_error("read", error)),
             }
-        })
-        .await
-        .map_err(|e| InternalError(format!("read: spawn: {e}")))?;
-
-        match result {
-            Ok((n, data)) => {
-                if n > 0 {
-                    let mut arr_guard = buf.as_reference_mut()?;
-                    if let Reference::ByteArray(byte_array) = &mut *arr_guard {
-                        let off = usize::try_from(off).map_err(|e| InternalError(e.to_string()))?;
-                        for (i, &byte_val) in data.iter().enumerate() {
-                            let index = off.checked_add(i).ok_or_else(|| {
-                                InternalError("SocketInputStream range overflow".into())
-                            })?;
-                            *bounds::index_mut(byte_array, index, "SocketInputStream.read")? =
-                                i8::from_ne_bytes(byte_val.to_ne_bytes());
-                        }
-                    }
-                }
-                // Reset read timeout
-                if timeout > 0
-                    && let Some(h) = vm.socket_handles().get(&fd).await
-                    && let Some(s) = h.socket_type.as_raw()
-                {
-                    let _ = s.set_read_timeout(None);
-                }
-                Ok(Some(Value::Int(n)))
-            }
-            Err(e) => Err(e),
+        }
+    };
+    let result = if timeout > 0 {
+        let duration = std::time::Duration::from_millis(u64::try_from(timeout)?);
+        tokio::select! {
+            result = tokio::time::timeout(duration, read_future) => result.map_err(|_| ristretto_types::Error::JavaError(JavaError::SocketTimeoutException("Read timed out".to_string())))?,
+            () = lifecycle.cancelled() => return Err(JavaError::SocketException("Socket closed".to_string()).into()),
+        }
+    } else {
+        tokio::select! {
+            result = read_future => result,
+            () = lifecycle.cancelled() => return Err(JavaError::SocketException("Socket closed".to_string()).into()),
+        }
+    }?;
+    let (n, data) = result;
+    if n > 0 {
+        let mut arr_guard = buf.as_reference_mut()?;
+        let Reference::ByteArray(byte_array) = &mut *arr_guard else {
+            return Err(InternalError("not a byte array".to_string()));
+        };
+        for (index, byte) in data.into_iter().enumerate() {
+            *bounds::index_mut(
+                byte_array,
+                offset
+                    .checked_add(index)
+                    .ok_or_else(|| InternalError("SocketInputStream range overflow".into()))?,
+                "SocketInputStream.read",
+            )? = i8::from_ne_bytes(byte.to_ne_bytes());
         }
     }
+    Ok(Some(Value::Int(n)))
 }
 
 #[cfg(test)]

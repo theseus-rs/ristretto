@@ -1,5 +1,5 @@
 use crate::bounds;
-use crate::java::lang::class::get_class;
+use crate::java::lang::class::{get_class, get_class_no_init};
 use ristretto_classfile::VerifyMode;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11, JavaStr};
@@ -261,8 +261,15 @@ pub async fn define_class_0_1<T: Thread + 'static>(
     };
     let _name = parameters.pop()?.as_string()?;
     let lookup = parameters.pop()?;
-    let _lookup = get_class(&thread, &lookup).await?;
+    let lookup_class = get_class(&thread, &lookup).await?;
     let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
+    // JVMS 5.3.5 and MethodHandles.Lookup#defineHiddenClass require a generated
+    // hidden class to live in the lookup class's runtime package and module. The
+    // class bytes alone do not carry module membership, so inherit it explicitly.
+    // Do not initialize the generated class until classData has been installed;
+    // LambdaForm hidden classes read it from their class initializer.
+    let defined_class = get_class_no_init(&*thread, &class).await?;
+    defined_class.set_module_name(lookup_class.module_name()?)?;
     let class_loader = parameters.pop()?;
     set_defining_class_loader(&class, &class_loader)?;
     // Set classData for hidden classes; this is used by StringConcatFactory and others

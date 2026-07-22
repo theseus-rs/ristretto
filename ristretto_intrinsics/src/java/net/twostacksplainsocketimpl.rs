@@ -1,12 +1,18 @@
+use crate::java::io::socketfiledescriptor::{get_impl_fd, set_impl_fd};
+use crate::java::net::socket_ops;
+use crate::net_helpers::{
+    boxed_int_value, inet_address_from_socket, inet_address_value, java_inet_address,
+    std_socket_address,
+};
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
-use ristretto_macros::intrinsic_method;
-use ristretto_types::JavaError;
-use ristretto_types::Thread;
-use ristretto_types::{Parameters, Result};
+use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_types::{Parameters, Result, Thread, VM};
 use std::sync::Arc;
+
+const SO_BINDADDR: i32 = 0x000f;
+const SO_TIMEOUT: i32 = 0x1006;
 
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.initProto()V", Equal(JAVA_8))]
 #[async_method]
@@ -14,318 +20,247 @@ pub async fn init_proto<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.initProto()V".to_string(),
-    )
-    .into())
+    Ok(None)
 }
+
 #[intrinsic_method(
     "java/net/TwoStacksPlainSocketImpl.socketAccept(Ljava/net/SocketImpl;)V",
     Equal(JAVA_8)
 )]
 #[async_method]
 pub async fn socket_accept<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.socketAccept(Ljava/net/SocketImpl;)V".to_string(),
-    )
-    .into())
+    let accepted = parameters.pop()?;
+    let this = parameters.pop()?;
+    let fd = get_impl_fd(&this)?;
+    let vm = thread.vm()?;
+    let (stream, peer) = socket_ops::accept(vm.as_ref(), fd, None).await?;
+    let accepted_fd = socket_ops::insert_accepted(vm.as_ref(), stream, peer.is_ipv6()).await?;
+    set_impl_fd(&accepted, accepted_fd)?;
+    let address = java_inet_address(&thread, inet_address_from_socket(peer), None).await?;
+    let local_port = i32::from(socket_ops::local_address(vm.as_ref(), fd).await?.port());
+    let mut object = accepted.as_object_mut()?;
+    object.set_value("address", address)?;
+    object.set_value("port", Value::Int(i32::from(peer.port())))?;
+    object.set_value("localport", Value::Int(local_port))?;
+    Ok(None)
 }
+
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.socketAvailable()I", Equal(JAVA_8))]
 #[async_method]
 pub async fn socket_available<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.socketAvailable()I".to_string(),
-    )
-    .into())
+    let fd = get_impl_fd(&parameters.pop()?)?;
+    Ok(Some(Value::Int(
+        socket_ops::available(thread.vm()?.as_ref(), fd).await?,
+    )))
 }
+
 #[intrinsic_method(
     "java/net/TwoStacksPlainSocketImpl.socketBind(Ljava/net/InetAddress;IZ)V",
     Equal(JAVA_8)
 )]
 #[async_method]
 pub async fn socket_bind<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _arg2 = parameters.pop_bool()?;
-    let _arg1 = parameters.pop_int()?;
-    let _arg0 = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.socketBind(Ljava/net/InetAddress;IZ)V".to_string(),
-    )
-    .into())
+    let exclusive = parameters.pop_bool()?;
+    let port = parameters.pop_int()?;
+    let address = parameters.pop()?;
+    let this = parameters.pop()?;
+    let fd = get_impl_fd(&this)?;
+    let vm = thread.vm()?;
+    let ipv6 = vm
+        .socket_handles()
+        .get(&fd)
+        .await
+        .is_some_and(|handle| handle.is_ipv6);
+    let native = std_socket_address(inet_address_value(&address)?, port, ipv6)?;
+    socket_ops::set_exclusive_bind(vm.as_ref(), fd, exclusive).await?;
+    socket_ops::bind(vm.as_ref(), fd, native).await?;
+    let port = i32::from(socket_ops::local_address(vm.as_ref(), fd).await?.port());
+    let mut object = this.as_object_mut()?;
+    object.set_value("address", address)?;
+    object.set_value("localport", Value::Int(port))?;
+    Ok(None)
 }
+
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.socketClose0(Z)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn socket_close0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_bool()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.socketClose0(Z)V".to_string(),
-    )
-    .into())
+    let _deferred = parameters.pop_bool()?;
+    let this = parameters.pop()?;
+    let fd = get_impl_fd(&this)?;
+    if fd >= 0 {
+        socket_ops::close(thread.vm()?.as_ref(), fd).await;
+        set_impl_fd(&this, -1)?;
+    }
+    Ok(None)
 }
+
 #[intrinsic_method(
     "java/net/TwoStacksPlainSocketImpl.socketConnect(Ljava/net/InetAddress;II)V",
     Equal(JAVA_8)
 )]
 #[async_method]
 pub async fn socket_connect<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _arg2 = parameters.pop_int()?;
-    let _arg1 = parameters.pop_int()?;
-    let _arg0 = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.socketConnect(Ljava/net/InetAddress;II)V".to_string(),
-    )
-    .into())
+    let timeout = parameters.pop_int()?;
+    let port = parameters.pop_int()?;
+    let address = parameters.pop()?;
+    let this = parameters.pop()?;
+    let fd = get_impl_fd(&this)?;
+    let vm = thread.vm()?;
+    let ipv6 = vm
+        .socket_handles()
+        .get(&fd)
+        .await
+        .is_some_and(|handle| handle.is_ipv6);
+    let target = std_socket_address(inet_address_value(&address)?, port, ipv6)?;
+    if socket_ops::connect_start(vm.as_ref(), fd, &target).await? == socket_ops::IO_UNAVAILABLE {
+        socket_ops::wait_for_connect(vm.as_ref(), fd, timeout).await?;
+    }
+    let local_port = i32::from(socket_ops::local_address(vm.as_ref(), fd).await?.port());
+    let mut object = this.as_object_mut()?;
+    object.set_value("address", address)?;
+    object.set_value("port", Value::Int(port))?;
+    object.set_value("localport", Value::Int(local_port))?;
+    Ok(None)
 }
+
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.socketCreate(Z)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn socket_create<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_bool()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.socketCreate(Z)V".to_string(),
-    )
-    .into())
+    let stream = parameters.pop_bool()?;
+    let this = parameters.pop()?;
+    let vm = thread.vm()?;
+    let fd = socket_ops::create_preferred(vm.as_ref(), stream).await?;
+    set_impl_fd(&this, fd)?;
+    // The Windows JDK checks whether `fd1` itself is null to distinguish a
+    // single dual-stack descriptor from its historical two-socket setup.
+    if this.as_object_ref()?.value("fd1").is_ok() {
+        this.as_object_mut()?
+            .set_value("fd1", Value::Object(None))?;
+    }
+    Ok(None)
 }
+
 #[intrinsic_method(
     "java/net/TwoStacksPlainSocketImpl.socketGetOption(ILjava/lang/Object;)I",
     Equal(JAVA_8)
 )]
 #[async_method]
 pub async fn socket_get_option<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _arg1 = parameters.pop_reference()?;
-    let _arg0 = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.socketGetOption(ILjava/lang/Object;)I".to_string(),
-    )
-    .into())
+    let container = parameters.pop()?;
+    let option = parameters.pop_int()?;
+    let this = parameters.pop()?;
+    let fd = get_impl_fd(&this)?;
+    let vm = thread.vm()?;
+    if option == SO_TIMEOUT {
+        return Ok(Some(Value::Int(
+            vm.socket_handles()
+                .get(&fd)
+                .await
+                .map_or(0, |handle| handle.timeout_millis()),
+        )));
+    }
+    if option == SO_BINDADDR {
+        let address = socket_ops::local_address(vm.as_ref(), fd).await?;
+        let address = java_inet_address(&thread, inet_address_from_socket(address), None).await?;
+        container.as_object_mut()?.set_value("addr", address)?;
+        return Ok(Some(Value::Int(0)));
+    }
+    Ok(Some(Value::Int(
+        socket_ops::get_int_option(vm.as_ref(), fd, option).await?,
+    )))
 }
+
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.socketListen(I)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn socket_listen<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.socketListen(I)V".to_string(),
-    )
-    .into())
+    let backlog = parameters.pop_int()?;
+    let fd = get_impl_fd(&parameters.pop()?)?;
+    socket_ops::listen(thread.vm()?.as_ref(), fd, backlog).await?;
+    Ok(None)
 }
+
 #[intrinsic_method(
     "java/net/TwoStacksPlainSocketImpl.socketNativeSetOption(IZLjava/lang/Object;)V",
     Equal(JAVA_8)
 )]
 #[async_method]
 pub async fn socket_native_set_option<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _arg2 = parameters.pop_reference()?;
-    let _arg1 = parameters.pop_bool()?;
-    let _arg0 = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.socketNativeSetOption(IZLjava/lang/Object;)V"
-            .to_string(),
-    )
-    .into())
+    let value = parameters.pop()?;
+    let enabled = parameters.pop_bool()?;
+    let option = parameters.pop_int()?;
+    let fd = get_impl_fd(&parameters.pop()?)?;
+    let value = boxed_int_value(&value)?;
+    if option == SO_TIMEOUT {
+        socket_ops::set_timeout(thread.vm()?.as_ref(), fd, value).await?;
+    } else {
+        let value = if option == socket_ops::SO_LINGER && !enabled {
+            -1
+        } else if matches!(
+            option,
+            socket_ops::TCP_NODELAY
+                | socket_ops::SO_REUSEADDR
+                | socket_ops::SO_KEEPALIVE
+                | socket_ops::SO_OOBINLINE
+        ) {
+            i32::from(enabled)
+        } else {
+            value
+        };
+        socket_ops::set_int_option(thread.vm()?.as_ref(), fd, option, value).await?;
+    }
+    Ok(None)
 }
+
 #[intrinsic_method(
     "java/net/TwoStacksPlainSocketImpl.socketSendUrgentData(I)V",
     Equal(JAVA_8)
 )]
 #[async_method]
 pub async fn socket_send_urgent_data<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.socketSendUrgentData(I)V".to_string(),
-    )
-    .into())
+    let data = parameters.pop_int()?;
+    let fd = get_impl_fd(&parameters.pop()?)?;
+    socket_ops::send_oob(thread.vm()?.as_ref(), fd, data).await?;
+    Ok(None)
 }
+
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.socketShutdown(I)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn socket_shutdown<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _arg0 = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "java/net/TwoStacksPlainSocketImpl.socketShutdown(I)V".to_string(),
-    )
-    .into())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_init_proto() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_proto(thread, Parameters::default()).await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.initProto()V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_socket_accept() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket_accept(thread, Parameters::new(vec![Value::Object(None)])).await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.socketAccept(Ljava/net/SocketImpl;)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_socket_available() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket_available(thread, Parameters::default()).await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.socketAvailable()I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_socket_bind() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket_bind(
-            thread,
-            Parameters::new(vec![Value::Object(None), Value::Int(0), Value::from(false)]),
-        )
-        .await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.socketBind(Ljava/net/InetAddress;IZ)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_socket_close0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket_close0(thread, Parameters::new(vec![Value::from(false)])).await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.socketClose0(Z)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_socket_connect() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket_connect(
-            thread,
-            Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.socketConnect(Ljava/net/InetAddress;II)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_socket_create() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket_create(thread, Parameters::new(vec![Value::from(false)])).await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.socketCreate(Z)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_socket_get_option() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket_get_option(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.socketGetOption(ILjava/lang/Object;)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_socket_listen() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket_listen(thread, Parameters::new(vec![Value::Int(0)])).await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.socketListen(I)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_socket_native_set_option() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket_native_set_option(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::from(false), Value::Object(None)]),
-        )
-        .await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.socketNativeSetOption(IZLjava/lang/Object;)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_socket_send_urgent_data() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket_send_urgent_data(thread, Parameters::new(vec![Value::Int(0)])).await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.socketSendUrgentData(I)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "windows")]
-    #[tokio::test]
-    async fn test_socket_shutdown() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket_shutdown(thread, Parameters::new(vec![Value::Int(0)])).await;
-        assert_eq!(
-            "java/net/TwoStacksPlainSocketImpl.socketShutdown(I)V",
-            result.unwrap_err().to_string()
-        );
-    }
+    let how = parameters.pop_int()?;
+    let fd = get_impl_fd(&parameters.pop()?)?;
+    socket_ops::shutdown(thread.vm()?.as_ref(), fd, how).await?;
+    Ok(None)
 }

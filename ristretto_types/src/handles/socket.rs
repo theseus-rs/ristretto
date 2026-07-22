@@ -15,7 +15,7 @@
 //! - **`TcpListener(Arc<tokio::net::TcpListener>)`**: TCP server sockets. Arc-wrapped
 //!   to allow cloning the handle for concurrent accept without removing from the map.
 //!
-//! - **`UdpSocket(tokio::net::UdpSocket)`**: UDP sockets. Provides async
+//! - **`UdpSocket(Arc<tokio::net::UdpSocket>)`**: UDP sockets. Provides async
 //!   `send_to()`/`recv_from()` for datagram I/O.
 //!
 //! This design eliminates the need for `spawn_blocking` + `try_clone()` on I/O
@@ -24,7 +24,14 @@
 #[cfg(not(target_family = "wasm"))]
 use socket2::Socket;
 #[cfg(not(target_family = "wasm"))]
+#[cfg(windows)]
+use std::net::SocketAddr;
+#[cfg(not(target_family = "wasm"))]
 use std::sync::Arc;
+#[cfg(windows)]
+use std::sync::RwLock;
+#[cfg(not(target_family = "wasm"))]
+use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(not(target_family = "wasm"))]
 use std::time::Duration;
 
@@ -46,7 +53,7 @@ pub enum SocketType {
     /// TCP server listener for async accept.
     TcpListener(Arc<tokio::net::TcpListener>),
     /// UDP socket for async send/receive.
-    UdpSocket(tokio::net::UdpSocket),
+    UdpSocket(Arc<tokio::net::UdpSocket>),
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -80,7 +87,7 @@ impl SocketType {
 
     /// Returns a reference to the UDP socket, if this is a `UdpSocket` variant.
     #[must_use]
-    pub fn as_udp_socket(&self) -> Option<&tokio::net::UdpSocket> {
+    pub fn as_udp_socket(&self) -> Option<&Arc<tokio::net::UdpSocket>> {
         match self {
             SocketType::UdpSocket(u) => Some(u),
             _ => None,
@@ -116,6 +123,99 @@ impl SocketType {
     }
 }
 
+/// Shared lifecycle state for a managed socket.
+///
+/// Blocking Java socket operations keep a clone of this value while they are
+/// waiting. Closing the Java socket marks the lifecycle closed and wakes those
+/// operations even when the underlying Tokio socket is still temporarily held
+/// by an in-flight future.
+#[cfg(not(target_family = "wasm"))]
+#[derive(Debug)]
+pub struct SocketLifecycle {
+    closed: AtomicBool,
+    changed: tokio::sync::watch::Sender<bool>,
+    /// Address explicitly supplied to `bind`. Winsock can report an any-local
+    /// address for an IPv4 bind on an IPv6 dual-stack socket, so legacy Java
+    /// socket queries retain the requested address as a fallback.
+    #[cfg(windows)]
+    bound_address: RwLock<Option<SocketAddr>>,
+    /// Address explicitly supplied to `connect`. Retaining the requested peer
+    /// avoids depending on a platform ABI round-trip for Java-visible metadata.
+    #[cfg(windows)]
+    peer_address: RwLock<Option<SocketAddr>>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl SocketLifecycle {
+    fn new() -> Self {
+        let (changed, _receiver) = tokio::sync::watch::channel(false);
+        Self {
+            closed: AtomicBool::new(false),
+            changed,
+            #[cfg(windows)]
+            bound_address: RwLock::new(None),
+            #[cfg(windows)]
+            peer_address: RwLock::new(None),
+        }
+    }
+
+    /// Record the address explicitly supplied to `bind`.
+    #[cfg(windows)]
+    pub fn set_bound_address(&self, address: SocketAddr) {
+        if let Ok(mut bound_address) = self.bound_address.write() {
+            *bound_address = Some(address);
+        }
+    }
+
+    /// Return the address explicitly supplied to `bind`, if one was recorded.
+    #[cfg(windows)]
+    #[must_use]
+    pub fn bound_address(&self) -> Option<SocketAddr> {
+        self.bound_address.read().ok().and_then(|address| *address)
+    }
+
+    /// Record the address explicitly supplied to `connect`.
+    #[cfg(windows)]
+    pub fn set_peer_address(&self, address: Option<SocketAddr>) {
+        if let Ok(mut peer_address) = self.peer_address.write() {
+            *peer_address = address;
+        }
+    }
+
+    /// Return the address explicitly supplied to `connect`, if one was recorded.
+    #[cfg(windows)]
+    #[must_use]
+    pub fn peer_address(&self) -> Option<SocketAddr> {
+        self.peer_address.read().ok().and_then(|address| *address)
+    }
+
+    /// Returns whether this socket has been closed.
+    #[must_use]
+    pub fn is_closed(&self) -> bool {
+        self.closed.load(Ordering::Acquire)
+    }
+
+    /// Mark this socket closed and wake all pending operations.
+    pub fn close(&self) {
+        if !self.closed.swap(true, Ordering::AcqRel) {
+            self.changed.send_replace(true);
+        }
+    }
+
+    /// Wait until this socket is closed.
+    pub async fn cancelled(&self) {
+        if self.is_closed() {
+            return;
+        }
+        let mut receiver = self.changed.subscribe();
+        while !*receiver.borrow_and_update() {
+            if receiver.changed().await.is_err() {
+                break;
+            }
+        }
+    }
+}
+
 /// A managed socket handle that bundles the socket type with per-socket metadata.
 ///
 /// This consolidates what was previously spread across separate `SocketTimeouts`,
@@ -134,6 +234,8 @@ pub struct SocketHandle {
     pub is_unix: bool,
     /// Whether this socket is in non-blocking mode.
     pub non_blocking: bool,
+    /// Lifecycle signal shared with in-flight operations.
+    pub lifecycle: Arc<SocketLifecycle>,
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -147,7 +249,27 @@ impl SocketHandle {
             is_ipv6: false,
             is_unix: false,
             non_blocking: false,
+            lifecycle: Arc::new(SocketLifecycle::new()),
         }
+    }
+
+    /// Replace the underlying socket while preserving all metadata and the
+    /// lifecycle signal used by in-flight operations.
+    #[must_use]
+    pub fn with_socket_type(self, socket_type: SocketType) -> Self {
+        Self {
+            socket_type,
+            timeout: self.timeout,
+            is_ipv6: self.is_ipv6,
+            is_unix: self.is_unix,
+            non_blocking: self.non_blocking,
+            lifecycle: self.lifecycle,
+        }
+    }
+
+    /// Mark the handle closed and wake pending operations.
+    pub fn close(&self) {
+        self.lifecycle.close();
     }
 
     /// Get the timeout in milliseconds. Returns 0 if no timeout is set.
@@ -203,7 +325,8 @@ mod tests {
         #[cfg(unix)]
         assert!(listener.raw_fd() >= 0);
 
-        let udp = SocketType::UdpSocket(tokio::net::UdpSocket::bind("127.0.0.1:0").await?);
+        let udp =
+            SocketType::UdpSocket(Arc::new(tokio::net::UdpSocket::bind("127.0.0.1:0").await?));
         assert!(udp.as_raw().is_none());
         assert!(udp.as_tcp_stream().is_none());
         assert!(udp.as_tcp_listener().is_none());
@@ -220,9 +343,12 @@ mod tests {
         assert!(!handle.is_ipv6);
         assert!(!handle.is_unix);
         assert!(!handle.non_blocking);
+        assert!(!handle.lifecycle.is_closed());
         assert_eq!(handle.timeout_millis(), 0);
 
         handle.timeout = Some(Duration::from_millis(1500));
         assert_eq!(handle.timeout_millis(), 1500);
+        handle.close();
+        assert!(handle.lifecycle.is_closed());
     }
 }

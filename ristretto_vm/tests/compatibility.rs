@@ -20,6 +20,8 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
+#[cfg(not(target_family = "wasm"))]
+use std::{collections::HashMap, fs};
 use tokio::sync::Mutex as AsyncMutex;
 use tracing::metadata::LevelFilter;
 use tracing::{debug, error, info, trace, warn};
@@ -34,6 +36,7 @@ static TEST_FILTER: LazyLock<Regex> = LazyLock::new(|| {
 const TEST_CLASS_NAME: &str = "Test";
 const TEST_FILE: &str = "Test.java";
 const IGNORE_FILE: &str = "ignore.txt";
+const RUNTIME_PROPERTIES_FILE: &str = "runtime.properties";
 const TEST_TIMEOUT_PREFIX: &str = "Test timed out after ";
 
 /// A single failure observed while running the compatibility test suite.
@@ -45,17 +48,44 @@ struct Failure {
 }
 
 #[cfg(not(target_family = "wasm"))]
+#[derive(Debug, Clone)]
+struct TestCase {
+    relative_dir: PathBuf,
+    source_dir: PathBuf,
+    class_dir: PathBuf,
+    java_version: String,
+    java_home: PathBuf,
+    system_properties: Vec<(String, String)>,
+}
+
+#[cfg(not(target_family = "wasm"))]
+impl TestCase {
+    fn name(&self) -> String {
+        let base = self.relative_dir.to_string_lossy().replace('\\', "/");
+        if self.source_dir == self.class_dir {
+            base
+        } else {
+            format!("{base}@java{}", self.java_version)
+        }
+    }
+}
+
+#[cfg(not(target_family = "wasm"))]
 #[test]
 fn compatibility_tests() -> Result<()> {
     let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let tests_root_dir = cargo_manifest.join("..").join("tests").canonicalize()?;
+    let workspace_dir = cargo_manifest
+        .parent()
+        .ok_or_else(|| InternalError("crate directory has no parent".to_string()))?;
+    // CARGO_MANIFEST_DIR is already absolute. Avoid canonicalizing this path on Windows because
+    // that produces a verbatim `\\?\` prefix, which older JDK tools reject in command arguments.
+    let tests_root_dir = workspace_dir.join("tests");
 
     initialize_tracing();
 
-    let java_version = DEFAULT_JAVA_VERSION.to_string();
-    let java_home = java_home(&java_version)?;
     let test_dirs = collect_test_dirs(&tests_root_dir)?;
-    compile_tests(&java_home, &tests_root_dir, &test_dirs)?;
+    let test_cases = build_test_cases(&tests_root_dir, &test_dirs)?;
+    compile_tests(&test_cases)?;
 
     let passed = AtomicUsize::new(0);
     let failures: Arc<Mutex<Vec<Failure>>> = Arc::new(Mutex::new(Vec::new()));
@@ -83,35 +113,21 @@ fn compatibility_tests() -> Result<()> {
         .map_err(|error| InternalError(error.to_string()))?;
 
     pool.install(|| {
-        test_dirs
+        test_cases
             .par_iter()
-            .filter(|test_dir| !test_dir.starts_with("socket"))
-            .for_each(|test_dir| {
-                run_compatibility_test(
-                    &java_version,
-                    &java_home,
-                    &tests_root_dir,
-                    test_dir,
-                    &passed,
-                    &failures,
-                );
+            .filter(|test_case| !test_case.relative_dir.starts_with("socket"))
+            .for_each(|test_case| {
+                run_compatibility_test(test_case, &passed, &failures);
             });
     });
 
     // Socket tests can bind shared ports and depend on tight client/server timing. Run them after
     // the parallel suite so unrelated VMs cannot starve or interfere with their network threads.
-    test_dirs
+    test_cases
         .iter()
-        .filter(|test_dir| test_dir.starts_with("socket"))
-        .for_each(|test_dir| {
-            run_compatibility_test(
-                &java_version,
-                &java_home,
-                &tests_root_dir,
-                test_dir,
-                &passed,
-                &failures,
-            );
+        .filter(|test_case| test_case.relative_dir.starts_with("socket"))
+        .for_each(|test_case| {
+            run_compatibility_test(test_case, &passed, &failures);
         });
 
     let passed_count = passed.load(Ordering::Relaxed);
@@ -146,23 +162,18 @@ fn compatibility_tests() -> Result<()> {
 /// Runs a single compatibility test (both interpreted and JIT) and records the outcome.
 #[cfg(not(target_family = "wasm"))]
 fn run_compatibility_test(
-    java_version: &str,
-    java_home: &Path,
-    tests_root_dir: &Path,
-    test_dir: &Path,
+    test_case: &TestCase,
     passed: &AtomicUsize,
     failures: &Mutex<Vec<Failure>>,
 ) {
-    // Normalize path separators so test names use '/' on all platforms.
-    let test_name = test_dir.to_string_lossy().replace('\\', "/");
-    let test_dir = tests_root_dir.join(test_dir);
+    let test_name = test_case.name();
 
     if !TEST_FILTER.is_match(&test_name) {
         return;
     }
 
     // Determine if the test should be ignored
-    let ignore_file = test_dir.join(IGNORE_FILE);
+    let ignore_file = test_case.source_dir.join(IGNORE_FILE);
     if ignore_file.exists() {
         debug!("Ignoring test {test_name}");
         return;
@@ -179,20 +190,24 @@ fn run_compatibility_test(
         }
     };
 
-    match expected_output(java_home, tests_root_dir, &test_dir) {
+    match expected_output(test_case) {
         Ok((expected_duration, expected_output)) => {
             record(test_vm(
-                java_version,
+                &test_case.java_version,
                 &test_name,
-                &test_dir,
+                &test_case.class_dir,
+                &test_case.source_dir,
+                &test_case.system_properties,
                 true,
                 &expected_duration,
                 &expected_output,
             ));
             record(test_vm(
-                java_version,
+                &test_case.java_version,
                 &test_name,
-                &test_dir,
+                &test_case.class_dir,
+                &test_case.source_dir,
+                &test_case.system_properties,
                 false,
                 &expected_duration,
                 &expected_output,
@@ -266,26 +281,124 @@ fn java_home(java_version: &str) -> Result<PathBuf> {
     Ok(java_home)
 }
 
+#[cfg(not(target_family = "wasm"))]
+fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<TestCase>> {
+    let workspace_dir = tests_root_dir
+        .parent()
+        .ok_or_else(|| InternalError("tests directory has no parent".to_string()))?;
+    let output_root = workspace_dir
+        .join("target")
+        .join("compatibility")
+        .join(format!(
+            "{}-{}",
+            std::env::consts::OS,
+            std::env::consts::ARCH
+        ));
+    let mut java_homes: HashMap<String, PathBuf> = HashMap::new();
+    let mut cases = Vec::new();
+    for relative_dir in test_dirs {
+        let source_dir = tests_root_dir.join(relative_dir);
+        let properties_file = source_dir.join(RUNTIME_PROPERTIES_FILE);
+        if !properties_file.exists() {
+            let version = DEFAULT_JAVA_VERSION.to_string();
+            let home = if let Some(home) = java_homes.get(&version) {
+                home.clone()
+            } else {
+                let home = java_home(&version)?;
+                java_homes.insert(version.clone(), home.clone());
+                home
+            };
+            cases.push(TestCase {
+                relative_dir: relative_dir.clone(),
+                source_dir: source_dir.clone(),
+                class_dir: source_dir,
+                java_version: version,
+                java_home: home,
+                system_properties: Vec::new(),
+            });
+            continue;
+        }
+        let properties = parse_runtime_properties(&properties_file)?;
+        let versions = properties
+            .get("java.versions")
+            .ok_or_else(|| {
+                InternalError(format!(
+                    "{} must define java.versions",
+                    properties_file.display()
+                ))
+            })?
+            .split(',')
+            .map(str::trim)
+            .filter(|version| !version.is_empty());
+        let system_properties = properties
+            .iter()
+            .filter_map(|(key, value)| {
+                key.strip_prefix("system.")
+                    .map(|key| (key.to_string(), value.clone()))
+            })
+            .collect::<Vec<_>>();
+        for version in versions {
+            let home = if let Some(home) = java_homes.get(version) {
+                home.clone()
+            } else {
+                let home = java_home(version)?;
+                java_homes.insert(version.to_string(), home.clone());
+                home
+            };
+            cases.push(TestCase {
+                relative_dir: relative_dir.clone(),
+                source_dir: source_dir.clone(),
+                class_dir: output_root.join(version).join(relative_dir),
+                java_version: version.to_string(),
+                java_home: home,
+                system_properties: system_properties.clone(),
+            });
+        }
+    }
+    Ok(cases)
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn parse_runtime_properties(path: &Path) -> Result<HashMap<String, String>> {
+    let contents = fs::read_to_string(path)?;
+    let mut properties = HashMap::new();
+    for (line_number, line) in contents.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=') else {
+            return Err(InternalError(format!(
+                "invalid property at {}:{}",
+                path.display(),
+                line_number + 1
+            )));
+        };
+        properties.insert(key.trim().to_string(), value.trim().to_string());
+    }
+    Ok(properties)
+}
+
 /// Compiles the tests in the test directories.
 #[cfg(not(target_family = "wasm"))]
-fn compile_tests(java_home: &Path, tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<()> {
-    test_dirs
-        .par_iter()
-        .try_for_each(|test_dir| compile_test(java_home, tests_root_dir, test_dir))?;
+fn compile_tests(test_cases: &[TestCase]) -> Result<()> {
+    test_cases.par_iter().try_for_each(compile_test)?;
     Ok(())
 }
 
 /// Compiles a test directory by running `javac` on the `Test.java` file.
 #[cfg(not(target_family = "wasm"))]
-fn compile_test(java_home: &Path, tests_root_dir: &Path, test_dir: &PathBuf) -> Result<()> {
-    let test_name = test_dir.to_string_lossy().to_string();
-    let test_dir = tests_root_dir.join(test_dir);
+fn compile_test(test_case: &TestCase) -> Result<()> {
+    let test_name = test_case.name();
+    let source_dir = &test_case.source_dir;
+    let class_dir = &test_case.class_dir;
+    fs::create_dir_all(class_dir)?;
 
     // Check the data of the .class file to see if it is newer than the .java file and skip
     // compilation if it is.
-    let class_file = test_dir.join(format!("{TEST_CLASS_NAME}.class"));
-    if class_file.exists() {
-        let java_file = test_dir.join(TEST_FILE);
+    let class_file = class_dir.join(format!("{TEST_CLASS_NAME}.class"));
+    if test_case.source_dir == test_case.class_dir && class_file.exists() {
+        let java_file = source_dir.join(TEST_FILE);
         let java_file_modified = java_file.metadata()?.modified()?;
         let class_file_modified = class_file.metadata()?.modified()?;
         if class_file_modified >= java_file_modified {
@@ -294,16 +407,25 @@ fn compile_test(java_home: &Path, tests_root_dir: &Path, test_dir: &PathBuf) -> 
         }
     }
 
-    let arguments = vec![
-        "-parameters",
+    let java_file = source_dir.join(TEST_FILE);
+    let mut arguments = vec!["-parameters"];
+    if test_case.source_dir != test_case.class_dir {
+        // Cross-runtime fixtures exercise the selected JDK's class library but
+        // intentionally use Java 8 bytecode. This keeps the test focused on the
+        // native surface instead of newer invokedynamic bootstrap machinery.
+        arguments.extend(["-source", "8", "-target", "8"]);
+    }
+    arguments.extend([
+        "-d",
+        class_dir.to_str().unwrap_or_default(),
         "-cp",
-        test_dir.to_str().unwrap_or_default(),
-        TEST_FILE,
-    ];
-    let javac = java_home.join("bin").join("javac");
+        source_dir.to_str().unwrap_or_default(),
+        java_file.to_str().unwrap_or_default(),
+    ]);
+    let javac = test_case.java_home.join("bin").join("javac");
     let output = std::process::Command::new(javac)
         .args(&arguments)
-        .current_dir(test_dir)
+        .current_dir(source_dir)
         .output()
         .map_err(|error| InternalError(error.to_string()))?;
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -319,26 +441,29 @@ fn compile_test(java_home: &Path, tests_root_dir: &Path, test_dir: &PathBuf) -> 
 
 /// Compiles a test directory by running `javac` on the `Test.java` file.
 #[cfg(not(target_family = "wasm"))]
-fn expected_output(
-    java_home: &Path,
-    tests_root_dir: &Path,
-    test_dir: &PathBuf,
-) -> Result<(Duration, String)> {
-    let test_name = test_dir.to_string_lossy().to_string();
-    let test_dir = tests_root_dir.join(test_dir);
+fn expected_output(test_case: &TestCase) -> Result<(Duration, String)> {
+    let test_name = test_case.name();
 
     let start_time = Instant::now();
-    let arguments = vec![
-        "-Dstdout.encoding=UTF-8",
-        "-Dstderr.encoding=UTF-8",
-        "-cp",
-        test_dir.to_str().unwrap_or_default(),
-        TEST_CLASS_NAME,
+    let mut arguments = vec![
+        "-Dstdout.encoding=UTF-8".to_string(),
+        "-Dstderr.encoding=UTF-8".to_string(),
     ];
-    let javac = java_home.join("bin").join("java");
-    let output = std::process::Command::new(javac)
+    arguments.extend(
+        test_case
+            .system_properties
+            .iter()
+            .map(|(key, value)| format!("-D{key}={value}")),
+    );
+    arguments.extend([
+        "-cp".to_string(),
+        test_case.class_dir.to_string_lossy().into_owned(),
+        TEST_CLASS_NAME.to_string(),
+    ]);
+    let java = test_case.java_home.join("bin").join("java");
+    let output = std::process::Command::new(java)
         .args(&arguments)
-        .current_dir(test_dir)
+        .current_dir(&test_case.source_dir)
         .output()
         .map_err(|error| InternalError(error.to_string()))?;
     if !output.status.success() {
@@ -356,7 +481,9 @@ fn expected_output(
 fn test_vm(
     java_version: &str,
     test_name: &str,
-    test_dir: &Path,
+    class_dir: &Path,
+    source_dir: &Path,
+    system_properties: &[(String, String)],
     interpreted: bool,
     expected_duration: &Duration,
     expected_output: &str,
@@ -377,7 +504,9 @@ fn test_vm(
         // Spawn a thread with a larger stack to handle deeply nested async calls that occur during
         // method handle invocations and invokedynamic resolution.
         let java_version = java_version.to_string();
-        let test_dir = test_dir.to_path_buf();
+        let class_dir = class_dir.to_path_buf();
+        let source_dir = source_dir.to_path_buf();
+        let system_properties = system_properties.to_vec();
         let timeout_message = timeout_message.clone();
         std::thread::Builder::new()
             .stack_size(stack_size)
@@ -400,7 +529,9 @@ fn test_vm(
                             test_timeout,
                             run_test(
                                 &java_version,
-                                &test_dir,
+                                &class_dir,
+                                &source_dir,
+                                &system_properties,
                                 interpreted,
                                 stdout.clone(),
                                 stderr.clone(),
@@ -496,19 +627,21 @@ fn socket_timeout_retry_policy() {
 #[cfg(not(target_family = "wasm"))]
 async fn run_test(
     java_version: &str,
-    test_dir: &Path,
+    class_dir: &Path,
+    source_dir: &Path,
+    system_properties: &[(String, String)],
     interpreted: bool,
     stdout: Arc<AsyncMutex<Vec<u8>>>,
     stderr: Arc<AsyncMutex<Vec<u8>>>,
 ) -> Result<(Duration, String)> {
     let start_time = Instant::now();
-    let class_path = ClassPath::from(&[test_dir]);
+    let class_path = ClassPath::from(&[class_dir]);
 
     // Create a garbage collector configured to use only one thread
     let gc_config = GcConfigurationBuilder::new().threads(1).build();
     let garbage_collector = GarbageCollector::with_config(gc_config);
     let user_dir = {
-        let s = test_dir.to_string_lossy().to_string();
+        let s = source_dir.to_string_lossy().to_string();
         s.strip_prefix(r"\\?\").map_or(s.clone(), str::to_string)
     };
     let mut configuration_builder = ConfigurationBuilder::new()
@@ -519,6 +652,9 @@ async fn run_test(
         .stderr(stderr.clone())
         .garbage_collector(garbage_collector)
         .add_system_property("user.dir", user_dir);
+    for (key, value) in system_properties {
+        configuration_builder = configuration_builder.add_system_property(key, value);
+    }
 
     configuration_builder = configuration_builder.interpreted(interpreted);
     if !interpreted {

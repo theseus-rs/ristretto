@@ -1,4 +1,5 @@
 use crate::bounds;
+use crate::net_helpers::socket_io_error;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
@@ -6,7 +7,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
-use ristretto_types::{Parameters, Result, VM};
+use ristretto_types::{JavaError, Parameters, Result, VM};
 use std::sync::Arc;
 
 #[intrinsic_method("java/net/SocketOutputStream.init()V", LessThanOrEqual(JAVA_17))]
@@ -59,61 +60,39 @@ pub async fn socket_write_0<T: Thread + 'static>(
 
     let vm = thread.vm()?;
 
-    // Check variant first
-    let is_tcp_stream = {
+    let (stream, lifecycle) = {
         let handle = vm
             .socket_handles()
             .get(&fd)
             .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
-        handle.socket_type.as_tcp_stream().is_some()
+            .ok_or_else(|| JavaError::SocketException("Socket closed".to_string()))?;
+        (
+            handle
+                .socket_type
+                .as_tcp_stream()
+                .ok_or_else(|| JavaError::SocketException("Socket is not connected".to_string()))?
+                .clone(),
+            handle.lifecycle.clone(),
+        )
     };
-
-    if is_tcp_stream {
-        // Async write to TcpStream, using writable() for backpressure
-        let mut written = 0;
-        while written < data.len() {
-            let handle = vm
-                .socket_handles()
-                .get(&fd)
-                .await
-                .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
-            let Some(stream) = handle.socket_type.as_tcp_stream() else {
-                return Err(InternalError("expected TcpStream".to_string()));
-            };
-            let stream = stream.clone();
-            drop(handle);
-            let source = bounds::range_from(&data, written.., "SocketOutputStream.write")?;
-            match stream.try_write(source) {
-                Ok(n) => written += n,
-                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                    stream
-                        .writable()
-                        .await
-                        .map_err(|e| InternalError(format!("socketWrite0: {e}")))?;
-                }
-                Err(e) => return Err(InternalError(format!("socketWrite0: {e}"))),
+    let mut written = 0;
+    while written < data.len() {
+        let source = bounds::range_from(&data, written.., "SocketOutputStream.write")?;
+        match stream.try_write(source) {
+            Ok(0) => {
+                return Err(
+                    JavaError::SocketException("Socket write returned zero".to_string()).into(),
+                );
             }
+            Ok(count) => written += count,
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                tokio::select! {
+                    result = stream.writable() => result.map_err(|error| socket_io_error("write", error))?,
+                    () = lifecycle.cancelled() => return Err(JavaError::SocketException("Socket closed".to_string()).into()),
+                }
+            }
+            Err(error) => return Err(socket_io_error("write", error)),
         }
-    } else {
-        let handle = vm
-            .socket_handles()
-            .get(&fd)
-            .await
-            .ok_or_else(|| InternalError(format!("Socket not found for fd {fd}")))?;
-        let Some(socket) = handle.socket_type.as_raw() else {
-            return Err(InternalError(
-                "expected TcpStream or Raw socket for write".to_string(),
-            ));
-        };
-        let cloned = socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("write: clone: {e}")))?;
-        drop(handle);
-        tokio::task::spawn_blocking(move || std::io::Write::write_all(&mut &cloned, &data))
-            .await
-            .map_err(|e| InternalError(format!("write: spawn: {e}")))?
-            .map_err(|e| InternalError(format!("socketWrite0: {e}")))?;
     }
 
     Ok(None)
