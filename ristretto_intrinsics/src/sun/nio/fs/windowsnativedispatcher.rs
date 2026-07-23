@@ -1,3 +1,12 @@
+#![expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::cast_sign_loss,
+    clippy::items_after_statements,
+    reason = "Win32 HANDLE/LUID values are transported through Java long bit patterns; API imports stay beside their platform calls"
+)]
+
+use crate::sun::nio::ch::iocp::{self, CompletionPacket};
 use crate::sun::nio::fs::common::{throw_windows_exception, windows_error_code};
 use crate::sun::nio::fs::managed_files;
 use bitflags::bitflags;
@@ -13,75 +22,274 @@ use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::collections::HashMap;
-use std::collections::VecDeque;
-use std::sync::{Arc, Mutex, OnceLock};
+use std::mem::{size_of, size_of_val};
+use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::{Arc, Mutex};
 
-/// Directory enumeration state retained across `FindFirstFile`/`FindNextFile` invocations.
-struct FindFileState {
-    parent: std::path::PathBuf,
-    remaining: VecDeque<String>,
+fn last_windows_error() -> i32 {
+    std::io::Error::last_os_error().raw_os_error().unwrap_or(1)
 }
 
-fn find_file_handles() -> &'static Mutex<HashMap<i64, FindFileState>> {
-    static HANDLES: OnceLock<Mutex<HashMap<i64, FindFileState>>> = OnceLock::new();
-    HANDLES.get_or_init(|| Mutex::new(HashMap::new()))
+struct CopyCancelContext {
+    memory: *const ristretto_types::NativeMemory,
+    address: i64,
 }
 
-fn next_find_file_handle() -> i64 {
-    use std::sync::atomic::{AtomicI64, Ordering};
-    static COUNTER: AtomicI64 = AtomicI64::new(1);
-    COUNTER.fetch_add(1, Ordering::Relaxed)
-}
-
-/// I/O completion port state used to back JDK's `WindowsWatchService` IOCP loop.
-///
-/// JDK calls `CreateIoCompletionPort`, posts wakeups via `PostQueuedCompletionStatus`, and the
-/// poller thread blocks in `GetQueuedCompletionStatus0`. We implement a minimal in-process queue
-/// that supports the wakeup/close handshake; no real directory-change events are produced.
-struct IocpPort {
-    tx: tokio::sync::mpsc::UnboundedSender<IocpCompletion>,
-    rx: tokio::sync::Mutex<tokio::sync::mpsc::UnboundedReceiver<IocpCompletion>>,
-}
-
-#[derive(Clone, Copy)]
-struct IocpCompletion {
-    error: i32,
-    bytes_transferred: i32,
-    completion_key: i32,
-    overlapped: i64,
-}
-
-fn iocp_ports() -> &'static Mutex<HashMap<i64, Arc<IocpPort>>> {
-    static PORTS: OnceLock<Mutex<HashMap<i64, Arc<IocpPort>>>> = OnceLock::new();
-    PORTS.get_or_init(|| Mutex::new(HashMap::new()))
-}
-
-fn next_iocp_port_handle() -> i64 {
-    use std::sync::atomic::{AtomicI64, Ordering};
-    static COUNTER: AtomicI64 = AtomicI64::new(0x1000_0000);
-    COUNTER.fetch_add(1, Ordering::Relaxed)
-}
-
-fn next_iocp_event_handle() -> i64 {
-    use std::sync::atomic::{AtomicI64, Ordering};
-    static COUNTER: AtomicI64 = AtomicI64::new(0x2000_0000);
-    COUNTER.fetch_add(1, Ordering::Relaxed)
-}
-
-/// Splits a path of the form `dir\*` (or similar wildcard) into the directory portion.
-fn split_search_pattern(path: &str) -> (String, String) {
-    // Strip trailing wildcards (`*`, `*.*`) and the separator that precedes them.
-    let trimmed = path.trim_end_matches(['*', '?']);
-    let trimmed = trimmed.trim_end_matches(['\\', '/']);
-    let dir = if trimmed.is_empty() {
-        path.to_string()
+#[expect(unsafe_code)]
+unsafe extern "system" fn copy_progress(
+    _total_file_size: i64,
+    _total_bytes_transferred: i64,
+    _stream_size: i64,
+    _stream_bytes_transferred: i64,
+    _stream_number: u32,
+    _callback_reason: u32,
+    _source_file: windows_sys::Win32::Foundation::HANDLE,
+    _destination_file: windows_sys::Win32::Foundation::HANDLE,
+    data: *const std::ffi::c_void,
+) -> u32 {
+    if data.is_null() {
+        return windows_sys::Win32::Storage::FileSystem::PROGRESS_CONTINUE;
+    }
+    let context = unsafe { &*data.cast::<CopyCancelContext>() };
+    let memory = unsafe { &*context.memory };
+    if memory
+        .read_i32(context.address)
+        .is_some_and(|value| value != 0)
+    {
+        windows_sys::Win32::Storage::FileSystem::PROGRESS_CANCEL
     } else {
-        trimmed.to_string()
-    };
-    let pattern = path[dir.len()..]
-        .trim_start_matches(['\\', '/'])
-        .to_string();
-    (dir, pattern)
+        windows_sys::Win32::Storage::FileSystem::PROGRESS_CONTINUE
+    }
+}
+
+#[derive(Clone, Default)]
+struct GuestSecurityDescriptor {
+    owner: Option<Vec<u8>>,
+    owner_address: i64,
+    dacl: Option<Vec<u8>>,
+    dacl_address: i64,
+}
+
+#[derive(Default)]
+struct GuestSecurityDescriptors(Mutex<HashMap<i64, GuestSecurityDescriptor>>);
+
+fn security_descriptors<V: VM + ?Sized>(vm: &V) -> Result<Arc<GuestSecurityDescriptors>> {
+    vm.resource_manager()
+        .get_or_init(GuestSecurityDescriptors::default)
+}
+
+enum HostSecurityDescriptor {
+    Absolute {
+        descriptor: windows_sys::Win32::Security::SECURITY_DESCRIPTOR,
+        _owner: Option<Vec<u8>>,
+        _dacl: Option<Vec<u8>>,
+    },
+    Relative(Vec<u8>),
+}
+
+impl HostSecurityDescriptor {
+    fn pointer(&mut self) -> windows_sys::Win32::Security::PSECURITY_DESCRIPTOR {
+        match self {
+            Self::Absolute { descriptor, .. } => std::ptr::from_mut(descriptor).cast(),
+            Self::Relative(descriptor) => descriptor.as_mut_ptr().cast(),
+        }
+    }
+}
+
+fn host_security_descriptor<V: VM + ?Sized>(
+    vm: &V,
+    address: i64,
+) -> Result<Option<HostSecurityDescriptor>> {
+    if address == 0 {
+        return Ok(None);
+    }
+    let state = security_descriptors(vm)?
+        .0
+        .lock()
+        .map_err(|_| InternalError("poisoned security descriptor map".to_string()))?
+        .get(&address)
+        .cloned();
+    if let Some(mut state) = state {
+        let mut descriptor = windows_sys::Win32::Security::SECURITY_DESCRIPTOR {
+            Revision: 1,
+            ..Default::default()
+        };
+        if let Some(owner) = state.owner.as_mut() {
+            descriptor.Owner = owner.as_mut_ptr().cast();
+        }
+        if let Some(dacl) = state.dacl.as_mut() {
+            descriptor.Control |= windows_sys::Win32::Security::SE_DACL_PRESENT;
+            descriptor.Dacl = dacl.as_mut_ptr().cast();
+        }
+        return Ok(Some(HostSecurityDescriptor::Absolute {
+            descriptor,
+            _owner: state.owner,
+            _dacl: state.dacl,
+        }));
+    }
+    Ok(Some(HostSecurityDescriptor::Relative(
+        read_guest_allocation(vm, address)?,
+    )))
+}
+
+#[derive(Default)]
+struct GuestOverlappedOperation {
+    result: Mutex<Option<(i32, u32)>>,
+    notification: tokio::sync::Notify,
+}
+
+#[derive(Default)]
+struct GuestOverlappedOperations(Mutex<HashMap<(i64, i64), Arc<GuestOverlappedOperation>>>);
+
+fn overlapped_operations<V: VM + ?Sized>(vm: &V) -> Result<Arc<GuestOverlappedOperations>> {
+    vm.resource_manager()
+        .get_or_init(GuestOverlappedOperations::default)
+}
+
+struct BackupContexts {
+    next: AtomicI64,
+    pointers: Mutex<HashMap<i64, usize>>,
+}
+
+impl Default for BackupContexts {
+    fn default() -> Self {
+        Self {
+            next: AtomicI64::new(1),
+            pointers: Mutex::new(HashMap::new()),
+        }
+    }
+}
+
+fn backup_contexts<V: VM + ?Sized>(vm: &V) -> Result<Arc<BackupContexts>> {
+    vm.resource_manager().get_or_init(BackupContexts::default)
+}
+
+fn begin_guest_overlapped<V: VM + ?Sized>(
+    vm: &V,
+    handle: i64,
+    overlapped: i64,
+) -> Result<Arc<GuestOverlappedOperation>> {
+    let operation = Arc::new(GuestOverlappedOperation::default());
+    let operations = overlapped_operations(vm)?;
+    let mut operations = operations
+        .0
+        .lock()
+        .map_err(|_| InternalError("poisoned overlapped operation map".to_string()))?;
+    if let Some(previous) = operations.get(&(handle, overlapped))
+        && previous
+            .result
+            .lock()
+            .map_err(|_| InternalError("poisoned overlapped result".to_string()))?
+            .is_none()
+    {
+        return Err(InternalError(
+            "overlapped operation already pending".to_string(),
+        ));
+    }
+    operations.insert((handle, overlapped), operation.clone());
+    Ok(operation)
+}
+
+fn finish_guest_overlapped(operation: &GuestOverlappedOperation, error: i32, transferred: u32) {
+    if let Ok(mut result) = operation.result.lock() {
+        *result = Some((error, transferred));
+    }
+    operation.notification.notify_waiters();
+}
+
+fn read_guest_sid<V: VM + ?Sized>(vm: &V, address: i64) -> Result<Vec<u8>> {
+    if address == 0 {
+        return Err(InternalError("null SID address".to_string()));
+    }
+    let header = vm
+        .native_memory()
+        .try_read_bytes(address, 8)
+        .ok_or_else(|| InternalError("invalid SID address".to_string()))?;
+    let sub_authorities = usize::from(
+        header
+            .get(1)
+            .copied()
+            .ok_or_else(|| InternalError("truncated SID header".to_string()))?,
+    );
+    let length = 8usize
+        .checked_add(
+            sub_authorities
+                .checked_mul(4)
+                .ok_or_else(|| InternalError("SID sub-authority length overflow".to_string()))?,
+        )
+        .ok_or_else(|| InternalError("SID length overflow".to_string()))?;
+    vm.native_memory()
+        .try_read_bytes(address, length)
+        .ok_or_else(|| InternalError("truncated SID".to_string()))
+}
+
+fn sid_string(sid: &[u8]) -> Result<String> {
+    if sid.len() < 8 {
+        return Err(InternalError("truncated SID".to_string()));
+    }
+    let revision = sid
+        .first()
+        .copied()
+        .ok_or_else(|| InternalError("truncated SID revision".to_string()))?;
+    let count = usize::from(
+        sid.get(1)
+            .copied()
+            .ok_or_else(|| InternalError("truncated SID count".to_string()))?,
+    );
+    let authority = sid
+        .get(2..8)
+        .ok_or_else(|| InternalError("truncated SID authority".to_string()))?
+        .iter()
+        .fold(0u64, |value, byte| (value << 8) | u64::from(*byte));
+    let mut result = format!("S-{revision}-{authority}");
+    for index in 0..count {
+        let start = 8 + index * 4;
+        let bytes: [u8; 4] = sid
+            .get(start..start + 4)
+            .and_then(|value| value.try_into().ok())
+            .ok_or_else(|| InternalError("truncated SID sub-authority".to_string()))?;
+        result.push('-');
+        result.push_str(&u32::from_le_bytes(bytes).to_string());
+    }
+    Ok(result)
+}
+
+fn read_guest_allocation<V: VM + ?Sized>(vm: &V, address: i64) -> Result<Vec<u8>> {
+    let length = vm
+        .native_memory()
+        .remaining_len(address)
+        .ok_or_else(|| InternalError("invalid native address".to_string()))?;
+    vm.native_memory()
+        .try_read_bytes(address, length)
+        .ok_or_else(|| InternalError("invalid native allocation".to_string()))
+}
+
+fn read_guest_acl<V: VM + ?Sized>(vm: &V, address: i64) -> Result<Vec<u8>> {
+    let header = vm
+        .native_memory()
+        .try_read_bytes(address, 8)
+        .ok_or_else(|| InternalError("invalid ACL address".to_string()))?;
+    let size = usize::from(
+        read_u16(&header, 2).ok_or_else(|| InternalError("truncated ACL".to_string()))?,
+    );
+    if size < 8 {
+        return Err(InternalError("invalid ACL size".to_string()));
+    }
+    vm.native_memory()
+        .try_read_bytes(address, size)
+        .ok_or_else(|| InternalError("truncated ACL allocation".to_string()))
+}
+
+fn read_u16(bytes: &[u8], offset: usize) -> Option<u16> {
+    Some(u16::from_ne_bytes(
+        bytes.get(offset..offset + 2)?.try_into().ok()?,
+    ))
+}
+
+fn read_u32(bytes: &[u8], offset: usize) -> Option<u32> {
+    Some(u32::from_ne_bytes(
+        bytes.get(offset..offset + 4)?.try_into().ok()?,
+    ))
 }
 
 bitflags! {
@@ -90,41 +298,12 @@ bitflags! {
     /// See [Generic Access Rights](https://learn.microsoft.com/en-us/windows/win32/secauthz/generic-access-rights).
     #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     struct DesiredAccess: u32 {
-        const GENERIC_READ = 0x8000_0000;
         const GENERIC_WRITE = 0x4000_0000;
         const FILE_WRITE_ATTRIBUTES = 0x0000_0100;
         const FILE_WRITE_DATA = 0x0000_0002;
         const FILE_APPEND_DATA = 0x0000_0004;
         const FILE_WRITE_EA = 0x0000_0010;
-        const DELETE = 0x0001_0000;
     }
-}
-
-/// Windows file creation disposition values for `CreateFile`.
-///
-/// See [CreateFileW (dwCreationDisposition)](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew).
-mod creation_disposition {
-    pub const CREATE_NEW: i32 = 1;
-    pub const CREATE_ALWAYS: i32 = 2;
-    // OPEN_EXISTING = 3 (default / fallthrough)
-    pub const OPEN_ALWAYS: i32 = 4;
-    pub const TRUNCATE_EXISTING: i32 = 5;
-}
-
-/// POSIX-style open flags used by `managed_files::open`.
-mod posix_open_flags {
-    /// Read-only access.
-    pub const O_RDONLY: i32 = 0;
-    /// Write-only access.
-    pub const O_WRONLY: i32 = 1;
-    /// Read-write access.
-    pub const O_RDWR: i32 = 2;
-    /// Create file if it does not exist.
-    pub const O_CREAT: i32 = 0x40;
-    /// Exclusive creation (fail if file exists).
-    pub const O_EXCL: i32 = 0x80;
-    /// Truncate file to zero length.
-    pub const O_TRUNC: i32 = 0x200;
 }
 
 /// Windows file attribute constants.
@@ -139,29 +318,8 @@ mod file_attribute {
     pub const NORMAL: i32 = 0x80;
 }
 
-/// Field offsets within the `WIN32_FILE_ATTRIBUTE_DATA` structure written to native memory.
-///
-/// See [WIN32_FILE_ATTRIBUTE_DATA](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/ns-fileapi-win32_file_attribute_data).
-mod file_attribute_data_offset {
-    /// `dwFileAttributes` (DWORD, 4 bytes)
-    pub const FILE_ATTRIBUTES: i64 = 0;
-    /// `ftCreationTime` (FILETIME, 8 bytes)
-    pub const CREATION_TIME: i64 = 4;
-    /// `ftLastAccessTime` (FILETIME, 8 bytes)
-    pub const LAST_ACCESS_TIME: i64 = 12;
-    /// `ftLastWriteTime` (FILETIME, 8 bytes)
-    pub const LAST_WRITE_TIME: i64 = 20;
-    /// `nFileSizeHigh` (DWORD, 4 bytes)
-    pub const FILE_SIZE_HIGH: i64 = 28;
-    /// `nFileSizeLow` (DWORD, 4 bytes)
-    pub const FILE_SIZE_LOW: i64 = 32;
-}
-
 /// Bit mask for extracting the low 32 bits of a 64-bit file size.
 const FILE_SIZE_LOW_MASK: u64 = 0xFFFF_FFFF;
-
-/// Number of bits in a DWORD, used to split a 64-bit file size into high and low 32-bit parts.
-const DWORD_BITS: u64 = 32;
 
 /// Preserves the bit pattern of a Win32 `DWORD` when storing it in Java/native signed memory.
 fn file_size_dword(value: u64) -> i32 {
@@ -216,15 +374,24 @@ fn set_windows_file_attributes(path: &std::path::Path, attributes: i32) -> std::
     std::fs::set_permissions(path, permissions)
 }
 
-/// Placeholder handle value returned by `FindFirstFile` to indicate a valid (non-`INVALID_HANDLE_VALUE`) result.
-const FIND_FILE_PLACEHOLDER_HANDLE: i64 = 1;
-
 /// Read a null-terminated UTF-16 string from native memory at the given address.
 fn read_native_string<T: Thread + 'static>(
     thread: &Arc<T>,
     address: i64,
     context: &str,
 ) -> Result<String> {
+    let mut path_chars = read_native_wide(thread, address, context)?;
+    path_chars.pop();
+    String::from_utf16(&path_chars)
+        .map_err(|error| InternalError(format!("{context}: invalid UTF-16: {error}")))
+}
+
+/// Reads a zero-terminated UTF-16 string, retaining its terminator for Win32 calls.
+fn read_native_wide<T: Thread + 'static>(
+    thread: &Arc<T>,
+    address: i64,
+    context: &str,
+) -> Result<Vec<u16>> {
     let vm = thread.vm()?;
     let native_memory = vm.native_memory();
     let mut path_chars = Vec::new();
@@ -233,13 +400,38 @@ fn read_native_string<T: Thread + 'static>(
         let word = native_memory
             .read_i16(address + offset)
             .ok_or_else(|| InternalError(format!("{context}: bad address")))?;
-        if word == 0 {
-            break;
-        }
         path_chars.push(word.cast_unsigned());
-        offset += 2;
+        if word == 0 {
+            return Ok(path_chars);
+        }
+        offset = offset
+            .checked_add(2)
+            .ok_or_else(|| InternalError(format!("{context}: address overflow")))?;
     }
-    Ok(String::from_utf16_lossy(&path_chars))
+}
+
+fn wide_string(value: &[u16]) -> String {
+    let length = value
+        .iter()
+        .position(|word| *word == 0)
+        .unwrap_or(value.len());
+    String::from_utf16_lossy(value.get(..length).unwrap_or(value))
+}
+
+#[expect(unsafe_code)]
+fn write_native_structure<V: VM + ?Sized, S>(
+    vm: &V,
+    address: i64,
+    structure: &S,
+    context: &str,
+) -> Result<()> {
+    let bytes = unsafe {
+        std::slice::from_raw_parts(std::ptr::from_ref(structure).cast::<u8>(), size_of::<S>())
+    };
+    if !vm.native_memory().try_write_bytes(address, bytes) {
+        return Err(InternalError(format!("{context}: invalid output address")));
+    }
+    Ok(())
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CloseHandle(J)V", Any)]
@@ -250,7 +442,14 @@ pub async fn close_handle<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let handle = parameters.pop_long()?;
     let vm = thread.vm()?;
-    managed_files::close(vm.file_handles(), handle).await;
+    if !managed_files::close(vm.file_handles(), handle).await && !iocp::close_port(&*vm, handle)? {
+        #[expect(unsafe_code)]
+        unsafe {
+            use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
+            let _ = CloseHandle(handle as usize as HANDLE);
+        }
+    }
+    iocp::mark_closed(&*vm, handle);
     Ok(None)
 }
 
@@ -262,69 +461,78 @@ pub async fn create_file_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let flags_and_attrs = parameters.pop_int()?;
     let creation_disposition = parameters.pop_int()?;
-    let _security_attrs = parameters.pop_long()?;
+    let security_descriptor = parameters.pop_long()?;
     let share_mode = parameters.pop_int()?;
     let desired_access = parameters.pop_int()?;
     let path_address = parameters.pop_long()?;
-    let path_str = read_native_string(&thread, path_address, "CreateFile0")?;
-
-    // Map Windows CreateFile parameters to POSIX-style flags for managed_files::open
+    let path = read_native_wide(&thread, path_address, "CreateFile0")?;
     let access = DesiredAccess::from_bits_truncate(desired_access.cast_unsigned());
-    let read = access.contains(DesiredAccess::GENERIC_READ);
-    let write = access.intersects(
+    let writable = access.intersects(
         DesiredAccess::GENERIC_WRITE
             | DesiredAccess::FILE_WRITE_DATA
             | DesiredAccess::FILE_APPEND_DATA
             | DesiredAccess::FILE_WRITE_EA
             | DesiredAccess::FILE_WRITE_ATTRIBUTES,
     );
-    let access_mode: i32 = match (read, write) {
-        (true, true) => posix_open_flags::O_RDWR,
-        (false, true) => posix_open_flags::O_WRONLY,
-        _ => posix_open_flags::O_RDONLY,
-    };
-
-    let create_flag: i32 = match creation_disposition {
-        creation_disposition::CREATE_NEW => posix_open_flags::O_CREAT | posix_open_flags::O_EXCL,
-        creation_disposition::CREATE_ALWAYS => {
-            posix_open_flags::O_CREAT | posix_open_flags::O_TRUNC
-        }
-        creation_disposition::OPEN_ALWAYS => posix_open_flags::O_CREAT,
-        creation_disposition::TRUNCATE_EXISTING => posix_open_flags::O_TRUNC,
-        _ => 0, // OPEN_EXISTING or default
-    };
-
-    let flags = access_mode | create_flag;
     let vm = thread.vm()?;
-    let fd = match managed_files::open_with_windows_options(
-        vm.file_handles(),
-        vm.resource_manager(),
-        &path_str,
-        flags,
-        0,
-        share_mode,
-        flags_and_attrs,
-    )
-    .await
-    {
-        Ok(fd) => fd,
-        Err(e) => {
-            let code = windows_error_code(&e);
-            return Err(throw_windows_exception(&thread, code).await);
-        }
+    let (raw_handle, error) = {
+        let mut descriptor = host_security_descriptor(&*vm, security_descriptor)?;
+        let security_attributes = descriptor.as_mut().map(|descriptor| {
+            windows_sys::Win32::Security::SECURITY_ATTRIBUTES {
+                nLength: u32::try_from(
+                    size_of::<windows_sys::Win32::Security::SECURITY_ATTRIBUTES>(),
+                )
+                .unwrap_or(0),
+                lpSecurityDescriptor: descriptor.pointer(),
+                bInheritHandle: 0,
+            }
+        });
+        let security_attributes_pointer = security_attributes
+            .as_ref()
+            .map_or(std::ptr::null(), std::ptr::from_ref);
+        #[expect(unsafe_code)]
+        let raw_handle = unsafe {
+            windows_sys::Win32::Storage::FileSystem::CreateFileW(
+                path.as_ptr(),
+                desired_access.cast_unsigned(),
+                share_mode.cast_unsigned(),
+                security_attributes_pointer,
+                creation_disposition.cast_unsigned(),
+                flags_and_attrs.cast_unsigned(),
+                std::ptr::null_mut(),
+            )
+        };
+        let error = if raw_handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
+            last_windows_error()
+        } else {
+            0
+        };
+        (raw_handle as usize, error)
     };
-    Ok(Some(Value::Long(fd)))
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    let handle = managed_files::adopt_raw_handle(vm.file_handles(), raw_handle, writable)
+        .await
+        .map_err(|error| InternalError(format!("CreateFile0: {error}")))?;
+    Ok(Some(Value::Long(handle)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.FindClose(J)V", Any)]
 #[async_method]
 pub async fn find_close<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let handle = parameters.pop_long()?;
-    if let Ok(mut handles) = find_file_handles().lock() {
-        handles.remove(&handle);
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Storage::FileSystem::FindClose(
+            handle as usize as windows_sys::Win32::Foundation::HANDLE,
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
     }
     Ok(None)
 }
@@ -342,84 +550,35 @@ pub async fn find_first_file_0<T: Thread + 'static>(
         .pop_reference()?
         .ok_or(InternalError("FindFirstFile0: null FirstFile".to_string()))?;
     let path_address = parameters.pop_long()?;
-    let path_str = read_native_string(&thread, path_address, "FindFirstFile0")?;
-
-    let (dir, pattern) = split_search_pattern(&path_str);
-    let dir_path = std::path::Path::new(&dir);
-    let is_enumeration = !pattern.is_empty();
-
-    // Mirror the Win32 `FindFirstFile` contract: when called with a wildcard pattern (e.g.
-    // `dir\*`) we enumerate directory contents; when called with a concrete path we return
-    // a single entry describing that path itself (used by `WindowsLinkSupport.getRealPath`
-    // and similar callers).
-    let mut entries: VecDeque<String> = VecDeque::new();
-    if is_enumeration && dir_path.is_dir() {
-        // Win32 `FindFirstFile` always returns `.` and `..` as the first two entries; mirror that
-        // so JDK's `WindowsDirectoryStream` can correctly filter them. Without these synthetic
-        // entries, an empty directory returns an empty name that JDK interprets as a real child
-        // and the walker recurses into the same directory forever.
-        entries.push_back(".".to_string());
-        entries.push_back("..".to_string());
-        match std::fs::read_dir(dir_path) {
-            Ok(read_dir) => {
-                for entry in read_dir.flatten() {
-                    if let Some(name) = entry.file_name().to_str() {
-                        entries.push_back(name.to_string());
-                    }
-                }
-            }
-            Err(error) => {
-                let code = windows_error_code(&error);
-                return Err(throw_windows_exception(&thread, code).await);
-            }
-        }
-    } else {
-        match std::fs::metadata(dir_path) {
-            Ok(_) => {
-                if let Some(name) = dir_path.file_name().and_then(|n| n.to_str()) {
-                    entries.push_back(name.to_string());
-                } else {
-                    entries.push_back(dir.clone());
-                }
-            }
-            Err(error) => {
-                let code = windows_error_code(&error);
-                return Err(throw_windows_exception(&thread, code).await);
-            }
-        }
-    }
-
-    let first = entries.pop_front().unwrap_or_default();
-    let first_path = if !is_enumeration || first.is_empty() {
-        dir_path.to_path_buf()
-    } else {
-        dir_path.join(&first)
+    let path = read_native_wide(&thread, path_address, "FindFirstFile0")?;
+    let mut data = windows_sys::Win32::Storage::FileSystem::WIN32_FIND_DATAW::default();
+    let (handle, error) = {
+        #[expect(unsafe_code)]
+        let handle = unsafe {
+            windows_sys::Win32::Storage::FileSystem::FindFirstFileW(path.as_ptr(), &raw mut data)
+        };
+        let error = if handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
+            last_windows_error()
+        } else {
+            0
+        };
+        (handle as usize, error)
     };
-    let attributes = std::fs::symlink_metadata(&first_path)
-        .map_or(file_attribute::NORMAL, |metadata| {
-            metadata_file_attributes(&metadata)
-        });
-
-    let handle = next_find_file_handle();
-    if let Ok(mut handles) = find_file_handles().lock() {
-        handles.insert(
-            handle,
-            FindFileState {
-                parent: dir_path.to_path_buf(),
-                remaining: entries,
-            },
-        );
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
     }
-
-    let name_value = thread.intern_string(&first).await?;
+    let name_value = thread.intern_string(&wide_string(&data.cFileName)).await?;
 
     let mut guard = first_file_gc.write();
     let Reference::Object(ref mut obj) = *guard else {
         return Err(InternalError("FindFirstFile0: not an object".to_string()));
     };
-    obj.set_value("handle", Value::Long(handle))?;
+    obj.set_value("handle", Value::Long(handle as i64))?;
     obj.set_value("name", name_value)?;
-    obj.set_value("attributes", Value::Int(attributes))?;
+    obj.set_value(
+        "attributes",
+        Value::Int(data.dwFileAttributes.cast_signed()),
+    )?;
     Ok(None)
 }
 
@@ -431,51 +590,22 @@ pub async fn get_file_attributes_ex_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let address = parameters.pop_long()?;
     let path_address = parameters.pop_long()?;
-    let path_str = read_native_string(&thread, path_address, "GetFileAttributesEx0")?;
-    let path = std::path::Path::new(&path_str);
-
-    let vm = thread.vm()?;
-    let native_memory = vm.native_memory();
-
-    match std::fs::symlink_metadata(path) {
-        Ok(metadata) => {
-            let file_attributes = metadata_file_attributes(&metadata);
-            // dwFileAttributes (4 bytes)
-            native_memory.write_i32(
-                address + file_attribute_data_offset::FILE_ATTRIBUTES,
-                file_attributes,
-            );
-            let creation = system_time_to_filetime(metadata.created().ok());
-            let access = system_time_to_filetime(metadata.accessed().ok());
-            let write = system_time_to_filetime(metadata.modified().ok());
-            native_memory.write_i64(
-                address + file_attribute_data_offset::CREATION_TIME,
-                i64::from_ne_bytes(creation.to_ne_bytes()),
-            );
-            native_memory.write_i64(
-                address + file_attribute_data_offset::LAST_ACCESS_TIME,
-                i64::from_ne_bytes(access.to_ne_bytes()),
-            );
-            native_memory.write_i64(
-                address + file_attribute_data_offset::LAST_WRITE_TIME,
-                i64::from_ne_bytes(write.to_ne_bytes()),
-            );
-            // nFileSizeHigh (4 bytes) + nFileSizeLow (4 bytes)
-            let size = metadata.len();
-            let size_high = file_size_dword(size >> DWORD_BITS);
-            let size_low = file_size_dword(size);
-            native_memory.write_i32(
-                address + file_attribute_data_offset::FILE_SIZE_HIGH,
-                size_high,
-            );
-            native_memory.write_i32(
-                address + file_attribute_data_offset::FILE_SIZE_LOW,
-                size_low,
-            );
-            Ok(None)
-        }
-        Err(e) => Err(throw_windows_exception(&thread, windows_error_code(&e)).await),
+    let path = read_native_wide(&thread, path_address, "GetFileAttributesEx0")?;
+    let mut attributes =
+        windows_sys::Win32::Storage::FileSystem::WIN32_FILE_ATTRIBUTE_DATA::default();
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Storage::FileSystem::GetFileAttributesExW(
+            path.as_ptr(),
+            windows_sys::Win32::Storage::FileSystem::GetFileExInfoStandard,
+            (&raw mut attributes).cast(),
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
     }
+    write_native_structure(&*thread.vm()?, address, &attributes, "GetFileAttributesEx0")?;
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -488,11 +618,30 @@ pub async fn get_full_path_name_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let path_address = parameters.pop_long()?;
-    let path_str = read_native_string(&thread, path_address, "GetFullPathName0")?;
-    let full_path = std::fs::canonicalize(&path_str)
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or(path_str);
-
+    let path = read_native_wide(&thread, path_address, "GetFullPathName0")?;
+    let mut buffer = vec![0u16; 260];
+    loop {
+        #[expect(unsafe_code)]
+        let length = unsafe {
+            windows_sys::Win32::Storage::FileSystem::GetFullPathNameW(
+                path.as_ptr(),
+                u32::try_from(buffer.len()).unwrap_or(u32::MAX),
+                buffer.as_mut_ptr(),
+                std::ptr::null_mut(),
+            )
+        };
+        if length == 0 {
+            return Err(throw_windows_exception(&thread, last_windows_error()).await);
+        }
+        let length = usize::try_from(length).unwrap_or(usize::MAX);
+        if length < buffer.len() {
+            buffer.truncate(length);
+            break;
+        }
+        buffer.resize(length.saturating_add(1), 0);
+    }
+    let full_path = String::from_utf16(&buffer)
+        .map_err(|error| InternalError(format!("GetFullPathName0: {error}")))?;
     let string_value = thread.intern_string(&full_path).await?;
     Ok(Some(string_value))
 }
@@ -509,58 +658,166 @@ pub async fn init_ids<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.AccessCheck(JJIIIII)Z", Any)]
 #[async_method]
 pub async fn access_check<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _generic_all = parameters.pop_int()?;
-    let _generic_execute = parameters.pop_int()?;
-    let _generic_write = parameters.pop_int()?;
-    let _generic_read = parameters.pop_int()?;
-    let _access_mask = parameters.pop_int()?;
-    let _security_info = parameters.pop_long()?;
-    let _token = parameters.pop_long()?;
-    // We do not enforce ACLs; report the requested access as granted so JDK's
-    // checkAccess returns success and Files.isWritable / isReadable / isExecutable
-    // mirror the underlying file system semantics already enforced by open/read/write.
-    Ok(Some(Value::Int(1)))
+    let generic_all = parameters.pop_int()?;
+    let generic_execute = parameters.pop_int()?;
+    let generic_write = parameters.pop_int()?;
+    let generic_read = parameters.pop_int()?;
+    let access_mask = parameters.pop_int()?;
+    let security_info = parameters.pop_long()?;
+    let token = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let mut descriptor = read_guest_allocation(&*vm, security_info)?;
+    let mapping = windows_sys::Win32::Security::GENERIC_MAPPING {
+        GenericRead: generic_read.cast_unsigned(),
+        GenericWrite: generic_write.cast_unsigned(),
+        GenericExecute: generic_execute.cast_unsigned(),
+        GenericAll: generic_all.cast_unsigned(),
+    };
+    let mut desired = access_mask.cast_unsigned();
+    let mut privilege_buffer = vec![0u8; 1024];
+    let mut privilege_length = u32::try_from(privilege_buffer.len()).unwrap_or(0);
+    let mut granted = 0u32;
+    let mut access_status = 0i32;
+    #[expect(unsafe_code)]
+    unsafe {
+        windows_sys::Win32::Security::MapGenericMask(&raw mut desired, &raw const mapping);
+    }
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Security::AccessCheck(
+            descriptor.as_mut_ptr().cast(),
+            token as usize as windows_sys::Win32::Foundation::HANDLE,
+            desired,
+            &raw const mapping,
+            privilege_buffer.as_mut_ptr().cast(),
+            &raw mut privilege_length,
+            &raw mut granted,
+            &raw mut access_status,
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
+    }
+    Ok(Some(Value::Int(i32::from(access_status != 0))))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.AddAccessAllowedAceEx(JIIJ)V", Any)]
 #[async_method]
 pub async fn add_access_allowed_ace_ex<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _sid_address = parameters.pop_long()?;
-    let _mask = parameters.pop_int()?;
-    let _flags = parameters.pop_int()?;
-    let _acl_address = parameters.pop_long()?;
+    let sid_address = parameters.pop_long()?;
+    let mask = parameters.pop_int()?;
+    let flags = parameters.pop_int()?;
+    let acl_address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let sid = read_guest_sid(&*vm, sid_address)?;
+    let mut acl = read_guest_acl(&*vm, acl_address)?;
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Security::AddAccessAllowedAceEx(
+            acl.as_mut_ptr().cast(),
+            windows_sys::Win32::Security::ACL_REVISION,
+            flags.cast_unsigned(),
+            mask.cast_unsigned(),
+            sid.as_ptr().cast_mut().cast(),
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
+    }
+    if !vm.native_memory().try_write_bytes(acl_address, &acl) {
+        return Err(InternalError(
+            "AddAccessAllowedAceEx: invalid ACL address".to_string(),
+        ));
+    }
     Ok(None)
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.AddAccessDeniedAceEx(JIIJ)V", Any)]
 #[async_method]
 pub async fn add_access_denied_ace_ex<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _sid_address = parameters.pop_long()?;
-    let _mask = parameters.pop_int()?;
-    let _flags = parameters.pop_int()?;
-    let _acl_address = parameters.pop_long()?;
+    let sid_address = parameters.pop_long()?;
+    let mask = parameters.pop_int()?;
+    let flags = parameters.pop_int()?;
+    let acl_address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let sid = read_guest_sid(&*vm, sid_address)?;
+    let mut acl = read_guest_acl(&*vm, acl_address)?;
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Security::AddAccessDeniedAceEx(
+            acl.as_mut_ptr().cast(),
+            windows_sys::Win32::Security::ACL_REVISION,
+            flags.cast_unsigned(),
+            mask.cast_unsigned(),
+            sid.as_ptr().cast_mut().cast(),
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
+    }
+    if !vm.native_memory().try_write_bytes(acl_address, &acl) {
+        return Err(InternalError(
+            "AddAccessDeniedAceEx: invalid ACL address".to_string(),
+        ));
+    }
     Ok(None)
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.AdjustTokenPrivileges(JJI)V", Any)]
 #[async_method]
 pub async fn adjust_token_privileges<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _attributes = parameters.pop_int()?;
-    let _luid = parameters.pop_long()?;
-    let _token = parameters.pop_long()?;
-    // Privilege adjustment is a no-op: we do not impersonate Windows token state.
+    let attributes = parameters.pop_int()?;
+    let luid_address = parameters.pop_long()?;
+    let token = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let luid = vm
+        .native_memory()
+        .read_i64(luid_address)
+        .ok_or_else(|| InternalError("AdjustTokenPrivileges: invalid LUID address".to_string()))?;
+    use windows_sys::Win32::Foundation::{HANDLE, LUID};
+    use windows_sys::Win32::Security::{
+        AdjustTokenPrivileges, LUID_AND_ATTRIBUTES, TOKEN_PRIVILEGES,
+    };
+    let privileges = TOKEN_PRIVILEGES {
+        PrivilegeCount: 1,
+        Privileges: [LUID_AND_ATTRIBUTES {
+            Luid: LUID {
+                LowPart: luid.cast_unsigned() as u32,
+                HighPart: (luid >> 32) as i32,
+            },
+            Attributes: attributes.cast_unsigned(),
+        }],
+    };
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Foundation::SetLastError(0);
+        AdjustTokenPrivileges(
+            token as usize as HANDLE,
+            0,
+            &raw const privileges,
+            0,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        )
+    };
+    let error = last_windows_error();
+    if ok == 0 || error == 1300
+    /* ERROR_NOT_ALL_ASSIGNED */
+    {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
     Ok(None)
 }
 
@@ -570,46 +827,189 @@ pub async fn adjust_token_privileges<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn backup_read0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let obj_gc = parameters.pop_reference()?;
-    let _context_address = parameters.pop_long()?;
-    let _abort = parameters.pop_bool()?;
-    let _bytes_to_read = parameters.pop_int()?;
-    let _buffer_address = parameters.pop_long()?;
-    let _handle = parameters.pop_long()?;
-    // Report end-of-stream so callers do not loop indefinitely.
-    if let Some(obj_gc) = obj_gc {
-        let mut guard = obj_gc.write();
-        if let Reference::Object(ref mut obj) = *guard {
-            obj.set_value("bytesTransferred", Value::Int(0))?;
-            obj.set_value("context", Value::Long(0))?;
-        }
+    let obj_gc = parameters
+        .pop_reference()?
+        .ok_or_else(|| InternalError("BackupRead0: null result".to_string()))?;
+    let context_handle = parameters.pop_long()?;
+    let abort = parameters.pop_bool()?;
+    let bytes_to_read = parameters.pop_int()?;
+    let buffer_address = parameters.pop_long()?;
+    let handle = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let file = vm
+        .file_handles()
+        .get(&handle)
+        .await
+        .ok_or_else(|| InternalError("BackupRead0: invalid file handle".to_string()))?;
+    use std::os::windows::io::AsRawHandle;
+    let raw_handle = file.file.as_raw_handle() as usize;
+    drop(file);
+    let contexts = backup_contexts(&*vm)?;
+    let context = if context_handle == 0 {
+        0
+    } else {
+        contexts
+            .pointers
+            .lock()
+            .map_err(|_| InternalError("poisoned backup context map".to_string()))?
+            .get(&context_handle)
+            .copied()
+            .ok_or_else(|| InternalError("BackupRead0: invalid backup context".to_string()))?
+    };
+    let length = usize::try_from(bytes_to_read.max(0)).unwrap_or(0);
+    let mut buffer = vec![0u8; length];
+    let (error, transferred, context) = {
+        let mut context = context as *mut std::ffi::c_void;
+        let mut transferred = 0u32;
+        #[expect(unsafe_code)]
+        let ok = unsafe {
+            windows_sys::Win32::Storage::FileSystem::BackupRead(
+                raw_handle as windows_sys::Win32::Foundation::HANDLE,
+                buffer.as_mut_ptr(),
+                u32::try_from(length).unwrap_or(u32::MAX),
+                &raw mut transferred,
+                abort.into(),
+                0,
+                &raw mut context,
+            )
+        };
+        let error = if ok == 0 { last_windows_error() } else { 0 };
+        (error, transferred, context as usize)
+    };
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
     }
+    let transferred_length = usize::try_from(transferred).unwrap_or(0).min(buffer.len());
+    let transferred_bytes = buffer.get(..transferred_length).ok_or_else(|| {
+        InternalError("BackupRead0: transferred length exceeds buffer".to_string())
+    })?;
+    if transferred_length != 0
+        && !vm
+            .native_memory()
+            .try_write_bytes(buffer_address, transferred_bytes)
+    {
+        return Err(InternalError(
+            "BackupRead0: invalid buffer address".to_string(),
+        ));
+    }
+    let result_context = if abort || context == 0 {
+        if context_handle != 0 {
+            contexts
+                .pointers
+                .lock()
+                .map_err(|_| InternalError("poisoned backup context map".to_string()))?
+                .remove(&context_handle);
+        }
+        0
+    } else if context_handle != 0 {
+        contexts
+            .pointers
+            .lock()
+            .map_err(|_| InternalError("poisoned backup context map".to_string()))?
+            .insert(context_handle, context);
+        context_handle
+    } else {
+        let new_handle = contexts.next.fetch_add(1, Ordering::Relaxed);
+        contexts
+            .pointers
+            .lock()
+            .map_err(|_| InternalError("poisoned backup context map".to_string()))?
+            .insert(new_handle, context);
+        new_handle
+    };
+    let mut guard = obj_gc.write();
+    let Reference::Object(ref mut obj) = *guard else {
+        return Err(InternalError(
+            "BackupRead0: result is not an object".to_string(),
+        ));
+    };
+    obj.set_value("bytesTransferred", Value::Int(transferred.cast_signed()))?;
+    obj.set_value("context", Value::Long(result_context))?;
     Ok(None)
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.BackupSeek(JJJ)V", Equal(JAVA_8))]
 #[async_method]
 pub async fn backup_seek<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _context_address = parameters.pop_long()?;
-    let _bytes_to_skip = parameters.pop_long()?;
-    let _handle = parameters.pop_long()?;
+    let context_handle = parameters.pop_long()?;
+    let bytes_to_skip = parameters.pop_long()?;
+    let handle = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let file = vm
+        .file_handles()
+        .get(&handle)
+        .await
+        .ok_or_else(|| InternalError("BackupSeek: invalid file handle".to_string()))?;
+    use std::os::windows::io::AsRawHandle;
+    let raw_handle = file.file.as_raw_handle() as usize;
+    drop(file);
+    let contexts = backup_contexts(&*vm)?;
+    let pointer = contexts
+        .pointers
+        .lock()
+        .map_err(|_| InternalError("poisoned backup context map".to_string()))?
+        .get(&context_handle)
+        .copied()
+        .ok_or_else(|| InternalError("BackupSeek: invalid backup context".to_string()))?;
+    let bytes = u64::from_ne_bytes(bytes_to_skip.to_ne_bytes());
+    let (error, context) = {
+        let mut context = pointer as *mut std::ffi::c_void;
+        let mut low_seeked = 0u32;
+        let mut high_seeked = 0u32;
+        #[expect(unsafe_code)]
+        let ok = unsafe {
+            windows_sys::Win32::Storage::FileSystem::BackupSeek(
+                raw_handle as windows_sys::Win32::Foundation::HANDLE,
+                bytes as u32,
+                (bytes >> 32) as u32,
+                &raw mut low_seeked,
+                &raw mut high_seeked,
+                &raw mut context,
+            )
+        };
+        let error = if ok == 0 { last_windows_error() } else { 0 };
+        (error, context as usize)
+    };
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    contexts
+        .pointers
+        .lock()
+        .map_err(|_| InternalError("poisoned backup context map".to_string()))?
+        .insert(context_handle, context);
     Ok(None)
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CancelIo(J)V", Any)]
 #[async_method]
 pub async fn cancel_io<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _h_file = parameters.pop_long()?;
-    // No outstanding asynchronous I/O is tracked in this stub.
+    let h_file = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let file = vm.file_handles().get(&h_file).await;
+    let Some(file) = file else {
+        return Err(throw_windows_exception(&thread, 6).await);
+    };
+    use std::os::windows::io::AsRawHandle;
+    let raw_handle = file.file.as_raw_handle() as usize;
+    drop(file);
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        use windows_sys::Win32::Foundation::HANDLE;
+        windows_sys::Win32::System::IO::CancelIoEx(raw_handle as HANDLE, std::ptr::null())
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
+    }
     Ok(None)
 }
 
@@ -622,20 +1022,57 @@ pub async fn convert_sid_to_string_sid<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _address = parameters.pop_long()?;
-    // We don't track real SIDs; surface the well-known null SID.
-    let value = thread.intern_string("S-1-0-0").await?;
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let sid = read_guest_sid(&*vm, address)?;
+    let value = thread.intern_string(&sid_string(&sid)?).await?;
     Ok(Some(value))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.ConvertStringSidToSid0(J)J", Any)]
 #[async_method]
 pub async fn convert_string_sid_to_sid0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _address = parameters.pop_long()?;
-    Ok(Some(Value::Long(1)))
+    let address = parameters.pop_long()?;
+    let sid_string = read_native_wide(&thread, address, "ConvertStringSidToSid0")?;
+    let (error, sid) = {
+        let mut native_sid = std::ptr::null_mut();
+        #[expect(unsafe_code)]
+        let ok = unsafe {
+            windows_sys::Win32::Security::Authorization::ConvertStringSidToSidW(
+                sid_string.as_ptr(),
+                &raw mut native_sid,
+            )
+        };
+        if ok == 0 {
+            (last_windows_error(), Vec::new())
+        } else {
+            #[expect(unsafe_code)]
+            let length = unsafe { windows_sys::Win32::Security::GetLengthSid(native_sid) };
+            #[expect(unsafe_code)]
+            let sid = unsafe {
+                std::slice::from_raw_parts(native_sid.cast::<u8>(), length as usize).to_vec()
+            };
+            #[expect(unsafe_code)]
+            unsafe {
+                windows_sys::Win32::Foundation::LocalFree(native_sid.cast());
+            }
+            (0, sid)
+        }
+    };
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    let vm = thread.vm()?;
+    let guest_address = vm.native_memory().allocate(sid.len());
+    if !vm.native_memory().try_write_bytes(guest_address, &sid) {
+        return Err(InternalError(
+            "ConvertStringSidToSid0: allocation failed".to_string(),
+        ));
+    }
+    Ok(Some(Value::Long(guest_address)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CopyFileEx0(JJIJ)V", Any)]
@@ -644,14 +1081,44 @@ pub async fn copy_file_ex0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _cancel_address = parameters.pop_long()?;
-    let _flags = parameters.pop_int()?;
+    let cancel_address = parameters.pop_long()?;
+    let flags = parameters.pop_int()?;
     let new_address = parameters.pop_long()?;
     let existing_address = parameters.pop_long()?;
-    let existing = read_native_string(&thread, existing_address, "CopyFileEx0")?;
-    let new = read_native_string(&thread, new_address, "CopyFileEx0")?;
-    if let Err(e) = std::fs::copy(&existing, &new) {
-        return Err(throw_windows_exception(&thread, windows_error_code(&e)).await);
+    let existing = read_native_wide(&thread, existing_address, "CopyFileEx0")?;
+    let new = read_native_wide(&thread, new_address, "CopyFileEx0")?;
+    let vm = thread.vm()?;
+    if cancel_address != 0 && vm.native_memory().read_i32(cancel_address).is_none() {
+        return Err(throw_windows_exception(&thread, 998 /* ERROR_NOACCESS */).await);
+    }
+    let error = {
+        let context = CopyCancelContext {
+            memory: vm.native_memory(),
+            address: cancel_address,
+        };
+        let (callback, context_pointer): (
+            windows_sys::Win32::Storage::FileSystem::LPPROGRESS_ROUTINE,
+            *const std::ffi::c_void,
+        ) = if cancel_address == 0 {
+            (None, std::ptr::null())
+        } else {
+            (Some(copy_progress), std::ptr::from_ref(&context).cast())
+        };
+        #[expect(unsafe_code)]
+        let ok = unsafe {
+            windows_sys::Win32::Storage::FileSystem::CopyFileExW(
+                existing.as_ptr(),
+                new.as_ptr(),
+                callback,
+                context_pointer,
+                std::ptr::null_mut(),
+                flags.cast_unsigned(),
+            )
+        };
+        if ok == 0 { last_windows_error() } else { 0 }
+    };
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
     }
     Ok(None)
 }
@@ -662,11 +1129,36 @@ pub async fn create_directory0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _sd_address = parameters.pop_long()?;
+    let sd_address = parameters.pop_long()?;
     let address = parameters.pop_long()?;
-    let path = read_native_string(&thread, address, "CreateDirectory0")?;
-    if let Err(e) = std::fs::create_dir(&path) {
-        return Err(throw_windows_exception(&thread, windows_error_code(&e)).await);
+    let path = read_native_wide(&thread, address, "CreateDirectory0")?;
+    let vm = thread.vm()?;
+    let error = {
+        let mut descriptor = host_security_descriptor(&*vm, sd_address)?;
+        let security_attributes = descriptor.as_mut().map(|descriptor| {
+            windows_sys::Win32::Security::SECURITY_ATTRIBUTES {
+                nLength: u32::try_from(
+                    size_of::<windows_sys::Win32::Security::SECURITY_ATTRIBUTES>(),
+                )
+                .unwrap_or(0),
+                lpSecurityDescriptor: descriptor.pointer(),
+                bInheritHandle: 0,
+            }
+        });
+        let security_attributes_pointer = security_attributes
+            .as_ref()
+            .map_or(std::ptr::null(), std::ptr::from_ref);
+        #[expect(unsafe_code)]
+        let ok = unsafe {
+            windows_sys::Win32::Storage::FileSystem::CreateDirectoryW(
+                path.as_ptr(),
+                security_attributes_pointer,
+            )
+        };
+        if ok == 0 { last_windows_error() } else { 0 }
+    };
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
     }
     Ok(None)
 }
@@ -674,15 +1166,32 @@ pub async fn create_directory0<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CreateEvent(ZZ)J", Any)]
 #[async_method]
 pub async fn create_event<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _b_initial_state = parameters.pop_bool()?;
-    let _b_manual_reset = parameters.pop_bool()?;
-    // We don't implement real Win32 events; return a unique non-zero pseudo-handle so the JDK's
-    // overlapped-I/O wrapper has something to store. `WatchService` only uses the value to detect
-    // `INVALID_HANDLE_VALUE` and to call `CloseHandle` later.
-    Ok(Some(Value::Long(next_iocp_event_handle())))
+    let initial_state = parameters.pop_bool()?;
+    let manual_reset = parameters.pop_bool()?;
+    let (handle, error) = {
+        #[expect(unsafe_code)]
+        let handle = unsafe {
+            windows_sys::Win32::System::Threading::CreateEventW(
+                std::ptr::null(),
+                manual_reset.into(),
+                initial_state.into(),
+                std::ptr::null(),
+            )
+        };
+        let error = if handle.is_null() {
+            last_windows_error()
+        } else {
+            0
+        };
+        (handle as usize, error)
+    };
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    Ok(Some(Value::Long(handle as i64)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CreateHardLink0(JJ)V", Any)]
@@ -693,10 +1202,18 @@ pub async fn create_hard_link0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let existing_file_address = parameters.pop_long()?;
     let new_file_address = parameters.pop_long()?;
-    let existing = read_native_string(&thread, existing_file_address, "CreateHardLink0")?;
-    let new = read_native_string(&thread, new_file_address, "CreateHardLink0")?;
-    if let Err(e) = std::fs::hard_link(&existing, &new) {
-        return Err(throw_windows_exception(&thread, windows_error_code(&e)).await);
+    let existing = read_native_wide(&thread, existing_file_address, "CreateHardLink0")?;
+    let new = read_native_wide(&thread, new_file_address, "CreateHardLink0")?;
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Storage::FileSystem::CreateHardLinkW(
+            new.as_ptr(),
+            existing.as_ptr(),
+            std::ptr::null(),
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
     }
     Ok(None)
 }
@@ -704,27 +1221,20 @@ pub async fn create_hard_link0<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CreateIoCompletionPort(JJJ)J", Any)]
 #[async_method]
 pub async fn create_io_completion_port<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _completion_key = parameters.pop_long()?;
+    let completion_key = parameters.pop_long()?;
     let existing_port = parameters.pop_long()?;
-    let _file_handle = parameters.pop_long()?;
-    if existing_port == 0 {
-        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-        let port = Arc::new(IocpPort {
-            tx,
-            rx: tokio::sync::Mutex::new(rx),
-        });
-        let handle = next_iocp_port_handle();
-        if let Ok(mut ports) = iocp_ports().lock() {
-            ports.insert(handle, port);
-        }
-        Ok(Some(Value::Long(handle)))
-    } else {
-        // Associating a handle with an existing port - we don't track per-handle state.
-        Ok(Some(Value::Long(existing_port)))
+    let file_handle = parameters.pop_long()?;
+    let completion_key = i32::try_from(completion_key)
+        .map_err(|_| InternalError("completion key is outside the Win32 range".to_string()))?;
+    let vm = thread.vm()?;
+    if file_handle != -1 && vm.file_handles().get(&file_handle).await.is_none() {
+        return Err(throw_windows_exception(&thread, 6).await);
     }
+    let port = iocp::create_or_associate(&*vm, file_handle, existing_port, completion_key)?;
+    Ok(Some(Value::Long(port)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.CreateSymbolicLink0(JJI)V", Any)]
@@ -736,40 +1246,20 @@ pub async fn create_symbolic_link0<T: Thread + 'static>(
     let flags = parameters.pop_int()?;
     let target_address = parameters.pop_long()?;
     let link_address = parameters.pop_long()?;
-    let link = read_native_string(&thread, link_address, "CreateSymbolicLink0")?;
-    let target = read_native_string(&thread, target_address, "CreateSymbolicLink0")?;
-    let is_dir = (flags & 0x1) != 0;
-    let result = create_symlink(&link, &target, is_dir);
-    if let Err(e) = result {
-        return Err(throw_windows_exception(&thread, windows_error_code(&e)).await);
+    let link = read_native_wide(&thread, link_address, "CreateSymbolicLink0")?;
+    let target = read_native_wide(&thread, target_address, "CreateSymbolicLink0")?;
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Storage::FileSystem::CreateSymbolicLinkW(
+            link.as_ptr(),
+            target.as_ptr(),
+            flags.cast_unsigned(),
+        )
+    };
+    if !ok {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
     }
     Ok(None)
-}
-
-#[cfg(target_family = "windows")]
-fn create_symlink(link: &str, target: &str, is_dir: bool) -> std::io::Result<()> {
-    use std::os::windows::fs::{symlink_dir, symlink_file};
-    if is_dir {
-        symlink_dir(target, link)
-    } else {
-        symlink_file(target, link)
-    }
-}
-
-#[cfg(not(target_family = "windows"))]
-fn create_symlink(link: &str, target: &str, _is_dir: bool) -> std::io::Result<()> {
-    #[cfg(unix)]
-    {
-        std::os::unix::fs::symlink(target, link)
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = (link, target);
-        Err(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "symlinks not supported",
-        ))
-    }
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.DeleteFile0(J)V", Any)]
@@ -779,7 +1269,8 @@ pub async fn delete_file0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let address = parameters.pop_long()?;
-    let path = read_native_string(&thread, address, "DeleteFile0")?;
+    let path = read_native_wide(&thread, address, "DeleteFile0")?;
+    let path_string = wide_string(&path);
 
     // Match Windows: a file with an active memory mapping cannot be deleted (sharing
     // violation). Compare via the canonicalized path stored when the mapping was created.
@@ -787,7 +1278,7 @@ pub async fn delete_file0<T: Thread + 'static>(
     if let Ok(regions) = vm
         .resource_manager()
         .get_or_init(crate::java::nio::mapped_regions::MappedRegions::new)
-        && let Ok(canonical) = std::fs::canonicalize(&path)
+        && let Ok(canonical) = std::fs::canonicalize(&path_string)
         && let Some(canonical_str) = canonical.to_str()
         && regions.is_path_mapped(canonical_str)
     {
@@ -795,13 +1286,10 @@ pub async fn delete_file0<T: Thread + 'static>(
         return Err(throw_windows_exception(&thread, ERROR_SHARING_VIOLATION).await);
     }
 
-    let metadata = std::fs::symlink_metadata(&path);
-    let result = match metadata {
-        Ok(meta) if meta.is_dir() => std::fs::remove_dir(&path),
-        _ => std::fs::remove_file(&path),
-    };
-    if let Err(e) = result {
-        return Err(throw_windows_exception(&thread, windows_error_code(&e)).await);
+    #[expect(unsafe_code)]
+    let ok = unsafe { windows_sys::Win32::Storage::FileSystem::DeleteFileW(path.as_ptr()) };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
     }
     Ok(None)
 }
@@ -821,8 +1309,9 @@ pub async fn device_io_control_get_reparse_point<T: Thread + 'static>(
     let vm = thread.vm()?;
     match read_reparse_point(vm.file_handles(), handle, buffer_size).await {
         Ok(bytes) => {
-            let native_memory = vm.native_memory();
-            native_memory.write_bytes(buffer_address, &bytes);
+            if !vm.native_memory().try_write_bytes(buffer_address, &bytes) {
+                return Err(throw_windows_exception(&thread, 998 /* ERROR_NOACCESS */).await);
+            }
             Ok(None)
         }
         Err(code) => Err(throw_windows_exception(&thread, code).await),
@@ -886,25 +1375,72 @@ async fn read_reparse_point(
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.DeviceIoControlSetSparse(J)V", Any)]
 #[async_method]
 pub async fn device_io_control_set_sparse<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _handle = parameters.pop_long()?;
-    // Best-effort no-op: we don't mark files sparse, but allow the call to succeed so
-    // higher-level code (Files.createFile with SparseFileOption) continues without error.
+    let handle = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let file = vm.file_handles().get(&handle).await.ok_or_else(|| {
+        InternalError("DeviceIoControlSetSparse: invalid file handle".to_string())
+    })?;
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::System::IO::DeviceIoControl;
+    let raw_handle = file.file.as_raw_handle() as usize;
+    drop(file);
+    let mut returned = 0u32;
+    const FSCTL_SET_SPARSE: u32 = 0x0009_00C4;
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        DeviceIoControl(
+            raw_handle as HANDLE,
+            FSCTL_SET_SPARSE,
+            std::ptr::null(),
+            0,
+            std::ptr::null_mut(),
+            0,
+            &raw mut returned,
+            std::ptr::null_mut(),
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
+    }
     Ok(None)
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.DuplicateTokenEx(JI)J", Any)]
 #[async_method]
 pub async fn duplicate_token_ex<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _desired_access = parameters.pop_int()?;
+    let desired_access = parameters.pop_int()?;
     let token = parameters.pop_long()?;
-    // We don't impersonate the user; return the same pseudo-token.
-    Ok(Some(Value::Long(token)))
+    use windows_sys::Win32::Foundation::HANDLE;
+    use windows_sys::Win32::Security::{
+        DuplicateTokenEx, SecurityImpersonation, TokenImpersonation,
+    };
+    let (result, error) = {
+        let mut result: HANDLE = std::ptr::null_mut();
+        #[expect(unsafe_code)]
+        let ok = unsafe {
+            DuplicateTokenEx(
+                token as usize as HANDLE,
+                desired_access.cast_unsigned(),
+                std::ptr::null(),
+                SecurityImpersonation,
+                TokenImpersonation,
+                &raw mut result,
+            )
+        };
+        let error = if ok == 0 { last_windows_error() } else { 0 };
+        (result as usize, error)
+    };
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    Ok(Some(Value::Long(result as i64)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.FindFirstFile1(JJ)J", Any)]
@@ -915,13 +1451,25 @@ pub async fn find_first_file1<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let data_address = parameters.pop_long()?;
     let path_address = parameters.pop_long()?;
-    let path = read_native_string(&thread, path_address, "FindFirstFile1")?;
-    let entry_path = std::path::PathBuf::from(&path);
-    if std::fs::symlink_metadata(&entry_path).is_err() {
-        return Err(throw_windows_exception(&thread, 2 /* ERROR_FILE_NOT_FOUND */).await);
+    let path = read_native_wide(&thread, path_address, "FindFirstFile1")?;
+    let mut data = windows_sys::Win32::Storage::FileSystem::WIN32_FIND_DATAW::default();
+    #[expect(unsafe_code)]
+    let handle = unsafe {
+        windows_sys::Win32::Storage::FileSystem::FindFirstFileW(path.as_ptr(), &raw mut data)
+    };
+    if handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
     }
-    write_find_data(&thread, data_address, &entry_path)?;
-    Ok(Some(Value::Long(next_find_file_handle())))
+    if let Err(error) =
+        write_native_structure(&*thread.vm()?, data_address, &data, "FindFirstFile1")
+    {
+        #[expect(unsafe_code)]
+        unsafe {
+            windows_sys::Win32::Storage::FileSystem::FindClose(handle);
+        }
+        return Err(error);
+    }
+    Ok(Some(Value::Long(handle as usize as i64)))
 }
 
 #[intrinsic_method(
@@ -933,11 +1481,48 @@ pub async fn find_first_stream0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _obj = parameters.pop_reference()?;
-    let _address = parameters.pop_long()?;
-    // We don't enumerate NTFS alternate data streams; report end-of-stream so JDK
-    // callers cleanly observe an empty stream list.
-    Err(throw_windows_exception(&thread, 38 /* ERROR_HANDLE_EOF */).await)
+    let obj_gc = parameters
+        .pop_reference()?
+        .ok_or_else(|| InternalError("FindFirstStream0: null FirstStream".to_string()))?;
+    let address = parameters.pop_long()?;
+    let path = read_native_wide(&thread, address, "FindFirstStream0")?;
+    let mut data = windows_sys::Win32::Storage::FileSystem::WIN32_FIND_STREAM_DATA::default();
+    let (handle, error) = {
+        #[expect(unsafe_code)]
+        let handle = unsafe {
+            windows_sys::Win32::Storage::FileSystem::FindFirstStreamW(
+                path.as_ptr(),
+                windows_sys::Win32::Storage::FileSystem::FindStreamInfoStandard,
+                (&raw mut data).cast(),
+                0,
+            )
+        };
+        let error = if handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
+            last_windows_error()
+        } else {
+            0
+        };
+        (handle as usize, error)
+    };
+    if error != 0 && error != 38
+    /* ERROR_HANDLE_EOF */
+    {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    let name = if error != 0 {
+        Value::Object(None)
+    } else {
+        thread
+            .intern_string(&wide_string(&data.cStreamName))
+            .await?
+    };
+    let mut guard = obj_gc.write();
+    let Reference::Object(ref mut object) = *guard else {
+        return Err(InternalError("FindFirstStream0: not an object".to_string()));
+    };
+    object.set_value("handle", Value::Long(handle as i64))?;
+    object.set_value("name", name)?;
+    Ok(None)
 }
 
 #[intrinsic_method(
@@ -970,82 +1555,27 @@ async fn find_next_file_impl<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let data_address = parameters.pop_long()?;
     let handle = parameters.pop_long()?;
-    let next = {
-        let mut handles = find_file_handles().lock().map_err(|_| {
-            InternalError("FindNextFile: poisoned find-file handle map".to_string())
-        })?;
-        handles.get_mut(&handle).and_then(|state| {
-            state
-                .remaining
-                .pop_front()
-                .map(|name| (state.parent.clone(), name))
-        })
+    let mut data = windows_sys::Win32::Storage::FileSystem::WIN32_FIND_DATAW::default();
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Storage::FileSystem::FindNextFileW(
+            handle as usize as windows_sys::Win32::Foundation::HANDLE,
+            &raw mut data,
+        )
     };
-    match next {
-        Some((parent, name)) => {
-            let entry_path = parent.join(&name);
-            write_find_data(thread, data_address, &entry_path)?;
-            let value = thread.intern_string(&name).await?;
-            Ok(Some(value))
+    if ok == 0 {
+        let error = last_windows_error();
+        if error == 18
+        /* ERROR_NO_MORE_FILES */
+        {
+            return Ok(Some(Value::Object(None)));
         }
-        None => Ok(Some(Value::Object(None))),
+        return Err(throw_windows_exception(thread, error).await);
     }
-}
-
-/// Write a `WIN32_FIND_DATAW` structure to the supplied native buffer based on the metadata
-/// for `entry_path`. The JDK's `WindowsDirectoryStream` reads at least `dwFileAttributes`,
-/// timestamps, and file size from this buffer to construct cached `BasicFileAttributes`
-/// instances for the entries it returns.
-fn write_find_data<T: Thread + 'static>(
-    thread: &Arc<T>,
-    data_address: i64,
-    entry_path: &std::path::Path,
-) -> Result<()> {
-    if data_address == 0 {
-        return Ok(());
-    }
-    let vm = thread.vm()?;
-    let native_memory = vm.native_memory();
-    let (attrs, creation, access, write, size) = match std::fs::symlink_metadata(entry_path) {
-        Ok(meta) => {
-            let attrs = metadata_file_attributes(&meta);
-            (
-                attrs,
-                system_time_to_filetime(meta.created().ok()),
-                system_time_to_filetime(meta.accessed().ok()),
-                system_time_to_filetime(meta.modified().ok()),
-                meta.len(),
-            )
-        }
-        Err(_) => (file_attribute::NORMAL, 0, 0, 0, 0),
-    };
-    native_memory.write_i32(
-        data_address + file_attribute_data_offset::FILE_ATTRIBUTES,
-        attrs,
-    );
-    native_memory.write_i64(
-        data_address + file_attribute_data_offset::CREATION_TIME,
-        i64::from_ne_bytes(creation.to_ne_bytes()),
-    );
-    native_memory.write_i64(
-        data_address + file_attribute_data_offset::LAST_ACCESS_TIME,
-        i64::from_ne_bytes(access.to_ne_bytes()),
-    );
-    native_memory.write_i64(
-        data_address + file_attribute_data_offset::LAST_WRITE_TIME,
-        i64::from_ne_bytes(write.to_ne_bytes()),
-    );
-    let size_high = file_size_dword(size >> DWORD_BITS);
-    let size_low = file_size_dword(size);
-    native_memory.write_i32(
-        data_address + file_attribute_data_offset::FILE_SIZE_HIGH,
-        size_high,
-    );
-    native_memory.write_i32(
-        data_address + file_attribute_data_offset::FILE_SIZE_LOW,
-        size_low,
-    );
-    Ok(())
+    write_native_structure(&*thread.vm()?, data_address, &data, "FindNextFile")?;
+    Ok(Some(
+        thread.intern_string(&wide_string(&data.cFileName)).await?,
+    ))
 }
 
 #[intrinsic_method(
@@ -1054,11 +1584,10 @@ fn write_find_data<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn find_next_stream<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _handle = parameters.pop_long()?;
-    Ok(Some(Value::Object(None)))
+    find_next_stream_impl(&thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -1067,11 +1596,39 @@ pub async fn find_next_stream<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn find_next_stream0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    find_next_stream_impl(&thread, parameters).await
+}
+
+async fn find_next_stream_impl<T: Thread + 'static>(
+    thread: &Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _handle = parameters.pop_long()?;
-    Ok(Some(Value::Object(None)))
+    let handle = parameters.pop_long()?;
+    let mut data = windows_sys::Win32::Storage::FileSystem::WIN32_FIND_STREAM_DATA::default();
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Storage::FileSystem::FindNextStreamW(
+            handle as usize as windows_sys::Win32::Foundation::HANDLE,
+            (&raw mut data).cast(),
+        )
+    };
+    if ok == 0 {
+        let error = last_windows_error();
+        if error == 38 /* ERROR_HANDLE_EOF */ || error == 18
+        /* ERROR_NO_MORE_FILES */
+        {
+            return Ok(Some(Value::Object(None)));
+        }
+        return Err(throw_windows_exception(thread, error).await);
+    }
+    Ok(Some(
+        thread
+            .intern_string(&wide_string(&data.cStreamName))
+            .await?,
+    ))
 }
 
 #[intrinsic_method(
@@ -1124,12 +1681,38 @@ fn format_win32_message(_code: i32) -> Option<String> {
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetAce(JI)J", Any)]
 #[async_method]
 pub async fn get_ace<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _ace_index = parameters.pop_int()?;
-    let _address = parameters.pop_long()?;
-    Ok(Some(Value::Long(0)))
+    let ace_index = parameters.pop_int()?;
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let mut acl = read_guest_acl(&*vm, address)?;
+    let (error, offset) = {
+        let mut ace = std::ptr::null_mut();
+        #[expect(unsafe_code)]
+        let ok = unsafe {
+            windows_sys::Win32::Security::GetAce(
+                acl.as_mut_ptr().cast(),
+                ace_index.cast_unsigned(),
+                &raw mut ace,
+            )
+        };
+        let error = if ok == 0 { last_windows_error() } else { 0 };
+        let offset = (ace as usize).checked_sub(acl.as_ptr() as usize);
+        (error, offset)
+    };
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    let offset = offset.ok_or_else(|| InternalError("GetAce: invalid ACE pointer".to_string()))?;
+    let guest_address = address
+        .checked_add(
+            i64::try_from(offset)
+                .map_err(|_| InternalError("GetAce: ACE offset overflow".to_string()))?,
+        )
+        .ok_or_else(|| InternalError("GetAce: address overflow".to_string()))?;
+    Ok(Some(Value::Long(guest_address)))
 }
 
 #[intrinsic_method(
@@ -1138,19 +1721,38 @@ pub async fn get_ace<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_acl_information0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let obj_gc = parameters
         .pop_reference()?
         .ok_or(InternalError("GetAclInformation0: null obj".to_string()))?;
-    let _address = parameters.pop_long()?;
-    let mut guard = obj_gc.write();
-    if let Reference::Object(ref mut obj) = *guard {
-        // Empty DACL: no entries, just the 8-byte ACL header.
-        obj.set_value("aceCount", Value::Int(0))?;
-        obj.set_value("aclBytesInUse", Value::Int(8))?;
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let acl = read_guest_acl(&*vm, address)?;
+    let mut information = windows_sys::Win32::Security::ACL_SIZE_INFORMATION::default();
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Security::GetAclInformation(
+            acl.as_ptr().cast(),
+            (&raw mut information).cast(),
+            u32::try_from(size_of_val(&information)).unwrap_or(0),
+            windows_sys::Win32::Security::AclSizeInformation,
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
     }
+    let mut guard = obj_gc.write();
+    let Reference::Object(ref mut obj) = *guard else {
+        return Err(InternalError(
+            "GetAclInformation0: not an object".to_string(),
+        ));
+    };
+    obj.set_value(
+        "aceCount",
+        Value::Int(i32::try_from(information.AceCount).unwrap_or(i32::MAX)),
+    )?;
     Ok(None)
 }
 
@@ -1161,7 +1763,9 @@ pub async fn get_current_process<T: Thread + 'static>(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     // Win32 returns a pseudo-handle (-1) for the current process.
-    Ok(Some(Value::Long(-1)))
+    #[expect(unsafe_code)]
+    let handle = unsafe { windows_sys::Win32::System::Threading::GetCurrentProcess() };
+    Ok(Some(Value::Long(handle as usize as i64)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetCurrentThread()J", Any)]
@@ -1171,7 +1775,9 @@ pub async fn get_current_thread<T: Thread + 'static>(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     // Win32 returns a pseudo-handle (-2) for the current thread.
-    Ok(Some(Value::Long(-2)))
+    #[expect(unsafe_code)]
+    let handle = unsafe { windows_sys::Win32::System::Threading::GetCurrentThread() };
+    Ok(Some(Value::Long(handle as usize as i64)))
 }
 
 #[intrinsic_method(
@@ -1188,8 +1794,9 @@ pub async fn get_disk_free_space0<T: Thread + 'static>(
         .ok_or(InternalError("GetDiskFreeSpace0: null obj".to_string()))?;
     let address = parameters.pop_long()?;
     let path = read_native_string(&thread, address, "GetDiskFreeSpace0")?;
-    let Some(info) = disk_free_space(&path) else {
-        return Err(throw_windows_exception(&thread, 3 /* ERROR_PATH_NOT_FOUND */).await);
+    let info = match disk_free_space(&path) {
+        Ok(info) => info,
+        Err(error) => return Err(throw_windows_exception(&thread, error).await),
     };
     let mut guard = obj_gc.write();
     let Reference::Object(ref mut obj) = *guard else {
@@ -1218,8 +1825,9 @@ pub async fn get_disk_free_space_ex0<T: Thread + 'static>(
         .ok_or(InternalError("GetDiskFreeSpaceEx0: null obj".to_string()))?;
     let address = parameters.pop_long()?;
     let path = read_native_string(&thread, address, "GetDiskFreeSpaceEx0")?;
-    let Some(info) = disk_free_space_ex(&path) else {
-        return Err(throw_windows_exception(&thread, 3 /* ERROR_PATH_NOT_FOUND */).await);
+    let info = match disk_free_space_ex(&path) {
+        Ok(info) => info,
+        Err(error) => return Err(throw_windows_exception(&thread, error).await),
     };
     let mut guard = obj_gc.write();
     let Reference::Object(ref mut obj) = *guard else {
@@ -1254,7 +1862,7 @@ struct DiskFreeSpaceExInfo {
 
 #[cfg(target_family = "windows")]
 #[expect(unsafe_code)]
-fn disk_free_space(path: &str) -> Option<DiskFreeSpaceInfo> {
+fn disk_free_space(path: &str) -> std::result::Result<DiskFreeSpaceInfo, i32> {
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceW;
     let wide: Vec<u16> = std::ffi::OsStr::new(path)
@@ -1275,19 +1883,19 @@ fn disk_free_space(path: &str) -> Option<DiskFreeSpaceInfo> {
         )
     };
     if ok == 0 {
-        return None;
+        return Err(last_windows_error());
     }
-    Some(DiskFreeSpaceInfo { bytes_per_sector })
+    Ok(DiskFreeSpaceInfo { bytes_per_sector })
 }
 
 #[cfg(not(target_family = "windows"))]
-fn disk_free_space(_path: &str) -> Option<DiskFreeSpaceInfo> {
-    None
+fn disk_free_space(_path: &str) -> std::result::Result<DiskFreeSpaceInfo, i32> {
+    Err(50 /* ERROR_NOT_SUPPORTED */)
 }
 
 #[cfg(target_family = "windows")]
 #[expect(unsafe_code)]
-fn disk_free_space_ex(path: &str) -> Option<DiskFreeSpaceExInfo> {
+fn disk_free_space_ex(path: &str) -> std::result::Result<DiskFreeSpaceExInfo, i32> {
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
     let wide: Vec<u16> = std::ffi::OsStr::new(path)
@@ -1306,9 +1914,9 @@ fn disk_free_space_ex(path: &str) -> Option<DiskFreeSpaceExInfo> {
         )
     };
     if ok == 0 {
-        return None;
+        return Err(last_windows_error());
     }
-    Some(DiskFreeSpaceExInfo {
+    Ok(DiskFreeSpaceExInfo {
         free_to_caller,
         total,
         total_free,
@@ -1316,8 +1924,8 @@ fn disk_free_space_ex(path: &str) -> Option<DiskFreeSpaceExInfo> {
 }
 
 #[cfg(not(target_family = "windows"))]
-fn disk_free_space_ex(_path: &str) -> Option<DiskFreeSpaceExInfo> {
-    None
+fn disk_free_space_ex(_path: &str) -> std::result::Result<DiskFreeSpaceExInfo, i32> {
+    Err(50 /* ERROR_NOT_SUPPORTED */)
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetDriveType0(J)I", Any)]
@@ -1356,12 +1964,14 @@ pub async fn get_file_attributes0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let path_address = parameters.pop_long()?;
-    let path_str = read_native_string(&thread, path_address, "GetFileAttributes0")?;
-    let path = std::path::Path::new(&path_str);
-    match std::fs::symlink_metadata(path) {
-        Ok(metadata) => Ok(Some(Value::Int(metadata_file_attributes(&metadata)))),
-        Err(e) => Err(throw_windows_exception(&thread, windows_error_code(&e)).await),
+    let path = read_native_wide(&thread, path_address, "GetFileAttributes0")?;
+    #[expect(unsafe_code)]
+    let attributes =
+        unsafe { windows_sys::Win32::Storage::FileSystem::GetFileAttributesW(path.as_ptr()) };
+    if attributes == u32::MAX {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
     }
+    Ok(Some(Value::Int(attributes.cast_signed())))
 }
 
 #[intrinsic_method(
@@ -1388,34 +1998,25 @@ pub async fn get_file_information_by_handle0<T: Thread + 'static>(
     let address = parameters.pop_long()?;
     let handle = parameters.pop_long()?;
     let vm = thread.vm()?;
-    let Ok(metadata) = managed_files::metadata(vm.file_handles(), handle).await else {
-        return Err(throw_windows_exception(&thread, 2 /* ERROR_FILE_NOT_FOUND */).await);
+    let file = vm.file_handles().get(&handle).await.ok_or_else(|| {
+        InternalError("GetFileInformationByHandle: invalid file handle".to_string())
+    })?;
+    use std::os::windows::io::AsRawHandle;
+    let raw_handle = file.file.as_raw_handle() as windows_sys::Win32::Foundation::HANDLE;
+    let mut information =
+        windows_sys::Win32::Storage::FileSystem::BY_HANDLE_FILE_INFORMATION::default();
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Storage::FileSystem::GetFileInformationByHandle(
+            raw_handle,
+            &raw mut information,
+        )
     };
-    let native_memory = vm.native_memory();
-    let attributes = metadata_file_attributes(&metadata).cast_unsigned();
-    let size = metadata.len();
-    let size_high = u32::try_from(size >> 32).unwrap_or(0);
-    let size_low = u32::try_from(size & 0xFFFF_FFFF).unwrap_or(0);
-    let modified_ft = system_time_to_filetime(metadata.modified().ok());
-    let created_ft = system_time_to_filetime(metadata.created().ok());
-    let accessed_ft = system_time_to_filetime(metadata.accessed().ok());
-    let (vol_serial, n_links, file_index) = file_identity(vm.file_handles(), handle)
-        .await
-        .unwrap_or((0, 1, 0));
-    let index_high = u32::try_from(file_index >> 32).unwrap_or(0);
-    let index_low = u32::try_from(file_index & 0xFFFF_FFFF).unwrap_or(0);
-    let mut buffer = [0u8; 52];
-    buffer[0..4].copy_from_slice(&attributes.to_le_bytes());
-    buffer[4..12].copy_from_slice(&created_ft.to_le_bytes());
-    buffer[12..20].copy_from_slice(&accessed_ft.to_le_bytes());
-    buffer[20..28].copy_from_slice(&modified_ft.to_le_bytes());
-    buffer[28..32].copy_from_slice(&vol_serial.to_le_bytes());
-    buffer[32..36].copy_from_slice(&size_high.to_le_bytes());
-    buffer[36..40].copy_from_slice(&size_low.to_le_bytes());
-    buffer[40..44].copy_from_slice(&n_links.to_le_bytes());
-    buffer[44..48].copy_from_slice(&index_high.to_le_bytes());
-    buffer[48..52].copy_from_slice(&index_low.to_le_bytes());
-    native_memory.write_bytes(address, &buffer);
+    drop(file);
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
+    }
+    write_native_structure(&*vm, address, &information, "GetFileInformationByHandle")?;
     Ok(None)
 }
 
@@ -1444,35 +2045,63 @@ pub(crate) async fn file_identity(
     Some((info.dwVolumeSerialNumber, info.nNumberOfLinks, index))
 }
 
-fn system_time_to_filetime(time: Option<std::time::SystemTime>) -> u64 {
-    match time {
-        Some(t) => match t.duration_since(std::time::UNIX_EPOCH) {
-            Ok(d) => {
-                // Convert Unix time to Windows FILETIME (100-ns intervals since 1601-01-01)
-                d.as_secs()
-                    .saturating_mul(10_000_000)
-                    .saturating_add(u64::from(d.subsec_nanos() / 100))
-                    .saturating_add(116_444_736_000_000_000)
-            }
-            Err(_) => 0,
-        },
-        None => 0,
-    }
-}
-
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetFileSecurity0(JIJI)I", Any)]
 #[async_method]
 pub async fn get_file_security0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _n_length = parameters.pop_int()?;
-    let _desc_address = parameters.pop_long()?;
-    let _requested_information = parameters.pop_int()?;
-    let _path_address = parameters.pop_long()?;
-    // We don't surface real security descriptors. Report zero bytes were written
-    // (the JDK treats this as success because the buffer was sufficient).
-    Ok(Some(Value::Int(0)))
+    let n_length = parameters.pop_int()?;
+    let desc_address = parameters.pop_long()?;
+    let requested_information = parameters.pop_int()?;
+    let path_address = parameters.pop_long()?;
+    let path = read_native_wide(&thread, path_address, "GetFileSecurity0")?;
+    let buffer_length = usize::try_from(n_length.max(0)).unwrap_or(0);
+    let mut descriptor = vec![0u8; buffer_length];
+    let mut required = 0u32;
+    let descriptor_pointer = if descriptor.is_empty() {
+        std::ptr::null_mut()
+    } else {
+        descriptor.as_mut_ptr().cast()
+    };
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Security::GetFileSecurityW(
+            path.as_ptr(),
+            requested_information.cast_unsigned(),
+            descriptor_pointer,
+            u32::try_from(buffer_length).unwrap_or(u32::MAX),
+            &raw mut required,
+        )
+    };
+    if ok == 0 {
+        let error = last_windows_error();
+        if error != 122
+        /* ERROR_INSUFFICIENT_BUFFER */
+        {
+            return Err(throw_windows_exception(&thread, error).await);
+        }
+        return Ok(Some(Value::Int(
+            i32::try_from(required).unwrap_or(i32::MAX),
+        )));
+    }
+    let bytes_written = usize::try_from(required)
+        .unwrap_or(buffer_length)
+        .min(buffer_length);
+    let written_descriptor = descriptor
+        .get(..bytes_written)
+        .ok_or_else(|| InternalError("GetFileSecurity0: invalid result length".to_string()))?;
+    if bytes_written != 0
+        && !thread
+            .vm()?
+            .native_memory()
+            .try_write_bytes(desc_address, written_descriptor)
+    {
+        return Err(InternalError(
+            "GetFileSecurity0: invalid descriptor address".to_string(),
+        ));
+    }
+    Ok(Some(Value::Int(n_length)))
 }
 
 #[intrinsic_method(
@@ -1567,48 +2196,65 @@ async fn final_path_name(
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetLengthSid(J)I", Any)]
 #[async_method]
 pub async fn get_length_sid<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _address = parameters.pop_long()?;
-    Ok(Some(Value::Int(12)))
+    let address = parameters.pop_long()?;
+    let length = read_guest_sid(&*thread.vm()?, address)?.len();
+    Ok(Some(Value::Int(i32::try_from(length).unwrap_or(i32::MAX))))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetLogicalDrives()I", Any)]
 #[async_method]
 pub async fn get_logical_drives<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    #[cfg(target_os = "windows")]
-    {
-        // Probe drive letters A-Z by attempting to read metadata on the root.
-        let mut mask: u32 = 0;
-        for i in 0u8..26 {
-            let letter = (b'A' + i) as char;
-            let root = format!("{letter}:\\");
-            if std::fs::metadata(&root).is_ok() {
-                mask |= 1u32 << u32::from(i);
-            }
-        }
-        return Ok(Some(Value::Int(mask.cast_signed())));
+    #[expect(unsafe_code)]
+    let mask = unsafe { windows_sys::Win32::Storage::FileSystem::GetLogicalDrives() };
+    if mask == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
     }
-    #[cfg(not(target_os = "windows"))]
-    {
-        Ok(Some(Value::Int(1 << 2)))
-    }
+    Ok(Some(Value::Int(mask.cast_signed())))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetOverlappedResult(JJ)I", Any)]
 #[async_method]
 pub async fn get_overlapped_result<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _lp_overlapped = parameters.pop_long()?;
-    let _h_file = parameters.pop_long()?;
-    // No outstanding overlapped I/O in our stub: report zero bytes transferred.
-    Ok(Some(Value::Int(0)))
+    let lp_overlapped = parameters.pop_long()?;
+    let h_file = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let operations = overlapped_operations(&*vm)?;
+    let operation = operations
+        .0
+        .lock()
+        .map_err(|_| InternalError("poisoned overlapped operation map".to_string()))?
+        .get(&(h_file, lp_overlapped))
+        .cloned()
+        .ok_or_else(|| InternalError("GetOverlappedResult: unknown operation".to_string()))?;
+    let (error, transferred) = loop {
+        let notified = operation.notification.notified();
+        if let Some(result) = *operation
+            .result
+            .lock()
+            .map_err(|_| InternalError("poisoned overlapped result".to_string()))?
+        {
+            break result;
+        }
+        notified.await;
+    };
+    operations
+        .0
+        .lock()
+        .map_err(|_| InternalError("poisoned overlapped operation map".to_string()))?
+        .remove(&(h_file, lp_overlapped));
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    Ok(Some(Value::Int(transferred.cast_signed())))
 }
 
 #[intrinsic_method(
@@ -1624,26 +2270,8 @@ pub async fn get_queued_completion_status0<T: Thread + 'static>(
         "GetQueuedCompletionStatus0: null status".to_string(),
     ))?;
     let completion_port = parameters.pop_long()?;
-    let port = {
-        let Ok(ports) = iocp_ports().lock() else {
-            return Err(InternalError(
-                "GetQueuedCompletionStatus0: iocp_ports poisoned".to_string(),
-            ));
-        };
-        ports.get(&completion_port).cloned()
-    };
-    let Some(port) = port else {
-        return Err(throw_windows_exception(&thread, 6 /* ERROR_INVALID_HANDLE */).await);
-    };
-    let completion = {
-        let mut rx = port.rx.lock().await;
-        rx.recv().await.unwrap_or(IocpCompletion {
-            error: 6,
-            bytes_transferred: 0,
-            completion_key: 0,
-            overlapped: 0,
-        })
-    };
+    let vm = thread.vm()?;
+    let completion = iocp::receive(&*vm, completion_port).await?;
     let mut guard = status_gc.write();
     let Reference::Object(ref mut obj) = *guard else {
         return Err(InternalError(
@@ -1665,11 +2293,37 @@ pub async fn get_queued_completion_status0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_security_descriptor_dacl<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _address = parameters.pop_long()?;
-    Ok(Some(Value::Long(0)))
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    if let Some(descriptor) = security_descriptors(&*vm)?
+        .0
+        .lock()
+        .map_err(|_| InternalError("poisoned security descriptor map".to_string()))?
+        .get(&address)
+        .cloned()
+    {
+        return Ok(Some(Value::Long(descriptor.dacl_address)));
+    }
+    let descriptor = vm
+        .native_memory()
+        .try_read_bytes(address, 20)
+        .ok_or_else(|| {
+            InternalError("GetSecurityDescriptorDacl: invalid descriptor".to_string())
+        })?;
+    let control = read_u16(&descriptor, 2).unwrap_or(0);
+    if control & windows_sys::Win32::Security::SE_DACL_PRESENT == 0 {
+        return Ok(Some(Value::Long(0)));
+    }
+    let offset = i64::from(read_u32(&descriptor, 16).unwrap_or(0));
+    let dacl = if offset == 0 {
+        0
+    } else {
+        address.saturating_add(offset)
+    };
+    Ok(Some(Value::Long(dacl)))
 }
 
 #[intrinsic_method(
@@ -1678,24 +2332,114 @@ pub async fn get_security_descriptor_dacl<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn get_security_descriptor_owner<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _address = parameters.pop_long()?;
-    Ok(Some(Value::Long(0)))
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    if let Some(descriptor) = security_descriptors(&*vm)?
+        .0
+        .lock()
+        .map_err(|_| InternalError("poisoned security descriptor map".to_string()))?
+        .get(&address)
+        .cloned()
+    {
+        return Ok(Some(Value::Long(descriptor.owner_address)));
+    }
+    let descriptor = vm
+        .native_memory()
+        .try_read_bytes(address, 20)
+        .ok_or_else(|| {
+            InternalError("GetSecurityDescriptorOwner: invalid descriptor".to_string())
+        })?;
+    let offset = i64::from(read_u32(&descriptor, 4).unwrap_or(0));
+    let owner = if offset == 0 {
+        0
+    } else {
+        address.saturating_add(offset)
+    };
+    Ok(Some(Value::Long(owner)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.GetTokenInformation(JIJI)I", Any)]
 #[async_method]
 pub async fn get_token_information<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _token_info_length = parameters.pop_int()?;
-    let _token_info = parameters.pop_long()?;
-    let _token_info_class = parameters.pop_int()?;
-    let _token = parameters.pop_long()?;
-    Ok(Some(Value::Int(0)))
+    let token_info_length = parameters.pop_int()?;
+    let token_info = parameters.pop_long()?;
+    let token_info_class = parameters.pop_int()?;
+    let token = parameters.pop_long()?;
+    let length = usize::try_from(token_info_length.max(0)).unwrap_or(0);
+    let mut buffer = vec![0u8; length];
+    let mut required = 0u32;
+    let pointer = if buffer.is_empty() {
+        std::ptr::null_mut()
+    } else {
+        buffer.as_mut_ptr().cast()
+    };
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Security::GetTokenInformation(
+            token as usize as windows_sys::Win32::Foundation::HANDLE,
+            token_info_class,
+            pointer,
+            u32::try_from(length).unwrap_or(u32::MAX),
+            &raw mut required,
+        )
+    };
+    if ok == 0 {
+        let error = last_windows_error();
+        if error != 122
+        /* ERROR_INSUFFICIENT_BUFFER */
+        {
+            return Err(throw_windows_exception(&thread, error).await);
+        }
+        return Ok(Some(Value::Int(
+            i32::try_from(required).unwrap_or(i32::MAX),
+        )));
+    }
+
+    // TOKEN_USER begins with SID_AND_ATTRIBUTES. Convert its embedded host pointer into
+    // the equivalent guest address before exposing the buffer to Java Unsafe.
+    if token_info_class == windows_sys::Win32::Security::TokenUser && length >= size_of::<usize>() {
+        let pointer_bytes = buffer
+            .get(..size_of::<usize>())
+            .ok_or_else(|| InternalError("GetTokenInformation: invalid TOKEN_USER".to_string()))?;
+        let host_pointer =
+            usize::from_ne_bytes(pointer_bytes.try_into().map_err(|_| {
+                InternalError("GetTokenInformation: invalid TOKEN_USER".to_string())
+            })?);
+        let host_base = buffer.as_ptr() as usize;
+        let offset = host_pointer.checked_sub(host_base).ok_or_else(|| {
+            InternalError("GetTokenInformation: SID pointer outside result".to_string())
+        })?;
+        let guest_pointer = token_info
+            .checked_add(i64::try_from(offset).map_err(|_| {
+                InternalError("GetTokenInformation: SID offset overflow".to_string())
+            })?)
+            .ok_or_else(|| InternalError("GetTokenInformation: address overflow".to_string()))?;
+        let output_pointer = buffer.get_mut(..size_of::<usize>()).ok_or_else(|| {
+            InternalError("GetTokenInformation: truncated TOKEN_USER".to_string())
+        })?;
+        output_pointer.copy_from_slice(&(guest_pointer as usize).to_ne_bytes());
+    }
+    let written = usize::try_from(required).unwrap_or(length).min(length);
+    let written_buffer = buffer
+        .get(..written)
+        .ok_or_else(|| InternalError("GetTokenInformation: invalid result length".to_string()))?;
+    if written != 0
+        && !thread
+            .vm()?
+            .native_memory()
+            .try_write_bytes(token_info, written_buffer)
+    {
+        return Err(InternalError(
+            "GetTokenInformation: invalid output address".to_string(),
+        ));
+    }
+    Ok(Some(Value::Int(token_info_length)))
 }
 
 #[intrinsic_method(
@@ -1712,8 +2456,10 @@ pub async fn get_volume_information0<T: Thread + 'static>(
         .ok_or(InternalError("GetVolumeInformation0: null obj".to_string()))?;
     let address = parameters.pop_long()?;
     let path = read_native_string(&thread, address, "GetVolumeInformation0")?;
-    let info = volume_information(&path)
-        .ok_or_else(|| InternalError("GetVolumeInformation0: failed".to_string()))?;
+    let info = match volume_information(&path) {
+        Ok(info) => info,
+        Err(error) => return Err(throw_windows_exception(&thread, error).await),
+    };
     let fs_name = info.0.to_object(thread.as_ref()).await?;
     let vol_name = info.1.to_object(thread.as_ref()).await?;
     let mut guard = obj_gc.write();
@@ -1731,7 +2477,7 @@ pub async fn get_volume_information0<T: Thread + 'static>(
 
 #[cfg(target_family = "windows")]
 #[expect(unsafe_code)]
-fn volume_information(path: &str) -> Option<(String, String, u32, u32)> {
+fn volume_information(path: &str) -> std::result::Result<(String, String, u32, u32), i32> {
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Storage::FileSystem::GetVolumeInformationW;
     let wide: Vec<u16> = std::ffi::OsStr::new(path)
@@ -1756,7 +2502,7 @@ fn volume_information(path: &str) -> Option<(String, String, u32, u32)> {
         )
     };
     if ok == 0 {
-        return None;
+        return Err(last_windows_error());
     }
     let vol_len = vol_name
         .iter()
@@ -1766,9 +2512,9 @@ fn volume_information(path: &str) -> Option<(String, String, u32, u32)> {
         .iter()
         .position(|&c| c == 0)
         .unwrap_or(fs_name.len());
-    let fs_name = fs_name.get(..fs_len)?;
-    let vol_name = vol_name.get(..vol_len)?;
-    Some((
+    let fs_name = fs_name.get(..fs_len).unwrap_or(&fs_name);
+    let vol_name = vol_name.get(..vol_len).unwrap_or(&vol_name);
+    Ok((
         String::from_utf16_lossy(fs_name),
         String::from_utf16_lossy(vol_name),
         serial,
@@ -1777,8 +2523,8 @@ fn volume_information(path: &str) -> Option<(String, String, u32, u32)> {
 }
 
 #[cfg(not(target_family = "windows"))]
-fn volume_information(_path: &str) -> Option<(String, String, u32, u32)> {
-    None
+fn volume_information(_path: &str) -> std::result::Result<(String, String, u32, u32), i32> {
+    Err(50 /* ERROR_NOT_SUPPORTED */)
 }
 
 #[intrinsic_method(
@@ -1792,14 +2538,17 @@ pub async fn get_volume_path_name0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let address = parameters.pop_long()?;
     let path = read_native_string(&thread, address, "GetVolumePathName0")?;
-    let volume = volume_path_name(&path);
+    let volume = match volume_path_name(&path) {
+        Ok(volume) => volume,
+        Err(error) => return Err(throw_windows_exception(&thread, error).await),
+    };
     let value = volume.to_object(thread.as_ref()).await?;
     Ok(Some(value))
 }
 
 #[cfg(target_family = "windows")]
 #[expect(unsafe_code)]
-fn volume_path_name(path: &str) -> String {
+fn volume_path_name(path: &str) -> std::result::Result<String, i32> {
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Storage::FileSystem::GetVolumePathNameW;
     let wide: Vec<u16> = std::ffi::OsStr::new(path)
@@ -1815,28 +2564,44 @@ fn volume_path_name(path: &str) -> String {
         )
     };
     if ok == 0 {
-        return String::new();
+        return Err(last_windows_error());
     }
     let len = buf.iter().position(|&c| c == 0).unwrap_or(buf.len());
-    let Some(buf) = buf.get(..len) else {
-        return String::new();
-    };
-    String::from_utf16_lossy(buf)
+    Ok(String::from_utf16_lossy(buf.get(..len).unwrap_or(&buf)))
 }
 
 #[cfg(not(target_family = "windows"))]
-fn volume_path_name(_path: &str) -> String {
-    String::new()
+fn volume_path_name(_path: &str) -> std::result::Result<String, i32> {
+    Err(50 /* ERROR_NOT_SUPPORTED */)
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.InitializeAcl(JI)V", Any)]
 #[async_method]
 pub async fn initialize_acl<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _size = parameters.pop_int()?;
-    let _address = parameters.pop_long()?;
+    let size = parameters.pop_int()?;
+    let address = parameters.pop_long()?;
+    let length = usize::try_from(size)
+        .map_err(|_| InternalError("InitializeAcl: negative ACL size".to_string()))?;
+    let mut acl = vec![0u8; length];
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Security::InitializeAcl(
+            acl.as_mut_ptr().cast(),
+            u32::try_from(length).unwrap_or(u32::MAX),
+            windows_sys::Win32::Security::ACL_REVISION,
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
+    }
+    if !thread.vm()?.native_memory().try_write_bytes(address, &acl) {
+        return Err(InternalError(
+            "InitializeAcl: invalid ACL address".to_string(),
+        ));
+    }
     Ok(None)
 }
 
@@ -1846,34 +2611,110 @@ pub async fn initialize_acl<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn initialize_security_descriptor<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _address = parameters.pop_long()?;
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let descriptor = [1u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    if !vm.native_memory().try_write_bytes(address, &descriptor) {
+        return Err(InternalError(
+            "InitializeSecurityDescriptor: invalid descriptor address".to_string(),
+        ));
+    }
+    security_descriptors(&*vm)?
+        .0
+        .lock()
+        .map_err(|_| InternalError("poisoned security descriptor map".to_string()))?
+        .insert(address, GuestSecurityDescriptor::default());
     Ok(None)
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.LocalFree(J)V", Any)]
 #[async_method]
 pub async fn local_free<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _address = parameters.pop_long()?;
-    // No native allocations are tracked here; the call is a safe no-op.
+    let address = parameters.pop_long()?;
+    if address != 0 {
+        let vm = thread.vm()?;
+        vm.native_memory().free(address);
+        security_descriptors(&*vm)?
+            .0
+            .lock()
+            .map_err(|_| InternalError("poisoned security descriptor map".to_string()))?
+            .remove(&address);
+    }
     Ok(None)
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.LookupAccountName0(JJI)I", Any)]
 #[async_method]
 pub async fn lookup_account_name0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _cb_sid = parameters.pop_int()?;
-    let _sid_address = parameters.pop_long()?;
-    let _name_address = parameters.pop_long()?;
-    Ok(Some(Value::Int(0)))
+    let cb_sid = parameters.pop_int()?;
+    let sid_address = parameters.pop_long()?;
+    let name_address = parameters.pop_long()?;
+    let name = read_native_wide(&thread, name_address, "LookupAccountName0")?;
+    let mut required_sid = 0u32;
+    let mut required_domain = 0u32;
+    let mut sid_use = 0i32;
+    #[expect(unsafe_code)]
+    unsafe {
+        windows_sys::Win32::Security::LookupAccountNameW(
+            std::ptr::null(),
+            name.as_ptr(),
+            std::ptr::null_mut(),
+            &raw mut required_sid,
+            std::ptr::null_mut(),
+            &raw mut required_domain,
+            &raw mut sid_use,
+        );
+    }
+    let query_error = last_windows_error();
+    if required_sid == 0 && query_error != 122
+    /* ERROR_INSUFFICIENT_BUFFER */
+    {
+        return Err(throw_windows_exception(&thread, query_error).await);
+    }
+    if cb_sid <= 0 || sid_address == 0 {
+        return Ok(Some(Value::Int(required_sid.cast_signed())));
+    }
+    let mut sid = vec![0u8; usize::try_from(cb_sid).unwrap_or(0)];
+    let mut sid_size = u32::try_from(sid.len()).unwrap_or(0);
+    let mut domain = vec![0u16; usize::try_from(required_domain).unwrap_or(0)];
+    let mut domain_size = required_domain;
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Security::LookupAccountNameW(
+            std::ptr::null(),
+            name.as_ptr(),
+            sid.as_mut_ptr().cast(),
+            &raw mut sid_size,
+            domain.as_mut_ptr(),
+            &raw mut domain_size,
+            &raw mut sid_use,
+        )
+    };
+    if ok == 0 {
+        let error = last_windows_error();
+        if error == 122 {
+            return Ok(Some(Value::Int(sid_size.cast_signed())));
+        }
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    sid.truncate(usize::try_from(sid_size).unwrap_or(0));
+    if !thread
+        .vm()?
+        .native_memory()
+        .try_write_bytes(sid_address, &sid)
+    {
+        return Err(throw_windows_exception(&thread, 998).await);
+    }
+    Ok(Some(Value::Int(sid_size.cast_signed())))
 }
 
 #[intrinsic_method(
@@ -1888,15 +2729,58 @@ pub async fn lookup_account_sid0<T: Thread + 'static>(
     let obj_gc = parameters
         .pop_reference()?
         .ok_or(InternalError("LookupAccountSid0: null obj".to_string()))?;
-    let _address = parameters.pop_long()?;
-    let name = "Unknown".to_object(thread.as_ref()).await?;
-    let domain = String::new().to_object(thread.as_ref()).await?;
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let mut sid = read_guest_sid(&*vm, address)?;
+    let mut name_length = 0u32;
+    let mut domain_length = 0u32;
+    let mut sid_use = 0i32;
+    #[expect(unsafe_code)]
+    unsafe {
+        windows_sys::Win32::Security::LookupAccountSidW(
+            std::ptr::null(),
+            sid.as_mut_ptr().cast(),
+            std::ptr::null_mut(),
+            &raw mut name_length,
+            std::ptr::null_mut(),
+            &raw mut domain_length,
+            &raw mut sid_use,
+        );
+    }
+    let error = last_windows_error();
+    if error != 122 || name_length == 0 {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    let mut name = vec![0u16; name_length as usize];
+    let mut domain = vec![0u16; domain_length as usize];
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Security::LookupAccountSidW(
+            std::ptr::null(),
+            sid.as_mut_ptr().cast(),
+            name.as_mut_ptr(),
+            &raw mut name_length,
+            domain.as_mut_ptr(),
+            &raw mut domain_length,
+            &raw mut sid_use,
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
+    }
+    name.truncate(name_length as usize);
+    domain.truncate(domain_length as usize);
+    let name = String::from_utf16_lossy(&name)
+        .to_object(thread.as_ref())
+        .await?;
+    let domain = String::from_utf16_lossy(&domain)
+        .to_object(thread.as_ref())
+        .await?;
     let mut guard = obj_gc.write();
     if let Reference::Object(ref mut obj) = *guard {
         obj.set_value("domain", domain)?;
         obj.set_value("name", name)?;
-        // SID_NAME_USE::SidTypeUnknown = 8
-        obj.set_value("use", Value::Int(8))?;
+        obj.set_value("use", Value::Int(sid_use))?;
     }
     Ok(None)
 }
@@ -1904,14 +2788,28 @@ pub async fn lookup_account_sid0<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.LookupPrivilegeValue0(J)J", Any)]
 #[async_method]
 pub async fn lookup_privilege_value0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _name = parameters.pop_long()?;
-    // Return a sentinel LUID. The JDK treats `LookupPrivilegeValue0` failure as
-    // an `AssertionError`, so we always succeed; subsequent privilege adjustments
-    // are no-ops handled by `adjust_token_privileges`.
-    Ok(Some(Value::Long(1)))
+    let name_address = parameters.pop_long()?;
+    let name = read_native_wide(&thread, name_address, "LookupPrivilegeValue0")?;
+    let mut luid = windows_sys::Win32::Foundation::LUID::default();
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Security::LookupPrivilegeValueW(
+            std::ptr::null(),
+            name.as_ptr(),
+            &raw mut luid,
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
+    }
+    let value = (i64::from(luid.HighPart) << 32) | i64::from(luid.LowPart);
+    let vm = thread.vm()?;
+    let address = vm.native_memory().allocate(8);
+    vm.native_memory().write_i64(address, value);
+    Ok(Some(Value::Long(address)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.MoveFileEx0(JJI)V", Any)]
@@ -1920,13 +2818,21 @@ pub async fn move_file_ex0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _flags = parameters.pop_int()?;
+    let flags = parameters.pop_int()?;
     let new_address = parameters.pop_long()?;
     let existing_address = parameters.pop_long()?;
-    let existing = read_native_string(&thread, existing_address, "MoveFileEx0")?;
-    let new = read_native_string(&thread, new_address, "MoveFileEx0")?;
-    if let Err(e) = std::fs::rename(&existing, &new) {
-        return Err(throw_windows_exception(&thread, windows_error_code(&e)).await);
+    let existing = read_native_wide(&thread, existing_address, "MoveFileEx0")?;
+    let new = read_native_wide(&thread, new_address, "MoveFileEx0")?;
+    #[expect(unsafe_code)]
+    let ok = unsafe {
+        windows_sys::Win32::Storage::FileSystem::MoveFileExW(
+            existing.as_ptr(),
+            new.as_ptr(),
+            flags.cast_unsigned(),
+        )
+    };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
     }
     Ok(None)
 }
@@ -1934,26 +2840,64 @@ pub async fn move_file_ex0<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.OpenProcessToken(JI)J", Any)]
 #[async_method]
 pub async fn open_process_token<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _desired_access = parameters.pop_int()?;
-    let _process = parameters.pop_long()?;
-    // Return a sentinel pseudo-token. AccessCheck below ignores it.
-    Ok(Some(Value::Long(1)))
+    let desired_access = parameters.pop_int()?;
+    let process = parameters.pop_long()?;
+    use windows_sys::Win32::Foundation::HANDLE;
+    let (token, error) = {
+        let mut token: HANDLE = std::ptr::null_mut();
+        #[expect(unsafe_code)]
+        let ok = unsafe {
+            windows_sys::Win32::System::Threading::OpenProcessToken(
+                process as usize as HANDLE,
+                desired_access.cast_unsigned(),
+                &raw mut token,
+            )
+        };
+        let error = if ok == 0 { last_windows_error() } else { 0 };
+        (token as usize, error)
+    };
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    Ok(Some(Value::Long(token as i64)))
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.OpenThreadToken(JIZ)J", Any)]
 #[async_method]
 pub async fn open_thread_token<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _open_as_self = parameters.pop_bool()?;
-    let _desired_access = parameters.pop_int()?;
-    let _thread = parameters.pop_long()?;
-    // No thread-impersonation token. JDK falls back to the process token.
-    Ok(Some(Value::Long(0)))
+    let open_as_self = parameters.pop_bool()?;
+    let desired_access = parameters.pop_int()?;
+    let thread_handle = parameters.pop_long()?;
+    use windows_sys::Win32::Foundation::HANDLE;
+    let (token, error) = {
+        let mut token: HANDLE = std::ptr::null_mut();
+        #[expect(unsafe_code)]
+        let ok = unsafe {
+            windows_sys::Win32::System::Threading::OpenThreadToken(
+                thread_handle as usize as HANDLE,
+                desired_access.cast_unsigned(),
+                open_as_self.into(),
+                &raw mut token,
+            )
+        };
+        let error = if ok == 0 { last_windows_error() } else { 0 };
+        (token as usize, error)
+    };
+    if error != 0 {
+        if error == 1008
+        /* ERROR_NO_TOKEN */
+        {
+            return Ok(Some(Value::Long(0)));
+        }
+        return Err(throw_windows_exception(&thread, error).await);
+    }
+    Ok(Some(Value::Long(token as i64)))
 }
 
 #[intrinsic_method(
@@ -1967,23 +2911,17 @@ pub async fn post_queued_completion_status<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let completion_key = parameters.pop_long()?;
     let completion_port = parameters.pop_long()?;
-    let port = {
-        let Ok(ports) = iocp_ports().lock() else {
-            return Err(InternalError(
-                "PostQueuedCompletionStatus: iocp_ports poisoned".to_string(),
-            ));
-        };
-        ports.get(&completion_port).cloned()
-    };
-    let Some(port) = port else {
-        return Err(throw_windows_exception(&thread, 6 /* ERROR_INVALID_HANDLE */).await);
-    };
-    let _ = port.tx.send(IocpCompletion {
-        error: 0,
-        bytes_transferred: 0,
-        completion_key: i32::try_from(completion_key).unwrap_or(0),
-        overlapped: 0,
-    });
+    let vm = thread.vm()?;
+    iocp::post_to_port(
+        &*vm,
+        completion_port,
+        CompletionPacket {
+            error: 0,
+            bytes_transferred: 0,
+            completion_key: i32::try_from(completion_key).unwrap_or(0),
+            overlapped: 0,
+        },
+    )?;
     Ok(None)
 }
 
@@ -1992,19 +2930,116 @@ pub async fn post_queued_completion_status<T: Thread + 'static>(
     Any
 )]
 #[async_method]
+#[expect(
+    clippy::too_many_lines,
+    reason = "issuing and completing one overlapped Win32 directory operation is one state machine"
+)]
 pub async fn read_directory_changes_w<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _p_overlapped = parameters.pop_long()?;
-    let _bytes_returned_address = parameters.pop_long()?;
-    let _filter = parameters.pop_int()?;
-    let _watch_sub_tree = parameters.pop_bool()?;
-    let _buffer_length = parameters.pop_int()?;
-    let _buffer_address = parameters.pop_long()?;
-    let _h_directory = parameters.pop_long()?;
-    // We don't generate real file-change notifications; the call is treated as a successful
-    // arming of the overlapped read. The watcher's `poll` will simply time out.
+    let p_overlapped = parameters.pop_long()?;
+    let bytes_returned_address = parameters.pop_long()?;
+    let filter = parameters.pop_int()?;
+    let watch_sub_tree = parameters.pop_bool()?;
+    let buffer_length = parameters.pop_int()?;
+    let buffer_address = parameters.pop_long()?;
+    let h_directory = parameters.pop_long()?;
+    let size = usize::try_from(buffer_length)
+        .map_err(|_| InternalError("ReadDirectoryChangesW: negative buffer length".to_string()))?;
+    let vm = thread.vm()?;
+    if vm
+        .native_memory()
+        .try_read_bytes(buffer_address, size)
+        .is_none()
+        || vm
+            .native_memory()
+            .try_read_bytes(bytes_returned_address, 4)
+            .is_none()
+    {
+        return Err(throw_windows_exception(&thread, 998 /* ERROR_NOACCESS */).await);
+    }
+    let file = vm
+        .file_handles()
+        .get(&h_directory)
+        .await
+        .ok_or_else(|| InternalError("ReadDirectoryChangesW: invalid handle".to_string()))?;
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::{ERROR_IO_PENDING, HANDLE};
+    use windows_sys::Win32::System::IO::{GetOverlappedResult, OVERLAPPED};
+    let raw_handle = file.file.as_raw_handle() as usize;
+    drop(file);
+    let target = iocp::begin_operation(&*vm, h_directory)?;
+    let guest_operation = match begin_guest_overlapped(&*vm, h_directory, p_overlapped) {
+        Ok(operation) => operation,
+        Err(error) => {
+            iocp::abandon_operation(&*vm, target)?;
+            return Err(error);
+        }
+    };
+    let mut buffer = vec![0u8; size];
+    let mut overlapped = Box::<OVERLAPPED>::default();
+    let mut initial_bytes = 0u32;
+    #[expect(unsafe_code)]
+    let issued = unsafe {
+        windows_sys::Win32::Storage::FileSystem::ReadDirectoryChangesW(
+            raw_handle as HANDLE,
+            buffer.as_mut_ptr().cast(),
+            u32::try_from(size).unwrap_or(u32::MAX),
+            watch_sub_tree.into(),
+            filter.cast_unsigned(),
+            &raw mut initial_bytes,
+            &raw mut *overlapped,
+            None,
+        )
+    };
+    if issued == 0 {
+        let error = last_windows_error();
+        if error.cast_unsigned() != ERROR_IO_PENDING {
+            iocp::abandon_operation(&*vm, target)?;
+            overlapped_operations(&*vm)?
+                .0
+                .lock()
+                .map_err(|_| InternalError("poisoned overlapped operation map".to_string()))?
+                .remove(&(h_directory, p_overlapped));
+            drop(overlapped);
+            return Err(throw_windows_exception(&thread, error).await);
+        }
+    }
+
+    let overlapped_pointer = Box::into_raw(overlapped) as usize;
+    tokio::task::spawn_blocking(move || {
+        #[expect(unsafe_code)]
+        let overlapped = unsafe { Box::from_raw(overlapped_pointer as *mut OVERLAPPED) };
+        let mut transferred = initial_bytes;
+        #[expect(unsafe_code)]
+        let ok = unsafe {
+            GetOverlappedResult(
+                raw_handle as HANDLE,
+                &raw const *overlapped,
+                &raw mut transferred,
+                1,
+            )
+        };
+        let mut error = if ok == 0 { last_windows_error() } else { 0 };
+        let mut transferred_usize = usize::try_from(transferred).unwrap_or(0).min(buffer.len());
+        if error == 0 {
+            let transferred_bytes = buffer.get(..transferred_usize);
+            let transferred_value = transferred.to_ne_bytes();
+            let wrote_result = transferred_bytes
+                .is_some_and(|bytes| vm.native_memory().try_write_bytes(buffer_address, bytes));
+            let wrote_length = vm
+                .native_memory()
+                .try_write_bytes(bytes_returned_address, &transferred_value);
+            if !wrote_result || !wrote_length {
+                error = 998; // ERROR_NOACCESS
+                transferred = 0;
+                transferred_usize = 0;
+            }
+        }
+        finish_guest_overlapped(&guest_operation, error, transferred);
+        let _ = iocp::post_operation(&*vm, target, error, transferred_usize, p_overlapped);
+    });
     Ok(None)
 }
 
@@ -2015,9 +3050,11 @@ pub async fn remove_directory0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let address = parameters.pop_long()?;
-    let path = read_native_string(&thread, address, "RemoveDirectory0")?;
-    if let Err(e) = std::fs::remove_dir(&path) {
-        return Err(throw_windows_exception(&thread, windows_error_code(&e)).await);
+    let path = read_native_wide(&thread, address, "RemoveDirectory0")?;
+    #[expect(unsafe_code)]
+    let ok = unsafe { windows_sys::Win32::Storage::FileSystem::RemoveDirectoryW(path.as_ptr()) };
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, last_windows_error()).await);
     }
     Ok(None)
 }
@@ -2059,14 +3096,86 @@ pub async fn set_file_attributes0<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.SetFileSecurity0(JIJ)V", Any)]
 #[async_method]
 pub async fn set_file_security0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _desc_address = parameters.pop_long()?;
-    let _requested_information = parameters.pop_int()?;
-    let _path_address = parameters.pop_long()?;
-    // Best-effort no-op: we don't apply NT security descriptors. This keeps
-    // `Files.copy` with `COPY_ATTRIBUTES` working without surfacing an error.
+    let desc_address = parameters.pop_long()?;
+    let requested_information = parameters.pop_int()?;
+    let path_address = parameters.pop_long()?;
+    let path = read_native_wide(&thread, path_address, "SetFileSecurity0")?;
+    let vm = thread.vm()?;
+    let state = security_descriptors(&*vm)?
+        .0
+        .lock()
+        .map_err(|_| InternalError("poisoned security descriptor map".to_string()))?
+        .get(&desc_address)
+        .cloned();
+
+    let (ok, error) = (|| -> Result<(i32, i32)> {
+        let ok = if let Some(mut state) = state {
+            let mut descriptor = windows_sys::Win32::Security::SECURITY_DESCRIPTOR::default();
+            #[expect(unsafe_code)]
+            let initialized = unsafe {
+                windows_sys::Win32::Security::InitializeSecurityDescriptor(
+                    (&raw mut descriptor).cast(),
+                    1,
+                )
+            };
+            if initialized == 0 {
+                return Ok((0, last_windows_error()));
+            }
+            if let Some(owner) = state.owner.as_mut() {
+                #[expect(unsafe_code)]
+                let owner_ok = unsafe {
+                    windows_sys::Win32::Security::SetSecurityDescriptorOwner(
+                        (&raw mut descriptor).cast(),
+                        owner.as_mut_ptr().cast(),
+                        0,
+                    )
+                };
+                if owner_ok == 0 {
+                    return Ok((0, last_windows_error()));
+                }
+            }
+            if let Some(dacl) = state.dacl.as_mut() {
+                #[expect(unsafe_code)]
+                let dacl_ok = unsafe {
+                    windows_sys::Win32::Security::SetSecurityDescriptorDacl(
+                        (&raw mut descriptor).cast(),
+                        1,
+                        dacl.as_mut_ptr().cast(),
+                        0,
+                    )
+                };
+                if dacl_ok == 0 {
+                    return Ok((0, last_windows_error()));
+                }
+            }
+            #[expect(unsafe_code)]
+            unsafe {
+                windows_sys::Win32::Security::SetFileSecurityW(
+                    path.as_ptr(),
+                    requested_information.cast_unsigned(),
+                    (&raw mut descriptor).cast(),
+                )
+            }
+        } else {
+            let mut descriptor = read_guest_allocation(&*vm, desc_address)?;
+            #[expect(unsafe_code)]
+            unsafe {
+                windows_sys::Win32::Security::SetFileSecurityW(
+                    path.as_ptr(),
+                    requested_information.cast_unsigned(),
+                    descriptor.as_mut_ptr().cast(),
+                )
+            }
+        };
+        let error = if ok == 0 { last_windows_error() } else { 0 };
+        Ok((ok, error))
+    })()?;
+    if ok == 0 {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
     Ok(None)
 }
 
@@ -2076,14 +3185,25 @@ pub async fn set_file_security0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn set_file_time<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _last_write_time = parameters.pop_long()?;
-    let _last_access_time = parameters.pop_long()?;
-    let _create_time = parameters.pop_long()?;
-    let _handle = parameters.pop_long()?;
-    // Best-effort no-op: setting NT file times via raw FILETIME values is unsupported.
+    let last_write_time = parameters.pop_long()?;
+    let last_access_time = parameters.pop_long()?;
+    let create_time = parameters.pop_long()?;
+    let handle = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    if let Err(error) = set_file_time_via_handle(
+        vm.file_handles(),
+        handle,
+        create_time,
+        last_access_time,
+        last_write_time,
+    )
+    .await
+    {
+        return Err(throw_windows_exception(&thread, windows_error_code(&error)).await);
+    }
     Ok(None)
 }
 
@@ -2172,11 +3292,27 @@ pub async fn set_file_time0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn set_security_descriptor_dacl<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _acl_address = parameters.pop_long()?;
-    let _desc_address = parameters.pop_long()?;
+    let acl_address = parameters.pop_long()?;
+    let desc_address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let acl = if acl_address == 0 {
+        None
+    } else {
+        Some(read_guest_acl(&*vm, acl_address)?)
+    };
+    let descriptors = security_descriptors(&*vm)?;
+    let mut descriptors = descriptors
+        .0
+        .lock()
+        .map_err(|_| InternalError("poisoned security descriptor map".to_string()))?;
+    let descriptor = descriptors.get_mut(&desc_address).ok_or_else(|| {
+        InternalError("SetSecurityDescriptorDacl: uninitialized descriptor".to_string())
+    })?;
+    descriptor.dacl = acl;
+    descriptor.dacl_address = acl_address;
     Ok(None)
 }
 
@@ -2186,27 +3322,62 @@ pub async fn set_security_descriptor_dacl<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn set_security_descriptor_owner<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _owner_address = parameters.pop_long()?;
-    let _desc_address = parameters.pop_long()?;
+    let owner_address = parameters.pop_long()?;
+    let desc_address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let owner = if owner_address == 0 {
+        None
+    } else {
+        Some(read_guest_sid(&*vm, owner_address)?)
+    };
+    let descriptors = security_descriptors(&*vm)?;
+    let mut descriptors = descriptors
+        .0
+        .lock()
+        .map_err(|_| InternalError("poisoned security descriptor map".to_string()))?;
+    let descriptor = descriptors.get_mut(&desc_address).ok_or_else(|| {
+        InternalError("SetSecurityDescriptorOwner: uninitialized descriptor".to_string())
+    })?;
+    descriptor.owner = owner;
+    descriptor.owner_address = owner_address;
     Ok(None)
 }
 
 #[intrinsic_method("sun/nio/fs/WindowsNativeDispatcher.SetThreadToken(JJ)V", Any)]
 #[async_method]
 pub async fn set_thread_token<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _token = parameters.pop_long()?;
-    let _thread = parameters.pop_long()?;
-    // We do not impersonate Windows tokens; ignore the request so callers proceed.
+    let token = parameters.pop_long()?;
+    let thread_handle = parameters.pop_long()?;
+    use windows_sys::Win32::Foundation::HANDLE;
+    let error = {
+        let thread_handle = thread_handle as usize as HANDLE;
+        let thread_pointer = if thread_handle.is_null() {
+            std::ptr::null()
+        } else {
+            &raw const thread_handle
+        };
+        #[expect(unsafe_code)]
+        let ok = unsafe {
+            windows_sys::Win32::System::Threading::SetThreadToken(
+                thread_pointer,
+                token as usize as HANDLE,
+            )
+        };
+        if ok == 0 { last_windows_error() } else { 0 }
+    };
+    if error != 0 {
+        return Err(throw_windows_exception(&thread, error).await);
+    }
     Ok(None)
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_family = "windows")))]
 mod tests {
     use super::*;
 
@@ -3042,6 +4213,135 @@ mod tests {
         )
         .await?;
         assert_eq!(None, result);
+        Ok(())
+    }
+}
+
+#[cfg(all(test, target_family = "windows"))]
+mod windows_tests {
+    use super::*;
+
+    #[test]
+    fn test_file_size_dword_preserves_unsigned_bits() {
+        assert_eq!(i32::MIN, file_size_dword(0x8000_0000));
+        assert_eq!(-1, file_size_dword(0xFFFF_FFFF));
+        assert_eq!(1, file_size_dword(0x1_0000_0001));
+    }
+
+    #[test]
+    fn test_dos_attributes_round_trip() {
+        let file = tempfile::NamedTempFile::new().expect("temp file");
+        let requested = file_attribute::HIDDEN | file_attribute::SYSTEM | file_attribute::ARCHIVE;
+        set_windows_file_attributes(file.path(), requested).expect("set DOS attributes");
+        let metadata = std::fs::symlink_metadata(file.path()).expect("metadata");
+        let actual = metadata_file_attributes(&metadata);
+        assert_eq!(requested, actual & requested);
+        set_windows_file_attributes(file.path(), file_attribute::NORMAL)
+            .expect("reset DOS attributes");
+    }
+
+    #[tokio::test]
+    async fn test_init_ids() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        assert_eq!(None, init_ids(thread, Parameters::default()).await?);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_invalid_native_arguments_are_rejected() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+
+        let access_parameters = Parameters::new(vec![
+            Value::Long(0),
+            Value::Long(0),
+            Value::Int(0),
+            Value::Int(0),
+            Value::Int(0),
+            Value::Int(0),
+            Value::Int(0),
+        ]);
+        assert!(
+            access_check(thread.clone(), access_parameters)
+                .await
+                .is_err()
+        );
+
+        let ace_parameters = Parameters::new(vec![
+            Value::Long(0),
+            Value::Int(0),
+            Value::Int(0),
+            Value::Long(0),
+        ]);
+        assert!(
+            add_access_allowed_ace_ex(thread.clone(), ace_parameters.clone())
+                .await
+                .is_err()
+        );
+        assert!(
+            add_access_denied_ace_ex(thread.clone(), ace_parameters)
+                .await
+                .is_err()
+        );
+
+        assert!(
+            adjust_token_privileges(
+                thread.clone(),
+                Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Int(0)]),
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            backup_read0(
+                thread.clone(),
+                Parameters::new(vec![
+                    Value::Long(0),
+                    Value::Long(0),
+                    Value::Int(0),
+                    Value::from(false),
+                    Value::Long(0),
+                    Value::Object(None),
+                ]),
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            backup_seek(
+                thread.clone(),
+                Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            cancel_io(thread.clone(), Parameters::new(vec![Value::Long(0)]),)
+                .await
+                .is_err()
+        );
+        assert!(
+            convert_sid_to_string_sid(thread.clone(), Parameters::new(vec![Value::Long(0)]),)
+                .await
+                .is_err()
+        );
+        assert!(
+            convert_string_sid_to_sid0(thread.clone(), Parameters::new(vec![Value::Long(0)]),)
+                .await
+                .is_err()
+        );
+        assert!(
+            create_io_completion_port(
+                thread.clone(),
+                Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            device_io_control_set_sparse(thread, Parameters::new(vec![Value::Long(0)]),)
+                .await
+                .is_err()
+        );
         Ok(())
     }
 }

@@ -43,11 +43,12 @@ dirs = { workspace = true }
 filetime = { workspace = true }
 libc = { workspace = true }
 midir = { workspace = true, optional = true }
+libloading = { workspace = true }
 os_info = { workspace = true }
 socket2 = { workspace = true }
 sysinfo = { workspace = true }
 thread-priority = { workspace = true }
-tokio = { workspace = true, features = ["fs", "net", "process", "time"] }
+tokio = { workspace = true, features = ["fs", "io-util", "net", "process", "time"] }
 whoami = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]

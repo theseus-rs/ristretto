@@ -8,10 +8,16 @@ use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 #[cfg(target_os = "macos")]
+use std::collections::HashMap;
+#[cfg(target_os = "macos")]
 use std::ffi::CString;
 #[cfg(target_os = "macos")]
 use std::mem::size_of;
 use std::sync::Arc;
+#[cfg(target_os = "macos")]
+use std::sync::Mutex;
+#[cfg(target_os = "macos")]
+use std::sync::atomic::{AtomicI64, Ordering};
 
 #[cfg(target_os = "macos")]
 fn last_errno() -> i32 {
@@ -21,15 +27,14 @@ fn last_errno() -> i32 {
 use super::common::throw_unix_exception;
 
 #[cfg(target_os = "macos")]
-fn to_cstring(path: &str) -> Result<CString> {
-    CString::new(path.as_bytes())
-        .map_err(|e| InternalError(format!("Invalid path (contains null byte): {e}")))
+fn to_cstring(path: &[u8]) -> Result<CString> {
+    CString::new(path).map_err(|e| InternalError(format!("Invalid path (contains null byte): {e}")))
 }
 
-fn read_native_path<V: VM>(vm: &V, address: i64) -> Result<String> {
-    let path_bytes = vm.native_memory().read_cstring(address);
-    String::from_utf8(path_bytes)
-        .map_err(|error| InternalError(format!("Invalid path encoding: {error}")))
+fn read_native_path<V: VM>(vm: &V, address: i64) -> Result<Vec<u8>> {
+    vm.native_memory()
+        .try_read_cstring(address)
+        .ok_or_else(|| InternalError(format!("Invalid native path address: {address}")))
 }
 
 /// State for iterating mount entries from `getfsstat`/`fsstat_entry`/`endfsstat`.
@@ -37,6 +42,36 @@ fn read_native_path<V: VM>(vm: &V, address: i64) -> Result<String> {
 struct FsstatIterator {
     entries: Vec<libc::statfs>,
     index: usize,
+}
+
+#[cfg(target_os = "macos")]
+struct BsdNativeState {
+    next_handle: AtomicI64,
+    fsstat: Mutex<HashMap<i64, FsstatIterator>>,
+}
+
+#[cfg(target_os = "macos")]
+impl BsdNativeState {
+    fn new() -> Self {
+        Self {
+            next_handle: AtomicI64::new(0x6200_0000_0000_0000),
+            fsstat: Mutex::new(HashMap::new()),
+        }
+    }
+
+    fn insert(&self, iterator: FsstatIterator) -> Result<i64> {
+        let handle = self.next_handle.fetch_add(1, Ordering::Relaxed);
+        self.fsstat
+            .lock()
+            .map_err(|_| InternalError("fsstat iterator lock poisoned".to_string()))?
+            .insert(handle, iterator);
+        Ok(handle)
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn bsd_state<V: VM + ?Sized>(vm: &V) -> Result<Arc<BsdNativeState>> {
+    vm.resource_manager().get_or_init(BsdNativeState::new)
 }
 
 #[cfg(target_os = "macos")]
@@ -65,11 +100,11 @@ struct AttrList {
 #[cfg(target_os = "macos")]
 const ATTR_BIT_MAP_COUNT: u16 = 5;
 #[cfg(target_os = "macos")]
-const ATTR_CMN_MODTIME: u32 = 0x0000_0400;
+const ATTR_CMN_MODTIME: u32 = libc::ATTR_CMN_MODTIME;
 #[cfg(target_os = "macos")]
-const ATTR_CMN_ACCTIME: u32 = 0x0000_1000;
+const ATTR_CMN_ACCTIME: u32 = libc::ATTR_CMN_ACCTIME;
 #[cfg(target_os = "macos")]
-const ATTR_CMN_CRTIME: u32 = 0x0000_0100;
+const ATTR_CMN_CRTIME: u32 = libc::ATTR_CMN_CRTIME;
 
 #[cfg(target_os = "macos")]
 #[expect(unsafe_code)]
@@ -133,7 +168,7 @@ pub async fn clonefile_0<T: Thread + 'static>(
 #[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.endfsstat(J)V", Any)]
 #[async_method]
 pub async fn endfsstat<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let handle = parameters.pop_long()?;
@@ -141,9 +176,12 @@ pub async fn endfsstat<T: Thread + 'static>(
     #[cfg(target_os = "macos")]
     {
         if handle != 0 {
-            // SAFETY: handle was created by getfsstat via Box::into_raw
-            #[expect(unsafe_code)]
-            let _ = unsafe { Box::from_raw(handle as *mut FsstatIterator) };
+            let vm = thread.vm()?;
+            bsd_state(&*vm)?
+                .fsstat
+                .lock()
+                .map_err(|_| InternalError("fsstat iterator lock poisoned".to_string()))?
+                .remove(&handle);
         }
     }
     #[cfg(not(target_os = "macos"))]
@@ -164,7 +202,7 @@ pub async fn fsetattrlist_0<T: Thread + 'static>(
     #[cfg_attr(not(target_os = "macos"), expect(unused_variables))] thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let btime = parameters.pop_long()?;
+    let options = parameters.pop_long()?;
     let crtime = parameters.pop_long()?;
     let acctime = parameters.pop_long()?;
     let modtime = parameters.pop_long()?;
@@ -173,14 +211,14 @@ pub async fn fsetattrlist_0<T: Thread + 'static>(
 
     #[cfg(target_os = "macos")]
     {
-        if let Err(errno) = set_attrlist_by_fd(fd, commonattr, modtime, acctime, crtime, btime) {
+        if let Err(errno) = set_attrlist_by_fd(fd, commonattr, modtime, acctime, crtime, options) {
             return Err(throw_unix_exception(&thread, errno).await);
         }
         Ok(None)
     }
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = (fd, commonattr, modtime, acctime, crtime, btime);
+        let _ = (fd, commonattr, modtime, acctime, crtime, options);
         Err(InternalError(
             "fsetattrlist0 is not supported on this platform".to_string(),
         ))
@@ -205,9 +243,15 @@ pub async fn fsstat_entry<T: Thread + 'static>(
             return Ok(Some(Value::Int(-1)));
         }
 
-        // SAFETY: handle was created by getfsstat via Box::into_raw
-        #[expect(unsafe_code)]
-        let state = unsafe { &mut *(handle as *mut FsstatIterator) };
+        let vm = thread.vm()?;
+        let state = bsd_state(&*vm)?;
+        let mut iterators = state
+            .fsstat
+            .lock()
+            .map_err(|_| InternalError("fsstat iterator lock poisoned".to_string()))?;
+        let Some(state) = iterators.get_mut(&handle) else {
+            return Ok(Some(Value::Int(-1)));
+        };
         if state.index >= state.entries.len() {
             return Ok(Some(Value::Int(-1)));
         }
@@ -238,7 +282,6 @@ pub async fn fsstat_entry<T: Thread + 'static>(
         };
 
         if !mount_entry.is_null() {
-            let vm = thread.vm()?;
             let gc = vm.garbage_collector();
 
             let mut guard = mount_entry.as_reference_mut()?;
@@ -251,10 +294,12 @@ pub async fn fsstat_entry<T: Thread + 'static>(
             object.set_value("name", Value::new_object(gc, Reference::from(mntfromname)))?;
             object.set_value("dir", Value::new_object(gc, Reference::from(mntonname)))?;
             object.set_value("fstype", Value::new_object(gc, Reference::from(fstypename)))?;
-            object.set_value(
-                "opts",
-                Value::new_object(gc, Reference::from(Vec::<u8>::new())),
-            )?;
+            let options = if entry.f_flags & libc::MNT_RDONLY.cast_unsigned() != 0 {
+                b"ro".to_vec()
+            } else {
+                Vec::new()
+            };
+            object.set_value("opts", Value::new_object(gc, Reference::from(options)))?;
         }
 
         Ok(Some(Value::Int(0)))
@@ -299,8 +344,8 @@ pub async fn getfsstat<T: Thread + 'static>(
         };
         match result {
             Ok(entries) => {
-                let state = Box::new(FsstatIterator { entries, index: 0 });
-                let handle = Box::into_raw(state) as i64;
+                let vm = thread.vm()?;
+                let handle = bsd_state(&*vm)?.insert(FsstatIterator { entries, index: 0 })?;
                 Ok(Some(Value::Long(handle)))
             }
             Err(errno) => Err(throw_unix_exception(&thread, errno).await),
@@ -322,11 +367,11 @@ pub async fn getmntonname_0<T: Thread + 'static>(
     let path_address = parameters.pop_long()?;
 
     let vm = thread.vm()?;
-    let path_str = read_native_path(&*vm, path_address)?;
+    let path = read_native_path(&*vm, path_address)?;
 
     #[cfg(target_os = "macos")]
     {
-        let c_path = to_cstring(&path_str)?;
+        let c_path = to_cstring(&path)?;
         #[expect(unsafe_code)]
         let mut stat_buf: libc::statfs = unsafe { std::mem::zeroed() };
         #[expect(unsafe_code)]
@@ -345,7 +390,7 @@ pub async fn getmntonname_0<T: Thread + 'static>(
     }
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = path_str;
+        let _ = path;
         // Return "/" as default mount point
         let mount_point: Vec<u8> = b"/".to_vec();
         let gc = vm.garbage_collector();
@@ -371,7 +416,7 @@ pub async fn setattrlist_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let btime = parameters.pop_long()?;
+    let options = parameters.pop_long()?;
     let crtime = parameters.pop_long()?;
     let acctime = parameters.pop_long()?;
     let modtime = parameters.pop_long()?;
@@ -379,12 +424,12 @@ pub async fn setattrlist_0<T: Thread + 'static>(
     let path_address = parameters.pop_long()?;
 
     let vm = thread.vm()?;
-    let path_str = read_native_path(&*vm, path_address)?;
+    let path = read_native_path(&*vm, path_address)?;
 
     #[cfg(target_os = "macos")]
     {
         if let Err(errno) =
-            set_attrlist_by_path(&path_str, commonattr, modtime, acctime, crtime, btime)
+            set_attrlist_by_path(&path, commonattr, modtime, acctime, crtime, options)
         {
             return Err(throw_unix_exception(&thread, errno).await);
         }
@@ -392,7 +437,7 @@ pub async fn setattrlist_0<T: Thread + 'static>(
     }
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = (path_str, commonattr, modtime, acctime, crtime, btime);
+        let _ = (path, commonattr, modtime, acctime, crtime, options);
         Err(InternalError(
             "setattrlist0 is not supported on this platform".to_string(),
         ))
@@ -408,15 +453,14 @@ fn build_attrlist_buf(
     modtime: i64,
     acctime: i64,
     crtime: i64,
-    _btime: i64,
+    _options: i64,
 ) -> (AttrList, Vec<libc::timespec>) {
     #[expect(clippy::cast_sign_loss)]
     let mask = commonattr as u32;
     let attrlist = AttrList {
         bitmapcount: ATTR_BIT_MAP_COUNT,
         reserved: 0,
-        // Only include the bits we can handle
-        commonattr: mask & (ATTR_CMN_CRTIME | ATTR_CMN_MODTIME | ATTR_CMN_ACCTIME),
+        commonattr: mask,
         volattr: 0,
         dirattr: 0,
         fileattr: 0,
@@ -424,7 +468,7 @@ fn build_attrlist_buf(
     };
 
     // Attributes must be written to the buffer in the order defined by the bitmask
-    // (lowest bit first): CRTIME (0x100) < MODTIME (0x400) < ACCTIME (0x1000)
+    // (lowest bit first): CRTIME (0x200) < MODTIME (0x400) < ACCTIME (0x1000)
     let mut buf = Vec::new();
     let nanos_to_timespec = |nanos: i64| libc::timespec {
         tv_sec: nanos / 1_000_000_000,
@@ -446,15 +490,15 @@ fn build_attrlist_buf(
 
 #[cfg(target_os = "macos")]
 fn set_attrlist_by_path(
-    path: &str,
+    path: &[u8],
     commonattr: i32,
     modtime: i64,
     acctime: i64,
     crtime: i64,
-    btime: i64,
+    options: i64,
 ) -> std::result::Result<(), i32> {
-    let c_path = CString::new(path.as_bytes()).map_err(|_| 22)?; // EINVAL
-    let (mut attr, buf) = build_attrlist_buf(commonattr, modtime, acctime, crtime, btime);
+    let c_path = CString::new(path).map_err(|_| 22)?; // EINVAL
+    let (mut attr, buf) = build_attrlist_buf(commonattr, modtime, acctime, crtime, options);
 
     if buf.is_empty() {
         return Ok(());
@@ -468,7 +512,7 @@ fn set_attrlist_by_path(
             std::ptr::from_mut(&mut attr).cast::<libc::c_void>(),
             buf.as_ptr() as *mut libc::c_void,
             buf_size,
-            0,
+            options.cast_unsigned(),
         )
     };
     if result < 0 {
@@ -484,9 +528,9 @@ fn set_attrlist_by_fd(
     modtime: i64,
     acctime: i64,
     crtime: i64,
-    btime: i64,
+    options: i64,
 ) -> std::result::Result<(), i32> {
-    let (mut attr, buf) = build_attrlist_buf(commonattr, modtime, acctime, crtime, btime);
+    let (mut attr, buf) = build_attrlist_buf(commonattr, modtime, acctime, crtime, options);
 
     if buf.is_empty() {
         return Ok(());
@@ -500,7 +544,7 @@ fn set_attrlist_by_fd(
             std::ptr::from_mut(&mut attr).cast::<libc::c_void>(),
             buf.as_ptr() as *mut libc::c_void,
             buf_size,
-            0,
+            options.cast_unsigned(),
         )
     };
     if result < 0 {
@@ -524,10 +568,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_clonefile_0_empty_path() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let empty_path = write_cstring_to_native(&*vm, "");
         let mut params = Parameters::default();
-        params.push_long(0); // src address
-        params.push_long(0); // dst address
+        params.push_long(empty_path); // src address
+        params.push_long(empty_path); // dst address
         params.push_int(0); // flags
         let result = clonefile_0(thread, params).await;
         assert!(matches!(result, Err(ristretto_types::Error::Throwable(_))));
@@ -659,9 +704,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_getmntonname_0_empty_path() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let empty_path = write_cstring_to_native(&*vm, "");
         let mut params = Parameters::default();
-        params.push_long(0); // path address (reads empty string)
+        params.push_long(empty_path);
         let result = getmntonname_0(thread, params).await;
         #[cfg(not(target_os = "macos"))]
         {
@@ -707,9 +753,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_setattrlist_0_empty_attrs() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let empty_path = write_cstring_to_native(&*vm, "");
         let mut params = Parameters::default();
-        params.push_long(0); // path address
+        params.push_long(empty_path);
         params.push_int(0); // commonattr = 0 (no attrs to set)
         params.push_long(0); // modtime
         params.push_long(0); // acctime

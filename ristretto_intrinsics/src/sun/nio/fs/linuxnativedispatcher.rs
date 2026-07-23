@@ -1,4 +1,3 @@
-use ristretto_classfile::JAVA_17;
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
@@ -9,22 +8,30 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 #[cfg(target_os = "linux")]
-use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 use super::common::throw_unix_exception;
+#[cfg(target_os = "linux")]
+use super::native_resources;
 
-/// `IOStatus.UNSUPPORTED` from `sun.nio.ch.IOStatus`. Returned by `directCopy0` to indicate
-/// that direct copy via a platform specific syscall is not supported. The caller falls back
-/// to the buffered copy path.
-const IO_STATUS_UNSUPPORTED: i32 = -4;
+#[cfg(target_os = "linux")]
+fn last_errno() -> i32 {
+    std::io::Error::last_os_error()
+        .raw_os_error()
+        .unwrap_or(libc::EIO)
+}
+
+const IO_STATUS_UNAVAILABLE: i32 = -2;
+const IO_STATUS_UNSUPPORTED_CASE: i32 = -6;
 
 /// Read a NUL-terminated byte string from native memory.
-fn read_native_path<V: VM>(vm: &V, address: i64) -> Vec<u8> {
-    vm.native_memory().read_cstring(address)
+fn read_native_path<V: VM>(vm: &V, address: i64) -> Result<Vec<u8>> {
+    vm.native_memory()
+        .try_read_cstring(address)
+        .ok_or_else(|| InternalError(format!("Invalid native string address: {address}")))
 }
 
 /// Read a C string field from a `libc::mntent` struct as a Java byte array.
@@ -68,8 +75,8 @@ pub async fn setmntent_0<T: Thread + 'static>(
     let path_address = parameters.pop_long()?;
 
     let vm = thread.vm()?;
-    let path_bytes = read_native_path(&*vm, path_address);
-    let mode_bytes = read_native_path(&*vm, type_address);
+    let path_bytes = read_native_path(&*vm, path_address)?;
+    let mode_bytes = read_native_path(&*vm, type_address)?;
 
     let Ok(path) = std::ffi::CString::new(path_bytes) else {
         return Err(throw_unix_exception(&thread, libc::EINVAL).await);
@@ -86,8 +93,7 @@ pub async fn setmntent_0<T: Thread + 'static>(
             .unwrap_or(libc::EIO);
         return Err(throw_unix_exception(&thread, errno).await);
     }
-    #[expect(clippy::cast_possible_wrap)]
-    let handle = fp as usize as i64;
+    let handle = native_resources::insert_file(&*vm, fp)?;
     Ok(Some(Value::Long(handle)))
 }
 
@@ -108,8 +114,8 @@ pub async fn getmntent_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _buf_len = parameters.pop_int()?;
-    let _buffer = parameters.pop_long()?;
+    let buf_len = parameters.pop_int()?;
+    let buffer = parameters.pop_long()?;
     let entry_value = parameters.pop()?;
     let fp = parameters.pop_long()?;
 
@@ -117,45 +123,54 @@ pub async fn getmntent_0<T: Thread + 'static>(
         return Ok(Some(Value::Int(-1)));
     }
 
-    let fp_ptr = usize::try_from(fp)
-        .map_err(|_| InternalError("invalid mount file handle".to_string()))?
-        as *mut libc::FILE;
-    let mut storage: libc::mntent = unsafe_zeroed_mntent();
-    let scratch_len: libc::c_int = 4096;
-    let mut scratch = vec![0u8; usize::try_from(scratch_len).unwrap_or(0)];
-
-    #[expect(unsafe_code)]
-    let result = unsafe {
-        unsafe extern "C" {
-            fn getmntent_r(
-                stream: *mut libc::FILE,
-                mntbuf: *mut libc::mntent,
-                buf: *mut libc::c_char,
-                buflen: libc::c_int,
-            ) -> *mut libc::mntent;
-        }
-        getmntent_r(
-            fp_ptr,
-            std::ptr::addr_of_mut!(storage),
-            scratch.as_mut_ptr().cast::<libc::c_char>(),
-            scratch_len,
-        )
-    };
-    if result.is_null() {
-        return Ok(Some(Value::Int(-1)));
-    }
-
-    #[expect(unsafe_code)]
-    let (name, dir, fstype, opts) = unsafe {
-        (
-            cstr_field_to_bytes(storage.mnt_fsname),
-            cstr_field_to_bytes(storage.mnt_dir),
-            cstr_field_to_bytes(storage.mnt_type),
-            cstr_field_to_bytes(storage.mnt_opts),
-        )
-    };
-
     let vm = thread.vm()?;
+    let scratch_len = usize::try_from(buf_len).unwrap_or(0);
+    if scratch_len == 0
+        || vm
+            .native_memory()
+            .try_read_bytes(buffer, scratch_len)
+            .is_none()
+    {
+        return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+    }
+    let entry = {
+        let mut storage: libc::mntent = unsafe_zeroed_mntent();
+        let mut scratch = vec![0u8; scratch_len];
+        #[expect(unsafe_code)]
+        native_resources::with_file(&*vm, fp, |fp_ptr| unsafe {
+            unsafe extern "C" {
+                fn getmntent_r(
+                    stream: *mut libc::FILE,
+                    mntbuf: *mut libc::mntent,
+                    buf: *mut libc::c_char,
+                    buflen: libc::c_int,
+                ) -> *mut libc::mntent;
+            }
+            let result = getmntent_r(
+                fp_ptr,
+                std::ptr::addr_of_mut!(storage),
+                scratch.as_mut_ptr().cast::<libc::c_char>(),
+                buf_len,
+            );
+            if result.is_null() {
+                None
+            } else {
+                Some((
+                    cstr_field_to_bytes(storage.mnt_fsname),
+                    cstr_field_to_bytes(storage.mnt_dir),
+                    cstr_field_to_bytes(storage.mnt_type),
+                    cstr_field_to_bytes(storage.mnt_opts),
+                ))
+            }
+        })?
+    };
+    let Some(entry) = entry else {
+        return Err(throw_unix_exception(&thread, libc::EBADF).await);
+    };
+    let Some((name, dir, fstype, opts)) = entry else {
+        return Ok(Some(Value::Int(-1)));
+    };
+
     let gc = vm.garbage_collector();
     let mut guard = entry_value.as_reference_mut()?;
     let Reference::Object(object) = &mut *guard else {
@@ -183,19 +198,18 @@ fn unsafe_zeroed_mntent() -> libc::mntent {
 #[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.endmntent(J)V", Any)]
 #[async_method]
 pub async fn endmntent<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let stream = parameters.pop_long()?;
 
-    if stream != 0 {
-        let fp = usize::try_from(stream)
-            .map_err(|_| InternalError("invalid mount file handle".to_string()))?
-            as *mut libc::FILE;
-        #[expect(unsafe_code)]
-        unsafe {
-            libc::endmntent(fp);
-        }
+    let vm = thread.vm()?;
+    let Some(pointer) = native_resources::take_file(&*vm, stream)? else {
+        return Err(throw_unix_exception(&thread, libc::EBADF).await);
+    };
+    #[expect(unsafe_code)]
+    unsafe {
+        libc::endmntent(pointer as *mut libc::FILE);
     }
 
     Ok(None)
@@ -218,16 +232,22 @@ pub async fn posix_fadvise<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _advice = parameters.pop_int()?;
-    let _len = parameters.pop_long()?;
-    let _offset = parameters.pop_long()?;
-    let _fd = parameters.pop_int()?;
+    let advice = parameters.pop_int()?;
+    let len = parameters.pop_long()?;
+    let offset = parameters.pop_long()?;
+    let fd = parameters.pop_int()?;
 
-    // The descriptors used here are managed by ristretto's `HandleManager` and do not
-    // correspond to real OS file descriptors, so calling `libc::posix_fadvise` directly
-    // is unsafe. The advice is purely a performance hint, so a no-op success preserves
-    // correct semantics.
-    Ok(Some(Value::Int(0)))
+    #[cfg(target_os = "linux")]
+    {
+        #[expect(unsafe_code)]
+        let result = unsafe { libc::posix_fadvise(fd, offset, len, advice) };
+        Ok(Some(Value::Int(result)))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = (fd, offset, len, advice);
+        Ok(Some(Value::Int(libc::ENOTSUP)))
+    }
 }
 
 /// `LinuxNativeDispatcher.directCopy0(IIJ)I`
@@ -242,13 +262,104 @@ pub async fn posix_fadvise<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn direct_copy_0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _address_to_poll_for_cancel = parameters.pop_long()?;
-    let _src = parameters.pop_int()?;
-    let _dst = parameters.pop_int()?;
-    Ok(Some(Value::Int(IO_STATUS_UNSUPPORTED)))
+    let address_to_poll_for_cancel = parameters.pop_long()?;
+    let src = parameters.pop_int()?;
+    let dst = parameters.pop_int()?;
+
+    #[cfg(target_os = "linux")]
+    {
+        let vm = thread.vm()?;
+        if address_to_poll_for_cancel != 0
+            && vm
+                .native_memory()
+                .read_i32(address_to_poll_for_cancel)
+                .is_none()
+        {
+            return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+        }
+        let cancelled = || {
+            address_to_poll_for_cancel != 0
+                && vm
+                    .native_memory()
+                    .read_i32(address_to_poll_for_cancel)
+                    .is_some_and(|value| value != 0)
+        };
+        if cancelled() {
+            return Err(throw_unix_exception(&thread, libc::ECANCELED).await);
+        }
+        let count = if address_to_poll_for_cancel == 0 {
+            0x7fff_f000_usize
+        } else {
+            1024 * 1024
+        };
+
+        loop {
+            #[expect(unsafe_code)]
+            let copied = unsafe {
+                libc::copy_file_range(
+                    src,
+                    std::ptr::null_mut(),
+                    dst,
+                    std::ptr::null_mut(),
+                    count,
+                    0,
+                )
+            };
+            if copied > 0 {
+                if cancelled() {
+                    return Err(throw_unix_exception(&thread, libc::ECANCELED).await);
+                }
+                continue;
+            }
+            if copied == 0 {
+                return Ok(Some(Value::Int(0)));
+            }
+            let error = last_errno();
+            if error == libc::EINTR {
+                continue;
+            }
+            if error == libc::EAGAIN {
+                return Ok(Some(Value::Int(IO_STATUS_UNAVAILABLE)));
+            }
+            if !matches!(error, libc::EINVAL | libc::ENOSYS | libc::EXDEV) {
+                return Err(throw_unix_exception(&thread, error).await);
+            }
+            break;
+        }
+
+        loop {
+            #[expect(unsafe_code)]
+            let copied = unsafe { libc::sendfile(dst, src, std::ptr::null_mut(), count) };
+            if copied > 0 {
+                if cancelled() {
+                    return Err(throw_unix_exception(&thread, libc::ECANCELED).await);
+                }
+                continue;
+            }
+            if copied == 0 {
+                return Ok(Some(Value::Int(0)));
+            }
+            let error = last_errno();
+            if error == libc::EINTR {
+                continue;
+            }
+            if error == libc::EAGAIN {
+                return Ok(Some(Value::Int(IO_STATUS_UNAVAILABLE)));
+            }
+            if matches!(error, libc::EINVAL | libc::ENOSYS) {
+                return Ok(Some(Value::Int(IO_STATUS_UNSUPPORTED_CASE)));
+            }
+            return Err(throw_unix_exception(&thread, error).await);
+        }
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = (thread, dst, src, address_to_poll_for_cancel);
+        Ok(Some(Value::Int(-4)))
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -258,17 +369,10 @@ pub async fn direct_copy_0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn fgetxattr0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _value_len = parameters.pop_int()?;
-    let _value_adddress = parameters.pop_long()?;
-    let _name_address = parameters.pop_long()?;
-    let _filedes = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I".to_string(),
-    )
-    .into())
+    super::unixnativedispatcher::fgetxattr_0(thread, parameters).await
 }
 
 #[cfg(target_os = "linux")]
@@ -278,16 +382,10 @@ pub async fn fgetxattr0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn flistxattr<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _size = parameters.pop_int()?;
-    let _list_address = parameters.pop_long()?;
-    let _filedes = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I".to_string(),
-    )
-    .into())
+    super::unixnativedispatcher::flistxattr(thread, parameters).await
 }
 
 #[cfg(target_os = "linux")]
@@ -297,15 +395,10 @@ pub async fn flistxattr<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn fremovexattr0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _name_address = parameters.pop_long()?;
-    let _filedes = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V".to_string(),
-    )
-    .into())
+    super::unixnativedispatcher::fremovexattr_0(thread, parameters).await
 }
 
 #[cfg(target_os = "linux")]
@@ -315,190 +408,46 @@ pub async fn fremovexattr0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn fsetxattr0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _value_len = parameters.pop_int()?;
-    let _value_adddress = parameters.pop_long()?;
-    let _name_address = parameters.pop_long()?;
-    let _filedes = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V".to_string(),
-    )
-    .into())
+    super::unixnativedispatcher::fsetxattr_0(thread, parameters).await
 }
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I", Equal(JAVA_8))]
 #[async_method]
 pub async fn getlinelen<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _stream = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/nio/fs/LinuxNativeDispatcher.endmntent(J)V",
-    LessThanOrEqual(JAVA_17)
-)]
-#[async_method]
-pub async fn endmntent_linux_le_v17<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _stream = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.endmntent(J)V".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I",
-    LessThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn fgetxattr0_linux_le_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _value_len = parameters.pop_int()?;
-    let _value_adddress = parameters.pop_long()?;
-    let _name_address = parameters.pop_long()?;
-    let _filedes = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I",
-    LessThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn flistxattr_linux_le_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _size = parameters.pop_int()?;
-    let _list_address = parameters.pop_long()?;
-    let _filedes = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V",
-    LessThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn fremovexattr0_linux_le_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _name_address = parameters.pop_long()?;
-    let _filedes = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V",
-    LessThanOrEqual(JAVA_11)
-)]
-#[async_method]
-pub async fn fsetxattr0_linux_le_v11<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _value_len = parameters.pop_int()?;
-    let _value_adddress = parameters.pop_long()?;
-    let _name_address = parameters.pop_long()?;
-    let _filedes = parameters.pop_int()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "linux")]
-#[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I", Equal(JAVA_8))]
-#[async_method]
-pub async fn getlinelen_linux_v8<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _stream = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/nio/fs/LinuxNativeDispatcher.getmntent0(JLsun/nio/fs/UnixMountEntry;JI)I",
-    LessThanOrEqual(JAVA_17)
-)]
-#[async_method]
-pub async fn getmntent0_linux_le_v17<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _buf_len = parameters.pop_int()?;
-    let _buffer = parameters.pop_long()?;
-    let _entry = parameters.pop_reference()?;
-    let _fp = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.getmntent0(JLsun/nio/fs/UnixMountEntry;JI)I".to_string(),
-    )
-    .into())
-}
-
-#[cfg(target_os = "linux")]
-#[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.init()V", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn init_linux_le_v17<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
-) -> Result<Option<Value>> {
-    Err(
-        JavaError::UnsatisfiedLinkError("sun/nio/fs/LinuxNativeDispatcher.init()V".to_string())
-            .into(),
-    )
-}
-
-#[cfg(target_os = "linux")]
-#[intrinsic_method(
-    "sun/nio/fs/LinuxNativeDispatcher.setmntent0(JJ)J",
-    LessThanOrEqual(JAVA_17)
-)]
-#[async_method]
-pub async fn setmntent0_linux_le_v17<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
-) -> Result<Option<Value>> {
-    let _type_address = parameters.pop_long()?;
-    let _path_address = parameters.pop_long()?;
-    Err(JavaError::UnsatisfiedLinkError(
-        "sun/nio/fs/LinuxNativeDispatcher.setmntent0(JJ)J".to_string(),
-    )
-    .into())
+    let stream = parameters.pop_long()?;
+    if stream == 0 {
+        return Err(throw_unix_exception(&thread, libc::EBADF).await);
+    }
+    let vm = thread.vm()?;
+    #[expect(unsafe_code)]
+    let outcome = native_resources::with_file(&*vm, stream, |pointer| unsafe {
+        let mut line = std::ptr::null_mut::<libc::c_char>();
+        let mut capacity = 0_usize;
+        let result = libc::getline(&raw mut line, &raw mut capacity, pointer);
+        let error = last_errno();
+        let eof = libc::feof(pointer) != 0;
+        libc::free(line.cast::<libc::c_void>());
+        (result, error, eof)
+    })?;
+    let Some((result, error, eof)) = outcome else {
+        return Err(throw_unix_exception(&thread, libc::EBADF).await);
+    };
+    if result < 0 {
+        if eof {
+            return Ok(Some(Value::Int(-1)));
+        }
+        return Err(throw_unix_exception(&thread, error).await);
+    }
+    Ok(Some(Value::Int(i32::try_from(result).map_err(|_| {
+        InternalError("line length exceeds jint".to_string())
+    })?)))
 }
 
 #[cfg(test)]
@@ -514,7 +463,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_posix_fadvise_returns_success() {
+    async fn test_posix_fadvise_returns_native_status() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push_int(0); // fd
@@ -522,7 +471,7 @@ mod tests {
         params.push_long(0); // len
         params.push_int(0); // advice
         let result = posix_fadvise(thread, params).await.expect("posix_fadvise");
-        assert_eq!(result, Some(Value::Int(0)));
+        assert!(matches!(result, Some(Value::Int(_))));
     }
 
     #[tokio::test]
@@ -533,17 +482,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_direct_copy_0_returns_unsupported() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let mut params = Parameters::default();
-        params.push_int(0); // dst
-        params.push_int(0); // src
-        params.push_long(0); // cancel address
-        let result = direct_copy_0(thread, params).await.expect("direct_copy_0");
-        assert_eq!(result, Some(Value::Int(IO_STATUS_UNSUPPORTED)));
-    }
-
-    #[tokio::test]
     async fn test_direct_copy_0_underflow() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = direct_copy_0(thread, Parameters::default()).await;
@@ -551,12 +489,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_endmntent_with_zero_handle() {
+    async fn test_endmntent_with_invalid_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push_long(0);
-        let result = endmntent(thread, params).await.expect("endmntent");
-        assert!(result.is_none());
+        let result = endmntent(thread, params).await;
+        assert!(matches!(result, Err(Error::Throwable(_))));
     }
 
     #[tokio::test]
@@ -574,16 +512,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_setmntent_0_invalid_path_throws() {
+    async fn test_setmntent_0_invalid_native_address() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
-        // Pass two zero addresses; reading them yields an empty C string.  setmntent on
-        // Linux will fail to open ""; on other platforms the intrinsic returns a
-        // UnixException unconditionally.
+        // Invalid guest pointers are rejected instead of being interpreted as empty strings.
         params.push_long(0);
         params.push_long(0);
         let result = setmntent_0(thread, params).await;
-        assert!(matches!(result, Err(Error::Throwable(_))));
+        assert!(matches!(result, Err(InternalError(_))));
     }
 
     #[tokio::test]
@@ -611,9 +547,8 @@ mod tests {
         use std::io::Write;
 
         // Build a tiny synthetic mtab-style file we can parse with getmntent_r.
-        let dir = std::env::temp_dir().join("ristretto_linux_native_dispatcher_test");
-        std::fs::create_dir_all(&dir).expect("temp dir");
-        let path = dir.join("mtab");
+        let directory = tempfile::tempdir().expect("temp directory");
+        let path = directory.path().join("mtab");
         {
             let mut f = std::fs::File::create(&path).expect("create");
             writeln!(f, "/dev/sda1 / ext4 rw,relatime 0 0").expect("write");
@@ -649,25 +584,44 @@ mod tests {
             .object("sun.nio.fs.UnixMountEntry", "", &[] as &[Value])
             .await
             .expect("UnixMountEntry");
+        let scratch = vm.native_memory().allocate(1024);
         for _ in 0..2 {
             let mut params = Parameters::default();
             params.push_long(handle);
             params.push(entry.clone());
-            params.push_long(0);
-            params.push_int(0);
+            params.push_long(scratch);
+            params.push_int(1024);
             let r = getmntent_0(thread.clone(), params)
                 .await
                 .expect("getmntent_0")
                 .expect("rc");
             assert_eq!(r, Value::Int(0));
         }
+        let directory = {
+            let entry_reference = entry.as_reference().expect("entry reference");
+            let Reference::Object(entry_object) = &*entry_reference else {
+                panic!("expected mount entry object");
+            };
+            entry_object.value("dir").expect("dir field")
+        };
+        let directory = {
+            let directory_reference = directory.as_reference().expect("dir reference");
+            let Reference::ByteArray(directory) = &*directory_reference else {
+                panic!("expected byte array mount directory");
+            };
+            directory
+                .iter()
+                .map(|byte| byte.cast_unsigned())
+                .collect::<Vec<u8>>()
+        };
+        assert_eq!(directory, b"/tmp");
 
         // EOF.
         let mut params = Parameters::default();
         params.push_long(handle);
         params.push(entry.clone());
-        params.push_long(0);
-        params.push_int(0);
+        params.push_long(scratch);
+        params.push_int(1024);
         let r = getmntent_0(thread.clone(), params)
             .await
             .expect("getmntent_0")
@@ -679,224 +633,5 @@ mod tests {
         params.push_long(handle);
         let r = endmntent(thread.clone(), params).await.expect("endmntent");
         assert!(r.is_none());
-
-        std::fs::remove_file(&path).ok();
-        std::fs::remove_dir(&dir).ok();
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_fgetxattr0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fgetxattr0(
-            thread,
-            Parameters::new(vec![
-                Value::Int(0),
-                Value::Long(0),
-                Value::Long(0),
-                Value::Int(0),
-            ]),
-        )
-        .await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_flistxattr() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = flistxattr(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Long(0), Value::Int(0)]),
-        )
-        .await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_fremovexattr0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            fremovexattr0(thread, Parameters::new(vec![Value::Int(0), Value::Long(0)])).await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_fsetxattr0() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fsetxattr0(
-            thread,
-            Parameters::new(vec![
-                Value::Int(0),
-                Value::Long(0),
-                Value::Long(0),
-                Value::Int(0),
-            ]),
-        )
-        .await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_getlinelen() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = getlinelen(thread, Parameters::new(vec![Value::Long(0)])).await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_endmntent_linux_le_v17() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = endmntent_linux_le_v17(thread, Parameters::new(vec![Value::Long(0)])).await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.endmntent(J)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_fgetxattr0_linux_le_v11() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fgetxattr0_linux_le_v11(
-            thread,
-            Parameters::new(vec![
-                Value::Int(0),
-                Value::Long(0),
-                Value::Long(0),
-                Value::Int(0),
-            ]),
-        )
-        .await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_flistxattr_linux_le_v11() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = flistxattr_linux_le_v11(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Long(0), Value::Int(0)]),
-        )
-        .await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_fremovexattr0_linux_le_v11() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fremovexattr0_linux_le_v11(
-            thread,
-            Parameters::new(vec![Value::Int(0), Value::Long(0)]),
-        )
-        .await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_fsetxattr0_linux_le_v11() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fsetxattr0_linux_le_v11(
-            thread,
-            Parameters::new(vec![
-                Value::Int(0),
-                Value::Long(0),
-                Value::Long(0),
-                Value::Int(0),
-            ]),
-        )
-        .await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_getlinelen_linux_v8() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = getlinelen_linux_v8(thread, Parameters::new(vec![Value::Long(0)])).await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_getmntent0_linux_le_v17() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = getmntent0_linux_le_v17(
-            thread,
-            Parameters::new(vec![
-                Value::Long(0),
-                Value::Object(None),
-                Value::Long(0),
-                Value::Int(0),
-            ]),
-        )
-        .await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.getmntent0(JLsun/nio/fs/UnixMountEntry;JI)I",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_init_linux_le_v17() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_linux_le_v17(thread, Parameters::default()).await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.init()V",
-            result.unwrap_err().to_string()
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[tokio::test]
-    async fn test_setmntent0_linux_le_v17() {
-        let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = setmntent0_linux_le_v17(
-            thread,
-            Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
-        assert_eq!(
-            "sun/nio/fs/LinuxNativeDispatcher.setmntent0(JJ)J",
-            result.unwrap_err().to_string()
-        );
     }
 }

@@ -4,8 +4,8 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
+use ristretto_types::{Thread, VM};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/misc/Unsafe.addressSize()I", LessThanOrEqual(JAVA_8))]
@@ -200,10 +200,14 @@ pub async fn get_boolean_volatile<T: Thread + 'static>(
 #[intrinsic_method("sun/misc/Unsafe.getByte(J)B", LessThanOrEqual(JAVA_8))]
 #[async_method]
 pub async fn get_byte_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::from(8i8)))
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    Ok(Some(Value::Int(i32::from(
+        vm.native_memory().read_i8(address).unwrap_or_default(),
+    ))))
 }
 
 #[intrinsic_method(
@@ -332,10 +336,14 @@ pub async fn get_float_volatile<T: Thread + 'static>(
 #[intrinsic_method("sun/misc/Unsafe.getInt(J)I", LessThanOrEqual(JAVA_8))]
 #[async_method]
 pub async fn get_int_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::from(0i32)))
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    Ok(Some(Value::Int(
+        vm.native_memory().read_i32(address).unwrap_or_default(),
+    )))
 }
 
 #[intrinsic_method(
@@ -566,9 +574,14 @@ pub async fn put_boolean_volatile<T: Thread + 'static>(
 #[intrinsic_method("sun/misc/Unsafe.putByte(JB)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
 pub async fn put_byte_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let value = parameters.pop_int()?;
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    #[expect(clippy::cast_possible_truncation)]
+    vm.native_memory().write_i8(address, value as i8);
     Ok(None)
 }
 
@@ -731,9 +744,13 @@ pub async fn put_int_volatile<T: Thread + 'static>(
 #[intrinsic_method("sun/misc/Unsafe.putLong(JJ)V", LessThanOrEqual(JAVA_8))]
 #[async_method]
 pub async fn put_long_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let value = parameters.pop_long()?;
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    vm.native_memory().write_i64(address, value);
     Ok(None)
 }
 
@@ -1121,9 +1138,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_byte_1() -> Result<()> {
-        let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = get_byte_1(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::from(8i8)));
+        let (vm, thread) = crate::test::java8_thread().await?;
+        let address = vm.native_memory().allocate(1);
+        vm.native_memory().write_i8(address, -42);
+        let mut parameters = Parameters::default();
+        parameters.push_long(address);
+        let result = get_byte_1(thread, parameters).await?;
+        assert_eq!(result, Some(Value::Int(-42)));
         Ok(())
     }
 
@@ -1153,9 +1174,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_int_1() -> Result<()> {
-        let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = get_int_1(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::from(0i32)));
+        let (vm, thread) = crate::test::java8_thread().await?;
+        let address = vm.native_memory().allocate(4);
+        vm.native_memory().write_i32(address, 0x1234_5678);
+        let mut parameters = Parameters::default();
+        parameters.push_long(address);
+        let result = get_int_1(thread, parameters).await?;
+        assert_eq!(result, Some(Value::Int(0x1234_5678)));
         Ok(())
     }
 
@@ -1244,9 +1269,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_byte_1() -> Result<()> {
-        let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = put_byte_1(thread, Parameters::default()).await?;
+        let (vm, thread) = crate::test::java8_thread().await?;
+        let address = vm.native_memory().allocate(1);
+        let mut parameters = Parameters::default();
+        parameters.push_long(address);
+        parameters.push_int(-42);
+        let result = put_byte_1(thread, parameters).await?;
         assert_eq!(result, None);
+        assert_eq!(vm.native_memory().read_i8(address), Some(-42));
         Ok(())
     }
 
@@ -1284,9 +1314,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_put_long_1() -> Result<()> {
-        let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = put_long_1(thread, Parameters::default()).await?;
+        let (vm, thread) = crate::test::java8_thread().await?;
+        let address = vm.native_memory().allocate(8);
+        let mut parameters = Parameters::default();
+        parameters.push_long(address);
+        parameters.push_long(0x0102_0304_0506_0708);
+        let result = put_long_1(thread, parameters).await?;
         assert_eq!(result, None);
+        assert_eq!(
+            vm.native_memory().read_i64(address),
+            Some(0x0102_0304_0506_0708)
+        );
         Ok(())
     }
 

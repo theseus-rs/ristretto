@@ -22,9 +22,9 @@ pub async fn buffered_copy_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     const MAX_BUFFER_SIZE: i32 = 1024 * 1024; // 1 MB
 
-    let _cancel = parameters.pop_long()?;
+    let cancel = parameters.pop_long()?;
     let buffer_size = parameters.pop_int()?;
-    let _address = parameters.pop_long()?;
+    let address = parameters.pop_long()?;
     let src = parameters.pop_int()?;
     let dst = parameters.pop_int()?;
 
@@ -38,10 +38,26 @@ pub async fn buffered_copy_0<T: Thread + 'static>(
     };
 
     let vm = thread.vm()?;
+    if address != 0
+        && vm
+            .native_memory()
+            .try_read_bytes(address, buf_size)
+            .is_none()
+    {
+        return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+    }
     let file_handles = vm.file_handles();
     let mut buf = vec![0u8; buf_size];
 
     loop {
+        if cancel != 0 {
+            let Some(cancelled) = vm.native_memory().read_i32(cancel) else {
+                return Err(throw_unix_exception(&thread, libc::EFAULT).await);
+            };
+            if cancelled != 0 {
+                return Err(throw_unix_exception(&thread, libc::ECANCELED).await);
+            }
+        }
         let n = match managed_files::read(file_handles, i64::from(src), &mut buf).await {
             Ok(n) => n,
             Err(e) => {
@@ -95,12 +111,9 @@ mod tests {
     #[cfg(target_family = "unix")]
     async fn test_buffered_copy_0_success() {
         let (vm, thread) = crate::test::thread().await.expect("thread");
-        let src_path = std::env::current_dir()
-            .unwrap()
-            .join("_test_buffered_copy_src.tmp");
-        let dst_path = std::env::current_dir()
-            .unwrap()
-            .join("_test_buffered_copy_dst.tmp");
+        let directory = tempfile::tempdir().expect("temp directory");
+        let src_path = directory.path().join("source");
+        let dst_path = directory.path().join("destination");
         std::fs::write(&src_path, b"buffered copy data").unwrap();
 
         let file_handles = vm.file_handles();
@@ -143,8 +156,5 @@ mod tests {
 
         let content = std::fs::read(&dst_path).unwrap();
         assert_eq!(content, b"buffered copy data");
-
-        std::fs::remove_file(&src_path).ok();
-        std::fs::remove_file(&dst_path).ok();
     }
 }

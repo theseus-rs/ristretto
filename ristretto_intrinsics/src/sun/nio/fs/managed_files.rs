@@ -13,6 +13,23 @@ pub(crate) async fn open(
     flags: i32,
     mode: i32,
 ) -> std::io::Result<i64> {
+    open_path(
+        file_handles,
+        resource_manager,
+        std::path::Path::new(path),
+        flags,
+        mode,
+    )
+    .await
+}
+
+pub(crate) async fn open_path(
+    file_handles: &HandleManager<i64, FileHandle>,
+    resource_manager: &ResourceManager,
+    path: &std::path::Path,
+    flags: i32,
+    mode: i32,
+) -> std::io::Result<i64> {
     open_inner(file_handles, resource_manager, path, flags, mode, None).await
 }
 
@@ -29,7 +46,7 @@ pub(crate) async fn open_with_windows_options(
     open_inner(
         file_handles,
         resource_manager,
-        path,
+        std::path::Path::new(path),
         flags,
         mode,
         Some((share_mode, flags_and_attributes)),
@@ -40,7 +57,7 @@ pub(crate) async fn open_with_windows_options(
 async fn open_inner(
     file_handles: &HandleManager<i64, FileHandle>,
     resource_manager: &ResourceManager,
-    path: &str,
+    path: &std::path::Path,
     flags: i32,
     mode: i32,
     windows_options: Option<(i32, i32)>,
@@ -122,13 +139,13 @@ async fn open_inner(
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
     let file = {
         let _ = open_options;
-        path.to_string()
+        path.to_string_lossy().into_owned()
     };
 
     let fd;
     #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
     {
-        fd = raw_file_descriptor(path, resource_manager)
+        fd = raw_file_descriptor(&file, resource_manager)
             .map_err(|e| std::io::Error::other(e.to_string()))?;
     }
     #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
@@ -259,26 +276,104 @@ pub(crate) async fn write_all(
     }
 }
 
-pub(crate) async fn close(file_handles: &HandleManager<i64, FileHandle>, fd: i64) {
+pub(crate) async fn close(file_handles: &HandleManager<i64, FileHandle>, fd: i64) -> bool {
     #[cfg_attr(
         all(target_family = "wasm", not(target_os = "wasi")),
         expect(unused_variables, unused_mut)
     )]
-    if let Some(mut handle) = file_handles.remove(&fd).await {
-        #[cfg(not(target_family = "wasm"))]
-        {
-            if handle.mode != FileModeFlags::READ_ONLY {
-                let _ = handle.file.flush().await;
-            }
-        }
-        #[cfg(target_os = "wasi")]
-        {
-            use std::io::Write;
-            if handle.mode != FileModeFlags::READ_ONLY {
-                let _ = handle.file.flush();
-            }
+    let Some(mut handle) = file_handles.remove(&fd).await else {
+        return false;
+    };
+    #[cfg(not(target_family = "wasm"))]
+    {
+        if handle.mode != FileModeFlags::READ_ONLY {
+            let _ = handle.file.flush().await;
         }
     }
+    #[cfg(target_os = "wasi")]
+    {
+        use std::io::Write;
+        if handle.mode != FileModeFlags::READ_ONLY {
+            let _ = handle.file.flush();
+        }
+    }
+    true
+}
+
+/// Adopts ownership of an already-open Unix file descriptor and registers it with the VM.
+///
+/// The caller must not close `fd` after this succeeds. On insertion failure the constructed
+/// `File` is dropped and closes the descriptor.
+#[cfg(target_family = "unix")]
+pub(crate) async fn adopt_raw_fd(
+    file_handles: &HandleManager<i64, FileHandle>,
+    fd: i32,
+    flags: i32,
+) -> std::io::Result<i64> {
+    use std::os::fd::FromRawFd;
+
+    if fd < 0 {
+        return Err(std::io::Error::from_raw_os_error(libc::EBADF));
+    }
+    #[expect(unsafe_code)]
+    let file = unsafe { std::fs::File::from_raw_fd(fd) };
+    let file = tokio::fs::File::from_std(file);
+    let access_mode = flags & libc::O_ACCMODE;
+    let file_handle = FileHandle {
+        file,
+        append: flags & libc::O_APPEND != 0,
+        mode: if access_mode == libc::O_RDONLY {
+            FileModeFlags::READ_ONLY
+        } else {
+            FileModeFlags::READ_WRITE
+        },
+    };
+    let fd = i64::from(fd);
+    file_handles
+        .insert(fd, file_handle)
+        .await
+        .map_err(|error| std::io::Error::other(error.to_string()))?;
+    Ok(fd)
+}
+
+/// Adopts an owned Win32 file handle and registers it under its native numeric value.
+#[cfg(target_os = "windows")]
+pub(crate) async fn adopt_raw_handle(
+    file_handles: &HandleManager<i64, FileHandle>,
+    raw_handle: usize,
+    writable: bool,
+) -> std::io::Result<i64> {
+    use std::os::windows::io::FromRawHandle;
+
+    if raw_handle == 0
+        || raw_handle == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE as usize
+    {
+        return Err(std::io::Error::from_raw_os_error(6));
+    }
+    #[expect(unsafe_code)]
+    let file = unsafe { std::fs::File::from_raw_handle(raw_handle as _) };
+    let file = tokio::fs::File::from_std(file);
+    #[expect(
+        clippy::cast_possible_wrap,
+        reason = "preserve the native HANDLE bit pattern in Java long"
+    )]
+    let handle = raw_handle as i64;
+    file_handles
+        .insert(
+            handle,
+            FileHandle {
+                file,
+                append: false,
+                mode: if writable {
+                    FileModeFlags::READ_WRITE
+                } else {
+                    FileModeFlags::READ_ONLY
+                },
+            },
+        )
+        .await
+        .map_err(|error| std::io::Error::other(error.to_string()))?;
+    Ok(handle)
 }
 
 pub(crate) async fn metadata(

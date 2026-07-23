@@ -15,7 +15,6 @@ use ristretto_classloader::{DEFAULT_JAVA_VERSION, runtime};
 use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
 use ristretto_vm::Error::InternalError;
 use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
-#[cfg(not(target_family = "wasm"))]
 use std::num::NonZero;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -233,7 +232,7 @@ fn initialize_tracing() {
         .init();
 }
 
-/// Collects directories of all tests to run.  A test is a directory that contains a
+/// Collects directories of all tests to run. A test is a directory that contains a
 /// `Test.java` file.
 #[cfg(not(target_family = "wasm"))]
 fn collect_test_dirs(tests_root_dir: &PathBuf) -> Result<Vec<PathBuf>> {
@@ -388,14 +387,30 @@ fn test_vm(
                         .build()
                         .map_err(|error| InternalError(error.to_string()))?;
                     runtime.block_on(async {
+                        let stdout = Arc::new(AsyncMutex::new(Vec::new()));
+                        let stderr = Arc::new(AsyncMutex::new(Vec::new()));
                         match tokio::time::timeout(
                             test_timeout,
-                            run_test(&java_version, &test_dir, interpreted),
+                            run_test(
+                                &java_version,
+                                &test_dir,
+                                interpreted,
+                                stdout.clone(),
+                                stderr.clone(),
+                            ),
                         )
                         .await
                         {
                             Ok(result) => result,
-                            Err(_elapsed) => Err(InternalError(timeout_message)),
+                            Err(_elapsed) => {
+                                let stdout = stdout.lock().await;
+                                let stdout = String::from_utf8_lossy(&stdout);
+                                let stderr = stderr.lock().await;
+                                let stderr = String::from_utf8_lossy(&stderr);
+                                Err(InternalError(format!(
+                                    "{timeout_message}\nstdout: {stdout}\nstderr: {stderr}"
+                                )))
+                            }
                         }
                     })
                 })
@@ -438,8 +453,12 @@ fn test_vm(
             }
         }
         Ok(Err(error)) => {
-            error!("Failed ({test_type}) {test_name}: {error:?}");
-            Err(make_failure(format!("{error:?}")))
+            let error_message = match error {
+                ristretto_vm::Error::Throwable(_) => "Java invocation failed".to_string(),
+                error => format!("{error:?}"),
+            };
+            error!("Failed ({test_type}) {test_name}: {error_message}");
+            Err(make_failure(error_message))
         }
         Err(error) => {
             error!("Panic ({test_type}) {test_name}: {error:?}");
@@ -472,11 +491,11 @@ async fn run_test(
     java_version: &str,
     test_dir: &Path,
     interpreted: bool,
+    stdout: Arc<AsyncMutex<Vec<u8>>>,
+    stderr: Arc<AsyncMutex<Vec<u8>>>,
 ) -> Result<(Duration, String)> {
     let start_time = Instant::now();
     let class_path = ClassPath::from(&[test_dir]);
-    let stdout = Arc::new(AsyncMutex::new(Vec::new()));
-    let stderr = Arc::new(AsyncMutex::new(Vec::new()));
 
     // Create a garbage collector configured to use only one thread
     let gc_config = GcConfigurationBuilder::new().threads(1).build();
@@ -503,7 +522,9 @@ async fn run_test(
     let configuration = configuration_builder.build()?;
     let vm = VM::new(configuration).await?;
     let parameters: Vec<&str> = Vec::new();
-    let result = vm.invoke_main(&parameters).await;
+    // A thrown Java object is only rooted by the VM while it is executing. Do not retain or
+    // format that unrooted GC reference across the thread-shutdown await.
+    let invocation_failed = vm.invoke_main(&parameters).await.is_err();
 
     // Wait for all spawned threads to complete before collecting output
     let _ = vm.wait_for_non_daemon_threads().await;
@@ -512,9 +533,9 @@ async fn run_test(
     let stdout = String::from_utf8_lossy(&stdout_lock).to_string();
     let stderr_lock = stderr.lock().await;
     let stderr = String::from_utf8_lossy(&stderr_lock).to_string();
-    if let Err(error) = result {
+    if invocation_failed {
         return Err(InternalError(format!(
-            "{error:?}:\nstdout: {stdout}\nstderr: {stderr}"
+            "main invocation failed:\nstdout: {stdout}\nstderr: {stderr}"
         )));
     }
     Ok((start_time.elapsed(), stdout))
