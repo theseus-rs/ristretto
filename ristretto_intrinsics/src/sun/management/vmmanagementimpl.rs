@@ -1,4 +1,5 @@
-use ristretto_classfile::VersionSpecification::Any;
+use ristretto_classfile::JAVA_25;
+use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -6,6 +7,21 @@ use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
+
+#[intrinsic_method(
+    "sun/management/VMManagementImpl.endAOTRecording()Z",
+    GreaterThanOrEqual(JAVA_25)
+)]
+#[async_method]
+pub async fn end_aot_recording<T: Thread + 'static>(
+    _thread: Arc<T>,
+    _parameters: Parameters,
+) -> Result<Option<Value>> {
+    Err(JavaError::UnsatisfiedLinkError(
+        "sun.management.VMManagementImpl.endAOTRecording()Z".to_string(),
+    )
+    .into())
+}
 
 #[intrinsic_method("sun/management/VMManagementImpl.getAvailableProcessors()I", Any)]
 #[async_method]
@@ -382,6 +398,16 @@ pub async fn is_thread_cpu_time_enabled<T: Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_end_aot_recording() {
+        let (_vm, thread) = crate::test::thread().await.expect("thread");
+        let result = end_aot_recording(thread, Parameters::default()).await;
+        assert_eq!(
+            "sun.management.VMManagementImpl.endAOTRecording()Z",
+            result.unwrap_err().to_string()
+        );
+    }
 
     #[tokio::test]
     async fn test_get_available_processors() {
