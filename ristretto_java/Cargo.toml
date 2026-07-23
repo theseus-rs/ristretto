@@ -42,15 +42,18 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 tokio = { workspace = true, features = ["rt"] }
 
 [features]
-default = ["audio", "rustls-tls"]
+default = ["audio", "tls-rustls-ring"]
 audio = [
     "ristretto_vm/audio",
 ]
-native-tls = [
-    "ristretto_vm/native-tls",
+tls-native-tls = [
+    "ristretto_vm/tls-native-tls",
 ]
-rustls-tls = [
-    "ristretto_vm/rustls-tls",
+tls-rustls-aws-lc-rs = [
+    "ristretto_vm/tls-rustls-aws-lc-rs",
+]
+tls-rustls-ring = [
+    "ristretto_vm/tls-rustls-ring",
 ]
 startup-trace = [
     "ristretto_vm/startup-trace",

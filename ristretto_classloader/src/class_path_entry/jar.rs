@@ -1,8 +1,6 @@
 use crate::Error::{ArchiveError, ClassNotFound, FileNotFound, ParseError};
 use crate::Result;
 use crate::class_path_entry::manifest::Manifest;
-#[cfg(not(target_family = "wasm"))]
-use reqwest::Client;
 use ristretto_classfile::ClassFile;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
@@ -233,7 +231,7 @@ impl Archive {
         } else if let Some(url) = &self.url {
             #[cfg(not(target_family = "wasm"))]
             {
-                let client = Client::new();
+                let client = crate::tls::reqwest_client()?;
                 let bytes = client.get(url).send().await?.bytes().await?.to_vec();
                 let cursor = io::Cursor::new(bytes);
                 let archive = ZipArchive::new(cursor)?;
@@ -325,6 +323,8 @@ mod tests {
     use crate::class_path_entry::manifest::{MAIN_CLASS, MANIFEST_VERSION};
     use ristretto_classfile::{ConstantPool, JAVA_17};
     use std::fs;
+    #[cfg(not(target_family = "wasm"))]
+    use std::io::BufRead;
     use std::io::{self, Write};
     use std::path::PathBuf;
     use zip::write::SimpleFileOptions;
@@ -529,6 +529,43 @@ mod tests {
         };
         let result = archive.zip_archive().await;
         assert!(matches!(result, Err(ArchiveError(_))));
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[tokio::test]
+    async fn test_archive_from_url() -> Result<()> {
+        let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let classes_jar = cargo_manifest
+            .join("..")
+            .join("classes")
+            .join("classes.jar");
+        let bytes = fs::read(classes_jar)?;
+        let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let address = listener.local_addr()?;
+        let server = std::thread::spawn(move || -> io::Result<()> {
+            let (mut stream, _) = listener.accept()?;
+            let mut request = io::BufReader::new(stream.try_clone()?);
+            let mut line = String::new();
+            while request.read_line(&mut line)? > 0 {
+                if line == "\r\n" {
+                    break;
+                }
+                line.clear();
+            }
+            write!(
+                stream,
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                bytes.len()
+            )?;
+            stream.write_all(&bytes)
+        });
+
+        let mut archive = Archive::from_url(format!("http://{address}/classes.jar"));
+        assert!(!archive.zip_archive().await?.is_empty());
+        server
+            .join()
+            .map_err(|_| io::Error::other("HTTP server thread panicked"))??;
+        Ok(())
     }
 
     #[cfg(feature = "url")]

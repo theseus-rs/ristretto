@@ -15,3 +15,22 @@ Command line interface for the Ristretto [JVM](https://docs.oracle.com/javase/sp
 ```shell
 java HelloWorld
 ```
+
+## Feature flags
+
+`ristretto_java` uses feature flags to address compile time and binary size uses.
+
+The following features are available:
+
+| Name                       | Description                                    | Default? |
+|----------------------------|------------------------------------------------|----------|
+| `audio`                    | Enables `javax.sound` support                  | Yes      |
+| `startup-trace`            | Enables startup tracing                        | No       |
+| `tls-native-tls`           | Enables Native TLS support                     | No       |
+| `tls-rustls-aws-lc-rs`     | Enables Rustls with the AWS-LC crypto provider | No       |
+| `tls-rustls-ring`          | Enables Rustls with the Ring crypto provider   | Yes      |
+| `url`                      | Enables URL class path entries                 | No       |
+
+The TLS backend features are alternatives. To select a non-default backend without compiling Ring,
+disable default features and enable `tls-native-tls` or `tls-rustls-aws-lc-rs`, together with any
+other required features such as `audio`.
