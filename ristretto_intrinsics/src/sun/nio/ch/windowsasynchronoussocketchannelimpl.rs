@@ -280,6 +280,7 @@ pub async fn connect0<T: Thread + 'static>(
                     socket_type,
                     timeout,
                     is_ipv6,
+                    lifecycle,
                     ..
                 } = handle;
                 if !matches!(socket_type, SocketType::Raw(_)) {
@@ -292,6 +293,7 @@ pub async fn connect0<T: Thread + 'static>(
                     is_ipv6,
                     is_unix: false,
                     non_blocking: true,
+                    lifecycle,
                 };
                 if vm.socket_handles().insert(fd, replacement).await.is_err() {
                     let _ =

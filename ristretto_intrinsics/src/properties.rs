@@ -57,6 +57,11 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     let java_home = vm.java_home().to_string_lossy().to_string();
     let class_file_version = vm.java_class_file_version();
     let major_java_version = class_file_version.java();
+    let specification_version = if major_java_version == 8 {
+        "1.8".to_string()
+    } else {
+        major_java_version.to_string()
+    };
     let major_class_version = class_file_version.major();
     let minor_class_version = class_file_version.minor();
     let (language_owned, country_owned) = detect_default_locale();
@@ -118,6 +123,10 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
         "Java Platform API Specification".into(),
     );
     properties.insert("java.specification.vendor", "Oracle Corporation".into());
+    properties.insert(
+        "java.specification.version",
+        Cow::Owned(specification_version.clone()),
+    );
     // TODO: implement java.specification.maintenance.version
     properties.insert("java.specification.maintenance.version", Cow::Borrowed(""));
     properties.insert("java.vendor", "ristretto".into());
@@ -143,7 +152,7 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     );
     properties.insert(
         "java.vm.specification.version",
-        Cow::Owned(major_java_version.to_string()),
+        Cow::Owned(specification_version),
     );
     properties.insert("java.vm.vendor", "ristretto".into());
     properties.insert("java.vm.version", vm_version.into());

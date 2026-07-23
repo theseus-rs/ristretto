@@ -22,7 +22,16 @@ pub async fn is_ipv_4_available<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(1)))
+    #[cfg(not(target_family = "wasm"))]
+    let available = socket2::Socket::new(
+        socket2::Domain::IPV4,
+        socket2::Type::DGRAM,
+        Some(socket2::Protocol::UDP),
+    )
+    .is_ok();
+    #[cfg(target_family = "wasm")]
+    let available = false;
+    Ok(Some(Value::Int(i32::from(available))))
 }
 
 #[intrinsic_method("java/net/InetAddress.isIPv6Supported()Z", GreaterThanOrEqual(JAVA_21))]
@@ -31,7 +40,16 @@ pub async fn is_ipv_6_supported<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Int(0)))
+    #[cfg(not(target_family = "wasm"))]
+    let supported = socket2::Socket::new(
+        socket2::Domain::IPV6,
+        socket2::Type::DGRAM,
+        Some(socket2::Protocol::UDP),
+    )
+    .is_ok();
+    #[cfg(target_family = "wasm")]
+    let supported = false;
+    Ok(Some(Value::Int(i32::from(supported))))
 }
 
 #[cfg(test)]
@@ -50,7 +68,16 @@ mod tests {
     async fn test_is_ipv_4_available() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = is_ipv_4_available(thread, Parameters::default()).await?;
-        assert_eq!(Some(Value::Int(1)), result);
+        #[cfg(not(target_family = "wasm"))]
+        let expected = socket2::Socket::new(
+            socket2::Domain::IPV4,
+            socket2::Type::DGRAM,
+            Some(socket2::Protocol::UDP),
+        )
+        .is_ok();
+        #[cfg(target_family = "wasm")]
+        let expected = false;
+        assert_eq!(Some(Value::Int(i32::from(expected))), result);
         Ok(())
     }
 
@@ -58,7 +85,16 @@ mod tests {
     async fn test_is_ipv_6_supported() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let result = is_ipv_6_supported(thread, Parameters::default()).await?;
-        assert_eq!(Some(Value::Int(0)), result);
+        #[cfg(not(target_family = "wasm"))]
+        let expected = socket2::Socket::new(
+            socket2::Domain::IPV6,
+            socket2::Type::DGRAM,
+            Some(socket2::Protocol::UDP),
+        )
+        .is_ok();
+        #[cfg(target_family = "wasm")]
+        let expected = false;
+        assert_eq!(Some(Value::Int(i32::from(expected))), result);
         Ok(())
     }
 }

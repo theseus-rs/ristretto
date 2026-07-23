@@ -215,6 +215,8 @@ impl MethodRegistry {
 mod tests {
     use super::*;
     use crate::vm;
+    #[cfg(target_family = "unix")]
+    use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17};
     use ristretto_classfile::{JAVA_21, JavaStr};
     use ristretto_classloader::runtime;
     use ristretto_classloader::{
@@ -238,6 +240,25 @@ mod tests {
         let result = method_registry.method("foo", "hashCode", "()I");
         assert!(result.is_none());
         Ok(())
+    }
+
+    #[cfg(target_family = "unix")]
+    #[test]
+    fn test_plain_datagram_send_version_registration() {
+        const CLASS: &str = "java/net/PlainDatagramSocketImpl";
+        const DESCRIPTOR: &str = "(Ljava/net/DatagramPacket;)V";
+
+        let java_8 = MethodRegistry::new(&JAVA_8);
+        assert!(java_8.method(CLASS, "send", DESCRIPTOR).is_some());
+        assert!(java_8.method(CLASS, "send0", DESCRIPTOR).is_none());
+
+        let java_11 = MethodRegistry::new(&JAVA_11);
+        assert!(java_11.method(CLASS, "send", DESCRIPTOR).is_some());
+        assert!(java_11.method(CLASS, "send0", DESCRIPTOR).is_some());
+
+        let java_17 = MethodRegistry::new(&JAVA_17);
+        assert!(java_17.method(CLASS, "send", DESCRIPTOR).is_none());
+        assert!(java_17.method(CLASS, "send0", DESCRIPTOR).is_some());
     }
 
     #[cfg(feature = "audio")]
@@ -339,12 +360,21 @@ mod tests {
                     .to_string(),
             );
         }
-        // Early Java 11 updates used this NativeLibrary signature. The runtime used by this test
-        // is a later update, but the registry must retain the intrinsic for older Java 11 homes.
+        // Java 11 update releases changed these native signatures. The registry must retain both
+        // datagram send variants and the early NativeLibrary signature across Java 11 homes.
         if version_major == 11 {
             required_methods.push(
                 "java/lang/ClassLoader$NativeLibrary.load0(Ljava/lang/String;Z)Z".to_string(),
             );
+            if os != "windows" {
+                required_methods.push(
+                    "java/net/PlainDatagramSocketImpl.send(Ljava/net/DatagramPacket;)V".to_string(),
+                );
+                required_methods.push(
+                    "java/net/PlainDatagramSocketImpl.send0(Ljava/net/DatagramPacket;)V"
+                        .to_string(),
+                );
+            }
         }
         // Ristretto-specific intrinsic needed to mask ACC_SUPER from class modifiers; the
         // JDK exposes this as a non-native method in Java 25+, but we still require the

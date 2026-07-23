@@ -16,7 +16,11 @@ pub async fn is_reuse_port_available_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::from(false)))
+    #[cfg(not(target_family = "wasm"))]
+    let available = super::socket_ops::reuse_port_available(false);
+    #[cfg(target_family = "wasm")]
+    let available = false;
+    Ok(Some(Value::from(available)))
 }
 
 #[cfg(test)]
@@ -27,7 +31,11 @@ mod tests {
     async fn test_is_reuse_port_available_0() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
         let result = is_reuse_port_available_0(thread, Parameters::default()).await?;
-        assert_eq!(Some(Value::from(false)), result);
+        #[cfg(not(target_family = "wasm"))]
+        let expected = super::super::socket_ops::reuse_port_available(false);
+        #[cfg(target_family = "wasm")]
+        let expected = false;
+        assert_eq!(Some(Value::from(expected)), result);
         Ok(())
     }
 }

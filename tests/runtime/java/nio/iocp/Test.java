@@ -27,7 +27,9 @@ public class Test {
 
         group.shutdown();
         System.out.println("Shutdown requested: " + group.isShutdown());
-        System.out.println("Terminated: " + group.awaitTermination(10, TimeUnit.SECONDS));
+        // Emulated Windows ARM runners can take substantially longer to unwind both
+        // IOCP handler threads under a full compatibility-test workload.
+        System.out.println("Terminated: " + group.awaitTermination(60, TimeUnit.SECONDS));
         System.out.println("Handler threads created: " + threadCount.get());
 
         // A second shutdown must not close the completion-port handle twice.

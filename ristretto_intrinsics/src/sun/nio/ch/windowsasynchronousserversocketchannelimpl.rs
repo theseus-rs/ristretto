@@ -99,13 +99,14 @@ pub async fn accept0<T: Thread + 'static>(
                                 );
                                 return;
                             };
-                            let SocketHandle { timeout, is_ipv6, .. } = child;
+                            let SocketHandle { timeout, is_ipv6, lifecycle, .. } = child;
                             let connected = SocketHandle {
                                 socket_type: SocketType::TcpStream(Arc::new(stream)),
                                 timeout,
                                 is_ipv6,
                                 is_unix: false,
                                 non_blocking: true,
+                                lifecycle,
                             };
                             if vm.socket_handles().insert(accept_fd, connected).await.is_err() {
                                 let _ = post_operation(

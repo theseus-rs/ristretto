@@ -1,5 +1,6 @@
 use ristretto_classfile::JavaStr;
 use ristretto_types::Assignable;
+use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError::{ClassNotFoundException, NullPointerException};
 use ristretto_types::JavaObject;
 use ristretto_types::VM;
@@ -328,35 +329,20 @@ pub async fn get_component_type<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let object = parameters.pop()?;
-    let class_name = {
-        let object = object.as_object_ref()?;
-        object.value("name")?.as_string()?
-    };
-    let class = thread.class(&class_name).await?;
+    let class = get_class_no_init(&thread, &object).await?;
 
     if !class.is_array() {
         return Ok(Some(Value::Object(None)));
     }
 
-    // Strip only ONE leading '[' to get the component type
-    // e.g., "[[Ljava/lang/String;" -> "[Ljava/lang/String;" (String[] is component of String[][])
-    let component_description = class_name.strip_prefix('[').unwrap_or(&class_name);
-
-    // Convert primitive type descriptors to primitive type names
-    let component_class_name = match component_description {
-        "B" => "byte",
-        "C" => "char",
-        "D" => "double",
-        "F" => "float",
-        "I" => "int",
-        "J" => "long",
-        "S" => "short",
-        "Z" => "boolean",
-        _ => component_description,
-    };
-
-    let class = thread.class(component_class_name).await?;
-    let class_object = class.to_object(&thread).await?;
+    // Class.name uses binary names (`[Ljava.lang.String;`) while the loader uses
+    // internal names (`[Ljava/lang/String;`). Derive the component from the loaded
+    // class so one-dimensional object arrays do not retain the descriptor's `L...;`.
+    let component = class
+        .component_type()
+        .ok_or_else(|| InternalError("array class has no component type".to_string()))?;
+    let component_class = thread.class(component).await?;
+    let class_object = component_class.to_object(&thread).await?;
 
     Ok(Some(class_object))
 }
@@ -2075,11 +2061,23 @@ mod tests {
         let class = thread.class("[I").await?;
         let class_object = class.to_object(&thread).await?;
         let parameters = Parameters::new(vec![class_object]);
-        let result = get_component_type(thread, parameters).await?;
+        let result = get_component_type(thread.clone(), parameters).await?;
         let class_object = result.expect("class");
         let class_object = class_object.as_object_ref()?;
         let class_name = class_object.value("name")?.as_string()?;
         assert_eq!(class_name.as_str(), "int");
+
+        let class = thread
+            .class("[Ljava/util/concurrent/ConcurrentHashMap$Segment;")
+            .await?;
+        let class_object = class.to_object(&thread).await?;
+        let result = get_component_type(thread, Parameters::new(vec![class_object])).await?;
+        let component = result.expect("component class");
+        let component = component.as_object_ref()?;
+        assert_eq!(
+            component.value("name")?.as_string()?,
+            "java.util.concurrent.ConcurrentHashMap$Segment"
+        );
         Ok(())
     }
 
