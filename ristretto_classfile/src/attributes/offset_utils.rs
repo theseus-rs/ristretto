@@ -211,7 +211,35 @@ pub(crate) fn instructions_to_bytes(
         let byte_position = u16::try_from(bytes.position())?;
         let instruction_position = u16::try_from(index)?;
         instruction_to_byte_map.insert(instruction_position, byte_position);
-        instruction.to_bytes(&mut bytes)?;
+
+        // Branch operands are logical instruction indices until the second pass. Serializing them
+        // as byte offsets just to measure instruction sizes can overflow for large valid methods.
+        let mut sizing_instruction = instruction.clone();
+        match &mut sizing_instruction {
+            Instruction::Ifeq(target)
+            | Instruction::Ifne(target)
+            | Instruction::Iflt(target)
+            | Instruction::Ifge(target)
+            | Instruction::Ifgt(target)
+            | Instruction::Ifle(target)
+            | Instruction::If_icmpeq(target)
+            | Instruction::If_icmpne(target)
+            | Instruction::If_icmplt(target)
+            | Instruction::If_icmpge(target)
+            | Instruction::If_icmpgt(target)
+            | Instruction::If_icmple(target)
+            | Instruction::If_acmpeq(target)
+            | Instruction::If_acmpne(target)
+            | Instruction::Goto(target)
+            | Instruction::Jsr(target)
+            | Instruction::Ifnull(target)
+            | Instruction::Ifnonnull(target) => *target = byte_position,
+            Instruction::Goto_w(target) | Instruction::Jsr_w(target) => {
+                *target = i32::from(byte_position);
+            }
+            _ => {}
+        }
+        sizing_instruction.to_bytes(&mut bytes)?;
     }
 
     let mut bytes = Cursor::new(Vec::new());
@@ -329,6 +357,21 @@ mod tests {
 
         assert_eq!(instructions, result);
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_to_bytes_large_method_with_nearby_branch() -> Result<()> {
+        let mut instructions = vec![Instruction::Iconst_0, Instruction::Istore_0];
+        instructions.extend(std::iter::repeat_n(Instruction::Iinc(0, 0), 20_000));
+        instructions.push(Instruction::Goto(20_003));
+        instructions.push(Instruction::Return);
+
+        let (_instruction_to_byte_map, bytes) = instructions_to_bytes(&instructions)?;
+        let mut reader = ByteReader::new(&bytes);
+        let (_byte_to_instruction_map, result) = instructions_from_bytes(&mut reader)?;
+
+        assert_eq!(instructions, result);
         Ok(())
     }
 
