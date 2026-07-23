@@ -1,5 +1,5 @@
-use ristretto_classfile::JAVA_8;
-use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
+use ristretto_classfile::VersionSpecification::LessThanOrEqual;
+use ristretto_classfile::{JAVA_8, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
@@ -30,7 +30,10 @@ pub async fn n_get_library_for_feature<T: ristretto_types::Thread + 'static>(
     Ok(Some(Value::Int(0)))
 }
 
-#[intrinsic_method("com/sun/media/sound/Platform.nIsBigEndian()Z", Any)]
+#[intrinsic_method(
+    "com/sun/media/sound/Platform.nIsBigEndian()Z",
+    LessThanOrEqual(JAVA_21)
+)]
 #[async_method]
 pub async fn n_is_big_endian<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
