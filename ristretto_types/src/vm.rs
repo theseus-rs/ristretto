@@ -15,6 +15,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
+/// First descriptor value reserved for VM-managed network handles.
+///
+/// Native file descriptors occupy a small, process-wide integer range. Keeping
+/// synthetic descriptors above the maximum descriptor range used by supported
+/// hosts prevents file and socket handle maps from aliasing the same value.
+pub const FIRST_NIO_FD: i32 = 1 << 30;
+
 /// Trait representing the virtual machine.
 pub trait VM: Send + Sync {
     /// The concrete thread type for this VM.
@@ -295,7 +302,7 @@ mod tests {
         assert!(vm_ref.system_properties().is_empty());
         assert_eq!(vm_ref.next_thread_id()?, 1);
         assert_eq!(vm_ref.next_hidden_class_suffix()?, 1);
-        assert_eq!(vm_ref.next_nio_fd(), 3);
+        assert_eq!(vm_ref.next_nio_fd(), FIRST_NIO_FD);
         assert_eq!(
             vm_ref.class("java/lang/Object").await?.name(),
             "java/lang/Object"

@@ -130,6 +130,8 @@ pub struct SocketHandle {
     pub timeout: Option<Duration>,
     /// Whether this socket uses IPv6.
     pub is_ipv6: bool,
+    /// Whether this socket belongs to the Unix-domain address family.
+    pub is_unix: bool,
     /// Whether this socket is in non-blocking mode.
     pub non_blocking: bool,
 }
@@ -143,6 +145,7 @@ impl SocketHandle {
             socket_type,
             timeout: None,
             is_ipv6: false,
+            is_unix: false,
             non_blocking: false,
         }
     }
@@ -215,6 +218,7 @@ mod tests {
         let mut handle = SocketHandle::new(crate::test_utils::raw_socket_type());
         assert!(handle.timeout.is_none());
         assert!(!handle.is_ipv6);
+        assert!(!handle.is_unix);
         assert!(!handle.non_blocking);
         assert_eq!(handle.timeout_millis(), 0);
 

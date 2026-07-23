@@ -29,6 +29,7 @@ pub async fn close_0<T: Thread + 'static>(
     };
     let vm = thread.vm()?;
     managed_files::close(vm.file_handles(), i64::from(fd)).await;
+    let _ = super::posix::close_descriptor(&*vm, fd)?;
     #[cfg(not(target_family = "wasm"))]
     vm.socket_handles().remove(&fd).await;
     Ok(None)

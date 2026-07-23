@@ -82,6 +82,12 @@ pub enum JavaError {
     /// - [ConnectException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/ConnectException.html)
     #[error("{0}")]
     ConnectException(String),
+    /// `sun.net.ConnectionResetException`
+    ///
+    /// The JDK NIO dispatchers use this internal `SocketException` subtype to
+    /// distinguish a reset connection from an orderly end-of-stream.
+    #[error("{0}")]
+    ConnectionResetException(String),
     /// `ExceptionInInitializerError`
     ///
     /// # References
@@ -163,6 +169,12 @@ pub enum JavaError {
     /// - [NoRouteToHostException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/NoRouteToHostException.html)
     #[error("{0}")]
     NoRouteToHostException(String),
+    /// `PortUnreachableException`
+    ///
+    /// # References
+    /// - [PortUnreachableException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/net/PortUnreachableException.html)
+    #[error("{0}")]
+    PortUnreachableException(String),
     /// `NoClassDefFoundError`
     ///
     /// # References
@@ -260,6 +272,7 @@ impl JavaError {
             JavaError::ClassNotFoundException(_) => "java.lang.ClassNotFoundException",
             JavaError::CloneNotSupportedException(_) => "java.lang.CloneNotSupportedException",
             JavaError::ConnectException(_) => "java.net.ConnectException",
+            JavaError::ConnectionResetException(_) => "sun.net.ConnectionResetException",
             JavaError::ExceptionInInitializerError(_) => "java.lang.ExceptionInInitializerError",
             JavaError::FileNotFoundException(_) => "java.io.FileNotFoundException",
             JavaError::IllegalAccessError(_) => "java.lang.IllegalAccessError",
@@ -274,6 +287,7 @@ impl JavaError {
             JavaError::InterruptedException(_) => "java.lang.InterruptedException",
             JavaError::IoException(_) => "java.io.IOException",
             JavaError::NoRouteToHostException(_) => "java.net.NoRouteToHostException",
+            JavaError::PortUnreachableException(_) => "java.net.PortUnreachableException",
             JavaError::NoClassDefFoundError(_) => "java.lang.NoClassDefFoundError",
             JavaError::NoSuchFieldError(_) => "java.lang.NoSuchFieldError",
             JavaError::NoSuchMethodError(_) => "java.lang.NoSuchMethodError",
@@ -408,6 +422,13 @@ mod tests {
     }
 
     #[test]
+    fn test_connection_reset_exception() {
+        let error = JavaError::ConnectionResetException("Connection reset".to_string());
+        assert_eq!(error.class_name(), "sun.net.ConnectionResetException");
+        assert_eq!(error.message(), "Connection reset");
+    }
+
+    #[test]
     fn test_exception_in_initializer_error() {
         let error = JavaError::ExceptionInInitializerError("initialization failed".to_string());
         assert_eq!(error.class_name(), "java.lang.ExceptionInInitializerError");
@@ -499,6 +520,13 @@ mod tests {
         let error = JavaError::NoRouteToHostException("No route to host".to_string());
         assert_eq!(error.class_name(), "java.net.NoRouteToHostException");
         assert_eq!(error.message(), "No route to host");
+    }
+
+    #[test]
+    fn test_port_unreachable_exception() {
+        let error = JavaError::PortUnreachableException("Port unreachable".to_string());
+        assert_eq!(error.class_name(), "java.net.PortUnreachableException");
+        assert_eq!(error.message(), "Port unreachable");
     }
 
     #[test]

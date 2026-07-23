@@ -3,7 +3,6 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -14,13 +13,10 @@ use std::sync::Arc;
 )]
 #[async_method]
 pub async fn accept_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    mut parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _isaa = parameters.pop_reference()?;
-    let _newfd = parameters.pop_reference()?;
-    let _ssfd = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError("sun.nio.ch.UnixAsynchronousServerSocketChannelImpl.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I".to_string()).into())
+    super::net::accept(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -51,10 +47,7 @@ mod tests {
             ]),
         )
         .await;
-        assert_eq!(
-            "sun.nio.ch.UnixAsynchronousServerSocketChannelImpl.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I",
-            result.unwrap_err().to_string()
-        );
+        assert!(result.is_err());
     }
 
     #[tokio::test]

@@ -1,5 +1,6 @@
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Test getting and setting socket options.
@@ -14,10 +15,13 @@ public class Test {
         System.out.println("ServerSocket reuseAddress: " + serverSocket.getReuseAddress());
 
         int port = serverSocket.getLocalPort();
+        AtomicInteger urgentData = new AtomicInteger(-1);
 
         Thread serverThread = new Thread(() -> {
             try {
                 Socket client = serverSocket.accept();
+                client.setOOBInline(true);
+                urgentData.set(client.getInputStream().read());
                 client.close();
                 serverSocket.close();
             } catch (Exception e) {
@@ -53,6 +57,10 @@ public class Test {
         // SO_LINGER
         socket.setSoLinger(true, 10);
         System.out.println("SO_LINGER: " + socket.getSoLinger());
+        socket.setSoLinger(true, 0);
+        System.out.println("SO_LINGER zero: " + socket.getSoLinger());
+        socket.setSoLinger(false, 0);
+        System.out.println("SO_LINGER disabled: " + socket.getSoLinger());
 
         // SO_TIMEOUT
         socket.setSoTimeout(5000);
@@ -61,9 +69,11 @@ public class Test {
         // OOB inline
         socket.setOOBInline(true);
         System.out.println("OOB inline: " + socket.getOOBInline());
+        socket.sendUrgentData('A');
 
         socket.close();
         serverThread.join();
+        System.out.println("Urgent data: " + (char) urgentData.get());
         System.out.println("=== TCP Options Test Complete ===");
     }
 }

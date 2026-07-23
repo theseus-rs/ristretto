@@ -8,12 +8,21 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::io::SeekFrom;
-use std::os::unix::fs::MetadataExt;
+use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::sync::Arc;
+
+fn io_status(operation: &str, error: &std::io::Error) -> Result<i64> {
+    match error.kind() {
+        std::io::ErrorKind::WouldBlock => Ok(-2),
+        std::io::ErrorKind::Interrupted => Ok(-3),
+        _ => Err(JavaError::IoException(format!("{operation}: {error}")).into()),
+    }
+}
 
 async fn file_key<V: VM>(vm: &V, fd: i64) -> Option<(u64, u64)> {
     managed_files::metadata(vm.file_handles(), fd)
@@ -45,7 +54,15 @@ pub async fn allocation_granularity_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Long(4096)))
+    #[expect(unsafe_code)]
+    let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+    if page_size <= 0 {
+        return Err(JavaError::IoException(
+            "allocationGranularity0: unable to determine the system page size".to_string(),
+        )
+        .into());
+    }
+    Ok(Some(Value::Long(page_size)))
 }
 
 #[intrinsic_method(
@@ -61,14 +78,48 @@ pub async fn available_0<T: Thread + 'static>(
     let fd = i64::from(get_fd(&fd_value)?);
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
-    let size = managed_files::metadata(file_handles, fd)
+    let metadata = managed_files::metadata(file_handles, fd).await.ok();
+    if metadata.as_ref().is_some_and(|value| {
+        let kind = value.file_type();
+        kind.is_char_device() || kind.is_fifo() || kind.is_socket()
+    }) {
+        let mut available = 0_i32;
+        #[expect(unsafe_code)]
+        // SAFETY: available points to writable storage and fd is the descriptor supplied by NIO.
+        let result = unsafe {
+            libc::ioctl(
+                i32::try_from(fd).unwrap_or(-1),
+                libc::FIONREAD,
+                &raw mut available,
+            )
+        };
+        if result >= 0 {
+            return Ok(Some(Value::Int(available.max(0))));
+        }
+    }
+
+    let Some(position) = managed_files::seek(file_handles, fd, SeekFrom::Current(0))
         .await
-        .map_err(|e| InternalError(format!("available0: {e}")))?
-        .len();
-    let pos = managed_files::seek(file_handles, fd, SeekFrom::Current(0))
-        .await
-        .map_err(|e| InternalError(format!("available0: {e}")))?;
-    let available = size.saturating_sub(pos);
+        .ok()
+    else {
+        return Ok(Some(Value::Int(0)));
+    };
+    let mut size = metadata
+        .filter(std::fs::Metadata::is_file)
+        .map_or(0, |value| value.len());
+    if size < position {
+        let Ok(end) = managed_files::seek(file_handles, fd, SeekFrom::End(0)).await else {
+            return Ok(Some(Value::Int(0)));
+        };
+        if managed_files::seek(file_handles, fd, SeekFrom::Start(position))
+            .await
+            .is_err()
+        {
+            return Ok(Some(Value::Int(0)));
+        }
+        size = end;
+    }
+    let available = size.saturating_sub(position);
     Ok(Some(Value::Int(
         i32::try_from(available).unwrap_or(i32::MAX),
     )))
@@ -89,6 +140,7 @@ pub async fn close_int_fd<T: Thread + 'static>(
         regions.remove_fd(i64::from(fd));
     }
     managed_files::close(vm.file_handles(), i64::from(fd)).await;
+    let _ = super::posix::close_descriptor(&*vm, fd)?;
     #[cfg(not(target_family = "wasm"))]
     vm.socket_handles().remove(&fd).await;
     Ok(None)
@@ -112,11 +164,11 @@ pub async fn force_0<T: Thread + 'static>(
     if metadata_only {
         managed_files::sync_data(file_handles, fd)
             .await
-            .map_err(|e| InternalError(format!("force0: {e}")))?;
+            .map_err(|e| JavaError::IoException(format!("force0: {e}")))?;
     } else {
         managed_files::sync_all(file_handles, fd)
             .await
-            .map_err(|e| InternalError(format!("force0: {e}")))?;
+            .map_err(|e| JavaError::IoException(format!("force0: {e}")))?;
     }
     Ok(Some(Value::Int(0)))
 }
@@ -135,7 +187,7 @@ pub async fn is_other_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let metadata = managed_files::metadata(vm.file_handles(), fd)
         .await
-        .map_err(|e| InternalError(format!("isOther0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("isOther0: {e}")))?;
     let is_other = !metadata.is_file() && !metadata.is_dir() && !metadata.is_symlink();
     Ok(Some(Value::Int(i32::from(is_other))))
 }
@@ -150,15 +202,22 @@ pub async fn lock_0<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let shared = parameters.pop_int()? != 0;
-    let _size = parameters.pop_long()?;
-    let _pos = parameters.pop_long()?;
+    let size = parameters.pop_long()?;
+    let pos = parameters.pop_long()?;
     let blocking = parameters.pop_int()? != 0;
     let fd_value = parameters.pop()?;
     let fd = i64::from(get_fd(&fd_value)?);
 
-    let value = managed_files::lock(thread.vm()?.file_handles(), fd, shared, blocking)
-        .await
-        .map_err(|e| InternalError(format!("lock0: {e}")))?;
+    let value = managed_files::lock_range(
+        thread.vm()?.file_handles(),
+        fd,
+        u64::try_from(pos).map_err(|_| InternalError("lock0: negative position".to_string()))?,
+        u64::try_from(size).map_err(|_| InternalError("lock0: negative size".to_string()))?,
+        shared,
+        blocking,
+    )
+    .await
+    .map_err(|e| JavaError::IoException(format!("lock0: {e}")))?;
 
     Ok(Some(Value::Int(value)))
 }
@@ -184,17 +243,15 @@ pub async fn map_0<T: Thread + 'static>(
     let position = u64::try_from(position)
         .map_err(|_| InternalError("map0: negative position".to_string()))?;
 
-    // Allocate native memory and read file contents into it
     let len =
         usize::try_from(length).map_err(|_| InternalError("map0: length too large".to_string()))?;
     let file_handles = vm.file_handles();
-    managed_files::seek(file_handles, fd, SeekFrom::Start(position))
-        .await
-        .map_err(|e| InternalError(format!("map0: {e}")))?;
     let mut buf = vec![0u8; len];
-    let _ = managed_files::read(file_handles, fd, &mut buf)
-        .await
-        .map_err(|e| InternalError(format!("map0: {e}")))?;
+    if len > 0 {
+        let _ = managed_files::read_at(file_handles, fd, &mut buf, position)
+            .await
+            .map_err(|e| JavaError::IoException(format!("map0: {e}")))?;
+    }
     let address = vm.native_memory().allocate(len.max(1));
     if len > 0 {
         vm.native_memory().write_bytes(address, &buf);
@@ -242,7 +299,7 @@ pub async fn pread_0<T: Thread + 'static>(
     let mut buf = vec![0u8; count];
     let n = managed_files::read_at(file_handles, fd, &mut buf, offset)
         .await
-        .map_err(|e| InternalError(format!("pread0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("pread0: {e}")))?;
 
     if n > 0 {
         let bytes = bounds::range_to(&buf, ..n, "pread0")?;
@@ -282,7 +339,7 @@ pub async fn pwrite_0<T: Thread + 'static>(
         .map_err(|_| InternalError("pwrite0: negative position".to_string()))?;
     let n = managed_files::write_at(file_handles, fd, &data, offset)
         .await
-        .map_err(|e| InternalError(format!("pwrite0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("pwrite0: {e}")))?;
 
     Ok(Some(Value::Int(i32::try_from(n)?)))
 }
@@ -320,12 +377,10 @@ pub async fn read_0<T: Thread + 'static>(
             };
             Ok(Some(Value::Int(result)))
         }
-        Err(e) => {
-            let errno = e.raw_os_error().unwrap_or(5 /* EIO */);
-            Err(InternalError(format!(
-                "UnixFileDispatcherImpl.read0: errno={errno}"
-            )))
-        }
+        Err(error) => Ok(Some(Value::Int(i32::try_from(io_status(
+            "UnixFileDispatcherImpl.read0",
+            &error,
+        )?)?))),
     }
 }
 
@@ -372,9 +427,19 @@ pub async fn readv_0<T: Thread + 'static>(
         return Ok(Some(Value::Long(0)));
     }
 
-    let (n, returned_chunks) = managed_files::readv(file_handles, fd, chunks)
-        .await
-        .map_err(|e| InternalError(format!("readv0: {e}")))?;
+    let (n, returned_chunks) = match managed_files::readv(file_handles, fd, chunks).await {
+        Ok(result) => result,
+        Err(error) => {
+            return Ok(Some(Value::Long(io_status(
+                "UnixFileDispatcherImpl.readv0",
+                &error,
+            )?)));
+        }
+    };
+
+    if n == 0 {
+        return Ok(Some(Value::Long(-1)));
+    }
 
     let mut total: i64 = 0;
     let mut remaining = n;
@@ -401,14 +466,19 @@ pub async fn release_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _size = parameters.pop_long()?;
-    let _pos = parameters.pop_long()?;
+    let size = parameters.pop_long()?;
+    let pos = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
     let fd = i64::from(get_fd(&fd_value)?);
 
-    managed_files::unlock(thread.vm()?.file_handles(), fd)
-        .await
-        .map_err(|e| InternalError(format!("release0: {e}")))?;
+    managed_files::unlock_range(
+        thread.vm()?.file_handles(),
+        fd,
+        u64::try_from(pos).map_err(|_| InternalError("release0: negative position".to_string()))?,
+        u64::try_from(size).map_err(|_| InternalError("release0: negative size".to_string()))?,
+    )
+    .await
+    .map_err(|e| JavaError::IoException(format!("release0: {e}")))?;
 
     Ok(None)
 }
@@ -431,13 +501,13 @@ pub async fn seek_0<T: Thread + 'static>(
         // Return current position
         managed_files::seek(vm.file_handles(), fd, SeekFrom::Current(0))
             .await
-            .map_err(|e| InternalError(format!("seek0: {e}")))?
+            .map_err(|e| JavaError::IoException(format!("seek0: {e}")))?
     } else {
         let offset = u64::try_from(pos)
             .map_err(|_| InternalError("seek0: negative position".to_string()))?;
         managed_files::seek(vm.file_handles(), fd, SeekFrom::Start(offset))
             .await
-            .map_err(|e| InternalError(format!("seek0: {e}")))?
+            .map_err(|e| JavaError::IoException(format!("seek0: {e}")))?
     };
     Ok(Some(Value::Long(i64::try_from(result)?)))
 }
@@ -469,7 +539,7 @@ pub async fn size_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let size = managed_files::metadata(vm.file_handles(), fd)
         .await
-        .map_err(|e| InternalError(format!("size0: {e}")))?
+        .map_err(|e| JavaError::IoException(format!("size0: {e}")))?
         .len();
     Ok(Some(Value::Long(i64::try_from(size)?)))
 }
@@ -491,7 +561,7 @@ pub async fn truncate_0<T: Thread + 'static>(
         u64::try_from(size).map_err(|_| InternalError("truncate0: negative size".to_string()))?;
     managed_files::set_len(vm.file_handles(), fd, size)
         .await
-        .map_err(|e| InternalError(format!("truncate0: {e}")))?;
+        .map_err(|e| JavaError::IoException(format!("truncate0: {e}")))?;
     Ok(Some(Value::Int(0)))
 }
 
@@ -539,12 +609,10 @@ pub async fn write_0<T: Thread + 'static>(
 
     match managed_files::write(vm.file_handles(), fd, &data).await {
         Ok(n) => Ok(Some(Value::Int(i32::try_from(n)?))),
-        Err(e) => {
-            let errno = e.raw_os_error().unwrap_or(5 /* EIO */);
-            Err(InternalError(format!(
-                "UnixFileDispatcherImpl.write0: errno={errno}"
-            )))
-        }
+        Err(error) => Ok(Some(Value::Int(i32::try_from(io_status(
+            "UnixFileDispatcherImpl.write0",
+            &error,
+        )?)?))),
     }
 }
 
@@ -585,9 +653,15 @@ pub async fn writev_0<T: Thread + 'static>(
         return Ok(Some(Value::Long(0)));
     }
 
-    let n = managed_files::writev(file_handles, fd, chunks)
-        .await
-        .map_err(|e| InternalError(format!("writev0: {e}")))?;
+    let n = match managed_files::writev(file_handles, fd, chunks).await {
+        Ok(n) => n,
+        Err(error) => {
+            return Ok(Some(Value::Long(io_status(
+                "UnixFileDispatcherImpl.writev0",
+                &error,
+            )?)));
+        }
+    };
 
     Ok(Some(Value::Long(i64::try_from(n)?)))
 }
@@ -602,7 +676,7 @@ mod tests {
         let result = allocation_granularity_0(thread, Parameters::default())
             .await
             .expect("allocation_granularity_0");
-        assert_eq!(result, Some(Value::Long(4096)));
+        assert!(matches!(result, Some(Value::Long(size)) if size > 0));
     }
 
     #[tokio::test]

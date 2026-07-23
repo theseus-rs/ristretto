@@ -1,117 +1,276 @@
 use crate::java::io::socketfiledescriptor::get_fd;
-use crate::net_helpers::inet_address_ipv4;
+use crate::net_helpers::inet_socket_address;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
-use ristretto_classloader::Value;
+use ristretto_classloader::{Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM};
-#[cfg(any(unix, windows))]
+#[cfg(all(unix, not(target_os = "macos")))]
 use std::mem::size_of;
-use std::net::{Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6};
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::sync::Arc;
 
-/// Read an IPv4 or IPv6 sockaddr from native memory and return `(ip_bytes, port)`.
-/// Returns 4 bytes for IPv4, 16 bytes for IPv6.
-#[expect(clippy::unnecessary_wraps)]
-fn read_sockaddr(native_mem: &ristretto_types::NativeMemory, addr: i64) -> Result<(Vec<u8>, u16)> {
-    // Detect address family from native sockaddr
-    #[cfg(target_os = "macos")]
-    let family = native_mem
-        .read_bytes(addr + 1, 1)
-        .first()
-        .copied()
-        .unwrap_or_default();
-    #[cfg(not(target_os = "macos"))]
-    let family = {
-        let fam_bytes = native_mem.read_bytes(addr, 2);
-        let fam_bytes = <[u8; 2]>::try_from(fam_bytes.as_slice()).unwrap_or_default();
-        u16::from_ne_bytes(fam_bytes)
+const MAX_PACKET_LEN: usize = 65_536;
+
+#[cfg(windows)]
+#[expect(
+    unsafe_code,
+    clippy::needless_pass_by_value,
+    reason = "the blocking worker owns its cloned socket for the full receive operation"
+)]
+fn receive_datagram(
+    socket: socket2::Socket,
+    count: usize,
+) -> std::io::Result<(usize, Vec<u8>, SocketAddr)> {
+    let mut data = vec![0_u8; count];
+    // SAFETY: `MaybeUninit<u8>` has the same layout as `u8`; the backing bytes
+    // are already initialized and remain owned by `data` for the entire call.
+    let uninitialized = unsafe {
+        std::slice::from_raw_parts_mut(data.as_mut_ptr().cast::<std::mem::MaybeUninit<u8>>(), count)
     };
+    let mut buffers = [socket2::MaybeUninitSlice::new(uninitialized)];
+    let (received, _flags, sender) = socket.recv_from_vectored(&mut buffers)?;
+    let received = received.min(count);
+    data.truncate(received);
+    let sender = sender.as_socket().ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "datagram sender is not an Internet socket address",
+        )
+    })?;
+    Ok((received, data, sender))
+}
 
+#[cfg(not(windows))]
+fn receive_datagram(
+    socket: socket2::Socket,
+    count: usize,
+) -> std::io::Result<(usize, Vec<u8>, SocketAddr)> {
+    let udp: std::net::UdpSocket = socket.into();
+    let mut data = vec![0_u8; count];
+    let (received, sender) = udp.recv_from(&mut data)?;
+    data.truncate(received);
+    Ok((received, data, sender))
+}
+
+#[cfg(windows)]
+#[expect(unsafe_code)]
+pub(super) fn receive_connected_datagram(
+    socket: &socket2::Socket,
+    count: usize,
+) -> std::io::Result<(usize, Vec<u8>)> {
+    let mut data = vec![0_u8; count];
+    // SAFETY: `MaybeUninit<u8>` has the same layout as `u8`; the backing bytes
+    // are initialized and remain valid for the duration of `recv_vectored`.
+    let uninitialized = unsafe {
+        std::slice::from_raw_parts_mut(data.as_mut_ptr().cast::<std::mem::MaybeUninit<u8>>(), count)
+    };
+    let mut buffers = [socket2::MaybeUninitSlice::new(uninitialized)];
+    let (received, _flags) = socket.recv_vectored(&mut buffers)?;
+    let received = received.min(count);
+    data.truncate(received);
+    Ok((received, data))
+}
+
+#[cfg(not(windows))]
+pub(super) fn receive_connected_datagram(
+    socket: &socket2::Socket,
+    count: usize,
+) -> std::io::Result<(usize, Vec<u8>)> {
+    let mut data = vec![0_u8; count];
+    let mut socket = socket;
+    let received = std::io::Read::read(&mut socket, &mut data)?;
+    data.truncate(received);
+    Ok((received, data))
+}
+
+#[cfg(unix)]
+#[expect(clippy::cast_possible_truncation)]
+const AF_INET6_VALUE: u16 = libc::AF_INET6 as u16;
+#[cfg(target_os = "windows")]
+const AF_INET6_VALUE: u16 = 23;
+
+fn native_bytes(
+    memory: &ristretto_types::NativeMemory,
+    address: i64,
+    length: usize,
+    operation: &str,
+) -> Result<Vec<u8>> {
+    if length == 0 {
+        return Ok(Vec::new());
+    }
+    memory.try_read_bytes(address, length).ok_or_else(|| {
+        InternalError(format!(
+            "{operation}: invalid native memory range at {address} with length {length}"
+        ))
+    })
+}
+
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the sockaddr length is checked before its fixed-layout fields are accessed"
+)]
+fn read_sockaddr(
+    memory: &ristretto_types::NativeMemory,
+    address: i64,
+    length: usize,
+) -> Result<socket2::SockAddr> {
+    if length < 2 {
+        return Err(InternalError(
+            "socket address is shorter than its family".to_string(),
+        ));
+    }
+    let family_bytes = native_bytes(memory, address, 2, "DatagramChannelImpl.send0")?;
     #[cfg(target_os = "macos")]
-    let is_ipv6 = family == 30; // AF_INET6 on macOS
-    #[cfg(target_os = "linux")]
-    let is_ipv6 = family == 10; // AF_INET6 on Linux
-    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
-    let is_ipv6 = family == 23; // AF_INET6 on Windows and other platforms
-
-    let port_bytes = native_mem.read_bytes(addr + 2, 2);
-    let port_bytes = <[u8; 2]>::try_from(port_bytes.as_slice()).unwrap_or_default();
-    let port = u16::from_be_bytes(port_bytes);
-
-    if is_ipv6 {
-        // IPv6: skip flowinfo (4 bytes at offset 4), read 16 bytes at offset 8
-        let ip_bytes = native_mem.read_bytes(addr + 8, 16);
-        let ip = Ipv6Addr::from(<[u8; 16]>::try_from(ip_bytes.as_slice()).unwrap_or([0; 16]));
-        // Convert IPv4-mapped IPv6 to IPv4
-        if let Some(v4) = ip.to_ipv4_mapped() {
-            Ok((v4.octets().to_vec(), port))
-        } else {
-            Ok((ip.octets().to_vec(), port))
-        }
-    } else {
-        let ip_bytes = native_mem.read_bytes(addr + 4, 4);
-        Ok((ip_bytes, port))
-    }
-}
-
-/// Read an IPv4 sockaddr from native memory and return (ip, port).
-fn read_sockaddr_v4(
-    native_mem: &ristretto_types::NativeMemory,
-    addr: i64,
-) -> Result<(Ipv4Addr, u16)> {
-    let (bytes, port) = read_sockaddr(native_mem, addr)?;
-    if let Ok(octets) = <[u8; 4]>::try_from(bytes.as_slice()) {
-        Ok((Ipv4Addr::from(octets), port))
-    } else {
-        // IPv6 bytes, but caller wants IPv4; return unspecified
-        Ok((Ipv4Addr::UNSPECIFIED, port))
-    }
-}
-
-/// Write a sockaddr to native memory, choosing IPv4 or IPv6 format based on socket domain.
-fn write_sockaddr(
-    native_mem: &ristretto_types::NativeMemory,
-    addr: i64,
-    sock_addr: &std::net::SocketAddr,
-) {
-    match sock_addr {
-        std::net::SocketAddr::V4(v4) => {
-            write_sockaddr_v4(native_mem, addr, *v4.ip(), v4.port());
-        }
-        std::net::SocketAddr::V6(v6) => {
-            // Check if it's an IPv4-mapped IPv6 address
-            if let Some(v4) = v6.ip().to_ipv4_mapped() {
-                write_sockaddr_v4(native_mem, addr, v4, v6.port());
-            } else {
-                write_sockaddr_v4(native_mem, addr, Ipv4Addr::UNSPECIFIED, v6.port());
-            }
-        }
-    }
-}
-
-/// Write an IPv4 sockaddr to native memory.
-fn write_sockaddr_v4(
-    native_mem: &ristretto_types::NativeMemory,
-    addr: i64,
-    ip: Ipv4Addr,
-    port: u16,
-) {
-    // sin_len + sin_family (AF_INET=2) on macOS; sin_family only on Linux
-    #[cfg(target_os = "macos")]
-    {
-        native_mem.write_bytes(addr, &[16u8]); // sin_len = 16
-        native_mem.write_bytes(addr + 1, &[2u8]); // sin_family = AF_INET
-    }
+    let family = u16::from(family_bytes[1]);
     #[cfg(not(target_os = "macos"))]
-    {
-        native_mem.write_bytes(addr, &2u16.to_ne_bytes()); // sin_family = AF_INET
+    let family = u16::from_ne_bytes(
+        family_bytes
+            .try_into()
+            .map_err(|_| InternalError("invalid socket family".to_string()))?,
+    );
+    let required = if family == AF_INET6_VALUE { 28 } else { 16 };
+    if length < required {
+        return Err(InternalError(format!(
+            "socket address length {length} is less than {required}"
+        )));
     }
-    native_mem.write_bytes(addr + 2, &port.to_be_bytes());
-    native_mem.write_bytes(addr + 4, &ip.octets());
+    let bytes = native_bytes(memory, address, required, "DatagramChannelImpl.send0")?;
+    let port = u16::from_be_bytes([bytes[2], bytes[3]]);
+    if family == AF_INET6_VALUE {
+        let octets: [u8; 16] = bytes[8..24]
+            .try_into()
+            .map_err(|_| InternalError("invalid IPv6 socket address".to_string()))?;
+        let scope_id = u32::from_ne_bytes(
+            bytes[24..28]
+                .try_into()
+                .map_err(|_| InternalError("invalid IPv6 scope id".to_string()))?,
+        );
+        Ok(socket2::SockAddr::from(SocketAddrV6::new(
+            Ipv6Addr::from(octets),
+            port,
+            0,
+            scope_id,
+        )))
+    } else if family == 2 {
+        Ok(socket2::SockAddr::from(SocketAddrV4::new(
+            Ipv4Addr::new(bytes[4], bytes[5], bytes[6], bytes[7]),
+            port,
+        )))
+    } else {
+        Err(ristretto_types::JavaError::SocketException(format!(
+            "unsupported socket address family {family}"
+        ))
+        .into())
+    }
+}
+
+#[expect(
+    clippy::indexing_slicing,
+    reason = "the buffers are created at the exact sockaddr layout sizes"
+)]
+fn write_sockaddr(
+    memory: &ristretto_types::NativeMemory,
+    address: i64,
+    socket_address: &SocketAddr,
+) -> Result<()> {
+    let bytes = match socket_address {
+        SocketAddr::V4(address) => {
+            let mut bytes = vec![0_u8; 16];
+            #[cfg(target_os = "macos")]
+            {
+                bytes[0] = 16;
+                bytes[1] = 2;
+            }
+            #[cfg(not(target_os = "macos"))]
+            bytes[..2].copy_from_slice(&2_u16.to_ne_bytes());
+            bytes[2..4].copy_from_slice(&address.port().to_be_bytes());
+            bytes[4..8].copy_from_slice(&address.ip().octets());
+            bytes
+        }
+        SocketAddr::V6(address) => {
+            let mut bytes = vec![0_u8; 28];
+            #[cfg(target_os = "macos")]
+            {
+                bytes[0] = 28;
+                bytes[1] = u8::try_from(AF_INET6_VALUE).unwrap_or_default();
+            }
+            #[cfg(not(target_os = "macos"))]
+            bytes[..2].copy_from_slice(&AF_INET6_VALUE.to_ne_bytes());
+            bytes[2..4].copy_from_slice(&address.port().to_be_bytes());
+            bytes[4..8].copy_from_slice(&address.flowinfo().to_ne_bytes());
+            bytes[8..24].copy_from_slice(&address.ip().octets());
+            bytes[24..28].copy_from_slice(&address.scope_id().to_ne_bytes());
+            bytes
+        }
+    };
+    if memory.try_write_bytes(address, &bytes) {
+        Ok(())
+    } else {
+        Err(InternalError("invalid native sender address".to_string()))
+    }
+}
+
+pub(super) fn datagram_io_status(error: &std::io::Error) -> Result<i64> {
+    match error.kind() {
+        std::io::ErrorKind::WouldBlock => Ok(i64::from(super::IOS_UNAVAILABLE)),
+        std::io::ErrorKind::Interrupted => Ok(i64::from(super::IOS_INTERRUPTED)),
+        std::io::ErrorKind::ConnectionRefused | std::io::ErrorKind::ConnectionReset => {
+            Err(ristretto_types::JavaError::PortUnreachableException(error.to_string()).into())
+        }
+        _ => Err(ristretto_types::JavaError::SocketException(error.to_string()).into()),
+    }
+}
+
+async fn inet_socket_address_value<T: Thread + 'static>(
+    thread: &Arc<T>,
+    address: SocketAddr,
+) -> Result<(Value, Value)> {
+    let vm = thread.vm()?;
+    let (octets, scope_id, port) = match address {
+        SocketAddr::V4(address) => (address.ip().octets().to_vec(), 0, address.port()),
+        SocketAddr::V6(address) => (
+            address.ip().octets().to_vec(),
+            address.scope_id(),
+            address.port(),
+        ),
+    };
+    #[expect(clippy::cast_possible_wrap)]
+    let octets: Box<[i8]> = octets.into_iter().map(|byte| byte as i8).collect();
+    let bytes = Value::new_object(vm.garbage_collector(), Reference::ByteArray(octets));
+    let inet_address = if scope_id == 0 {
+        thread
+            .invoke(
+                "java.net.InetAddress",
+                "getByAddress(Ljava/lang/String;[B)Ljava/net/InetAddress;",
+                &[Value::Object(None), bytes],
+            )
+            .await?
+    } else {
+        thread
+            .invoke(
+                "java.net.Inet6Address",
+                "getByAddress(Ljava/lang/String;[BI)Ljava/net/Inet6Address;",
+                &[
+                    Value::Object(None),
+                    bytes,
+                    Value::Int(i32::try_from(scope_id).unwrap_or(i32::MAX)),
+                ],
+            )
+            .await?
+    }
+    .ok_or_else(|| InternalError("InetAddress.getByAddress returned null".to_string()))?;
+    let socket_address = thread
+        .object(
+            "java.net.InetSocketAddress",
+            "Ljava/net/InetAddress;I",
+            &[inet_address.clone(), Value::Int(i32::from(port))],
+        )
+        .await?;
+    Ok((inet_address, socket_address))
 }
 
 #[intrinsic_method(
@@ -145,8 +304,27 @@ pub async fn disconnect_0<T: Thread + 'static>(
             .map_err(|e| InternalError(format!("disconnect: clone: {e}")))?
     };
 
-    tokio::task::spawn_blocking(move || {
-        #[cfg(unix)]
+    let result = tokio::task::spawn_blocking(move || {
+        #[cfg(target_os = "macos")]
+        {
+            use std::os::fd::AsRawFd;
+            #[expect(unsafe_code)]
+            // SAFETY: the cloned socket is live and the wildcard association and
+            // connection identifiers request a datagram disconnect.
+            let result = unsafe {
+                libc::disconnectx(
+                    cloned_socket.as_raw_fd(),
+                    libc::SAE_ASSOCID_ANY,
+                    libc::SAE_CONNID_ANY,
+                )
+            };
+            if result == -1 {
+                Err(std::io::Error::last_os_error())
+            } else {
+                Ok(())
+            }
+        }
+        #[cfg(all(unix, not(target_os = "macos")))]
         {
             use std::os::fd::AsRawFd;
             #[expect(unsafe_code, clippy::cast_possible_truncation)]
@@ -156,50 +334,50 @@ pub async fn disconnect_0<T: Thread + 'static>(
                 let mut addr: libc::sockaddr_storage = std::mem::zeroed();
                 addr.ss_family = libc::AF_UNSPEC as libc::sa_family_t;
                 // On macOS, connect(AF_UNSPEC) may return EAFNOSUPPORT; ignore it
-                let _ = libc::connect(
+                let result = libc::connect(
                     cloned_socket.as_raw_fd(),
                     std::ptr::from_ref(&addr).cast::<libc::sockaddr>(),
                     size_of::<libc::sockaddr>() as libc::socklen_t,
                 );
+                if result == -1 {
+                    Err(std::io::Error::last_os_error())
+                } else {
+                    Ok(())
+                }
             }
         }
         #[cfg(windows)]
         {
             use std::os::windows::io::AsRawSocket;
 
-            #[repr(C)]
-            struct SockAddrStorage {
-                ss_family: u16,
-                _padding: [u8; 126],
-            }
-
-            #[expect(unsafe_code)]
-            // SAFETY: ss_family is the first field of the sockaddr structure, and Windows expects
-            // the address family to be in the first 2 bytes for connect() even when disconnecting.
-            #[link(name = "ws2_32")]
-            unsafe extern "system" {
-                fn connect(s: u64, name: *const SockAddrStorage, namelen: i32) -> i32;
-            }
-
             #[expect(unsafe_code)]
             // SAFETY: cloned_socket is a valid socket handle; we connect to AF_UNSPEC
-            // to disconnect the UDP socket, matching the JDK native implementation.
+            // using a zeroed SOCKETADDRESS-sized buffer, matching OpenJDK.
             unsafe {
-                let addr = SockAddrStorage {
-                    ss_family: 0, // AF_UNSPEC
-                    _padding: [0u8; 126],
-                };
-                #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-                let _ = connect(
-                    cloned_socket.as_raw_socket(),
-                    std::ptr::from_ref(&addr),
-                    size_of::<SockAddrStorage>() as i32,
+                let address = [0_u8; 28];
+                let result = windows_sys::Win32::Networking::WinSock::connect(
+                    usize::try_from(cloned_socket.as_raw_socket()).unwrap_or(usize::MAX),
+                    address.as_ptr().cast(),
+                    i32::try_from(address.len()).unwrap_or(28),
                 );
+                if result == -1 {
+                    let code = windows_sys::Win32::Networking::WinSock::WSAGetLastError();
+                    Err(std::io::Error::from_raw_os_error(code))
+                } else {
+                    Ok(())
+                }
             }
         }
     })
     .await
     .map_err(|e| InternalError(format!("disconnect: spawn: {e}")))?;
+    if let Err(error) = result {
+        #[cfg(all(unix, not(target_os = "macos")))]
+        if error.kind() == std::io::ErrorKind::AddrNotAvailable {
+            return Ok(None);
+        }
+        return Err(ristretto_types::JavaError::SocketException(error.to_string()).into());
+    }
 
     Ok(None)
 }
@@ -222,50 +400,78 @@ pub async fn receive_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _connected = parameters.pop_bool()?;
+    let connected = parameters.pop_bool()?;
     let len = parameters.pop_int()?;
     let address = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
+    let receiver = parameters.pop()?;
     let fd = get_fd(&fd_value)?;
-    let count = usize::try_from(len).map_err(|e| InternalError(e.to_string()))?;
+    let count = usize::try_from(len)
+        .map_err(|e| InternalError(e.to_string()))?
+        .min(MAX_PACKET_LEN);
 
     let vm = thread.vm()?;
-    let cloned_socket = {
+    let non_blocking = {
         let guard = vm
             .socket_handles()
             .get(&fd)
             .await
             .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-        let Some(socket) = guard.socket_type.as_raw() else {
-            return Err(InternalError("expected raw socket".to_string()));
-        };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("receive: clone: {e}")))?
+        guard.non_blocking
     };
 
-    let result = tokio::task::spawn_blocking(move || {
-        let udp: std::net::UdpSocket = cloned_socket.into();
-        let mut buf = vec![0u8; count];
-        match udp.recv_from(&mut buf) {
-            Ok((n, _from_addr)) => {
-                buf.truncate(n);
-                let n_val = i32::try_from(n).unwrap_or(i32::MAX);
-                Ok((n_val, buf))
+    let result = loop {
+        if !non_blocking {
+            let status = super::socketdispatcher::wait_raw_socket(&thread, fd, false).await?;
+            if status < 0 {
+                return Ok(Some(Value::Int(i32::try_from(status)?)));
             }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => Ok((-2, Vec::new())),
-            Err(e) => Err(e),
         }
-    })
-    .await
-    .map_err(|e| InternalError(format!("receive: spawn: {e}")))?
-    .map_err(|e| InternalError(format!("receive: {e}")))?;
+        let cloned_socket = {
+            let guard = vm
+                .socket_handles()
+                .get(&fd)
+                .await
+                .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
+            let socket = guard
+                .socket_type
+                .as_raw()
+                .ok_or_else(|| InternalError("expected raw socket".to_string()))?;
+            socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("receive: clone: {e}")))?
+        };
+        let result = tokio::task::spawn_blocking(move || receive_datagram(cloned_socket, count))
+            .await
+            .map_err(|e| InternalError(format!("receive: spawn: {e}")))?;
+        match result {
+            Err(error) if !connected && error.kind() == std::io::ErrorKind::ConnectionRefused => {}
+            result => break result,
+        }
+    };
 
-    let (n, data) = result;
-    if n > 0 {
-        vm.native_memory().write_bytes(address, &data);
+    let (n, data, sender) = match result {
+        Ok(result) => result,
+        Err(error) => {
+            return Ok(Some(Value::Int(i32::try_from(datagram_io_status(
+                &error,
+            )?)?)));
+        }
+    };
+    if !vm.native_memory().try_write_bytes(address, &data) {
+        return Err(InternalError("receive0: invalid native buffer".to_string()));
     }
-    Ok(Some(Value::Int(n)))
+    let (inet_address, socket_address) = inet_socket_address_value(&thread, sender).await?;
+    let mut receiver = receiver.as_reference_mut()?;
+    let Reference::Object(receiver) = &mut *receiver else {
+        return Err(InternalError(
+            "DatagramChannelImpl receiver is not an object".to_string(),
+        ));
+    };
+    receiver.set_value("cachedSenderInetAddress", inet_address)?;
+    receiver.set_value("cachedSenderPort", Value::Int(i32::from(sender.port())))?;
+    receiver.set_value("sender", socket_address)?;
+    Ok(Some(Value::Int(i32::try_from(n)?)))
 }
 
 #[intrinsic_method(
@@ -277,55 +483,69 @@ pub async fn receive_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _connected = parameters.pop_bool()?;
+    let connected = parameters.pop_bool()?;
     let sender_addr_ptr = parameters.pop_long()?;
     let len = parameters.pop_int()?;
     let address = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
     let fd = get_fd(&fd_value)?;
-    let count = usize::try_from(len).map_err(|e| InternalError(e.to_string()))?;
+    let count = usize::try_from(len)
+        .map_err(|e| InternalError(e.to_string()))?
+        .min(MAX_PACKET_LEN);
 
     let vm = thread.vm()?;
-    let cloned_socket = {
+    let non_blocking = {
         let guard = vm
             .socket_handles()
             .get(&fd)
             .await
             .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
-        let Some(socket) = guard.socket_type.as_raw() else {
-            return Err(InternalError("expected raw socket".to_string()));
-        };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("receive: clone: {e}")))?
+        guard.non_blocking
     };
 
-    let result = tokio::task::spawn_blocking(move || {
-        let udp: std::net::UdpSocket = cloned_socket.into();
-        let mut buf = vec![0u8; count];
-        match udp.recv_from(&mut buf) {
-            Ok((n, from_addr)) => {
-                buf.truncate(n);
-                let n_val = i32::try_from(n).unwrap_or(i32::MAX);
-                Ok((n_val, buf, Some(from_addr)))
+    let result = loop {
+        if !non_blocking {
+            let status = super::socketdispatcher::wait_raw_socket(&thread, fd, false).await?;
+            if status < 0 {
+                return Ok(Some(Value::Int(i32::try_from(status)?)));
             }
-            Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => Ok((-2, Vec::new(), None)),
-            Err(e) => Err(e),
         }
-    })
-    .await
-    .map_err(|e| InternalError(format!("receive: spawn: {e}")))?
-    .map_err(|e| InternalError(format!("receive: {e}")))?;
+        let cloned_socket = {
+            let guard = vm
+                .socket_handles()
+                .get(&fd)
+                .await
+                .ok_or_else(|| InternalError(format!("socket not found for fd {fd}")))?;
+            let socket = guard
+                .socket_type
+                .as_raw()
+                .ok_or_else(|| InternalError("expected raw socket".to_string()))?;
+            socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("receive: clone: {e}")))?
+        };
+        let result = tokio::task::spawn_blocking(move || receive_datagram(cloned_socket, count))
+            .await
+            .map_err(|e| InternalError(format!("receive: spawn: {e}")))?;
+        match result {
+            Err(error) if !connected && error.kind() == std::io::ErrorKind::ConnectionRefused => {}
+            result => break result,
+        }
+    };
 
-    let (n, data, sender) = result;
-    if n > 0 {
-        vm.native_memory().write_bytes(address, &data);
+    let (n, data, sender) = match result {
+        Ok(result) => result,
+        Err(error) => {
+            return Ok(Some(Value::Int(i32::try_from(datagram_io_status(
+                &error,
+            )?)?)));
+        }
+    };
+    if !vm.native_memory().try_write_bytes(address, &data) {
+        return Err(InternalError("receive0: invalid native buffer".to_string()));
     }
-    // Write sender address to native sockaddr
-    if let Some(sender_addr) = sender {
-        write_sockaddr(vm.native_memory(), sender_addr_ptr, &sender_addr);
-    }
-    Ok(Some(Value::Int(n)))
+    write_sockaddr(vm.native_memory(), sender_addr_ptr, &sender)?;
+    Ok(Some(Value::Int(i32::try_from(n)?)))
 }
 
 #[intrinsic_method(
@@ -342,27 +562,23 @@ pub async fn send_0_0<T: Thread + 'static>(
     let len = parameters.pop_int()?;
     let address = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
-    let _prefer_ipv6 = parameters.pop_bool()?;
+    let prefer_ipv6 = parameters.pop_bool()?;
     let fd = get_fd(&fd_value)?;
-    let count = usize::try_from(len).map_err(|e| InternalError(e.to_string()))?;
-
-    let ip = inet_address_ipv4(&addr_value)?;
+    let count = usize::try_from(len)
+        .map_err(|e| InternalError(e.to_string()))?
+        .min(MAX_PACKET_LEN);
 
     let vm = thread.vm()?;
-    let data = vm.native_memory().read_bytes(address, count);
-    let is_ipv6 = vm
-        .socket_handles()
-        .get(&fd)
-        .await
-        .is_some_and(|guard| guard.is_ipv6);
+    let data = native_bytes(
+        vm.native_memory(),
+        address,
+        count,
+        "DatagramChannelImpl.send0",
+    )?;
     #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-    let target = if is_ipv6 {
-        socket2::SockAddr::from(SocketAddrV6::new(ip.to_ipv6_mapped(), port as u16, 0, 0))
-    } else {
-        socket2::SockAddr::from(SocketAddrV4::new(ip, port as u16))
-    };
+    let target = inet_socket_address(&addr_value, prefer_ipv6, port as u16)?;
 
-    let cloned_socket = {
+    let (cloned_socket, non_blocking) = {
         let guard = vm
             .socket_handles()
             .get(&fd)
@@ -371,18 +587,30 @@ pub async fn send_0_0<T: Thread + 'static>(
         let Some(socket) = guard.socket_type.as_raw() else {
             return Err(InternalError("expected raw socket".to_string()));
         };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("send: clone: {e}")))?
+        (
+            socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("send: clone: {e}")))?,
+            guard.non_blocking,
+        )
     };
+    if !non_blocking {
+        let status = super::socketdispatcher::wait_raw_socket(&thread, fd, true).await?;
+        if status < 0 {
+            return Ok(Some(Value::Int(i32::try_from(status)?)));
+        }
+    }
 
-    let n = tokio::task::spawn_blocking(move || cloned_socket.send_to(&data, &target))
+    let result = tokio::task::spawn_blocking(move || cloned_socket.send_to(&data, &target))
         .await
-        .map_err(|e| InternalError(format!("send: spawn: {e}")))?
-        .map_err(|e| InternalError(format!("send: {e}")))?;
+        .map_err(|e| InternalError(format!("send: spawn: {e}")))?;
 
-    #[expect(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-    Ok(Some(Value::Int(n as i32)))
+    match result {
+        Ok(n) => Ok(Some(Value::Int(i32::try_from(n)?))),
+        Err(error) => Ok(Some(Value::Int(i32::try_from(datagram_io_status(
+            &error,
+        )?)?))),
+    }
 }
 
 #[intrinsic_method(
@@ -400,32 +628,21 @@ pub async fn send_0_1<T: Thread + 'static>(
     let address = parameters.pop_long()?;
     let fd_value = parameters.pop()?;
     let fd = get_fd(&fd_value)?;
-    let count = usize::try_from(len).map_err(|e| InternalError(e.to_string()))?;
-    let _target_len = usize::try_from(target_addr_len).map_err(|e| InternalError(e.to_string()))?;
+    let count = usize::try_from(len)
+        .map_err(|e| InternalError(e.to_string()))?
+        .min(MAX_PACKET_LEN);
+    let target_len = usize::try_from(target_addr_len).map_err(|e| InternalError(e.to_string()))?;
 
     let vm = thread.vm()?;
-    let data = vm.native_memory().read_bytes(address, count);
-    let (ip_bytes, port) = read_sockaddr(vm.native_memory(), target_addr_ptr)?;
-    let is_ipv6 = vm
-        .socket_handles()
-        .get(&fd)
-        .await
-        .is_some_and(|guard| guard.is_ipv6);
-    let target = if ip_bytes.len() == 4 {
-        let ip_octets = <[u8; 4]>::try_from(ip_bytes.as_slice())
-            .map_err(|_| InternalError("invalid IPv4 target address".to_string()))?;
-        let ip = Ipv4Addr::from(ip_octets);
-        if is_ipv6 {
-            socket2::SockAddr::from(SocketAddrV6::new(ip.to_ipv6_mapped(), port, 0, 0))
-        } else {
-            socket2::SockAddr::from(SocketAddrV4::new(ip, port))
-        }
-    } else {
-        let ip = Ipv6Addr::from(<[u8; 16]>::try_from(ip_bytes.as_slice()).unwrap_or([0; 16]));
-        socket2::SockAddr::from(SocketAddrV6::new(ip, port, 0, 0))
-    };
+    let data = native_bytes(
+        vm.native_memory(),
+        address,
+        count,
+        "DatagramChannelImpl.send0",
+    )?;
+    let target = read_sockaddr(vm.native_memory(), target_addr_ptr, target_len)?;
 
-    let cloned_socket = {
+    let (cloned_socket, non_blocking) = {
         let guard = vm
             .socket_handles()
             .get(&fd)
@@ -434,18 +651,30 @@ pub async fn send_0_1<T: Thread + 'static>(
         let Some(socket) = guard.socket_type.as_raw() else {
             return Err(InternalError("expected raw socket".to_string()));
         };
-        socket
-            .try_clone()
-            .map_err(|e| InternalError(format!("send: clone: {e}")))?
+        (
+            socket
+                .try_clone()
+                .map_err(|e| InternalError(format!("send: clone: {e}")))?,
+            guard.non_blocking,
+        )
     };
+    if !non_blocking {
+        let status = super::socketdispatcher::wait_raw_socket(&thread, fd, true).await?;
+        if status < 0 {
+            return Ok(Some(Value::Int(i32::try_from(status)?)));
+        }
+    }
 
-    let n = tokio::task::spawn_blocking(move || cloned_socket.send_to(&data, &target))
+    let result = tokio::task::spawn_blocking(move || cloned_socket.send_to(&data, &target))
         .await
-        .map_err(|e| InternalError(format!("send: spawn: {e}")))?
-        .map_err(|e| InternalError(format!("send: {e}")))?;
+        .map_err(|e| InternalError(format!("send: spawn: {e}")))?;
 
-    let n = i32::try_from(n).map_err(|e| InternalError(e.to_string()))?;
-    Ok(Some(Value::Int(n)))
+    match result {
+        Ok(n) => Ok(Some(Value::Int(i32::try_from(n)?))),
+        Err(error) => Ok(Some(Value::Int(i32::try_from(datagram_io_status(
+            &error,
+        )?)?))),
+    }
 }
 
 #[cfg(test)]

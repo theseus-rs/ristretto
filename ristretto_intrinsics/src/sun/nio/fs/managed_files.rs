@@ -380,18 +380,31 @@ pub(crate) async fn metadata(
     file_handles: &HandleManager<i64, FileHandle>,
     fd: i64,
 ) -> std::io::Result<std::fs::Metadata> {
-    let file_handle = file_handles
-        .get(&fd)
+    #[cfg_attr(
+        all(target_family = "wasm", not(target_os = "wasi")),
+        expect(unused_mut)
+    )]
+    let mut file_handle = file_handles
+        .get_mut(&fd)
         .await
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "bad fd"))?;
 
     #[cfg(not(target_family = "wasm"))]
     {
+        // Tokio may accept a write into its internal buffer before the backing
+        // file's metadata reflects the new length. Java FileChannel.size must
+        // observe all writes completed through this managed handle.
+        if file_handle.mode != FileModeFlags::READ_ONLY {
+            file_handle.file.flush().await?;
+        }
         file_handle.file.metadata().await
     }
 
     #[cfg(target_os = "wasi")]
     {
+        if file_handle.mode != FileModeFlags::READ_ONLY {
+            file_handle.file.flush()?;
+        }
         file_handle.file.metadata()
     }
 
@@ -1026,7 +1039,68 @@ pub(crate) async fn write_at_file(
     .map_err(std::io::Error::other)?
 }
 
-/// Acquires a Windows byte-range lock with the same offset and length semantics as `LockFileEx`.
+/// Acquires a POSIX byte-range lock with `fcntl`.
+#[cfg(target_family = "unix")]
+#[expect(unsafe_code)]
+pub(crate) async fn lock_range(
+    file_handles: &HandleManager<i64, FileHandle>,
+    fd: i64,
+    position: u64,
+    size: u64,
+    shared: bool,
+    blocking: bool,
+) -> std::io::Result<i32> {
+    use std::os::fd::AsRawFd;
+
+    let file_handle = file_handles
+        .get(&fd)
+        .await
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "bad fd"))?;
+    let raw_fd = file_handle.file.as_raw_fd();
+    drop(file_handle);
+    let start = libc::off_t::try_from(position)
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidInput, "position too large"))?;
+    let length = if size == i64::MAX.cast_unsigned() {
+        0
+    } else {
+        libc::off_t::try_from(size)
+            .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidInput, "size too large"))?
+    };
+    let lock_type = libc::c_short::try_from(if shared { libc::F_RDLCK } else { libc::F_WRLCK })
+        .map_err(|_| std::io::Error::other("invalid platform lock type"))?;
+    let seek_set = libc::c_short::try_from(libc::SEEK_SET)
+        .map_err(|_| std::io::Error::other("invalid platform seek origin"))?;
+
+    tokio::task::spawn_blocking(move || {
+        let mut lock = libc::flock {
+            l_type: lock_type,
+            l_whence: seek_set,
+            l_start: start,
+            l_len: length,
+            l_pid: 0,
+        };
+        let command = if blocking {
+            libc::F_SETLKW
+        } else {
+            libc::F_SETLK
+        };
+        if unsafe { libc::fcntl(raw_fd, command, &raw mut lock) } == 0 {
+            return Ok(0);
+        }
+        let error = std::io::Error::last_os_error();
+        let errno = error.raw_os_error();
+        if !blocking && (errno == Some(libc::EACCES) || errno == Some(libc::EAGAIN)) {
+            Ok(-1)
+        } else if error.kind() == std::io::ErrorKind::Interrupted {
+            Ok(2)
+        } else {
+            Err(error)
+        }
+    })
+    .await
+    .map_err(std::io::Error::other)?
+}
+
 #[cfg(target_os = "windows")]
 pub(crate) async fn lock_range(
     file_handles: &HandleManager<i64, FileHandle>,
@@ -1097,7 +1171,54 @@ pub(crate) async fn lock_range_file(
     .map_err(std::io::Error::other)?
 }
 
-/// Releases the exact Windows byte range previously locked with [`lock_range`].
+/// Releases an exact POSIX byte range previously locked with [`lock_range`].
+#[cfg(target_family = "unix")]
+#[expect(unsafe_code)]
+pub(crate) async fn unlock_range(
+    file_handles: &HandleManager<i64, FileHandle>,
+    fd: i64,
+    position: u64,
+    size: u64,
+) -> std::io::Result<()> {
+    use std::os::fd::AsRawFd;
+
+    let file_handle = file_handles
+        .get(&fd)
+        .await
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "bad fd"))?;
+    let raw_fd = file_handle.file.as_raw_fd();
+    drop(file_handle);
+    let start = libc::off_t::try_from(position)
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidInput, "position too large"))?;
+    let length = if size == i64::MAX.cast_unsigned() {
+        0
+    } else {
+        libc::off_t::try_from(size)
+            .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidInput, "size too large"))?
+    };
+    let unlock_type = libc::c_short::try_from(libc::F_UNLCK)
+        .map_err(|_| std::io::Error::other("invalid platform unlock type"))?;
+    let seek_set = libc::c_short::try_from(libc::SEEK_SET)
+        .map_err(|_| std::io::Error::other("invalid platform seek origin"))?;
+
+    tokio::task::spawn_blocking(move || {
+        let mut lock = libc::flock {
+            l_type: unlock_type,
+            l_whence: seek_set,
+            l_start: start,
+            l_len: length,
+            l_pid: 0,
+        };
+        if unsafe { libc::fcntl(raw_fd, libc::F_SETLK, &raw mut lock) } == 0 {
+            Ok(())
+        } else {
+            Err(std::io::Error::last_os_error())
+        }
+    })
+    .await
+    .map_err(std::io::Error::other)?
+}
+
 #[cfg(target_os = "windows")]
 pub(crate) async fn unlock_range(
     file_handles: &HandleManager<i64, FileHandle>,

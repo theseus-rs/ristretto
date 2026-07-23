@@ -61,9 +61,16 @@ fn compatibility_tests() -> Result<()> {
     let failures: Arc<Mutex<Vec<Failure>>> = Arc::new(Mutex::new(Vec::new()));
 
     let available_threads = std::thread::available_parallelism().map_or(1, NonZero::get);
-    // Each VM uses one Tokio worker and one GC worker. Keep the conservative default for local
-    // runs, but allow CI to use all of its small fixed-size CPU allocation.
-    let default_threads = (available_threads / 2).max(1);
+    // Each compatibility case occupies a Rayon worker, a test thread, a Tokio worker, and a GC
+    // worker. Account for all four so concurrent VMs do not starve long-running tests.
+    // Windows CI runners report substantially more logical processors than they can sustain
+    // while several full VMs perform mapped-file and native socket operations. Running those VMs
+    // concurrently can starve otherwise healthy cases past their two-minute timeout.
+    let default_threads = if cfg!(target_os = "windows") {
+        1
+    } else {
+        (available_threads / 4).max(1)
+    };
     let num_threads = std::env::var("RISTRETTO_COMPATIBILITY_THREADS")
         .ok()
         .and_then(|value| value.parse::<usize>().ok())
