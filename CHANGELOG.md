@@ -7,6 +7,194 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_pom` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.32.0) - 2026-07-24
+
+### Added
+- implement sockets
+
+### Other
+- add clippy lints
+- improve pom testing
+- initial wasm32-wasip2 tests
+
+## `ristretto_java` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/v0.31.0...v0.32.0) - 2026-07-24
+
+### Added
+- add ability to configure TLS providers
+- implement javax/sound
+- implement sun/nio/ch
+- implement sun/nio/fs
+- implement sun/nio/ch/Windows
+- implement sun/nio/ch/sctp
+- implement java/util/prefs/WindowsPreferences
+- implement sun/util/locale/provider/HostLocaleProviderAdapterImpl
+- implement jdk/internal/platform/CgroupMetrics
+- implement sockets
+
+### Fixed
+- correct file io/nio errors
+- correct windows jdk installation directory
+- update intrinsics for current java versions
+- consume file lock ranges on non-Windows
+
+### Other
+- ristretto-v0.32.0
+- add clippy lints
+- update dependencies
+- rename ristretto_cli crate to ristretto_java
+- refactor mod.rs to named modules
+- update to Rust 1.97.1
+- improve classfile testing
+- update java versions
+- Merge pull request #771 from theseus-rs/add-tls-providers
+- update to cranelift=0.134.2
+- Merge branch 'main' into refactor-modules
+- Merge pull request #765 from theseus-rs/impl-iocp
+- Merge pull request #762 from theseus-rs/update-to-rust-1.97.1
+- improve jimage testing
+- Merge branch 'main' into update-cranelift
+- improve macro testing
+- improve pom testing
+- initial wasm32-wasip2 tests
+- improve types testing
+
+## `ristretto_vm` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.31.0...ristretto_vm-v0.32.0) - 2026-07-24
+
+### Added
+- add ability to configure TLS providers
+- implement sun/nio/ch
+- implement sun/nio/fs
+- implement javax/sound
+- implement sun/nio/ch/sctp
+- implement java/util/prefs/WindowsPreferences
+
+### Fixed
+- correct file io/nio errors
+
+### Other
+- ristretto-v0.32.0
+- Merge pull request #771 from theseus-rs/add-tls-providers
+- refactor mod.rs to named modules
+- add clippy lints
+- update dependencies
+
+## `ristretto_intrinsics` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.31.0...ristretto_intrinsics-v0.32.0) - 2026-07-24
+
+### Added
+- add ability to configure TLS providers
+- implement sun/nio/ch
+- implement sun/nio/fs
+- implement javax/sound
+- implement sun/nio/ch/Windows
+- implement sun/nio/ch/sctp
+- implement java/util/prefs/WindowsPreferences
+- implement sun/util/locale/provider/HostLocaleProviderAdapterImpl
+- implement jdk/internal/platform/CgroupMetrics
+
+### Fixed
+- update intrinsics for current java versions
+- consume file lock ranges on non-Windows
+- correct file io/nio errors
+
+### Other
+- ristretto-v0.32.0
+- Merge pull request #771 from theseus-rs/add-tls-providers
+- update java versions
+- update to cranelift=0.134.2
+- Merge branch 'main' into refactor-modules
+- Merge pull request #765 from theseus-rs/impl-iocp
+- Merge pull request #762 from theseus-rs/update-to-rust-1.97.1
+- update to Rust 1.97.1
+- add clippy lints
+- update dependencies
+
+## `ristretto_types` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.31.0...ristretto_types-v0.32.0) - 2026-07-24
+
+### Added
+- add ability to configure TLS providers
+- implement sun/nio/ch
+- implement sun/nio/fs
+- implement sun/nio/ch/sctp
+- implement java/util/prefs/WindowsPreferences
+
+### Fixed
+- correct file io/nio errors
+
+### Other
+- ristretto-v0.32.0
+- Merge pull request #771 from theseus-rs/add-tls-providers
+- refactor mod.rs to named modules
+- update to Rust 1.97.1
+- add clippy lints
+- update dependencies
+- improve types testing
+
+## `ristretto_jit` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.31.0...ristretto_jit-v0.32.0) - 2026-07-24
+
+### Fixed
+- correct file io/nio errors
+
+### Other
+- ristretto-v0.32.0
+- update to cranelift=0.134.2
+- refactor mod.rs to named modules
+- add clippy lints
+- Merge branch 'main' into update-cranelift
+- update dependencies
+
+## `ristretto_macros` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.31.0...ristretto_macros-v0.32.0) - 2026-07-24
+
+### Other
+- ristretto-v0.32.0
+- refactor mod.rs to named modules
+- add clippy lints
+- update dependencies
+- improve macro testing
+
+## `ristretto_classloader` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.31.0...ristretto_classloader-v0.32.0) - 2026-07-24
+
+### Added
+- add ability to configure TLS providers
+
+### Fixed
+- correct file io/nio errors
+- correct windows jdk installation directory
+
+### Other
+- ristretto-v0.32.0
+- update java versions
+- refactor mod.rs to named modules
+- add clippy lints
+- update dependencies
+
+## `ristretto_jimage` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.31.0...ristretto_jimage-v0.32.0) - 2026-07-24
+
+### Fixed
+- correct file io/nio errors
+
+### Other
+- add clippy lints
+- update dependencies
+- improve jimage testing
+
+## `ristretto_gc` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.31.0...ristretto_gc-v0.32.0) - 2026-07-24
+
+### Other
+- add clippy lints
+- update dependencies
+
+## `ristretto_classfile` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.31.0...ristretto_classfile-v0.32.0) - 2026-07-24
+
+### Added
+- add ability to configure TLS providers
+
+### Other
+- refactor mod.rs to named modules
+- update to Rust 1.97.1
+- add clippy lints
+- update dependencies
+- improve classfile testing
+
 ## `ristretto_pom` - [0.32.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.32.0) - 2026-07-23
 
 ### Added
