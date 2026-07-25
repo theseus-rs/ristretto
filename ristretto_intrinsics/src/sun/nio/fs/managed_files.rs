@@ -1072,13 +1072,15 @@ pub(crate) async fn lock_range(
         .map_err(|_| std::io::Error::other("invalid platform seek origin"))?;
 
     tokio::task::spawn_blocking(move || {
-        let mut lock = libc::flock {
-            l_type: lock_type,
-            l_whence: seek_set,
-            l_start: start,
-            l_len: length,
-            l_pid: 0,
-        };
+        #[expect(unsafe_code)]
+        // SAFETY: flock is a plain C data structure and all semantically relevant fields are
+        // assigned immediately below. Zero is valid for any platform-specific padding fields.
+        let mut lock: libc::flock = unsafe { std::mem::zeroed() };
+        lock.l_type = lock_type;
+        lock.l_whence = seek_set;
+        lock.l_start = start;
+        lock.l_len = length;
+        lock.l_pid = 0;
         let command = if blocking {
             libc::F_SETLKW
         } else {
@@ -1202,13 +1204,15 @@ pub(crate) async fn unlock_range(
         .map_err(|_| std::io::Error::other("invalid platform seek origin"))?;
 
     tokio::task::spawn_blocking(move || {
-        let mut lock = libc::flock {
-            l_type: unlock_type,
-            l_whence: seek_set,
-            l_start: start,
-            l_len: length,
-            l_pid: 0,
-        };
+        #[expect(unsafe_code)]
+        // SAFETY: flock is a plain C data structure and all semantically relevant fields are
+        // assigned immediately below. Zero is valid for any platform-specific padding fields.
+        let mut lock: libc::flock = unsafe { std::mem::zeroed() };
+        lock.l_type = unlock_type;
+        lock.l_whence = seek_set;
+        lock.l_start = start;
+        lock.l_len = length;
+        lock.l_pid = 0;
         if unsafe { libc::fcntl(raw_fd, libc::F_SETLK, &raw mut lock) } == 0 {
             Ok(())
         } else {

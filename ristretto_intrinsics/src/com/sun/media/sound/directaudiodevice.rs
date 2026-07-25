@@ -249,7 +249,7 @@ pub async fn n_open<T: ristretto_types::Thread + 'static>(
 
         let buffer: Arc<Mutex<VecDeque<u8>>> =
             Arc::new(Mutex::new(VecDeque::with_capacity(buffer_size_bytes)));
-        let byte_position = Arc::new(std::sync::atomic::AtomicI64::new(0));
+        let byte_position = Arc::new(portable_atomic::AtomicI64::new(0));
         let is_running = Arc::new(AtomicBool::new(false));
         let close_signal = Arc::new(AtomicBool::new(false));
 
@@ -457,9 +457,10 @@ pub async fn n_open<T: ristretto_types::Thread + 'static>(
 
     #[cfg(target_family = "wasm")]
     {
+        use portable_atomic::AtomicI64;
         use std::collections::VecDeque;
         use std::sync::Mutex;
-        use std::sync::atomic::{AtomicBool, AtomicI64};
+        use std::sync::atomic::AtomicBool;
 
         let sample_rate_u32 = sample_rate as u32;
 

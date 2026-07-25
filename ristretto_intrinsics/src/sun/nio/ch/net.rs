@@ -1,4 +1,5 @@
 use crate::java::io::socketfiledescriptor::{get_fd, set_fd};
+use crate::java::net::socket_ops;
 use crate::net_helpers::{
     inet_socket_address, ipv4_from_java_int, ipv6_from_java_bytes, socket_from_type,
 };
@@ -13,7 +14,6 @@ use ristretto_types::handles::{SocketHandle, SocketType};
 use ristretto_types::{Parameters, Result, VM};
 use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 use std::cmp::Ordering;
-#[cfg(unix)]
 use std::net::Ipv4Addr;
 use std::net::Shutdown;
 #[cfg(target_os = "linux")]
@@ -80,7 +80,7 @@ fn native_ipv4(address: Ipv4Addr) -> libc::in_addr {
     }
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(any(target_os = "dragonfly", target_os = "netbsd"))))]
 #[expect(unsafe_code)]
 fn change_source_block(
     socket: &Socket,
@@ -117,14 +117,29 @@ fn change_source_block(
     }
 }
 
+#[cfg(any(target_os = "dragonfly", target_os = "netbsd"))]
+fn change_source_block(
+    socket: &Socket,
+    block: bool,
+    group: Ipv4Addr,
+    interface: Ipv4Addr,
+    source: Ipv4Addr,
+) -> std::io::Result<()> {
+    let _ = (socket, block, group, interface, source);
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Unsupported,
+        "source-specific multicast is not supported on this platform",
+    ))
+}
+
 #[cfg(windows)]
 #[expect(unsafe_code)]
 fn change_source_block(
     socket: &Socket,
     block: bool,
-    group: std::net::Ipv4Addr,
-    interface: std::net::Ipv4Addr,
-    source: std::net::Ipv4Addr,
+    group: Ipv4Addr,
+    interface: Ipv4Addr,
+    source: Ipv4Addr,
 ) -> std::io::Result<()> {
     use std::os::windows::io::AsRawSocket;
     use windows_sys::Win32::Networking::WinSock::{
@@ -132,7 +147,7 @@ fn change_source_block(
         SOCKET_ERROR, WSAGetLastError, setsockopt,
     };
 
-    let address = |address: std::net::Ipv4Addr| IN_ADDR {
+    let address = |address: Ipv4Addr| IN_ADDR {
         S_un: IN_ADDR_0 {
             S_addr: u32::from_ne_bytes(address.octets()),
         },
@@ -164,6 +179,36 @@ fn change_source_block(
     } else {
         Ok(())
     }
+}
+
+#[cfg(not(any(target_os = "dragonfly", target_os = "netbsd")))]
+fn join_or_drop_source_v4(
+    socket: &Socket,
+    join: bool,
+    source: Ipv4Addr,
+    group: Ipv4Addr,
+    interface: Ipv4Addr,
+) -> std::io::Result<()> {
+    if join {
+        socket.join_ssm_v4(&source, &group, &interface)
+    } else {
+        socket.leave_ssm_v4(&source, &group, &interface)
+    }
+}
+
+#[cfg(any(target_os = "dragonfly", target_os = "netbsd"))]
+fn join_or_drop_source_v4(
+    socket: &Socket,
+    join: bool,
+    source: Ipv4Addr,
+    group: Ipv4Addr,
+    interface: Ipv4Addr,
+) -> std::io::Result<()> {
+    let _ = (socket, join, source, group, interface);
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Unsupported,
+        "source-specific multicast is not supported on this platform",
+    ))
 }
 
 #[cfg(target_os = "linux")]
@@ -1337,13 +1382,7 @@ pub async fn is_reuse_port_available_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    #[cfg(unix)]
-    let available = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))
-        .and_then(|socket| socket.set_reuse_port(true))
-        .is_ok();
-    #[cfg(not(unix))]
-    let available = false;
-    Ok(Some(Value::from(available)))
+    Ok(Some(Value::from(socket_ops::reuse_port_available(false))))
 }
 
 #[intrinsic_method("sun/nio/ch/Net.joinOrDrop4(ZLjava/io/FileDescriptor;III)I", Any)]
@@ -1375,11 +1414,7 @@ pub async fn join_or_drop_4<T: Thread + 'static>(
         }
     } else {
         let source = ipv4_from_java_int(source);
-        if join != 0 {
-            socket.join_ssm_v4(&source, &group, &interface)
-        } else {
-            socket.leave_ssm_v4(&source, &group, &interface)
-        }
+        join_or_drop_source_v4(&socket, join != 0, source, group, interface)
     };
     Ok(Some(Value::Int(multicast_status(result, join != 0)?)))
 }
@@ -2264,6 +2299,38 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result = join_or_drop_4(thread, Parameters::default()).await;
         assert!(result.is_err());
+    }
+
+    #[cfg(all(unix, not(target_os = "netbsd")))]
+    #[tokio::test]
+    async fn test_join_or_drop_4_source_specific() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
+        let fd = 42;
+        vm.socket_handles()
+            .insert(fd, SocketHandle::new(SocketType::Raw(socket)))
+            .await?;
+
+        let fd_value = thread
+            .object("java.io.FileDescriptor", "", &[] as &[Value])
+            .await?;
+        set_fd(&fd_value, fd)?;
+        let group = i32::from_ne_bytes(0xe800_0001_u32.to_ne_bytes());
+        let source = 0x7f00_0001;
+
+        for join in [1, 0] {
+            let parameters = Parameters::new(vec![
+                Value::Int(join),
+                fd_value.clone(),
+                Value::Int(group),
+                Value::Int(0),
+                Value::Int(source),
+            ]);
+            let _ = join_or_drop_4(thread.clone(), parameters).await;
+        }
+
+        vm.socket_handles().remove(&fd).await;
+        Ok(())
     }
 
     #[tokio::test]

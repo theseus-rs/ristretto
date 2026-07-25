@@ -108,18 +108,47 @@ fn set_stat_fields(object: &mut ristretto_classloader::Object, stat: &libc::stat
     object.set_value("st_nlink", Value::Int(link_count))?;
     object.set_value("st_uid", Value::Int(user_id))?;
     object.set_value("st_gid", Value::Int(group_id))?;
-    object.set_value("st_size", Value::Long(stat.st_size))?;
-    object.set_value("st_atime_sec", Value::Long(stat.st_atime))?;
-    object.set_value("st_atime_nsec", Value::Long(stat.st_atime_nsec))?;
-    object.set_value("st_mtime_sec", Value::Long(stat.st_mtime))?;
-    object.set_value("st_mtime_nsec", Value::Long(stat.st_mtime_nsec))?;
-    object.set_value("st_ctime_sec", Value::Long(stat.st_ctime))?;
-    object.set_value("st_ctime_nsec", Value::Long(stat.st_ctime_nsec))?;
+    #[cfg(target_os = "netbsd")]
+    let (access_nsec, modification_nsec, change_nsec) =
+        (stat.st_atimensec, stat.st_mtimensec, stat.st_ctimensec);
+    #[cfg(not(target_os = "netbsd"))]
+    let (access_nsec, modification_nsec, change_nsec) =
+        (stat.st_atime_nsec, stat.st_mtime_nsec, stat.st_ctime_nsec);
+    object.set_value("st_size", Value::Long(platform_signed_to_i64(stat.st_size)))?;
+    object.set_value(
+        "st_atime_sec",
+        Value::Long(platform_signed_to_i64(stat.st_atime)),
+    )?;
+    object.set_value(
+        "st_atime_nsec",
+        Value::Long(platform_signed_to_i64(access_nsec)),
+    )?;
+    object.set_value(
+        "st_mtime_sec",
+        Value::Long(platform_signed_to_i64(stat.st_mtime)),
+    )?;
+    object.set_value(
+        "st_mtime_nsec",
+        Value::Long(platform_signed_to_i64(modification_nsec)),
+    )?;
+    object.set_value(
+        "st_ctime_sec",
+        Value::Long(platform_signed_to_i64(stat.st_ctime)),
+    )?;
+    object.set_value(
+        "st_ctime_nsec",
+        Value::Long(platform_signed_to_i64(change_nsec)),
+    )?;
     #[cfg(target_os = "macos")]
     set_birthtime_fields(object, stat.st_birthtime, stat.st_birthtime_nsec, true)?;
     #[cfg(not(target_os = "macos"))]
     set_birthtime_fields(object, 0, 0, false)?;
     Ok(())
+}
+
+#[cfg(target_family = "unix")]
+fn platform_signed_to_i64<T: Into<i64>>(value: T) -> i64 {
+    value.into()
 }
 
 #[cfg(all(target_family = "unix", not(target_os = "macos")))]
@@ -1005,7 +1034,7 @@ pub async fn fgetxattr_0<T: Thread + 'static>(
         }
         Ok(Some(Value::Int(i32::try_from(result)?)))
     }
-    #[cfg(all(target_family = "unix", not(target_os = "macos")))]
+    #[cfg(any(target_os = "android", target_os = "linux"))]
     {
         let c_name = to_cstring(&name_str)?;
         #[expect(unsafe_code)]
@@ -1026,6 +1055,14 @@ pub async fn fgetxattr_0<T: Thread + 'static>(
             return Err(throw_unix_exception(&thread, libc::EFAULT).await);
         }
         Ok(Some(Value::Int(i32::try_from(result)?)))
+    }
+    #[cfg(all(
+        target_family = "unix",
+        not(any(target_os = "android", target_os = "linux", target_os = "macos"))
+    ))]
+    {
+        let _ = (fd, name_str, value_pointer, value);
+        Err(throw_unix_exception(&thread, libc::ENOTSUP).await)
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -1091,7 +1128,7 @@ pub async fn flistxattr<T: Thread + 'static>(
         }
         Ok(Some(Value::Int(i32::try_from(result)?)))
     }
-    #[cfg(all(target_family = "unix", not(target_os = "macos")))]
+    #[cfg(any(target_os = "android", target_os = "linux"))]
     {
         #[expect(unsafe_code)]
         let result = unsafe { libc::flistxattr(fd, list_pointer, size) };
@@ -1111,6 +1148,14 @@ pub async fn flistxattr<T: Thread + 'static>(
             return Err(throw_unix_exception(&thread, libc::EFAULT).await);
         }
         Ok(Some(Value::Int(i32::try_from(result)?)))
+    }
+    #[cfg(all(
+        target_family = "unix",
+        not(any(target_os = "android", target_os = "linux", target_os = "macos"))
+    ))]
+    {
+        let _ = (fd, list_pointer, list);
+        Err(throw_unix_exception(&thread, libc::ENOTSUP).await)
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -1182,7 +1227,7 @@ pub async fn fpathconf<T: Thread + 'static>(
                 return Err(throw_unix_exception(&thread, errno).await);
             }
         }
-        Ok(Some(Value::Long(result)))
+        Ok(Some(Value::Long(platform_signed_to_i64(result))))
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -1219,7 +1264,7 @@ pub async fn fremovexattr_0<T: Thread + 'static>(
         }
         Ok(None)
     }
-    #[cfg(all(target_family = "unix", not(target_os = "macos")))]
+    #[cfg(any(target_os = "android", target_os = "linux"))]
     {
         let c_name = to_cstring(&name_str)?;
         #[expect(unsafe_code)]
@@ -1228,6 +1273,14 @@ pub async fn fremovexattr_0<T: Thread + 'static>(
             return Err(throw_unix_exception(&thread, last_errno()).await);
         }
         Ok(None)
+    }
+    #[cfg(all(
+        target_family = "unix",
+        not(any(target_os = "android", target_os = "linux", target_os = "macos"))
+    ))]
+    {
+        let _ = (fd, name_str);
+        Err(throw_unix_exception(&thread, libc::ENOTSUP).await)
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -1283,7 +1336,7 @@ pub async fn fsetxattr_0<T: Thread + 'static>(
         }
         Ok(None)
     }
-    #[cfg(all(target_family = "unix", not(target_os = "macos")))]
+    #[cfg(any(target_os = "android", target_os = "linux"))]
     {
         let c_name = to_cstring(&name_str)?;
         #[expect(unsafe_code)]
@@ -1292,6 +1345,14 @@ pub async fn fsetxattr_0<T: Thread + 'static>(
             return Err(throw_unix_exception(&thread, last_errno()).await);
         }
         Ok(None)
+    }
+    #[cfg(all(
+        target_family = "unix",
+        not(any(target_os = "android", target_os = "linux", target_os = "macos"))
+    ))]
+    {
+        let _ = (fd, name_str, value_pointer, value);
+        Err(throw_unix_exception(&thread, libc::ENOTSUP).await)
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -1446,12 +1507,12 @@ pub async fn futimens_0<T: Thread + 'static>(
     {
         let times = [
             libc::timespec {
-                tv_sec: access_time / 1_000_000_000,
-                tv_nsec: access_time % 1_000_000_000,
+                tv_sec: (access_time / 1_000_000_000) as _,
+                tv_nsec: (access_time % 1_000_000_000) as _,
             },
             libc::timespec {
-                tv_sec: modification_time / 1_000_000_000,
-                tv_nsec: modification_time % 1_000_000_000,
+                tv_sec: (modification_time / 1_000_000_000) as _,
+                tv_nsec: (modification_time % 1_000_000_000) as _,
             },
         ];
         #[expect(unsafe_code)]
@@ -1496,18 +1557,34 @@ pub async fn futimes_0<T: Thread + 'static>(
 
     #[cfg(target_family = "unix")]
     {
+        #[cfg(not(any(target_os = "android", target_os = "illumos", target_os = "solaris")))]
         let times = [
             libc::timeval {
-                tv_sec: access_time / 1_000_000,
+                tv_sec: (access_time / 1_000_000) as _,
                 tv_usec: (access_time % 1_000_000) as _,
             },
             libc::timeval {
-                tv_sec: modification_time / 1_000_000,
+                tv_sec: (modification_time / 1_000_000) as _,
                 tv_usec: (modification_time % 1_000_000) as _,
             },
         ];
+        #[cfg(any(target_os = "android", target_os = "illumos", target_os = "solaris"))]
+        let times = [
+            libc::timespec {
+                tv_sec: (access_time / 1_000_000) as _,
+                tv_nsec: ((access_time % 1_000_000) * 1_000) as _,
+            },
+            libc::timespec {
+                tv_sec: (modification_time / 1_000_000) as _,
+                tv_nsec: ((modification_time % 1_000_000) * 1_000) as _,
+            },
+        ];
         #[expect(unsafe_code)]
+        #[cfg(not(any(target_os = "android", target_os = "illumos", target_os = "solaris")))]
         let result = unsafe { libc::futimes(fd, times.as_ptr()) };
+        #[expect(unsafe_code)]
+        #[cfg(any(target_os = "android", target_os = "illumos", target_os = "solaris"))]
+        let result = unsafe { libc::futimens(fd, times.as_ptr()) };
         if result < 0 {
             return Err(throw_unix_exception(&thread, last_errno()).await);
         }
@@ -1924,18 +2001,41 @@ pub async fn lutimes_0<T: Thread + 'static>(
     #[cfg(target_family = "unix")]
     {
         let c_path = to_cstring(&path_str)?;
+        #[cfg(not(any(target_os = "android", target_os = "illumos", target_os = "solaris")))]
         let times = [
             libc::timeval {
-                tv_sec: access_time / 1_000_000,
+                tv_sec: (access_time / 1_000_000) as _,
                 tv_usec: (access_time % 1_000_000) as _,
             },
             libc::timeval {
-                tv_sec: modification_time / 1_000_000,
+                tv_sec: (modification_time / 1_000_000) as _,
                 tv_usec: (modification_time % 1_000_000) as _,
             },
         ];
+        #[cfg(any(target_os = "android", target_os = "illumos", target_os = "solaris"))]
+        let times = [
+            libc::timespec {
+                tv_sec: (access_time / 1_000_000) as _,
+                tv_nsec: ((access_time % 1_000_000) * 1_000) as _,
+            },
+            libc::timespec {
+                tv_sec: (modification_time / 1_000_000) as _,
+                tv_nsec: ((modification_time % 1_000_000) * 1_000) as _,
+            },
+        ];
         #[expect(unsafe_code)]
+        #[cfg(not(any(target_os = "android", target_os = "illumos", target_os = "solaris")))]
         let result = unsafe { libc::lutimes(c_path.as_ptr(), times.as_ptr()) };
+        #[expect(unsafe_code)]
+        #[cfg(any(target_os = "android", target_os = "illumos", target_os = "solaris"))]
+        let result = unsafe {
+            libc::utimensat(
+                libc::AT_FDCWD,
+                c_path.as_ptr(),
+                times.as_ptr(),
+                libc::AT_SYMLINK_NOFOLLOW,
+            )
+        };
         if result < 0 {
             return Err(throw_unix_exception(&thread, last_errno()).await);
         }
@@ -2147,7 +2247,7 @@ pub async fn pathconf_0<T: Thread + 'static>(
                 return Err(throw_unix_exception(&thread, errno).await);
             }
         }
-        Ok(Some(Value::Long(result)))
+        Ok(Some(Value::Long(platform_signed_to_i64(result))))
     }
     #[cfg(not(target_family = "unix"))]
     {
@@ -2764,11 +2864,11 @@ pub async fn utimes_0<T: Thread + 'static>(
         let c_path = to_cstring(&path_str)?;
         let times = [
             libc::timeval {
-                tv_sec: access_time / 1_000_000,
+                tv_sec: (access_time / 1_000_000) as _,
                 tv_usec: (access_time % 1_000_000) as _,
             },
             libc::timeval {
-                tv_sec: modification_time / 1_000_000,
+                tv_sec: (modification_time / 1_000_000) as _,
                 tv_usec: (modification_time % 1_000_000) as _,
             },
         ];
@@ -2809,12 +2909,12 @@ pub async fn utimensat_0<T: Thread + 'static>(
         let c_path = to_cstring(&path_str)?;
         let times = [
             libc::timespec {
-                tv_sec: access_time / 1_000_000_000,
-                tv_nsec: access_time % 1_000_000_000,
+                tv_sec: (access_time / 1_000_000_000) as _,
+                tv_nsec: (access_time % 1_000_000_000) as _,
             },
             libc::timespec {
-                tv_sec: modification_time / 1_000_000_000,
-                tv_nsec: modification_time % 1_000_000_000,
+                tv_sec: (modification_time / 1_000_000_000) as _,
+                tv_nsec: (modification_time % 1_000_000_000) as _,
             },
         ];
         #[expect(unsafe_code)]
@@ -3182,6 +3282,21 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn test_fpathconf_success() -> Result<()> {
+        use std::os::fd::AsRawFd;
+
+        let (_vm, thread) = crate::test::java11_thread().await?;
+        let directory = std::fs::File::open(".")?;
+        let parameters = Parameters::new(vec![
+            Value::Int(directory.as_raw_fd()),
+            Value::Int(libc::_PC_NAME_MAX),
+        ]);
+        let result = fpathconf(thread, parameters).await?;
+        assert!(matches!(result, Some(Value::Long(value)) if value > 0));
+        Ok(())
+    }
+
     #[cfg(target_os = "linux")]
     #[tokio::test]
     async fn test_fpathconf_clears_stale_errno() -> Result<()> {
@@ -3266,6 +3381,26 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_fstatat_0_success() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let temp_file = tempfile::NamedTempFile::new()?;
+        let path_addr =
+            write_cstring_to_native(&*vm, temp_file.path().to_str().expect("temporary path"));
+        let attributes = thread
+            .object("sun.nio.fs.UnixFileAttributes", "", &[] as &[Value])
+            .await?;
+        let parameters = Parameters::new(vec![
+            Value::Int(libc::AT_FDCWD),
+            Value::Long(path_addr),
+            Value::Int(0),
+            attributes,
+        ]);
+        let result = fstatat_0(thread, parameters).await?;
+        assert_eq!(result, None);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_futimens_default_params() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let result = futimens(thread, Parameters::default()).await;
@@ -3303,6 +3438,49 @@ mod tests {
             matches!(result, Err(ristretto_types::Error::ParametersUnderflow)),
             "expected ParametersUnderflow, got {result:?}"
         );
+    }
+
+    #[tokio::test]
+    async fn test_time_updates_success() -> Result<()> {
+        use std::os::fd::AsRawFd;
+
+        let (vm, thread) = crate::test::thread().await?;
+        let temp_file = tempfile::NamedTempFile::new()?;
+        let path_addr =
+            write_cstring_to_native(&*vm, temp_file.path().to_str().expect("temporary path"));
+        let access_micros = 1_700_000_000_123_456;
+        let modification_micros = 1_700_000_001_654_321;
+
+        let parameters = Parameters::new(vec![
+            Value::Int(temp_file.as_file().as_raw_fd()),
+            Value::Long(access_micros),
+            Value::Long(modification_micros),
+        ]);
+        assert_eq!(futimes_0(thread.clone(), parameters).await?, None);
+
+        let parameters = Parameters::new(vec![
+            Value::Long(path_addr),
+            Value::Long(access_micros),
+            Value::Long(modification_micros),
+        ]);
+        assert_eq!(lutimes_0(thread.clone(), parameters).await?, None);
+
+        let parameters = Parameters::new(vec![
+            Value::Long(path_addr),
+            Value::Long(access_micros),
+            Value::Long(modification_micros),
+        ]);
+        assert_eq!(utimes_0(thread.clone(), parameters).await?, None);
+
+        let parameters = Parameters::new(vec![
+            Value::Int(libc::AT_FDCWD),
+            Value::Long(path_addr),
+            Value::Long(access_micros * 1_000),
+            Value::Long(modification_micros * 1_000),
+            Value::Int(0),
+        ]);
+        assert_eq!(utimensat_0(thread, parameters).await?, None);
+        Ok(())
     }
 
     #[tokio::test]

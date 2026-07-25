@@ -36,7 +36,12 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 os_info = { workspace = true }
+
+[target.'cfg(all(not(target_family = "wasm"), target_endian = "little", not(target_os = "dragonfly"), not(any(target_arch = "mips", target_arch = "mips64"))))'.dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+[target.'cfg(all(not(target_family = "wasm"), any(target_endian = "big", target_os = "dragonfly", target_arch = "mips", target_arch = "mips64")))'.dependencies]
+tokio = { workspace = true, features = ["rt"] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 tokio = { workspace = true, features = ["rt"] }

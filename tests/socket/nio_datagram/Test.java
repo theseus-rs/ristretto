@@ -1,6 +1,7 @@
 import java.net.InetSocketAddress;
 import java.net.StandardProtocolFamily;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
@@ -95,6 +96,10 @@ public class Test {
                 started.countDown();
                 try {
                     blockingReceiver.receive(ByteBuffer.allocateDirect(1));
+                } catch (ClosedChannelException error) {
+                    // Closing can win immediately before receive starts or while it is blocked.
+                    // Both paths are valid and AsynchronousCloseException extends this class.
+                    result.set("closed");
                 } catch (Exception error) {
                     result.set(error.getClass().getSimpleName());
                 }

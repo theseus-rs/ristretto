@@ -43,8 +43,13 @@ fn check_effective_access(path: &Path, access_mode: FileAccessMode) -> bool {
     }
 
     // AT_EACCESS makes faccessat evaluate the effective uid/gid and supplementary groups,
-    // matching the identity the process will use for the subsequent operation.
-    unsafe { libc::faccessat(libc::AT_FDCWD, path.as_ptr(), mode, libc::AT_EACCESS) == 0 }
+    // matching the identity the process will use for the subsequent operation. Android does not
+    // expose AT_EACCESS; Android application processes use the same real and effective IDs.
+    #[cfg(not(target_os = "android"))]
+    let flags = libc::AT_EACCESS;
+    #[cfg(target_os = "android")]
+    let flags = 0;
+    unsafe { libc::faccessat(libc::AT_FDCWD, path.as_ptr(), mode, flags) == 0 }
 }
 
 fn resolve_path<T: Thread + 'static>(thread: &Arc<T>, path: impl AsRef<Path>) -> Result<PathBuf> {

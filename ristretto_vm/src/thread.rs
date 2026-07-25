@@ -1,5 +1,5 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), not(target_os = "solaris")))]
 use crate::JavaError::StackOverflowError;
 use crate::JavaError::{RuntimeException, UnsatisfiedLinkError, VerifyError};
 use crate::Parameters;
@@ -26,7 +26,7 @@ use tokio::sync::{Notify, RwLock};
 use tokio::time::{Instant, timeout_at};
 use tracing::{Level, debug, event_enabled};
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), not(target_os = "solaris")))]
 // Leave room for another interpreter transition without rejecting legitimate bootstrap work on
 // Tokio's smaller worker-thread stacks.
 const NATIVE_STACK_RED_ZONE: usize = 128 * 1024;
@@ -911,7 +911,7 @@ impl Thread {
             .into());
         } else {
             // Check for native stack overflow before creating a new frame
-            #[cfg(not(target_family = "wasm"))]
+            #[cfg(all(not(target_family = "wasm"), not(target_os = "solaris")))]
             if let Some(remaining) = stacker::remaining_stack()
                 && remaining < NATIVE_STACK_RED_ZONE
             {

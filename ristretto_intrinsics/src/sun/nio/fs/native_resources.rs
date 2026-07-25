@@ -1,8 +1,9 @@
 //! Per-VM ownership for libc resources represented as opaque Java `long` values.
 
+use portable_atomic::AtomicI64;
 use ristretto_types::{Result, VM};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 const FIRST_HANDLE: i64 = 0x6000_0000_0000_0000;

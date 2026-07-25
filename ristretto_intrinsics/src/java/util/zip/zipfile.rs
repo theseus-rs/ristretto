@@ -1,4 +1,5 @@
 use crate::bounds;
+use portable_atomic::AtomicI64;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
@@ -10,7 +11,7 @@ use ristretto_types::{Parameters, Result, VM as _};
 use std::collections::HashMap;
 use std::io::{self, Read};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::Ordering;
 use zip::ZipArchive;
 
 /// Pre-parsed information about a single ZIP entry.

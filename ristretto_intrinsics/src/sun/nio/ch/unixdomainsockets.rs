@@ -114,7 +114,9 @@ fn microsoft_unix_socket() -> std::io::Result<Socket> {
         return Err(std::io::Error::from_raw_os_error(code));
     }
 
-    let raw_socket = u64::try_from(raw_socket).unwrap_or(u64::MAX);
+    let raw_socket: std::os::windows::io::RawSocket = raw_socket
+        .try_into()
+        .map_err(|_| std::io::Error::other("socket handle is out of range"))?;
     #[expect(unsafe_code)]
     // SAFETY: WSASocketW returned a new owned socket, which is transferred to Socket.
     let socket = unsafe { Socket::from_raw_socket(raw_socket) };

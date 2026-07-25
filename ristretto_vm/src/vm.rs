@@ -24,11 +24,12 @@ use ristretto_types::handles::SocketHandle;
 use ristretto_types::handles::{FileHandle, HandleManager, MemberHandle};
 
 type ThreadHandle = ristretto_types::handles::ThreadHandle<Thread>;
+use portable_atomic::AtomicU64;
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::{Arc, Weak};
 use tokio::sync::{Mutex, RwLock};
 use tracing::{debug, warn};

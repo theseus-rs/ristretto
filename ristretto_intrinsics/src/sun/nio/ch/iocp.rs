@@ -1,3 +1,4 @@
+use portable_atomic::{AtomicI64, AtomicU64};
 use ristretto_classfile::JAVA_14;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::{Reference, Value};
@@ -9,7 +10,7 @@ use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM};
 use std::collections::HashMap;
 use std::ptr::null;
-use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use windows_sys::Win32::System::Diagnostics::Debug::{
     FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS, FormatMessageW,

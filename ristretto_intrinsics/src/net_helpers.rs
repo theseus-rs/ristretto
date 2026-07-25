@@ -379,16 +379,30 @@ pub(crate) async fn reverse_lookup(address: IpAddr) -> Result<String> {
 fn reverse_lookup_blocking(address: IpAddr) -> Result<String> {
     let socket_address = SockAddr::from(SocketAddr::new(address, 0));
     let mut host = [0 as std::ffi::c_char; 1025];
+    #[cfg(all(
+        unix,
+        any(target_os = "android", target_os = "dragonfly", target_os = "freebsd")
+    ))]
+    let host_length = host.len();
+    #[cfg(all(
+        unix,
+        not(any(target_os = "android", target_os = "dragonfly", target_os = "freebsd"))
+    ))]
+    let host_length = libc::socklen_t::try_from(host.len()).unwrap_or(libc::socklen_t::MAX);
+    #[cfg(all(unix, any(target_os = "illumos", target_os = "solaris")))]
+    let name_required = libc::NI_NAMEREQD.cast_signed();
+    #[cfg(all(unix, not(any(target_os = "illumos", target_os = "solaris"))))]
+    let name_required = libc::NI_NAMEREQD;
     #[cfg(unix)]
     let result = unsafe {
         libc::getnameinfo(
             socket_address.as_ptr().cast(),
             socket_address.len(),
             host.as_mut_ptr(),
-            libc::socklen_t::try_from(host.len()).unwrap_or(libc::socklen_t::MAX),
+            host_length,
             std::ptr::null_mut(),
             0,
-            libc::NI_NAMEREQD,
+            name_required,
         )
     };
     #[cfg(windows)]

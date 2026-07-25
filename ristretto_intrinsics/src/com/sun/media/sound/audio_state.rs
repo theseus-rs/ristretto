@@ -1,8 +1,9 @@
 use parking_lot::RwLock;
+use portable_atomic::AtomicI64;
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// A wrapper that allows `!Send + !Sync` types to be stored in `Send + Sync` containers.
 ///

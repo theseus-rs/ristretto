@@ -1,3 +1,5 @@
+#[cfg(target_os = "macos")]
+use portable_atomic::AtomicI64;
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::{Reference, Value};
@@ -16,8 +18,7 @@ use std::mem::size_of;
 use std::sync::Arc;
 #[cfg(target_os = "macos")]
 use std::sync::Mutex;
-#[cfg(target_os = "macos")]
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::Ordering;
 
 #[cfg(target_os = "macos")]
 fn last_errno() -> i32 {

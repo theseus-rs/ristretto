@@ -1,5 +1,6 @@
+use portable_atomic::AtomicI64;
 use std::collections::BTreeMap;
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::Ordering;
 
 use ristretto_gc::sync::RwLock;
 

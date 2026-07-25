@@ -10,6 +10,7 @@ use crate::sun::nio::ch::iocp::{self, CompletionPacket};
 use crate::sun::nio::fs::common::{throw_windows_exception, windows_error_code};
 use crate::sun::nio::fs::managed_files;
 use bitflags::bitflags;
+use portable_atomic::AtomicI64;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21};
@@ -23,7 +24,7 @@ use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::collections::HashMap;
 use std::mem::{size_of, size_of_val};
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 fn last_windows_error() -> i32 {

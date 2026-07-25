@@ -317,7 +317,14 @@ fn interface_flags(name: &str) -> Option<u32> {
             // SAFETY: POSIX guarantees a nul-terminated interface name.
             let current_name = unsafe { std::ffi::CStr::from_ptr(address.ifa_name) };
             if current_name.to_bytes() == name.as_bytes() {
-                result = Some(address.ifa_flags);
+                #[cfg(any(target_os = "illumos", target_os = "solaris"))]
+                {
+                    result = u32::try_from(address.ifa_flags).ok();
+                }
+                #[cfg(not(any(target_os = "illumos", target_os = "solaris")))]
+                {
+                    result = Some(address.ifa_flags);
+                }
                 break;
             }
         }

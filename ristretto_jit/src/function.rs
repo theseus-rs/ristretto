@@ -1,25 +1,70 @@
 use crate::Error::InternalError;
 use crate::{JitValue, Result, Value};
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 use cranelift::jit::JITModule;
 use std::fmt::{Debug, Formatter};
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 use std::sync::{Arc, Mutex};
 
 /// A structure representing a native function from the JIT compiler
 #[derive(Clone)]
 pub struct Function {
     function: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8),
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(all(
+        not(target_family = "wasm"),
+        target_endian = "little",
+        not(any(
+            target_arch = "mips",
+            target_arch = "mips64",
+            target_os = "dragonfly",
+            target_os = "solaris"
+        ))
+    ))]
     module: Arc<JitModuleOwner>,
 }
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 struct JitModuleOwner {
     module: Mutex<Option<JITModule>>,
 }
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 impl JitModuleOwner {
     fn new(module: Option<JITModule>) -> Self {
         Self {
@@ -28,7 +73,16 @@ impl JitModuleOwner {
     }
 }
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 impl Drop for JitModuleOwner {
     fn drop(&mut self) {
         let module = match self.module.get_mut() {
@@ -60,13 +114,31 @@ impl Function {
     ) -> Self {
         Self {
             function,
-            #[cfg(not(target_family = "wasm"))]
+            #[cfg(all(
+                not(target_family = "wasm"),
+                target_endian = "little",
+                not(any(
+                    target_arch = "mips",
+                    target_arch = "mips64",
+                    target_os = "dragonfly",
+                    target_os = "solaris"
+                ))
+            ))]
             module: Arc::new(JitModuleOwner::new(None)),
         }
     }
 
     /// Creates a function backed by an owning JIT module.
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(all(
+        not(target_family = "wasm"),
+        target_endian = "little",
+        not(any(
+            target_arch = "mips",
+            target_arch = "mips64",
+            target_os = "dragonfly",
+            target_os = "solaris"
+        ))
+    ))]
     pub(crate) fn with_module(
         function: unsafe extern "C" fn(*const JitValue, usize, *mut JitValue, *const u8),
         module: JITModule,

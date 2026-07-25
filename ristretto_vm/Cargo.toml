@@ -28,6 +28,7 @@ flate2 = { workspace = true }
 indexmap = { workspace = true }
 jiff = { workspace = true }
 parking_lot = { workspace = true }
+portable-atomic = { workspace = true }
 ristretto_classfile = { path = "../ristretto_classfile", version = "0.32.0" }
 ristretto_classloader = { path = "../ristretto_classloader", version = "0.32.0", default-features = false }
 ristretto_gc = { path = "../ristretto_gc", version = "0.32.0" }
@@ -54,11 +55,15 @@ filetime = { workspace = true }
 getrandom = { workspace = true }
 os_info = { workspace = true }
 rayon = { workspace = true }
-stacker = { workspace = true }
 sysinfo = { workspace = true }
-thread-priority = { workspace = true }
-tokio = { workspace = true, features = ["fs", "rt-multi-thread", "time"] }
+tokio = { workspace = true, features = ["fs", "time"] }
 whoami = { workspace = true }
+
+[target.'cfg(all(not(target_family = "wasm"), not(target_os = "solaris")))'.dependencies]
+stacker = { workspace = true }
+
+[target.'cfg(all(not(target_family = "wasm"), target_endian = "little", not(target_os = "dragonfly"), not(any(target_arch = "mips", target_arch = "mips64"))))'.dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [dev-dependencies]
 criterion = { workspace = true }

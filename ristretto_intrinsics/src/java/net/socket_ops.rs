@@ -43,29 +43,29 @@ fn is_connect_pending(error: &std::io::Error) -> bool {
     )
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(any(target_os = "illumos", target_os = "solaris"))))]
 fn reuse_port(socket: &Socket) -> std::io::Result<bool> {
     socket.reuse_port()
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "illumos", target_os = "solaris"))]
 fn reuse_port(_socket: &Socket) -> std::io::Result<bool> {
     Err(std::io::Error::new(
         std::io::ErrorKind::Unsupported,
-        "SO_REUSEPORT is not supported by Winsock",
+        "SO_REUSEPORT is not supported on this platform",
     ))
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(any(target_os = "illumos", target_os = "solaris"))))]
 fn set_reuse_port(socket: &Socket, enabled: bool) -> std::io::Result<()> {
     socket.set_reuse_port(enabled)
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "illumos", target_os = "solaris"))]
 fn set_reuse_port(_socket: &Socket, _enabled: bool) -> std::io::Result<()> {
     Err(std::io::Error::new(
         std::io::ErrorKind::Unsupported,
-        "SO_REUSEPORT is not supported by Winsock",
+        "SO_REUSEPORT is not supported on this platform",
     ))
 }
 
@@ -78,21 +78,43 @@ pub(crate) fn reuse_port_available(stream: bool) -> bool {
 }
 
 fn traffic_class(socket: &Socket, ipv6: bool) -> std::io::Result<u32> {
+    #[cfg(target_os = "solaris")]
+    {
+        let _ = (socket, ipv6);
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "IP_TOS is not supported on Solaris",
+        ));
+    }
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     if ipv6 {
         return socket.tclass_v6();
     }
-    let _ = ipv6;
-    socket.tos_v4()
+    #[cfg(not(target_os = "solaris"))]
+    {
+        let _ = ipv6;
+        socket.tos_v4()
+    }
 }
 
 fn set_traffic_class(socket: &Socket, ipv6: bool, value: u32) -> std::io::Result<()> {
+    #[cfg(target_os = "solaris")]
+    {
+        let _ = (socket, ipv6, value);
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "IP_TOS is not supported on Solaris",
+        ));
+    }
     #[cfg(any(target_os = "linux", target_os = "macos"))]
     if ipv6 {
         return socket.set_tclass_v6(value);
     }
-    let _ = ipv6;
-    socket.set_tos_v4(value)
+    #[cfg(not(target_os = "solaris"))]
+    {
+        let _ = ipv6;
+        socket.set_tos_v4(value)
+    }
 }
 
 pub(crate) async fn create<V: VM + ?Sized>(vm: &V, stream: bool, ipv6: bool) -> Result<i32> {

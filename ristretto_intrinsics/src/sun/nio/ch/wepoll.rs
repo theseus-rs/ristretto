@@ -1,3 +1,4 @@
+use portable_atomic::AtomicI64;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
@@ -5,7 +6,7 @@ use ristretto_macros::{async_method, intrinsic_method};
 use ristretto_types::Error::InternalError;
 use ristretto_types::{JavaError, Parameters, Result, Thread, VM};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use windows_sys::Win32::Networking::WinSock::{

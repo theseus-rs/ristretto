@@ -62,7 +62,11 @@ pub async fn allocation_granularity_0<T: Thread + 'static>(
         )
         .into());
     }
-    Ok(Some(Value::Long(page_size)))
+    Ok(Some(Value::Long(platform_long_to_i64(page_size))))
+}
+
+fn platform_long_to_i64<T: Into<i64>>(value: T) -> i64 {
+    value.into()
 }
 
 #[intrinsic_method(

@@ -10,7 +10,17 @@ use ristretto_types::{JavaError, Thread};
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 use std::time::Duration;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(any(
+    target_family = "windows",
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "ios",
+    target_os = "linux",
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "vxworks"
+))]
 use thread_priority::{ThreadPriority, ThreadPriorityValue, set_current_thread_priority};
 use tracing::error;
 
@@ -352,12 +362,32 @@ pub async fn set_priority_0<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let new_priority = parameters.pop_int()?;
 
-    #[cfg(target_family = "wasm")]
+    #[cfg(not(any(
+        target_family = "windows",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "ios",
+        target_os = "linux",
+        target_os = "macos",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "vxworks"
+    )))]
     {
         let _ = new_priority;
     }
 
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(any(
+        target_family = "windows",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "ios",
+        target_os = "linux",
+        target_os = "macos",
+        target_os = "netbsd",
+        target_os = "openbsd",
+        target_os = "vxworks"
+    ))]
     {
         let priority: ThreadPriority = match new_priority {
             ..=1 => ThreadPriority::Min,
