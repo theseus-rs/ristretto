@@ -1,3 +1,21 @@
+[target.aarch64-linux-android]
+linker = "aarch64-linux-android29-clang"
+
+[target.arm-linux-androideabi]
+linker = "armv7a-linux-androideabi29-clang"
+
+[target.armv7-linux-androideabi]
+linker = "armv7a-linux-androideabi29-clang"
+
+[target.i686-linux-android]
+linker = "i686-linux-android29-clang"
+
+[target.thumbv7neon-linux-androideabi]
+linker = "armv7a-linux-androideabi29-clang"
+
+[target.x86_64-linux-android]
+linker = "x86_64-linux-android29-clang"
+
 [target.x86_64-pc-windows-gnu]
 rustflags = ["-C", "link-arg=-Wl,--stack,8388608"]
 

@@ -240,7 +240,7 @@ pub async fn posix_fadvise<T: Thread + 'static>(
     #[cfg(target_os = "linux")]
     {
         #[expect(unsafe_code)]
-        let result = unsafe { libc::posix_fadvise(fd, offset, len, advice) };
+        let result = unsafe { libc::posix_fadvise(fd, offset as _, len as _, advice) };
         Ok(Some(Value::Int(result)))
     }
     #[cfg(not(target_os = "linux"))]
@@ -299,11 +299,12 @@ pub async fn direct_copy_0<T: Thread + 'static>(
         loop {
             #[expect(unsafe_code)]
             let copied = unsafe {
-                libc::copy_file_range(
+                libc::syscall(
+                    libc::SYS_copy_file_range,
                     src,
-                    std::ptr::null_mut(),
+                    std::ptr::null_mut::<libc::c_void>(),
                     dst,
-                    std::ptr::null_mut(),
+                    std::ptr::null_mut::<libc::c_void>(),
                     count,
                     0,
                 )

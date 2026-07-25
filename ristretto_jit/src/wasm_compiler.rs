@@ -1,7 +1,7 @@
 use crate::{Function, Result};
 use ristretto_classfile::{ClassFile, Method};
 
-/// Java Virtual Machine (JVM) bytecode to wasm code compiler.
+/// Java Virtual Machine (JVM) fallback compiler.
 ///
 /// This is a no-op compiler that does not actually compile any code.
 #[derive(Clone, Debug)]
@@ -13,20 +13,20 @@ impl Compiler {
     /// # Errors
     ///
     /// This function currently never returns an error, but the signature is kept consistent
-    /// with the non-wasm compiler implementation.
+    /// with the native compiler implementation.
     pub fn new() -> Result<Self> {
         Ok(Compiler {})
     }
 
     /// Returns whether the method can potentially be JIT compiled.
     ///
-    /// Always returns `false` on wasm since native JIT is not supported.
+    /// Always returns `false` since native JIT is not supported.
     #[must_use]
     pub fn can_compile(_method: &Method) -> bool {
         false
     }
 
-    /// Compiles the given bytecode into WASM code.
+    /// Compiles the given bytecode into native code.
     ///
     /// # Errors
     ///

@@ -1,112 +1,176 @@
 name: Publish
 
 on:
-  # Defining workflow_call means that this workflow can be called from
-  # your main workflow job
   workflow_call:
-    # cargo-dist exposes the plan from the plan step, as a JSON string,
-    # to your job if it needs it
     inputs:
       plan:
-        required: true
+        default: "{}"
+        required: false
         type: string
+      dry_run:
+        default: false
+        required: false
+        type: boolean
 
 jobs:
   upload-assets:
-    timeout-minutes: 60
+    name: upload-assets (${{ matrix.platform }})
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { target: aarch64-apple-darwin, os: macos-26 }
-          # - { target: aarch64-linux-android, os: ubuntu-latest }
-          - { target: aarch64-unknown-linux-gnu, os: ubuntu-latest }
-          - { target: aarch64-unknown-linux-musl, os: ubuntu-latest }
-          # - { target: arm-linux-androideabi, os: ubuntu-latest }
-          - { target: arm-unknown-linux-gnueabi, os: ubuntu-latest }
-          # - { target: arm-unknown-linux-gnueabihf, os: ubuntu-latest }
-          # - { target: arm-unknown-linux-musleabi, os: ubuntu-latest }
-          # - { target: arm-unknown-linux-musleabihf, os: ubuntu-latest }
-          # - { target: armv5te-unknown-linux-gnueabi, os: ubuntu-latest }
-          # - { target: armv5te-unknown-linux-musleabi, os: ubuntu-latest }
-          # - { target: armv7-linux-androideabi, os: ubuntu-latest }
-          - { target: armv7-unknown-linux-gnueabi, os: ubuntu-latest }
-          - { target: armv7-unknown-linux-gnueabihf, os: ubuntu-latest }
-          - { target: armv7-unknown-linux-musleabi, os: ubuntu-latest }
-          - { target: armv7-unknown-linux-musleabihf, os: ubuntu-latest }
-          # - { target: i586-unknown-linux-gnu, os: ubuntu-latest }
-          # - { target: i586-unknown-linux-musl, os: ubuntu-latest }
-          # - { target: i686-unknown-freebsd, os: ubuntu-latest }
-          # - { target: i686-linux-android, os: ubuntu-latest }
-          # - { target: i686-pc-windows-gnu, os: windows-latest }
-          - { target: i686-unknown-linux-gnu, os: ubuntu-latest }
-          # - { target: mips-unknown-linux-gnu, os: ubuntu-latest }
-          # - { target: mips-unknown-linux-musl, os: ubuntu-latest }
-          # - { target: mips64-unknown-linux-gnuabi64, os: ubuntu-latest }
-          # - { target: mips64-unknown-linux-muslabi64, os: ubuntu-latest }
-          # - { target: mips64el-unknown-linux-gnuabi64, os: ubuntu-latest }
-          # - { target: mips64el-unknown-linux-muslabi64, os: ubuntu-latest }
-          # - { target: mipsel-unknown-linux-gnu, os: ubuntu-latest }
-          # - { target: mipsel-unknown-linux-musl, os: ubuntu-latest }
-          # - { target: powerpc-unknown-linux-gnu, os: ubuntu-latest }
-          # - { target: powerpc64-unknown-linux-gnu, os: ubuntu-latest }
-          - { target: powerpc64le-unknown-linux-gnu, os: ubuntu-latest }
-          - { target: riscv64gc-unknown-linux-gnu, os: ubuntu-latest }
-          - { target: s390x-unknown-linux-gnu, os: ubuntu-latest }
-          # - { target: sparc64-unknown-linux-gnu, os: ubuntu-latest }
-          # - { target: sparcv9-sun-solaris, os: ubuntu-latest }
-          # - { target: thumbv6m-none-eabi, os: ubuntu-latest }
-          # - { target: thumbv7em-none-eabi, os: ubuntu-latest }
-          # - { target: thumbv7em-none-eabihf, os: ubuntu-latest }
-          # - { target: thumbv7m-none-eabi, os: ubuntu-latest }
-          # - { target: thumbv7neon-linux-androideabi, os: ubuntu-latest }
-          # - { target: thumbv7neon-unknown-linux-gnueabihf, os: ubuntu-latest }
-          # - { target: thumbv8m.base-none-eabi, os: ubuntu-latest }
-          # - { target: thumbv8m.main-none-eabi, os: ubuntu-latest }
-          # - { target: thumbv8m.main-none-eabihf, os: ubuntu-latest }
-          # - { target: wasm32-unknown-emscripten, os: ubuntu-latest }
-          - { target: x86_64-apple-darwin, os: macos-26-intel }
-          # - { target: x86_64-linux-android, os: ubuntu-latest }
-          # - { target: x86_64-pc-windows-gnu, os: windows-latest }
-          # - { target: x86_64-pc-windows-msvc, os: windows-latest }
-          # - { target: x86_64-sun-solaris, os: ubuntu-latest }
-          # - { target: x86_64-unknown-freebsd, os: ubuntu-latest }
-          # - { target: x86_64-unknown-dragonfly, os: ubuntu-latest }
-          # - { target: x86_64-unknown-illumos, os: ubuntu-latest }
-          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest }
-          - { target: x86_64-unknown-linux-musl, os: ubuntu-latest }
-          # - { target: x86_64-unknown-netbsd, os: ubuntu-latest }
+          # Native builds.
+          - { platform: linux-arm, cross: false, audio: true, os: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu }
+          - { platform: linux-x64, cross: false, audio: true, os: ubuntu-latest, target: x86_64-unknown-linux-gnu }
+          - { platform: macos-arm, cross: false, audio: true, os: macos-26, target: aarch64-apple-darwin }
+          - { platform: macos-x64, cross: false, audio: true, os: macos-26-intel, target: x86_64-apple-darwin }
+          - { platform: wasm32, cross: false, disable_tls: true, os: ubuntu-latest, target: wasm32-unknown-unknown }
+          - { platform: wasm32-wasip2, cross: false, disable_tls: true, nightly: true, os: ubuntu-latest, target: wasm32-wasip2 }
+          - { platform: wasm64, cross: false, build_std: true, disable_tls: true, os: ubuntu-latest, target: wasm64-unknown-unknown, rustflags: '-Zcrate-attr=feature(simd_wasm64) -Zcrate-attr=allow(unused_features) --cfg getrandom_backend="unsupported"' }
+          - { platform: windows-arm, cross: false, audio: true, os: windows-11-arm, target: aarch64-pc-windows-msvc }
+          - { platform: windows-x64, cross: false, audio: true, os: windows-latest, target: x86_64-pc-windows-msvc }
+
+          # Cross builds.
+          - { platform: aarch64-android, cross: true, audio: true, os: ubuntu-latest, target: aarch64-linux-android }
+          - { platform: aarch64-linux-musl, cross: true, os: ubuntu-latest, target: aarch64-unknown-linux-musl }
+          - { platform: aarch64be-linux-gnu, cross: true, build_std: true, disable_tls: true, os: ubuntu-latest, target: aarch64_be-unknown-linux-gnu, rustflags: "--cfg rustix_use_libc" }
+          - { platform: arm-android, cross: true, audio: true, os: ubuntu-latest, target: arm-linux-androideabi }
+          - { platform: arm-linux-gnueabi, cross: true, os: ubuntu-latest, target: arm-unknown-linux-gnueabi }
+          - { platform: arm-linux-gnueabihf, cross: true, os: ubuntu-latest, target: arm-unknown-linux-gnueabihf }
+          - { platform: arm-linux-musleabi, cross: true, os: ubuntu-latest, target: arm-unknown-linux-musleabi }
+          - { platform: arm-linux-musleabihf, cross: true, os: ubuntu-latest, target: arm-unknown-linux-musleabihf }
+          - { platform: armv5te-linux-gnueabi, cross: true, os: ubuntu-latest, target: armv5te-unknown-linux-gnueabi }
+          - { platform: armv5te-linux-musleabi, cross: true, os: ubuntu-latest, target: armv5te-unknown-linux-musleabi }
+          - { platform: armv7-android, cross: true, audio: true, os: ubuntu-latest, target: armv7-linux-androideabi }
+          - { platform: armv7-linux-gnueabi, cross: true, os: ubuntu-latest, target: armv7-unknown-linux-gnueabi }
+          - { platform: armv7-linux-gnueabihf, cross: true, os: ubuntu-latest, target: armv7-unknown-linux-gnueabihf }
+          - { platform: armv7-linux-musleabi, cross: true, os: ubuntu-latest, target: armv7-unknown-linux-musleabi }
+          - { platform: armv7-linux-musleabihf, cross: true, os: ubuntu-latest, target: armv7-unknown-linux-musleabihf }
+          - { platform: i586-linux-gnu, cross: true, disable_tls: true, os: ubuntu-latest, target: i586-unknown-linux-gnu }
+          - { platform: i586-linux-musl, cross: true, disable_tls: true, os: ubuntu-latest, target: i586-unknown-linux-musl }
+          - { platform: i686-android, cross: true, audio: true, os: ubuntu-latest, target: i686-linux-android }
+          - { platform: i686-freebsd, cross: true, disable_tls: true, os: ubuntu-latest, target: i686-unknown-freebsd }
+          - { platform: i686-linux-gnu, cross: true, os: ubuntu-latest, target: i686-unknown-linux-gnu }
+          - { platform: i686-linux-musl, cross: true, os: ubuntu-latest, target: i686-unknown-linux-musl }
+          - { platform: i686-windows-gnu, cross: true, audio: true, os: ubuntu-latest, target: i686-pc-windows-gnu, rustflags: "-C link-arg=/opt/wine-stable/lib/wine/i386-windows/libws2_32.a" }
+          - { platform: loongarch64-linux-gnu, cross: true, disable_tls: true, os: ubuntu-latest, target: loongarch64-unknown-linux-gnu }
+          - { platform: loongarch64-linux-musl, cross: true, disable_tls: true, os: ubuntu-latest, target: loongarch64-unknown-linux-musl }
+          - { platform: mips-linux-gnu, cross: true, build_std: true, disable_tls: true, os: ubuntu-latest, target: mips-unknown-linux-gnu }
+          - { platform: mips-linux-musl, cross: true, build_std: true, disable_tls: true, os: ubuntu-latest, target: mips-unknown-linux-musl }
+          - { platform: mips64-linux-gnuabi64, cross: true, build_std: true, disable_tls: true, os: ubuntu-latest, target: mips64-unknown-linux-gnuabi64 }
+          - { platform: mips64-linux-muslabi64, cross: true, build_std: true, disable_tls: true, os: ubuntu-latest, target: mips64-unknown-linux-muslabi64 }
+          - { platform: mips64el-linux-gnuabi64, cross: true, build_std: true, disable_tls: true, os: ubuntu-latest, target: mips64el-unknown-linux-gnuabi64 }
+          - { platform: mips64el-linux-muslabi64, cross: true, build_std: true, disable_tls: true, os: ubuntu-latest, target: mips64el-unknown-linux-muslabi64 }
+          - { platform: mipsel-linux-gnu, cross: true, build_std: true, disable_tls: true, os: ubuntu-latest, target: mipsel-unknown-linux-gnu }
+          - { platform: mipsel-linux-musl, cross: true, build_std: true, disable_tls: true, os: ubuntu-latest, target: mipsel-unknown-linux-musl }
+          - { platform: powerpc-linux-gnu, cross: true, os: ubuntu-latest, target: powerpc-unknown-linux-gnu }
+          - { platform: powerpc64-linux-gnu, cross: true, os: ubuntu-latest, target: powerpc64-unknown-linux-gnu }
+          - { platform: powerpc64le-linux-gnu, cross: true, os: ubuntu-latest, target: powerpc64le-unknown-linux-gnu }
+          - { platform: linux-riscv64, cross: true, audio: true, os: ubuntu-latest, target: riscv64gc-unknown-linux-gnu }
+          - { platform: riscv64-linux-musl, cross: true, os: ubuntu-latest, target: riscv64gc-unknown-linux-musl }
+          - { platform: linux-s390x, cross: true, audio: true, os: ubuntu-latest, target: s390x-unknown-linux-gnu }
+          - { platform: sparc64-linux-gnu, cross: true, disable_tls: true, os: ubuntu-latest, target: sparc64-unknown-linux-gnu }
+          - { platform: sparcv9-solaris, cross: true, disable_tls: true, os: ubuntu-latest, target: sparcv9-sun-solaris, rustflags: "-C link-arg=/tmp/ristretto-solaris-compat.o" }
+          - { platform: thumbv7neon-android, cross: true, audio: true, os: ubuntu-latest, target: thumbv7neon-linux-androideabi }
+          - { platform: thumbv7neon-linux-gnueabihf, cross: true, os: ubuntu-latest, target: thumbv7neon-unknown-linux-gnueabihf }
+          - { platform: x86_64-android, cross: true, audio: true, os: ubuntu-latest, target: x86_64-linux-android }
+          - { platform: x86_64-dragonfly, cross: true, build_std: true, disable_tls: true, os: ubuntu-latest, target: x86_64-unknown-dragonfly }
+          - { platform: x86_64-freebsd, cross: true, disable_tls: true, os: ubuntu-latest, target: x86_64-unknown-freebsd }
+          - { platform: x86_64-illumos, cross: true, disable_tls: true, os: ubuntu-latest, target: x86_64-unknown-illumos }
+          - { platform: x86_64-linux-musl, cross: true, os: ubuntu-latest, target: x86_64-unknown-linux-musl }
+          - { platform: x86_64-netbsd, cross: true, disable_tls: true, os: ubuntu-latest, target: x86_64-unknown-netbsd }
+          - { platform: x86_64-solaris, cross: true, disable_tls: true, os: ubuntu-latest, target: x86_64-pc-solaris, rustflags: "-C link-arg=/tmp/ristretto-solaris-compat.o" }
+          - { platform: x86_64-windows-gnu, cross: true, audio: true, os: ubuntu-latest, target: x86_64-pc-windows-gnu }
+
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout source code
         uses: actions/checkout@v6
 
       - name: Install Rust
+        if: ${{ !matrix.cross && !matrix.build_std && !matrix.nightly }}
         run: rustup toolchain install --target ${{ matrix.target }} --no-self-update
 
-      - name: Install cross-compilation tools
-        if: ${{ startsWith(matrix.os, 'ubuntu') }}
-        uses: taiki-e/setup-cross-toolchain-action@v1
-        with:
-          target: ${{ matrix.target }}
+      - name: Install Rust
+        if: ${{ matrix.cross && !matrix.build_std && !matrix.nightly }}
+        run: rustup toolchain install --no-self-update
 
-      - uses: taiki-e/upload-rust-binary-action@v1
+      - name: Install nightly Rust
+        if: ${{ matrix.build_std }}
+        run: |
+          rustup toolchain install nightly --profile minimal --component rust-src --no-self-update
+          rustup override set nightly
+
+      - name: Install nightly Rust
+        if: ${{ !matrix.build_std && matrix.nightly }}
+        run: |
+          rustup toolchain install nightly --profile minimal --target ${{ matrix.target }} --no-self-update
+          rustup override set nightly
+
+      - name: Install cross
+        if: ${{ matrix.cross }}
+        uses: taiki-e/install-action@main
+        with:
+          tool: cross
+
+      - name: Install native Linux audio dependencies
+        if: ${{ !matrix.cross && matrix.audio && contains(matrix.target, '-linux-') }}
+        run: .github/scripts/setup-linux.sh
+
+      - name: Configure build-std
+        if: ${{ matrix.build_std }}
+        run: echo "CARGO_UNSTABLE_BUILD_STD=std,panic_abort" >> "$GITHUB_ENV"
+
+      - name: Build and upload release archive
+        if: ${{ matrix.platform != 'wasm64' }}
+        uses: taiki-e/upload-rust-binary-action@v1
         with:
           bin: java
-          # (optional) Comma-separated list of algorithms to be used for checksum.
-          # [default value: ]
-          # [possible values: sha256, sha512, sha1, or md5]
+          build-tool: ${{ matrix.cross && 'cross' || 'cargo' }}
           checksum: sha256
-          # (optional) On which platform to distribute the `.tar.gz` file.
-          # [default value: unix]
-          # [possible values: all, unix, windows, none]
+          dry-run: ${{ inputs.dry_run }}
+          dry-run-intended: ${{ inputs.dry_run }}
+          features: ${{ !matrix.audio && !matrix.disable_tls && 'tls-rustls-ring' || '' }}
+          locked: true
+          no-default-features: ${{ !matrix.audio }}
+          package: ristretto_java
           tar: all
-          # (optional) On which platform to distribute the `.zip` file.
-          # [default value: windows]
-          # [possible values: all, unix, windows, none]
-          zip: windows
-          # (optional) Target triple, default is host triple.
           target: ${{ matrix.target }}
+          zip: windows
         env:
-          # (required)
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUSTFLAGS: ${{ matrix.rustflags }}
+
+      # upload-rust-binary-action unconditionally runs `rustup target add` for
+      # cargo builds, but wasm64 has no prebuilt standard library to install.
+      - name: Build and upload release archive
+        if: ${{ matrix.platform == 'wasm64' }}
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUSTFLAGS: ${{ matrix.rustflags }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          cargo build \
+            --bin java \
+            --locked \
+            --no-default-features \
+            --package ristretto_java \
+            --release \
+            --target "${TARGET}"
+
+          archive="java-${TARGET}"
+          tar -C "target/${TARGET}/release" -czf "${archive}.tar.gz" java.wasm
+          sha256sum "${archive}.tar.gz" > "${archive}.sha256"
+
+          if [[ "${DRY_RUN}" != "true" ]]; then
+            case "${GITHUB_REF}" in
+              refs/tags/*) tag="${GITHUB_REF#refs/tags/}" ;;
+              *)
+                echo "Release ref must be a tag: ${GITHUB_REF}" >&2
+                exit 1
+                ;;
+            esac
+            gh release upload "${tag}" "${archive}.tar.gz" "${archive}.sha256" --clobber
+          fi

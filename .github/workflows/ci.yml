@@ -16,6 +16,13 @@ jobs:
     name: Checks
     uses: ./.github/workflows/checks.yml
 
+  release-builds:
+    name: Release builds
+    needs: [ checks ]
+    uses: ./.github/workflows/release-post-announce.yml
+    with:
+      dry_run: true
+
   build:
     name: ${{ matrix.platform }}
     needs: [ checks ]
@@ -188,7 +195,7 @@ jobs:
         env:
           CARGO_TERM_COLOR: always
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          RISTRETTO_COMPATIBILITY_THREADS: "4"
+          RISTRETTO_COMPATIBILITY_THREADS: ${{ matrix.platform == 'windows-arm' && '1' || '4' }}
           RUST_BACKTRACE: 1
           RUST_LOG: info
         run: |

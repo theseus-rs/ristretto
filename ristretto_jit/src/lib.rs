@@ -35,34 +35,130 @@
         reason = "unit tests use direct fixture indexing and assertions with Result-returning tests"
     )
 )]
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 mod compiler;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 mod control_flow_graph;
 mod error;
 mod function;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 mod instruction;
 mod jit_value;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 mod local_type;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 mod local_variables;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 mod operand_stack;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 mod runtime_helpers;
-#[cfg(all(test, not(target_family = "wasm")))]
+#[cfg(all(
+    test,
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 mod test;
 mod value;
-#[cfg(target_family = "wasm")]
+#[cfg(any(
+    target_family = "wasm",
+    target_endian = "big",
+    target_arch = "mips",
+    target_arch = "mips64",
+    target_os = "dragonfly",
+    target_os = "solaris"
+))]
 mod wasm_compiler;
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(any(
+        target_arch = "mips",
+        target_arch = "mips64",
+        target_os = "dragonfly",
+        target_os = "solaris"
+    ))
+))]
 pub use compiler::Compiler;
 pub use error::{Error, Result};
 pub use function::Function;
 pub(crate) use jit_value::JitValue;
 pub use value::Value;
-#[cfg(target_family = "wasm")]
+#[cfg(any(
+    target_family = "wasm",
+    target_endian = "big",
+    target_arch = "mips",
+    target_arch = "mips64",
+    target_os = "dragonfly",
+    target_os = "solaris"
+))]
 pub use wasm_compiler::Compiler;

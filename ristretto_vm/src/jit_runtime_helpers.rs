@@ -22,13 +22,14 @@ use crate::JavaError::{
 };
 use crate::instruction::convert_error_to_throwable;
 use crate::{Result, Thread, VM};
+use portable_atomic::AtomicI64;
 use ristretto_classfile::BaseType;
 use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_gc::sync::{Mutex, RwLock};
 use ristretto_gc::{GarbageCollector, Gc};
 use std::future::Future;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::runtime::Handle;
 
 /// Runtime context passed to JIT-compiled code as an opaque pointer.
@@ -1293,7 +1294,12 @@ fn thread_from_ctx(ctx: &RuntimeContext) -> &Thread {
 /// (the JIT is disabled with a warning otherwise). This avoids spawning side runtimes for
 /// arbitrary user `<clinit>` code, which was unsafe (could lose task-locals, reactor handles,
 /// etc.).
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(target_os = "dragonfly"),
+    not(any(target_arch = "mips", target_arch = "mips64"))
+))]
 fn run_async<F, T>(future: F) -> T
 where
     F: Future<Output = T> + Send,
@@ -1309,7 +1315,13 @@ where
     tokio::task::block_in_place(|| Handle::current().block_on(future))
 }
 
-#[cfg(target_family = "wasm")]
+#[cfg(any(
+    target_family = "wasm",
+    target_endian = "big",
+    target_os = "dragonfly",
+    target_arch = "mips",
+    target_arch = "mips64"
+))]
 fn run_async<F, T>(future: F) -> T
 where
     F: Future<Output = T>,

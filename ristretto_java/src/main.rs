@@ -28,7 +28,13 @@ use tracing::debug;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg(target_family = "wasm")]
+#[cfg(any(
+    target_family = "wasm",
+    target_endian = "big",
+    target_os = "dragonfly",
+    target_arch = "mips",
+    target_arch = "mips64"
+))]
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     startup_trace!("[cli] entry point");
@@ -42,7 +48,12 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(
+    not(target_family = "wasm"),
+    target_endian = "little",
+    not(target_os = "dragonfly"),
+    not(any(target_arch = "mips", target_arch = "mips64"))
+))]
 #[tokio::main]
 async fn main() -> Result<()> {
     startup_trace!("[cli] entry point");

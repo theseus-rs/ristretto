@@ -1,3 +1,74 @@
+[target.aarch64-linux-android]
+image = "ghcr.io/cross-rs/aarch64-linux-android:edge"
+
+[target.aarch64-linux-android.env]
+passthrough = [
+    "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=aarch64-linux-android29-clang",
+]
+
+[target.aarch64_be-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/aarch64_be-unknown-linux-gnu:edge"
+
+[target.arm-linux-androideabi]
+image = "ghcr.io/cross-rs/arm-linux-androideabi:edge"
+
+[target.arm-linux-androideabi.env]
+passthrough = [
+    "CARGO_TARGET_ARM_LINUX_ANDROIDEABI_LINKER=armv7a-linux-androideabi29-clang",
+]
+
+[target.armv7-linux-androideabi]
+image = "ghcr.io/cross-rs/armv7-linux-androideabi:edge"
+
+[target.armv7-linux-androideabi.env]
+passthrough = [
+    "CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER=armv7a-linux-androideabi29-clang",
+]
+
+[target.i686-linux-android]
+image = "ghcr.io/cross-rs/i686-linux-android:edge"
+
+[target.i686-linux-android.env]
+passthrough = [
+    "CARGO_TARGET_I686_LINUX_ANDROID_LINKER=i686-linux-android29-clang",
+]
+
+[target.i686-unknown-freebsd]
+image = "ghcr.io/cross-rs/i686-unknown-freebsd:edge"
+
+[target.i686-pc-windows-gnu]
+image = "ghcr.io/cross-rs/i686-pc-windows-gnu:edge"
+
+[target.loongarch64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/loongarch64-unknown-linux-gnu:edge"
+
+[target.loongarch64-unknown-linux-musl]
+image = "ghcr.io/cross-rs/loongarch64-unknown-linux-musl:edge"
+
+[target.mips-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/mips-unknown-linux-gnu:edge"
+
+[target.mips-unknown-linux-musl]
+image = "ghcr.io/cross-rs/mips-unknown-linux-musl:edge"
+
+[target.mips64-unknown-linux-gnuabi64]
+image = "ghcr.io/cross-rs/mips64-unknown-linux-gnuabi64:edge"
+
+[target.mips64-unknown-linux-muslabi64]
+image = "ghcr.io/cross-rs/mips64-unknown-linux-muslabi64:edge"
+
+[target.mips64el-unknown-linux-gnuabi64]
+image = "ghcr.io/cross-rs/mips64el-unknown-linux-gnuabi64:edge"
+
+[target.mips64el-unknown-linux-muslabi64]
+image = "ghcr.io/cross-rs/mips64el-unknown-linux-muslabi64:edge"
+
+[target.mipsel-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/mipsel-unknown-linux-gnu:edge"
+
+[target.mipsel-unknown-linux-musl]
+image = "ghcr.io/cross-rs/mipsel-unknown-linux-musl:edge"
+
 [target.riscv64gc-unknown-linux-gnu]
 image = "ghcr.io/cross-rs/riscv64gc-unknown-linux-gnu:edge"
 pre-build = [
@@ -12,6 +83,9 @@ passthrough = [
     "HOME=/tmp",
 ]
 
+[target.riscv64gc-unknown-linux-musl]
+image = "ghcr.io/cross-rs/riscv64gc-unknown-linux-musl:edge"
+
 [target.s390x-unknown-linux-gnu]
 image = "ghcr.io/cross-rs/s390x-unknown-linux-gnu:edge"
 pre-build = [
@@ -24,4 +98,53 @@ pre-build = [
 passthrough = [
     "PKG_CONFIG_ALLOW_CROSS=1",
     "HOME=/tmp",
+]
+
+[target.sparc64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/sparc64-unknown-linux-gnu:edge"
+
+[target.sparcv9-sun-solaris]
+image = "ghcr.io/cross-rs/sparcv9-sun-solaris:edge"
+pre-build = ".github/scripts/setup-solaris-cross.sh"
+
+[target.thumbv7neon-linux-androideabi]
+image = "ghcr.io/cross-rs/thumbv7neon-linux-androideabi:edge"
+
+[target.thumbv7neon-linux-androideabi.env]
+passthrough = [
+    "CARGO_TARGET_THUMBV7NEON_LINUX_ANDROIDEABI_LINKER=armv7a-linux-androideabi29-clang",
+]
+
+[target.x86_64-unknown-dragonfly]
+image = "ghcr.io/cross-rs/x86_64-unknown-dragonfly:edge"
+
+[target.x86_64-linux-android]
+image = "ghcr.io/cross-rs/x86_64-linux-android:edge"
+
+[target.x86_64-linux-android.env]
+passthrough = [
+    "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=x86_64-linux-android29-clang",
+]
+
+[target.x86_64-unknown-freebsd]
+image = "ghcr.io/cross-rs/x86_64-unknown-freebsd:edge"
+
+[target.x86_64-unknown-illumos]
+image = "ghcr.io/cross-rs/x86_64-unknown-illumos:edge"
+
+[target.x86_64-pc-solaris]
+image = "ghcr.io/cross-rs/x86_64-pc-solaris:edge"
+pre-build = ".github/scripts/setup-solaris-cross.sh"
+
+[target.x86_64-pc-windows-gnu]
+image = "ghcr.io/cross-rs/x86_64-pc-windows-gnu:edge"
+
+[target.x86_64-unknown-netbsd]
+image = "ghcr.io/cross-rs/x86_64-unknown-netbsd:edge"
+pre-build = [
+    "apt-get update && apt-get install --assume-yes xz-utils",
+    "curl --fail --location --retry 3 https://cdn.NetBSD.org/pub/NetBSD/NetBSD-9.3/amd64/binary/sets/base.tar.xz --output /tmp/netbsd-base.tar.xz",
+    "echo '7e7dbf02c7b9d09a37a6ce49ad8ce1a0bfcb9a4a3a104866a724d6f0c449949ad95bbf741b7580d252701820fa70eaff49fb6af0db234eae0bf0d4c6a298578a  /tmp/netbsd-base.tar.xz' | sha512sum --check",
+    "tar --extract --xz --file /tmp/netbsd-base.tar.xz --directory /tmp ./lib/libkvm.so.6.0",
+    "cp /tmp/lib/libkvm.so.6.0 $CROSS_SYSROOT/lib/ && ln --symbolic --force libkvm.so.6.0 $CROSS_SYSROOT/lib/libkvm.so",
 ]

@@ -56,7 +56,7 @@ pub(crate) fn file_descriptor_from_java_object<V: VM>(
 
 /// Per-VM counter for generating synthetic file descriptors on WebAssembly.
 #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
-struct WasmFdCounter(std::sync::atomic::AtomicI64);
+struct WasmFdCounter(portable_atomic::AtomicI64);
 
 /// Returns a raw file descriptor for the current platform. On WebAssembly, it returns a negative
 /// counter as WebAssembly does not support file descriptors in the same way as traditional
@@ -68,7 +68,7 @@ pub(crate) fn raw_file_descriptor(
 ) -> Result<i64> {
     use std::sync::atomic::Ordering;
     let counter =
-        resource_manager.get_or_init(|| WasmFdCounter(std::sync::atomic::AtomicI64::new(-1000)))?;
+        resource_manager.get_or_init(|| WasmFdCounter(portable_atomic::AtomicI64::new(-1000)))?;
     Ok(counter.0.fetch_sub(1, Ordering::Relaxed))
 }
 
