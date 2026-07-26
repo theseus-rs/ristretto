@@ -27,26 +27,31 @@ async fn test_runtime(version: &str, class_name: &str) -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore = "requires network access"]
 async fn test_get_runtime_v8() -> Result<()> {
     test_runtime(JAVA_8_VERSION, "java.lang.Object").await
 }
 
 #[tokio::test]
+#[ignore = "requires network access"]
 async fn test_get_runtime_v11() -> Result<()> {
     test_runtime(JAVA_11_VERSION, "java.lang.Object").await
 }
 
 #[tokio::test]
+#[ignore = "requires network access"]
 async fn test_get_runtime_v17() -> Result<()> {
     test_runtime(JAVA_17_VERSION, "java.lang.Object").await
 }
 
 #[tokio::test]
+#[ignore = "requires network access"]
 async fn test_get_runtime_v21() -> Result<()> {
     test_runtime(JAVA_21_VERSION, "java.lang.Object").await
 }
 
 #[tokio::test]
+#[ignore = "requires network access"]
 async fn test_get_runtime_v25() -> Result<()> {
     test_runtime(JAVA_25_VERSION, "java.lang.Object").await
 }

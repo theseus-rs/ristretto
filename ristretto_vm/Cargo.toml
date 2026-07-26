@@ -75,6 +75,7 @@ walkdir = { workspace = true }
 
 [target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
 rayon = { workspace = true }
+ristretto_resolver = { path = "../ristretto_resolver", version = "0.32.0" }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]

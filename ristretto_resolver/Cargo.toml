@@ -1,0 +1,54 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "Asynchronous JVM dependency resolution and artifact retrieval"
+edition.workspace = true
+keywords = ["java", "jvm", "dependency", "artifact", "repository"]
+license.workspace = true
+name = "ristretto_resolver"
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bytes = { workspace = true }
+fancy-regex = { workspace = true }
+futures-util = { workspace = true }
+md-5 = { workspace = true }
+quick-xml = { workspace = true, features = ["serialize"] }
+ristretto_pom = { path = "../ristretto_pom", version = "0.32.0" }
+serde = { workspace = true, features = ["derive"] }
+sha1 = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+url = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+glob = { workspace = true }
+reqwest = { workspace = true, default-features = false, features = ["http2", "stream"] }
+rustls = { workspace = true, features = ["ring"], optional = true }
+tokio = { workspace = true, features = ["fs", "io-util", "time"] }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+tempfile = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[features]
+default = ["tls-rustls-ring"]
+tls-native-tls = [
+    "reqwest/native-tls",
+    "reqwest/native-tls-vendored",
+]
+tls-rustls-aws-lc-rs = [
+    "reqwest/rustls",
+]
+tls-rustls-ring = [
+    "dep:rustls",
+    "reqwest/rustls-no-provider",
+]

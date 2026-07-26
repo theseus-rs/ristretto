@@ -46,6 +46,7 @@ visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_java/) si
 - Parallel Just-In-Time (JIT) compilation for x86-64, aarch64, s390x, and riscv64 architectures.
 - WebAssembly (WASM) compilation support for single-threaded edge and browser deployments.
 - Native Maven POM (Project Object Model) parsing.
+- Asynchronous JVM dependency resolution with graph introspection and extensible artifact storage.
 
 ### Limitations
 

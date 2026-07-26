@@ -6,17 +6,25 @@ import java.sql.Statement;
 public class JDBC {
     public static void main(String ... args) throws Exception {
         Class.forName("org.h2.Driver");
-        String url = "jdbc:h2:~/test";
-        String user = "sa";
-        String password = "";
+        String url = "jdbc:h2:mem:ristretto;DB_CLOSE_DELAY=-1";
 
-        try (Connection connection = DriverManager.getConnection(url, user, password);
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("SELECT H2VERSION()")) {
+        try (Connection connection = DriverManager.getConnection(url, "sa", "");
+             Statement statement = connection.createStatement()) {
+            statement.executeUpdate(
+                "CREATE TABLE people (id INTEGER PRIMARY KEY, name VARCHAR(100) NOT NULL)"
+            );
+            statement.executeUpdate(
+                "INSERT INTO people (id, name) VALUES " +
+                "(1, 'Alan Turing'), (2, 'John von Neumann')"
+            );
 
-            if (resultSet.next()) {
-                String version = resultSet.getString(1);
-                System.out.println("H2 Database Version: " + version);
+            try (ResultSet resultSet = statement.executeQuery(
+                    "SELECT id, name FROM people ORDER BY id")) {
+                while (resultSet.next()) {
+                    int id = resultSet.getInt("id");
+                    String name = resultSet.getString("name");
+                    System.out.println(id + "|" + name);
+                }
             }
         }
     }

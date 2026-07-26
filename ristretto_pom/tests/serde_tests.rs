@@ -668,6 +668,13 @@ mod scm_tests {
         let result = round_trip_xml(&im);
         assert_eq!(im.system, result.system);
         assert_eq!(im.url, result.url);
+
+        let without_system: IssueManagement = quick_xml::de::from_str(
+            "<issueManagement><url>https://example.test/issues</url></issueManagement>",
+        )
+        .expect("issue management without an optional system");
+        assert!(without_system.system.is_empty());
+        assert_eq!(without_system.url, "https://example.test/issues");
     }
 
     #[test]
@@ -686,6 +693,12 @@ mod scm_tests {
         assert_eq!(ci.system, result.system);
         assert_eq!(ci.url, result.url);
         assert!(result.notifiers.is_some());
+
+        let without_url: CiManagement =
+            quick_xml::de::from_str("<ciManagement><system>Jenkins</system></ciManagement>")
+                .expect("CI management without an optional URL");
+        assert_eq!(without_url.system, "Jenkins");
+        assert!(without_url.url.is_empty());
     }
 
     #[test]

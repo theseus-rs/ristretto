@@ -40,7 +40,7 @@ mod tests {
     #[tokio::test]
     async fn test_interrupt() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = interrupt(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = interrupt(thread, Parameters::new(vec![Value::Int(-1)])).await;
         assert!(result.is_err());
     }
 

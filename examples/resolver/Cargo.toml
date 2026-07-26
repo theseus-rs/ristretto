@@ -1,0 +1,19 @@
+[package]
+edition.workspace = true
+name = "resolver"
+publish = false
+license.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ristretto_resolver = { path = "../../ristretto_resolver" }
+url = { workspace = true }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+tokio = { workspace = true }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread"] }

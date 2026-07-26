@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 #![allow(clippy::result_large_err)]
 
-use ristretto_vm::{ClassPath, ConfigurationBuilder, Result, VM};
+use ristretto_vm::{ClassPath, Configuration, ConfigurationBuilder, Result, VM, Value};
 use std::path::PathBuf;
 
 #[cfg(target_family = "wasm")]
@@ -18,24 +18,43 @@ async fn main() -> Result<()> {
 
 /// Creates a simple embedded JVM that executes a Java class named `HelloWorld`.
 async fn common_main() -> Result<()> {
+    let configuration = configuration_builder().build()?;
+    let _result = invoke_main(configuration).await?;
+    Ok(())
+}
+
+fn configuration_builder() -> ConfigurationBuilder {
     let cargo_manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let class_path = ClassPath::from(&[cargo_manifest_dir]);
-    let configuration = ConfigurationBuilder::new()
+    ConfigurationBuilder::new()
         .class_path(class_path)
         .main_class("HelloWorld")
-        .build()?;
+}
+
+async fn invoke_main(configuration: Configuration) -> Result<Option<Value>> {
     let vm = VM::new(configuration).await?;
     let parameters = Vec::<&str>::new();
-    let _result = vm.invoke_main(&parameters).await?;
-    Ok(())
+    vm.invoke_main(&parameters).await
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::io::Cursor;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
 
-    #[test]
-    fn test_main() -> Result<()> {
-        main()
+    #[tokio::test(flavor = "current_thread")]
+    async fn test_invoke_main() -> Result<()> {
+        let stdout = Arc::new(Mutex::new(Cursor::new(Vec::<u8>::new())));
+        let configuration = configuration_builder().stdout(stdout.clone()).build()?;
+
+        let result = invoke_main(configuration).await?;
+
+        assert!(result.is_none());
+        let stdout = stdout.lock().await;
+        let output = String::from_utf8_lossy(stdout.get_ref());
+        assert_eq!("Hello, World!", output.trim());
+        Ok(())
     }
 }
