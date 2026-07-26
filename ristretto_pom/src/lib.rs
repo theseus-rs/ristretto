@@ -31,6 +31,7 @@
 )]
 
 pub mod build;
+pub mod configuration;
 pub mod dependency;
 pub mod developer;
 pub mod distribution;
@@ -50,8 +51,9 @@ pub use error::{Error, Result};
 pub use build::{
     Build, BuildBuilder, BuildPlugins, Excludes, Extension, Extensions, Filters, Goals, Includes,
     Plugin, PluginBuilder, PluginExecution, PluginExecutionBuilder, PluginExecutions,
-    PluginManagement, Resource, ResourceBuilder, Resources, TestResources,
+    PluginManagement, Resource, ResourceBuilder, Resources, Source, Sources, TestResources,
 };
+pub use configuration::{Configuration, ConfigurationElement, ConfigurationValue};
 pub use dependency::{
     Dependencies, Dependency, DependencyBuilder, DependencyManagement, DependencyManagementBuilder,
     Exclusion, Exclusions,
@@ -70,7 +72,7 @@ pub use organization::{
 };
 pub use profile::{
     Activation, ActivationBuilder, ActivationFile, ActivationOs, ActivationOsBuilder,
-    ActivationProperty, Modules, Profile, ProfileBuilder, Profiles,
+    ActivationProperty, Modules, Profile, ProfileBuilder, Profiles, Subprojects,
 };
 pub use project::{Project, ProjectBuilder};
 pub use reporting::{

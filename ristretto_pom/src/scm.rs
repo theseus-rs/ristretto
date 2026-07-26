@@ -5,9 +5,30 @@ use std::collections::BTreeMap;
 
 /// Represents the SCM information.
 #[non_exhaustive]
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Scm {
+    /// Whether inherited SCM connection URLs append the child's path.
+    #[serde(
+        rename = "@child.scm.connection.inherit.append.path",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub child_scm_connection_inherit_append_path: Option<String>,
+    /// Whether inherited developer connection URLs append the child's path.
+    #[serde(
+        rename = "@child.scm.developerConnection.inherit.append.path",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub child_scm_developer_connection_inherit_append_path: Option<String>,
+    /// Whether inherited browsable SCM URLs append the child's path.
+    #[serde(
+        rename = "@child.scm.url.inherit.append.path",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub child_scm_url_inherit_append_path: Option<String>,
     /// The connection URL.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub connection: Option<String>,
@@ -15,11 +36,33 @@ pub struct Scm {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub developer_connection: Option<String>,
     /// The tag name.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "default_scm_tag", skip_serializing_if = "Option::is_none")]
     pub tag: Option<String>,
     /// The URL.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
+}
+
+impl Default for Scm {
+    fn default() -> Self {
+        Self {
+            child_scm_connection_inherit_append_path: None,
+            child_scm_developer_connection_inherit_append_path: None,
+            child_scm_url_inherit_append_path: None,
+            connection: None,
+            developer_connection: None,
+            tag: default_scm_tag(),
+            url: None,
+        }
+    }
+}
+
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "serde default function must return the optional field type"
+)]
+fn default_scm_tag() -> Option<String> {
+    Some("HEAD".to_string())
 }
 
 impl Scm {
@@ -33,6 +76,9 @@ impl Scm {
     #[must_use]
     pub fn github(owner: &str, repo: &str) -> Self {
         Self {
+            child_scm_connection_inherit_append_path: None,
+            child_scm_developer_connection_inherit_append_path: None,
+            child_scm_url_inherit_append_path: None,
             connection: Some(format!("scm:git:git://github.com/{owner}/{repo}.git")),
             developer_connection: Some(format!("scm:git:ssh://github.com/{owner}/{repo}.git")),
             tag: Some("HEAD".to_string()),
@@ -52,6 +98,27 @@ impl ScmBuilder {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Controls path appending for inherited SCM connection URLs.
+    #[must_use]
+    pub fn child_connection_append_path(mut self, append: bool) -> Self {
+        self.scm.child_scm_connection_inherit_append_path = Some(append.to_string());
+        self
+    }
+
+    /// Controls path appending for inherited developer connection URLs.
+    #[must_use]
+    pub fn child_developer_connection_append_path(mut self, append: bool) -> Self {
+        self.scm.child_scm_developer_connection_inherit_append_path = Some(append.to_string());
+        self
+    }
+
+    /// Controls path appending for inherited browsable SCM URLs.
+    #[must_use]
+    pub fn child_url_append_path(mut self, append: bool) -> Self {
+        self.scm.child_scm_url_inherit_append_path = Some(append.to_string());
+        self
     }
 
     /// Sets the connection URL.
@@ -187,7 +254,7 @@ pub struct Notifiers {
 
 /// Represents a notifier.
 #[non_exhaustive]
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 #[expect(
     clippy::struct_excessive_bools,
@@ -195,19 +262,19 @@ pub struct Notifiers {
 )]
 pub struct Notifier {
     /// The type of notifier.
-    #[serde(rename = "type")]
+    #[serde(rename = "type", default = "default_notifier_type")]
     pub r#type: String,
     /// Whether to send on error.
-    #[serde(default)]
+    #[serde(default = "notification_enabled_by_default")]
     pub send_on_error: bool,
     /// Whether to send on failure.
-    #[serde(default)]
+    #[serde(default = "notification_enabled_by_default")]
     pub send_on_failure: bool,
     /// Whether to send on success.
-    #[serde(default)]
+    #[serde(default = "notification_enabled_by_default")]
     pub send_on_success: bool,
     /// Whether to send on warning.
-    #[serde(default)]
+    #[serde(default = "notification_enabled_by_default")]
     pub send_on_warning: bool,
     /// The address.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -225,8 +292,8 @@ impl Notifier {
             r#type: "mail".to_string(),
             send_on_error: true,
             send_on_failure: true,
-            send_on_success: false,
-            send_on_warning: false,
+            send_on_success: true,
+            send_on_warning: true,
             address: Some(address.into()),
             configuration: BTreeMap::new(),
         }
@@ -237,6 +304,28 @@ impl Notifier {
     pub fn builder(r#type: impl Into<String>) -> NotifierBuilder {
         NotifierBuilder::new(r#type)
     }
+}
+
+impl Default for Notifier {
+    fn default() -> Self {
+        Self {
+            r#type: "mail".to_string(),
+            send_on_error: true,
+            send_on_failure: true,
+            send_on_success: true,
+            send_on_warning: true,
+            address: None,
+            configuration: BTreeMap::new(),
+        }
+    }
+}
+
+const fn notification_enabled_by_default() -> bool {
+    true
+}
+
+fn default_notifier_type() -> String {
+    "mail".to_string()
 }
 
 /// Builder for `Notifier`.
@@ -252,10 +341,10 @@ impl NotifierBuilder {
         Self {
             notifier: Notifier {
                 r#type: r#type.into(),
-                send_on_error: false,
-                send_on_failure: false,
-                send_on_success: false,
-                send_on_warning: false,
+                send_on_error: true,
+                send_on_failure: true,
+                send_on_success: true,
+                send_on_warning: true,
                 address: None,
                 configuration: BTreeMap::new(),
             },

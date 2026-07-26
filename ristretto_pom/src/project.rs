@@ -6,14 +6,14 @@ use crate::developer::{Contributors, Developers};
 use crate::distribution::DistributionManagement;
 use crate::license::Licenses;
 use crate::organization::{MailingLists, Organization, Parent, Prerequisites};
-use crate::profile::{Modules, Profiles};
+use crate::profile::{Modules, Profiles, Subprojects};
 use crate::reporting::Reporting;
 use crate::repository::Repositories;
 use crate::scm::{CiManagement, IssueManagement, Scm};
 use crate::version::PomVersion;
 use crate::{DependencyScope, Error, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::path::Path;
@@ -23,6 +23,26 @@ use std::path::Path;
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", rename = "project")]
 pub struct Project {
+    /// Whether child project URLs append the child's path while inheriting.
+    #[serde(
+        rename = "@child.project.url.inherit.append.path",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub child_project_url_inherit_append_path: Option<String>,
+
+    /// Whether this Maven 4 project is the root of the source tree.
+    #[serde(rename = "@root", default, skip_serializing_if = "std::ops::Not::not")]
+    pub root: bool,
+
+    /// Whether Maven should preserve this project's model version.
+    #[serde(
+        rename = "@preserve.model.version",
+        default,
+        skip_serializing_if = "std::ops::Not::not"
+    )]
+    pub preserve_model_version: bool,
+
     /// The version of the POM model.
     #[serde(rename = "modelVersion")]
     pub model_version: PomVersion,
@@ -90,6 +110,10 @@ pub struct Project {
     /// The modules (sub-projects) of this project.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modules: Option<Modules>,
+
+    /// The Maven 4 subprojects of this project.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subprojects: Option<Subprojects>,
 
     /// The Source, Control, Management (SCM) information for this project.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -216,7 +240,18 @@ impl Project {
         }
 
         // groupId is required unless inherited from parent
+        if self.artifact_id.trim().is_empty() {
+            return Err(Error::MissingField("artifactId".to_string()));
+        }
+
         if self.group_id.is_none() && self.parent.is_none() {
+            return Err(Error::MissingField("groupId".to_string()));
+        }
+        if self
+            .group_id
+            .as_ref()
+            .is_some_and(|value| value.trim().is_empty())
+        {
             return Err(Error::MissingField("groupId".to_string()));
         }
 
@@ -224,19 +259,68 @@ impl Project {
         if self.version.is_none() && self.parent.is_none() {
             return Err(Error::MissingField("version".to_string()));
         }
+        if self
+            .version
+            .as_ref()
+            .is_some_and(|value| value.trim().is_empty())
+        {
+            return Err(Error::MissingField("version".to_string()));
+        }
 
         // Validate parent has all required fields (if present)
         if let Some(ref parent) = self.parent {
-            if parent.group_id.is_empty() {
+            if parent.group_id.trim().is_empty() {
                 return Err(Error::MissingField("parent.groupId".to_string()));
             }
-            if parent.artifact_id.is_empty() {
+            if parent.artifact_id.trim().is_empty() {
                 return Err(Error::MissingField("parent.artifactId".to_string()));
             }
-            if parent.version.is_empty() {
+            if parent.version.trim().is_empty() {
                 return Err(Error::MissingField("parent.version".to_string()));
             }
         }
+
+        validate_dependency_syntax(&self.dependencies, "dependencies")?;
+        if let Some(management) = &self.dependency_management {
+            validate_dependency_syntax(
+                &management.dependencies,
+                "dependencyManagement.dependencies",
+            )?;
+        }
+        if let Some(profiles) = &self.profiles {
+            let mut profile_ids = BTreeSet::new();
+            for profile in &profiles.profiles {
+                if profile.id.trim().is_empty() {
+                    return Err(Error::MissingField("profile.id".to_string()));
+                }
+                if !profile_ids.insert(&profile.id) {
+                    return Err(Error::ValidationError(format!(
+                        "Duplicate profile id '{}'",
+                        profile.id
+                    )));
+                }
+                if let Some(dependencies) = &profile.dependencies {
+                    validate_dependency_syntax(dependencies, "profile.dependencies")?;
+                }
+                if let Some(management) = &profile.dependency_management {
+                    validate_dependency_syntax(
+                        &management.dependencies,
+                        "profile.dependencyManagement.dependencies",
+                    )?;
+                }
+                validate_repositories(profile.repositories.as_ref(), "profile.repositories")?;
+                validate_repositories(
+                    profile.plugin_repositories.as_ref(),
+                    "profile.pluginRepositories",
+                )?;
+                validate_build(profile.build.as_ref())?;
+                validate_reporting(profile.reporting.as_ref())?;
+            }
+        }
+        validate_repositories(self.repositories.as_ref(), "repositories")?;
+        validate_repositories(self.plugin_repositories.as_ref(), "pluginRepositories")?;
+        validate_build(self.build.as_ref())?;
+        validate_reporting(self.reporting.as_ref())?;
 
         Ok(())
     }
@@ -251,14 +335,29 @@ impl Project {
     ///
     /// Returns an error if semantic validation fails.
     pub fn validate_semantics(&self) -> Result<()> {
-        // Validate dependencies
-        for dependency in &self.dependencies.dependencies {
-            if dependency.scope == Some(DependencyScope::System) && dependency.system_path.is_none()
-            {
-                return Err(Error::ValidationError(format!(
-                    "Dependency {}:{} has system scope but no systemPath",
-                    dependency.group_id, dependency.artifact_id
-                )));
+        validate_dependencies(&self.dependencies, false)?;
+        if let Some(management) = &self.dependency_management {
+            validate_dependencies(&management.dependencies, true)?;
+        }
+        if let Some(profiles) = &self.profiles {
+            for profile in &profiles.profiles {
+                if profile.activation.as_ref().is_some_and(|activation| {
+                    activation
+                        .file
+                        .as_ref()
+                        .is_some_and(|file| file.exists.is_some() && file.missing.is_some())
+                }) {
+                    return Err(Error::ValidationError(format!(
+                        "Profile '{}' activation.file cannot define both exists and missing",
+                        profile.id
+                    )));
+                }
+                if let Some(dependencies) = &profile.dependencies {
+                    validate_dependencies(dependencies, false)?;
+                }
+                if let Some(management) = &profile.dependency_management {
+                    validate_dependencies(&management.dependencies, true)?;
+                }
             }
         }
 
@@ -273,10 +372,38 @@ impl Project {
     /// # Errors
     ///
     /// Returns an error if effective validation fails.
-    pub fn validate_effective(&self, _parent: Option<&Project>) -> Result<()> {
-        // Future: validate effective POM after parent inheritance
-        // For now, just run standard validation
-        self.validate()
+    pub fn validate_effective(&self, parent: Option<&Project>) -> Result<()> {
+        self.validate()?;
+        match (&self.parent, parent) {
+            (None, None) => Ok(()),
+            (Some(declared), Some(parent)) => {
+                parent.validate()?;
+                let parent_group = effective_group_id(parent).unwrap_or_default();
+                let parent_version = effective_version(parent).unwrap_or_default();
+                if declared.group_id != parent_group
+                    || declared.artifact_id != parent.artifact_id
+                    || !parent_version_matches(&declared.version, parent_version)
+                {
+                    return Err(Error::ValidationError(format!(
+                        "Resolved parent {}:{}:{} does not match declared parent {}:{}:{}",
+                        parent_group,
+                        parent.artifact_id,
+                        parent_version,
+                        declared.group_id,
+                        declared.artifact_id,
+                        declared.version
+                    )));
+                }
+                Ok(())
+            }
+            (Some(_), None) => Err(Error::ValidationError(
+                "Effective validation requires the declared parent project".to_string(),
+            )),
+            (None, Some(_)) => Err(Error::ValidationError(
+                "A resolved parent was supplied for a project without a parent declaration"
+                    .to_string(),
+            )),
+        }
     }
 
     /// Creates a new `Project` with the minimum required fields.
@@ -287,6 +414,9 @@ impl Project {
         version: impl Into<String>,
     ) -> Self {
         Self {
+            child_project_url_inherit_append_path: None,
+            root: false,
+            preserve_model_version: false,
             model_version: PomVersion::DEFAULT_MODEL,
             parent: None,
             group_id: Some(group_id.into()),
@@ -304,6 +434,7 @@ impl Project {
             mailing_lists: None,
             prerequisites: None,
             modules: None,
+            subprojects: None,
             scm: None,
             issue_management: None,
             ci_management: None,
@@ -326,6 +457,187 @@ impl Project {
     }
 }
 
+fn parent_version_matches(declared: &str, resolved: &str) -> bool {
+    declared == resolved
+        || (declared.starts_with(['[', '('])
+            && declared.ends_with([']', ')'])
+            && !resolved.trim().is_empty())
+}
+
+fn effective_group_id(project: &Project) -> Option<&str> {
+    project.group_id.as_deref().or_else(|| {
+        project
+            .parent
+            .as_ref()
+            .map(|parent| parent.group_id.as_str())
+    })
+}
+
+fn effective_version(project: &Project) -> Option<&str> {
+    project.version.as_deref().or_else(|| {
+        project
+            .parent
+            .as_ref()
+            .map(|parent| parent.version.as_str())
+    })
+}
+
+fn validate_dependency_syntax(dependencies: &Dependencies, location: &str) -> Result<()> {
+    for dependency in &dependencies.dependencies {
+        if dependency.group_id.trim().is_empty() {
+            return Err(Error::MissingField(format!(
+                "{location}.dependency.groupId"
+            )));
+        }
+        if dependency.artifact_id.trim().is_empty() {
+            return Err(Error::MissingField(format!(
+                "{location}.dependency.artifactId"
+            )));
+        }
+        if dependency
+            .version
+            .as_ref()
+            .is_some_and(|value| value.trim().is_empty())
+        {
+            return Err(Error::MissingField(format!(
+                "{location}.dependency.version"
+            )));
+        }
+        if let Some(exclusions) = &dependency.exclusions {
+            for exclusion in &exclusions.exclusions {
+                if exclusion.group_id.trim().is_empty() {
+                    return Err(Error::MissingField(format!(
+                        "{location}.dependency.exclusions.exclusion.groupId"
+                    )));
+                }
+                if exclusion.artifact_id.trim().is_empty() {
+                    return Err(Error::MissingField(format!(
+                        "{location}.dependency.exclusions.exclusion.artifactId"
+                    )));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_repositories(repositories: Option<&Repositories>, location: &str) -> Result<()> {
+    let Some(repositories) = repositories else {
+        return Ok(());
+    };
+    let mut ids = BTreeSet::new();
+    for repository in &repositories.repositories {
+        if repository.id.trim().is_empty() {
+            return Err(Error::MissingField(format!("{location}.repository.id")));
+        }
+        if repository.url.trim().is_empty() {
+            return Err(Error::MissingField(format!("{location}.repository.url")));
+        }
+        if !ids.insert(&repository.id) {
+            return Err(Error::ValidationError(format!(
+                "Duplicate repository id '{}' in {location}",
+                repository.id
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn validate_build(build: Option<&Build>) -> Result<()> {
+    let Some(build) = build else {
+        return Ok(());
+    };
+    if let Some(extensions) = &build.extensions {
+        for extension in &extensions.extensions {
+            if extension.group_id.trim().is_empty()
+                || extension.artifact_id.trim().is_empty()
+                || extension.version.trim().is_empty()
+            {
+                return Err(Error::ValidationError(
+                    "Build extensions require non-empty groupId, artifactId, and version"
+                        .to_string(),
+                ));
+            }
+        }
+    }
+    let plugins = build
+        .plugins
+        .iter()
+        .flat_map(|plugins| &plugins.plugins)
+        .chain(
+            build
+                .plugin_management
+                .iter()
+                .flat_map(|management| &management.plugins),
+        );
+    for plugin in plugins {
+        if plugin.artifact_id.trim().is_empty() {
+            return Err(Error::MissingField(
+                "build.plugins.plugin.artifactId".to_string(),
+            ));
+        }
+        if let Some(dependencies) = &plugin.dependencies {
+            validate_dependency_syntax(dependencies, "build.plugins.plugin.dependencies")?;
+        }
+    }
+    Ok(())
+}
+
+fn validate_reporting(reporting: Option<&Reporting>) -> Result<()> {
+    let Some(reporting) = reporting else {
+        return Ok(());
+    };
+    if let Some(plugins) = &reporting.plugins {
+        for plugin in &plugins.plugins {
+            if plugin.artifact_id.trim().is_empty() {
+                return Err(Error::MissingField(
+                    "reporting.plugins.plugin.artifactId".to_string(),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_dependencies(dependencies: &Dependencies, managed: bool) -> Result<()> {
+    for dependency in &dependencies.dependencies {
+        let coordinate = format!("{}:{}", dependency.group_id, dependency.artifact_id);
+        if dependency.scope == Some(DependencyScope::System)
+            && dependency
+                .system_path
+                .as_ref()
+                .is_none_or(|path| path.trim().is_empty())
+        {
+            return Err(Error::ValidationError(format!(
+                "Dependency {coordinate} has system scope but no systemPath"
+            )));
+        }
+        if dependency.scope != Some(DependencyScope::System) && dependency.system_path.is_some() {
+            return Err(Error::ValidationError(format!(
+                "Dependency {coordinate} has systemPath without system scope"
+            )));
+        }
+        if dependency.scope == Some(DependencyScope::Import) {
+            if !managed {
+                return Err(Error::ValidationError(format!(
+                    "Dependency {coordinate} uses import scope outside dependencyManagement"
+                )));
+            }
+            if dependency.r#type.as_deref() != Some("pom") {
+                return Err(Error::ValidationError(format!(
+                    "Imported dependency {coordinate} must have type pom"
+                )));
+            }
+            if dependency.version.is_none() {
+                return Err(Error::ValidationError(format!(
+                    "Imported dependency {coordinate} must have a version"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Builder for constructing a `Project`.
 #[derive(Debug, Clone)]
 pub struct ProjectBuilder {
@@ -338,6 +650,9 @@ impl ProjectBuilder {
     pub fn new(artifact_id: impl Into<String>) -> Self {
         Self {
             project: Project {
+                child_project_url_inherit_append_path: None,
+                root: false,
+                preserve_model_version: false,
                 model_version: PomVersion::DEFAULT_MODEL,
                 parent: None,
                 group_id: None,
@@ -355,6 +670,7 @@ impl ProjectBuilder {
                 mailing_lists: None,
                 prerequisites: None,
                 modules: None,
+                subprojects: None,
                 scm: None,
                 issue_management: None,
                 ci_management: None,
@@ -382,6 +698,20 @@ impl ProjectBuilder {
     #[must_use]
     pub fn version(mut self, version: impl Into<String>) -> Self {
         self.project.version = Some(version.into());
+        self
+    }
+
+    /// Marks this Maven 4 project as the source-tree root.
+    #[must_use]
+    pub fn root(mut self, root: bool) -> Self {
+        self.project.root = root;
+        self
+    }
+
+    /// Controls whether Maven preserves this project's model version.
+    #[must_use]
+    pub fn preserve_model_version(mut self, preserve: bool) -> Self {
+        self.project.preserve_model_version = preserve;
         self
     }
 

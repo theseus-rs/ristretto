@@ -103,6 +103,13 @@ impl DistributionManagementBuilder {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Site {
+    /// Whether inherited site URLs append the child's path.
+    #[serde(
+        rename = "@child.site.url.inherit.append.path",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub child_site_url_inherit_append_path: Option<String>,
     /// The ID of the site.
     pub id: String,
     /// The name of the site.
@@ -117,6 +124,7 @@ impl Site {
     #[must_use]
     pub fn new(id: impl Into<String>, url: impl Into<String>) -> Self {
         Self {
+            child_site_url_inherit_append_path: None,
             id: id.into(),
             name: None,
             url: url.into(),
@@ -143,6 +151,13 @@ impl SiteBuilder {
         Self {
             site: Site::new(id, url),
         }
+    }
+
+    /// Controls path appending for inherited site URLs.
+    #[must_use]
+    pub fn child_url_append_path(mut self, append: bool) -> Self {
+        self.site.child_site_url_inherit_append_path = Some(append.to_string());
+        self
     }
 
     /// Sets the name.

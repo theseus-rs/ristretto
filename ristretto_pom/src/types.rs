@@ -10,6 +10,15 @@ use std::str::FromStr;
 
 use crate::{Error, Result};
 
+pub(crate) fn deserialize_maven_boolean<'de, D>(
+    deserializer: D,
+) -> std::result::Result<bool, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    String::deserialize(deserializer).map(|value| value.trim().eq_ignore_ascii_case("true"))
+}
+
 /// Dependency scope in Maven.
 ///
 /// Defines the classpath(s) that a dependency is available on and controls
@@ -232,11 +241,22 @@ impl<'de> Deserialize<'de> for UpdatePolicy {
         D: serde::Deserializer<'de>,
     {
         let policy = String::deserialize(deserializer)?;
-        Ok(match policy.to_lowercase().as_str() {
+        let normalized = policy.to_ascii_lowercase();
+        Ok(match normalized.as_str() {
             "always" => Self::Always,
             "daily" => Self::Daily,
             "never" => Self::Never,
-            _ => Self::Interval(policy),
+            _ => {
+                let minutes = normalized
+                    .strip_prefix("interval:")
+                    .and_then(|minutes| minutes.parse::<u64>().ok())
+                    .ok_or_else(|| {
+                        serde::de::Error::custom(format!(
+                            "invalid repository update policy '{policy}'"
+                        ))
+                    })?;
+                Self::Interval(format!("interval:{minutes}"))
+            }
         })
     }
 }

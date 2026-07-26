@@ -1,14 +1,17 @@
 //! Build-related types.
 
+use crate::configuration::Configuration;
 use crate::dependency::Dependencies;
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Represents build configuration.
 #[non_exhaustive]
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Build {
+    /// Maven 4 source directories and their compilation/resource semantics.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sources: Option<Sources>,
     /// The source directory.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_directory: Option<String>,
@@ -51,6 +54,80 @@ pub struct Build {
     /// The plugins.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plugins: Option<BuildPlugins>,
+}
+
+/// Represents Maven 4 source declarations.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+pub struct Sources {
+    /// The source declarations.
+    #[serde(rename = "source", default)]
+    pub sources: Vec<Source>,
+}
+
+/// A Maven 4 source directory.
+#[non_exhaustive]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct Source {
+    /// Source usage, normally `main` or `test`.
+    #[serde(default = "default_source_scope")]
+    pub scope: String,
+    /// Source language, normally `java` or `resources`.
+    #[serde(default = "default_source_language")]
+    pub lang: String,
+    /// Optional module name.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub module: Option<String>,
+    /// Optional target platform version.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_version: Option<String>,
+    /// Optional explicit output path.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target_path: Option<String>,
+    /// Whether string filtering is enabled.
+    #[serde(default)]
+    pub string_filtering: bool,
+    /// Whether this source is enabled.
+    #[serde(default = "source_enabled_by_default")]
+    pub enabled: bool,
+    /// Source directory relative to the POM.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub directory: Option<String>,
+    /// Included file patterns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub includes: Option<Includes>,
+    /// Excluded file patterns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub excludes: Option<Excludes>,
+}
+
+impl Default for Source {
+    fn default() -> Self {
+        Self {
+            scope: default_source_scope(),
+            lang: default_source_language(),
+            module: None,
+            target_version: None,
+            target_path: None,
+            string_filtering: false,
+            enabled: true,
+            directory: None,
+            includes: None,
+            excludes: None,
+        }
+    }
+}
+
+fn default_source_scope() -> String {
+    "main".to_string()
+}
+
+fn default_source_language() -> String {
+    "java".to_string()
+}
+
+const fn source_enabled_by_default() -> bool {
+    true
 }
 
 impl Build {
@@ -116,6 +193,17 @@ impl BuildBuilder {
         self
     }
 
+    /// Adds a Maven 4 source declaration.
+    #[must_use]
+    pub fn source(mut self, source: Source) -> Self {
+        self.build
+            .sources
+            .get_or_insert_with(Sources::default)
+            .sources
+            .push(source);
+        self
+    }
+
     /// Adds a plugin.
     #[must_use]
     pub fn plugin(mut self, plugin: Plugin) -> Self {
@@ -173,6 +261,9 @@ pub struct Extension {
     pub artifact_id: String,
     /// The version of the extension.
     pub version: String,
+    /// Maven 4 extension configuration.
+    #[serde(default, skip_serializing_if = "Configuration::is_empty")]
+    pub configuration: Configuration,
 }
 
 impl Extension {
@@ -187,6 +278,7 @@ impl Extension {
             group_id: group_id.into(),
             artifact_id: artifact_id.into(),
             version: version.into(),
+            configuration: Configuration::default(),
         }
     }
 }
@@ -216,7 +308,7 @@ pub struct Resource {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target_path: Option<String>,
     /// Whether filtering is enabled.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::types::deserialize_maven_boolean")]
     pub filtering: bool,
     /// The directory.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -340,8 +432,33 @@ pub struct BuildPlugins {
 #[serde(rename_all = "camelCase")]
 pub struct PluginManagement {
     /// The plugins.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        serialize_with = "serialize_managed_plugins",
+        deserialize_with = "deserialize_managed_plugins"
+    )]
     pub plugins: Vec<Plugin>,
+}
+
+fn serialize_managed_plugins<S>(plugins: &[Plugin], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    #[derive(Serialize)]
+    struct ManagedPlugins<'a> {
+        #[serde(rename = "plugin")]
+        plugins: &'a [Plugin],
+    }
+
+    ManagedPlugins { plugins }.serialize(serializer)
+}
+
+fn deserialize_managed_plugins<'de, D>(deserializer: D) -> Result<Vec<Plugin>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    BuildPlugins::deserialize(deserializer).map(|plugins| plugins.plugins)
 }
 
 impl PluginManagement {
@@ -360,11 +477,14 @@ impl PluginManagement {
 
 /// Represents a plugin.
 #[non_exhaustive]
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Plugin {
     /// The group ID of the plugin.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default = "default_plugin_group",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub group_id: Option<String>,
     /// The artifact ID of the plugin.
     pub artifact_id: String,
@@ -372,7 +492,7 @@ pub struct Plugin {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     /// Whether to enable extensions.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::types::deserialize_maven_boolean")]
     pub extensions: bool,
     /// The plugin executions.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -381,11 +501,14 @@ pub struct Plugin {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dependencies: Option<Dependencies>,
     /// Whether the plugin is inherited.
-    #[serde(default)]
+    #[serde(
+        default = "inherited_by_default",
+        deserialize_with = "crate::types::deserialize_maven_boolean"
+    )]
     pub inherited: bool,
     /// The plugin configuration.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub configuration: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Configuration::is_empty")]
+    pub configuration: Configuration,
 }
 
 impl Plugin {
@@ -393,14 +516,14 @@ impl Plugin {
     #[must_use]
     pub fn new(artifact_id: impl Into<String>) -> Self {
         Self {
-            group_id: None,
+            group_id: default_plugin_group(),
             artifact_id: artifact_id.into(),
             version: None,
             extensions: false,
             executions: None,
             dependencies: None,
-            inherited: false,
-            configuration: BTreeMap::new(),
+            inherited: true,
+            configuration: Configuration::default(),
         }
     }
 
@@ -409,6 +532,20 @@ impl Plugin {
     pub fn builder(artifact_id: impl Into<String>) -> PluginBuilder {
         PluginBuilder::new(artifact_id)
     }
+}
+
+impl Default for Plugin {
+    fn default() -> Self {
+        Self::new("")
+    }
+}
+
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "serde default function must return the optional field type"
+)]
+fn default_plugin_group() -> Option<String> {
+    Some("org.apache.maven.plugins".to_string())
 }
 
 /// Builder for `Plugin`.
@@ -457,7 +594,7 @@ impl PluginBuilder {
     /// Adds a configuration entry.
     #[must_use]
     pub fn config(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.plugin.configuration.insert(key.into(), value.into());
+        self.plugin.configuration.insert(key, value);
         self
     }
 
@@ -490,11 +627,14 @@ pub struct PluginExecutions {
 
 /// Represents a plugin execution.
 #[non_exhaustive]
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct PluginExecution {
     /// The ID of the execution.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default = "default_execution_id",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub id: Option<String>,
     /// The phase of the execution.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -503,11 +643,14 @@ pub struct PluginExecution {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub goals: Option<Goals>,
     /// Whether the execution is inherited.
-    #[serde(default)]
+    #[serde(
+        default = "inherited_by_default",
+        deserialize_with = "crate::types::deserialize_maven_boolean"
+    )]
     pub inherited: bool,
     /// The configuration.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub configuration: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Configuration::is_empty")]
+    pub configuration: Configuration,
 }
 
 impl PluginExecution {
@@ -516,6 +659,30 @@ impl PluginExecution {
     pub fn builder() -> PluginExecutionBuilder {
         PluginExecutionBuilder::new()
     }
+}
+
+impl Default for PluginExecution {
+    fn default() -> Self {
+        Self {
+            id: default_execution_id(),
+            phase: None,
+            goals: None,
+            inherited: true,
+            configuration: Configuration::default(),
+        }
+    }
+}
+
+const fn inherited_by_default() -> bool {
+    true
+}
+
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "serde default function must return the optional field type"
+)]
+fn default_execution_id() -> Option<String> {
+    Some("default".to_string())
 }
 
 /// Builder for `PluginExecution`.
@@ -560,9 +727,7 @@ impl PluginExecutionBuilder {
     /// Adds a configuration entry.
     #[must_use]
     pub fn config(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.execution
-            .configuration
-            .insert(key.into(), value.into());
+        self.execution.configuration.insert(key, value);
         self
     }
 
