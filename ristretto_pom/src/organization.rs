@@ -1,6 +1,6 @@
 //! Organization and parent-related types.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// Represents the parent project of a Maven project.
 #[non_exhaustive]
@@ -203,8 +203,39 @@ pub struct MailingList {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub archive: Option<String>,
     /// Other archive URLs.
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        default,
+        skip_serializing_if = "Vec::is_empty",
+        serialize_with = "serialize_other_archives",
+        deserialize_with = "deserialize_other_archives"
+    )]
     pub other_archives: Vec<String>,
+}
+
+fn serialize_other_archives<S>(archives: &[String], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    #[derive(Serialize)]
+    struct OtherArchives<'a> {
+        #[serde(rename = "otherArchive")]
+        archives: &'a [String],
+    }
+
+    OtherArchives { archives }.serialize(serializer)
+}
+
+fn deserialize_other_archives<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct OtherArchives {
+        #[serde(rename = "otherArchive", default)]
+        archives: Vec<String>,
+    }
+
+    OtherArchives::deserialize(deserializer).map(|archives| archives.archives)
 }
 
 impl MailingList {

@@ -1,7 +1,7 @@
 //! Reporting types.
 
+use crate::configuration::Configuration;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
 /// Represents reporting configuration.
 #[non_exhaustive]
@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 #[serde(rename_all = "camelCase")]
 pub struct Reporting {
     /// Whether to exclude defaults.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::types::deserialize_maven_boolean")]
     pub exclude_defaults: bool,
     /// The output directory.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -83,11 +83,14 @@ pub struct ReportingPlugins {
 
 /// Represents a reporting plugin.
 #[non_exhaustive]
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportPlugin {
     /// The group ID of the plugin.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default = "default_report_group",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub group_id: Option<String>,
     /// The artifact ID of the plugin.
     pub artifact_id: String,
@@ -97,9 +100,15 @@ pub struct ReportPlugin {
     /// The report sets.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub report_sets: Option<ReportSets>,
+    /// Whether the report plugin is inherited.
+    #[serde(
+        default = "inherited_by_default",
+        deserialize_with = "crate::types::deserialize_maven_boolean"
+    )]
+    pub inherited: bool,
     /// The configuration.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub configuration: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Configuration::is_empty")]
+    pub configuration: Configuration,
 }
 
 impl ReportPlugin {
@@ -107,11 +116,12 @@ impl ReportPlugin {
     #[must_use]
     pub fn new(artifact_id: impl Into<String>) -> Self {
         Self {
-            group_id: None,
+            group_id: default_report_group(),
             artifact_id: artifact_id.into(),
             version: None,
             report_sets: None,
-            configuration: BTreeMap::new(),
+            inherited: true,
+            configuration: Configuration::default(),
         }
     }
 
@@ -120,6 +130,20 @@ impl ReportPlugin {
     pub fn builder(artifact_id: impl Into<String>) -> ReportPluginBuilder {
         ReportPluginBuilder::new(artifact_id)
     }
+}
+
+impl Default for ReportPlugin {
+    fn default() -> Self {
+        Self::new("")
+    }
+}
+
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "serde default function must return the optional field type"
+)]
+fn default_report_group() -> Option<String> {
+    Some("org.apache.maven.plugins".to_string())
 }
 
 /// Builder for `ReportPlugin`.
@@ -151,10 +175,17 @@ impl ReportPluginBuilder {
         self
     }
 
+    /// Sets whether the report plugin is inherited.
+    #[must_use]
+    pub fn inherited(mut self, inherited: bool) -> Self {
+        self.plugin.inherited = inherited;
+        self
+    }
+
     /// Adds a configuration entry.
     #[must_use]
     pub fn config(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.plugin.configuration.insert(key.into(), value.into());
+        self.plugin.configuration.insert(key, value);
         self
     }
 
@@ -187,21 +218,27 @@ pub struct ReportSets {
 
 /// Represents a report set.
 #[non_exhaustive]
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ReportSet {
     /// The ID of the report set.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default = "default_report_set_id",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub id: Option<String>,
     /// The reports.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reports: Option<Reports>,
     /// Whether the report set is inherited.
-    #[serde(default)]
+    #[serde(
+        default = "inherited_by_default",
+        deserialize_with = "crate::types::deserialize_maven_boolean"
+    )]
     pub inherited: bool,
     /// The configuration.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub configuration: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Configuration::is_empty")]
+    pub configuration: Configuration,
 }
 
 impl ReportSet {
@@ -210,6 +247,29 @@ impl ReportSet {
     pub fn builder() -> ReportSetBuilder {
         ReportSetBuilder::new()
     }
+}
+
+impl Default for ReportSet {
+    fn default() -> Self {
+        Self {
+            id: default_report_set_id(),
+            reports: None,
+            inherited: true,
+            configuration: Configuration::default(),
+        }
+    }
+}
+
+const fn inherited_by_default() -> bool {
+    true
+}
+
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "serde default function must return the optional field type"
+)]
+fn default_report_set_id() -> Option<String> {
+    Some("default".to_string())
 }
 
 /// Builder for `ReportSet`.

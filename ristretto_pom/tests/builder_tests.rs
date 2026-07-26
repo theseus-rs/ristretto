@@ -89,9 +89,11 @@ fn profile_builders_and_shortcuts() {
             .build())
         .property("env", Some("ci".to_string()))
         .file(ActivationFile::exists("pom.xml"))
+        .condition("${env.CI} == true")
         .build();
     assert!(activation.active_by_default);
     assert_eq!(activation.jdk.as_deref(), Some("21"));
+    assert_eq!(activation.condition.as_deref(), Some("${env.CI} == true"));
 
     let mac = ActivationOs::mac();
     assert_eq!(mac.family.as_deref(), Some("mac"));
@@ -178,4 +180,7 @@ fn repository_and_scm_shortcuts() {
     let notifier = Notifier::mail("team@example.com");
     assert_eq!(notifier.r#type, "mail");
     assert!(notifier.send_on_error);
+    assert!(notifier.send_on_failure);
+    assert!(notifier.send_on_success);
+    assert!(notifier.send_on_warning);
 }

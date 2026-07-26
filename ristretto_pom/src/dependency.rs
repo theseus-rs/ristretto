@@ -1,7 +1,8 @@
 //! Dependency-related types.
 
 use crate::types::DependencyScope;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::borrow::Cow;
 
 /// Represents dependency management information.
 #[non_exhaustive]
@@ -98,34 +99,35 @@ impl Dependencies {
 
 /// Represents a dependency.
 #[non_exhaustive]
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Dependency {
     /// The group ID of the dependency.
     pub group_id: String,
     /// The artifact ID of the dependency.
     pub artifact_id: String,
     /// The version of the dependency.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
     /// The type of the dependency.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub r#type: Option<String>,
     /// The classifier of the dependency.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub classifier: Option<String>,
     /// The scope of the dependency.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<DependencyScope>,
+    /// Original `scope` expression, when it was explicitly present.
+    scope_expression: Option<String>,
     /// The system path of the dependency.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub system_path: Option<String>,
     /// The exclusions.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exclusions: Option<Exclusions>,
     /// Whether the dependency is optional.
-    #[serde(default)]
     pub optional: bool,
+    /// Whether `optional` was explicitly present in the source model.
+    ///
+    /// Effective-model merging uses this to distinguish an omitted value from an
+    /// explicit `false`.
+    pub optional_explicit: bool,
+    /// Original `optional` expression, when it was explicitly present.
+    optional_expression: Option<String>,
 }
 
 impl Dependency {
@@ -139,9 +141,12 @@ impl Dependency {
             r#type: None,
             classifier: None,
             scope: None,
+            scope_expression: None,
             system_path: None,
             exclusions: None,
             optional: false,
+            optional_explicit: false,
+            optional_expression: None,
         }
     }
 
@@ -152,6 +157,22 @@ impl Dependency {
         artifact_id: impl Into<String>,
     ) -> DependencyBuilder {
         DependencyBuilder::new(group_id, artifact_id)
+    }
+
+    /// Returns the original explicit `optional` value.
+    ///
+    /// This can contain a Maven property expression such as `${dependency.optional}`.
+    #[must_use]
+    pub fn optional_expression(&self) -> Option<&str> {
+        self.optional_expression.as_deref()
+    }
+
+    /// Returns the original explicit `scope` value.
+    ///
+    /// This can contain a Maven property expression such as `${dependency.scope}`.
+    #[must_use]
+    pub fn scope_expression(&self) -> Option<&str> {
+        self.scope_expression.as_deref()
     }
 }
 
@@ -195,6 +216,7 @@ impl DependencyBuilder {
     #[must_use]
     pub fn scope(mut self, scope: DependencyScope) -> Self {
         self.dependency.scope = Some(scope);
+        self.dependency.scope_expression = Some(scope.to_string());
         self
     }
 
@@ -209,6 +231,18 @@ impl DependencyBuilder {
     #[must_use]
     pub fn optional(mut self, optional: bool) -> Self {
         self.dependency.optional = optional;
+        self.dependency.optional_explicit = true;
+        self.dependency.optional_expression = Some(optional.to_string());
+        self
+    }
+
+    /// Sets an interpolatable Maven `optional` expression.
+    #[must_use]
+    pub fn optional_expression(mut self, expression: impl Into<String>) -> Self {
+        let expression = expression.into();
+        self.dependency.optional = parse_maven_boolean(&expression);
+        self.dependency.optional_explicit = true;
+        self.dependency.optional_expression = Some(expression);
         self
     }
 
@@ -229,6 +263,111 @@ impl DependencyBuilder {
     pub fn build(self) -> Dependency {
         self.dependency
     }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DependencyXml {
+    group_id: String,
+    artifact_id: String,
+    version: Option<String>,
+    r#type: Option<String>,
+    classifier: Option<String>,
+    scope: Option<String>,
+    system_path: Option<String>,
+    exclusions: Option<Exclusions>,
+    optional: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for Dependency {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let dependency = DependencyXml::deserialize(deserializer)?;
+        let scope = dependency
+            .scope
+            .as_deref()
+            .and_then(|scope| scope.parse().ok());
+        if let Some(expression) = dependency.scope.as_deref()
+            && scope.is_none()
+            && !expression.contains("${")
+        {
+            return Err(serde::de::Error::custom(format!(
+                "unknown dependency scope '{expression}'"
+            )));
+        }
+        Ok(Self {
+            group_id: dependency.group_id,
+            artifact_id: dependency.artifact_id,
+            version: dependency.version,
+            r#type: dependency.r#type,
+            classifier: dependency.classifier,
+            scope,
+            scope_expression: dependency.scope,
+            system_path: dependency.system_path,
+            exclusions: dependency.exclusions,
+            optional: dependency
+                .optional
+                .as_deref()
+                .is_some_and(parse_maven_boolean),
+            optional_explicit: dependency.optional.is_some(),
+            optional_expression: dependency.optional,
+        })
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DependencyXmlRef<'a> {
+    group_id: &'a str,
+    artifact_id: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    r#type: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    classifier: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    scope: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    system_path: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    exclusions: Option<&'a Exclusions>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    optional: Option<Cow<'a, str>>,
+}
+
+impl Serialize for Dependency {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        DependencyXmlRef {
+            group_id: &self.group_id,
+            artifact_id: &self.artifact_id,
+            version: self.version.as_deref(),
+            r#type: self.r#type.as_deref(),
+            classifier: self.classifier.as_deref(),
+            scope: self.scope_expression.as_deref().map_or_else(
+                || self.scope.map(|scope| Cow::Owned(scope.to_string())),
+                |expression| Some(Cow::Borrowed(expression)),
+            ),
+            system_path: self.system_path.as_deref(),
+            exclusions: self.exclusions.as_ref(),
+            optional: self.optional_explicit.then(|| {
+                self.optional_expression.as_deref().map_or_else(
+                    || Cow::Borrowed(if self.optional { "true" } else { "false" }),
+                    Cow::Borrowed,
+                )
+            }),
+        }
+        .serialize(serializer)
+    }
+}
+
+fn parse_maven_boolean(value: &str) -> bool {
+    value.trim().eq_ignore_ascii_case("true")
 }
 
 /// Represents a list of exclusions.
@@ -305,5 +444,27 @@ mod tests {
 
         deps.add(Dependency::new("com.example", "lib"));
         assert_eq!(deps.len(), 1);
+    }
+
+    #[test]
+    fn covers_expression_fallback_serialization_and_repeated_exclusions() {
+        let mut dependency = Dependency::builder("com.example", "library")
+            .scope(DependencyScope::Runtime)
+            .optional(false)
+            .exclusion(Exclusion::new("first", "excluded"))
+            .exclusion(Exclusion::new("second", "excluded"))
+            .build();
+        dependency.scope_expression = None;
+        dependency.optional_expression = None;
+        let xml = quick_xml::se::to_string(&dependency).expect("dependency XML");
+        assert!(xml.contains("<scope>runtime</scope>"));
+        assert!(xml.contains("<optional>false</optional>"));
+        assert_eq!(
+            dependency
+                .exclusions
+                .as_ref()
+                .map(|exclusions| exclusions.exclusions.len()),
+            Some(2)
+        );
     }
 }

@@ -179,6 +179,77 @@ fn test_unsupported_model_version() {
 }
 
 #[test]
+fn test_rejects_invalid_dependency_and_repository_fields() {
+    let empty_dependency = r"
+<project><modelVersion>4.0.0</modelVersion><groupId>com.example</groupId>
+<artifactId>app</artifactId><version>1</version><dependencies><dependency>
+<groupId></groupId><artifactId>lib</artifactId></dependency></dependencies></project>";
+    assert!(parse_xml(empty_dependency).is_err());
+
+    let duplicate_repository = r"
+<project><modelVersion>4.0.0</modelVersion><groupId>com.example</groupId>
+<artifactId>app</artifactId><version>1</version><repositories>
+<repository><id>same</id><url>https://one.example</url></repository>
+<repository><id>same</id><url>https://two.example</url></repository>
+</repositories></project>";
+    assert!(parse_xml(duplicate_repository).is_err());
+}
+
+#[test]
+fn test_rejects_invalid_import_and_system_dependency_semantics() {
+    let import_outside_management = r"
+<project><modelVersion>4.0.0</modelVersion><groupId>com.example</groupId>
+<artifactId>app</artifactId><version>1</version><dependencies><dependency>
+<groupId>com.example</groupId><artifactId>bom</artifactId><version>1</version>
+<type>pom</type><scope>import</scope></dependency></dependencies></project>";
+    assert!(parse_xml(import_outside_management).is_err());
+
+    let system_path_without_scope = r"
+<project><modelVersion>4.0.0</modelVersion><groupId>com.example</groupId>
+<artifactId>app</artifactId><version>1</version><dependencies><dependency>
+<groupId>com.example</groupId><artifactId>local</artifactId><version>1</version>
+<systemPath>/tmp/local.jar</systemPath></dependency></dependencies></project>";
+    assert!(parse_xml(system_path_without_scope).is_err());
+}
+
+#[test]
+fn test_parses_nested_plugin_configuration() -> Result<()> {
+    let nested_configuration = r"
+<project><modelVersion>4.0.0</modelVersion><groupId>com.example</groupId>
+<artifactId>app</artifactId><version>1</version><build><plugins><plugin>
+<artifactId>maven-compiler-plugin</artifactId><configuration>
+<compilerArgs><arg>-Xlint</arg><arg>-parameters</arg></compilerArgs>
+</configuration></plugin></plugins></build></project>";
+    let project = parse_xml(nested_configuration)?;
+    let plugin = &project
+        .build
+        .as_ref()
+        .unwrap()
+        .plugins
+        .as_ref()
+        .unwrap()
+        .plugins[0];
+    let ristretto_pom::ConfigurationValue::Nested(arguments) =
+        plugin.configuration.get("compilerArgs").unwrap()
+    else {
+        panic!("compilerArgs should be nested configuration");
+    };
+    assert_eq!(arguments.elements.len(), 2);
+    assert!(
+        arguments
+            .elements
+            .iter()
+            .all(|element| element.name == "arg")
+    );
+
+    let mut serialized = Vec::new();
+    project.to_writer(&mut serialized)?;
+    let reparsed = Project::from_reader(serialized.as_slice())?;
+    assert_eq!(project, reparsed);
+    Ok(())
+}
+
+#[test]
 fn test_project_validation_error_paths() {
     let project = Project::builder("child")
         .parent(Parent::new("", "parent", "1.0.0"))
@@ -209,6 +280,39 @@ fn test_project_validation_error_paths() {
         Err(Error::ValidationError(message)) if message.contains("system scope")
     ));
     assert!(project.validate_effective(None).is_err());
+}
+
+#[test]
+fn effective_validation_checks_the_resolved_parent_coordinates() {
+    let child = Project::builder("child")
+        .parent(Parent::new("com.example", "parent", "1.0"))
+        .build_project();
+    let parent = Project::new("com.example", "parent", "1.0");
+    child
+        .validate_effective(Some(&parent))
+        .expect("matching resolved parent");
+
+    let wrong_parent = Project::new("com.example", "other-parent", "1.0");
+    assert!(matches!(
+        child.validate_effective(Some(&wrong_parent)),
+        Err(Error::ValidationError(message)) if message.contains("does not match")
+    ));
+    assert!(child.validate_effective(None).is_err());
+}
+
+#[test]
+fn rejects_conflicting_file_profile_activation() {
+    let xml = r"<project>
+      <modelVersion>4.0.0</modelVersion><groupId>com.example</groupId>
+      <artifactId>app</artifactId><version>1.0</version>
+      <profiles><profile><id>invalid</id><activation><file>
+        <exists>present</exists><missing>absent</missing>
+      </file></activation></profile></profiles>
+    </project>";
+    assert!(matches!(
+        Project::from_reader(xml.as_bytes()),
+        Err(Error::ValidationError(message)) if message.contains("both exists and missing")
+    ));
 }
 
 #[test]

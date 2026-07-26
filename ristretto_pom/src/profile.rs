@@ -16,6 +16,33 @@ pub struct Modules {
     pub modules: Vec<String>,
 }
 
+/// Represents a list of Maven 4 subprojects.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+pub struct Subprojects {
+    /// The subprojects.
+    #[serde(rename = "subproject", default)]
+    pub subprojects: Vec<String>,
+}
+
+impl Subprojects {
+    /// Creates an empty `Subprojects`.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Creates `Subprojects` from a vector of relative paths.
+    #[must_use]
+    pub fn from_vec(subprojects: Vec<String>) -> Self {
+        Self { subprojects }
+    }
+
+    /// Adds a subproject.
+    pub fn add(&mut self, subproject: impl Into<String>) {
+        self.subprojects.push(subproject.into());
+    }
+}
+
 impl Modules {
     /// Creates an empty `Modules`.
     #[must_use]
@@ -64,10 +91,11 @@ impl Profiles {
 
 /// Represents a profile.
 #[non_exhaustive]
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Profile {
     /// The ID of the profile.
+    #[serde(default = "default_profile_id")]
     pub id: String,
     /// The activation conditions.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -78,6 +106,9 @@ pub struct Profile {
     /// The modules.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modules: Option<Modules>,
+    /// The Maven 4 subprojects.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subprojects: Option<Subprojects>,
     /// The repositories.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub repositories: Option<Repositories>,
@@ -101,6 +132,16 @@ pub struct Profile {
     pub reporting: Option<Reporting>,
 }
 
+impl Default for Profile {
+    fn default() -> Self {
+        Self::new(default_profile_id())
+    }
+}
+
+fn default_profile_id() -> String {
+    "default".to_string()
+}
+
 impl Profile {
     /// Creates a new `Profile` with the given ID.
     #[must_use]
@@ -110,6 +151,7 @@ impl Profile {
             activation: None,
             build: None,
             modules: None,
+            subprojects: None,
             repositories: None,
             plugin_repositories: None,
             dependencies: None,
@@ -204,6 +246,12 @@ pub struct Activation {
     /// The file.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file: Option<ActivationFile>,
+    /// The project packaging that activates this profile.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub packaging: Option<String>,
+    /// Maven 4 condition expression.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub condition: Option<String>,
 }
 
 impl Activation {
@@ -216,6 +264,8 @@ impl Activation {
             os: None,
             property: None,
             file: None,
+            packaging: None,
+            condition: None,
         }
     }
 
@@ -228,6 +278,8 @@ impl Activation {
             os: None,
             property: None,
             file: None,
+            packaging: None,
+            condition: None,
         }
     }
 
@@ -243,6 +295,8 @@ impl Activation {
                 value,
             }),
             file: None,
+            packaging: None,
+            condition: None,
         }
     }
 
@@ -301,6 +355,20 @@ impl ActivationBuilder {
     #[must_use]
     pub fn file(mut self, file: ActivationFile) -> Self {
         self.activation.file = Some(file);
+        self
+    }
+
+    /// Sets the project packaging that activates the profile.
+    #[must_use]
+    pub fn packaging(mut self, packaging: impl Into<String>) -> Self {
+        self.activation.packaging = Some(packaging.into());
+        self
+    }
+
+    /// Sets a Maven 4 condition expression.
+    #[must_use]
+    pub fn condition(mut self, condition: impl Into<String>) -> Self {
+        self.activation.condition = Some(condition.into());
         self
     }
 

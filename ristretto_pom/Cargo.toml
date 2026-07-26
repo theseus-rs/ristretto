@@ -1,7 +1,7 @@
 [package]
 authors.workspace = true
 categories.workspace = true
-description = "Ristretto Package Object Model"
+description = "Ristretto Maven Project Object Model"
 edition.workspace = true
 keywords = ["java", "jvm", "pom"]
 license.workspace = true

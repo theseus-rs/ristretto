@@ -48,6 +48,64 @@ mod dependency_tests {
         assert_eq!(dep.r#type, result.r#type);
         assert_eq!(dep.classifier, result.classifier);
         assert_eq!(dep.optional, result.optional);
+        assert!(result.optional_explicit);
+    }
+
+    #[test]
+    fn dependency_preserves_optional_presence() {
+        let omitted: Dependency = quick_xml::de::from_str(
+            "<dependency><groupId>com.example</groupId><artifactId>demo</artifactId></dependency>",
+        )
+        .expect("dependency without optional");
+        assert!(!omitted.optional);
+        assert!(!omitted.optional_explicit);
+        assert!(
+            !quick_xml::se::to_string(&omitted)
+                .expect("serialize dependency")
+                .contains("<optional>")
+        );
+
+        let explicit_false: Dependency = quick_xml::de::from_str(
+            "<dependency><groupId>com.example</groupId><artifactId>demo</artifactId><optional>false</optional></dependency>",
+        )
+        .expect("dependency with explicit optional");
+        assert!(!explicit_false.optional);
+        assert!(explicit_false.optional_explicit);
+        assert!(
+            quick_xml::se::to_string(&explicit_false)
+                .expect("serialize dependency")
+                .contains("<optional>false</optional>")
+        );
+
+        let expression: Dependency = quick_xml::de::from_str(
+            "<dependency><groupId>com.example</groupId><artifactId>demo</artifactId>\
+             <optional>${dependency.optional}</optional></dependency>",
+        )
+        .expect("dependency with interpolated optional");
+        assert!(!expression.optional);
+        assert_eq!(
+            expression.optional_expression(),
+            Some("${dependency.optional}")
+        );
+        assert_eq!(round_trip_xml(&expression), expression);
+        assert_eq!(
+            Dependency::builder("com.example", "demo")
+                .optional_expression("${dependency.optional}")
+                .build(),
+            expression
+        );
+    }
+
+    #[test]
+    fn dependency_preserves_scope_expressions() {
+        let dependency: Dependency = quick_xml::de::from_str(
+            "<dependency><groupId>com.example</groupId><artifactId>demo</artifactId>\
+             <scope>${dependency.scope}</scope></dependency>",
+        )
+        .expect("dependency with interpolated scope");
+        assert!(dependency.scope.is_none());
+        assert_eq!(dependency.scope_expression(), Some("${dependency.scope}"));
+        assert_eq!(round_trip_xml(&dependency), dependency);
     }
 
     #[test]
@@ -119,6 +177,27 @@ mod build_tests {
         assert_eq!(build.final_name, result.final_name);
         assert_eq!(build.directory, result.directory);
         assert_eq!(build.default_goal, result.default_goal);
+    }
+
+    #[test]
+    fn maven4_sources_round_trip_with_defaults() {
+        let build: Build = quick_xml::de::from_str(
+            "<build><sources><source><module>org.example.app</module>\
+             <targetVersion>21</targetVersion><directory>src/main/java</directory>\
+             <includes><include>**/*.java</include></includes></source></sources></build>",
+        )
+        .expect("Maven 4 sources should deserialize");
+        let source = build
+            .sources
+            .as_ref()
+            .expect("sources")
+            .sources
+            .first()
+            .expect("source");
+        assert_eq!(source.scope, "main");
+        assert_eq!(source.lang, "java");
+        assert!(source.enabled);
+        assert_eq!(round_trip_xml(&build), build);
     }
 
     #[test]
@@ -199,6 +278,70 @@ mod build_tests {
     }
 
     #[test]
+    fn test_plugin_inheritance_defaults_to_true() {
+        let plugin: Plugin =
+            quick_xml::de::from_str("<plugin><artifactId>compiler</artifactId></plugin>")
+                .expect("plugin should deserialize");
+        let execution: PluginExecution =
+            quick_xml::de::from_str("<execution/>").expect("execution should deserialize");
+        assert!(plugin.inherited);
+        assert!(execution.inherited);
+        assert_eq!(plugin.group_id.as_deref(), Some("org.apache.maven.plugins"));
+        assert_eq!(execution.id.as_deref(), Some("default"));
+    }
+
+    #[test]
+    fn technical_boolean_expressions_are_accepted() {
+        let plugin: Plugin = quick_xml::de::from_str(
+            "<plugin><artifactId>compiler</artifactId>\
+             <extensions>${plugin.extensions}</extensions>\
+             <inherited>${plugin.inherited}</inherited>\
+             <executions><execution><inherited>${execution.inherited}</inherited>\
+             </execution></executions></plugin>",
+        )
+        .expect("technical plugin booleans should deserialize");
+        assert!(!plugin.extensions);
+        assert!(!plugin.inherited);
+        assert!(
+            !plugin
+                .executions
+                .as_ref()
+                .and_then(|executions| executions.executions.first())
+                .is_some_and(|execution| execution.inherited)
+        );
+
+        let resource: Resource = quick_xml::de::from_str(
+            "<resource><filtering>${resource.filtering}</filtering></resource>",
+        )
+        .expect("technical resource boolean should deserialize");
+        assert!(!resource.filtering);
+
+        let reporting: Reporting = quick_xml::de::from_str(
+            "<reporting><excludeDefaults>${reporting.exclude}</excludeDefaults>\
+             <plugins><plugin><artifactId>report</artifactId>\
+             <inherited>${report.inherited}</inherited><reportSets><reportSet>\
+             <inherited>${set.inherited}</inherited></reportSet></reportSets>\
+             </plugin></plugins></reporting>",
+        )
+        .expect("technical reporting booleans should deserialize");
+        assert!(!reporting.exclude_defaults);
+    }
+
+    #[test]
+    fn test_reporting_inheritance_defaults_to_true() {
+        let plugin: ReportPlugin =
+            quick_xml::de::from_str("<plugin><artifactId>project-info</artifactId></plugin>")
+                .expect("report plugin should deserialize");
+        let report_set: ReportSet =
+            quick_xml::de::from_str("<reportSet><id>default</id></reportSet>")
+                .expect("report set should deserialize");
+        assert!(plugin.inherited);
+        assert!(report_set.inherited);
+        assert_eq!(plugin.group_id.as_deref(), Some("org.apache.maven.plugins"));
+        assert_eq!(report_set.id.as_deref(), Some("default"));
+    }
+
+    #[test]
     fn test_resource_serde() {
         let resource = Resource::builder()
             .directory("src/main/resources")
@@ -219,11 +362,13 @@ mod build_tests {
 
     #[test]
     fn test_extension_serde() {
-        let extension = Extension::new("org.apache.maven.wagon", "wagon-ssh", "3.4.0");
+        let mut extension = Extension::new("org.apache.maven.wagon", "wagon-ssh", "3.4.0");
+        extension.configuration.insert("setting", "value");
         let result = round_trip_xml(&extension);
         assert_eq!(extension.group_id, result.group_id);
         assert_eq!(extension.artifact_id, result.artifact_id);
         assert_eq!(extension.version, result.version);
+        assert_eq!(extension.configuration, result.configuration);
     }
 
     #[test]
@@ -239,6 +384,19 @@ mod build_tests {
 
         let result = round_trip_xml(&pm);
         assert_eq!(result.plugins.len(), 2);
+        let xml = quick_xml::se::to_string(&pm).expect("serialize plugin management");
+        assert!(xml.contains("<plugins><plugin>"));
+        assert!(!xml.contains("<plugins><artifactId>"));
+
+        let parsed: PluginManagement = quick_xml::de::from_str(
+            "<pluginManagement><plugins><plugin><artifactId>maven-clean-plugin</artifactId></plugin></plugins></pluginManagement>",
+        )
+        .expect("parse Maven pluginManagement nesting");
+        assert_eq!(parsed.plugins.len(), 1);
+        assert_eq!(
+            parsed.plugins.first().expect("managed plugin").artifact_id,
+            "maven-clean-plugin"
+        );
     }
 
     #[test]
@@ -247,6 +405,40 @@ mod build_tests {
         let result = round_trip_xml(&goals);
         assert_eq!(result.goals.len(), 2);
     }
+}
+
+#[test]
+fn maven4_subprojects_and_inheritance_attributes_round_trip() {
+    let xml = r#"<project child.project.url.inherit.append.path="false">
+      <modelVersion>4.1.0</modelVersion><groupId>org.example</groupId>
+      <artifactId>parent</artifactId><version>1.0</version>
+      <subprojects><subproject>api</subproject><subproject>impl</subproject></subprojects>
+      <scm child.scm.connection.inherit.append.path="false"
+           child.scm.developerConnection.inherit.append.path="false"
+           child.scm.url.inherit.append.path="false"><url>https://example.test/code</url></scm>
+      <distributionManagement><site child.site.url.inherit.append.path="false">
+        <id>docs</id><url>https://example.test/docs</url>
+      </site></distributionManagement>
+    </project>"#;
+    let project = Project::from_reader(xml.as_bytes()).expect("Maven 4 project should parse");
+    assert_eq!(
+        project
+            .subprojects
+            .as_ref()
+            .expect("subprojects")
+            .subprojects,
+        ["api", "impl"]
+    );
+    assert_eq!(
+        project.child_project_url_inherit_append_path.as_deref(),
+        Some("false")
+    );
+    let mut serialized = Vec::new();
+    project
+        .to_writer(&mut serialized)
+        .expect("Maven 4 project should serialize");
+    let round_trip = Project::from_reader(serialized.as_slice()).expect("round trip should parse");
+    assert_eq!(round_trip, project);
 }
 
 mod repository_tests {
@@ -271,6 +463,17 @@ mod repository_tests {
     }
 
     #[test]
+    fn test_deployment_repository_unique_version_serde() {
+        let repository: Repository = quick_xml::de::from_str(
+            "<repository><id>releases</id><url>https://repo.example</url>\
+             <uniqueVersion>false</uniqueVersion></repository>",
+        )
+        .expect("deployment repository should deserialize");
+        assert_eq!(repository.unique_version, Some(false));
+        assert_eq!(round_trip_xml(&repository), repository);
+    }
+
+    #[test]
     fn test_repository_policy_serde() {
         let policy = RepositoryPolicy::builder()
             .enabled(true)
@@ -282,6 +485,61 @@ mod repository_tests {
         assert_eq!(policy.enabled, result.enabled);
         assert_eq!(policy.update_policy, result.update_policy);
         assert_eq!(policy.checksum_policy, result.checksum_policy);
+    }
+
+    #[test]
+    fn test_repository_policy_omitted_enabled_defaults_to_true() {
+        let policy: RepositoryPolicy = quick_xml::de::from_str(
+            "<repositoryPolicy><updatePolicy>daily</updatePolicy></repositoryPolicy>",
+        )
+        .expect("repository policy should deserialize");
+        assert!(policy.enabled);
+        assert_eq!(policy.update_policy, Some(UpdatePolicy::Daily));
+    }
+
+    #[test]
+    fn repository_policy_preserves_enabled_expressions() {
+        let policy: RepositoryPolicy = quick_xml::de::from_str(
+            "<repositoryPolicy><enabled>${releases.enabled}</enabled></repositoryPolicy>",
+        )
+        .expect("repository policy expression should deserialize");
+        assert!(!policy.enabled);
+        assert_eq!(policy.enabled_expression(), Some("${releases.enabled}"));
+        assert_eq!(round_trip_xml(&policy), policy);
+        assert_eq!(
+            RepositoryPolicy::builder()
+                .enabled_expression("${releases.enabled}")
+                .build(),
+            policy
+        );
+    }
+
+    #[test]
+    fn repository_policy_preserves_update_and_checksum_expressions() {
+        let policy: RepositoryPolicy = quick_xml::de::from_str(
+            "<repositoryPolicy><updatePolicy>${repository.update}</updatePolicy>\
+             <checksumPolicy>${repository.checksum}</checksumPolicy></repositoryPolicy>",
+        )
+        .expect("repository policy expressions should deserialize");
+        assert!(policy.update_policy.is_none());
+        assert!(policy.checksum_policy.is_none());
+        assert_eq!(
+            policy.update_policy_expression(),
+            Some("${repository.update}")
+        );
+        assert_eq!(
+            policy.checksum_policy_expression(),
+            Some("${repository.checksum}")
+        );
+        assert_eq!(round_trip_xml(&policy), policy);
+    }
+
+    #[test]
+    fn test_invalid_update_policy_is_rejected() {
+        let result = quick_xml::de::from_str::<RepositoryPolicy>(
+            "<repositoryPolicy><updatePolicy>sometimes</updatePolicy></repositoryPolicy>",
+        );
+        assert!(result.is_err());
     }
 
     #[test]
@@ -449,6 +707,17 @@ mod scm_tests {
         assert_eq!(notifier.send_on_success, result.send_on_success);
         assert_eq!(notifier.send_on_warning, result.send_on_warning);
     }
+
+    #[test]
+    fn test_notifier_defaults_match_maven() {
+        let notifier: Notifier =
+            quick_xml::de::from_str("<notifier/>").expect("notifier should deserialize");
+        assert_eq!(notifier.r#type, "mail");
+        assert!(notifier.send_on_error);
+        assert!(notifier.send_on_failure);
+        assert!(notifier.send_on_success);
+        assert!(notifier.send_on_warning);
+    }
 }
 
 mod distribution_tests {
@@ -559,6 +828,14 @@ mod organization_tests {
         assert_eq!(ml.post, result.post);
         assert_eq!(ml.archive, result.archive);
         assert_eq!(ml.other_archives.len(), result.other_archives.len());
+        let xml = quick_xml::se::to_string(&ml).expect("serialize mailing list");
+        assert!(xml.contains("<otherArchives><otherArchive>"));
+
+        let parsed: MailingList = quick_xml::de::from_str(
+            "<mailingList><otherArchives><otherArchive>https://archive.example</otherArchive></otherArchives></mailingList>",
+        )
+        .expect("parse Maven otherArchives nesting");
+        assert_eq!(parsed.other_archives, ["https://archive.example"]);
     }
 
     #[test]
@@ -592,6 +869,16 @@ mod profile_tests {
     }
 
     #[test]
+    fn profile_id_defaults_to_default() {
+        let profile: Profile = quick_xml::de::from_str(
+            "<profile><properties><enabled>true</enabled></properties></profile>",
+        )
+        .expect("profile without id");
+        assert_eq!(profile.id, "default");
+        assert_eq!(Profile::default().id, "default");
+    }
+
+    #[test]
     fn test_activation_active_by_default_serde() {
         let activation = Activation::active_by_default();
         let result = round_trip_xml(&activation);
@@ -603,6 +890,22 @@ mod profile_tests {
         let activation = Activation::jdk("17");
         let result = round_trip_xml(&activation);
         assert_eq!(activation.jdk, result.jdk);
+    }
+
+    #[test]
+    fn test_activation_condition_serde() {
+        let activation = Activation::builder()
+            .condition("${feature.mode} == enabled")
+            .build();
+        let result = round_trip_xml(&activation);
+        assert_eq!(activation.condition, result.condition);
+    }
+
+    #[test]
+    fn test_activation_packaging_serde() {
+        let activation = Activation::builder().packaging("war").build();
+        let result = round_trip_xml(&activation);
+        assert_eq!(activation.packaging, result.packaging);
     }
 
     #[test]
@@ -751,6 +1054,24 @@ mod project_tests {
         assert_eq!(project.group_id, result.group_id);
         assert_eq!(project.artifact_id, result.artifact_id);
         assert_eq!(project.version, result.version);
+    }
+
+    #[test]
+    fn test_maven4_project_attributes_serde() {
+        let project: Project = quick_xml::de::from_str(
+            r#"<project root="true" preserve.model.version="true">
+                <modelVersion>4.1.0</modelVersion>
+                <groupId>com.example</groupId>
+                <artifactId>root-project</artifactId>
+                <version>1.0</version>
+            </project>"#,
+        )
+        .expect("Maven 4 project attributes");
+        assert!(project.root);
+        assert!(project.preserve_model_version);
+        let xml = quick_xml::se::to_string(&project).expect("serialize Maven 4 project");
+        assert!(xml.contains("root=\"true\""));
+        assert!(xml.contains("preserve.model.version=\"true\""));
     }
 
     #[test]

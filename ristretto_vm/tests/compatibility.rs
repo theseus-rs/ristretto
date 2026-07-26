@@ -193,21 +193,15 @@ fn run_compatibility_test(
     match expected_output(test_case) {
         Ok((expected_duration, expected_output)) => {
             record(test_vm(
-                &test_case.java_version,
+                test_case,
                 &test_name,
-                &test_case.class_dir,
-                &test_case.source_dir,
-                &test_case.system_properties,
                 true,
                 &expected_duration,
                 &expected_output,
             ));
             record(test_vm(
-                &test_case.java_version,
+                test_case,
                 &test_name,
-                &test_case.class_dir,
-                &test_case.source_dir,
-                &test_case.system_properties,
                 false,
                 &expected_duration,
                 &expected_output,
@@ -479,11 +473,8 @@ fn expected_output(test_case: &TestCase) -> Result<(Duration, String)> {
 /// Tests the VM by running the `Test` class in the specified test directory.
 #[cfg(not(target_family = "wasm"))]
 fn test_vm(
-    java_version: &str,
+    test_case: &TestCase,
     test_name: &str,
-    class_dir: &Path,
-    source_dir: &Path,
-    system_properties: &[(String, String)],
     interpreted: bool,
     expected_duration: &Duration,
     expected_output: &str,
@@ -498,68 +489,8 @@ fn test_vm(
         Duration::from_mins(2)
     };
     let worker_threads = if is_socket_test { 2 } else { 1 };
-    let timeout_message = format!("{TEST_TIMEOUT_PREFIX}{} seconds", test_timeout.as_secs());
-    let stack_size = 8 * 1024 * 1024; // 8 MB stack
-    let run_once = || {
-        // Spawn a thread with a larger stack to handle deeply nested async calls that occur during
-        // method handle invocations and invokedynamic resolution.
-        let java_version = java_version.to_string();
-        let class_dir = class_dir.to_path_buf();
-        let source_dir = source_dir.to_path_buf();
-        let system_properties = system_properties.to_vec();
-        let timeout_message = timeout_message.clone();
-        std::thread::Builder::new()
-            .stack_size(stack_size)
-            .spawn(move || {
-                std::panic::catch_unwind(|| {
-                    let runtime = tokio::runtime::Builder::new_multi_thread()
-                        // Rayon already runs multiple compatibility tests in parallel. A single
-                        // worker avoids multiplying the runner's thread count for most VMs, while
-                        // socket cases need a second worker so their Java server and client threads
-                        // can make progress independently.
-                        .worker_threads(worker_threads)
-                        .enable_all()
-                        .thread_stack_size(stack_size)
-                        .build()
-                        .map_err(|error| InternalError(error.to_string()))?;
-                    runtime.block_on(async {
-                        let stdout = Arc::new(AsyncMutex::new(Vec::new()));
-                        let stderr = Arc::new(AsyncMutex::new(Vec::new()));
-                        match tokio::time::timeout(
-                            test_timeout,
-                            run_test(
-                                &java_version,
-                                &class_dir,
-                                &source_dir,
-                                &system_properties,
-                                interpreted,
-                                stdout.clone(),
-                                stderr.clone(),
-                            ),
-                        )
-                        .await
-                        {
-                            Ok(result) => result,
-                            Err(_elapsed) => {
-                                let stdout = stdout.lock().await;
-                                let stdout = String::from_utf8_lossy(&stdout);
-                                let stderr = stderr.lock().await;
-                                let stderr = String::from_utf8_lossy(&stderr);
-                                Err(InternalError(format!(
-                                    "{timeout_message}\nstdout: {stdout}\nstderr: {stderr}"
-                                )))
-                            }
-                        }
-                    })
-                })
-            })
-            .expect("Failed to spawn test thread")
-            .join()
-            .expect("Test thread panicked")
-    };
-
     let max_attempts = if is_socket_test { 3 } else { 1 };
-    let mut result = run_once();
+    let mut result = run_vm_once(test_case, interpreted, test_timeout, worker_threads);
     for attempt in 2..=max_attempts {
         let should_retry =
             matches!(&result, Ok(Err(error)) if is_retryable_socket_timeout(test_name, error));
@@ -567,7 +498,7 @@ fn test_vm(
             break;
         }
         warn!("Retrying ({test_type}) {test_name} after timeout ({attempt}/{max_attempts})");
-        result = run_once();
+        result = run_vm_once(test_case, interpreted, test_timeout, worker_threads);
     }
 
     let make_failure = |message: String| Failure {
@@ -603,6 +534,72 @@ fn test_vm(
             Err(make_failure(format!("panic: {error:?}")))
         }
     }
+}
+
+#[cfg(not(target_family = "wasm"))]
+fn run_vm_once(
+    test_case: &TestCase,
+    interpreted: bool,
+    test_timeout: Duration,
+    worker_threads: usize,
+) -> std::thread::Result<Result<(Duration, String)>> {
+    let stack_size = 8 * 1024 * 1024; // 8 MB stack
+    let java_version = test_case.java_version.clone();
+    let class_dir = test_case.class_dir.clone();
+    let source_dir = test_case.source_dir.clone();
+    let system_properties = test_case.system_properties.clone();
+    let timeout_message = format!("{TEST_TIMEOUT_PREFIX}{} seconds", test_timeout.as_secs());
+
+    // Spawn a thread with a larger stack to handle deeply nested async calls that occur during
+    // method handle invocations and invokedynamic resolution.
+    std::thread::Builder::new()
+        .stack_size(stack_size)
+        .spawn(move || {
+            std::panic::catch_unwind(|| {
+                let runtime = tokio::runtime::Builder::new_multi_thread()
+                    // Rayon already runs multiple compatibility tests in parallel. A single worker
+                    // avoids multiplying the runner's thread count for most VMs, while socket cases
+                    // need a second worker so their Java server and client threads can make
+                    // progress independently.
+                    .worker_threads(worker_threads)
+                    .enable_all()
+                    .thread_stack_size(stack_size)
+                    .build()
+                    .map_err(|error| InternalError(error.to_string()))?;
+                runtime.block_on(async {
+                    let stdout = Arc::new(AsyncMutex::new(Vec::new()));
+                    let stderr = Arc::new(AsyncMutex::new(Vec::new()));
+                    match tokio::time::timeout(
+                        test_timeout,
+                        run_test(
+                            &java_version,
+                            &class_dir,
+                            &source_dir,
+                            &system_properties,
+                            interpreted,
+                            stdout.clone(),
+                            stderr.clone(),
+                        ),
+                    )
+                    .await
+                    {
+                        Ok(result) => result,
+                        Err(_elapsed) => {
+                            let stdout = stdout.lock().await;
+                            let stdout = String::from_utf8_lossy(&stdout);
+                            let stderr = stderr.lock().await;
+                            let stderr = String::from_utf8_lossy(&stderr);
+                            Err(InternalError(format!(
+                                "{timeout_message}\nstdout: {stdout}\nstderr: {stderr}"
+                            )))
+                        }
+                    }
+                })
+            })
+        })
+        .expect("Failed to spawn test thread")
+        .join()
+        .expect("Test thread panicked")
 }
 
 #[cfg(not(target_family = "wasm"))]
