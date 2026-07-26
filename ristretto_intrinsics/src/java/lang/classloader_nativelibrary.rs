@@ -14,10 +14,17 @@ use std::sync::Arc;
 )]
 #[async_method]
 pub async fn find<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Long(1)))
+    let name = parameters.pop()?.as_string()?;
+    let native_library = parameters.pop()?;
+    let handle = native_library.as_object_ref()?.value("handle")?.as_i64()?;
+    let vm = thread.vm()?;
+    let address = crate::native_library::libraries(vm.as_ref())?
+        .find(handle, &name)
+        .unwrap_or_default();
+    Ok(Some(Value::Long(address)))
 }
 
 #[intrinsic_method(
@@ -26,10 +33,10 @@ pub async fn find<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn find_entry<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Ok(Some(Value::Long(2)))
+    find(thread, parameters).await
 }
 
 #[intrinsic_method(
@@ -38,15 +45,19 @@ pub async fn find_entry<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn load<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _is_builtin = parameters.pop_bool()?;
-    let _name = parameters.pop()?.as_string()?;
+    let is_builtin = parameters.pop_bool()?;
+    let name = parameters.pop()?.as_string()?;
     let native_library_value = parameters.pop()?;
+    let intrinsic = is_builtin && crate::native_library::is_intrinsic_native_library(name.as_str());
+    let vm = thread.vm()?;
+    let (handle, jni_version) =
+        crate::native_library::libraries(vm.as_ref())?.load(&name, intrinsic)?;
     let mut native_library = native_library_value.as_object_mut()?;
-    native_library.set_value("handle", Value::Long(1))?;
-    native_library.set_value("jniVersion", Value::Int(0x0001_0008))?; // JNI 1.8
+    native_library.set_value("handle", Value::Long(handle))?;
+    native_library.set_value("jniVersion", Value::Int(i32::from(jni_version)))?;
     native_library.set_value("loaded", Value::from(true))?;
 
     Ok(None)
@@ -58,16 +69,20 @@ pub async fn load<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn load_0<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let _is_jni = parameters.pop_bool()?;
-    let _is_builtin = parameters.pop_bool()?;
-    let _name = parameters.pop()?.as_string()?;
+    let is_builtin = parameters.pop_bool()?;
+    let name = parameters.pop()?.as_string()?;
     let native_library_value = parameters.pop()?;
+    let intrinsic = is_builtin && crate::native_library::is_intrinsic_native_library(name.as_str());
+    let vm = thread.vm()?;
+    let (handle, jni_version) =
+        crate::native_library::libraries(vm.as_ref())?.load(&name, intrinsic)?;
     let mut native_library = native_library_value.as_object_mut()?;
-    native_library.set_value("handle", Value::Long(1))?;
-    native_library.set_value("jniVersion", Value::Int(0x0001_0008))?;
+    native_library.set_value("handle", Value::Long(handle))?;
+    native_library.set_value("jniVersion", Value::Int(i32::from(jni_version)))?;
     Ok(Some(Value::from(true)))
 }
 
@@ -78,15 +93,19 @@ pub async fn load_0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn load_0_early_java_11<T: Thread + 'static>(
-    _thread: Arc<T>,
+    thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let _is_builtin = parameters.pop_bool()?;
-    let _name = parameters.pop()?.as_string()?;
+    let is_builtin = parameters.pop_bool()?;
+    let name = parameters.pop()?.as_string()?;
     let native_library_value = parameters.pop()?;
+    let intrinsic = is_builtin && crate::native_library::is_intrinsic_native_library(name.as_str());
+    let vm = thread.vm()?;
+    let (handle, jni_version) =
+        crate::native_library::libraries(vm.as_ref())?.load(&name, intrinsic)?;
     let mut native_library = native_library_value.as_object_mut()?;
-    native_library.set_value("handle", Value::Long(1))?;
-    native_library.set_value("jniVersion", Value::Int(0x0001_0008))?;
+    native_library.set_value("handle", Value::Long(handle))?;
+    native_library.set_value("jniVersion", Value::Int(i32::from(jni_version)))?;
     Ok(Some(Value::from(true)))
 }
 
@@ -96,9 +115,15 @@ pub async fn load_0_early_java_11<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn unload_0<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let _is_builtin = parameters.pop_bool()?;
+    let _name = parameters.pop()?.as_string()?;
+    let native_library = parameters.pop()?;
+    let handle = native_library.as_object_ref()?.value("handle")?.as_i64()?;
+    let vm = thread.vm()?;
+    crate::native_library::libraries(vm.as_ref())?.unload(handle);
     Ok(None)
 }
 
@@ -108,32 +133,52 @@ pub async fn unload_0<T: Thread + 'static>(
 )]
 #[async_method]
 pub async fn unload_1<T: Thread + 'static>(
-    _thread: Arc<T>,
-    _parameters: Parameters,
+    thread: Arc<T>,
+    mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let handle = parameters.pop_long()?;
+    let _is_builtin = parameters.pop_bool()?;
+    let _name = parameters.pop()?.as_string()?;
+    let vm = thread.vm()?;
+    crate::native_library::libraries(vm.as_ref())?.unload(handle);
     Ok(None)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::native_library::JniVersion;
     use ristretto_classfile::{BaseType, FieldType};
     use ristretto_classloader::Reference;
     use ristretto_types::JavaObject;
 
     #[tokio::test]
     async fn test_find() -> Result<()> {
-        let (_vm, thread) = crate::test::java11_thread().await?;
-        let result = find(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Long(1)));
+        let (vm, thread) = crate::test::java11_thread().await?;
+        let native_library_class = thread.class("java.lang.ClassLoader$NativeLibrary").await?;
+        let native_library = ristretto_classloader::Object::new(native_library_class)?;
+        let native_library =
+            Value::new_object(vm.garbage_collector(), Reference::Object(native_library));
+        let mut parameters = Parameters::default();
+        parameters.push(native_library);
+        parameters.push("missing".to_object(&thread).await?);
+        let result = find(thread, parameters).await?;
+        assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
 
     #[tokio::test]
     async fn test_find_entry() -> Result<()> {
-        let (_vm, thread) = crate::test::java11_thread().await?;
-        let result = find_entry(thread, Parameters::default()).await?;
-        assert_eq!(result, Some(Value::Long(2)));
+        let (vm, thread) = crate::test::java11_thread().await?;
+        let native_library_class = thread.class("java.lang.ClassLoader$NativeLibrary").await?;
+        let native_library = ristretto_classloader::Object::new(native_library_class)?;
+        let native_library =
+            Value::new_object(vm.garbage_collector(), Reference::Object(native_library));
+        let mut parameters = Parameters::default();
+        parameters.push(native_library);
+        parameters.push("missing".to_object(&thread).await?);
+        let result = find_entry(thread, parameters).await?;
+        assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
 
@@ -190,8 +235,8 @@ mod tests {
             Reference::Object(native_library_instance),
         );
         parameters.push(native_library_value);
-        parameters.push("foo".to_object(&thread).await?); // name
-        parameters.push_bool(false); // is_builtin
+        parameters.push("sctp".to_object(&thread).await?); // name
+        parameters.push_bool(true); // is_builtin
         let result = load(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
@@ -213,7 +258,10 @@ mod tests {
         assert_eq!(result, Some(Value::from(true)));
         let native_library = native_library.as_object_ref()?;
         assert_eq!(native_library.value("handle")?, Value::Long(1));
-        assert_eq!(native_library.value("jniVersion")?, Value::Int(0x0001_0008));
+        assert_eq!(
+            native_library.value("jniVersion")?,
+            Value::Int(i32::from(JniVersion::V1_6))
+        );
         Ok(())
     }
 
@@ -232,14 +280,25 @@ mod tests {
         assert_eq!(result, Some(Value::from(true)));
         let native_library = native_library.as_object_ref()?;
         assert_eq!(native_library.value("handle")?, Value::Long(1));
-        assert_eq!(native_library.value("jniVersion")?, Value::Int(0x0001_0008));
+        assert_eq!(
+            native_library.value("jniVersion")?,
+            Value::Int(i32::from(JniVersion::V1_6))
+        );
         Ok(())
     }
 
     #[tokio::test]
     async fn test_unload_0() -> Result<()> {
-        let (_vm, thread) = crate::test::java11_thread().await?;
-        let result = unload_0(thread, Parameters::default()).await?;
+        let (vm, thread) = crate::test::java11_thread().await?;
+        let native_library_class = thread.class("java.lang.ClassLoader$NativeLibrary").await?;
+        let native_library = ristretto_classloader::Object::new(native_library_class)?;
+        let native_library =
+            Value::new_object(vm.garbage_collector(), Reference::Object(native_library));
+        let mut parameters = Parameters::default();
+        parameters.push(native_library);
+        parameters.push("sctp".to_object(&thread).await?);
+        parameters.push_bool(true);
+        let result = unload_0(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -247,7 +306,9 @@ mod tests {
     #[tokio::test]
     async fn test_unload_1() -> Result<()> {
         let (_vm, thread) = crate::test::java11_thread().await?;
-        let result = unload_1(thread, Parameters::default()).await?;
+        let name = "sctp".to_object(&thread).await?;
+        let parameters = Parameters::new(vec![name, Value::Int(1), Value::Long(0)]);
+        let result = unload_1(thread, parameters).await?;
         assert_eq!(result, None);
         Ok(())
     }
