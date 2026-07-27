@@ -162,8 +162,10 @@ impl ScmBuilder {
 #[serde(rename_all = "camelCase")]
 pub struct IssueManagement {
     /// The issue management system.
+    #[serde(default)]
     pub system: String,
     /// The URL.
+    #[serde(default)]
     pub url: String,
 }
 
@@ -184,8 +186,10 @@ impl IssueManagement {
 #[serde(rename_all = "camelCase")]
 pub struct CiManagement {
     /// The CI system.
+    #[serde(default)]
     pub system: String,
     /// The URL.
+    #[serde(default)]
     pub url: String,
     /// The notifiers.
     #[serde(default, skip_serializing_if = "Option::is_none")]

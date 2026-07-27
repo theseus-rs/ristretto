@@ -227,7 +227,9 @@ jobs:
           RUST_LOG: info
         run: |
           cargo test --profile release-tests -p ristretto_classloader runtime::util::tests -- --ignored --test-threads=1
-          cargo test --profile release-tests -p runtime_class_loader -- --ignored
+          cargo test --profile release-tests -p ristretto_classloader object::tests::test_as_string_java8 -- --ignored --test-threads=1
+          cargo test --profile release-tests -p ristretto_classloader --test runtime -- --ignored --test-threads=1
+          cargo test --profile release-tests -p runtime_class_loader -- --ignored --test-threads=1
 
       - name: Tests
         if: ${{ matrix.platform == 'macos-x64' }}

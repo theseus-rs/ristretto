@@ -16,6 +16,12 @@ use std::fs;
 /// }
 /// ```
 fn main() -> Result<()> {
+    let bytes = generate_class()?;
+    fs::write("HelloWorld.class", bytes)?;
+    Ok(())
+}
+
+fn generate_class() -> Result<Vec<u8>> {
     let mut constant_pool = ConstantPool::default();
     let super_class = constant_pool.add_class("java/lang/Object")?;
     let object_init = constant_pool.add_method_ref(super_class, "<init>", "()V")?;
@@ -108,8 +114,7 @@ fn main() -> Result<()> {
 
     let mut bytes = Vec::new();
     class_file.to_bytes(&mut bytes)?;
-    fs::write("HelloWorld.class", bytes)?;
-    Ok(())
+    Ok(bytes)
 }
 
 #[cfg(test)]
@@ -117,7 +122,20 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_main() -> Result<()> {
-        main()
+    fn test_generate_class() -> Result<()> {
+        let bytes = generate_class()?;
+        let class_file = ClassFile::from_bytes(&bytes)?;
+
+        class_file.verify()?;
+        assert_eq!(JAVA_21, class_file.version);
+        assert_eq!("HelloWorld", class_file.class_name()?);
+        assert!(class_file.to_string().contains("Hello, World!"));
+        let method_names = class_file
+            .methods
+            .iter()
+            .map(|method| class_file.constant_pool.try_get_utf8(method.name_index))
+            .collect::<Result<Vec<_>>>()?;
+        assert_eq!(vec!["<init>", "main"], method_names);
+        Ok(())
     }
 }

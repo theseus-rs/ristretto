@@ -246,9 +246,10 @@ pub(crate) fn parse_major_version(version: &str) -> u64 {
 #[cfg(all(test, not(all(target_family = "wasm", target_os = "unknown"))))]
 mod tests {
     use super::*;
-    use crate::runtime::bootstrap::{JAVA_11_VERSION, JAVA_21_VERSION};
+    use crate::runtime::bootstrap::{JAVA_8_VERSION, JAVA_11_VERSION, JAVA_21_VERSION};
 
     #[tokio::test]
+    #[ignore = "requires network access"]
     async fn test_get_runtime_archive_latest_exact() -> Result<()> {
         let expected_version = JAVA_11_VERSION;
         let (version, file_name, archive) = get_runtime_archive(expected_version).await?;
@@ -259,16 +260,22 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires network access"]
     async fn test_get_runtime_archive_partial_version() -> Result<()> {
-        let partial_version = "8.422";
-        let (version, file_name, archive) = get_runtime_archive(partial_version).await?;
-        assert!(version.starts_with(partial_version));
-        assert!(file_name.contains(partial_version));
+        let partial_version = JAVA_8_VERSION
+            .split('.')
+            .take(2)
+            .collect::<Vec<_>>()
+            .join(".");
+        let (version, file_name, archive) = get_runtime_archive(&partial_version).await?;
+        assert!(version.starts_with(&partial_version));
+        assert!(file_name.contains(&partial_version));
         assert!(!archive.is_empty());
         Ok(())
     }
 
     #[tokio::test]
+    #[ignore = "requires network access"]
     async fn test_get_runtime_archive_latest_major_version() -> Result<()> {
         let major_version = "17";
         let (version, file_name, archive) = get_runtime_archive(major_version).await?;
@@ -279,6 +286,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires network access"]
     async fn test_get_runtime_archive_latest_lts() -> Result<()> {
         let (version, _file_name, archive) = get_runtime_archive("*").await?;
         let expected_major_version = DEFAULT_MAJOR_VERSION.to_string();
@@ -288,6 +296,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires network access"]
     async fn test_get_runtime_archive_unsupported_version() {
         let result = get_runtime_archive("21.0.0.0.0").await;
         assert!(matches!(result, Err(Error::RequestError(_))));
@@ -300,6 +309,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires network access"]
     async fn test_download_archive() -> Result<()> {
         let version = JAVA_21_VERSION;
         let (_file_name, archive) = download_archive(version).await?;
@@ -308,6 +318,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires network access"]
     async fn test_get_release_versions() -> Result<()> {
         let major_version = "21";
         let release_versions = get_release_versions(major_version).await?;

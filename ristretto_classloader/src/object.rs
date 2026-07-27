@@ -1135,6 +1135,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires downloading a Java 8 runtime"]
     async fn test_as_string_java8() -> Result<()> {
         let collector = GarbageCollector::new();
         let class = java8_string_class().await?;
@@ -1153,6 +1154,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires downloading a Java 8 runtime"]
     async fn test_as_string_java8_invalid_byte_array_value() -> Result<()> {
         let collector = GarbageCollector::new();
         let class = java8_string_class().await?;
