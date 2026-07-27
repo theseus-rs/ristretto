@@ -13,6 +13,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - initial Maven dependency resolver
 - implement jdk/internal/loader/NativeLibrary
 - expand Maven 4 model support and validation
+- implement sockets
+
+### Other
+- ristretto-v0.32.1
+- add release targets
+- add clippy lints
+- improve pom testing
+- initial wasm32-wasip2 tests
+
+## `ristretto_resolver` - [0.32.1](https://github.com/theseus-rs/ristretto/releases/tag/ristretto_resolver-v0.32.1) - 2026-07-27
+
+### Added
+- initial Maven dependency resolver
+
+### Other
+- ristretto-v0.32.1
+
+## `ristretto_pom` - [0.32.1](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.29.0...ristretto_pom-v0.32.1) - 2026-07-27
+
+### Added
+- initial Maven dependency resolver
+- expand Maven 4 model support and validation
+- implement sockets
+
+### Other
+- add clippy lints
+- improve pom testing
+- initial wasm32-wasip2 tests
+
+## `ristretto_vm` - [0.32.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.32.0...ristretto_vm-v0.32.1) - 2026-07-27
+
+### Added
+- initial Maven dependency resolver
+- expand Maven 4 model support and validation
+
+### Other
+- ristretto-v0.32.1
+- add release targets
+
+## `ristretto_intrinsics` - [0.32.1](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.32.0...ristretto_intrinsics-v0.32.1) - 2026-07-27
+
+### Added
+- initial Maven dependency resolver
+- implement jdk/internal/loader/NativeLibrary
+
+### Other
+- ristretto-v0.32.1
+- add release targets
+
+## `ristretto_types` - [0.32.1](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.32.0...ristretto_types-v0.32.1) - 2026-07-27
+
+### Other
+- ristretto-v0.32.1
+- add release targets
+
+## `ristretto_jit` - [0.32.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.32.0...ristretto_jit-v0.32.1) - 2026-07-27
+
+### Other
+- ristretto-v0.32.1
+- add release targets
+
+## `ristretto_macros` - [0.32.1](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.32.0...ristretto_macros-v0.32.1) - 2026-07-27
+
+### Other
+- ristretto-v0.32.1
+
+## `ristretto_classloader` - [0.32.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.32.0...ristretto_classloader-v0.32.1) - 2026-07-27
+
+### Added
+- initial Maven dependency resolver
+- implement jdk/internal/loader/NativeLibrary
+
+### Other
+- ristretto-v0.32.1
+
+## `ristretto_java` - [0.32.1](https://github.com/theseus-rs/ristretto/compare/v0.32.0...v0.32.1) - 2026-07-27
+
+### Added
+- initial Maven dependency resolver
+- implement jdk/internal/loader/NativeLibrary
+- expand Maven 4 model support and validation
 
 ### Other
 - add release targets
