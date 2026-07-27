@@ -18,7 +18,7 @@ pub(crate) fn reqwest_client() -> reqwest::Result<reqwest::Client> {
     }
 
     #[cfg(not(any(feature = "tls-rustls-aws-lc-rs", feature = "tls-rustls-ring")))]
-    Ok(reqwest::Client::new())
+    reqwest::Client::builder().build()
 }
 
 #[cfg(test)]

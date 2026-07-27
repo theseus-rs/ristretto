@@ -35,6 +35,8 @@ pub mod java;
 pub mod jdk;
 /// Host locale detection
 mod locale;
+/// Dynamic native-library support shared with the VM.
+pub mod native_library;
 mod net_helpers;
 /// Methods for handling Java properties
 pub mod properties;
