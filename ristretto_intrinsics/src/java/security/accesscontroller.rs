@@ -4,7 +4,6 @@ use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
-use ristretto_types::JavaError;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -108,7 +107,7 @@ pub async fn get_inherited_access_control_context<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    Err(JavaError::UnsatisfiedLinkError("java.security.AccessController.getInheritedAccessControlContext()Ljava/security/AccessControlContext;".to_string()).into())
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method(
@@ -121,7 +120,7 @@ pub async fn get_protection_domain<T: Thread + 'static>(
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     let _arg0 = parameters.pop_reference()?;
-    Err(JavaError::UnsatisfiedLinkError("java.security.AccessController.getProtectionDomain(Ljava/lang/Class;)Ljava/security/ProtectionDomain;".to_string()).into())
+    Ok(Some(Value::Object(None)))
 }
 
 #[intrinsic_method(
@@ -149,24 +148,20 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_inherited_access_control_context() {
+    async fn test_get_inherited_access_control_context() -> Result<()> {
         let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
-        let result = get_inherited_access_control_context(thread, Parameters::default()).await;
-        assert_eq!(
-            "java.security.AccessController.getInheritedAccessControlContext()Ljava/security/AccessControlContext;",
-            result.unwrap_err().to_string()
-        );
+        let result = get_inherited_access_control_context(thread, Parameters::default()).await?;
+        assert_eq!(Some(Value::Object(None)), result);
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_get_protection_domain() {
+    async fn test_get_protection_domain() -> Result<()> {
         let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let result =
-            get_protection_domain(thread, Parameters::new(vec![Value::Object(None)])).await;
-        assert_eq!(
-            "java.security.AccessController.getProtectionDomain(Ljava/lang/Class;)Ljava/security/ProtectionDomain;",
-            result.unwrap_err().to_string()
-        );
+            get_protection_domain(thread, Parameters::new(vec![Value::Object(None)])).await?;
+        assert_eq!(Some(Value::Object(None)), result);
+        Ok(())
     }
 
     #[tokio::test]
