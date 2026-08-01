@@ -27,7 +27,7 @@ fn is_intrinsic_native_library(path: &str) -> bool {
         .iter()
         .find_map(|suffix| without_prefix.strip_suffix(suffix))
         .unwrap_or(without_prefix);
-    matches!(stem, "net" | "nio" | "sctp" | "zip")
+    matches!(stem, "jimage" | "net" | "nio" | "prefs" | "sctp" | "zip")
 }
 
 /// Set the defining class loader and module on a class mirror created by defineClass.
@@ -480,17 +480,13 @@ mod tests {
         let result = find_builtin_lib(thread.clone(), parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
 
-        let mut parameters = Parameters::default();
-        parameters.push("zip".to_object(&thread).await?);
-        let result = find_builtin_lib(thread.clone(), parameters).await?;
-        let expected = "zip".to_object(&thread).await?;
-        assert_eq!(result, Some(expected));
-
-        let mut parameters = Parameters::default();
-        parameters.push("sctp".to_object(&thread).await?);
-        let result = find_builtin_lib(thread.clone(), parameters).await?;
-        let expected = "sctp".to_object(&thread).await?;
-        assert_eq!(result, Some(expected));
+        for library in ["jimage", "net", "nio", "prefs", "sctp", "zip"] {
+            let mut parameters = Parameters::default();
+            parameters.push(library.to_object(&thread).await?);
+            let result = find_builtin_lib(thread.clone(), parameters).await?;
+            let expected = library.to_object(&thread).await?;
+            assert_eq!(result, Some(expected));
+        }
 
         let mut parameters = Parameters::default();
         parameters.push("/usr/lib/libinternet.so".to_object(&thread).await?);
