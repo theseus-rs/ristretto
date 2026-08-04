@@ -2,6 +2,7 @@ use crate::Result;
 use crate::class_path_entry::directory::Directory;
 use crate::class_path_entry::image::Image;
 use crate::class_path_entry::jar::Jar;
+use crate::class_path_entry::memory::Memory;
 use ristretto_classfile::ClassFile;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Debug;
@@ -13,6 +14,7 @@ pub enum ClassPathEntry {
     Directory(Directory),
     Image(Image),
     Jar(Jar),
+    Memory(Memory),
 }
 
 /// Implementation for `ClassPathEntry`.
@@ -50,6 +52,7 @@ impl ClassPathEntry {
             ClassPathEntry::Directory(directory) => directory.name(),
             ClassPathEntry::Image(image) => image.name(),
             ClassPathEntry::Jar(jar) => jar.name(),
+            ClassPathEntry::Memory(memory) => memory.name(),
         }
     }
 
@@ -63,6 +66,7 @@ impl ClassPathEntry {
             ClassPathEntry::Directory(directory) => directory.read_class(name).await,
             ClassPathEntry::Image(image) => image.read_class(name).await,
             ClassPathEntry::Jar(jar) => jar.read_class(name).await,
+            ClassPathEntry::Memory(memory) => memory.read_class(name).await,
         }
     }
 
@@ -80,6 +84,7 @@ impl ClassPathEntry {
             ClassPathEntry::Directory(directory) => directory.read_resource(name).await,
             ClassPathEntry::Image(image) => image.read_resource(module, name).await,
             ClassPathEntry::Jar(jar) => jar.read_resource(name).await,
+            ClassPathEntry::Memory(memory) => memory.read_resource(name).await,
         }
     }
 
@@ -93,6 +98,7 @@ impl ClassPathEntry {
             ClassPathEntry::Directory(directory) => directory.class_names().await,
             ClassPathEntry::Image(image) => image.class_names().await,
             ClassPathEntry::Jar(jar) => jar.class_names().await,
+            ClassPathEntry::Memory(memory) => memory.class_names().await,
         }
     }
 }
@@ -175,6 +181,26 @@ mod tests {
                     .is_some()
             );
         }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_memory_entry_dispatch() -> Result<()> {
+        let bytes = include_bytes!("../../../classes/Minimum.class");
+        let memory = Memory::new("generated");
+        memory.add_class(bytes).await?;
+        let entry = ClassPathEntry::Memory(memory);
+
+        assert_eq!(OsStr::new("generated"), entry.name());
+        assert_eq!("Minimum", entry.read_class("Minimum").await?.class_name()?);
+        assert_eq!(
+            Some(bytes.as_slice()),
+            entry
+                .read_resource(Some("ignored.module"), "Minimum.class")
+                .await?
+                .as_deref()
+        );
+        assert_eq!(["Minimum"], entry.class_names().await?.as_slice());
         Ok(())
     }
 

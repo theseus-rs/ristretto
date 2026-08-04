@@ -62,17 +62,32 @@ impl ClassPath {
 
         for class_path_entry in self.iter() {
             if let Ok(mut class_file) = class_path_entry.read_class(name).await {
-                let source = class_path_entry.name().to_string_lossy().to_string();
+                let source = class_path_entry.name().to_string_lossy();
                 info!("load class {name} source: {source}");
-                let abs_path = std::path::Path::new(&source)
-                    .canonicalize()
-                    .unwrap_or_else(|_| std::path::PathBuf::from(&source));
-                let url = if abs_path.is_dir() {
-                    format!("file:{}/", abs_path.display())
-                } else {
-                    format!("file:{}", abs_path.display())
+                let code_source_url = match class_path_entry {
+                    ClassPathEntry::Directory(_)
+                    | ClassPathEntry::Image(_)
+                    | ClassPathEntry::Jar(_) => {
+                        let path = std::path::Path::new(source.as_ref())
+                            .canonicalize()
+                            .unwrap_or_else(|_| std::path::PathBuf::from(source.as_ref()));
+                        let path_string = path.to_string_lossy();
+                        let is_directory = path.is_dir();
+                        let mut url = String::with_capacity(
+                            "file:".len() + path_string.len() + usize::from(is_directory),
+                        );
+                        url.push_str("file:");
+                        url.push_str(&path_string);
+                        if is_directory {
+                            url.push('/');
+                        }
+                        Some(url)
+                    }
+                    // A synthetic protocol would be rejected by java.net.URL because no
+                    // corresponding protocol handler exists.
+                    ClassPathEntry::Memory(_) => None,
                 };
-                class_file.code_source_url = Some(url);
+                class_file.code_source_url = code_source_url;
                 return Ok(class_file);
             }
         }
@@ -229,6 +244,12 @@ mod tests {
 
         let class_file = class_path_entry.read_class("HelloWorld").await?;
         assert_eq!("HelloWorld", class_file.class_name()?);
+        assert!(
+            class_file
+                .code_source_url
+                .as_deref()
+                .is_some_and(|url| url.starts_with("file:") && url.ends_with('/'))
+        );
 
         #[cfg(feature = "url")]
         {
@@ -240,6 +261,21 @@ mod tests {
                 class_file.class_name()?
             );
         }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_read_class_from_memory() -> Result<()> {
+        let memory = crate::Memory::new("generated");
+        memory
+            .add_class(include_bytes!("../../classes/Minimum.class"))
+            .await?;
+        let class_path = ClassPath::new(vec![ClassPathEntry::Memory(memory)]);
+
+        let class_file = class_path.read_class("Minimum").await?;
+
+        assert_eq!("Minimum", class_file.class_name()?);
+        assert_eq!(None, class_file.code_source_url);
         Ok(())
     }
 
