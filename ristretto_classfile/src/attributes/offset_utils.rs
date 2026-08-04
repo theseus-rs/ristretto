@@ -202,6 +202,7 @@ pub(crate) fn instructions_from_byte_reader(
 ///   (e.g., refers to an index beyond the length of the `instructions` slice).
 /// - returns `Error::Io` if there is an issue writing to the internal byte buffer.
 /// - returns `Error::TryFromIntError` if a conversion from a numeric type fails.
+#[expect(clippy::too_many_lines)]
 pub(crate) fn instructions_to_bytes(
     instructions: &[Instruction],
 ) -> Result<(AHashMap<u16, u16>, Vec<u8>)> {
