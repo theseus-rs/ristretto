@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_java` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/v0.32.1...v0.33.0) - 2026-08-05
+
+### Added
+- implement in-memory class path entry
+- implement jdk/internal/foreign/abi/NativeEntryPoint
+- implement sun/misc/Perf
+
+### Fixed
+- handle large branch targets during serialization
+
+### Other
+- update Cargo.toml dependencies
+- Update ristretto_classfile/src/attributes/offset_utils.rs
+- Merge pull request #782 from theseus-rs/fix-intrinsic-libs
+- Merge pull request #783 from theseus-rs/impl-perf
+
+## `ristretto_resolver` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.32.1...ristretto_resolver-v0.33.0) - 2026-08-05
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_intrinsics` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.32.1...ristretto_intrinsics-v0.33.0) - 2026-08-05
+
+### Added
+- implement jdk/internal/foreign/abi/NativeEntryPoint
+- implement sun/misc/Perf
+
+### Other
+- Merge pull request #782 from theseus-rs/fix-intrinsic-libs
+- Merge pull request #783 from theseus-rs/impl-perf
+
+## `ristretto_jit` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.32.1...ristretto_jit-v0.33.0) - 2026-08-05
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classloader` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.32.1...ristretto_classloader-v0.33.0) - 2026-08-05
+
+### Added
+- implement in-memory class path entry
+
+## `ristretto_classfile` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.32.1...ristretto_classfile-v0.33.0) - 2026-08-05
+
+### Fixed
+- handle large branch targets during serialization
+
+### Other
+- Update ristretto_classfile/src/attributes/offset_utils.rs
+
 ## `ristretto_java` - [0.32.1](https://github.com/theseus-rs/ristretto/compare/v0.32.0...v0.32.1) - 2026-07-27
 
 ### Added
