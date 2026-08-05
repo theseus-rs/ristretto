@@ -22,10 +22,10 @@ ahash = { workspace = true }
 bitflags = { workspace = true }
 parking_lot = { workspace = true }
 portable-atomic = { workspace = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.32.1" }
-ristretto_classloader = { path = "../ristretto_classloader", version = "0.32.1", default-features = false }
-ristretto_gc = { path = "../ristretto_gc", version = "0.32.1" }
-ristretto_jit = { path = "../ristretto_jit", version = "0.32.1" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.33.0" }
+ristretto_classloader = { path = "../ristretto_classloader", version = "0.33.0", default-features = false }
+ristretto_gc = { path = "../ristretto_gc", version = "0.33.0" }
+ristretto_jit = { path = "../ristretto_jit", version = "0.33.0" }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 zerocopy = { workspace = true }
