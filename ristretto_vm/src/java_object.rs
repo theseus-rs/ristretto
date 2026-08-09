@@ -4,7 +4,7 @@ use crate::Result;
 use crate::thread::Thread;
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25, JavaStr};
 use ristretto_classloader::module::ModuleDescriptor;
-use ristretto_classloader::{Class, ClassLoader, Object, Reference, Value};
+use ristretto_classloader::{Class, ClassLoader, ClassLoaderType, Object, Reference, Value};
 use std::sync::Arc;
 
 /// Trait for converting a Rust value to a Java object.  Converts to objects of the primitive
@@ -277,7 +277,7 @@ async fn to_class_loader_object(thread: &Thread, class_loader: &Arc<ClassLoader>
     }
 
     let name = class_loader.name();
-    if name == "bootstrap" {
+    if class_loader.loader_type() == Some(ClassLoaderType::Bootstrap) {
         let builtin_class_loader = Value::Object(None);
         class_loader
             .set_object(Some(builtin_class_loader.clone()))
@@ -311,7 +311,7 @@ async fn to_class_loader_object(thread: &Thread, class_loader: &Arc<ClassLoader>
 
         // For the system/app class loader, create a ClassLoaders$AppClassLoader instance
         // to match the JDK behavior where the app class loader is AppClassLoader
-        let loader_class_name = if class_loader.name() == "system" {
+        let loader_class_name = if class_loader.loader_type() == Some(ClassLoaderType::System) {
             "jdk.internal.loader.ClassLoaders$AppClassLoader"
         } else {
             "jdk.internal.loader.BuiltinClassLoader"
@@ -431,7 +431,7 @@ async fn update_cached_class_module(
             // `callerModule == declaringModule` in
             // `AccessibleObject.checkCanSetAccessible`.
             if let Some(loader) = class.class_loader()?
-                && loader.name() != "bootstrap"
+                && loader.loader_type() != Some(ClassLoaderType::Bootstrap)
             {
                 return Ok(());
             }

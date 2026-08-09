@@ -1,3 +1,4 @@
+use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classfile::attributes::RequiresFlags;
 use ristretto_classloader::module::ModuleDescriptor;
@@ -422,7 +423,7 @@ async fn create_resolved_modules<T: Thread + 'static>(
             // JDK 17+ caches a descriptor-derived hash in ModuleReferenceImpl. Populate it
             // directly so Configuration graph construction does not interpret hashCode for
             // every reference. JDK 11 uses a different modifier hash and stays on the Java path.
-            if vm.java_major_version() >= 17
+            if vm.java_major_version() >= JAVA_17.java()
                 && mref_cls.name() == "jdk/internal/module/ModuleReferenceImpl"
             {
                 let hash = module_descriptor_hash_code(desc)
@@ -759,7 +760,7 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
                     .await?;
             values.push((requires_hash_code(req), req_obj));
         }
-        let req_set = if vm.java_major_version() >= 17 {
+        let req_set = if vm.java_major_version() >= JAVA_17.java() {
             create_hashed_set(thread, values).await?
         } else {
             let values = values
@@ -780,7 +781,7 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
             let exp_obj = create_exports_direct(thread, export, exports_class, empty_set).await?;
             values.push((exports_hash_code(export), exp_obj));
         }
-        let exp_set = if vm.java_major_version() >= 17 {
+        let exp_set = if vm.java_major_version() >= JAVA_17.java() {
             create_hashed_set(thread, values).await?
         } else {
             let values = values
@@ -801,7 +802,7 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
             let open_obj = create_opens_direct(thread, open, opens_class, empty_set).await?;
             values.push((opens_hash_code(open), open_obj));
         }
-        let opens_set = if vm.java_major_version() >= 17 {
+        let opens_set = if vm.java_major_version() >= JAVA_17.java() {
             create_hashed_set(thread, values).await?
         } else {
             let values = values
@@ -834,7 +835,7 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
             let prov_obj = create_provides_direct(thread, prov, provides_class).await?;
             values.push((provides_hash_code(prov), prov_obj));
         }
-        let provides_set = if vm.java_major_version() >= 17 {
+        let provides_set = if vm.java_major_version() >= JAVA_17.java() {
             create_hashed_set(thread, values).await?
         } else {
             let values = values
@@ -887,7 +888,7 @@ async fn create_module_descriptor_direct<T: Thread + 'static>(
 
     // ModuleDescriptor uses this exact cached hash scheme on JDK 17 and later.
     // JDK 11 hashes enum modifier sets by identity, so it must compute the value in Java.
-    if vm.java_major_version() >= 17 {
+    if vm.java_major_version() >= JAVA_17.java() {
         md_object.set_value_unchecked("hash", Value::Int(module_descriptor_hash_code(desc)))?;
     }
 
