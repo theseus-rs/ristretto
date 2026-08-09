@@ -32,6 +32,7 @@ pub struct Configuration {
     pub(super) batch_compilation: bool,
     pub(super) preview_features: bool,
     pub(super) verify_mode: VerifyMode,
+    pub(super) max_java_stack_size: usize,
     // Garbage collector
     pub(super) garbage_collector: Option<Arc<GarbageCollector>>,
     // JPMS module configuration fields
@@ -126,6 +127,14 @@ impl Configuration {
     #[must_use]
     pub fn verify_mode(&self) -> VerifyMode {
         self.verify_mode
+    }
+
+    /// Returns the maximum size in bytes of each interpreted Java stack.
+    ///
+    /// The value is rounded down to a whole interpreter value slot.
+    #[must_use]
+    pub fn max_java_stack_size(&self) -> usize {
+        self.max_java_stack_size
     }
 
     /// Returns the garbage collector, if one was configured.
@@ -262,6 +271,7 @@ impl Debug for Configuration {
             .field("batch_compilation", &self.batch_compilation)
             .field("preview_features", &self.preview_features)
             .field("verify_mode", &self.verify_mode)
+            .field("max_java_stack_size", &self.max_java_stack_size)
             .field("module_path", &self.module_path)
             .field("upgrade_module_path", &self.upgrade_module_path)
             .field("main_module", &self.main_module)

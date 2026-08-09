@@ -1,6 +1,5 @@
 use crate::Result;
-use crate::frame::ExecutionResult::Continue;
-use crate::frame::{ExecutionResult, Frame};
+use crate::frame::{ExecutionResult, Frame, MethodCall};
 use crate::instruction::resolve_method_ref;
 use crate::method_ref_cache::InvokeKind;
 use crate::operand_stack::OperandStack;
@@ -16,21 +15,15 @@ pub(crate) async fn invokespecial(
     stack: &mut OperandStack,
     method_index: u16,
 ) -> Result<ExecutionResult> {
-    let thread = frame.thread()?;
-
     // Resolve the method with JPMS checks and caching
     let resolution = resolve_method_ref(frame, method_index, InvokeKind::Special).await?;
 
     // +1 for the receiver (this)
     let parameters = stack.drain_last(resolution.param_count + 1);
-    let result =
-        Box::pin(thread.execute(&resolution.declaring_class, &resolution.method, &parameters))
-            .await?;
-    // For polymorphic methods, only push if the call site has a return type
-    if resolution.has_return_type
-        && let Some(result) = result
-    {
-        stack.push(result)?;
-    }
-    Ok(Continue)
+    Ok(ExecutionResult::Call(MethodCall {
+        class: resolution.declaring_class,
+        method: resolution.method,
+        parameters,
+        has_return_type: resolution.has_return_type,
+    }))
 }

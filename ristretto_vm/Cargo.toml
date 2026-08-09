@@ -21,7 +21,6 @@ workspace = true
 ahash = { workspace = true }
 async-recursion = { workspace = true }
 bitflags = { workspace = true }
-byte-unit = { workspace = true }
 byteorder = { workspace = true }
 dashmap = { workspace = true }
 flate2 = { workspace = true }
@@ -58,9 +57,6 @@ rayon = { workspace = true }
 sysinfo = { workspace = true }
 tokio = { workspace = true, features = ["fs", "time"] }
 whoami = { workspace = true }
-
-[target.'cfg(all(not(target_family = "wasm"), not(target_os = "solaris")))'.dependencies]
-stacker = { workspace = true }
 
 [target.'cfg(all(not(target_family = "wasm"), target_endian = "little", not(target_os = "dragonfly"), not(any(target_arch = "mips", target_arch = "mips64"))))'.dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread"] }

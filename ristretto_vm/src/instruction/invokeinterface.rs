@@ -4,8 +4,7 @@ use crate::JavaError::{
 };
 use crate::Result;
 use crate::assignable::Assignable;
-use crate::frame::ExecutionResult::Continue;
-use crate::frame::{ExecutionResult, Frame};
+use crate::frame::{ExecutionResult, Frame, MethodCall};
 use crate::instruction::{lookup_method, resolve_method_ref};
 use crate::method_ref_cache::InvokeKind;
 use crate::operand_stack::OperandStack;
@@ -30,7 +29,7 @@ pub(crate) async fn invokeinterface(
     let resolution = resolve_method_ref(frame, method_index, InvokeKind::Interface).await?;
 
     let method_descriptor = JavaStr::cow_from_str(&resolution.method_descriptor);
-    let (method_parameters, _method_return_type) =
+    let (method_parameters, method_return_type) =
         FieldType::parse_method_descriptor(&method_descriptor)?;
     let parameters = stack.drain_last(method_parameters.len() + 1);
 
@@ -87,10 +86,10 @@ pub(crate) async fn invokeinterface(
         .into());
     }
 
-    // Execute the method
-    let result = Box::pin(thread.execute(&resolved_class, &resolved_method, &parameters)).await?;
-    if let Some(value) = result {
-        stack.push(value)?;
-    }
-    Ok(Continue)
+    Ok(ExecutionResult::Call(MethodCall {
+        class: resolved_class,
+        method: resolved_method,
+        parameters,
+        has_return_type: method_return_type.is_some(),
+    }))
 }

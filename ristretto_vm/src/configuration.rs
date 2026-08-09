@@ -39,6 +39,9 @@ mod module_opens;
 mod module_patch;
 mod module_read;
 
+pub(crate) const JAVA_STACK_SLOT_SIZE: usize = size_of::<ristretto_classloader::Value>();
+pub(crate) const DEFAULT_MAX_JAVA_STACK_SIZE: usize = 65_536 * JAVA_STACK_SLOT_SIZE;
+
 pub use builder::ConfigurationBuilder;
 pub use configuration::{Configuration, VerifyMode};
 pub use main_module::MainModule;

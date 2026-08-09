@@ -4,7 +4,8 @@
 //! VM configurations with a fluent interface.
 
 use super::{
-    Configuration, MainModule, ModuleExport, ModuleOpens, ModulePatch, ModuleRead, VerifyMode,
+    Configuration, DEFAULT_MAX_JAVA_STACK_SIZE, JAVA_STACK_SLOT_SIZE, MainModule, ModuleExport,
+    ModuleOpens, ModulePatch, ModuleRead, VerifyMode,
 };
 use crate::Error::InternalError;
 use crate::Result;
@@ -46,6 +47,7 @@ pub struct ConfigurationBuilder {
     batch_compilation: bool,
     preview_features: bool,
     verify_mode: VerifyMode,
+    max_java_stack_size: usize,
     // Garbage collector
     garbage_collector: Option<Arc<GarbageCollector>>,
     // JPMS module configuration fields
@@ -78,6 +80,7 @@ impl ConfigurationBuilder {
     /// - Background batch compilation enabled
     /// - Preview features disabled
     /// - Verify mode set to Remote (verify only remote/untrusted classes)
+    /// - Maximum interpreted Java stack size equivalent to 65,536 stored values per thread
     /// - Standard output and error streams directed to system stdout/stderr
     #[must_use]
     pub fn new() -> Self {
@@ -92,6 +95,7 @@ impl ConfigurationBuilder {
             batch_compilation: true,
             preview_features: false,
             verify_mode: VerifyMode::default(),
+            max_java_stack_size: DEFAULT_MAX_JAVA_STACK_SIZE,
             garbage_collector: None,
             module_path: Vec::new(),
             upgrade_module_path: Vec::new(),
@@ -188,6 +192,16 @@ impl ConfigurationBuilder {
     #[must_use]
     pub fn verify_mode(mut self, verify_mode: VerifyMode) -> Self {
         self.verify_mode = verify_mode;
+        self
+    }
+
+    /// Set the maximum size in bytes of each interpreted Java stack.
+    ///
+    /// The size is rounded down to a whole interpreter value slot. Every frame consumes one
+    /// control slot plus its declared local-variable and operand-stack capacities.
+    #[must_use]
+    pub fn max_java_stack_size(mut self, max_java_stack_size: usize) -> Self {
+        self.max_java_stack_size = max_java_stack_size;
         self
     }
 
@@ -347,6 +361,13 @@ impl ConfigurationBuilder {
     /// An error will be returned if:
     /// - Both Java home and Java version are specified (mutually exclusive)
     pub fn build(self) -> Result<Configuration> {
+        let max_java_stack_size =
+            self.max_java_stack_size / JAVA_STACK_SLOT_SIZE * JAVA_STACK_SLOT_SIZE;
+        if max_java_stack_size == 0 {
+            return Err(InternalError(format!(
+                "Maximum Java stack size must be at least {JAVA_STACK_SLOT_SIZE} bytes"
+            )));
+        }
         let class_path = self.class_path.unwrap_or_else(|| ClassPath::from(&["."]));
 
         let java_home = self.java_home;
@@ -387,6 +408,7 @@ impl ConfigurationBuilder {
             batch_compilation: self.batch_compilation,
             preview_features: self.preview_features,
             verify_mode: self.verify_mode,
+            max_java_stack_size,
             garbage_collector: self.garbage_collector,
             module_path: self.module_path,
             upgrade_module_path: self.upgrade_module_path,
@@ -418,6 +440,7 @@ impl Debug for ConfigurationBuilder {
             .field("batch_compilation", &self.batch_compilation)
             .field("preview_features", &self.preview_features)
             .field("verify_mode", &self.verify_mode)
+            .field("max_java_stack_size", &self.max_java_stack_size)
             .field("module_path", &self.module_path)
             .field("upgrade_module_path", &self.upgrade_module_path)
             .field("main_module", &self.main_module)
@@ -591,6 +614,30 @@ mod tests {
             .build()
             .unwrap();
         assert_eq!(VerifyMode::None, config.verify_mode());
+    }
+
+    #[test]
+    fn test_max_java_stack_size() {
+        let requested_size = JAVA_STACK_SLOT_SIZE * 1_024 + 3;
+        let config = ConfigurationBuilder::new()
+            .max_java_stack_size(requested_size)
+            .build()
+            .unwrap();
+        assert_eq!(JAVA_STACK_SLOT_SIZE * 1_024, config.max_java_stack_size());
+    }
+
+    #[test]
+    fn test_max_java_stack_size_default() {
+        let config = ConfigurationBuilder::new().build().unwrap();
+        assert_eq!(DEFAULT_MAX_JAVA_STACK_SIZE, config.max_java_stack_size());
+    }
+
+    #[test]
+    fn test_max_java_stack_size_less_than_one_slot() {
+        let result = ConfigurationBuilder::new()
+            .max_java_stack_size(JAVA_STACK_SLOT_SIZE - 1)
+            .build();
+        assert!(result.is_err());
     }
 
     #[test]

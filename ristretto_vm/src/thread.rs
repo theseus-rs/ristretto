@@ -1,15 +1,13 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
-#[cfg(all(not(target_family = "wasm"), not(target_os = "solaris")))]
-use crate::JavaError::StackOverflowError;
-use crate::JavaError::{RuntimeException, UnsatisfiedLinkError, VerifyError};
+use crate::JavaError::{RuntimeException, StackOverflowError, UnsatisfiedLinkError, VerifyError};
 use crate::Parameters;
 use crate::RustValue;
-use crate::configuration::VerifyMode;
+use crate::configuration::{DEFAULT_MAX_JAVA_STACK_SIZE, JAVA_STACK_SLOT_SIZE, VerifyMode};
+use crate::frame::{ExecutionResult, MethodCall};
 use crate::java_object::JavaObject;
 use crate::rust_value::process_values;
 use crate::{Frame, Result, VM, jit};
-#[cfg(not(target_family = "wasm"))]
-use byte_unit::{Byte, UnitType};
+
 use parking_lot::RwLock as ParkingRwLock;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{FieldAccessFlags, FieldType, JavaStr, MethodAccessFlags};
@@ -17,11 +15,9 @@ use ristretto_classloader::{Class, ClassLoaderType, Method, Object, Reference, V
 use ristretto_intrinsics::get_monitor_id;
 use ristretto_macros::async_method;
 use std::collections::HashSet;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
-#[cfg(not(target_family = "wasm"))]
-use sysinfo::{Pid, ProcessRefreshKind, RefreshKind, System};
 use tokio::sync::{Notify, RwLock};
 use tokio::time::{Instant, timeout_at};
 use tracing::{Level, debug, event_enabled};
@@ -30,6 +26,167 @@ use tracing::{Level, debug, event_enabled};
 // Leave room for another interpreter transition without rejecting legitimate bootstrap work on
 // Tokio's smaller worker-thread stacks.
 const NATIVE_STACK_RED_ZONE: usize = 128 * 1024;
+
+const STACK_OVERFLOW_RESERVE_SLOTS: usize = 1_024;
+
+/// Number of synchronous instructions to execute before yielding to the Tokio runtime.
+const INSTRUCTION_YIELD_COUNT: u32 = 4096;
+
+#[derive(Debug)]
+struct MonitorGuard {
+    monitor: Option<Arc<ristretto_types::monitor::Monitor>>,
+    thread_id: u64,
+}
+
+impl MonitorGuard {
+    fn new(monitor: Option<Arc<ristretto_types::monitor::Monitor>>, thread_id: u64) -> Self {
+        Self { monitor, thread_id }
+    }
+}
+
+impl Drop for MonitorGuard {
+    fn drop(&mut self) {
+        if let Some(monitor) = self.monitor.take() {
+            let _ = monitor.release(self.thread_id);
+        }
+    }
+}
+
+#[derive(Debug)]
+struct StackEntry {
+    frame: Arc<Frame>,
+    slots: usize,
+    has_return_type: bool,
+    _monitor: MonitorGuard,
+}
+
+#[derive(Debug)]
+struct JavaStack {
+    entries: Vec<StackEntry>,
+    used_slots: usize,
+    max_slots: usize,
+    overflow_reserve_depth: usize,
+}
+
+impl JavaStack {
+    fn new(max_slots: usize) -> Self {
+        let entry_capacity = max_slots.saturating_add(STACK_OVERFLOW_RESERVE_SLOTS);
+        Self {
+            entries: Vec::with_capacity(entry_capacity),
+            used_slots: 0,
+            max_slots,
+            overflow_reserve_depth: 0,
+        }
+    }
+
+    fn frames(&self) -> Vec<Arc<Frame>> {
+        self.entries
+            .iter()
+            .map(|entry| entry.frame.clone())
+            .collect()
+    }
+
+    fn push(
+        &mut self,
+        frame: Arc<Frame>,
+        has_return_type: bool,
+        monitor: MonitorGuard,
+    ) -> Result<()> {
+        let slots = frame.stack_slots()?;
+        let used_slots = self.checked_used_slots(slots, frame.class(), frame.method())?;
+        self.used_slots = used_slots;
+        self.entries.push(StackEntry {
+            frame,
+            slots,
+            has_return_type,
+            _monitor: monitor,
+        });
+        Ok(())
+    }
+
+    fn check_capacity(&self, slots: usize, class: &Class, method: &Method) -> Result<()> {
+        self.checked_used_slots(slots, class, method).map(drop)
+    }
+
+    fn checked_used_slots(&self, slots: usize, class: &Class, method: &Method) -> Result<usize> {
+        let reserve = if self.overflow_reserve_depth == 0 {
+            0
+        } else {
+            STACK_OVERFLOW_RESERVE_SLOTS
+        };
+        let limit = self
+            .max_slots
+            .checked_add(reserve)
+            .ok_or_else(|| InternalError("Java stack limit overflow".to_string()))?;
+        let used_slots = self
+            .used_slots
+            .checked_add(slots)
+            .ok_or_else(|| InternalError("Java stack slot count overflow".to_string()))?;
+        if used_slots > limit {
+            if self.overflow_reserve_depth == 0 {
+                return Err(StackOverflowError(format!(
+                    "{}.{}{}",
+                    class.name(),
+                    method.name(),
+                    method.descriptor()
+                ))
+                .into());
+            }
+            return Err(InternalError(
+                "StackOverflowError emergency reserve exhausted".to_string(),
+            ));
+        }
+        Ok(used_slots)
+    }
+
+    fn push_jit(&mut self, frame: Arc<Frame>, has_return_type: bool, monitor: MonitorGuard) {
+        self.entries.push(StackEntry {
+            frame,
+            slots: 0,
+            has_return_type,
+            _monitor: monitor,
+        });
+    }
+
+    fn pop(&mut self) -> Option<StackEntry> {
+        let entry = self.entries.pop()?;
+        self.used_slots = self.used_slots.saturating_sub(entry.slots);
+        Some(entry)
+    }
+
+    fn truncate(&mut self, depth: usize) {
+        while self.entries.len() > depth {
+            let _ = self.pop();
+        }
+    }
+}
+
+enum DispatchResult {
+    FramePushed,
+    Completed(Option<Value>),
+}
+
+struct ExecutionBoundary<'a> {
+    thread: &'a Thread,
+    depth: usize,
+}
+
+impl Drop for ExecutionBoundary<'_> {
+    fn drop(&mut self) {
+        self.thread.stack.write().truncate(self.depth);
+    }
+}
+
+pub(crate) struct StackOverflowReserve<'a> {
+    thread: &'a Thread,
+}
+
+impl Drop for StackOverflowReserve<'_> {
+    fn drop(&mut self) {
+        let mut stack = self.thread.stack.write();
+        stack.overflow_reserve_depth = stack.overflow_reserve_depth.saturating_sub(1);
+    }
+}
 
 /// A state that is used to park a thread.  The thread will be parked until it is unparked by
 /// another thread or interrupted.
@@ -64,7 +221,8 @@ pub struct Thread {
     thread: Weak<Thread>,
     name: Arc<RwLock<String>>,
     java_object: Arc<RwLock<Value>>,
-    frames: Arc<ParkingRwLock<Vec<Arc<Frame>>>>,
+    stack: ParkingRwLock<JavaStack>,
+    instruction_yield_count: AtomicU32,
     /// Tracks class names currently being loaded via a Java classloader on this
     /// thread, preventing infinite recursion when `loadClass()` internally
     /// triggers further class resolution.
@@ -78,6 +236,10 @@ impl Thread {
     #[must_use]
     pub fn new(vm: &Weak<VM>, id: u64) -> Arc<Self> {
         let vm_ref = vm.clone();
+        let max_stack_size = vm.upgrade().map_or(DEFAULT_MAX_JAVA_STACK_SIZE, |vm| {
+            vm.configuration().max_java_stack_size()
+        });
+        let max_stack_slots = max_stack_size / JAVA_STACK_SLOT_SIZE;
         let name = format!("Thread-{id}");
         let java_object = Value::Object(None);
         Arc::new_cyclic(|thread| Thread {
@@ -86,7 +248,8 @@ impl Thread {
             thread: thread.clone(),
             name: Arc::new(RwLock::new(name)),
             java_object: Arc::new(RwLock::new(java_object)),
-            frames: Arc::new(ParkingRwLock::new(Vec::new())),
+            stack: ParkingRwLock::new(JavaStack::new(max_stack_slots)),
+            instruction_yield_count: AtomicU32::new(0),
             java_cl_loading: Mutex::new(HashSet::new()),
             park_state: ParkState::new(),
         })
@@ -95,6 +258,20 @@ impl Thread {
     /// Get the identifier of the thread.
     pub fn id(&self) -> u64 {
         self.id
+    }
+
+    /// Record a synchronous instruction and return whether the executor should yield.
+    pub(crate) fn record_synchronous_instruction(&self) -> bool {
+        let count = self
+            .instruction_yield_count
+            .fetch_add(1, Ordering::Relaxed)
+            .wrapping_add(1);
+        count.is_multiple_of(INSTRUCTION_YIELD_COUNT)
+    }
+
+    /// Reset the yield counter when an instruction already yields through asynchronous work.
+    pub(crate) fn reset_instruction_yield_count(&self) {
+        self.instruction_yield_count.store(0, Ordering::Relaxed);
     }
 
     /// Get the virtual machine that owns the thread.
@@ -140,8 +317,7 @@ impl Thread {
     ///
     /// if the frames cannot be accessed.
     pub fn frames(&self) -> Result<Vec<Arc<Frame>>> {
-        let frames = self.frames.read();
-        Ok(frames.clone())
+        Ok(self.stack.read().frames())
     }
 
     /// Get the current frame in the thread.
@@ -150,9 +326,17 @@ impl Thread {
     ///
     /// if the current frame cannot be accessed.
     pub fn current_frame(&self) -> Result<Arc<Frame>> {
-        let frames = self.frames.read();
-        let frame = frames.last().ok_or(InternalError("No frame".to_string()))?;
-        Ok(frame.clone())
+        let stack = self.stack.read();
+        let entry = stack
+            .entries
+            .last()
+            .ok_or(InternalError("No frame".to_string()))?;
+        Ok(entry.frame.clone())
+    }
+
+    pub(crate) fn stack_overflow_reserve(&self) -> StackOverflowReserve<'_> {
+        self.stack.write().overflow_reserve_depth += 1;
+        StackOverflowReserve { thread: self }
     }
 
     /// Set the thread as interrupted.
@@ -496,9 +680,10 @@ impl Thread {
         // We must drop the frames lock before invoking any Java methods to avoid
         // deadlocks (execute() modifies frames).
         let java_classloader = {
-            let frames = self.frames.read();
+            let stack = self.stack.read();
             let mut found = None;
-            for frame in frames.iter().rev() {
+            for entry in stack.entries.iter().rev() {
+                let frame = &entry.frame;
                 let class = frame.class();
                 if let Ok(Some(mirror)) = class.object()
                     && let Ok(obj) = mirror.as_object_ref()
@@ -841,30 +1026,53 @@ impl Thread {
     /// # Errors
     ///
     /// if the method cannot be invoked.
-    #[expect(clippy::too_many_lines)]
     pub async fn execute(
         &self,
         class: &Arc<Class>,
         method: &Arc<Method>,
         parameters: &[impl RustValue],
     ) -> Result<Option<Value>> {
+        let parameters = process_values(self, parameters).await?;
+        let base_depth = self.stack.read().entries.len();
+        let _boundary = ExecutionBoundary {
+            thread: self,
+            depth: base_depth,
+        };
+        let call = MethodCall {
+            class: class.clone(),
+            method: method.clone(),
+            parameters,
+            has_return_type: false,
+        };
+
+        match self.dispatch_method(call).await? {
+            DispatchResult::FramePushed => self.run_interpreter(base_depth).await,
+            DispatchResult::Completed(value) => Ok(value),
+        }
+    }
+
+    async fn dispatch_method(&self, call: MethodCall) -> Result<DispatchResult> {
+        let MethodCall {
+            class,
+            method,
+            parameters,
+            has_return_type,
+        } = call;
         let class_name = class.name();
         let method_name = method.name();
         let method_descriptor = method.descriptor();
         let vm = self.vm()?;
-        let parameters = process_values(self, parameters).await?;
 
-        // Handle ACC_SYNCHRONIZED: acquire monitor before method execution.
         let sync_monitor = self
-            .acquire_sync_monitor(class, method, &parameters)
+            .acquire_sync_monitor(&class, &method, &parameters)
             .await?;
+        let monitor_guard = MonitorGuard::new(sync_monitor, self.id);
 
         let method_registry = vm.method_registry();
         let rust_method = method_registry.method(class_name, method_name, method_descriptor);
-        // If the method is not found in the registry, try to JIT compile it.
         let jit_method = if rust_method.is_none() {
             if let Some(compiler) = vm.compiler() {
-                compiler.compile(class, method).await?
+                compiler.compile(&class, &method).await?
             } else {
                 None
             }
@@ -877,95 +1085,184 @@ impl Thread {
                 class_name,
                 method_name,
                 method_descriptor,
-                method,
+                &method,
                 rust_method.is_some(),
                 jit_method.is_some(),
             );
         }
 
-        let (result, frame_added) = if let Some(rust_method) = rust_method {
+        if let Some(rust_method) = rust_method {
             let Some(thread) = self.thread.upgrade() else {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
             let parameters = Parameters::new(parameters);
             let result = rust_method(thread, parameters).await;
-            (result, false)
+            drop(monitor_guard);
+            Self::debug_result(&class, &method, &result);
+            return result.map(DispatchResult::Completed);
         } else if let Some(jit_method) = jit_method {
             let gc = vm.garbage_collector();
             let Some(thread) = self.thread.upgrade() else {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
-            let frame = Arc::new(Frame::new(&self.thread, class, method));
-            {
-                let mut frames = self.frames.write();
-                frames.push(frame.clone());
-            }
-            let result = jit::execute(&jit_method, &parameters, gc, &vm, &thread, class);
-            (result, true)
+            let frame = Arc::new(Frame::new(&self.thread, &class, &method));
+            self.stack
+                .write()
+                .push_jit(frame, has_return_type, monitor_guard);
+            let result = jit::execute(&jit_method, &parameters, gc, &vm, &thread, &class);
+            let _ = self.stack.write().pop();
+            Self::debug_result(&class, &method, &result);
+            return result.map(DispatchResult::Completed);
         } else if method.is_native() {
-            // Release synchronized monitor before returning error
-            if let Some(ref monitor) = sync_monitor {
-                let _ = monitor.release(self.id);
-            }
             return Err(UnsatisfiedLinkError(format!(
                 "'{class_name}.{method_name}{method_descriptor}'"
             ))
             .into());
-        } else {
-            // Check for native stack overflow before creating a new frame
-            #[cfg(all(not(target_family = "wasm"), not(target_os = "solaris")))]
-            if let Some(remaining) = stacker::remaining_stack()
-                && remaining < NATIVE_STACK_RED_ZONE
-            {
-                // Release synchronized monitor before returning error
-                if let Some(ref monitor) = sync_monitor {
-                    let _ = monitor.release(self.id);
-                }
-                return Err(StackOverflowError(format!(
-                    "{class_name}.{method_name}{method_descriptor}"
-                ))
-                .into());
-            }
-            let frame = Arc::new(Frame::new(&self.thread, class, method));
-
-            // Limit the scope of the write lock to just adding the frame to the thread. This
-            // is necessary because java.lang.Thread (e.g. countStackFrames) needs to be able to
-            // access the thread's frames without causing a deadlock.
-            {
-                let mut frames = self.frames.write();
-                frames.push(frame.clone());
-            }
-            let result = frame.execute(parameters).await;
-            (result, true)
-        };
-
-        // Release ACC_SYNCHRONIZED monitor after method execution (even on error)
-        if let Some(monitor) = sync_monitor {
-            let _ = monitor.release(self.id);
         }
 
-        if event_enabled!(Level::DEBUG) {
-            let result_str = match &result {
-                Ok(Some(value)) => {
-                    let s = value.to_string();
-                    if s.len() > 100 {
-                        format!("{}...", &s[..97])
-                    } else {
-                        s
+        let frame_slots = Frame::stack_slots_for(&method)?;
+        self.stack
+            .read()
+            .check_capacity(frame_slots, &class, &method)?;
+        let frame = Arc::new(Frame::with_parameters(
+            &self.thread,
+            &class,
+            &method,
+            parameters,
+        )?);
+        self.stack
+            .write()
+            .push(frame, has_return_type, monitor_guard)?;
+        Ok(DispatchResult::FramePushed)
+    }
+
+    async fn run_interpreter(&self, base_depth: usize) -> Result<Option<Value>> {
+        loop {
+            let frame = {
+                let stack = self.stack.read();
+                let entry = stack.entries.last().ok_or_else(|| {
+                    InternalError("Interpreter stack unexpectedly empty".to_string())
+                })?;
+                entry.frame.clone()
+            };
+
+            match frame.execute_instruction(self).await {
+                Ok(ExecutionResult::Continue) => {}
+                Ok(ExecutionResult::Call(call)) => {
+                    let has_return_type = call.has_return_type;
+                    match self.dispatch_method(call).await {
+                        Ok(DispatchResult::FramePushed) => {}
+                        Ok(DispatchResult::Completed(value)) => {
+                            if let Err(error) = frame.complete_call(value, has_return_type).await {
+                                self.propagate_error(base_depth, error, false).await?;
+                            }
+                        }
+                        Err(error) => {
+                            self.propagate_error(base_depth, error, false).await?;
+                        }
                     }
                 }
-                Ok(None) => "void".to_string(),
-                Err(error) => format!("[ERROR] {error}"),
-            };
-            debug!("result: {class_name}.{method_name}{method_descriptor}: {result_str}");
+                Ok(ExecutionResult::Return(value)) => {
+                    let entry = self.stack.write().pop().ok_or_else(|| {
+                        InternalError("Interpreter stack unexpectedly empty".to_string())
+                    })?;
+                    let has_return_type = entry.has_return_type;
+                    Self::debug_result(
+                        entry.frame.class(),
+                        entry.frame.method(),
+                        &Ok(value.clone()),
+                    );
+                    drop(entry);
+
+                    if self.stack.read().entries.len() == base_depth {
+                        return Ok(value);
+                    }
+
+                    let caller = self.current_frame()?;
+                    if let Err(error) = caller.complete_call(value, has_return_type).await {
+                        self.propagate_error(base_depth, error, false).await?;
+                    }
+                }
+                Ok(ExecutionResult::ContinueAtPosition(_)) => {
+                    return Err(InternalError(
+                        "Frame returned an unprocessed branch result".to_string(),
+                    ));
+                }
+                Err(error) => {
+                    self.propagate_error(base_depth, error, true).await?;
+                }
+            }
+        }
+    }
+
+    async fn propagate_error(
+        &self,
+        base_depth: usize,
+        mut error: crate::Error,
+        skip_current: bool,
+    ) -> Result<()> {
+        if skip_current {
+            let entry =
+                self.stack.write().pop().ok_or_else(|| {
+                    InternalError("Interpreter stack unexpectedly empty".to_string())
+                })?;
+            Self::debug_error(entry.frame.class(), entry.frame.method(), &error);
+            drop(entry);
         }
 
-        if frame_added {
-            let mut frames = self.frames.write();
-            frames.pop();
-        }
+        loop {
+            if self.stack.read().entries.len() == base_depth {
+                return Err(error);
+            }
 
-        result
+            let frame = self.current_frame()?;
+            match frame.handle_error(error).await {
+                Ok(()) => return Ok(()),
+                Err(next_error) => {
+                    let entry = self.stack.write().pop().ok_or_else(|| {
+                        InternalError("Interpreter stack unexpectedly empty".to_string())
+                    })?;
+                    Self::debug_error(entry.frame.class(), entry.frame.method(), &next_error);
+                    drop(entry);
+                    error = next_error;
+                }
+            }
+        }
+    }
+
+    fn debug_result(class: &Arc<Class>, method: &Arc<Method>, result: &Result<Option<Value>>) {
+        if !event_enabled!(Level::DEBUG) {
+            return;
+        }
+        let result_str = match result {
+            Ok(Some(value)) => {
+                let value = value.to_string();
+                if value.len() > 100 {
+                    format!("{}...", &value[..97])
+                } else {
+                    value
+                }
+            }
+            Ok(None) => "void".to_string(),
+            Err(error) => format!("[ERROR] {error}"),
+        };
+        debug!(
+            "result: {}.{}{}: {result_str}",
+            class.name(),
+            method.name(),
+            method.descriptor()
+        );
+    }
+
+    fn debug_error(class: &Arc<Class>, method: &Arc<Method>, error: &crate::Error) {
+        if event_enabled!(Level::DEBUG) {
+            debug!(
+                "result: {}.{}{}: [ERROR] {error}",
+                class.name(),
+                method.name(),
+                method.descriptor()
+            );
+        }
     }
 
     /// Debug the execution of a method.
@@ -987,23 +1284,9 @@ impl Thread {
             "int"
         };
         let access_flags = method.access_flags();
-        #[cfg(not(target_family = "wasm"))]
-        let memory = {
-            let system = System::new_with_specifics(
-                RefreshKind::nothing().with_processes(ProcessRefreshKind::nothing().with_memory()),
-            );
-            let pid = std::process::id() as usize;
-            if let Some(process) = system.process(Pid::from(pid)) {
-                let memory = process.memory();
-                let memory = Byte::from_u64(memory).get_appropriate_unit(UnitType::Decimal);
-                format!(" ({execution_type}; {memory:#.3})")
-            } else {
-                format!("({execution_type})")
-            }
-        };
-        #[cfg(target_family = "wasm")]
-        let memory = format!("({execution_type})");
-        debug!("execute{memory}: {class_name}.{method_name}{method_descriptor} {access_flags}");
+        debug!(
+            "execute({execution_type}): {class_name}.{method_name}{method_descriptor} {access_flags}"
+        );
     }
 
     /// Add a new frame to the thread and invoke the method. To invoke a method on an object
@@ -1065,8 +1348,9 @@ impl Thread {
     pub(crate) async fn print_stack_trace(&self) {
         let name = self.name().await;
         eprintln!("Thread: {name}");
-        let frames = self.frames.read();
-        for frame in frames.iter().rev() {
+        let stack = self.stack.read();
+        for entry in stack.entries.iter().rev() {
+            let frame = &entry.frame;
             let class = frame.class();
             let class_name = class.name();
             let mut source = class.source_file().unwrap_or_default().to_string();
@@ -1227,8 +1511,27 @@ impl ristretto_types::Thread for Thread {
 mod tests {
     use super::*;
     use crate::ConfigurationBuilder;
+    use ristretto_classfile::attributes::{Attribute, ExceptionTableEntry, Instruction};
+    use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool};
     use ristretto_classloader::ClassPath;
+    use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
     use std::path::PathBuf;
+
+    #[tokio::test]
+    async fn test_instruction_yield_count_is_thread_based() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await.expect("thread");
+        let other_thread = Thread::new(&Arc::downgrade(&vm), thread.id() + 1);
+
+        for _ in 1..INSTRUCTION_YIELD_COUNT {
+            assert!(!thread.record_synchronous_instruction());
+        }
+        assert!(thread.record_synchronous_instruction());
+
+        assert!(!other_thread.record_synchronous_instruction());
+        thread.reset_instruction_yield_count();
+        assert!(!thread.record_synchronous_instruction());
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_interrupt() -> Result<()> {
@@ -1292,6 +1595,275 @@ mod tests {
             .class_path(class_path.clone())
             .build()?;
         VM::new(configuration).await
+    }
+
+    async fn interpreted_test_thread() -> Result<(Arc<VM>, Arc<Thread>)> {
+        let gc_configuration = GcConfigurationBuilder::new().threads(1).build();
+        let garbage_collector = GarbageCollector::with_config(gc_configuration);
+        let configuration = ConfigurationBuilder::new()
+            .interpreted(true)
+            .verify_mode(VerifyMode::None)
+            .garbage_collector(garbage_collector)
+            .build()?;
+        let vm = VM::new(configuration).await?;
+        let thread = Thread::new(&Arc::downgrade(&vm), 1);
+        Ok((vm, thread))
+    }
+
+    #[expect(clippy::too_many_lines)]
+    async fn recursive_test_class(thread: &Arc<Thread>) -> Result<Arc<Class>> {
+        let mut constant_pool = ConstantPool::default();
+        let super_class = constant_pool.add_class("java/lang/Object")?;
+        let this_class = constant_pool.add_class("InterpreterRecursionTest")?;
+        let stack_overflow_error = constant_pool.add_class("java/lang/StackOverflowError")?;
+        let arithmetic_exception = constant_pool.add_class("java/lang/ArithmeticException")?;
+        let code_index = constant_pool.add_utf8("Code")?;
+        let recurse_name_index = constant_pool.add_utf8("recurse")?;
+        let recurse_descriptor_index = constant_pool.add_utf8("(I)I")?;
+        let recurse_ref = constant_pool.add_method_ref(this_class, "recurse", "(I)I")?;
+        let catch_name_index = constant_pool.add_utf8("catchOverflow")?;
+        let catch_descriptor_index = constant_pool.add_utf8("()I")?;
+        let catch_arithmetic_name_index = constant_pool.add_utf8("catchArithmetic")?;
+        let oversized_name_index = constant_pool.add_utf8("oversized")?;
+        let void_descriptor_index = constant_pool.add_utf8("()V")?;
+
+        let recurse = ristretto_classfile::Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: recurse_name_index,
+            descriptor_index: recurse_descriptor_index,
+            attributes: vec![Attribute::Code {
+                name_index: code_index,
+                max_stack: 2,
+                max_locals: 1,
+                code: vec![
+                    Instruction::Iload_0,
+                    Instruction::Ifeq(9),
+                    Instruction::Iload_0,
+                    Instruction::Iconst_1,
+                    Instruction::Isub,
+                    Instruction::Invokestatic(recurse_ref),
+                    Instruction::Iconst_1,
+                    Instruction::Iadd,
+                    Instruction::Ireturn,
+                    Instruction::Iconst_0,
+                    Instruction::Ireturn,
+                ],
+                exception_table: Vec::new(),
+                attributes: Vec::new(),
+            }],
+        };
+        let catch_overflow = ristretto_classfile::Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: catch_name_index,
+            descriptor_index: catch_descriptor_index,
+            attributes: vec![Attribute::Code {
+                name_index: code_index,
+                max_stack: 1,
+                max_locals: 0,
+                code: vec![
+                    Instruction::Sipush(1_000),
+                    Instruction::Invokestatic(recurse_ref),
+                    Instruction::Ireturn,
+                    Instruction::Pop,
+                    Instruction::Iconst_m1,
+                    Instruction::Ireturn,
+                ],
+                exception_table: vec![ExceptionTableEntry {
+                    range_pc: 0..3,
+                    handler_pc: 3,
+                    catch_type: stack_overflow_error,
+                }],
+                attributes: Vec::new(),
+            }],
+        };
+        let catch_arithmetic = ristretto_classfile::Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: catch_arithmetic_name_index,
+            descriptor_index: catch_descriptor_index,
+            attributes: vec![Attribute::Code {
+                name_index: code_index,
+                max_stack: 2,
+                max_locals: 0,
+                code: vec![
+                    Instruction::Iconst_1,
+                    Instruction::Iconst_0,
+                    Instruction::Idiv,
+                    Instruction::Ireturn,
+                    Instruction::Pop,
+                    Instruction::Bipush(42),
+                    Instruction::Ireturn,
+                ],
+                exception_table: vec![ExceptionTableEntry {
+                    range_pc: 0..4,
+                    handler_pc: 4,
+                    catch_type: arithmetic_exception,
+                }],
+                attributes: Vec::new(),
+            }],
+        };
+        let oversized = ristretto_classfile::Method {
+            access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+            name_index: oversized_name_index,
+            descriptor_index: void_descriptor_index,
+            attributes: vec![Attribute::Code {
+                name_index: code_index,
+                max_stack: 128,
+                max_locals: 0,
+                code: vec![Instruction::Return],
+                exception_table: Vec::new(),
+                attributes: Vec::new(),
+            }],
+        };
+
+        let class = Class::from(
+            None,
+            ClassFile {
+                access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER,
+                constant_pool,
+                this_class,
+                super_class,
+                methods: vec![recurse, catch_overflow, catch_arithmetic, oversized],
+                ..Default::default()
+            },
+        )?;
+        thread.register_class(class.clone()).await?;
+        Ok(class)
+    }
+
+    #[tokio::test]
+    async fn test_configured_java_stack_limit() -> Result<()> {
+        let configuration = ConfigurationBuilder::new()
+            .interpreted(true)
+            .max_java_stack_size(16_384 * JAVA_STACK_SLOT_SIZE + 3)
+            .build()?;
+        let vm = VM::new(configuration).await?;
+        let thread = Thread::new(&Arc::downgrade(&vm), 1);
+
+        assert_eq!(16_384, thread.stack.read().max_slots);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_deep_interpreted_recursion_uses_java_stack() -> Result<()> {
+        let (_vm, thread) = interpreted_test_thread().await?;
+        let class = recursive_test_class(&thread).await?;
+        let method = class.try_get_method("recurse", "(I)I")?;
+        let (stack_pointer, stack_capacity) = {
+            let stack = thread.stack.read();
+            (stack.entries.as_ptr(), stack.entries.capacity())
+        };
+
+        let result = thread
+            .try_execute(&class, &method, &[Value::Int(4_000)])
+            .await?;
+
+        assert_eq!(Value::Int(4_000), result);
+        assert!(thread.frames()?.is_empty());
+        {
+            let stack = thread.stack.read();
+            assert_eq!(0, stack.used_slots);
+            assert_eq!(stack_pointer, stack.entries.as_ptr());
+            assert_eq!(stack_capacity, stack.entries.capacity());
+        }
+
+        let result = thread
+            .try_execute(&class, &method, &[Value::Int(4_000)])
+            .await?;
+
+        assert_eq!(Value::Int(4_000), result);
+        let stack = thread.stack.read();
+        assert_eq!(0, stack.used_slots);
+        assert_eq!(stack_pointer, stack.entries.as_ptr());
+        assert_eq!(stack_capacity, stack.entries.capacity());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_java_stack_overflow_is_catchable_and_cleans_up() -> Result<()> {
+        let (_vm, thread) = interpreted_test_thread().await?;
+        let class = recursive_test_class(&thread).await?;
+        thread.stack.write().max_slots = 64;
+        let catch_method = class.try_get_method("catchOverflow", "()I")?;
+
+        let result = thread
+            .try_execute(&class, &catch_method, &[] as &[Value])
+            .await?;
+
+        assert_eq!(Value::Int(-1), result);
+        assert!(thread.frames()?.is_empty());
+        assert_eq!(0, thread.stack.read().used_slots);
+
+        thread.stack.write().max_slots = DEFAULT_MAX_JAVA_STACK_SIZE / JAVA_STACK_SLOT_SIZE;
+        let recurse = class.try_get_method("recurse", "(I)I")?;
+        let result = thread
+            .try_execute(&class, &recurse, &[Value::Int(10)])
+            .await?;
+        assert_eq!(Value::Int(10), result);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_implicit_exception_is_catchable_at_java_stack_limit() -> Result<()> {
+        let (_vm, thread) = interpreted_test_thread().await?;
+        let class = recursive_test_class(&thread).await?;
+        let method = class.try_get_method("catchArithmetic", "()I")?;
+        thread.stack.write().max_slots = Frame::stack_slots_for(&method)?;
+
+        let result = thread.try_execute(&class, &method, &[] as &[Value]).await?;
+
+        assert_eq!(Value::Int(42), result);
+        assert!(thread.frames()?.is_empty());
+        let stack = thread.stack.read();
+        assert_eq!(0, stack.used_slots);
+        assert_eq!(0, stack.overflow_reserve_depth);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_oversized_frame_is_rejected_with_stack_overflow() -> Result<()> {
+        let (_vm, thread) = interpreted_test_thread().await?;
+        let class = recursive_test_class(&thread).await?;
+        let method = class.try_get_method("oversized", "()V")?;
+        thread.stack.write().max_slots = 64;
+
+        let result = thread.execute(&class, &method, &[] as &[Value]).await;
+
+        assert!(matches!(
+            result,
+            Err(crate::Error::JavaError(StackOverflowError(_)))
+        ));
+        assert!(thread.frames()?.is_empty());
+        assert_eq!(0, thread.stack.read().used_slots);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_execution_boundary_releases_frame_monitor() -> Result<()> {
+        let (_vm, thread, class) = crate::test::class().await?;
+        let method = class.try_get_method("test", "()V")?;
+        let frame = Arc::new(Frame::new(&Arc::downgrade(&thread), &class, &method));
+        assert_eq!(1, frame.stack_slots()?);
+
+        let monitor = Arc::new(ristretto_types::monitor::Monitor::new());
+        monitor.acquire(thread.id()).await?;
+        {
+            let _boundary = ExecutionBoundary {
+                thread: &thread,
+                depth: 0,
+            };
+            thread.stack.write().push(
+                frame,
+                false,
+                MonitorGuard::new(Some(monitor.clone()), thread.id()),
+            )?;
+        }
+
+        assert!(thread.frames()?.is_empty());
+        tokio::time::timeout(Duration::from_secs(1), monitor.acquire(thread.id() + 1))
+            .await
+            .map_err(|error| InternalError(error.to_string()))??;
+        monitor.release(thread.id() + 1)?;
+        Ok(())
     }
 
     #[tokio::test]
