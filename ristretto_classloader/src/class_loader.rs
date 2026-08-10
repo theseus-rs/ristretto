@@ -1,6 +1,6 @@
 use crate::Error::{ClassNotFound, InternalError};
 use crate::module::{ModuleDescriptor, ModuleDescriptorCache, ResolvedConfiguration};
-use crate::{Class, ClassPath, Result, Value};
+use crate::{Class, ClassLoaderType, ClassPath, Result, Value};
 use ahash::AHashMap;
 use ristretto_classfile::{
     ClassAccessFlags, ClassFile, ConstantPool, JAVA_1_0_2, JavaStr, JavaString,
@@ -23,6 +23,7 @@ type ModuleConfigLock = ristretto_gc::sync::RwLock<Option<Arc<ResolvedConfigurat
 pub struct ClassLoader {
     this: Weak<ClassLoader>,
     name: String,
+    loader_type: Option<ClassLoaderType>,
     class_path: ClassPath,
     parent: Arc<RwLock<Option<Arc<ClassLoader>>>>,
     classes: Arc<RwLock<AHashMap<JavaString, Arc<Class>>>>,
@@ -36,11 +37,26 @@ pub struct ClassLoader {
 }
 
 impl ClassLoader {
-    /// Create a new class loader with the given name and parent.
+    /// Create a custom class loader with the given name and class path.
     pub fn new<S: AsRef<str>>(name: S, class_path: ClassPath) -> Arc<Self> {
+        Self::new_inner(name.as_ref(), None, class_path)
+    }
+
+    /// Create a built-in class loader with the name defined by the Java runtime.
+    #[must_use]
+    pub fn new_builtin(loader_type: ClassLoaderType, class_path: ClassPath) -> Arc<Self> {
+        Self::new_inner(loader_type.name(), Some(loader_type), class_path)
+    }
+
+    fn new_inner(
+        name: &str,
+        loader_type: Option<ClassLoaderType>,
+        class_path: ClassPath,
+    ) -> Arc<Self> {
         Arc::new_cyclic(|weak_self| ClassLoader {
             this: weak_self.clone(),
-            name: name.as_ref().to_string(),
+            name: name.to_string(),
+            loader_type,
             class_path,
             parent: Arc::new(RwLock::new(None)),
             classes: Arc::new(RwLock::new(AHashMap::default())),
@@ -54,6 +70,12 @@ impl ClassLoader {
     #[must_use]
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Get the role of this built-in class loader, or `None` for a custom class loader.
+    #[must_use]
+    pub fn loader_type(&self) -> Option<ClassLoaderType> {
+        self.loader_type
     }
 
     /// Get the class path.
@@ -396,6 +418,7 @@ impl Clone for ClassLoader {
         Self {
             this: self.this.clone(),
             name: self.name.clone(),
+            loader_type: self.loader_type,
             class_path: self.class_path.clone(),
             parent: Arc::clone(&self.parent),
             classes: Arc::clone(&self.classes),
@@ -437,8 +460,23 @@ mod tests {
         let class_path = ClassPath::from(&["."]);
         let class_loader = ClassLoader::new(name, class_path);
         assert_eq!(name, class_loader.name());
+        assert_eq!(None, class_loader.loader_type());
         assert_eq!(&ClassPath::from(&["."]), class_loader.class_path());
         assert!(class_loader.parent().await.is_none());
+    }
+
+    #[test]
+    fn test_new_builtin() {
+        let class_path = ClassPath::from(&["."]);
+        for (loader_type, name) in [
+            (ClassLoaderType::Bootstrap, "bootstrap"),
+            (ClassLoaderType::Platform, "platform"),
+            (ClassLoaderType::System, "app"),
+        ] {
+            let class_loader = ClassLoader::new_builtin(loader_type, class_path.clone());
+            assert_eq!(name, class_loader.name());
+            assert_eq!(Some(loader_type), class_loader.loader_type());
+        }
     }
 
     #[test]

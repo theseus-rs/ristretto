@@ -1,7 +1,7 @@
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use crate::Error;
 use crate::runtime::util;
-use crate::{Class, ClassLoader, ClassPath, Result};
+use crate::{Class, ClassLoader, ClassLoaderType, ClassPath, Result};
 #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
 use flate2::bufread::GzDecoder;
 use ristretto_classfile::Error::IoError;
@@ -148,7 +148,7 @@ pub async fn home_class_loader(java_home: &Path) -> Result<(PathBuf, String, Arc
     };
 
     let class_path = get_class_path(&java_version, java_home)?;
-    let class_loader = ClassLoader::new("bootstrap", class_path);
+    let class_loader = ClassLoader::new_builtin(ClassLoaderType::Bootstrap, class_path);
     register_primitives(&class_loader).await?;
     Ok((java_home.to_path_buf(), java_version, class_loader))
 }
@@ -220,7 +220,7 @@ pub async fn version_class_loader_for_os(
 
     let installation_dir = java_home_for_os(os, installation_dir);
     let class_path = get_class_path(&version, &installation_dir)?;
-    let class_loader = ClassLoader::new("bootstrap", class_path);
+    let class_loader = ClassLoader::new_builtin(ClassLoaderType::Bootstrap, class_path);
     register_primitives(&class_loader).await?;
     Ok((installation_dir, version, class_loader))
 }

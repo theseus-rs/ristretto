@@ -13,7 +13,7 @@ use byte_unit::{Byte, UnitType};
 use parking_lot::RwLock as ParkingRwLock;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classfile::{FieldAccessFlags, FieldType, JavaStr, MethodAccessFlags};
-use ristretto_classloader::{Class, Method, Object, Reference, Value};
+use ristretto_classloader::{Class, ClassLoaderType, Method, Object, Reference, Value};
 use ristretto_intrinsics::get_monitor_id;
 use ristretto_macros::async_method;
 use std::collections::HashSet;
@@ -383,7 +383,9 @@ impl Thread {
                     .class_loader()
                     .ok()
                     .flatten()
-                    .is_some_and(|class_loader| class_loader.name() == "bootstrap");
+                    .is_some_and(|class_loader| {
+                        class_loader.loader_type() == Some(ClassLoaderType::Bootstrap)
+                    });
                 !is_trusted
             }
             VerifyMode::None => false,

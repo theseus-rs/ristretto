@@ -60,6 +60,7 @@
 
 mod class;
 mod class_loader;
+mod class_loader_type;
 mod class_path;
 mod class_path_entry;
 mod error;
@@ -75,6 +76,7 @@ mod value;
 
 pub use class::{Class, InitializationAction, InitializationState, POLYMORPHIC_METHODS};
 pub use class_loader::ClassLoader;
+pub use class_loader_type::ClassLoaderType;
 pub use class_path::ClassPath;
 pub use class_path_entry::{ClassPathEntry, Manifest, Memory, manifest};
 pub use error::{Error, Result};

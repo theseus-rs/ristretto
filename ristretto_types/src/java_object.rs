@@ -5,7 +5,7 @@ use crate::VM;
 use crate::module_access::{DefinedModule, ModuleAccess};
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25, JavaStr};
 use ristretto_classloader::module::ModuleDescriptor;
-use ristretto_classloader::{Class, ClassLoader, Object, Reference, Value};
+use ristretto_classloader::{Class, ClassLoader, ClassLoaderType, Object, Reference, Value};
 use std::sync::Arc;
 
 /// Trait for converting a Rust value to a Java object. Converts to objects of the primitive
@@ -294,7 +294,7 @@ fn to_class_loader_object<'a, T: Thread + 'static>(
         }
 
         let name = class_loader.name();
-        if name == "bootstrap" {
+        if class_loader.loader_type() == Some(ClassLoaderType::Bootstrap) {
             let builtin_class_loader = Value::Object(None);
             class_loader
                 .set_object(Some(builtin_class_loader.clone()))
@@ -974,7 +974,8 @@ mod tests {
             Value::Int(99)
         );
 
-        let bootstrap_loader = ClassLoader::new("bootstrap", ClassPath::new(Vec::new()));
+        let bootstrap_loader =
+            ClassLoader::new_builtin(ClassLoaderType::Bootstrap, ClassPath::new(Vec::new()));
         assert_eq!(
             bootstrap_loader.to_object(&*java17_thread).await?,
             Value::Object(None)
@@ -1133,7 +1134,8 @@ mod tests {
                 .await?
                 .is_object()
         );
-        let bootstrap_loader = ClassLoader::new("bootstrap", ClassPath::new(Vec::new()));
+        let bootstrap_loader =
+            ClassLoader::new_builtin(ClassLoaderType::Bootstrap, ClassPath::new(Vec::new()));
         let bootstrap_loaded_class =
             class_with_loader("cached/BootstrapLoaded", &bootstrap_loader)?;
         let bootstrap_cached_object = class_object_with_null_module(&*loader_thread).await?;

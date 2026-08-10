@@ -2057,7 +2057,7 @@ pub async fn register_natives<T: Thread + 'static>(
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
-    if vm.java_major_version() >= 17 {
+    if vm.java_major_version() >= JAVA_17.java() {
         let class = thread.class("jdk.internal.misc.UnsafeConstants").await?;
         let address_size = i32::try_from(REFERENCE_SIZE)?;
         class.set_static_value("ADDRESS_SIZE0", Value::Int(address_size))?;

@@ -1,5 +1,6 @@
+use crate::java::lang::invoke::methodhandlenatives::MemberNameFlags;
 use ristretto_classfile::VersionSpecification::{Between, Equal, GreaterThan};
-use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
+use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::{Object, Reference, Value};
 use ristretto_gc::GarbageCollector;
 use ristretto_macros::async_method;
@@ -8,15 +9,26 @@ use ristretto_types::Error::InternalError;
 use ristretto_types::{Frame, JavaObject, Parameters, Result, Thread, VM};
 use std::sync::Arc;
 
+struct FrameData {
+    class_mirror: Value,
+    member: Value,
+    method_name: Value,
+    descriptor: Value,
+    bytecode_index: i32,
+}
+
 /// Builds per-frame data from the filtered VM frames.
-///
-/// Returns a Vec of `(class_mirror, rmn_value, method_name, descriptor, bci)` tuples.
 async fn build_frame_data<T: Thread + 'static>(
     thread: &Arc<T>,
     gc: &Arc<GarbageCollector>,
     filtered_frames: &[&Arc<T::Frame>],
-) -> Result<Vec<(Value, Value, Value, Value, i32)>> {
-    let resolved_method_name_class = thread.class("java/lang/invoke/ResolvedMethodName").await?;
+    modern_layout: bool,
+) -> Result<Vec<FrameData>> {
+    let member_class = if modern_layout {
+        thread.class("java/lang/invoke/ResolvedMethodName").await?
+    } else {
+        thread.class("java/lang/invoke/MemberName").await?
+    };
     let mut frame_data = Vec::with_capacity(filtered_frames.len());
     for frame in filtered_frames {
         let class = frame.class();
@@ -26,12 +38,31 @@ async fn build_frame_data<T: Thread + 'static>(
         let method_name = method.name().to_object(thread).await?;
         let descriptor = method.descriptor().to_object(thread).await?;
 
-        let mut rmn = Object::new(resolved_method_name_class.clone())?;
-        rmn.set_value("vmholder", class_mirror.clone())?;
-        let rmn_value = Value::new_object(gc, Reference::Object(rmn));
+        let mut member = Object::new(member_class.clone())?;
+        if modern_layout {
+            member.set_value("vmholder", class_mirror.clone())?;
+        } else {
+            member.set_value("clazz", class_mirror.clone())?;
+            member.set_value("name", method_name.clone())?;
+            member.set_value("type", descriptor.clone())?;
+            let member_kind = if method.name() == "<init>" {
+                MemberNameFlags::IS_CONSTRUCTOR
+            } else {
+                MemberNameFlags::IS_METHOD
+            };
+            let flags = i32::from(method.access_flags().bits()) | member_kind.bits();
+            member.set_value("flags", Value::Int(flags))?;
+        }
+        let member = Value::new_object(gc, Reference::Object(member));
 
-        let bci = i32::try_from(pc).unwrap_or(0); // byte code index
-        frame_data.push((class_mirror, rmn_value, method_name, descriptor, bci));
+        let bytecode_index = i32::try_from(pc).unwrap_or(0);
+        frame_data.push(FrameData {
+            class_mirror,
+            member,
+            method_name,
+            descriptor,
+            bytecode_index,
+        });
     }
     Ok(frame_data)
 }
@@ -40,9 +71,10 @@ async fn build_frame_data<T: Thread + 'static>(
 ///
 /// Returns the end index (exclusive) of the populated frames.
 fn populate_frames(
-    frame_data: Vec<(Value, Value, Value, Value, i32)>,
+    frame_data: Vec<FrameData>,
     frames_value: &Value,
     start: usize,
+    modern_layout: bool,
 ) -> Result<i32> {
     let frames_guard = frames_value.as_reference()?;
     let elements = match &*frames_guard {
@@ -51,9 +83,7 @@ fn populate_frames(
     };
 
     let mut end = start;
-    for (i, (class_mirror, rmn_value, method_name, descriptor, bci)) in
-        frame_data.into_iter().enumerate()
-    {
+    for (i, frame) in frame_data.into_iter().enumerate() {
         let array_idx = start + i;
         if array_idx >= elements.len() {
             break;
@@ -63,16 +93,18 @@ fn populate_frames(
             if let Reference::Object(ref mut obj) = *sfi {
                 let obj_class_name = obj.class().name().to_string();
                 if obj_class_name == "java/lang/ClassFrameInfo" {
-                    let _ = obj.set_value("classOrMemberName", class_mirror);
+                    obj.set_value("classOrMemberName", frame.class_mirror)?;
+                } else if modern_layout {
+                    // JDK 25 keeps the resolved member and its expanded name and type directly on
+                    // StackFrameInfo.
+                    obj.set_value("classOrMemberName", frame.member)?;
+                    obj.set_value("name", frame.method_name)?;
+                    obj.set_value("type", frame.descriptor)?;
+                    obj.set_value("bci", Value::Int(frame.bytecode_index))?;
                 } else {
-                    // StackFrameInfo: set classOrMemberName (ResolvedMethodName)
-                    // and the actual Java fields (name, type, bci) directly so
-                    // getMethodName()/getDescriptor() work without needing
-                    // expandStackFrameInfo().
-                    obj.set_value("classOrMemberName", rmn_value)?;
-                    obj.set_value("name", method_name)?;
-                    obj.set_value("type", descriptor)?;
-                    obj.set_value("bci", Value::Int(bci))?;
+                    // JDK 11 through 21 keep all member metadata in MemberName.
+                    obj.set_value("memberName", frame.member)?;
+                    obj.set_value("bci", Value::Int(frame.bytecode_index))?;
                 }
             }
         }
@@ -96,6 +128,7 @@ async fn call_stack_walk_impl<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     let vm = thread.vm()?;
     let gc = vm.garbage_collector();
+    let modern_layout = vm.java_major_version() >= JAVA_25.java();
 
     let vm_frames = thread.frames().await?;
     let filtered_frames: Vec<_> = vm_frames
@@ -105,9 +138,9 @@ async fn call_stack_walk_impl<T: Thread + 'static>(
         .skip(usize::try_from(skip_frames).unwrap_or(0))
         .collect();
 
-    let frame_data = build_frame_data(&thread, gc, &filtered_frames).await?;
+    let frame_data = build_frame_data(&thread, gc, &filtered_frames, modern_layout).await?;
     let start = usize::try_from(start_index).unwrap_or(0);
-    let end_index = populate_frames(frame_data, &frames_value, start)?;
+    let end_index = populate_frames(frame_data, &frames_value, start, modern_layout)?;
 
     // Set total frame depth on the walker; used by frameBuffer.setBatch().
     let total_depth = i32::try_from(filtered_frames.len()).unwrap_or(0);

@@ -10,7 +10,9 @@ use ristretto_classfile::{
     Version,
 };
 use ristretto_classloader::module::ResolvedConfiguration;
-use ristretto_classloader::{Class, ClassLoader, ClassPath, Method, Object, Reference, Value};
+use ristretto_classloader::{
+    Class, ClassLoader, ClassLoaderType, ClassPath, Method, Object, Reference, Value,
+};
 use ristretto_gc::GarbageCollector;
 use std::io::{Cursor, Read, Write};
 use std::path::PathBuf;
@@ -314,8 +316,8 @@ impl MockVm {
             socket_handles: HandleManager::new(),
             thread_handles: HandleManager::new(),
             monitor_registry: MonitorRegistry::new(),
-            class_loader: Arc::new(RwLock::new(ClassLoader::new(
-                "bootstrap",
+            class_loader: Arc::new(RwLock::new(ClassLoader::new_builtin(
+                ClassLoaderType::Bootstrap,
                 ClassPath::new(Vec::new()),
             ))),
             classes: Mutex::new(AHashMap::default()),

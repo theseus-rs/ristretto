@@ -14,7 +14,8 @@ use ahash::AHashMap;
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_21, JAVA_PREVIEW_MINOR_VERSION, Version};
 use ristretto_classloader::manifest::MAIN_CLASS;
 use ristretto_classloader::{
-    Class, ClassLoader, ClassPath, ClassPathEntry, Object, Reference, Value, runtime,
+    Class, ClassLoader, ClassLoaderType, ClassPath, ClassPathEntry, Object, Reference, Value,
+    runtime,
 };
 use ristretto_gc::{GarbageCollector, Statistics};
 use ristretto_types::NativeMemory;
@@ -260,7 +261,7 @@ impl VM {
         bootstrap_class_loader: &Arc<ClassLoader>,
     ) -> Result<(Arc<ClassLoader>, Option<String>)> {
         let class_path = configuration.class_path().clone();
-        let system_class_loader = ClassLoader::new("system", class_path);
+        let system_class_loader = ClassLoader::new_builtin(ClassLoaderType::System, class_path);
         system_class_loader
             .set_parent(Some(bootstrap_class_loader.clone()))
             .await;
@@ -1209,6 +1210,9 @@ mod tests {
         );
         assert_eq!(DEFAULT_JAVA_VERSION, vm.java_version());
         assert!(vm.main_class().is_none());
+        let class_loader = vm.class_loader.read().await;
+        assert_eq!("app", class_loader.name());
+        assert_eq!(Some(ClassLoaderType::System), class_loader.loader_type());
         Ok(())
     }
 
