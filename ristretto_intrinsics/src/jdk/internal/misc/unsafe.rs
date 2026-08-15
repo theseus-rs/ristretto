@@ -10,7 +10,7 @@ use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::{InternalError, InvalidOperand};
 use ristretto_types::JavaError::{
-    ArrayIndexOutOfBoundsException, ClassFormatError, NullPointerException,
+    ArrayIndexOutOfBoundsException, ClassFormatError, NullPointerException, OutOfMemoryError,
 };
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
@@ -84,9 +84,13 @@ pub async fn allocate_memory_0<T: Thread + 'static>(
     if bytes == 0 {
         return Ok(Some(Value::Long(0)));
     }
-    let size = usize::try_from(bytes)?;
+    let size = usize::try_from(bytes)
+        .map_err(|_| OutOfMemoryError(format!("Unable to allocate {bytes} bytes")))?;
     let vm = thread.vm()?;
-    let address = vm.native_memory().allocate(size);
+    let address = vm
+        .native_memory()
+        .allocate(size)
+        .ok_or_else(|| OutOfMemoryError(format!("Unable to allocate {bytes} bytes")))?;
     Ok(Some(Value::Long(address)))
 }
 
@@ -2343,6 +2347,19 @@ mod tests {
             addr >= 0x1000_0000,
             "Expected managed memory address, got {addr}"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_allocate_memory_0_out_of_memory() -> Result<()> {
+        let (_vm, thread) = crate::test::thread().await?;
+        let mut parameters = Parameters::default();
+        parameters.push_long(512 * 1024 * 1024 + 1);
+        let result = allocate_memory_0(thread, parameters).await;
+        assert!(matches!(
+            result,
+            Err(ristretto_types::Error::JavaError(OutOfMemoryError(_)))
+        ));
         Ok(())
     }
 

@@ -1067,8 +1067,14 @@ pub async fn convert_string_sid_to_sid0<T: Thread + 'static>(
         return Err(throw_windows_exception(&thread, error).await);
     }
     let vm = thread.vm()?;
-    let guest_address = vm.native_memory().allocate(sid.len());
+    let guest_address = vm.native_memory().allocate(sid.len()).ok_or_else(|| {
+        ristretto_types::JavaError::OutOfMemoryError(format!(
+            "Unable to allocate {} bytes",
+            sid.len()
+        ))
+    })?;
     if !vm.native_memory().try_write_bytes(guest_address, &sid) {
+        vm.native_memory().free(guest_address);
         return Err(InternalError(
             "ConvertStringSidToSid0: allocation failed".to_string(),
         ));
@@ -2808,7 +2814,9 @@ pub async fn lookup_privilege_value0<T: Thread + 'static>(
     }
     let value = (i64::from(luid.HighPart) << 32) | i64::from(luid.LowPart);
     let vm = thread.vm()?;
-    let address = vm.native_memory().allocate(8);
+    let address = vm.native_memory().allocate(8).ok_or_else(|| {
+        ristretto_types::JavaError::OutOfMemoryError("Unable to allocate 8 bytes".to_string())
+    })?;
     vm.native_memory().write_i64(address, value);
     Ok(Some(Value::Long(address)))
 }

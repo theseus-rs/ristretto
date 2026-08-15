@@ -562,7 +562,10 @@ mod tests {
     fn write_cstring_to_native<V: VM>(vm: &V, s: &str) -> i64 {
         let mut bytes = s.as_bytes().to_vec();
         bytes.push(0);
-        let addr = vm.native_memory().allocate(bytes.len());
+        let addr = vm
+            .native_memory()
+            .allocate(bytes.len())
+            .expect("native memory allocation");
         vm.native_memory().write_bytes(addr, &bytes);
         addr
     }
