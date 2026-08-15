@@ -563,8 +563,14 @@ mod tests {
         path_bytes.push(0);
         let mut mode_bytes = b"r".to_vec();
         mode_bytes.push(0);
-        let path_addr = vm.native_memory().allocate(path_bytes.len());
-        let mode_addr = vm.native_memory().allocate(mode_bytes.len());
+        let path_addr = vm
+            .native_memory()
+            .allocate(path_bytes.len())
+            .expect("native memory allocation");
+        let mode_addr = vm
+            .native_memory()
+            .allocate(mode_bytes.len())
+            .expect("native memory allocation");
         vm.native_memory().write_bytes(path_addr, &path_bytes);
         vm.native_memory().write_bytes(mode_addr, &mode_bytes);
 
@@ -585,7 +591,10 @@ mod tests {
             .object("sun.nio.fs.UnixMountEntry", "", &[] as &[Value])
             .await
             .expect("UnixMountEntry");
-        let scratch = vm.native_memory().allocate(1024);
+        let scratch = vm
+            .native_memory()
+            .allocate(1024)
+            .expect("native memory allocation");
         for _ in 0..2 {
             let mut params = Parameters::default();
             params.push_long(handle);

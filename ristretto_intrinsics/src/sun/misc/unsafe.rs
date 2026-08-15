@@ -1057,6 +1057,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_allocate_memory_out_of_memory() -> Result<()> {
+        let (_vm, thread) = crate::test::java8_thread().await?;
+        let mut parameters = Parameters::default();
+        parameters.push_long(512 * 1024 * 1024 + 1);
+        let result = allocate_memory(thread, parameters).await;
+        assert!(matches!(
+            result,
+            Err(ristretto_types::Error::JavaError(
+                ristretto_types::JavaError::OutOfMemoryError(_)
+            ))
+        ));
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_array_base_offset() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
         let result = array_base_offset(thread, Parameters::default()).await?;
@@ -1139,7 +1154,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_byte_1() -> Result<()> {
         let (vm, thread) = crate::test::java8_thread().await?;
-        let address = vm.native_memory().allocate(1);
+        let address = vm
+            .native_memory()
+            .allocate(1)
+            .expect("native memory allocation");
         vm.native_memory().write_i8(address, -42);
         let mut parameters = Parameters::default();
         parameters.push_long(address);
@@ -1175,7 +1193,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_int_1() -> Result<()> {
         let (vm, thread) = crate::test::java8_thread().await?;
-        let address = vm.native_memory().allocate(4);
+        let address = vm
+            .native_memory()
+            .allocate(4)
+            .expect("native memory allocation");
         vm.native_memory().write_i32(address, 0x1234_5678);
         let mut parameters = Parameters::default();
         parameters.push_long(address);
@@ -1270,7 +1291,10 @@ mod tests {
     #[tokio::test]
     async fn test_put_byte_1() -> Result<()> {
         let (vm, thread) = crate::test::java8_thread().await?;
-        let address = vm.native_memory().allocate(1);
+        let address = vm
+            .native_memory()
+            .allocate(1)
+            .expect("native memory allocation");
         let mut parameters = Parameters::default();
         parameters.push_long(address);
         parameters.push_int(-42);
@@ -1315,7 +1339,10 @@ mod tests {
     #[tokio::test]
     async fn test_put_long_1() -> Result<()> {
         let (vm, thread) = crate::test::java8_thread().await?;
-        let address = vm.native_memory().allocate(8);
+        let address = vm
+            .native_memory()
+            .allocate(8)
+            .expect("native memory allocation");
         let mut parameters = Parameters::default();
         parameters.push_long(address);
         parameters.push_long(0x0102_0304_0506_0708);

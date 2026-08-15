@@ -1065,7 +1065,10 @@ mod tests {
             .insert(i64::from(fd), FileHandle::from((file, false)))
             .await?;
 
-        let address = vm.native_memory().allocate(6);
+        let address = vm
+            .native_memory()
+            .allocate(6)
+            .expect("native memory allocation");
         assert_eq!(
             read_file_descriptor(&*vm, fd, address, 6).await?,
             Some(Value::Int(6))
@@ -1077,8 +1080,14 @@ mod tests {
         );
 
         managed_files::seek(vm.file_handles(), i64::from(fd), SeekFrom::Start(0)).await?;
-        let first = vm.native_memory().allocate(2);
-        let second = vm.native_memory().allocate(4);
+        let first = vm
+            .native_memory()
+            .allocate(2)
+            .expect("native memory allocation");
+        let second = vm
+            .native_memory()
+            .allocate(4)
+            .expect("native memory allocation");
         let entries = [(first, 2), (second, 4)];
         assert_eq!(
             readv_file_descriptor(&*vm, fd, &entries).await?,

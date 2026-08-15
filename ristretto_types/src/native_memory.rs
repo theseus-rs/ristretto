@@ -5,6 +5,7 @@ use std::sync::atomic::Ordering;
 use ristretto_gc::sync::RwLock;
 
 const PAGE_ALIGNMENT: i64 = 4096;
+const MAX_NATIVE_ALLOCATION_BYTES: usize = 512 * 1024 * 1024;
 
 /// Per-VM native memory manager.
 #[derive(Debug)]
@@ -30,20 +31,37 @@ impl NativeMemory {
     }
 
     /// Allocates a block of memory and returns the base address.
-    pub fn allocate(&self, size: usize) -> i64 {
-        let address = self.next_address.fetch_add(
-            i64::try_from(size)
-                .unwrap_or(0)
-                .saturating_add(PAGE_ALIGNMENT),
-            Ordering::Relaxed,
-        );
-        let address = (address + PAGE_ALIGNMENT - 1) & !(PAGE_ALIGNMENT - 1);
-        let mut bytes = Vec::new();
-        if bytes.try_reserve_exact(size).is_ok() {
-            bytes.resize(size, 0);
+    ///
+    /// Returns [`None`] when the requested block cannot be represented or reserved.
+    pub fn allocate(&self, size: usize) -> Option<i64> {
+        if size > MAX_NATIVE_ALLOCATION_BYTES {
+            return None;
         }
+        let size_i64 = i64::try_from(size).ok()?;
+        let allocation_size = size_i64.checked_add(PAGE_ALIGNMENT)?;
+        let mut bytes = Vec::new();
+        if bytes.try_reserve_exact(size).is_err() {
+            return None;
+        }
+        bytes.resize(size, 0);
+
+        // Keep every allocation page-aligned even when the preceding allocation has an odd size.
+        let address = loop {
+            let current = self.next_address.load(Ordering::Relaxed);
+            let aligned = current
+                .checked_add(PAGE_ALIGNMENT - 1)
+                .map(|address| address & !(PAGE_ALIGNMENT - 1))?;
+            let next = aligned.checked_add(allocation_size)?;
+            if self
+                .next_address
+                .compare_exchange_weak(current, next, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+            {
+                break aligned;
+            }
+        };
         self.memory.write().insert(address, RwLock::new(bytes));
-        address
+        Some(address)
     }
 
     /// Frees the memory at the given address.
@@ -54,6 +72,9 @@ impl NativeMemory {
     /// Reads `len` bytes starting at `address`.
     pub fn read_bytes(&self, address: i64, len: usize) -> Vec<u8> {
         self.try_read_bytes(address, len).unwrap_or_else(|| {
+            if len > MAX_NATIVE_ALLOCATION_BYTES {
+                return Vec::new();
+            }
             let mut bytes = Vec::new();
             if bytes.try_reserve_exact(len).is_ok() {
                 bytes.resize(len, 0);
@@ -73,7 +94,11 @@ impl NativeMemory {
         let offset = offset_from_base(address, base);
         let end = offset.checked_add(len)?;
         let buf = buf_lock.read();
-        buf.get(offset..end).map(<[u8]>::to_vec)
+        let source = buf.get(offset..end)?;
+        let mut bytes = Vec::new();
+        bytes.try_reserve_exact(len).ok()?;
+        bytes.extend_from_slice(source);
+        Some(bytes)
     }
 
     /// Returns the number of bytes from `address` to the end of its allocation.
@@ -226,7 +251,11 @@ impl NativeMemory {
                     .iter()
                     .position(|&b| b == 0)
                     .map_or(bytes.len(), |position| position);
-                return bytes.get(..end).map(<[u8]>::to_vec);
+                let source = bytes.get(..end)?;
+                let mut result = Vec::new();
+                result.try_reserve_exact(end).ok()?;
+                result.extend_from_slice(source);
+                return Some(result);
             }
         }
         None
@@ -242,20 +271,33 @@ impl NativeMemory {
         }
         false
     }
+
+    /// Checks whether the complete address range belongs to one managed allocation.
+    #[must_use]
+    pub fn contains_range(&self, address: i64, len: usize) -> bool {
+        self.read_with(address, len, |_| ()).is_some()
+    }
 }
 
 fn offset_from_base(address: i64, base: i64) -> usize {
-    usize::try_from(address - base).unwrap_or(usize::MAX)
+    address
+        .checked_sub(base)
+        .and_then(|offset| usize::try_from(offset).ok())
+        .unwrap_or(usize::MAX)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn allocate(memory: &NativeMemory, size: usize) -> i64 {
+        memory.allocate(size).expect("native memory allocation")
+    }
+
     #[test]
     fn test_allocate_and_read_write() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(16);
+        let addr = allocate(&mem, 16);
         mem.write_bytes(addr, &[1, 2, 3, 4]);
         let data = mem.read_bytes(addr, 4);
         assert_eq!(data, vec![1, 2, 3, 4]);
@@ -264,8 +306,8 @@ mod tests {
     #[test]
     fn test_allocate_page_aligned() {
         let mem = NativeMemory::new();
-        let first = mem.allocate(1);
-        let second = mem.allocate(17);
+        let first = allocate(&mem, 1);
+        let second = allocate(&mem, 17);
         assert_eq!(first % PAGE_ALIGNMENT, 0);
         assert_eq!(second % PAGE_ALIGNMENT, 0);
     }
@@ -273,7 +315,7 @@ mod tests {
     #[test]
     fn test_read_write_at_offset() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(32);
+        let addr = allocate(&mem, 32);
         mem.write_bytes(addr + 8, &[10, 20, 30]);
         let data = mem.read_bytes(addr + 8, 3);
         assert_eq!(data, vec![10, 20, 30]);
@@ -285,7 +327,7 @@ mod tests {
     #[test]
     fn test_try_write_bytes_checks_full_range() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(4);
+        let addr = allocate(&mem, 4);
         assert!(mem.try_write_bytes(addr + 1, &[1, 2, 3]));
         assert!(!mem.try_write_bytes(addr + 2, &[4, 5, 6]));
         assert!(!mem.try_write_bytes(addr + 8, &[7]));
@@ -295,7 +337,7 @@ mod tests {
     #[test]
     fn test_free() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(8);
+        let addr = allocate(&mem, 8);
         mem.write_bytes(addr, &[42]);
         mem.free(addr);
         let data = mem.read_bytes(addr, 1);
@@ -305,7 +347,7 @@ mod tests {
     #[test]
     fn test_read_cstring() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(16);
+        let addr = allocate(&mem, 16);
         mem.write_bytes(addr, b"hello\0world");
         let s = mem.read_cstring(addr);
         assert_eq!(s, b"hello");
@@ -314,7 +356,7 @@ mod tests {
     #[test]
     fn test_read_cstring_at_offset() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(32);
+        let addr = allocate(&mem, 32);
         mem.write_bytes(addr + 4, b"test\0");
         let s = mem.read_cstring(addr + 4);
         assert_eq!(s, b"test");
@@ -323,7 +365,7 @@ mod tests {
     #[test]
     fn test_fallible_access_distinguishes_invalid_ranges() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(4);
+        let addr = allocate(&mem, 4);
         assert!(mem.try_write_bytes(addr, b"abc\0"));
         assert_eq!(mem.try_read_cstring(addr), Some(b"abc".to_vec()));
         assert!(!mem.try_write_bytes(addr + 2, b"toolong"));
@@ -334,7 +376,7 @@ mod tests {
     #[test]
     fn test_contains() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(8);
+        let addr = allocate(&mem, 8);
         assert!(mem.contains(addr));
         assert!(!mem.contains(addr + 100));
     }
@@ -342,7 +384,7 @@ mod tests {
     #[test]
     fn test_default() {
         let mem = NativeMemory::default();
-        let addr = mem.allocate(4);
+        let addr = allocate(&mem, 4);
         assert!(mem.contains(addr));
     }
 
@@ -350,9 +392,9 @@ mod tests {
     fn test_isolation() {
         let mem1 = NativeMemory::new();
         let mem2 = NativeMemory::new();
-        let addr1 = mem1.allocate(8);
+        let addr1 = allocate(&mem1, 8);
         mem1.write_bytes(addr1, &[1, 2, 3]);
-        let addr2 = mem2.allocate(8);
+        let addr2 = allocate(&mem2, 8);
         mem2.write_bytes(addr2, &[4, 5, 6]);
         // Each instance is independent
         let data1 = mem1.read_bytes(addr1, 3);
@@ -364,7 +406,7 @@ mod tests {
     #[test]
     fn test_read_write_i8() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(8);
+        let addr = allocate(&mem, 8);
         mem.write_i8(addr, -42);
         assert_eq!(mem.read_i8(addr), Some(-42));
     }
@@ -372,7 +414,7 @@ mod tests {
     #[test]
     fn test_read_write_i16() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(8);
+        let addr = allocate(&mem, 8);
         mem.write_i16(addr, -1234);
         assert_eq!(mem.read_i16(addr), Some(-1234));
     }
@@ -380,7 +422,7 @@ mod tests {
     #[test]
     fn test_read_write_i32() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(8);
+        let addr = allocate(&mem, 8);
         mem.write_i32(addr, 0x1234_5678);
         assert_eq!(mem.read_i32(addr), Some(0x1234_5678));
     }
@@ -388,7 +430,7 @@ mod tests {
     #[test]
     fn test_read_write_i64() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(16);
+        let addr = allocate(&mem, 16);
         mem.write_i64(addr, 0x1234_5678_9ABC_DEF0);
         assert_eq!(mem.read_i64(addr), Some(0x1234_5678_9ABC_DEF0));
     }
@@ -396,7 +438,7 @@ mod tests {
     #[test]
     fn test_read_write_f32() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(8);
+        let addr = allocate(&mem, 8);
         mem.write_f32(addr, std::f32::consts::PI);
         let val = mem.read_f32(addr).unwrap();
         assert!((val - std::f32::consts::PI).abs() < f32::EPSILON);
@@ -405,7 +447,7 @@ mod tests {
     #[test]
     fn test_read_write_f64() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(16);
+        let addr = allocate(&mem, 16);
         mem.write_f64(addr, std::f64::consts::PI);
         let val = mem.read_f64(addr).unwrap();
         assert!((val - std::f64::consts::PI).abs() < f64::EPSILON);
@@ -414,7 +456,7 @@ mod tests {
     #[test]
     fn test_read_with() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(16);
+        let addr = allocate(&mem, 16);
         mem.write_bytes(addr, &[1, 2, 3, 4]);
         let sum = mem.read_with(addr, 4, |bytes| {
             bytes.iter().map(|&b| u32::from(b)).sum::<u32>()
@@ -425,7 +467,7 @@ mod tests {
     #[test]
     fn test_read_with_out_of_bounds() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(4);
+        let addr = allocate(&mem, 4);
         // Try to read more than allocated
         let result = mem.read_with(addr, 8, |_| 42);
         assert_eq!(result, None);
@@ -434,23 +476,41 @@ mod tests {
     #[test]
     fn test_try_read_bytes_out_of_bounds() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(4);
+        let addr = allocate(&mem, 4);
         assert_eq!(mem.try_read_bytes(addr + 2, 4), None);
     }
 
     #[test]
     fn test_large_length_reads_do_not_panic() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(4);
+        let addr = allocate(&mem, 4);
         assert_eq!(mem.try_read_bytes(addr, usize::MAX), None);
         assert_eq!(mem.read_with(addr, usize::MAX, |_| 42), None);
         assert!(mem.read_bytes(0x9999_0000, usize::MAX).is_empty());
     }
 
     #[test]
+    fn test_extreme_addresses_do_not_panic() {
+        let mem = NativeMemory::new();
+        let addr = allocate(&mem, 4);
+        assert_eq!(mem.try_read_bytes(i64::MIN, 1), None);
+        assert_eq!(mem.try_read_bytes(i64::MAX, 1), None);
+        mem.write_bytes(i64::MIN, &[1]);
+        mem.write_bytes(i64::MAX, &[1]);
+        assert_eq!(mem.read_bytes(addr, 4), vec![0; 4]);
+    }
+
+    #[test]
+    fn test_unrepresentable_allocation_fails() {
+        let mem = NativeMemory::new();
+        assert_eq!(mem.allocate(usize::MAX), None);
+        assert_eq!(mem.allocate(MAX_NATIVE_ALLOCATION_BYTES + 1), None);
+    }
+
+    #[test]
     fn test_write_bytes_out_of_bounds_and_unallocated() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(4);
+        let addr = allocate(&mem, 4);
         mem.write_bytes(addr + 3, &[1, 2]);
         assert_eq!(mem.read_bytes(addr, 4), vec![0; 4]);
         mem.write_bytes(0x9999_0000, &[1, 2, 3]);
@@ -462,7 +522,7 @@ mod tests {
     #[test]
     fn test_read_cstring_invalid_addresses() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(4);
+        let addr = allocate(&mem, 4);
         assert_eq!(mem.read_cstring(addr + 4), Vec::<u8>::new());
         assert_eq!(mem.read_cstring(addr - 1), Vec::<u8>::new());
         assert_eq!(mem.read_cstring(0x9999_0000), Vec::<u8>::new());
@@ -471,7 +531,9 @@ mod tests {
     #[test]
     fn test_contains_at_allocation_end_and_unallocated() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(4);
+        let addr = allocate(&mem, 4);
+        assert!(mem.contains_range(addr, 4));
+        assert!(!mem.contains_range(addr + 2, 4));
         assert!(!mem.contains(addr + 4));
         assert!(!mem.contains(0x9999_0000));
     }
@@ -490,7 +552,7 @@ mod tests {
     #[test]
     fn test_typed_read_out_of_bounds() {
         let mem = NativeMemory::new();
-        let addr = mem.allocate(1);
+        let addr = allocate(&mem, 1);
         assert_eq!(mem.read_i8(addr + 1), None);
         assert_eq!(mem.read_i16(addr), None);
         assert_eq!(mem.read_i32(addr), None);
@@ -502,9 +564,9 @@ mod tests {
     #[test]
     fn test_multiple_allocations_lookup() {
         let mem = NativeMemory::new();
-        let addr1 = mem.allocate(64);
-        let addr2 = mem.allocate(64);
-        let addr3 = mem.allocate(64);
+        let addr1 = allocate(&mem, 64);
+        let addr2 = allocate(&mem, 64);
+        let addr3 = allocate(&mem, 64);
         mem.write_i32(addr1, 111);
         mem.write_i32(addr2, 222);
         mem.write_i32(addr3, 333);
@@ -514,11 +576,19 @@ mod tests {
     }
 
     #[test]
+    fn test_allocations_are_native_aligned() {
+        let mem = NativeMemory::new();
+        for size in [1, 3, 7, 15, 40, 127] {
+            assert_eq!(allocate(&mem, size) % 16, 0);
+        }
+    }
+
+    #[test]
     #[cfg(not(target_family = "wasm"))]
     fn test_concurrent_reads() {
         use std::sync::Arc;
         let mem = Arc::new(NativeMemory::new());
-        let addr = mem.allocate(1024);
+        let addr = allocate(&mem, 1024);
         mem.write_bytes(addr, &[42u8; 1024]);
 
         let handles: Vec<_> = (0..8)

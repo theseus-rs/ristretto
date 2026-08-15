@@ -342,7 +342,10 @@ mod tests {
             .await?;
         client.write_all(b"ready").await?;
 
-        let poll_address = vm.native_memory().allocate(8);
+        let poll_address = vm
+            .native_memory()
+            .allocate(8)
+            .expect("native memory allocation");
         vm.native_memory().write_i32(poll_address, fd);
         vm.native_memory()
             .write_i16(poll_address + POLLFD_EVENTS_OFFSET, JAVA_POLLIN);

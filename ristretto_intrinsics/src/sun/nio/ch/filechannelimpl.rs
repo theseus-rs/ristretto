@@ -8,7 +8,7 @@ use ristretto_classloader::Value;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
-use ristretto_types::JavaError::{IllegalArgumentException, IoException};
+use ristretto_types::JavaError::{IllegalArgumentException, IoException, OutOfMemoryError};
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
@@ -37,14 +37,23 @@ async fn do_map<V: VM>(vm: &Arc<V>, fd: i64, prot: i32, position: i64, length: i
     let length_usize = usize::try_from(length)?;
     let position_u64 = u64::try_from(position)?;
 
-    let address = vm.native_memory().allocate(length_usize.max(1));
+    let allocation_size = length_usize.max(1);
+    let address = vm
+        .native_memory()
+        .allocate(allocation_size)
+        .ok_or_else(|| OutOfMemoryError(format!("Unable to map {length_usize} bytes")))?;
 
     if length_usize > 0 {
         // Read up to `length` bytes from the file. If the file is shorter, the tail of the
         // mapping remains zero (as the JDK / OS would extend the file when MAP_RW; we mirror
         // by leaving zeros in our buffer for the read-only case and writing zeros back on
         // force for read-write).
-        let mut buf = vec![0u8; length_usize];
+        let mut buf = Vec::new();
+        if buf.try_reserve_exact(length_usize).is_err() {
+            vm.native_memory().free(address);
+            return Err(OutOfMemoryError(format!("Unable to map {length_usize} bytes")).into());
+        }
+        buf.resize(length_usize, 0);
         let n = match managed_files::read_at(vm.file_handles(), fd, &mut buf, position_u64).await {
             Ok(n) => n,
             Err(e) => {
@@ -296,6 +305,21 @@ mod tests {
         let (vm, _thread, _tmp, fd) = open_test_file(&initial).await;
         let result = do_map(&vm, fd, 0, 0, -1).await;
         assert!(result.is_err());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_do_map_allocation_failure() -> Result<()> {
+        let initial = b"abc".to_vec();
+        let (vm, _thread, _tmp, fd) = open_test_file(&initial).await;
+        let result = do_map(&vm, fd, 0, 0, 512 * 1024 * 1024 + 1).await;
+        assert!(matches!(
+            result,
+            Err(ristretto_types::Error::JavaError(OutOfMemoryError(_)))
+        ));
+        assert!(!vm.native_memory().contains(0));
+        let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
+        assert!(regions.get(0).is_none());
         Ok(())
     }
 

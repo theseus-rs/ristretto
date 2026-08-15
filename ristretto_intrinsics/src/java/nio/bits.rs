@@ -250,8 +250,8 @@ mod tests {
     async fn test_copy_swap_memory_0_native_to_native() -> Result<()> {
         let (vm, thread) = crate::test::java8_thread().await?;
         let mem = vm.native_memory();
-        let src_addr = mem.allocate(8);
-        let dst_addr = mem.allocate(8);
+        let src_addr = mem.allocate(8).expect("native memory allocation");
+        let dst_addr = mem.allocate(8).expect("native memory allocation");
         mem.write_bytes(src_addr, &[1u8, 2, 3, 4, 5, 6, 7, 8]);
         let mut params = Parameters::default();
         params.push(Value::Object(None));

@@ -2986,7 +2986,10 @@ mod tests {
     fn write_cstring_to_native<V: VM>(vm: &V, s: &str) -> i64 {
         let mut bytes = s.as_bytes().to_vec();
         bytes.push(0);
-        let addr = vm.native_memory().allocate(bytes.len());
+        let addr = vm
+            .native_memory()
+            .allocate(bytes.len())
+            .expect("native memory allocation");
         vm.native_memory().write_bytes(addr, &bytes);
         addr
     }
@@ -3782,7 +3785,10 @@ mod tests {
 
         // Write data
         let test_data = b"hello ristretto";
-        let buf_addr = vm.native_memory().allocate(test_data.len());
+        let buf_addr = vm
+            .native_memory()
+            .allocate(test_data.len())
+            .expect("native memory allocation");
         vm.native_memory().write_bytes(buf_addr, test_data);
         let mut params = Parameters::new(vec![]);
         params.push_int(fd);
@@ -3810,7 +3816,10 @@ mod tests {
         };
 
         // Read data back
-        let read_buf_addr = vm.native_memory().allocate(test_data.len());
+        let read_buf_addr = vm
+            .native_memory()
+            .allocate(test_data.len())
+            .expect("native memory allocation");
         let mut params = Parameters::new(vec![]);
         params.push_int(read_fd);
         params.push_long(read_buf_addr);

@@ -207,7 +207,10 @@ mod tests {
 
         let result = interrupt(thread.clone(), Parameters::new(vec![Value::Int(writer)])).await?;
         assert_eq!(None, result);
-        let address = vm.native_memory().allocate(32);
+        let address = vm
+            .native_memory()
+            .allocate(32)
+            .expect("native memory allocation");
         let result = kevent_0(
             thread.clone(),
             Parameters::new(vec![

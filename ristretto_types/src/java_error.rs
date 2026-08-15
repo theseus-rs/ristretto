@@ -208,6 +208,12 @@ pub enum JavaError {
     /// - [NullPointerException](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/NullPointerException.html)
     #[error("{}", .0.as_deref().unwrap_or("null"))]
     NullPointerException(Option<String>),
+    /// `OutOfMemoryError`
+    ///
+    /// # References
+    /// - [OutOfMemoryError](https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/lang/OutOfMemoryError.html)
+    #[error("{0}")]
+    OutOfMemoryError(String),
     /// `ProtocolException`
     ///
     /// # References
@@ -301,6 +307,7 @@ impl JavaError {
             JavaError::ArrayStoreException(_) => "java.lang.ArrayStoreException",
             JavaError::NegativeArraySizeException(_) => "java.lang.NegativeArraySizeException",
             JavaError::NullPointerException(_) => "java.lang.NullPointerException",
+            JavaError::OutOfMemoryError(_) => "java.lang.OutOfMemoryError",
             JavaError::ProtocolException(_) => "java.net.ProtocolException",
             JavaError::RuntimeException(_) => "java.lang.RuntimeException",
             JavaError::SocketException(_) => "java.net.SocketException",
@@ -493,6 +500,13 @@ mod tests {
         let error = JavaError::IllegalArgumentException("invalid argument".to_string());
         assert_eq!(error.class_name(), "java.lang.IllegalArgumentException");
         assert_eq!(error.message(), "invalid argument");
+    }
+
+    #[test]
+    fn test_out_of_memory_error() {
+        let error = JavaError::OutOfMemoryError("native allocation failed".to_string());
+        assert_eq!(error.class_name(), "java.lang.OutOfMemoryError");
+        assert_eq!(error.message(), "native allocation failed");
     }
 
     #[test]

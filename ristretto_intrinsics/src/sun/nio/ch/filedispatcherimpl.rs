@@ -978,14 +978,23 @@ pub async fn map0<T: Thread + 'static>(
     let len =
         usize::try_from(length).map_err(|_| InternalError("map0: length too large".to_string()))?;
 
+    let address = vm
+        .native_memory()
+        .allocate(len.max(1))
+        .ok_or_else(|| JavaError::OutOfMemoryError(format!("Unable to map {len} bytes")))?;
     let file_handles = vm.file_handles();
-    let mut buf = vec![0u8; len];
-    if len > 0 {
-        let _ = managed_files::read_at(file_handles, fd, &mut buf, position)
-            .await
-            .map_err(|e| JavaError::IoException(format!("map0: {e}")))?;
+    let mut buf = Vec::new();
+    if buf.try_reserve_exact(len).is_err() {
+        vm.native_memory().free(address);
+        return Err(JavaError::OutOfMemoryError(format!("Unable to map {len} bytes")).into());
     }
-    let address = vm.native_memory().allocate(len.max(1));
+    buf.resize(len, 0);
+    if len > 0
+        && let Err(error) = managed_files::read_at(file_handles, fd, &mut buf, position).await
+    {
+        vm.native_memory().free(address);
+        return Err(JavaError::IoException(format!("map0: {error}")).into());
+    }
     if len > 0 {
         vm.native_memory().write_bytes(address, &buf);
     }

@@ -155,7 +155,10 @@ mod tests {
             .insert(i64::from(fd), FileHandle::from((file, false)))
             .await?;
 
-        let address = vm.native_memory().allocate(6);
+        let address = vm
+            .native_memory()
+            .allocate(6)
+            .expect("native memory allocation");
         vm.native_memory().write_bytes(address, b"abcdef");
         let regions = vm.resource_manager().get_or_init(MappedRegions::new)?;
         regions.insert(
