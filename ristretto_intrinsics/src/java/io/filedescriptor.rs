@@ -109,7 +109,15 @@ pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let file_descriptor = parameters.pop()?;
+    let receiver = parameters.pop()?;
+    let file_descriptor = {
+        let object = receiver.as_object_ref()?;
+        if object.class().name() == "java/io/FileDescriptor" {
+            receiver.clone()
+        } else {
+            object.value("fd")?
+        }
+    };
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let fd = file_descriptor_from_java_object(&vm, &file_descriptor)?;

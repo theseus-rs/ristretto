@@ -54,9 +54,14 @@ pub async fn system<T: Thread + 'static>(thread: &Arc<T>) -> Result<AHashMap<&'s
 #[expect(clippy::too_many_lines)]
 fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static, str>>> {
     let mut properties = AHashMap::with_capacity(64);
-    let java_home = vm.java_home().to_string_lossy().to_string();
     let class_file_version = vm.java_class_file_version();
     let major_java_version = class_file_version.java();
+    let java_home = if major_java_version == 8 {
+        vm.java_home().join("jre")
+    } else {
+        vm.java_home().clone()
+    };
+    let java_home = java_home.to_string_lossy().into_owned();
     let specification_version = if major_java_version == 8 {
         "1.8".to_string()
     } else {
@@ -105,6 +110,30 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     // TODO: implement java.ext.dirs
     properties.insert("java.ext.dirs", Cow::Borrowed(""));
     properties.insert("java.home", java_home.into());
+
+    #[cfg(not(target_family = "wasm"))]
+    if major_java_version == 8 {
+        let library_path = vm.java_home().join("jre").join("lib");
+        let mut boot_class_path = vec![
+            library_path.join("resources.jar"),
+            library_path.join("rt.jar"),
+            library_path.join("sunrsasign.jar"),
+            library_path.join("jsse.jar"),
+            library_path.join("jce.jar"),
+            library_path.join("charsets.jar"),
+            library_path.join("jfr.jar"),
+        ];
+        let classes_path = vm.java_home().join("jre").join("classes");
+        if classes_path.exists() {
+            boot_class_path.push(classes_path);
+        }
+        boot_class_path.retain(|path| path.exists());
+        let boot_class_path = env::join_paths(boot_class_path)
+            .map_err(|error| InternalError(error.to_string()))?
+            .to_string_lossy()
+            .into_owned();
+        properties.insert("sun.boot.class.path", boot_class_path.into());
+    }
 
     #[cfg(not(target_family = "wasm"))]
     let tmp_dir = env::temp_dir();
@@ -294,6 +323,46 @@ fn console_input_encoding() -> Cow<'static, str> {
     #[cfg(not(target_os = "windows"))]
     {
         Cow::Borrowed("UTF-8")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(not(target_family = "wasm"))]
+    #[tokio::test]
+    async fn java_8_boot_class_path_includes_resources() -> Result<()> {
+        let (vm, _thread) = crate::test::java8_thread().await?;
+        let properties = system_properties(vm.as_ref())?;
+        let boot_class_path = properties
+            .get("sun.boot.class.path")
+            .expect("sun.boot.class.path");
+        let entries =
+            env::split_paths(std::ffi::OsStr::new(boot_class_path.as_ref())).collect::<Vec<_>>();
+        let library_path = vm.java_home().join("jre").join("lib");
+
+        assert!(entries.contains(&library_path.join("resources.jar")));
+        assert!(entries.contains(&library_path.join("rt.jar")));
+        assert_eq!(
+            vm.java_home().join("jre").to_string_lossy(),
+            properties.get("java.home").expect("java.home").as_ref()
+        );
+        Ok(())
+    }
+
+    #[cfg(target_family = "wasm")]
+    #[tokio::test]
+    async fn java_8_boot_class_path_is_omitted() -> Result<()> {
+        let (vm, _thread) = crate::test::java8_thread().await?;
+        let properties = system_properties(vm.as_ref())?;
+
+        assert!(!properties.contains_key("sun.boot.class.path"));
+        assert_eq!(
+            vm.java_home().join("jre").to_string_lossy(),
+            properties.get("java.home").expect("java.home").as_ref()
+        );
+        Ok(())
     }
 }
 

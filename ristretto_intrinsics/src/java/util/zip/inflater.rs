@@ -141,6 +141,7 @@ pub async fn inflate_bytes<T: Thread + 'static>(
     let off = parameters.pop_int()?;
     let output_ref = parameters.pop_reference()?;
     let handle = parameters.pop_long()?;
+    let inflater = parameters.pop()?;
 
     let Some(output_ref) = output_ref else {
         return Err(ristretto_types::JavaError::NullPointerException(Some(
@@ -158,6 +159,25 @@ pub async fn inflate_bytes<T: Thread + 'static>(
     #[expect(clippy::cast_sign_loss)]
     let len = len as usize;
 
+    let (input_ref, input_off, input_len) = {
+        let inflater = inflater.as_object_ref()?;
+        (
+            inflater.value("buf")?,
+            usize::try_from(inflater.value("off")?.as_i32()?)?,
+            usize::try_from(inflater.value("len")?.as_i32()?)?,
+        )
+    };
+    let input_bytes = if input_ref.is_null() || input_len == 0 {
+        Vec::new()
+    } else {
+        let input = input_ref.as_byte_vec_ref()?;
+        let input_end = checked_array_end(input_off, input_len, input.len())?;
+        bounds::range(&input, input_off..input_end, "Inflater input")?
+            .iter()
+            .map(|byte| byte.to_ne_bytes()[0])
+            .collect::<Vec<_>>()
+    };
+
     let state = get_inflater_state(&thread)?;
     let mut guard = state.handles.write();
     let Some(context) = guard.get_mut(&handle) else {
@@ -168,28 +188,53 @@ pub async fn inflate_bytes<T: Thread + 'static>(
     };
 
     let mut output_buffer = vec![0u8; len];
+    let before_in = context.decompress.total_in();
     let before_out = context.decompress.total_out();
-    let input: &[u8] = &[];
-    let result = context
-        .decompress
-        .decompress(input, &mut output_buffer, FlushDecompress::None);
-    let _status = match result {
-        Ok(status) => status,
+    let result =
+        context
+            .decompress
+            .decompress(&input_bytes, &mut output_buffer, FlushDecompress::None);
+    let (status, need_dict) = match result {
+        Ok(status) => (Some(status), false),
         Err(error) => {
-            return Err(ristretto_types::Error::InternalError(format!(
-                "Decompression error: {error}"
-            )));
+            if error.needs_dictionary().is_some() {
+                context.needs_dict = true;
+                (None, true)
+            } else {
+                return Err(ristretto_types::Error::InternalError(format!(
+                    "Decompression error: {error}"
+                )));
+            }
         }
     };
 
     #[expect(clippy::cast_possible_truncation)]
+    let bytes_read = (context.decompress.total_in() - before_in) as usize;
+    #[expect(clippy::cast_possible_truncation)]
     let bytes_written = (context.decompress.total_out() - before_out) as usize;
+    let finished = matches!(status, Some(flate2::Status::StreamEnd));
 
     // Copy output to array
     if bytes_written > 0 {
         let mut guard = output_ref.write();
         let output_bytes = guard.as_byte_vec_mut()?;
         copy_output_bytes(output_bytes, off, &output_buffer, bytes_written)?;
+    }
+
+    {
+        let mut inflater = inflater.as_object_mut()?;
+        let next_input_off = input_off.checked_add(bytes_read).ok_or_else(|| {
+            ristretto_types::Error::InternalError("Inflater input offset overflow".to_string())
+        })?;
+        let remaining = input_len.checked_sub(bytes_read).ok_or_else(|| {
+            ristretto_types::Error::InternalError(
+                "Inflater consumed more bytes than were available".to_string(),
+            )
+        })?;
+        inflater.set_value("off", Value::Int(i32::try_from(next_input_off)?))?;
+        inflater.set_value("len", Value::Int(i32::try_from(remaining)?))?;
+        inflater.set_value("finished", Value::from(finished))?;
+        inflater.set_value("needDict", Value::from(need_dict))?;
     }
 
     #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
@@ -472,7 +517,8 @@ pub async fn set_dictionary_buffer<T: Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ristretto_classloader::Reference;
+    use flate2::{Compress, Compression, FlushCompress, Status};
+    use ristretto_classloader::{Object, Reference};
 
     #[tokio::test]
     async fn test_init_and_end() -> Result<()> {
@@ -538,30 +584,64 @@ mod tests {
 
         // Create an inflater
         let mut parameters = Parameters::default();
-        parameters.push_int(0); // nowrap = false
+        parameters.push_int(1); // nowrap = true (raw DEFLATE, as used by ZIP entries)
         let result = init(thread.clone(), parameters).await?;
         let handle = result.expect("handle").as_i64()?;
 
-        // Create output array
-        let output_bytes: Vec<i8> = vec![0i8; 100];
-        let reference = Reference::from(output_bytes);
+        let expected = b"Hello, World!";
+        let mut compressor = Compress::new(Compression::default(), false);
+        let mut compressed = vec![0_u8; 100];
+        let status = compressor
+            .compress(expected, &mut compressed, FlushCompress::Finish)
+            .expect("compress test input");
+        assert_eq!(Status::StreamEnd, status);
+        compressed.truncate(usize::try_from(compressor.total_out())?);
+
         let vm = thread.vm()?;
         let gc = vm.garbage_collector();
-        let value = Value::new_object(gc, reference);
-        let Value::Object(wrapped_object) = value else {
-            panic!("expected object");
-        };
+        let compressed_len = compressed.len();
+        let compressed = compressed
+            .into_iter()
+            .map(u8::cast_signed)
+            .collect::<Vec<_>>();
+        let compressed = Value::new_object(gc, Reference::from(compressed));
+
+        let mut inflater_object = Object::new(thread.class("java/util/zip/Inflater").await?)?;
+        inflater_object.set_value("buf", compressed)?;
+        inflater_object.set_value("off", Value::Int(0))?;
+        inflater_object.set_value("len", Value::Int(i32::try_from(compressed_len)?))?;
+        let inflater = Value::new_object(gc, Reference::Object(inflater_object));
+
+        // Create output array
+        let output_bytes: Vec<i8> = vec![0i8; 100];
+        let output = Value::new_object(gc, Reference::from(output_bytes));
 
         let mut parameters = Parameters::default();
+        parameters.push(inflater.clone());
         parameters.push_long(handle);
-        parameters.push_reference(wrapped_object);
+        parameters.push(output.clone());
         parameters.push_int(0); // offset
         parameters.push_int(100); // length
 
-        // Should return 0 bytes written (no input data)
         let result = inflate_bytes(thread.clone(), parameters).await?;
         let bytes_written = result.expect("bytes_written").as_i32()?;
-        assert_eq!(bytes_written, 0);
+        assert_eq!(i32::try_from(expected.len())?, bytes_written);
+        let output = output.as_byte_vec_ref()?;
+        let actual = output
+            .iter()
+            .take(expected.len())
+            .map(|byte| byte.cast_unsigned())
+            .collect::<Vec<_>>();
+        assert_eq!(expected, actual.as_slice());
+
+        let inflater = inflater.as_object_ref()?;
+        assert_eq!(
+            Value::Int(i32::try_from(compressed_len)?),
+            inflater.value("off")?
+        );
+        assert_eq!(Value::Int(0), inflater.value("len")?);
+        assert_eq!(Value::from(true), inflater.value("finished")?);
+        assert_eq!(Value::from(false), inflater.value("needDict")?);
 
         // Cleanup
         let mut parameters = Parameters::default();

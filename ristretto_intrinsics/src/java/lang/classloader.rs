@@ -27,7 +27,10 @@ fn is_intrinsic_native_library(path: &str) -> bool {
         .iter()
         .find_map(|suffix| without_prefix.strip_suffix(suffix))
         .unwrap_or(without_prefix);
-    matches!(stem, "jimage" | "net" | "nio" | "prefs" | "sctp" | "zip")
+    matches!(
+        stem,
+        "jimage" | "net" | "nio" | "prefs" | "sctp" | "unpack" | "zip"
+    )
 }
 
 /// Set the defining class loader and module on a class mirror created by defineClass.

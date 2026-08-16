@@ -351,8 +351,14 @@ fn create_primitive_class(class_loader: &Weak<ClassLoader>, primitive: &str) -> 
 /// An error will be returned if the class path cannot be determined.
 fn get_class_path(version: &str, installation_dir: &Path) -> Result<ClassPath> {
     let class_path = if util::parse_major_version(version) <= 8 {
-        let rt_jar_path = installation_dir.join("jre").join("lib").join("rt.jar");
-        vec![rt_jar_path]
+        let library_path = installation_dir.join("jre").join("lib");
+        let mut class_path = Vec::with_capacity(2);
+        let resources_jar_path = library_path.join("resources.jar");
+        if resources_jar_path.is_file() {
+            class_path.push(resources_jar_path);
+        }
+        class_path.push(library_path.join("rt.jar"));
+        class_path
     } else {
         let modules_path = installation_dir.join("lib").join("modules");
         if modules_path.exists() {
@@ -629,6 +635,25 @@ mod tests {
             installation_dir,
             java_home_for_os("linux", PathBuf::from("runtime"))
         );
+    }
+
+    #[test]
+    fn test_java_8_class_path_includes_resources() -> Result<()> {
+        let temp_dir = TempDir::new()?;
+        let library_path = temp_dir.path().join("jre").join("lib");
+        std::fs::create_dir_all(&library_path)?;
+        let rt_jar_path = library_path.join("rt.jar");
+        let resources_jar_path = library_path.join("resources.jar");
+        std::fs::write(&rt_jar_path, [])?;
+        std::fs::write(&resources_jar_path, [])?;
+
+        let class_path = get_class_path("8u402", temp_dir.path())?;
+        let entries = class_path
+            .iter()
+            .map(|entry| PathBuf::from(entry.name()))
+            .collect::<Vec<_>>();
+        assert_eq!(vec![resources_jar_path, rt_jar_path], entries);
+        Ok(())
     }
 
     #[test]

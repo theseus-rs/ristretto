@@ -247,7 +247,10 @@ pub fn is_intrinsic_native_library(path: &str) -> bool {
         .iter()
         .find_map(|suffix| without_prefix.strip_suffix(suffix))
         .unwrap_or(without_prefix);
-    matches!(stem, "jimage" | "net" | "nio" | "prefs" | "sctp" | "zip")
+    matches!(
+        stem,
+        "jimage" | "net" | "nio" | "prefs" | "sctp" | "unpack" | "zip"
+    )
 }
 
 #[cfg(test)]
@@ -382,6 +385,7 @@ mod tests {
             "nio.dll",
             "libprefs.so",
             "libsctp.so",
+            "unpack",
             "/usr/lib/libzip.dylib",
             r"C:\Java\bin\net.dll",
             "libnio.jnilib",

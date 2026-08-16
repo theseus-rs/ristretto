@@ -16,6 +16,7 @@ use ristretto_classloader::{Class, Method, Reference, Value};
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
+use ristretto_types::JavaError::NoSuchMethodError;
 use ristretto_types::Parameters;
 use ristretto_types::Thread;
 use ristretto_types::VM;
@@ -612,12 +613,18 @@ pub async fn get_members<T: Thread + 'static>(
                 {
                     continue;
                 }
+                let reference_kind = if field.access_flags().contains(FieldAccessFlags::STATIC) {
+                    ReferenceKind::GetStatic
+                } else {
+                    ReferenceKind::GetField
+                };
                 members.push((
                     class.clone(),
                     field.name().to_string(),
                     field.field_type().to_string(),
                     field.access_flags().bits(),
                     MemberNameFlags::IS_FIELD,
+                    reference_kind,
                 ));
             }
         }
@@ -652,12 +659,22 @@ pub async fn get_members<T: Thread + 'static>(
                 {
                     continue;
                 }
+                let reference_kind = if flags.contains(MemberNameFlags::IS_CONSTRUCTOR) {
+                    ReferenceKind::NewInvokeSpecial
+                } else if method.access_flags().contains(MethodAccessFlags::STATIC) {
+                    ReferenceKind::InvokeStatic
+                } else if class.is_interface() {
+                    ReferenceKind::InvokeInterface
+                } else {
+                    ReferenceKind::InvokeVirtual
+                };
                 members.push((
                     class.clone(),
                     method_name.to_string(),
                     method.descriptor().to_string(),
                     method.access_flags().bits(),
                     flags,
+                    reference_kind,
                 ));
             }
         }
@@ -674,13 +691,15 @@ pub async fn get_members<T: Thread + 'static>(
     let skip = usize::try_from(skip).unwrap_or(0);
     let mut resolved_members = Vec::new();
 
-    for (class, name, descriptor, modifiers, flags) in
+    for (class, name, descriptor, modifiers, flags, reference_kind) in
         members.into_iter().skip(skip).take(results_len)
     {
         let class_val = class.to_object(&thread).await?;
         let name_val = name.to_object(&thread).await?;
         let type_val = descriptor.to_object(&thread).await?;
-        let flags_val = Value::Int(i32::from(modifiers) | flags.bits());
+        let reference_kind =
+            i32::from(reference_kind.kind()) << MemberNameFlags::REFERENCE_KIND_SHIFT.bits();
+        let flags_val = Value::Int(i32::from(modifiers) | flags.bits() | reference_kind);
         resolved_members.push((class_val, name_val, type_val, flags_val));
     }
 
@@ -1558,7 +1577,15 @@ async fn resolve_method<T: Thread + 'static>(
                         }
                     }
                 }
-                Err(e) => return Err(e.into()),
+                Err(_) => {
+                    return Err(NoSuchMethodError(format!(
+                        "{}.{}{}",
+                        class.name(),
+                        method_name,
+                        method_descriptor
+                    ))
+                    .into());
+                }
             }
         }
     };
