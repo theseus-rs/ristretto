@@ -24,15 +24,33 @@ use crate::instruction::{
     tableswitch, wide,
 };
 use crate::{LocalVariables, OperandStack, Result, Thread};
-use byte_unit::{Byte, UnitType};
 use ristretto_classfile::attributes::{Instruction, LookupSwitch, TableSwitch};
 use ristretto_classloader::{Class, Method, Value};
-use ristretto_macros::async_method;
+use ristretto_types::JavaError::StackOverflowError;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
+use tokio::sync::Mutex;
 use tracing::{Level, debug, event_enabled};
+
+/// A resolved Java method invocation that the thread trampoline must dispatch.
+#[derive(Debug)]
+pub(crate) struct MethodCall {
+    pub(crate) class: Arc<Class>,
+    pub(crate) method: Arc<Method>,
+    pub(crate) parameters: Vec<Value>,
+    pub(crate) has_return_type: bool,
+}
+
+impl PartialEq for MethodCall {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.class, &other.class)
+            && Arc::ptr_eq(&self.method, &other.method)
+            && self.parameters == other.parameters
+            && self.has_return_type == other.has_return_type
+    }
+}
 
 /// Represents the result of executing a JVM bytecode instruction.
 ///
@@ -61,6 +79,7 @@ pub(crate) enum ExecutionResult {
     Return(Option<Value>),
     Continue,
     ContinueAtPosition(usize),
+    Call(MethodCall),
 }
 
 /// Represents the result of executing a JVM bytecode instruction.
@@ -137,21 +156,57 @@ pub struct Frame {
     class: Arc<Class>,
     method: Arc<Method>,
     program_counter: AtomicUsize,
+    state: Mutex<Option<FrameState>>,
 }
 
-/// Number of instructions to execute before yielding to the Tokio runtime
-const INSTRUCTION_YIELD_COUNT: u32 = 4096;
+#[derive(Debug)]
+struct FrameState {
+    locals: LocalVariables,
+    stack: OperandStack,
+}
 
 impl Frame {
-    /// Create a new frame for the specified class. To invoke a method on an object reference, the
-    /// object reference must be the first parameter in the parameters vector.
+    /// Create a metadata-only frame for the specified class and method.
+    ///
+    /// JIT execution uses this frame for stack walking without allocating interpreter locals or an
+    /// operand stack. Interpreted calls use [`Frame::with_parameters`] instead.
     pub fn new(thread: &Weak<Thread>, class: &Arc<Class>, method: &Arc<Method>) -> Self {
         Frame {
             thread: thread.clone(),
             class: class.clone(),
             method: method.clone(),
             program_counter: AtomicUsize::new(0),
+            state: Mutex::new(None),
         }
+    }
+
+    pub(crate) fn with_parameters(
+        thread: &Weak<Thread>,
+        class: &Arc<Class>,
+        method: &Arc<Method>,
+        mut parameters: Vec<Value>,
+    ) -> Result<Self> {
+        Self::adjust_parameters(&mut parameters, method.max_locals());
+        if parameters.len() > method.max_locals() {
+            return Err(InternalError(format!(
+                "Method parameters require {} local-variable slots, but {}.{}{} declares {}",
+                parameters.len(),
+                class.name(),
+                method.name(),
+                method.descriptor(),
+                method.max_locals()
+            )));
+        }
+        Ok(Frame {
+            thread: thread.clone(),
+            class: class.clone(),
+            method: method.clone(),
+            program_counter: AtomicUsize::new(0),
+            state: Mutex::new(Some(FrameState {
+                locals: LocalVariables::new(parameters),
+                stack: OperandStack::with_max_size(method.max_stack()),
+            })),
+        })
     }
 
     /// Get the thread that owns this frame.
@@ -219,63 +274,121 @@ impl Frame {
     ///    - Load the instruction at the current program counter
     ///    - Execute the instruction, which may modify locals and stack
     ///    - Process the execution result (continue, jump, or return)
-    #[async_method]
-    pub async fn execute(&self, mut parameters: Vec<Value>) -> Result<Option<Value>> {
-        let max_locals = self.method.max_locals();
-        Frame::adjust_parameters(&mut parameters, max_locals);
-        let locals = &mut LocalVariables::new(parameters);
-        let max_stack = self.method.max_stack();
-        let stack = &mut OperandStack::with_max_size(max_stack);
+    pub async fn execute(&self, parameters: Vec<Value>) -> Result<Option<Value>> {
+        let thread = self.thread()?;
+        thread.execute(&self.class, &self.method, &parameters).await
+    }
+
+    /// Execute one bytecode instruction and return control to the thread trampoline when the
+    /// frame calls or returns.
+    pub(crate) async fn execute_instruction(&self, thread: &Thread) -> Result<ExecutionResult> {
+        let mut state = self.state.lock().await;
+        let state = state.as_mut().ok_or_else(|| {
+            InternalError("Interpreter frame state is not initialized".to_string())
+        })?;
         let code = self.method.code();
-        let mut instruction_yield_count: u32 = 0;
+        let program_counter = self.program_counter.load(Ordering::Relaxed);
+        let Some(instruction) = code.get(program_counter) else {
+            return Err(InvalidProgramCounter(program_counter));
+        };
 
-        loop {
-            let program_counter = self.program_counter.load(Ordering::Relaxed);
-            let Some(instruction) = code.get(program_counter) else {
-                return Err(InvalidProgramCounter(program_counter));
-            };
+        let FrameState { locals, stack } = state;
 
-            if event_enabled!(Level::DEBUG) {
-                self.debug_execute(locals, stack, instruction)?;
+        if event_enabled!(Level::DEBUG) {
+            self.debug_execute(locals, stack, instruction)?;
+        }
+
+        let result = match self.process(locals, stack, instruction) {
+            Ok(InstructionResult::Sync(result)) => {
+                if thread.record_synchronous_instruction() {
+                    tokio::task::yield_now().await;
+                }
+                Ok(result)
             }
+            Ok(InstructionResult::Async(future)) => {
+                thread.reset_instruction_yield_count();
+                future.await
+            }
+            Err(error) => Err(error),
+        };
 
-            let result = match self.process(locals, stack, instruction) {
-                Ok(InstructionResult::Sync(result)) => {
-                    // Yield periodically to allow tokio to process cancellation and other tasks
-                    instruction_yield_count = instruction_yield_count.wrapping_add(1);
-                    if instruction_yield_count.is_multiple_of(INSTRUCTION_YIELD_COUNT) {
-                        tokio::task::yield_now().await;
-                    }
-
-                    Ok(result)
-                }
-                Ok(InstructionResult::Async(future)) => {
-                    // Reset instruction count for async operations
-                    instruction_yield_count = 0;
-                    future.await
-                }
-                Err(error) => Err(error),
-            };
-
-            match result {
-                Ok(ExecutionResult::Continue) => {
-                    self.program_counter
-                        .store(program_counter + 1, Ordering::Relaxed);
-                }
-                Ok(ExecutionResult::ContinueAtPosition(program_counter)) => {
-                    self.program_counter
-                        .store(program_counter, Ordering::Relaxed);
-                }
-                Ok(ExecutionResult::Return(value)) => return Ok(value),
-                Err(error) => {
-                    let thread = self.thread()?;
-                    let throwable = convert_error_to_throwable(&thread, error).await?;
-                    let handler_program_counter = process_throwable(self, stack, throwable).await?;
-                    self.program_counter
-                        .store(handler_program_counter, Ordering::Relaxed);
-                }
+        match result {
+            Ok(ExecutionResult::Continue) => {
+                self.program_counter
+                    .store(program_counter + 1, Ordering::Relaxed);
+                Ok(ExecutionResult::Continue)
+            }
+            Ok(ExecutionResult::ContinueAtPosition(next_program_counter)) => {
+                self.program_counter
+                    .store(next_program_counter, Ordering::Relaxed);
+                Ok(ExecutionResult::Continue)
+            }
+            Ok(result @ (ExecutionResult::Return(_) | ExecutionResult::Call(_))) => Ok(result),
+            Err(error) => {
+                Self::handle_error_with_stack(self, stack, error).await?;
+                Ok(ExecutionResult::Continue)
             }
         }
+    }
+
+    /// Resume this frame after a method call completes successfully.
+    pub(crate) async fn complete_call(
+        &self,
+        value: Option<Value>,
+        has_return_type: bool,
+    ) -> Result<()> {
+        let mut state = self.state.lock().await;
+        let state = state.as_mut().ok_or_else(|| {
+            InternalError("Interpreter frame state is not initialized".to_string())
+        })?;
+        if has_return_type && let Some(value) = value {
+            state.stack.push(value)?;
+        }
+        self.program_counter.fetch_add(1, Ordering::Relaxed);
+        Ok(())
+    }
+
+    /// Deliver an error raised by a callee to this frame.
+    pub(crate) async fn handle_error(&self, error: crate::Error) -> Result<()> {
+        let mut state = self.state.lock().await;
+        let state = state.as_mut().ok_or_else(|| {
+            InternalError("Interpreter frame state is not initialized".to_string())
+        })?;
+        Self::handle_error_with_stack(self, &mut state.stack, error).await
+    }
+
+    async fn handle_error_with_stack(
+        frame: &Frame,
+        stack: &mut OperandStack,
+        error: crate::Error,
+    ) -> Result<()> {
+        let thread = frame.thread()?;
+        // The current frame may have consumed the entire configured Java stack. Every implicit
+        // throwable needs enough headroom to run its constructor without replacing the original
+        // error with a StackOverflowError.
+        let throwable = {
+            let _overflow_reserve = thread.stack_overflow_reserve();
+            convert_error_to_throwable(&thread, error).await?
+        };
+        let handler_program_counter = process_throwable(frame, stack, throwable).await?;
+        frame
+            .program_counter
+            .store(handler_program_counter, Ordering::Relaxed);
+        Ok(())
+    }
+
+    /// Number of Java stack slots reserved by this frame.
+    pub(crate) fn stack_slots(&self) -> Result<usize> {
+        Self::stack_slots_for(&self.method)
+    }
+
+    /// Number of Java stack slots required by a method before its frame is allocated.
+    pub(crate) fn stack_slots_for(method: &Method) -> Result<usize> {
+        method
+            .max_locals()
+            .checked_add(method.max_stack())
+            .and_then(|slots| slots.checked_add(1))
+            .ok_or_else(|| StackOverflowError("Java stack slot count overflow".to_string()).into())
     }
 
     /// Adjusts the parameters vector to conform to JVM local variable layout rules.
@@ -357,14 +470,9 @@ impl Frame {
         };
         let constant_pool = self.class.constant_pool();
         let instruction = instruction.to_formatted_string(constant_pool)?;
-        #[cfg(all(not(target_family = "wasm"), not(target_os = "solaris")))]
-        let stack_size = u64::try_from(stacker::remaining_stack().unwrap_or(0))?;
-        #[cfg(any(target_family = "wasm", target_os = "solaris"))]
-        let stack_size = 0u64;
-        let stack_size = Byte::from_u64(stack_size).get_appropriate_unit(UnitType::Decimal);
         debug!("  frame: {class_name}.{method_name}{method_descriptor}{source}");
         debug!("    locals: {locals}");
-        debug!("    stack ({stack_size:#.3}): {stack}");
+        debug!("    stack: {stack}");
         debug!("    pc: {program_counter}; instruction: {instruction}");
         Ok(())
     }
@@ -751,7 +859,7 @@ mod tests {
     use ristretto_classloader::ClassPath;
     use std::path::PathBuf;
 
-    async fn get_class(class_name: &str) -> Result<(Arc<Thread>, Arc<Class>)> {
+    async fn get_class(class_name: &str) -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let classes_path = cargo_manifest.join("..").join("classes");
         let class_path = ClassPath::from(&[classes_path]);
@@ -762,17 +870,59 @@ mod tests {
         let weak_vm = Arc::downgrade(&vm);
         let thread = Thread::new(&weak_vm, 3);
         let class = thread.class(class_name).await?;
-        Ok((thread, class))
+        Ok((vm, thread, class))
     }
 
     #[tokio::test]
     async fn test_execute() -> Result<()> {
-        let (thread, class) = get_class("java.lang.Math").await?;
+        let (_vm, thread, class) = get_class("java.lang.Math").await?;
         let method = class.method("addExact", "(II)I").expect("method not found");
         let parameters = vec![Value::Int(1), Value::Int(2)];
         let frame = Frame::new(&Arc::downgrade(&thread), &class, &method);
         let result = frame.execute(parameters).await?;
         assert!(matches!(result, Some(Value::Int(3))));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_method_call_equality() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
+        let call = MethodCall {
+            class: frame.class().clone(),
+            method: frame.method().clone(),
+            parameters: vec![Value::Int(42)],
+            has_return_type: true,
+        };
+        let same_call = MethodCall {
+            class: frame.class().clone(),
+            method: frame.method().clone(),
+            parameters: vec![Value::Int(42)],
+            has_return_type: true,
+        };
+
+        assert_eq!(call, same_call);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_with_parameters_rejects_too_many_local_slots() -> Result<()> {
+        let (_vm, thread, frame) = crate::test::frame().await?;
+        let result = Frame::with_parameters(
+            &Arc::downgrade(&thread),
+            frame.class(),
+            frame.method(),
+            vec![Value::Int(1)],
+        );
+
+        assert!(matches!(result, Err(InternalError(message)) if message ==
+            "Method parameters require 1 local-variable slots, but Test.test()V declares 0"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_metadata_frame_does_not_allocate_interpreter_state() -> Result<()> {
+        let (_vm, _thread, frame) = crate::test::frame().await?;
+        assert!(frame.state.lock().await.is_none());
         Ok(())
     }
 

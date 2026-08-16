@@ -1,8 +1,7 @@
 use crate::Error::InternalError;
 use crate::JavaError::NullPointerException;
 use crate::Result;
-use crate::frame::ExecutionResult::Continue;
-use crate::frame::{ExecutionResult, Frame};
+use crate::frame::{ExecutionResult, Frame, MethodCall};
 use crate::instruction::{lookup_method, resolve_method_ref};
 use crate::method_ref_cache::InvokeKind;
 use crate::operand_stack::OperandStack;
@@ -67,14 +66,12 @@ pub(crate) async fn invokevirtual(
         }
     };
 
-    let result = Box::pin(thread.execute(&class, &method, &parameters)).await?;
-    // For polymorphic methods, only push if the call site has a return type
-    if let Some(value) = result
-        && resolution.has_return_type
-    {
-        stack.push(value)?;
-    }
-    Ok(Continue)
+    Ok(ExecutionResult::Call(MethodCall {
+        class,
+        method,
+        parameters,
+        has_return_type: resolution.has_return_type,
+    }))
 }
 
 #[cfg(test)]
