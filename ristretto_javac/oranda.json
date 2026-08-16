@@ -1,0 +1,18 @@
+{
+  "project": {
+    "name": "ristretto javac"
+  },
+  "components": {
+    "artifacts": {
+      "package_managers": {
+        "preferred": {
+          "cargo": "cargo install ristretto_javac",
+          "binstall": "cargo binstall ristretto_javac"
+        }
+      }
+    },
+    "changelog": {
+      "read_changelog_file": false
+    }
+  }
+}

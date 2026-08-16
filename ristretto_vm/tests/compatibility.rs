@@ -38,6 +38,7 @@ const TEST_FILE: &str = "Test.java";
 const IGNORE_FILE: &str = "ignore.txt";
 const RUNTIME_PROPERTIES_FILE: &str = "runtime.properties";
 const TEST_TIMEOUT_PREFIX: &str = "Test timed out after ";
+const TEST_THREAD_STACK_SIZE: usize = 8 * 1024 * 1024;
 
 /// A single failure observed while running the compatibility test suite.
 #[derive(Debug, Clone)]
@@ -549,50 +550,55 @@ fn run_vm_once(
     let system_properties = test_case.system_properties.clone();
     let timeout_message = format!("{TEST_TIMEOUT_PREFIX}{} seconds", test_timeout.as_secs());
 
-    std::thread::spawn(move || {
-        std::panic::catch_unwind(|| {
-            let runtime = tokio::runtime::Builder::new_multi_thread()
-                // Rayon already runs multiple compatibility tests in parallel. A single worker
-                // avoids multiplying the runner's thread count for most VMs, while socket cases
-                // need a second worker so their Java server and client threads can make
-                // progress independently.
-                .worker_threads(worker_threads)
-                .enable_all()
-                .build()
-                .map_err(|error| InternalError(error.to_string()))?;
-            runtime.block_on(async {
-                let stdout = Arc::new(AsyncMutex::new(Vec::new()));
-                let stderr = Arc::new(AsyncMutex::new(Vec::new()));
-                match tokio::time::timeout(
-                    test_timeout,
-                    run_test(
-                        &java_version,
-                        &class_dir,
-                        &source_dir,
-                        &system_properties,
-                        interpreted,
-                        stdout.clone(),
-                        stderr.clone(),
-                    ),
-                )
-                .await
-                {
-                    Ok(result) => result,
-                    Err(_elapsed) => {
-                        let stdout = stdout.lock().await;
-                        let stdout = String::from_utf8_lossy(&stdout);
-                        let stderr = stderr.lock().await;
-                        let stderr = String::from_utf8_lossy(&stderr);
-                        Err(InternalError(format!(
-                            "{timeout_message}\nstdout: {stdout}\nstderr: {stderr}"
-                        )))
+    std::thread::Builder::new()
+        // Debug builds of the VM can require more than Rust's default native stack while polling
+        // deeply nested interpreter futures (for example, nested record bootstrap methods).
+        .stack_size(TEST_THREAD_STACK_SIZE)
+        .spawn(move || {
+            std::panic::catch_unwind(|| {
+                let runtime = tokio::runtime::Builder::new_multi_thread()
+                    // Rayon already runs multiple compatibility tests in parallel. A single worker
+                    // avoids multiplying the runner's thread count for most VMs, while socket cases
+                    // need a second worker so their Java server and client threads can make
+                    // progress independently.
+                    .worker_threads(worker_threads)
+                    .enable_all()
+                    .build()
+                    .map_err(|error| InternalError(error.to_string()))?;
+                runtime.block_on(async {
+                    let stdout = Arc::new(AsyncMutex::new(Vec::new()));
+                    let stderr = Arc::new(AsyncMutex::new(Vec::new()));
+                    match tokio::time::timeout(
+                        test_timeout,
+                        run_test(
+                            &java_version,
+                            &class_dir,
+                            &source_dir,
+                            &system_properties,
+                            interpreted,
+                            stdout.clone(),
+                            stderr.clone(),
+                        ),
+                    )
+                    .await
+                    {
+                        Ok(result) => result,
+                        Err(_elapsed) => {
+                            let stdout = stdout.lock().await;
+                            let stdout = String::from_utf8_lossy(&stdout);
+                            let stderr = stderr.lock().await;
+                            let stderr = String::from_utf8_lossy(&stderr);
+                            Err(InternalError(format!(
+                                "{timeout_message}\nstdout: {stdout}\nstderr: {stderr}"
+                            )))
+                        }
                     }
-                }
+                })
             })
         })
-    })
-    .join()
-    .expect("Test thread panicked")
+        .expect("spawn test thread")
+        .join()
+        .expect("Test thread panicked")
 }
 
 #[cfg(not(target_family = "wasm"))]

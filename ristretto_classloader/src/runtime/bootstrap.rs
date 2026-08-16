@@ -153,6 +153,31 @@ pub async fn home_class_loader(java_home: &Path) -> Result<(PathBuf, String, Arc
     Ok((java_home.to_path_buf(), java_version, class_loader))
 }
 
+/// Prepend entries to a bootstrap class loader's class path.
+///
+/// The returned class loader retains the original runtime class path after the additional entries.
+/// Primitive classes are registered on the replacement loader just as they are for a newly created
+/// runtime class loader.
+///
+/// # Errors
+///
+/// if primitive classes cannot be registered on the replacement class loader.
+pub async fn prepend_bootstrap_class_path(
+    class_loader: &Arc<ClassLoader>,
+    additional_class_path: &ClassPath,
+) -> Result<Arc<ClassLoader>> {
+    let mut entries = additional_class_path.iter().cloned().collect::<Vec<_>>();
+    if entries.is_empty() {
+        return Ok(Arc::clone(class_loader));
+    }
+    entries.extend(class_loader.class_path().iter().cloned());
+
+    let class_loader =
+        ClassLoader::new_builtin(ClassLoaderType::Bootstrap, ClassPath::new(entries));
+    register_primitives(&class_loader).await?;
+    Ok(class_loader)
+}
+
 /// Get a class loader for the given Java runtime version. If the version is not installed, the
 /// archive will be downloaded and extracted. A version can be a partial version, a major version,
 /// or a `*` to get the latest LTS release supported by the runtime.
@@ -549,6 +574,25 @@ mod tests {
         let (_java_home, java_version, class_loader) = version_class_loader(version).await?;
         assert_eq!(version, java_version);
         assert_eq!("bootstrap", class_loader.name());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_prepend_bootstrap_class_path() -> Result<()> {
+        let class_path = ClassPath::from(&["runtime"]);
+        let class_loader = ClassLoader::new_builtin(ClassLoaderType::Bootstrap, class_path);
+        let additional_class_path = ClassPath::from(&["tools.jar"]);
+
+        let class_loader =
+            prepend_bootstrap_class_path(&class_loader, &additional_class_path).await?;
+
+        assert_eq!(Some(ClassLoaderType::Bootstrap), class_loader.loader_type());
+        let entries = class_loader
+            .class_path()
+            .iter()
+            .map(|entry| entry.name().to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        assert_eq!(["tools.jar", "runtime"], entries.as_slice());
         Ok(())
     }
 

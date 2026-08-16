@@ -88,7 +88,7 @@ jobs:
           tool: cross
 
       - name: Install Linux dependencies
-        if: ${{ startsWith(matrix.platform, 'linux') || startsWith(matrix.platform, 'wasm32') }}
+        if: ${{ startsWith(matrix.platform, 'linux') }}
         run: .github/scripts/setup-linux.sh
 
       - name: Run clippy
@@ -230,6 +230,7 @@ jobs:
           cargo test --profile release-tests -p ristretto_classloader object::tests::test_as_string_java8 -- --ignored --test-threads=1
           cargo test --profile release-tests -p ristretto_classloader --test runtime -- --ignored --test-threads=1
           cargo test --profile release-tests -p runtime_class_loader -- --ignored --test-threads=1
+          cargo test --profile release-tests -p resolver -- --ignored --test-threads=1
 
       - name: Tests
         if: ${{ matrix.platform == 'macos-x64' }}
@@ -253,8 +254,11 @@ jobs:
           RUST_LOG: info
         run: |
           cross test --profile release-tests --workspace --all-features --target ${{ matrix.target }} \
+            --exclude compiler \
+            --exclude in_memory_compiler \
             --exclude ristretto_intrinsics \
             --exclude ristretto_java \
+            --exclude ristretto_javac \
             --exclude embedded_jvm \
             --exclude ristretto_vm
 
@@ -267,8 +271,11 @@ jobs:
           RUST_LOG: info
         run: |
           cross test --profile release-tests --workspace --all-features --target ${{ matrix.target }} \
+            --exclude compiler \
+            --exclude in_memory_compiler \
             --exclude ristretto_intrinsics \
             --exclude ristretto_java \
+            --exclude ristretto_javac \
             --exclude embedded_jvm \
             --exclude ristretto_jit \
             --exclude ristretto_vm

@@ -1,5 +1,6 @@
 use crate::locale::detect_default_locale;
 use ahash::AHashMap;
+use ristretto_classfile::JAVA_8;
 use ristretto_classloader::Value;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaObject;
@@ -55,16 +56,16 @@ pub async fn system<T: Thread + 'static>(thread: &Arc<T>) -> Result<AHashMap<&'s
 fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static, str>>> {
     let mut properties = AHashMap::with_capacity(64);
     let class_file_version = vm.java_class_file_version();
-    let major_java_version = class_file_version.java();
-    let java_home = if major_java_version == 8 {
+    let java_home = if class_file_version == &JAVA_8 {
         vm.java_home().join("jre")
     } else {
         vm.java_home().clone()
     };
     let java_home = java_home.to_string_lossy().into_owned();
-    let specification_version = if major_java_version == 8 {
+    let specification_version = if class_file_version == &JAVA_8 {
         "1.8".to_string()
     } else {
+        let major_java_version = class_file_version.java();
         major_java_version.to_string()
     };
     let major_class_version = class_file_version.major();
@@ -112,7 +113,7 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     properties.insert("java.home", java_home.into());
 
     #[cfg(not(target_family = "wasm"))]
-    if major_java_version == 8 {
+    if class_file_version == &JAVA_8 {
         let library_path = vm.java_home().join("jre").join("lib");
         let mut boot_class_path = vec![
             library_path.join("resources.jar"),

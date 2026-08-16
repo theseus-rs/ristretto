@@ -2,7 +2,6 @@
 
 [![Documentation](https://docs.rs/ristretto_classloader/badge.svg)](https://docs.rs/ristretto_classloader)
 [![Code Coverage](https://codecov.io/gh/theseus-rs/ristretto/branch/main/graph/badge.svg)](https://codecov.io/gh/theseus-rs/ristretto)
-[![Benchmarks](https://img.shields.io/badge/%F0%9F%90%B0_bencher-enabled-6ec241)](https://bencher.dev/perf/theseus-rs-ristretto)
 [![Latest version](https://img.shields.io/crates/v/ristretto_classloader.svg)](https://crates.io/crates/ristretto_classloader)
 [![License](https://img.shields.io/crates/l/ristretto_classloader)](https://github.com/theseus-rs/ristretto#license)
 [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
@@ -34,6 +33,24 @@ fn main() -> Result<()> {
         println!("{class:?}");
         Ok(())
     }
+}
+```
+
+Classes can also be retained and loaded entirely in memory:
+
+```rust,no_run
+use ristretto_classloader::{ClassLoader, ClassPath, ClassPathEntry, JavaStr, Memory, Result};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let class_bytes = std::fs::read("HelloWorld.class")?;
+    let memory = Memory::new("memory");
+    memory.add_class(&class_bytes).await?;
+    let class_path = ClassPath::new(vec![ClassPathEntry::Memory(memory)]);
+    let class_loader = ClassLoader::new("memory", class_path);
+    let class = class_loader.load(JavaStr::try_from_str("HelloWorld")?).await?;
+    println!("{class:?}");
+    Ok(())
 }
 ```
 

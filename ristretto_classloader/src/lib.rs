@@ -19,7 +19,7 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```rust,no_run
 //! use ristretto_classloader::{runtime, ClassLoader, JavaStr, Result};
 //! use std::sync::Arc;
 //!

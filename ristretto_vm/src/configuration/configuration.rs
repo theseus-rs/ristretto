@@ -6,7 +6,7 @@
 use super::{MainModule, ModuleExport, ModuleOpens, ModulePatch, ModuleRead};
 use ahash::{AHashMap, AHashSet};
 pub use ristretto_classfile::VerifyMode;
-use ristretto_classloader::ClassPath;
+use ristretto_classloader::{ClassPath, ClassPathEntry};
 use ristretto_gc::GarbageCollector;
 use std::fmt::Debug;
 use std::io::{Read, Write};
@@ -23,6 +23,7 @@ use tokio::sync::Mutex;
 /// Use [`ConfigurationBuilder`](super::ConfigurationBuilder) to create instances.
 pub struct Configuration {
     pub(super) class_path: ClassPath,
+    pub(super) bootstrap_class_path: ClassPath,
     pub(super) main_class: Option<String>,
     pub(super) jar: Option<PathBuf>,
     pub(super) java_home: Option<PathBuf>,
@@ -52,6 +53,16 @@ pub struct Configuration {
 }
 
 impl Configuration {
+    pub(crate) fn prepend_bootstrap_class_path<P: AsRef<std::ffi::OsStr>>(&mut self, path: P) {
+        let mut entries = vec![ClassPathEntry::new(path)];
+        entries.extend(self.bootstrap_class_path.iter().cloned());
+        self.bootstrap_class_path = ClassPath::new(entries);
+    }
+
+    pub(crate) fn bootstrap_class_path(&self) -> &ClassPath {
+        &self.bootstrap_class_path
+    }
+
     /// Returns a reference to the class path configuration.
     ///
     /// The class path determines where the VM will look for classes during execution.
