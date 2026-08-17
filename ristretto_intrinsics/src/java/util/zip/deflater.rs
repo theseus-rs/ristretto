@@ -104,6 +104,7 @@ fn level_to_compression(level: i32) -> Compression {
 )]
 #[async_method]
 #[expect(clippy::match_same_arms)]
+#[expect(clippy::too_many_lines)]
 pub async fn deflate_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
@@ -113,6 +114,7 @@ pub async fn deflate_bytes<T: Thread + 'static>(
     let out_off = parameters.pop_int()?;
     let output_ref = parameters.pop_reference()?;
     let handle = parameters.pop_long()?;
+    let deflater = parameters.pop()?;
 
     let Some(output_ref) = output_ref else {
         return Err(ristretto_types::JavaError::NullPointerException(Some(
@@ -130,6 +132,28 @@ pub async fn deflate_bytes<T: Thread + 'static>(
     #[expect(clippy::cast_sign_loss)]
     let out_len = out_len as usize;
 
+    let (input_ref, in_off, in_len, finish, set_params, level) = {
+        let deflater = deflater.as_object_ref()?;
+        (
+            deflater.value("buf")?,
+            usize::try_from(deflater.value("off")?.as_i32()?)?,
+            usize::try_from(deflater.value("len")?.as_i32()?)?,
+            deflater.value("finish")?.as_bool()?,
+            deflater.value("setParams")?.as_bool()?,
+            deflater.value("level")?.as_i32()?,
+        )
+    };
+    let input_bytes = if input_ref.is_null() || in_len == 0 {
+        Vec::new()
+    } else {
+        let input = input_ref.as_byte_vec_ref()?;
+        let input_end = checked_array_end(in_off, in_len, input.len())?;
+        bounds::range(&input, in_off..input_end, "Deflater input")?
+            .iter()
+            .map(|byte| byte.to_ne_bytes()[0])
+            .collect::<Vec<_>>()
+    };
+
     let deflaters = get_or_init_deflaters();
     let mut guard = deflaters.write();
     let Some(map) = guard.as_mut() else {
@@ -144,18 +168,35 @@ pub async fn deflate_bytes<T: Thread + 'static>(
         .into());
     };
 
-    let flush = match flush_mode {
-        0 => FlushCompress::None,
-        2 => FlushCompress::Sync,
-        3 => FlushCompress::Full,
-        4 => FlushCompress::Finish,
-        _ => FlushCompress::None,
+    if set_params {
+        context
+            .compress
+            .set_level(level_to_compression(level))
+            .map_err(|error| {
+                ristretto_types::Error::InternalError(format!(
+                    "Failed to update compression level: {error}"
+                ))
+            })?;
+        context.level = level;
+    }
+
+    let flush = if finish {
+        FlushCompress::Finish
+    } else {
+        match flush_mode {
+            0 => FlushCompress::None,
+            2 => FlushCompress::Sync,
+            3 => FlushCompress::Full,
+            _ => FlushCompress::None,
+        }
     };
 
     let mut output_buffer = vec![0u8; out_len];
+    let before_in = context.compress.total_in();
     let before_out = context.compress.total_out();
-    let input: &[u8] = &[];
-    let status = context.compress.compress(input, &mut output_buffer, flush);
+    let status = context
+        .compress
+        .compress(&input_bytes, &mut output_buffer, flush);
 
     let status = match status {
         Ok(s) => s,
@@ -167,10 +208,20 @@ pub async fn deflate_bytes<T: Thread + 'static>(
     };
 
     #[expect(clippy::cast_possible_truncation)]
+    let bytes_read = (context.compress.total_in() - before_in) as usize;
+    #[expect(clippy::cast_possible_truncation)]
     let bytes_written = (context.compress.total_out() - before_out) as usize;
-    context.output_produced += bytes_written as u64;
+    context.input_consumed += u64::try_from(bytes_read)?;
+    context.output_produced += u64::try_from(bytes_written)?;
 
-    if matches!(status, Status::StreamEnd) {
+    if bytes_read > 0 {
+        let consumed_input =
+            bounds::range_to(&input_bytes, ..bytes_read, "Deflater consumed input")?;
+        context.adler32 = update_adler32(context.adler32, consumed_input);
+    }
+
+    let finished = matches!(status, Status::StreamEnd);
+    if finished {
         context.finished = true;
     }
 
@@ -179,6 +230,24 @@ pub async fn deflate_bytes<T: Thread + 'static>(
         let mut guard = output_ref.write();
         let output_bytes = guard.as_byte_vec_mut()?;
         copy_output_bytes(output_bytes, out_off, &output_buffer, bytes_written)?;
+    }
+
+    {
+        let mut deflater = deflater.as_object_mut()?;
+        let next_in_off = in_off.checked_add(bytes_read).ok_or_else(|| {
+            ristretto_types::Error::InternalError("Deflater input offset overflow".to_string())
+        })?;
+        let remaining = in_len.checked_sub(bytes_read).ok_or_else(|| {
+            ristretto_types::Error::InternalError(
+                "Deflater consumed more bytes than were available".to_string(),
+            )
+        })?;
+        deflater.set_value("off", Value::Int(i32::try_from(next_in_off)?))?;
+        deflater.set_value("len", Value::Int(i32::try_from(remaining)?))?;
+        deflater.set_value("finished", Value::from(finished))?;
+        if set_params {
+            deflater.set_value("setParams", Value::from(false))?;
+        }
     }
 
     #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
@@ -597,7 +666,7 @@ pub async fn set_dictionary_buffer<T: Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ristretto_classloader::Reference;
+    use ristretto_classloader::{Object, Reference};
 
     async fn create_deflater<T: Thread + 'static>(
         thread: &Arc<T>,
@@ -783,18 +852,33 @@ mod tests {
         let (_vm, thread) = crate::test::java8_thread().await?;
 
         let handle = create_deflater(&thread, 6, false).await?;
+        let vm = thread.vm()?;
+        let gc = vm.garbage_collector();
+
+        let input_bytes: Vec<i8> = b"Hello, World!"
+            .iter()
+            .map(|byte| byte.cast_signed())
+            .collect();
+        let input_value = Value::new_object(gc, Reference::from(input_bytes));
+
+        let mut deflater_object = Object::new(thread.class("java/util/zip/Deflater").await?)?;
+        deflater_object.set_value("buf", input_value)?;
+        deflater_object.set_value("off", Value::Int(0))?;
+        deflater_object.set_value("len", Value::Int(13))?;
+        deflater_object.set_value("level", Value::Int(6))?;
+        deflater_object.set_value("finish", Value::from(true))?;
+        let deflater = Value::new_object(gc, Reference::Object(deflater_object));
 
         // Create output array
         let output_bytes: Vec<i8> = vec![0i8; 100];
         let output_ref = Reference::from(output_bytes);
-        let vm = thread.vm()?;
-        let gc = vm.garbage_collector();
         let output_value = Value::new_object(gc, output_ref);
         let Value::Object(output_wrapped) = output_value else {
             panic!("expected object");
         };
 
         let mut parameters = Parameters::default();
+        parameters.push(deflater.clone());
         parameters.push_long(handle);
         parameters.push_reference(output_wrapped);
         parameters.push_int(0); // out_off
@@ -802,9 +886,13 @@ mod tests {
         parameters.push_int(0); // flush
 
         let result = deflate_bytes(thread.clone(), parameters).await?;
-        // Should return number of bytes written (possibly 0 with no input)
         let bytes_written = result.expect("result").as_i32()?;
-        assert!(bytes_written >= 0);
+        assert!(bytes_written > 0);
+
+        let deflater = deflater.as_object_ref()?;
+        assert_eq!(Value::Int(13), deflater.value("off")?);
+        assert_eq!(Value::Int(0), deflater.value("len")?);
+        assert_eq!(Value::from(true), deflater.value("finished")?);
 
         // Cleanup
         let mut parameters = Parameters::default();
