@@ -8,6 +8,10 @@
       {
         "slug": "ristretto_java",
         "path": "./ristretto_java"
+      },
+      {
+        "slug": "ristretto_javac",
+        "path": "./ristretto_javac"
       }
     ]
   }

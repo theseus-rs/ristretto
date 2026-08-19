@@ -266,6 +266,7 @@ mod test {
     use super::*;
 
     #[tokio::test]
+    #[ignore = "requires network access"]
     async fn test_resolve() -> Result<()> {
         let options = Options {
             spring_boot_version: DEFAULT_SPRING_BOOT_VERSION.to_string(),

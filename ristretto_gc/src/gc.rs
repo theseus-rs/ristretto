@@ -16,7 +16,7 @@ use std::sync::Arc;
 /// A garbage collected pointer type for `T`.
 ///
 /// `Gc<T>` provides shared ownership of a value of type `T`, allocated in the heap. Unlike
-/// `Arc<T>`, `Gc<T>` can automatically detect and collect circular references using a low pause,
+/// `Arc<T>`, `Gc<T>` can automatically detect and collect circular references using a low-pause,
 /// parallel, concurrent, garbage collector with reachability analysis.
 pub struct Gc<T> {
     pub(crate) ptr: NonNull<T>,

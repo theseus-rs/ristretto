@@ -141,7 +141,8 @@ impl VM {
     ///
     /// # Errors
     ///
-    /// if the VM cannot be created
+    /// if the configured class loader already belongs to another hierarchy or the VM cannot be
+    /// created
     pub async fn new(configuration: Configuration) -> Result<Arc<Self>> {
         run_local(async move {
             let (java_home, java_version, bootstrap_class_loader) =
@@ -174,8 +175,11 @@ impl VM {
             startup_trace!("[vm] module system");
 
             let module_config = module_system.resolved_configuration_arc();
-            bootstrap_class_loader.set_module_configuration(Some(module_config.clone()));
-            class_loader.set_module_configuration(Some(module_config));
+            let mut current_class_loader = Some(class_loader.clone());
+            while let Some(current) = current_class_loader {
+                current.set_module_configuration(Some(module_config.clone()));
+                current_class_loader = current.parent().await;
+            }
             startup_trace!("[vm] class loader module config");
 
             let garbage_collector = configuration
@@ -223,19 +227,26 @@ impl VM {
     async fn create_bootstrap_loader(
         configuration: &Configuration,
     ) -> Result<(PathBuf, String, Arc<ClassLoader>)> {
-        if let Some(java_version) = configuration.java_version() {
-            let (java_home, java_version, bootstrap_class_loader) =
-                runtime::version_class_loader(java_version).await?;
-            Ok((java_home, java_version, bootstrap_class_loader))
-        } else if let Some(java_home) = configuration.java_home() {
-            let (java_home, java_version, bootstrap_class_loader) =
-                runtime::home_class_loader(java_home).await?;
-            Ok((java_home, java_version, bootstrap_class_loader))
-        } else {
-            Err(InternalError(
-                "Java version or Java home must be specified".to_string(),
-            ))
-        }
+        let (java_home, java_version, bootstrap_class_loader) =
+            if let Some(java_version) = configuration.java_version() {
+                let (java_home, java_version, bootstrap_class_loader) =
+                    runtime::version_class_loader(java_version).await?;
+                (java_home, java_version, bootstrap_class_loader)
+            } else if let Some(java_home) = configuration.java_home() {
+                let (java_home, java_version, bootstrap_class_loader) =
+                    runtime::home_class_loader(java_home).await?;
+                (java_home, java_version, bootstrap_class_loader)
+            } else {
+                return Err(InternalError(
+                    "Java version or Java home must be specified".to_string(),
+                ));
+            };
+        let bootstrap_class_loader = runtime::prepend_bootstrap_class_path(
+            &bootstrap_class_loader,
+            configuration.bootstrap_class_path(),
+        )
+        .await?;
+        Ok((java_home, java_version, bootstrap_class_loader))
     }
 
     /// Computes the class file version.
@@ -283,6 +294,7 @@ impl VM {
         } else {
             system_class_loader.clone()
         };
+
         debug!("classloader: {class_loader}");
 
         let main_class = main_class_name.map(|name| {
@@ -310,6 +322,14 @@ impl VM {
 
     /// Creates the JIT compiler.
     fn create_compiler(configuration: &Configuration) -> Option<Compiler> {
+        // Cranelift-generated code currently corrupts JVM state on the Windows ARM64 ABI during
+        // sufficiently complex workloads such as javac. Keep this target on the interpreter until
+        // the JIT ABI boundary is reliable there.
+        if cfg!(all(target_os = "windows", target_arch = "aarch64")) {
+            warn!("JIT is not supported on Windows ARM64; falling back to interpreter");
+            return None;
+        }
+
         let compiler = Compiler::new(
             configuration.batch_compilation(),
             configuration.interpreted(),
@@ -795,7 +815,7 @@ impl VM {
     /// # Errors
     ///
     /// if the primordial thread cannot be found
-    async fn primordial_thread(&self) -> Result<Arc<Thread>> {
+    pub(crate) async fn primordial_thread(&self) -> Result<Arc<Thread>> {
         let thread_handle = self.thread_handles.get(&1).await;
         let Some(thread_handle) = thread_handle else {
             return Err(InternalError("Primordial thread not found".into()));
@@ -842,18 +862,9 @@ impl VM {
                 )));
             };
 
-            let mut string_parameters = Vec::with_capacity(parameters.len());
-            for parameter in parameters {
-                let parameter = parameter.as_ref();
-                let parameter = parameter.to_string_lossy().to_string();
-                let thread = self.primordial_thread().await?;
-                let value = parameter.to_object(&thread).await?;
-                string_parameters.push(value);
-            }
-
-            let string_array_class = self.class("[Ljava/lang/String;").await?;
-            let string_reference = Reference::try_from((string_array_class, string_parameters))?;
-            let string_parameter = Value::new_object(&self.garbage_collector, string_reference);
+            let thread = self.primordial_thread().await?;
+            let string_parameter =
+                ristretto_types::JavaObject::to_object(parameters, &*thread).await?;
 
             self.invoke(
                 &main_class_name,
@@ -866,7 +877,7 @@ impl VM {
     }
 
     /// Invoke a method.  To invoke a method on an object reference, the object reference must be
-    /// the first parameter in the parameters vector.
+    /// the first parameter in the parameter vector.
     ///
     /// # Errors
     ///
@@ -1175,7 +1186,8 @@ mod tests {
     use super::*;
     use crate::configuration::{ConfigurationBuilder, ModuleExport, ModuleOpens, ModuleRead};
     use crate::method_ref_cache::{MethodRefError, MethodRefErrorKind, MethodRefKey};
-    use ristretto_classloader::{ClassPath, DEFAULT_JAVA_VERSION};
+    use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_25};
+    use ristretto_classloader::{ClassPath, ClassPathEntry, DEFAULT_JAVA_VERSION};
     use std::path::PathBuf;
 
     fn classes_jar_path() -> PathBuf {
@@ -1256,6 +1268,40 @@ mod tests {
         let vm = test_vm().await?;
         let class = vm.class("java.lang.Object").await?;
         assert_eq!("java/lang/Object", class.name());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_memory_class_path() -> Result<()> {
+        let memory = ristretto_classloader::Memory::new("in-memory-test");
+        let mut constant_pool = ConstantPool::default();
+        let this_class = constant_pool.add_class("InMemoryClass")?;
+        let super_class = constant_pool.add_class("java/lang/Object")?;
+        let class_file = ClassFile {
+            version: JAVA_25,
+            constant_pool,
+            access_flags: ClassAccessFlags::PUBLIC,
+            this_class,
+            super_class,
+            ..Default::default()
+        };
+        let mut class_bytes = Vec::new();
+        class_file.to_bytes(&mut class_bytes)?;
+        memory.add_class(&class_bytes).await?;
+        let class_path = ClassPath::new(vec![ClassPathEntry::Memory(memory)]);
+        let configuration = ConfigurationBuilder::new().class_path(class_path).build()?;
+        let vm = VM::new(configuration).await?;
+
+        let loaded_class = vm.class("InMemoryClass").await?;
+        let object_class = vm.class("java/lang/Object").await?;
+
+        assert_eq!("InMemoryClass", loaded_class.name());
+        assert_eq!("java/lang/Object", object_class.name());
+        assert_eq!(
+            "app",
+            loaded_class.class_loader()?.expect("class loader").name()
+        );
+        assert_eq!(None, loaded_class.class_file().code_source_url);
         Ok(())
     }
 

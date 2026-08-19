@@ -1,0 +1,49 @@
+[package]
+authors.workspace = true
+categories.workspace = true
+description = "A javac compatible CLI."
+documentation = "https://theseus-rs.github.io/ristretto/ristretto_javac/"
+edition.workspace = true
+homepage = "https://theseus-rs.github.io/ristretto/ristretto_javac/"
+keywords = ["java", "javac", "compiler", "cli"]
+license.workspace = true
+name = "ristretto_javac"
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[package.metadata.wix]
+upgrade-guid = "517B15B0-9C4A-4B41-9289-1498ACC3B0DD"
+path-guid = "9638A1F3-3BA7-4599-B2B3-DAEECEC1E7AE"
+license = false
+eula = false
+
+[[bin]]
+name = "javac"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+ristretto_vm = { path = "../ristretto_vm", version = "0.32.1", default-features = false }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+
+[target.'cfg(all(not(target_family = "wasm"), target_endian = "little", not(target_os = "dragonfly"), not(any(target_arch = "mips", target_arch = "mips64"))))'.dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+
+[target.'cfg(all(not(target_family = "wasm"), any(target_endian = "big", target_os = "dragonfly", target_arch = "mips", target_arch = "mips64")))'.dependencies]
+tokio = { workspace = true, features = ["rt"] }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+tokio = { workspace = true, features = ["rt"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[features]
+default = ["tls-rustls-ring"]
+tls-native-tls = ["ristretto_vm/tls-native-tls"]
+tls-rustls-aws-lc-rs = ["ristretto_vm/tls-rustls-aws-lc-rs"]
+tls-rustls-ring = ["ristretto_vm/tls-rustls-ring"]
+url = ["ristretto_vm/url"]

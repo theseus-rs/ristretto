@@ -1923,27 +1923,27 @@ mod tests {
 
     #[tokio::test]
     async fn test_for_name_0_java8() -> Result<()> {
-        test_for_name_0_with_version(crate::test::java8_thread()).await
+        Box::pin(test_for_name_0_with_version(crate::test::java8_thread())).await
     }
 
     #[tokio::test]
     async fn test_for_name_0_java11() -> Result<()> {
-        test_for_name_0_with_version(crate::test::java11_thread()).await
+        Box::pin(test_for_name_0_with_version(crate::test::java11_thread())).await
     }
 
     #[tokio::test]
     async fn test_for_name_0_java17() -> Result<()> {
-        test_for_name_0_with_version(crate::test::java17_thread()).await
+        Box::pin(test_for_name_0_with_version(crate::test::java17_thread())).await
     }
 
     #[tokio::test]
     async fn test_for_name_0_java21() -> Result<()> {
-        test_for_name_0_with_version(crate::test::java21_thread()).await
+        Box::pin(test_for_name_0_with_version(crate::test::java21_thread())).await
     }
 
     #[tokio::test]
     async fn test_for_name_0_java25() -> Result<()> {
-        test_for_name_0_with_version(crate::test::java25_thread()).await
+        Box::pin(test_for_name_0_with_version(crate::test::java25_thread())).await
     }
 
     async fn test_for_name_0_no_init_with_version(
@@ -1967,27 +1967,42 @@ mod tests {
 
     #[tokio::test]
     async fn test_for_name_0_no_init_java8() -> Result<()> {
-        test_for_name_0_no_init_with_version(crate::test::java8_thread()).await
+        Box::pin(test_for_name_0_no_init_with_version(
+            crate::test::java8_thread(),
+        ))
+        .await
     }
 
     #[tokio::test]
     async fn test_for_name_0_no_init_java11() -> Result<()> {
-        test_for_name_0_no_init_with_version(crate::test::java11_thread()).await
+        Box::pin(test_for_name_0_no_init_with_version(
+            crate::test::java11_thread(),
+        ))
+        .await
     }
 
     #[tokio::test]
     async fn test_for_name_0_no_init_java17() -> Result<()> {
-        test_for_name_0_no_init_with_version(crate::test::java17_thread()).await
+        Box::pin(test_for_name_0_no_init_with_version(
+            crate::test::java17_thread(),
+        ))
+        .await
     }
 
     #[tokio::test]
     async fn test_for_name_0_no_init_java21() -> Result<()> {
-        test_for_name_0_no_init_with_version(crate::test::java21_thread()).await
+        Box::pin(test_for_name_0_no_init_with_version(
+            crate::test::java21_thread(),
+        ))
+        .await
     }
 
     #[tokio::test]
     async fn test_for_name_0_no_init_java25() -> Result<()> {
-        test_for_name_0_no_init_with_version(crate::test::java25_thread()).await
+        Box::pin(test_for_name_0_no_init_with_version(
+            crate::test::java25_thread(),
+        ))
+        .await
     }
 
     async fn test_for_name_0_array_with_version(
@@ -2008,27 +2023,42 @@ mod tests {
 
     #[tokio::test]
     async fn test_for_name_0_array_java8() -> Result<()> {
-        test_for_name_0_array_with_version(crate::test::java8_thread()).await
+        Box::pin(test_for_name_0_array_with_version(
+            crate::test::java8_thread(),
+        ))
+        .await
     }
 
     #[tokio::test]
     async fn test_for_name_0_array_java11() -> Result<()> {
-        test_for_name_0_array_with_version(crate::test::java11_thread()).await
+        Box::pin(test_for_name_0_array_with_version(
+            crate::test::java11_thread(),
+        ))
+        .await
     }
 
     #[tokio::test]
     async fn test_for_name_0_array_java17() -> Result<()> {
-        test_for_name_0_array_with_version(crate::test::java17_thread()).await
+        Box::pin(test_for_name_0_array_with_version(
+            crate::test::java17_thread(),
+        ))
+        .await
     }
 
     #[tokio::test]
     async fn test_for_name_0_array_java21() -> Result<()> {
-        test_for_name_0_array_with_version(crate::test::java21_thread()).await
+        Box::pin(test_for_name_0_array_with_version(
+            crate::test::java21_thread(),
+        ))
+        .await
     }
 
     #[tokio::test]
     async fn test_for_name_0_array_java25() -> Result<()> {
-        test_for_name_0_array_with_version(crate::test::java25_thread()).await
+        Box::pin(test_for_name_0_array_with_version(
+            crate::test::java25_thread(),
+        ))
+        .await
     }
 
     #[tokio::test]

@@ -386,6 +386,7 @@ impl ConfigurationBuilder {
 
         Ok(Configuration {
             class_path,
+            bootstrap_class_path: ClassPath::new(Vec::new()),
             main_class: self.main_class,
             jar: self.jar,
             java_home,

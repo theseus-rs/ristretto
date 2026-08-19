@@ -10,11 +10,11 @@
 [![License](https://img.shields.io/crates/l/ristretto_classfile)](https://github.com/theseus-rs/ristretto#license)
 [![Semantic Versioning](https://img.shields.io/badge/%E2%9A%99%EF%B8%8F_SemVer-2.0.0-blue)](https://semver.org/spec/v2.0.0.html)
 
-Embeddable Java Virtual Machine [JVM](https://docs.oracle.com/javase/specs/jvms/se24/html/) implementation.
+Embeddable Java Virtual Machine [JVM](https://docs.oracle.com/javase/specs/jvms/se24/html/) and Java compiler implementation.
 
 ## Getting Started
 
-`ristretto` java can be installed using the following methods:
+The Ristretto `java` runtime can be installed using the following methods:
 
 ### Linux / MacOS
 
@@ -31,11 +31,32 @@ irm https://github.com/theseus-rs/ristretto/releases/latest/download/ristretto_j
 For more information, and additional installations instructions (cargo, homebrew, msi),
 visit the [ristretto](https://theseus-rs.github.io/ristretto/ristretto_java/) site.
 
+The `javac` compiler is available as a separate Cargo package:
+
+```shell
+cargo install ristretto_javac
+javac -d classes HelloWorld.java
+```
+
+Rust applications can also embed and reuse the compiler:
+
+```rust
+use ristretto_vm::{Compiler, CompilerError};
+
+#[tokio::main]
+async fn main() -> Result<(), CompilerError> {
+    let compiler = Compiler::default().await?;
+    compiler.compile(&["-d", "classes", "HelloWorld.java"]).await?;
+    Ok(())
+}
+```
+
 ### Features
 
 - Standard runtime classes backed by LTS versions of [AWS Corretto](https://github.com/corretto).
 - Flexible class loading from directories, JARs, JMODs, JImage files, and URLs.
 - Built-in support for reading, writing, and strictly verifying Java bytecode.
+- A `javac`-compatible CLI and reusable file or in-memory Rust compiler API.
 - Interpreter support for all Java byte codes including invokedynamic.
 - Fully asynchronous, non-blocking execution using Rust async/await for:
     - java.lang.Process

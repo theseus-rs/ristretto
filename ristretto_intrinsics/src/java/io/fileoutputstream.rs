@@ -162,8 +162,8 @@ pub async fn open_0<T: Thread + 'static>(
                     file_descriptor.set_value("fd", Value::Int(i32::try_from(fd)?))?;
                     if vm.java_class_file_version() >= &JAVA_11 {
                         file_descriptor.set_value("handle", Value::Long(fd))?;
+                        file_descriptor.set_value("append", Value::from(append))?;
                     }
-                    file_descriptor.set_value("append", Value::from(append))?;
                 }
                 Ok(None)
             }

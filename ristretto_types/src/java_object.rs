@@ -6,6 +6,7 @@ use crate::module_access::{DefinedModule, ModuleAccess};
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25, JavaStr};
 use ristretto_classloader::module::ModuleDescriptor;
 use ristretto_classloader::{Class, ClassLoader, ClassLoaderType, Object, Reference, Value};
+use std::ffi::OsStr;
 use std::sync::Arc;
 
 /// Trait for converting a Rust value to a Java object. Converts to objects of the primitive
@@ -214,6 +215,31 @@ impl<T: Thread> JavaObject<T> for &str {
 impl<T: Thread> JavaObject<T> for String {
     fn to_object<'a>(&'a self, thread: &'a T) -> crate::BoxFuture<'a, Result<Value>> {
         Box::pin(async move { self.as_str().to_object(thread).await })
+    }
+}
+
+impl<T, S> JavaObject<T> for [S]
+where
+    T: Thread,
+    S: AsRef<OsStr>,
+{
+    fn to_object<'a>(&'a self, thread: &'a T) -> crate::BoxFuture<'a, Result<Value>> {
+        let strings = self
+            .iter()
+            .map(|value| value.as_ref().to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+
+        Box::pin(async move {
+            let mut values = Vec::with_capacity(strings.len());
+            for string in &strings {
+                values.push(string.to_object(thread).await?);
+            }
+
+            let class = thread.class("[Ljava/lang/String;").await?;
+            let reference = Reference::try_from((class, values))?;
+            let vm = thread.vm()?;
+            Ok(Value::new_object(vm.garbage_collector(), reference))
+        })
     }
 }
 
@@ -836,6 +862,7 @@ mod tests {
     use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_25, JavaStr, JavaString};
     use ristretto_classloader::ClassPath;
     use ristretto_classloader::module::ResolvedConfiguration;
+    use std::ffi::OsString;
 
     fn class_with_loader(name: &str, class_loader: &Arc<ClassLoader>) -> Result<Arc<Class>> {
         let class_file = test_utils::class_file(name, &[], None)?;
@@ -961,6 +988,51 @@ mod tests {
                 .await
                 .is_err()
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_string_slices_to_object() -> Result<()> {
+        let thread = test_utils::MockThread::new(test_utils::MockVm::new(JAVA_17));
+
+        let str_values = ["str one", "str two"];
+        assert_string_array(
+            &str_values.as_slice().to_object(&*thread).await?,
+            &str_values,
+        )?;
+
+        let string_values = [String::from("String one"), String::from("String two")];
+        assert_string_array(
+            &string_values.as_slice().to_object(&*thread).await?,
+            &["String one", "String two"],
+        )?;
+
+        let os_str_values = [OsStr::new("OsStr one"), OsStr::new("OsStr two")];
+        assert_string_array(
+            &os_str_values.as_slice().to_object(&*thread).await?,
+            &["OsStr one", "OsStr two"],
+        )?;
+
+        let os_string_values = [
+            OsString::from("OsString one"),
+            OsString::from("OsString two"),
+        ];
+        assert_string_array(
+            &os_string_values.as_slice().to_object(&*thread).await?,
+            &["OsString one", "OsString two"],
+        )?;
+
+        assert_string_array(&(&[] as &[&str]).to_object(&*thread).await?, &[] as &[&str])?;
+        Ok(())
+    }
+
+    fn assert_string_array(value: &Value, expected: &[&str]) -> Result<()> {
+        let (class, values) = value.as_class_vec_ref()?;
+        assert_eq!("[Ljava/lang/String;", class.name());
+        assert_eq!(expected.len(), values.len());
+        for (value, expected) in values.iter().zip(expected) {
+            assert_eq!(*expected, value.as_string()?);
+        }
         Ok(())
     }
 

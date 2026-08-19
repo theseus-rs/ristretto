@@ -13,6 +13,7 @@
 //! - Bytecode interpretation with no dependencies on existing JVM implementations
 //! - Pure Rust implementation for memory safety and performance
 //! - Support for Java class loading and execution
+//! - File-oriented and memory-only Java source compilation
 //! - Configurable VM parameters
 //! - Basic JIT compilation capabilities
 //! - Type safe concurrent, mark-sweep garbage collector
@@ -60,6 +61,7 @@
 
 mod assignable;
 mod call_site_cache;
+mod compiler;
 mod configuration;
 mod frame;
 mod instruction;
@@ -82,6 +84,7 @@ pub(crate) mod test;
 mod thread;
 mod vm;
 
+pub use compiler::{CompiledClasses, Compiler, CompilerError, JavaSource};
 pub use configuration::{
     Configuration, ConfigurationBuilder, MainModule, ModuleExport, ModuleOpens, ModulePatch,
     ModuleRead, VerifyMode,
@@ -91,7 +94,10 @@ pub use java_object::JavaObject;
 pub(crate) use local_variables::LocalVariables;
 pub use module_system::{ALL_UNNAMED, AccessCheckResult, DefinedModule, ModuleSystem};
 pub(crate) use operand_stack::OperandStack;
-pub use ristretto_classloader::{Class, ClassPath, DEFAULT_JAVA_VERSION, Object, Reference, Value};
+pub use ristretto_classloader::{
+    Class, ClassLoader, ClassPath, ClassPathEntry, DEFAULT_JAVA_VERSION, Memory, Object, Reference,
+    Value,
+};
 pub use ristretto_types::{Error, JavaError, Parameters, Result, RustValue};
 pub use thread::Thread;
 pub use vm::VM;

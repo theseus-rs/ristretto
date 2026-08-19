@@ -1339,7 +1339,10 @@ fn store_pending_error(ctx: &RuntimeContext, error: crate::Error) {
     let bci = ctx.current_bci.load(Ordering::Relaxed);
     set_top_frame_pc(ctx, bci);
     let thread = thread_from_ctx(ctx);
-    let throwable = run_async(async { convert_error_to_throwable(thread, error).await });
+    let throwable = run_async(async {
+        let _overflow_reserve = thread.stack_overflow_reserve();
+        convert_error_to_throwable(thread, error).await
+    });
     match throwable {
         Ok(Value::Object(Some(gc_ref))) => {
             ctx.set_pending_exception(gc_ref.as_ptr_i64());
