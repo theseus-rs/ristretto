@@ -7,6 +7,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_javac` - [0.33.0](https://github.com/theseus-rs/ristretto/releases/tag/ristretto_javac-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+
+### Other
+- ristretto-v0.33.0
+
+## `ristretto_java` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/v0.32.1...v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+- implement com/sun/java/util/jar/pack/NativeUnpack
+- implement java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V
+- implement in-memory class path entry
+- implement apple/security/KeychainStore
+- implement com/sun/demo/jvmti/hprof/Tracker
+- implement jdk/internal/foreign/abi/NativeEntryPoint
+- implement sun/misc/Perf
+
+### Fixed
+- use portable atomic for keychain handles
+- correct native memory allocate
+
+### Other
+- ristretto-v0.33.0
+- Merge pull request #782 from theseus-rs/fix-intrinsic-libs
+- Merge pull request #783 from theseus-rs/impl-perf
+- use thread specific Java stacks
+
+## `ristretto_vm` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.32.1...ristretto_vm-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+- implement java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V
+
+### Other
+- ristretto-v0.33.0
+- use thread specific Java stacks
+
+## `ristretto_intrinsics` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.32.1...ristretto_intrinsics-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+- implement com/sun/java/util/jar/pack/NativeUnpack
+- implement apple/security/KeychainStore
+- implement com/sun/demo/jvmti/hprof/Tracker
+- implement java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V
+- implement jdk/internal/foreign/abi/NativeEntryPoint
+- implement sun/misc/Perf
+
+### Fixed
+- use portable atomic for keychain handles
+- correct native memory allocate
+
+### Other
+- ristretto-v0.33.0
+- Merge pull request #782 from theseus-rs/fix-intrinsic-libs
+- Merge pull request #783 from theseus-rs/impl-perf
+
+## `ristretto_types` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.32.1...ristretto_types-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+- implement java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V
+
+### Fixed
+- correct native memory allocate
+
+### Other
+- ristretto-v0.33.0
+
+## `ristretto_classloader` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.32.1...ristretto_classloader-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+- implement com/sun/java/util/jar/pack/NativeUnpack
+- implement java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V
+- implement in-memory class path entry
+
+### Other
+- ristretto-v0.33.0
+
 ## `ristretto_javac` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.32.1...ristretto_javac-v0.33.0) - 2026-08-19
 
 ### Added
