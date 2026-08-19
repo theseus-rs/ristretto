@@ -7,6 +7,114 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_javac` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.32.1...ristretto_javac-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+
+## `ristretto_java` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/v0.32.1...v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+- implement com/sun/java/util/jar/pack/NativeUnpack
+- implement java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V
+- implement in-memory class path entry
+- implement apple/security/KeychainStore
+- implement com/sun/demo/jvmti/hprof/Tracker
+- implement jdk/internal/foreign/abi/NativeEntryPoint
+- implement sun/misc/Perf
+
+### Fixed
+- handle large branch targets during serialization
+- use portable atomic for keychain handles
+- correct native memory allocate
+
+### Other
+- Update ristretto_classfile/src/attributes/offset_utils.rs
+- use thread specific Java stacks
+
+## `ristretto_resolver` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.32.1...ristretto_resolver-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+
+## `ristretto_pom` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.32.1...ristretto_pom-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+
+## `ristretto_vm` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.32.1...ristretto_vm-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+- implement java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V
+
+### Other
+- use thread specific Java stacks
+
+## `ristretto_intrinsics` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.32.1...ristretto_intrinsics-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+- implement com/sun/java/util/jar/pack/NativeUnpack
+- implement apple/security/KeychainStore
+- implement com/sun/demo/jvmti/hprof/Tracker
+- implement java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V
+- implement jdk/internal/foreign/abi/NativeEntryPoint
+- implement sun/misc/Perf
+
+### Fixed
+- use portable atomic for keychain handles
+- correct native memory allocate
+
+## `ristretto_types` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.32.1...ristretto_types-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+- implement java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V
+
+### Fixed
+- correct native memory allocate
+
+## `ristretto_jit` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.32.1...ristretto_jit-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+
+## `ristretto_macros` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.32.1...ristretto_macros-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+
+## `ristretto_classloader` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.32.1...ristretto_classloader-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+- implement com/sun/java/util/jar/pack/NativeUnpack
+- implement java/lang/StackTraceElement.initStackTraceElement(Ljava/lang/StackTraceElement;Ljava/lang/StackFrameInfo;)V
+- implement in-memory class path entry
+
+## `ristretto_jimage` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_jimage-v0.32.1...ristretto_jimage-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+
+## `ristretto_gc` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.32.1...ristretto_gc-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+
+## `ristretto_classfile` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.32.1...ristretto_classfile-v0.33.0) - 2026-08-19
+
+### Added
+- implement compiler and javac
+
+### Fixed
+- handle large branch targets during serialization
+
+### Other
+- Update ristretto_classfile/src/attributes/offset_utils.rs
+
 ## `ristretto_java` - [0.32.1](https://github.com/theseus-rs/ristretto/compare/v0.32.0...v0.32.1) - 2026-07-27
 
 ### Added
