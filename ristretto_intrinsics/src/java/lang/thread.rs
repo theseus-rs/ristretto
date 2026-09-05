@@ -88,11 +88,9 @@ async fn get_thread<T: Thread + 'static>(
 #[async_method]
 pub async fn clear_interrupt_event<T: Thread + 'static>(
     thread: Arc<T>,
-    mut parameters: Parameters,
+    _parameters: Parameters,
 ) -> Result<Option<Value>> {
-    let thread_object = parameters.pop()?;
-    let instance_thread = get_thread(&thread, &thread_object).await?;
-    let _ = instance_thread.is_interrupted(true);
+    let _ = thread.is_interrupted(true);
     Ok(None)
 }
 
@@ -838,12 +836,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_clear_interrupt_event() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await?;
-        let thread_instance = create_thread(&vm).await?;
-        let mut parameters = Parameters::default();
-        parameters.push(thread_instance);
-        let result = clear_interrupt_event(thread, parameters).await?;
+        let (_vm, thread) = crate::test::thread().await?;
+        thread.interrupt();
+        assert!(thread.is_interrupted(false));
+
+        let result = clear_interrupt_event(thread.clone(), Parameters::default()).await?;
         assert_eq!(result, None);
+        assert!(!thread.is_interrupted(false));
         Ok(())
     }
 
