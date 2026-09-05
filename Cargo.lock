@@ -3020,6 +3020,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ristretto_playground"
+version = "0.33.0"
+dependencies = [
+ "ristretto_classloader",
+ "ristretto_vm",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "ristretto_pom"
 version = "0.33.0"
 dependencies = [

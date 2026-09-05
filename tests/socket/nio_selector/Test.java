@@ -29,7 +29,9 @@ public class Test {
         }, "nio-selector-" + name);
         worker.setDaemon(true);
         worker.start();
-        worker.join(10_000);
+        // This guard includes first-use JIT compilation on slower CI runners. The socket
+        // operations retain their own shorter timeouts below.
+        worker.join(30_000);
         if (worker.isAlive()) {
             throw new AssertionError(name + " timed out");
         }

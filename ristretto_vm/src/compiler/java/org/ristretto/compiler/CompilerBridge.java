@@ -56,10 +56,10 @@ public final class CompilerBridge {
             printMessage(exception);
             return result(2, null);
         } catch (Exception exception) {
-            printMessage(exception);
+            exception.printStackTrace();
             return result(3, null);
         } catch (Throwable throwable) {
-            printMessage(throwable);
+            throwable.printStackTrace();
             return result(4, null);
         } finally {
             try {

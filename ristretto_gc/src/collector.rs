@@ -413,6 +413,14 @@ impl GarbageCollector {
         root_id
     }
 
+    /// Retains an allocation while its root guard still prevents concurrent reclamation.
+    pub(crate) fn retain<T>(&self, root: &Gc<T>) {
+        let pointer = SafePtr::from_ptr(root.as_ptr());
+        if let Some(metadata) = self.objects.get(&pointer) {
+            metadata.retain();
+        }
+    }
+
     /// Creates a new root guard that automatically manages the lifetime of a `Gc<T>` root.
     /// The returned guard will automatically remove the root when dropped.fm
     pub fn create_root_guard<T: Trace>(self: &Arc<Self>, root: Gc<T>) -> GcRootGuard<T> {
@@ -927,6 +935,9 @@ impl GarbageCollector {
 
         trace!("Concurrent sweep phase started");
 
+        // Explicitly retained allocations belong to untraced host containers. Their
+        // lifetime must not depend on whether a temporary root was observed in an
+        // earlier collection. Other allocations follow normal reachability rules.
         // Collect keys of objects that are unmarked AND were previously reachable.
         // Objects that were never marked as reachable during any GC mark phase are
         // owned by non-GC containers (e.g., ClassLoader, StringPool) and must not
@@ -935,7 +946,7 @@ impl GarbageCollector {
             .iter()
             .filter(|entry| {
                 let metadata = entry.value();
-                !metadata.is_marked() && metadata.was_ever_marked()
+                !metadata.is_retained() && !metadata.is_marked() && metadata.was_ever_marked()
             })
             .map(|entry| *entry.key())
             .collect();

@@ -1229,6 +1229,28 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_java25_unicode_hash_after_bootstrap() -> Result<()> {
+        let configuration = ConfigurationBuilder::new()
+            .java_version("25")
+            .interpreted(true)
+            .build()?;
+        let vm = VM::new(configuration).await?;
+        let thread = vm.primordial_thread().await?;
+        for (text, expected) in [
+            ("☕", 9749),
+            ("😀", 1_772_899),
+            ("Ristretto☕", 2_053_120_945),
+        ] {
+            let value = text.to_object(&thread).await?;
+            let hash = vm
+                .try_invoke("java.lang.String", "hashCode()I", &[value])
+                .await?;
+            assert_eq!(hash, Value::Int(expected), "{text}");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_vm_new_java_home() -> Result<()> {
         let vm = test_vm().await?;
         let configuration = ConfigurationBuilder::new()

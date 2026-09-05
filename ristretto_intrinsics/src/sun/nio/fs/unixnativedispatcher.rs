@@ -5,8 +5,12 @@ use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 #[cfg(target_family = "unix")]
 use ristretto_classfile::VersionSpecification::{Between, Equal, LessThanOrEqual};
+#[cfg(target_os = "wasi")]
+use ristretto_classfile::VersionSpecification::{Between, LessThanOrEqual};
 #[cfg(target_family = "unix")]
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_25};
+#[cfg(target_os = "wasi")]
+use ristretto_classfile::{JAVA_11, JAVA_17};
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
 use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
@@ -297,18 +301,7 @@ fn set_unix_metadata_fields(
     object: &mut ristretto_classloader::Object,
     metadata: &std::fs::Metadata,
 ) -> Result<()> {
-    const S_IFDIR: i32 = 0o040_000;
-    const S_IFREG: i32 = 0o100_000;
-    const S_IFLNK: i32 = 0o120_000;
-
-    let file_type = metadata.file_type();
-    let mode = if file_type.is_dir() {
-        S_IFDIR | 0o755
-    } else if file_type.is_symlink() {
-        S_IFLNK | 0o777
-    } else {
-        S_IFREG | 0o644
-    };
+    let mode = portable_file_mode(metadata);
 
     let access_time = system_time_parts(metadata.accessed());
     let modify_time = system_time_parts(metadata.modified());
@@ -328,6 +321,22 @@ fn set_unix_metadata_fields(
     object.set_value("st_ctime_sec", Value::Long(modify_time.0))?;
     object.set_value("st_ctime_nsec", Value::Long(modify_time.1))?;
     Ok(())
+}
+
+#[cfg(not(target_family = "unix"))]
+fn portable_file_mode(metadata: &std::fs::Metadata) -> i32 {
+    const S_IFDIR: i32 = 0o040_000;
+    const S_IFREG: i32 = 0o100_000;
+    const S_IFLNK: i32 = 0o120_000;
+
+    let file_type = metadata.file_type();
+    if file_type.is_dir() {
+        S_IFDIR | 0o755
+    } else if file_type.is_symlink() {
+        S_IFLNK | 0o777
+    } else {
+        S_IFREG | 0o644
+    }
 }
 
 /// Read a null-terminated path from native memory without applying UTF-8 conversion. Unix file
@@ -592,6 +601,66 @@ pub async fn access_0_1<T: Thread + 'static>(
     Ok(Some(Value::Int(result)))
 }
 
+#[cfg(target_os = "wasi")]
+#[intrinsic_method(
+    "sun/nio/fs/UnixNativeDispatcher.access0(JI)V",
+    LessThanOrEqual(JAVA_17)
+)]
+#[async_method]
+pub async fn access_0_0<T: Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    let result = access_0_1(thread.clone(), parameters).await?;
+    if result == Some(Value::Int(0)) {
+        Ok(None)
+    } else {
+        Err(throw_unix_exception(&thread, 13 /* EACCES */).await)
+    }
+}
+
+#[cfg(target_os = "wasi")]
+#[intrinsic_method(
+    "sun/nio/fs/UnixNativeDispatcher.access0(JI)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn access_0_1<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let mode = parameters.pop_int()?;
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let path = path_from_bytes(&read_native_path(&*vm, address)?);
+    let accessible = (|| -> std::io::Result<bool> {
+        let metadata = std::fs::metadata(&path)?;
+        // WASI exposes file capabilities, but cannot execute a native file.
+        if mode & 1 != 0 || mode & !7 != 0 {
+            return Ok(false);
+        }
+        if mode & 4 != 0 {
+            if metadata.is_dir() {
+                let _entries = std::fs::read_dir(&path)?;
+            } else {
+                let _file = std::fs::File::open(&path)?;
+            }
+        }
+        if mode & 2 != 0 {
+            if metadata.is_dir() {
+                return Ok(!metadata.permissions().readonly());
+            }
+            let _file = std::fs::OpenOptions::new().write(true).open(&path)?;
+        }
+        Ok(true)
+    })();
+    Ok(Some(Value::Int(if accessible.unwrap_or(false) {
+        0
+    } else {
+        -1
+    })))
+}
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.chmod0(JI)V", Any)]
 #[async_method]
@@ -750,7 +819,7 @@ pub async fn dup<T: Thread + 'static>(
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method(
     "sun/nio/fs/UnixNativeDispatcher.exists0(J)Z",
     Between(JAVA_11, JAVA_17)
@@ -1921,7 +1990,7 @@ pub async fn link_0<T: Thread + 'static>(
     Ok(None)
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method(
     "sun/nio/fs/UnixNativeDispatcher.lstat0(JLsun/nio/fs/UnixFileAttributes;)V",
     Any
@@ -1944,6 +2013,9 @@ pub async fn lstat_0<T: Thread + 'static>(
     let metadata = match std::fs::symlink_metadata(path_from_bytes(&path_str)) {
         Ok(m) => m,
         Err(e) => {
+            #[cfg(target_os = "wasi")]
+            let errno = wasm_linux_errno(&e);
+            #[cfg(not(target_os = "wasi"))]
             let errno = e.raw_os_error().unwrap_or(2);
             return Err(throw_unix_exception(&thread, errno).await);
         }
@@ -2219,6 +2291,90 @@ pub async fn opendir_0<T: Thread + 'static>(
     }
 }
 
+#[cfg(target_os = "wasi")]
+#[derive(Debug, Default)]
+struct WasiDirectories {
+    entries: parking_lot::Mutex<std::collections::HashMap<i64, std::fs::ReadDir>>,
+}
+
+#[cfg(target_os = "wasi")]
+#[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.opendir0(J)J", Any)]
+#[async_method]
+pub async fn opendir_0<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let path = path_from_bytes(&read_native_path(&*vm, address)?);
+    let entries = match std::fs::read_dir(path) {
+        Ok(entries) => entries,
+        Err(error) => return Err(throw_unix_exception(&thread, wasm_linux_errno(&error)).await),
+    };
+    let directories = vm
+        .resource_manager()
+        .get_or_init(WasiDirectories::default)?;
+    let handle = i64::from(vm.next_nio_fd());
+    directories.entries.lock().insert(handle, entries);
+    Ok(Some(Value::Long(handle)))
+}
+
+#[cfg(target_os = "wasi")]
+#[intrinsic_method(
+    "sun/nio/fs/UnixNativeDispatcher.readdir0(J)[B",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn readdir_0<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let handle = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let directories = vm
+        .resource_manager()
+        .get_or_init(WasiDirectories::default)?;
+    let entry = directories
+        .entries
+        .lock()
+        .get_mut(&handle)
+        .map(Iterator::next);
+    let Some(entry) = entry else {
+        return Err(throw_unix_exception(&thread, 9).await);
+    };
+    match entry {
+        None => Ok(Some(Value::Object(None))),
+        Some(Err(error)) => Err(throw_unix_exception(&thread, wasm_linux_errno(&error)).await),
+        Some(Ok(entry)) => {
+            let name = entry.file_name();
+            let bytes: &[i8] = zerocopy::transmute_ref!(name.as_encoded_bytes());
+            Ok(Some(Value::new_object(
+                vm.garbage_collector(),
+                Reference::from(bytes.to_vec()),
+            )))
+        }
+    }
+}
+
+#[cfg(target_os = "wasi")]
+#[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.closedir(J)V", Any)]
+#[async_method]
+pub async fn closedir<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let handle = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let directories = vm
+        .resource_manager()
+        .get_or_init(WasiDirectories::default)?;
+    let removed = directories.entries.lock().remove(&handle);
+    if removed.is_none() {
+        return Err(throw_unix_exception(&thread, 9).await);
+    }
+    Ok(None)
+}
+
 #[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/nio/fs/UnixNativeDispatcher.pathconf0(JI)J",
@@ -2319,7 +2475,7 @@ pub async fn read_0<T: Thread + 'static>(
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method(
     "sun/nio/fs/UnixNativeDispatcher.readdir(J)[B",
     LessThanOrEqual(JAVA_17)
@@ -2387,7 +2543,7 @@ pub async fn readdir_0<T: Thread + 'static>(
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.readlink0(J)[B", Any)]
 #[async_method]
 pub async fn readlink_0<T: Thread + 'static>(
@@ -2401,12 +2557,15 @@ pub async fn readlink_0<T: Thread + 'static>(
     let target = match std::fs::read_link(path_from_bytes(&path_str)) {
         Ok(t) => t,
         Err(e) => {
+            #[cfg(target_os = "wasi")]
+            let errno = wasm_linux_errno(&e);
+            #[cfg(not(target_os = "wasi"))]
             let errno = e.raw_os_error().unwrap_or(22);
             return Err(throw_unix_exception(&thread, errno).await);
         }
     };
 
-    let target_bytes = target.as_os_str().as_bytes().to_vec();
+    let target_bytes = target.as_os_str().as_encoded_bytes().to_vec();
     let target_i8: &[i8] = zerocopy::transmute_ref!(target_bytes.as_slice());
     Ok(Some(Value::new_object(
         vm.garbage_collector(),
@@ -2414,7 +2573,7 @@ pub async fn readlink_0<T: Thread + 'static>(
     )))
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.realpath0(J)[B", Any)]
 #[async_method]
 pub async fn realpath_0<T: Thread + 'static>(
@@ -2429,12 +2588,15 @@ pub async fn realpath_0<T: Thread + 'static>(
     let canonical = match std::fs::canonicalize(path_from_bytes(&path_bytes)) {
         Ok(c) => c,
         Err(error) => {
+            #[cfg(target_family = "unix")]
             let errno = error.raw_os_error().unwrap_or(2);
+            #[cfg(target_os = "wasi")]
+            let errno = wasm_linux_errno(&error);
             return Err(throw_unix_exception(&thread, errno).await);
         }
     };
 
-    let canonical_bytes = canonical.as_os_str().as_bytes().to_vec();
+    let canonical_bytes = canonical.as_os_str().as_encoded_bytes().to_vec();
     let canonical_i8: &[i8] = zerocopy::transmute_ref!(canonical_bytes.as_slice());
     Ok(Some(Value::new_object(
         thread.vm()?.garbage_collector(),
@@ -2547,7 +2709,7 @@ pub async fn rmdir_0<T: Thread + 'static>(
     Ok(None)
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method(
     "sun/nio/fs/UnixNativeDispatcher.stat0(JLsun/nio/fs/UnixFileAttributes;)V",
     LessThanOrEqual(JAVA_17)
@@ -2627,7 +2789,7 @@ pub async fn stat_0_1<T: Thread + 'static>(
     Ok(Some(Value::Int(0)))
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.stat1(J)I", Between(JAVA_11, JAVA_17))]
 #[async_method]
 pub async fn stat_1<T: Thread + 'static>(
@@ -2641,6 +2803,9 @@ pub async fn stat_1<T: Thread + 'static>(
     let metadata = match std::fs::metadata(path_from_bytes(&path_str)) {
         Ok(m) => m,
         Err(e) => {
+            #[cfg(target_os = "wasi")]
+            let errno = wasm_linux_errno(&e);
+            #[cfg(not(target_os = "wasi"))]
             let errno = e.raw_os_error().unwrap_or(2);
             return Err(throw_unix_exception(&thread, errno).await);
         }
@@ -2654,8 +2819,7 @@ pub async fn stat_1<T: Thread + 'static>(
     }
     #[cfg(not(target_family = "unix"))]
     {
-        let _ = metadata;
-        Ok(Some(Value::Int(0)))
+        Ok(Some(Value::Int(portable_file_mode(&metadata))))
     }
 }
 

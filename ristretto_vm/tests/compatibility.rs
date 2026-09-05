@@ -663,7 +663,11 @@ async fn run_test(
     let parameters: Vec<&str> = Vec::new();
     // A thrown Java object is only rooted by the VM while it is executing. Do not retain or
     // format that unrooted GC reference across the thread-shutdown await.
-    let invocation_failed = vm.invoke_main(&parameters).await.is_err();
+    let invocation_error = vm
+        .invoke_main(&parameters)
+        .await
+        .err()
+        .map(|error| error.to_string());
 
     // Wait for all spawned threads to complete before collecting output
     let _ = vm.wait_for_non_daemon_threads().await;
@@ -672,9 +676,9 @@ async fn run_test(
     let stdout = String::from_utf8_lossy(&stdout_lock).to_string();
     let stderr_lock = stderr.lock().await;
     let stderr = String::from_utf8_lossy(&stderr_lock).to_string();
-    if invocation_failed {
+    if let Some(error) = invocation_error {
         return Err(InternalError(format!(
-            "main invocation failed:\nstdout: {stdout}\nstderr: {stderr}"
+            "main invocation failed: {error}\nstdout: {stdout}\nstderr: {stderr}"
         )));
     }
     Ok((start_time.elapsed(), stdout))

@@ -112,7 +112,7 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
     properties.insert("java.ext.dirs", Cow::Borrowed(""));
     properties.insert("java.home", java_home.into());
 
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(any(not(target_family = "wasm"), target_os = "wasi"))]
     if class_file_version == &JAVA_8 {
         let library_path = vm.java_home().join("jre").join("lib");
         let mut boot_class_path = vec![
@@ -129,10 +129,18 @@ fn system_properties<V: VM>(vm: &V) -> Result<AHashMap<&'static str, Cow<'static
             boot_class_path.push(classes_path);
         }
         boot_class_path.retain(|path| path.exists());
+        #[cfg(not(target_family = "wasm"))]
         let boot_class_path = env::join_paths(boot_class_path)
             .map_err(|error| InternalError(error.to_string()))?
             .to_string_lossy()
             .into_owned();
+        // WASI exposes a POSIX filesystem, but std::env::join_paths is unsupported.
+        #[cfg(target_os = "wasi")]
+        let boot_class_path = boot_class_path
+            .iter()
+            .map(|path| path.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(":");
         properties.insert("sun.boot.class.path", boot_class_path.into());
     }
 
@@ -331,7 +339,7 @@ fn console_input_encoding() -> Cow<'static, str> {
 mod tests {
     use super::*;
 
-    #[cfg(not(target_family = "wasm"))]
+    #[cfg(any(not(target_family = "wasm"), target_os = "wasi"))]
     #[tokio::test]
     async fn java_8_boot_class_path_includes_resources() -> Result<()> {
         let (vm, _thread) = crate::test::java8_thread().await?;
@@ -339,8 +347,14 @@ mod tests {
         let boot_class_path = properties
             .get("sun.boot.class.path")
             .expect("sun.boot.class.path");
+        #[cfg(not(target_family = "wasm"))]
         let entries =
             env::split_paths(std::ffi::OsStr::new(boot_class_path.as_ref())).collect::<Vec<_>>();
+        #[cfg(target_os = "wasi")]
+        let entries = boot_class_path
+            .split(':')
+            .map(std::path::PathBuf::from)
+            .collect::<Vec<_>>();
         let library_path = vm.java_home().join("jre").join("lib");
 
         assert!(entries.contains(&library_path.join("resources.jar")));
@@ -352,7 +366,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(target_family = "wasm")]
+    #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
     #[tokio::test]
     async fn java_8_boot_class_path_is_omitted() -> Result<()> {
         let (vm, _thread) = crate::test::java8_thread().await?;

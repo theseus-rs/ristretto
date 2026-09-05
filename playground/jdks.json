@@ -1,0 +1,32 @@
+[
+  {
+    "major": 8,
+    "version": "8.502.07.1",
+    "url": "https://corretto.aws/downloads/resources/8.502.07.1/amazon-corretto-8.502.07.1-linux-x64.tar.gz",
+    "sha256": "ff9b634a2a70b81b75e855be1db50ff712e4ea5f92dc224cb1c069122710b111"
+  },
+  {
+    "major": 11,
+    "version": "11.0.32.9.1",
+    "url": "https://corretto.aws/downloads/resources/11.0.32.9.1/amazon-corretto-11.0.32.9.1-linux-x64.tar.gz",
+    "sha256": "b09aac76316cef26dca770c89ca23ce55708bd0463e2640e86915ee528cb5bd0"
+  },
+  {
+    "major": 17,
+    "version": "17.0.20.8.1",
+    "url": "https://corretto.aws/downloads/resources/17.0.20.8.1/amazon-corretto-17.0.20.8.1-linux-x64.tar.gz",
+    "sha256": "89b50d4ef5d27ce1f8e5cad616525e14f7665b7b4a1ffca85381b0e21401034f"
+  },
+  {
+    "major": 21,
+    "version": "21.0.12.8.1",
+    "url": "https://corretto.aws/downloads/resources/21.0.12.8.1/amazon-corretto-21.0.12.8.1-linux-x64.tar.gz",
+    "sha256": "75faed442d38a89c27f920e45ab24f9f71ff8ca6b732bfea90cdb500decd3c6b"
+  },
+  {
+    "major": 25,
+    "version": "25.0.4.7.1",
+    "url": "https://corretto.aws/downloads/resources/25.0.4.7.1/amazon-corretto-25.0.4.7.1-linux-x64.tar.gz",
+    "sha256": "1d03a3bd5091728492d92f0ef341aca7d8885ece9a150119558f3e3d62b58745"
+  }
+]
