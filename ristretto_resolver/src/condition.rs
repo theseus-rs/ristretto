@@ -333,8 +333,7 @@ impl<'a> Parser<'a> {
                 base.join(path)
             };
             glob::glob(&pattern.to_string_lossy())
-                .ok()
-                .is_some_and(|mut entries| entries.any(|entry| entry.is_ok()))
+                .is_ok_and(|mut entries| entries.any(|entry| entry.is_ok()))
         }
     }
 

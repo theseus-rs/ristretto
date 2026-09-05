@@ -126,7 +126,7 @@ impl Image {
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
-    #[expect(clippy::unused_async)]
+    #[expect(clippy::unused_async, clippy::unused_async_trait_impl)]
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
         let name = name.as_ref();
         if let Some(class_file) = self
@@ -178,7 +178,7 @@ impl Image {
     /// # Errors
     ///
     /// if the resource cannot be read.
-    #[expect(clippy::unused_async)]
+    #[expect(clippy::unused_async, clippy::unused_async_trait_impl)]
     pub async fn read_resource<S: AsRef<str>>(
         &self,
         module: Option<&str>,
@@ -206,7 +206,7 @@ impl Image {
     /// # Errors
     ///
     /// if the class names cannot be read.
-    #[expect(clippy::unused_async)]
+    #[expect(clippy::unused_async, clippy::unused_async_trait_impl)]
     pub async fn class_names(&self) -> Result<Vec<String>> {
         let resources = self.image.iter();
         let mut classes = Vec::with_capacity(resources.len());

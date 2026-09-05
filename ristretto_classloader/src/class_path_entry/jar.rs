@@ -217,7 +217,10 @@ impl Archive {
     /// # Errors
     ///
     /// if the archive cannot be read.
-    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    #[cfg_attr(
+        target_family = "wasm",
+        expect(clippy::unused_async, clippy::unused_async_trait_impl)
+    )]
     async fn zip_archive(&mut self) -> Result<&mut ZipArchive<io::Cursor<Vec<u8>>>> {
         if let Some(ref mut zip_archive) = self.zip_archive {
             return Ok(zip_archive);

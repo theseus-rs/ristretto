@@ -26,7 +26,10 @@ pub(crate) struct ModuleDescriptorCache {
 
 impl ModuleDescriptorCache {
     /// Reads one module descriptor directly from a jimage without scanning every resource.
-    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    #[cfg_attr(
+        target_family = "wasm",
+        expect(clippy::unused_async, clippy::unused_async_trait_impl)
+    )]
     pub(crate) async fn read_descriptor(
         self: Arc<Self>,
         jimage_path: &Path,
@@ -168,7 +171,10 @@ impl SystemModuleFinder {
     /// # Errors
     ///
     /// Returns an error if the jimage cannot be read.
-    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    #[cfg_attr(
+        target_family = "wasm",
+        expect(clippy::unused_async, clippy::unused_async_trait_impl)
+    )]
     pub async fn new(jimage_path: &Path) -> Result<Self> {
         #[cfg(not(target_family = "wasm"))]
         let modules = {
@@ -237,7 +243,10 @@ impl ModulePathFinder {
     /// # Errors
     ///
     /// Returns an error if any module cannot be read.
-    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    #[cfg_attr(
+        target_family = "wasm",
+        expect(clippy::unused_async, clippy::unused_async_trait_impl)
+    )]
     pub async fn new(paths: &[PathBuf]) -> Result<Self> {
         #[cfg(not(target_family = "wasm"))]
         let modules = {

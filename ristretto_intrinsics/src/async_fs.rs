@@ -61,6 +61,7 @@ mod wasm_impl {
             self
         }
 
+        #[expect(clippy::unused_async_trait_impl)]
         pub async fn open(&self, path: impl AsRef<Path>) -> io::Result<std::fs::File> {
             self.0.open(path)
         }

@@ -51,6 +51,8 @@
 //! ```
 
 #![deny(unsafe_code)]
+// Resolving Send for the nested invokedynamic futures requires additional trait solver depth.
+#![recursion_limit = "256"]
 #![cfg_attr(
     test,
     expect(

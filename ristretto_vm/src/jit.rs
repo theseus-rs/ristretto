@@ -164,7 +164,10 @@ impl Compiler {
     ///
     /// When batch compilation is enabled, methods are queued for background compilation and this
     /// function returns `None` immediately. Subsequent calls return the compiled function once ready.
-    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    #[cfg_attr(
+        target_family = "wasm",
+        expect(clippy::unused_async, clippy::unused_async_trait_impl)
+    )]
     pub async fn compile(
         &self,
         class: &Arc<Class>,

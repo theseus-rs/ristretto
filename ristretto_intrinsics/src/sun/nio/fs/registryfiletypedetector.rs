@@ -101,8 +101,10 @@ pub async fn query_string_value<T: Thread + 'static>(
         let chars: Vec<u16> = bytes
             .get(..usize::try_from(size).unwrap_or(0))
             .unwrap_or_default()
-            .chunks_exact(2)
-            .filter_map(|chunk| <[u8; 2]>::try_from(chunk).ok().map(u16::from_le_bytes))
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|&chunk| u16::from_le_bytes(chunk))
             .take_while(|character| *character != 0)
             .collect();
         String::from_utf16(&chars)
