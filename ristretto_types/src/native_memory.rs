@@ -247,10 +247,7 @@ impl NativeMemory {
             let offset = offset_from_base(address, base);
             let buf = buf_lock.read();
             if let Some(bytes) = buf.get(offset..) {
-                let end = bytes
-                    .iter()
-                    .position(|&b| b == 0)
-                    .map_or(bytes.len(), |position| position);
+                let end = bytes.iter().position(|&b| b == 0).unwrap_or(bytes.len());
                 let source = bytes.get(..end)?;
                 let mut result = Vec::new();
                 result.try_reserve_exact(end).ok()?;

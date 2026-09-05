@@ -12,6 +12,10 @@ on:
         required: false
         type: boolean
 
+# Keep all nightly builds on the same toolchain and avoid channel updates during a run.
+env:
+  NIGHTLY_TOOLCHAIN: nightly-2026-09-04
+
 jobs:
   upload-assets:
     name: upload-assets (${{ matrix.platform }})
@@ -99,14 +103,14 @@ jobs:
       - name: Install nightly Rust
         if: ${{ matrix.build_std }}
         run: |
-          rustup toolchain install nightly --profile minimal --component rust-src --no-self-update
-          rustup override set nightly
+          rustup toolchain install "$NIGHTLY_TOOLCHAIN" --profile minimal --component rust-src --no-self-update
+          rustup override set "$NIGHTLY_TOOLCHAIN"
 
       - name: Install nightly Rust
         if: ${{ !matrix.build_std && matrix.nightly }}
         run: |
-          rustup toolchain install nightly --profile minimal --target ${{ matrix.target }} --no-self-update
-          rustup override set nightly
+          rustup toolchain install "$NIGHTLY_TOOLCHAIN" --profile minimal --target ${{ matrix.target }} --no-self-update
+          rustup override set "$NIGHTLY_TOOLCHAIN"
 
       - name: Install cross
         if: ${{ matrix.cross }}

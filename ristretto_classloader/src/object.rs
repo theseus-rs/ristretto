@@ -591,15 +591,14 @@ impl Object {
                     Ok(value)
                 } else {
                     // UTF-16 encoded string
-                    let chunks = bytes.chunks_exact(2);
-                    if !chunks.remainder().is_empty() {
+                    let (chunks, remainder) = bytes.as_chunks::<2>();
+                    if !remainder.is_empty() {
                         return Err(ParseError("Invalid UTF-16 byte length".to_string()));
                     }
                     let code_units = chunks
-                        .map(|chunk| {
-                            let high = chunk.first().copied().unwrap_or_default().cast_unsigned();
-                            let low = chunk.get(1).copied().unwrap_or_default().cast_unsigned();
-                            u16::from_be_bytes([high, low])
+                        .iter()
+                        .map(|&[high, low]| {
+                            u16::from_be_bytes([high.cast_unsigned(), low.cast_unsigned()])
                         })
                         .collect::<Vec<u16>>();
                     let value = String::from_utf16(&code_units)

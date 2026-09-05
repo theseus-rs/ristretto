@@ -59,13 +59,7 @@ pub(super) fn parse_bridge_result(result: &Value) -> Result<CompiledClasses, Com
         Error::InternalError("compiler bridge returned malformed output".to_string())
     })?;
     let mut classes = BTreeMap::new();
-    for entry in entries.chunks_exact(2) {
-        let [class_name, bytecode] = entry else {
-            return Err(Error::InternalError(
-                "compiler bridge returned malformed output".to_string(),
-            )
-            .into());
-        };
+    for [class_name, bytecode] in entries.as_chunks::<2>().0 {
         let class_name = class_name.as_string().map_err(Error::from)?;
         let bytecode = bytecode
             .as_byte_vec_ref()

@@ -36,7 +36,10 @@ impl Directory {
     /// # Errors
     ///
     /// if the class file is not found or cannot be read.
-    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    #[cfg_attr(
+        target_family = "wasm",
+        expect(clippy::unused_async, clippy::unused_async_trait_impl)
+    )]
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
         let name = name.as_ref();
         let parts = name.split('.').collect::<Vec<_>>();
@@ -71,7 +74,10 @@ impl Directory {
     /// # Errors
     ///
     /// if the resource cannot be read.
-    #[cfg_attr(target_family = "wasm", expect(clippy::unused_async))]
+    #[cfg_attr(
+        target_family = "wasm",
+        expect(clippy::unused_async, clippy::unused_async_trait_impl)
+    )]
     pub async fn read_resource<S: AsRef<str>>(&self, name: S) -> Result<Option<Vec<u8>>> {
         let name = name.as_ref();
         let path = self.path.join(name);
@@ -98,7 +104,7 @@ impl Directory {
     /// # Errors
     ///
     /// if the class names cannot be read.
-    #[expect(clippy::unused_async)]
+    #[expect(clippy::unused_async, clippy::unused_async_trait_impl)]
     pub async fn class_names(&self) -> Result<Vec<String>> {
         let path = self.path.clone();
         #[cfg_attr(all(target_family = "wasm", target_os = "unknown"), expect(unused_mut))]
