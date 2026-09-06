@@ -54,6 +54,7 @@ warnings = "deny"
 [workspace.lints.clippy]
 pedantic = { level = "deny", priority = -1 }
 allow_attributes = "deny"
+excessive_nesting = "deny"
 expect_used = "deny"
 fallible_impl_from = "deny"
 indexing_slicing = "deny"
@@ -85,7 +86,7 @@ cpal = "0.18.2"
 cranelift = "0.135.1"
 criterion = { version = "0.8.2", default-features = false }
 dashmap = "6.2.1"
-dirs = "6.0.0"
+dirs = "7.0.0"
 filetime = "0.2.29"
 flate2 = "1.1.10"
 fancy-regex = "0.19.0"
@@ -94,9 +95,10 @@ getrandom = { version = "0.3.4", features = ["wasm_js"] }
 glob = "0.3.4"
 hashbrown = { version = "0.17.1", features = ["equivalent"] }
 indoc = "2.0.7"
-indexmap = "2.14.1"
+indexmap = "2.14.2"
 jiff = "0.2.35"
 libc = "0.2.189"
+libjpeg-turbo-rs = "0.8.0"
 libloading = "0.9.0"
 memchr = "2.8.3"
 memmap2 = "0.9.11"

@@ -725,20 +725,15 @@ impl GarbageCollector {
         #[cfg(not(target_family = "wasm"))]
         {
             let configuration = &collector.configuration;
-            if number_of_objects > configuration.parallel_threshold {
-                if let Some(thread_pool) = &collector.thread_pool {
-                    debug!("unmarking {number_of_objects} objects (parallel)");
-                    thread_pool.install(|| {
-                        objects.par_iter().for_each(|entry| {
-                            entry.value().unmark();
-                        });
-                    });
-                } else {
-                    debug!("unmarking {number_of_objects} objects (sequential)");
-                    for entry in objects.iter() {
+            if number_of_objects > configuration.parallel_threshold
+                && let Some(thread_pool) = &collector.thread_pool
+            {
+                debug!("unmarking {number_of_objects} objects (parallel)");
+                thread_pool.install(|| {
+                    objects.par_iter().for_each(|entry| {
                         entry.value().unmark();
-                    }
-                }
+                    });
+                });
             } else if number_of_objects > 0 {
                 debug!("unmarking {number_of_objects} objects (sequential)");
                 for entry in objects.iter() {
