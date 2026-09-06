@@ -20,7 +20,7 @@ workspace = true
 ahash = { workspace = true }
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
-ristretto_classfile = { path = "../ristretto_classfile", version = "0.33.0" }
+ristretto_classfile = { path = "../ristretto_classfile", version = "0.33.1" }
 syn = { workspace = true, features = ["full", "extra-traits"] }
 walkdir = { workspace = true }
 

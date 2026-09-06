@@ -7,6 +7,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## `ristretto_javac` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.33.0...ristretto_javac-v0.33.1) - 2026-09-06
+
+### Other
+- update Cargo.lock dependencies
+
+## `ristretto_java` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/v0.33.0...v0.33.1) - 2026-09-06
+
+### Added
+- add an in-browser Java 8-25 playground
+
+### Other
+- update Cargo.lock dependencies
+- update Cargo.toml dependencies
+- update to Rust 1.98.1
+- update to cranelift=0.135.1
+
+## `ristretto_resolver` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_resolver-v0.33.0...ristretto_resolver-v0.33.1) - 2026-09-06
+
+### Other
+- update to Rust 1.98.1
+
+## `ristretto_pom` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_pom-v0.33.0...ristretto_pom-v0.33.1) - 2026-09-06
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_vm` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_vm-v0.33.0...ristretto_vm-v0.33.1) - 2026-09-06
+
+### Added
+- add an in-browser Java 8-25 playground
+
+### Other
+- update to Rust 1.98.1
+
+## `ristretto_intrinsics` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_intrinsics-v0.33.0...ristretto_intrinsics-v0.33.1) - 2026-09-06
+
+### Added
+- add an in-browser Java 8-25 playground
+
+### Other
+- update to cranelift=0.135.1
+- update to Rust 1.98.1
+
+## `ristretto_types` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_types-v0.33.0...ristretto_types-v0.33.1) - 2026-09-06
+
+### Added
+- add an in-browser Java 8-25 playground
+
+### Other
+- update to Rust 1.98.1
+
+## `ristretto_jit` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_jit-v0.33.0...ristretto_jit-v0.33.1) - 2026-09-06
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_macros` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_macros-v0.33.0...ristretto_macros-v0.33.1) - 2026-09-06
+
+### Other
+- update Cargo.toml dependencies
+
+## `ristretto_classloader` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classloader-v0.33.0...ristretto_classloader-v0.33.1) - 2026-09-06
+
+### Added
+- add an in-browser Java 8-25 playground
+
+### Other
+- update to Rust 1.98.1
+
+## `ristretto_gc` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_gc-v0.33.0...ristretto_gc-v0.33.1) - 2026-09-06
+
+### Added
+- add an in-browser Java 8-25 playground
+
+## `ristretto_classfile` - [0.33.1](https://github.com/theseus-rs/ristretto/compare/ristretto_classfile-v0.33.0...ristretto_classfile-v0.33.1) - 2026-09-06
+
+### Other
+- update Cargo.toml dependencies
+
 ## `ristretto_javac` - [0.33.0](https://github.com/theseus-rs/ristretto/compare/ristretto_javac-v0.32.1...ristretto_javac-v0.33.0) - 2026-08-19
 
 ### Added
