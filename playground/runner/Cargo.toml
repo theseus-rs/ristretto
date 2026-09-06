@@ -1,0 +1,19 @@
+[package]
+name = "ristretto_playground"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+ristretto_vm = { path = "../../ristretto_vm", default-features = false }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+ristretto_classloader = { path = "../../ristretto_classloader" }
+tempfile = { workspace = true }

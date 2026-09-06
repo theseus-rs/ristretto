@@ -259,6 +259,7 @@ jobs:
             --exclude ristretto_intrinsics \
             --exclude ristretto_java \
             --exclude ristretto_javac \
+            --exclude ristretto_playground \
             --exclude embedded_jvm \
             --exclude ristretto_vm
 
@@ -276,6 +277,7 @@ jobs:
             --exclude ristretto_intrinsics \
             --exclude ristretto_java \
             --exclude ristretto_javac \
+            --exclude ristretto_playground \
             --exclude embedded_jvm \
             --exclude ristretto_jit \
             --exclude ristretto_vm

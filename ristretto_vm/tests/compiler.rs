@@ -171,3 +171,51 @@ fn assert_valid_classes(classes: &CompiledClasses) -> TestResult {
     }
     Ok(())
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn test_compiler_lts_versions() -> TestResult {
+    for version in [8_u16, 11, 17, 21, 25] {
+        eprintln!("Testing Java {version} compiler and runtime");
+        let configuration = ConfigurationBuilder::new()
+            .java_version(version.to_string())
+            .interpreted(true)
+            .build()?;
+        let compiler = Compiler::new(configuration).await?;
+        let classes = compiler
+            .compile_source(
+                "Versioned",
+                r#"
+            public class Versioned {
+                public static String value(int n) { return "Java " + n + " ☕"; }
+            }
+        "#,
+            )
+            .await?;
+        let bytes = classes
+            .get("Versioned")
+            .ok_or("compiler returned no class")?;
+        assert_eq!(
+            version,
+            ristretto_classfile::ClassFile::from_bytes(bytes)?
+                .version
+                .java()
+        );
+        let memory = Memory::new("versioned");
+        classes.load_into(&memory).await?;
+        let configuration = ConfigurationBuilder::new()
+            .java_version(version.to_string())
+            .interpreted(true)
+            .class_path(ClassPath::new(vec![ClassPathEntry::Memory(memory)]))
+            .build()?;
+        let vm = VM::new(configuration).await?;
+        let value = vm
+            .try_invoke(
+                "Versioned",
+                "value(I)Ljava/lang/String;",
+                &[i32::from(version)],
+            )
+            .await?;
+        assert_eq!(format!("Java {version} ☕"), value.as_string()?);
+    }
+    Ok(())
+}

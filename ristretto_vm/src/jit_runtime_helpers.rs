@@ -171,17 +171,12 @@ impl RuntimeContext {
         let sentinel_class =
             run_async(async { thread.class("java/lang/VirtualMachineError").await })?;
         let sentinel_object = Object::new(sentinel_class)?;
-        // Allocate the sentinel through `Gc::new` (which returns a `GcRootGuard` that keeps
-        // the allocation rooted for the guard's lifetime), then promote that guard's root to
-        // a long-lived root via `add_root` BEFORE the guard is dropped. This eliminates any
-        // window where only a temporary Value held the allocation alive. The
-        // `Drop`-driven cleanup of the long-lived root is handled in `RuntimeContext::Drop`.
-        let sentinel_guard = Gc::new(gc, RwLock::new(Reference::Object(sentinel_object)));
-        let sentinel_gc = sentinel_guard.clone_gc();
+        // The sentinel can escape into interpreter or native Rust values after this
+        // JIT context returns. Keep its allocation under the same VM ownership as Value.
+        let sentinel_gc =
+            Gc::new(gc, RwLock::new(Reference::Object(sentinel_object))).into_retained();
         let sentinel_ptr = sentinel_gc.as_ptr_i64();
         let sentinel_root = gc.add_root(&sentinel_gc);
-        // Safe: `add_root` above installs an independent root that outlives the guard.
-        drop(sentinel_guard);
         Ok(Self {
             gc: std::ptr::from_ref::<GarbageCollector>(gc).cast::<u8>(),
             gc_owner: Arc::clone(gc),
@@ -391,12 +386,10 @@ fn gc_from_context(context: *const u8) -> &'static GarbageCollector {
 
 /// Wraps a `Reference` in a `Gc<RwLock<Reference>>` and returns the raw pointer as i64.
 ///
-/// The object is rooted twice while this function returns: first by the allocation guard,
-/// then by the `RuntimeContext` transient root list. The transient root covers the compiled
-/// frame, whose operand stack is not visible to the GC.
+/// JIT allocations can escape to untraced VM containers, so retain them for the VM's
+/// lifetime, matching `Value::new_object`. Transient roots still describe compiled frames.
 fn alloc_reference(ctx: &RuntimeContext, reference: Reference) -> i64 {
-    let guard = Gc::new(ctx.garbage_collector(), RwLock::new(reference));
-    let gc_ref = guard.clone_gc();
+    let gc_ref = Gc::new(ctx.garbage_collector(), RwLock::new(reference)).into_retained();
     ctx.add_transient_root(&gc_ref);
     gc_ref.as_ptr_i64()
 }
@@ -2721,6 +2714,42 @@ mod tests {
             }
             other => panic!("expected InternalError, got {other:?}"),
         }
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_escaped_allocations_survive_context_drop() -> Result<()> {
+        let (vm, thread, class) = test::class().await?;
+        let collector = vm.garbage_collector();
+        let context = RuntimeContext::new(collector, &vm, &thread, &class)?;
+        let array = Value::Object(Some(gc_ref_from_ptr(alloc_reference(
+            &context,
+            Reference::from(vec![42_i8]),
+        ))?));
+        let sentinel = Value::Object(Some(gc_ref_from_ptr(context.sentinel_throwable)?));
+        let mut context = Some(context);
+        for cycle in 0..2 {
+            let completed = collector.statistics()?.collections_completed;
+            collector.collect();
+            tokio::time::timeout(std::time::Duration::from_secs(5), async {
+                while collector.statistics()?.collections_completed == completed {
+                    tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+                }
+                Ok::<_, crate::Error>(())
+            })
+            .await
+            .map_err(|error| InternalError(error.to_string()))??;
+            if cycle == 0 {
+                drop(context.take());
+            }
+        }
+        // Both objects escaped the compiled invocation into untraced Rust values.
+        assert_eq!(0, collector.statistics()?.objects_swept);
+        assert_eq!(&[42_i8], &*array.as_byte_vec_ref()?);
+        assert_eq!(
+            "java/lang/VirtualMachineError",
+            sentinel.as_object_ref()?.class().name()
+        );
+        Ok(())
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

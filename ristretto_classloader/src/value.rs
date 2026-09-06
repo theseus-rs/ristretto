@@ -24,7 +24,12 @@ pub enum Value {
 impl Value {
     /// Create a new object value.
     pub fn new_object(collector: &Arc<GarbageCollector>, reference: Reference) -> Self {
-        Value::Object(Some(Gc::new(collector, RwLock::new(reference)).clone_gc()))
+        // VM stacks, class statics, and native Rust locals are not a complete traced root
+        // set yet. A temporary allocation root must not make a live Java value eligible
+        // for sweeping later. Every Java allocation remains owned by its VM until teardown.
+        Value::Object(Some(
+            Gc::new(collector, RwLock::new(reference)).into_retained(),
+        ))
     }
 
     /// Create a new nullable object value.
@@ -1339,6 +1344,46 @@ mod tests {
         let result = Reference::try_from((original_class.clone(), original_value.clone()));
         assert!(matches!(result, Err(InvalidValueType(_))));
         Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn test_vm_value_survives_temporary_root_removal() {
+        let collector = GarbageCollector::new();
+        collector.start();
+        let value = Value::new_object(&collector, Reference::from(vec![42_i8]));
+        let Value::Object(Some(reference)) = &value else {
+            panic!("expected object");
+        };
+        let mut temporary_root = Some(reference.as_root(&collector).expect("root value"));
+        for cycle in 1..=2 {
+            collector.collect();
+            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+            while collector
+                .statistics()
+                .expect("statistics")
+                .collections_completed
+                < cycle
+            {
+                assert!(
+                    std::time::Instant::now() < deadline,
+                    "collection did not complete"
+                );
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
+            if cycle == 1 {
+                // A live VM value remains in an untraced Rust container after this root expires.
+                drop(temporary_root.take());
+            }
+        }
+        assert_eq!(0, collector.statistics().expect("statistics").objects_swept);
+        assert_eq!(
+            &[42_i8],
+            &*value.as_byte_vec_ref().expect("live byte array")
+        );
+        drop(temporary_root);
+        drop(value);
+        collector.stop().expect("stop collector");
     }
 
     #[tokio::test]

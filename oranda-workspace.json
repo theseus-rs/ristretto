@@ -4,6 +4,7 @@
   },
   "workspace": {
     "name": "ristretto",
+    "docs_path": "playground/site-intro.md",
     "members": [
       {
         "slug": "ristretto_java",

@@ -1,6 +1,7 @@
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
+use ristretto_gc::Gc;
 use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
@@ -58,7 +59,11 @@ pub async fn refers_to_0<T: Thread + 'static>(
     let reference = parameters.pop()?;
     let reference = reference.as_object_ref()?;
     let object = reference.value("referent")?;
-    let refers_to = object == object_parameter;
+    let refers_to = match (&object, &object_parameter) {
+        (Value::Object(Some(a)), Value::Object(Some(b))) => Gc::ptr_eq(a, b),
+        (Value::Object(None), Value::Object(None)) => true,
+        _ => false,
+    };
     Ok(Some(Value::from(refers_to)))
 }
 
@@ -143,6 +148,46 @@ mod tests {
         let value = refers_to_0(thread, parameters).await?.expect("refers to");
         let refers_to = value.as_bool()?;
         assert!(refers_to);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_refers_to_0_uses_identity() -> Result<()> {
+        let (vm, thread) = crate::test::java25_thread().await?;
+        let class = thread.class("java/lang/Object").await?;
+        let referent = Value::from_object(
+            vm.garbage_collector(),
+            ristretto_classloader::Object::new(class.clone())?,
+        );
+        let distinct = Value::from_object(
+            vm.garbage_collector(),
+            ristretto_classloader::Object::new(class)?,
+        );
+        assert_eq!(referent, distinct);
+        let reference = vm
+            .object(
+                "java/lang/ref/WeakReference",
+                "Ljava/lang/Object;",
+                std::slice::from_ref(&referent),
+            )
+            .await?;
+        for (candidate, expected) in [
+            (distinct, false),
+            (referent, true),
+            (Value::Object(None), false),
+        ] {
+            let parameters = Parameters::new(vec![reference.clone(), candidate]);
+            assert_eq!(
+                refers_to_0(thread.clone(), parameters).await?,
+                Some(Value::from(expected))
+            );
+        }
+        clear_0(thread.clone(), Parameters::new(vec![reference.clone()])).await?;
+        let parameters = Parameters::new(vec![reference, Value::Object(None)]);
+        assert_eq!(
+            refers_to_0(thread, parameters).await?,
+            Some(Value::from(true))
+        );
         Ok(())
     }
 

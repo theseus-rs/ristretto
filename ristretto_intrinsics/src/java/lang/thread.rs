@@ -592,6 +592,9 @@ pub async fn start_0<T: Thread + 'static>(
 
     #[cfg(not(target_family = "wasm"))]
     {
+        // Execution can release its last VM reference before termination bookkeeping.
+        // Keep the Java heap alive until the task finishes accessing its thread object.
+        let spawn_vm = vm.clone();
         let join_handle = tokio::spawn(async move {
             let result = spawn_thread
                 .execute(&thread_class, &run_method, &[thread_value])
@@ -620,12 +623,8 @@ pub async fn start_0<T: Thread + 'static>(
                 }
             }
 
-            // Set thread status to TERMINATED and eetop to 0 after execution.
-            // This is done inline (not via a RAII guard) because when the tokio
-            // runtime shuts down and cancels daemon tasks, the GC may have already
-            // freed the objects these Values point to. A RAII guard would attempt
-            // to acquire locks on freed memory during task cancellation, causing
-            // undefined behavior (manifesting as a deadlock).
+            // Cancelled tasks skip these Java heap updates; normal completion marks the
+            // thread terminated while spawn_vm still owns its heap.
             if let Err(error) = set_thread_status(&thread_object, ThreadState::TERMINATED) {
                 error!("Failed to set thread status to TERMINATED: {error}");
             }
@@ -643,10 +642,8 @@ pub async fn start_0<T: Thread + 'static>(
             // notification.
             if let Value::Object(Some(ref reference)) = thread_object {
                 let monitor_id = crate::get_monitor_id(&reference.read());
-                if let Some(id) = monitor_id
-                    && let Ok(vm) = spawn_thread.vm()
-                {
-                    let monitor = vm.monitor_registry().monitor(id);
+                if let Some(id) = monitor_id {
+                    let monitor = spawn_vm.monitor_registry().monitor(id);
                     let thread_id = spawn_thread.id();
                     if monitor.acquire(thread_id).await.is_ok() {
                         let _ = monitor.notify_all(thread_id);

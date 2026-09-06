@@ -28,6 +28,8 @@ pub(crate) struct ObjectMetadata {
     /// by Rust containers like `ClassLoader`) are never swept. Only objects that were
     /// previously traceable from a root and subsequently became unreachable are collected.
     was_ever_marked: AtomicBool,
+    /// Host-owned allocations are released during shutdown, even if once traced.
+    retained: AtomicBool,
     drop_fn: Mutex<DropFn>,
     finalizer: Mutex<Option<FinalizerFn>>,
 }
@@ -60,6 +62,7 @@ impl ObjectMetadata {
             size,
             marked: AtomicBool::new(INITIAL_MARK_STATE),
             was_ever_marked: AtomicBool::new(false),
+            retained: AtomicBool::new(false),
             drop_fn: Mutex::new(drop_fn),
             finalizer: Mutex::new(None), // No finalizer by default
         }
@@ -106,6 +109,7 @@ impl ObjectMetadata {
             size,
             marked: AtomicBool::new(INITIAL_MARK_STATE),
             was_ever_marked: AtomicBool::new(false),
+            retained: AtomicBool::new(false),
             drop_fn: Mutex::new(drop_fn),
             finalizer: Mutex::new(finalizer),
         }
@@ -136,6 +140,15 @@ impl ObjectMetadata {
     /// Returns whether this object was ever marked as reachable during a GC mark phase.
     pub(crate) fn was_ever_marked(&self) -> bool {
         self.was_ever_marked.load(Ordering::Acquire)
+    }
+
+    /// Keeps this allocation alive until collector shutdown, independently of tracing.
+    pub(crate) fn retain(&self) {
+        self.retained.store(true, Ordering::Release);
+    }
+
+    pub(crate) fn is_retained(&self) -> bool {
+        self.retained.load(Ordering::Acquire)
     }
 
     /// Unmarks the object.
@@ -219,6 +232,7 @@ impl std::fmt::Debug for ObjectMetadata {
             .field("size", &self.size)
             .field("marked", &self.is_marked())
             .field("was_ever_marked", &self.was_ever_marked())
+            .field("retained", &self.is_retained())
             .finish()
     }
 }

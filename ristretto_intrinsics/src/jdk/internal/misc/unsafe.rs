@@ -561,7 +561,14 @@ pub async fn compare_and_set_reference<T: Thread + 'static>(
         }
         Reference::Object(object) => {
             let value = object.value(offset)?;
-            if value == expected {
+            // CAS compares reference identity, never the objects' fields. Structural equality
+            // can recurse through an entire compiler graph and incorrectly accept another object.
+            let equal = match (&value, &expected) {
+                (Value::Object(Some(a)), Value::Object(Some(b))) => Gc::ptr_eq(a, b),
+                (Value::Object(None), Value::Object(None)) => true,
+                _ => false,
+            };
+            if equal {
                 object.set_value(offset, x)?;
                 1
             } else {
@@ -900,6 +907,8 @@ pub async fn define_class_0<T: Thread + 'static>(
     }
 
     let class = Class::from(None, class_file)?;
+    // Generated method-handle species must be discoverable by subsequent linking/reflection.
+    thread.register_class(class.clone()).await?;
     let class_object = class.to_object(&thread).await?;
 
     if !class_loader.is_null() {
@@ -2292,6 +2301,71 @@ pub async fn writeback_pre_sync_0<T: Thread + 'static>(
 mod tests {
     use super::*;
     use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_compare_and_set_reference_field_uses_identity() -> Result<()> {
+        let (_vm, thread) = crate::test::java25_thread().await?;
+        let vm = thread.vm()?;
+        let class = thread.class("java/lang/Object").await?;
+        let current = Value::from_object(vm.garbage_collector(), Object::new(class.clone())?);
+        let distinct = Value::from_object(vm.garbage_collector(), Object::new(class)?);
+        // Equal fields do not make two allocations the same Java reference.
+        assert_eq!(current, distinct);
+        let holder_class = thread
+            .class("java/util/concurrent/atomic/AtomicReference")
+            .await?;
+        let offset = i64::try_from(holder_class.object_field_offset("value")?)?;
+        let mut holder = Object::new(holder_class)?;
+        holder.set_value("value", current.clone())?;
+        let holder = Value::from_object(vm.garbage_collector(), holder);
+        let parameters = Parameters::new(vec![
+            holder.clone(),
+            Value::Long(offset),
+            distinct,
+            Value::Object(None),
+        ]);
+        assert_eq!(
+            compare_and_set_reference(thread.clone(), parameters).await?,
+            Some(Value::Int(0))
+        );
+        let observed = holder.as_object_ref()?.value("value")?;
+        assert!(
+            matches!((&observed, &current), (Value::Object(Some(a)), Value::Object(Some(b))) if Gc::ptr_eq(a, b))
+        );
+
+        let parameters = Parameters::new(vec![
+            holder.clone(),
+            Value::Long(offset),
+            current.clone(),
+            Value::Object(None),
+        ]);
+        assert_eq!(
+            compare_and_set_reference(thread.clone(), parameters).await?,
+            Some(Value::Int(1))
+        );
+        assert!(holder.as_object_ref()?.value("value")?.is_null());
+        let parameters = Parameters::new(vec![
+            holder.clone(),
+            Value::Long(offset),
+            Value::Object(None),
+            current,
+        ]);
+        assert_eq!(
+            compare_and_set_reference(thread.clone(), parameters).await?,
+            Some(Value::Int(1))
+        );
+        let parameters = Parameters::new(vec![
+            holder,
+            Value::Long(offset),
+            Value::Object(None),
+            Value::Object(None),
+        ]);
+        assert_eq!(
+            compare_and_set_reference(thread, parameters).await?,
+            Some(Value::Int(0))
+        );
+        Ok(())
+    }
 
     /// Creates a java.lang.reflect.Field for testing purposes.
     async fn create_field<T: Thread + 'static>(thread: &T) -> Result<Value> {

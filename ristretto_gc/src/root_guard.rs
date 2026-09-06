@@ -38,6 +38,19 @@ impl<T: Trace> GcRootGuard<T> {
         }
     }
 
+    /// Retains this allocation until the collector stops or is dropped.
+    ///
+    /// Use for host-owned allocations whose lifetime cannot be determined by tracing.
+    /// The returned pointer does not own the collector; callers must keep the collector
+    /// alive while using it. Retention applies only to this allocation, so any referenced
+    /// allocations must independently be rooted or retained. Memory is reclaimed by the
+    /// collector's normal shutdown cleanup, including finalizers.
+    #[must_use]
+    pub fn into_retained(self) -> Gc<T> {
+        self.collector.retain(&self.root);
+        self.root.clone()
+    }
+
     /// Returns a clone of the underlying `Gc<T>` pointer.
     ///
     /// This allows the `Gc<T>` to be used in data structures or passed to other functions

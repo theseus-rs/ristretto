@@ -1882,6 +1882,97 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(target_family = "wasm"))]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn test_spawned_thread_keeps_vm_alive_through_termination() -> Result<()> {
+        let (vm, _) = interpreted_test_thread().await?;
+        let thread = vm.primordial_thread().await?;
+        vm.wait_for_non_daemon_threads().await?;
+        let mut constant_pool = ConstantPool::default();
+        let this_class = constant_pool.add_class("DelayedThread")?;
+        let super_class = constant_pool.add_class("java/lang/Thread")?;
+        let constructor = constant_pool.add_method_ref(super_class, "<init>", "()V")?;
+        let sleep = constant_pool.add_method_ref(super_class, "sleep", "(J)V")?;
+        let delay = constant_pool.add_long(100)?;
+        let descriptor = constant_pool.add_utf8("()V")?;
+        let code_name = constant_pool.add_utf8("Code")?;
+        let mut methods = Vec::new();
+        for (name, code) in [
+            (
+                "<init>",
+                vec![
+                    Instruction::Aload_0,
+                    Instruction::Invokespecial(constructor),
+                    Instruction::Return,
+                ],
+            ),
+            (
+                "run",
+                vec![
+                    Instruction::Ldc2_w(delay),
+                    Instruction::Invokestatic(sleep),
+                    Instruction::Return,
+                ],
+            ),
+        ] {
+            methods.push(ristretto_classfile::Method {
+                access_flags: MethodAccessFlags::PUBLIC,
+                name_index: constant_pool.add_utf8(name)?,
+                descriptor_index: descriptor,
+                attributes: vec![Attribute::Code {
+                    name_index: code_name,
+                    max_stack: 2,
+                    max_locals: 1,
+                    code,
+                    exception_table: Vec::new(),
+                    attributes: Vec::new(),
+                }],
+            });
+        }
+        let class = Class::from(
+            None,
+            ClassFile {
+                access_flags: ClassAccessFlags::PUBLIC | ClassAccessFlags::SUPER,
+                constant_pool,
+                this_class,
+                super_class,
+                methods,
+                ..Default::default()
+            },
+        )?;
+        thread.register_class(class).await?;
+        let object = thread
+            .object("DelayedThread", "", &[] as &[Value])
+            .await
+            .map_err(|error| InternalError(format!("construct delayed thread: {error}")))?;
+        thread
+            .invoke(
+                "java/lang/Thread",
+                "start0()V",
+                std::slice::from_ref(&object),
+            )
+            .await
+            .map_err(|error| InternalError(format!("start delayed thread: {error}")))?;
+        let id = u64::try_from(object.as_object_ref()?.value("eetop")?.as_i64()?)?;
+        let handle = vm
+            .thread_handles()
+            .get_mut(&id)
+            .await
+            .and_then(|mut handle| handle.join_handle.take())
+            .ok_or_else(|| InternalError("Missing spawned thread handle".to_string()))?;
+        let weak_vm = Arc::downgrade(&vm);
+        drop(thread);
+        drop(vm);
+        // The last external VM owner is gone before run() finishes. Its task must
+        // retain the heap through status updates and join notifications, then release it.
+        tokio::time::timeout(Duration::from_secs(5), handle)
+            .await
+            .map_err(|error| InternalError(error.to_string()))?
+            .map_err(|error| InternalError(error.to_string()))?;
+        assert!(weak_vm.upgrade().is_none());
+        Ok(())
+    }
+
     #[tokio::test]
     async fn test_primitive_class() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");

@@ -14,6 +14,8 @@ Embeddable Java Virtual Machine [JVM](https://docs.oracle.com/javase/specs/jvms/
 
 ## Getting Started
 
+Try the [Java playground](https://theseus-rs.github.io/ristretto/playground/) to compile and run Java entirely in your browser, without installing a JDK. See [playground development and deployment](playground/README.md) for build instructions.
+
 The Ristretto `java` runtime can be installed using the following methods:
 
 ### Linux / MacOS

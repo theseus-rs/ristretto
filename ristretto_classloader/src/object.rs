@@ -590,15 +590,15 @@ impl Object {
                         .collect();
                     Ok(value)
                 } else {
-                    // UTF-16 encoded string
+                    // Compact UTF-16 strings use the VM native byte order (StringUTF16).
                     let (chunks, remainder) = bytes.as_chunks::<2>();
                     if !remainder.is_empty() {
                         return Err(ParseError("Invalid UTF-16 byte length".to_string()));
                     }
                     let code_units = chunks
                         .iter()
-                        .map(|&[high, low]| {
-                            u16::from_be_bytes([high.cast_unsigned(), low.cast_unsigned()])
+                        .map(|&[first, second]| {
+                            u16::from_ne_bytes([first.cast_unsigned(), second.cast_unsigned()])
                         })
                         .collect::<Vec<u16>>();
                     let value = String::from_utf16(&code_units)
@@ -1190,7 +1190,7 @@ mod tests {
         object.set_value("coder", Value::Int(1))?;
         let string_bytes: Vec<i8> = value
             .encode_utf16()
-            .flat_map(u16::to_be_bytes)
+            .flat_map(u16::to_ne_bytes)
             .map(|b| b as i8)
             .collect();
         let string_value = test_ref(&collector, string_bytes);

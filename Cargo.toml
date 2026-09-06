@@ -16,6 +16,7 @@ default-members = [
 ]
 members = [
     "examples/*",
+    "playground/runner",
     "ristretto_classfile",
     "ristretto_classloader",
     "ristretto_gc",
