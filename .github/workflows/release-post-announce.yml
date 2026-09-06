@@ -75,7 +75,9 @@ jobs:
           - { platform: riscv64-linux-musl, cross: true, os: ubuntu-latest, target: riscv64gc-unknown-linux-musl }
           - { platform: linux-s390x, cross: true, audio: true, os: ubuntu-latest, target: s390x-unknown-linux-gnu }
           - { platform: sparc64-linux-gnu, cross: true, disable_tls: true, os: ubuntu-latest, target: sparc64-unknown-linux-gnu }
-          - { platform: sparcv9-solaris, cross: true, disable_tls: true, os: ubuntu-latest, target: sparcv9-sun-solaris, rustflags: "-C link-arg=/tmp/ristretto-solaris-compat.o" }
+          # The Solaris cross images use GNU ld, which needs --gc-sections to discard
+          # unused Solaris 11 libc references when dry-run builds disable LTO.
+          - { platform: sparcv9-solaris, cross: true, disable_tls: true, os: ubuntu-latest, target: sparcv9-sun-solaris, rustflags: "-C link-arg=/tmp/ristretto-solaris-compat.o -C link-arg=-Wl,--gc-sections" }
           - { platform: thumbv7neon-android, cross: true, audio: true, os: ubuntu-latest, target: thumbv7neon-linux-androideabi }
           - { platform: thumbv7neon-linux-gnueabihf, cross: true, os: ubuntu-latest, target: thumbv7neon-unknown-linux-gnueabihf }
           - { platform: x86_64-android, cross: true, audio: true, os: ubuntu-latest, target: x86_64-linux-android }
@@ -84,7 +86,7 @@ jobs:
           - { platform: x86_64-illumos, cross: true, disable_tls: true, os: ubuntu-latest, target: x86_64-unknown-illumos }
           - { platform: x86_64-linux-musl, cross: true, os: ubuntu-latest, target: x86_64-unknown-linux-musl }
           - { platform: x86_64-netbsd, cross: true, disable_tls: true, os: ubuntu-latest, target: x86_64-unknown-netbsd }
-          - { platform: x86_64-solaris, cross: true, disable_tls: true, os: ubuntu-latest, target: x86_64-pc-solaris, rustflags: "-C link-arg=/tmp/ristretto-solaris-compat.o" }
+          - { platform: x86_64-solaris, cross: true, disable_tls: true, os: ubuntu-latest, target: x86_64-pc-solaris, rustflags: "-C link-arg=/tmp/ristretto-solaris-compat.o -C link-arg=-Wl,--gc-sections" }
           - { platform: x86_64-windows-gnu, cross: true, audio: true, os: ubuntu-latest, target: x86_64-pc-windows-gnu }
 
     runs-on: ${{ matrix.os }}
@@ -125,6 +127,16 @@ jobs:
       - name: Configure build-std
         if: ${{ matrix.build_std }}
         run: echo "CARGO_UNSTABLE_BUILD_STD=std,panic_abort" >> "$GITHUB_ENV"
+
+      # Cargo profile overrides also pass through cross to its containers.
+      # Published releases use the optimization settings from Cargo.toml.
+      - name: Configure dry-run optimization
+        if: ${{ inputs.dry_run }}
+        shell: bash
+        run: |
+          echo "CARGO_PROFILE_RELEASE_LTO=off" >> "$GITHUB_ENV"
+          echo "CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16" >> "$GITHUB_ENV"
+          echo "CARGO_PROFILE_RELEASE_OPT_LEVEL=2" >> "$GITHUB_ENV"
 
       - name: Build and upload release archive
         if: ${{ matrix.platform != 'wasm64' }}
