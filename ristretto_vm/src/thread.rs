@@ -29,7 +29,7 @@ const NATIVE_STACK_RED_ZONE: usize = 128 * 1024;
 
 const STACK_OVERFLOW_RESERVE_SLOTS: usize = 1_024;
 
-/// Number of synchronous instructions to execute before yielding to the Tokio runtime.
+/// Number of bytecodes to dispatch before yielding to the Tokio runtime.
 const INSTRUCTION_YIELD_COUNT: u32 = 4096;
 
 #[derive(Debug)]
@@ -260,18 +260,15 @@ impl Thread {
         self.id
     }
 
-    /// Record a synchronous instruction and return whether the executor should yield.
-    pub(crate) fn record_synchronous_instruction(&self) -> bool {
+    /// Record a bytecode and return whether the executor should yield.
+    ///
+    /// Async handlers also consume budget because awaiting a ready future does not yield.
+    pub(crate) fn record_instruction(&self) -> bool {
         let count = self
             .instruction_yield_count
             .fetch_add(1, Ordering::Relaxed)
             .wrapping_add(1);
         count.is_multiple_of(INSTRUCTION_YIELD_COUNT)
-    }
-
-    /// Reset the yield counter when an instruction already yields through asynchronous work.
-    pub(crate) fn reset_instruction_yield_count(&self) {
-        self.instruction_yield_count.store(0, Ordering::Relaxed);
     }
 
     /// Get the virtual machine that owns the thread.
@@ -1146,7 +1143,7 @@ impl Thread {
                 entry.frame.clone()
             };
 
-            match frame.execute_instruction(self).await {
+            match frame.execute_batch(self).await {
                 Ok(ExecutionResult::Continue) => {}
                 Ok(ExecutionResult::Call(call)) => {
                     let has_return_type = call.has_return_type;
@@ -1517,20 +1514,18 @@ mod tests {
     use ristretto_gc::{ConfigurationBuilder as GcConfigurationBuilder, GarbageCollector};
     use std::path::PathBuf;
 
-    #[tokio::test]
-    async fn test_instruction_yield_count_is_thread_based() -> Result<()> {
-        let (vm, thread) = crate::test::thread().await.expect("thread");
-        let other_thread = Thread::new(&Arc::downgrade(&vm), thread.id() + 1);
+    #[test]
+    fn test_instruction_yield_count_is_thread_based() {
+        let thread = Thread::new(&Weak::new(), 1);
+        let other_thread = Thread::new(&Weak::new(), 2);
 
         for _ in 1..INSTRUCTION_YIELD_COUNT {
-            assert!(!thread.record_synchronous_instruction());
+            assert!(!thread.record_instruction());
         }
-        assert!(thread.record_synchronous_instruction());
+        assert!(thread.record_instruction());
 
-        assert!(!other_thread.record_synchronous_instruction());
-        thread.reset_instruction_yield_count();
-        assert!(!thread.record_synchronous_instruction());
-        Ok(())
+        assert!(!other_thread.record_instruction());
+        assert!(!thread.record_instruction());
     }
 
     #[tokio::test]
@@ -1740,6 +1735,31 @@ mod tests {
         let thread = Thread::new(&Arc::downgrade(&vm), 1);
 
         assert_eq!(16_384, thread.stack.read().max_slots);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_batch_stops_at_call() -> Result<()> {
+        let (_vm, thread) = interpreted_test_thread().await?;
+        let class = recursive_test_class(&thread).await?;
+        let method = class.try_get_method("recurse", "(I)I")?;
+        let frame = Frame::with_parameters(
+            &Arc::downgrade(&thread),
+            &class,
+            &method,
+            vec![Value::Int(10)],
+        )?;
+
+        assert_eq!(
+            ExecutionResult::Call(MethodCall {
+                class,
+                method,
+                parameters: vec![Value::Int(9)],
+                has_return_type: true,
+            }),
+            frame.execute_batch(&thread).await?
+        );
+        assert_eq!(5, frame.program_counter());
         Ok(())
     }
 
