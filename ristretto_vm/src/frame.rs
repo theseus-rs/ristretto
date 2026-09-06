@@ -1,38 +1,41 @@
 use crate::Error::{InternalError, InvalidProgramCounter};
 
 use crate::instruction::{
-    aaload, aastore, aconst_null, aload, aload_0, aload_1, aload_2, aload_3, aload_w, anewarray,
-    areturn, arraylength, astore, astore_0, astore_1, astore_2, astore_3, astore_w, athrow, baload,
-    bastore, bipush, breakpoint, caload, castore, checkcast, convert_error_to_throwable, d2f, d2i,
-    d2l, dadd, daload, dastore, dcmpg, dcmpl, dconst_0, dconst_1, ddiv, dload, dload_0, dload_1,
-    dload_2, dload_3, dload_w, dmul, dneg, drem, dreturn, dstore, dstore_0, dstore_1, dstore_2,
-    dstore_3, dstore_w, dsub, dup, dup_x1, dup_x2, dup2, dup2_x1, dup2_x2, f2d, f2i, f2l, fadd,
-    faload, fastore, fcmpg, fcmpl, fconst_0, fconst_1, fconst_2, fdiv, fload, fload_0, fload_1,
-    fload_2, fload_3, fload_w, fmul, fneg, frem, freturn, fstore, fstore_0, fstore_1, fstore_2,
-    fstore_3, fstore_w, fsub, getfield, getstatic, goto, goto_w, i2b, i2c, i2d, i2f, i2l, i2s,
-    iadd, iaload, iand, iastore, iconst_0, iconst_1, iconst_2, iconst_3, iconst_4, iconst_5,
-    iconst_m1, idiv, if_acmpeq, if_acmpne, if_icmpeq, if_icmpge, if_icmpgt, if_icmple, if_icmplt,
-    if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne, ifnonnull, ifnull, iinc, iinc_w, iload, iload_0,
-    iload_1, iload_2, iload_3, iload_w, impdep1, impdep2, imul, ineg, instanceof, invokedynamic,
-    invokeinterface, invokespecial, invokestatic, invokevirtual, ior, irem, ireturn, ishl, ishr,
-    istore, istore_0, istore_1, istore_2, istore_3, istore_w, isub, iushr, ixor, jsr, jsr_w, l2d,
-    l2f, l2i, ladd, laload, land, lastore, lcmp, lconst_0, lconst_1, ldc, ldc_w, ldc2_w, ldiv,
-    lload, lload_0, lload_1, lload_2, lload_3, lload_w, lmul, lneg, lookupswitch, lor, lrem,
-    lreturn, lshl, lshr, lstore, lstore_0, lstore_1, lstore_2, lstore_3, lstore_w, lsub, lushr,
-    lxor, monitorenter, monitorexit, multianewarray, new, newarray, nop, pop, pop2,
-    process_throwable, putfield, putstatic, ret, ret_w, r#return, saload, sastore, sipush, swap,
-    tableswitch, wide,
+    FieldRefEntry, aaload, aastore, aconst_null, aload, aload_0, aload_1, aload_2, aload_3,
+    aload_w, anewarray, areturn, arraylength, astore, astore_0, astore_1, astore_2, astore_3,
+    astore_w, athrow, baload, bastore, bipush, breakpoint, caload, castore, checkcast,
+    convert_error_to_throwable, d2f, d2i, d2l, dadd, daload, dastore, dcmpg, dcmpl, dconst_0,
+    dconst_1, ddiv, dload, dload_0, dload_1, dload_2, dload_3, dload_w, dmul, dneg, drem, dreturn,
+    dstore, dstore_0, dstore_1, dstore_2, dstore_3, dstore_w, dsub, dup, dup_x1, dup_x2, dup2,
+    dup2_x1, dup2_x2, f2d, f2i, f2l, fadd, faload, fastore, fcmpg, fcmpl, fconst_0, fconst_1,
+    fconst_2, fdiv, fload, fload_0, fload_1, fload_2, fload_3, fload_w, fmul, fneg, frem, freturn,
+    fstore, fstore_0, fstore_1, fstore_2, fstore_3, fstore_w, fsub, getfield, getstatic, goto,
+    goto_w, i2b, i2c, i2d, i2f, i2l, i2s, iadd, iaload, iand, iastore, iconst_0, iconst_1,
+    iconst_2, iconst_3, iconst_4, iconst_5, iconst_m1, idiv, if_acmpeq, if_acmpne, if_icmpeq,
+    if_icmpge, if_icmpgt, if_icmple, if_icmplt, if_icmpne, ifeq, ifge, ifgt, ifle, iflt, ifne,
+    ifnonnull, ifnull, iinc, iinc_w, iload, iload_0, iload_1, iload_2, iload_3, iload_w, impdep1,
+    impdep2, imul, ineg, instanceof, invokedynamic, invokeinterface, invokespecial, invokestatic,
+    invokevirtual, ior, irem, ireturn, ishl, ishr, istore, istore_0, istore_1, istore_2, istore_3,
+    istore_w, isub, iushr, ixor, jsr, jsr_w, l2d, l2f, l2i, ladd, laload, land, lastore, lcmp,
+    lconst_0, lconst_1, ldc, ldc_w, ldc2_w, ldiv, lload, lload_0, lload_1, lload_2, lload_3,
+    lload_w, lmul, lneg, lookupswitch, lor, lrem, lreturn, lshl, lshr, lstore, lstore_0, lstore_1,
+    lstore_2, lstore_3, lstore_w, lsub, lushr, lxor, monitorenter, monitorexit, multianewarray,
+    new, newarray, nop, pop, pop2, process_throwable, putfield, putstatic, ret, ret_w, r#return,
+    saload, sastore, sipush, swap, tableswitch, wide,
 };
+use crate::method_ref_cache::MethodRefEntry;
+use crate::reference_cache::ClassReferences;
 use crate::{LocalVariables, OperandStack, Result, Thread};
 use ristretto_classfile::attributes::{Instruction, LookupSwitch, TableSwitch};
 use ristretto_classloader::{Class, Method, Value};
 use ristretto_types::JavaError::StackOverflowError;
-use std::future::Future;
-use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Weak};
+use std::sync::{Arc, OnceLock, Weak};
 use tokio::sync::Mutex;
 use tracing::{Level, debug, event_enabled};
+
+/// Maximum number of bytecodes executed while retaining the frame state lock.
+const INSTRUCTION_BATCH_SIZE: usize = 256;
 
 /// A resolved Java method invocation that the thread trampoline must dispatch.
 #[derive(Debug)]
@@ -82,46 +85,11 @@ pub(crate) enum ExecutionResult {
     Call(MethodCall),
 }
 
-/// Represents the result of executing a JVM bytecode instruction.
-///
-/// # Overview
-///
-/// This enum is used to control the flow of execution within a frame. After each instruction is
-/// processed, an `InstructionResult` is returned to indicate how the virtual machine should
-/// proceed.
-///
-/// # Variants
-///
-/// - `Sync(ExecutionResult)`: Indicates that the instruction execution should terminate and return
-///   the specified value (if any) to the caller. Methods with a void return type use
-///   `Return(None)`.
-///
-/// - `Async(Pin<Box<dyn Future<Output = Result<ExecutionResult>> + Send + 'a>>)`: Indicates that
-///   the instruction execution should continue with the next instruction (increments the program
-///   counter by 1).
-#[cfg(not(target_family = "wasm"))]
-pub(crate) enum InstructionResult<'a> {
+/// Async work is represented as bytecode data; no future is allocated by dispatch.
+#[derive(Debug)]
+pub(crate) enum InstructionResult {
     Sync(ExecutionResult),
-    Async(Pin<Box<dyn Future<Output = Result<ExecutionResult>> + Send + 'a>>),
-}
-
-/// This enum is used to control the flow of execution within a frame. After each instruction is
-/// processed, an `InstructionResult` is returned to indicate how the virtual machine should
-/// proceed.
-///
-/// # Variants
-///
-/// - `Sync(ExecutionResult)`: Indicates that the instruction execution should terminate and return
-///   the specified value (if any) to the caller. Methods with a void return type use
-///   `Return(None)`.
-///
-/// - `Async(Pin<Box<dyn Future<Output = Result<ExecutionResult>> + 'a>>)`: Indicates that
-///   the instruction execution should continue with the next instruction (increments the program
-///   counter by 1).
-#[cfg(target_family = "wasm")]
-pub(crate) enum InstructionResult<'a> {
-    Sync(ExecutionResult),
-    Async(Pin<Box<dyn Future<Output = Result<ExecutionResult>> + 'a>>),
+    Async(Instruction),
 }
 
 /// A frame is created each time a method is invoked in the JVM.
@@ -157,6 +125,8 @@ pub struct Frame {
     method: Arc<Method>,
     program_counter: AtomicUsize,
     state: Mutex<Option<FrameState>>,
+    method_refs: OnceLock<Arc<ClassReferences<MethodRefEntry>>>,
+    field_refs: OnceLock<Arc<ClassReferences<FieldRefEntry>>>,
 }
 
 #[derive(Debug)]
@@ -177,6 +147,8 @@ impl Frame {
             method: method.clone(),
             program_counter: AtomicUsize::new(0),
             state: Mutex::new(None),
+            method_refs: OnceLock::new(),
+            field_refs: OnceLock::new(),
         }
     }
 
@@ -202,6 +174,8 @@ impl Frame {
             class: class.clone(),
             method: method.clone(),
             program_counter: AtomicUsize::new(0),
+            method_refs: OnceLock::new(),
+            field_refs: OnceLock::new(),
             state: Mutex::new(Some(FrameState {
                 locals: LocalVariables::new(parameters),
                 stack: OperandStack::with_max_size(method.max_stack()),
@@ -224,7 +198,33 @@ impl Frame {
 
     /// Get a mutable reference to the class that owns this frame.
     pub fn class_mut(&mut self) -> &mut Arc<Class> {
+        self.method_refs.take();
+        self.field_refs.take();
         &mut self.class
+    }
+
+    pub(crate) fn method_refs(&self) -> Result<&ClassReferences<MethodRefEntry>> {
+        if let Some(entries) = self.method_refs.get() {
+            return Ok(entries);
+        }
+        let entries = self
+            .thread()?
+            .vm()?
+            .method_ref_cache()
+            .for_class(&self.class);
+        Ok(self.method_refs.get_or_init(|| entries))
+    }
+
+    pub(crate) fn field_refs(&self) -> Result<&ClassReferences<FieldRefEntry>> {
+        if let Some(entries) = self.field_refs.get() {
+            return Ok(entries);
+        }
+        let entries = self
+            .thread()?
+            .vm()?
+            .field_ref_cache()
+            .for_class(&self.class);
+        Ok(self.field_refs.get_or_init(|| entries))
     }
 
     /// Get the method in this frame.
@@ -279,56 +279,63 @@ impl Frame {
         thread.execute(&self.class, &self.method, &parameters).await
     }
 
-    /// Execute one bytecode instruction and return control to the thread trampoline when the
-    /// frame calls or returns.
-    pub(crate) async fn execute_instruction(&self, thread: &Thread) -> Result<ExecutionResult> {
+    /// Execute a bounded batch of bytecodes, returning early for method calls or returns.
+    ///
+    /// Keep the frame state locked across the batch to amortize locking and trampoline dispatch.
+    /// The program counter remains current for exceptions and stack walking, and the thread's
+    /// instruction budget preserves cooperative scheduling across batches and method calls.
+    pub(crate) async fn execute_batch(&self, thread: &Thread) -> Result<ExecutionResult> {
         let mut state = self.state.lock().await;
         let state = state.as_mut().ok_or_else(|| {
             InternalError("Interpreter frame state is not initialized".to_string())
         })?;
         let code = self.method.code();
-        let program_counter = self.program_counter.load(Ordering::Relaxed);
-        let Some(instruction) = code.get(program_counter) else {
-            return Err(InvalidProgramCounter(program_counter));
-        };
-
         let FrameState { locals, stack } = state;
 
-        if event_enabled!(Level::DEBUG) {
-            self.debug_execute(locals, stack, instruction)?;
-        }
+        for _ in 0..INSTRUCTION_BATCH_SIZE {
+            let program_counter = self.program_counter.load(Ordering::Relaxed);
+            let Some(instruction) = code.get(program_counter) else {
+                return Err(InvalidProgramCounter(program_counter));
+            };
 
-        let result = match self.process(locals, stack, instruction) {
-            Ok(InstructionResult::Sync(result)) => {
-                if thread.record_synchronous_instruction() {
-                    tokio::task::yield_now().await;
+            if event_enabled!(Level::DEBUG) {
+                self.debug_execute(locals, stack, instruction)?;
+            }
+
+            // An async handler can complete immediately, so every bytecode consumes budget.
+            // Yield before executing it, while the PC, locals and operand stack are consistent.
+            if thread.record_instruction() {
+                tokio::task::yield_now().await;
+            }
+
+            let result = match self.process(locals, stack, instruction) {
+                Ok(InstructionResult::Sync(result)) => Ok(result),
+                Ok(InstructionResult::Async(instruction)) => {
+                    // Loading/bootstrap work can re-enter Java execution. Keep the recursive
+                    // future boundary here, reached only after a synchronous cache miss.
+                    Box::pin(self.process_async(stack, &instruction)).await
                 }
-                Ok(result)
-            }
-            Ok(InstructionResult::Async(future)) => {
-                thread.reset_instruction_yield_count();
-                future.await
-            }
-            Err(error) => Err(error),
-        };
+                Err(error) => Err(error),
+            };
 
-        match result {
-            Ok(ExecutionResult::Continue) => {
-                self.program_counter
-                    .store(program_counter + 1, Ordering::Relaxed);
-                Ok(ExecutionResult::Continue)
-            }
-            Ok(ExecutionResult::ContinueAtPosition(next_program_counter)) => {
-                self.program_counter
-                    .store(next_program_counter, Ordering::Relaxed);
-                Ok(ExecutionResult::Continue)
-            }
-            Ok(result @ (ExecutionResult::Return(_) | ExecutionResult::Call(_))) => Ok(result),
-            Err(error) => {
-                Self::handle_error_with_stack(self, stack, error).await?;
-                Ok(ExecutionResult::Continue)
+            match result {
+                Ok(ExecutionResult::Continue) => {
+                    self.program_counter
+                        .store(program_counter + 1, Ordering::Relaxed);
+                }
+                Ok(ExecutionResult::ContinueAtPosition(next_program_counter)) => {
+                    self.program_counter
+                        .store(next_program_counter, Ordering::Relaxed);
+                }
+                Ok(result @ (ExecutionResult::Return(_) | ExecutionResult::Call(_))) => {
+                    return Ok(result);
+                }
+                Err(error) => {
+                    Self::handle_error_with_stack(self, stack, error).await?;
+                }
             }
         }
+        Ok(ExecutionResult::Continue)
     }
 
     /// Resume this frame after a method call completes successfully.
@@ -477,10 +484,46 @@ impl Frame {
         Ok(())
     }
 
-    /// Process an instruction in this frame
-    ///
-    /// # Overview
-    ///
+    /// Construct concrete futures only for loading, initialization, or other async work.
+    pub(crate) async fn process_async(
+        &self,
+        stack: &mut OperandStack,
+        instruction: &Instruction,
+    ) -> Result<ExecutionResult> {
+        match instruction {
+            Instruction::Getstatic(index) => getstatic(self, stack, *index).await,
+            Instruction::Putstatic(index) => putstatic(self, stack, *index).await,
+            Instruction::Getfield(index) => getfield(self, stack, *index).await,
+            Instruction::Putfield(index) => putfield(self, stack, *index).await,
+            Instruction::Invokevirtual(index) => invokevirtual(self, stack, *index).await,
+            Instruction::Invokespecial(index) => invokespecial(self, stack, *index).await,
+            Instruction::Invokestatic(index) => invokestatic(self, stack, *index).await,
+            Instruction::Invokeinterface(index, count) => {
+                invokeinterface(self, stack, *index, *count).await
+            }
+            Instruction::Invokedynamic(index) => invokedynamic(self, stack, *index).await,
+            Instruction::New(index) => new(self, stack, *index).await,
+            Instruction::Anewarray(index) => anewarray(self, stack, *index).await,
+            Instruction::Athrow => athrow(stack).await,
+            Instruction::Checkcast(index) => checkcast(self, stack, *index).await,
+            Instruction::Instanceof(index) => instanceof(self, stack, *index).await,
+            Instruction::Monitorenter => monitorenter(self, stack).await,
+            Instruction::Monitorexit => monitorexit(self, stack).await,
+            Instruction::Multianewarray(index, dimensions) => {
+                multianewarray(self, stack, *index, *dimensions).await
+            }
+            Instruction::Ldc(index) => {
+                crate::instruction::load_constant_async(self, stack, u16::from(*index)).await
+            }
+            Instruction::Ldc_w(index) => {
+                crate::instruction::load_constant_async(self, stack, *index).await
+            }
+            _ => Err(InternalError(format!(
+                "Unexpected slow instruction: {instruction:?}"
+            ))),
+        }
+    }
+
     /// This method is responsible for executing a single JVM bytecode instruction within the current frame.
     /// It dispatches the instruction to the appropriate handler function based on its opcode and
     /// manages the modification of the local variables and operand stack.
@@ -501,12 +544,12 @@ impl Frame {
     ///
     /// - [JVMS §6](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-6.html)
     #[expect(clippy::too_many_lines)]
-    fn process<'a>(
-        &'a self,
-        locals: &'a mut LocalVariables,
-        stack: &'a mut OperandStack,
+    fn process(
+        &self,
+        locals: &mut LocalVariables,
+        stack: &mut OperandStack,
         instruction: &Instruction,
-    ) -> Result<InstructionResult<'a>> {
+    ) -> Result<InstructionResult> {
         match instruction {
             Instruction::Nop => nop().map(InstructionResult::Sync),
             Instruction::Aconst_null => aconst_null(stack).map(InstructionResult::Sync),
@@ -728,66 +771,47 @@ impl Frame {
             Instruction::Dreturn => dreturn(stack).map(InstructionResult::Sync),
             Instruction::Areturn => areturn(stack).map(InstructionResult::Sync),
             Instruction::Return => r#return().map(InstructionResult::Sync),
-            Instruction::Getstatic(index) => Ok(InstructionResult::Async(Box::pin(getstatic(
-                self, stack, *index,
-            )))),
-            Instruction::Putstatic(index) => Ok(InstructionResult::Async(Box::pin(putstatic(
-                self, stack, *index,
-            )))),
-            Instruction::Getfield(index) => Ok(InstructionResult::Async(Box::pin(getfield(
-                self,
-                stack,
-                &self.class,
-                *index,
-            )))),
-            Instruction::Putfield(index) => Ok(InstructionResult::Async(Box::pin(putfield(
-                self,
-                stack,
-                &self.class,
-                *index,
-            )))),
-            Instruction::Invokevirtual(index) => Ok(InstructionResult::Async(Box::pin(
-                invokevirtual(self, stack, *index),
-            ))),
-            Instruction::Invokespecial(index) => Ok(InstructionResult::Async(Box::pin(
-                invokespecial(self, stack, *index),
-            ))),
-            Instruction::Invokestatic(index) => Ok(InstructionResult::Async(Box::pin(
-                invokestatic(self, stack, *index),
-            ))),
-            Instruction::Invokeinterface(index, count) => Ok(InstructionResult::Async(Box::pin(
-                invokeinterface(self, stack, *index, *count),
-            ))),
-            Instruction::Invokedynamic(index) => Ok(InstructionResult::Async(Box::pin(
-                invokedynamic(self, stack, *index),
-            ))),
-            Instruction::New(index) => {
-                Ok(InstructionResult::Async(Box::pin(new(self, stack, *index))))
+            Instruction::Getstatic(index)
+            | Instruction::Putstatic(index)
+            | Instruction::Getfield(index)
+            | Instruction::Putfield(index) => {
+                match crate::instruction::try_field(self, stack, *index, instruction)? {
+                    Some(result) => Ok(InstructionResult::Sync(result)),
+                    None => Ok(InstructionResult::Async(instruction.clone())),
+                }
+            }
+            Instruction::Invokevirtual(index)
+            | Instruction::Invokespecial(index)
+            | Instruction::Invokestatic(index)
+            | Instruction::Invokeinterface(index, _) => {
+                use crate::method_ref_cache::InvokeKind;
+                let kind = match instruction {
+                    Instruction::Invokevirtual(_) => InvokeKind::Virtual,
+                    Instruction::Invokespecial(_) => InvokeKind::Special,
+                    Instruction::Invokestatic(_) => InvokeKind::Static,
+                    _ => InvokeKind::Interface,
+                };
+                match crate::instruction::try_invoke(self, stack, *index, kind)? {
+                    Some(result) => Ok(InstructionResult::Sync(result)),
+                    None => Ok(InstructionResult::Async(instruction.clone())),
+                }
             }
             Instruction::Newarray(array_type) => {
                 newarray(self, stack, array_type).map(InstructionResult::Sync)
             }
-            Instruction::Anewarray(index) => Ok(InstructionResult::Async(Box::pin(anewarray(
-                self, stack, *index,
-            )))),
             Instruction::Arraylength => arraylength(stack).map(InstructionResult::Sync),
-            Instruction::Athrow => Ok(InstructionResult::Async(Box::pin(athrow(stack)))),
-            Instruction::Checkcast(class_index) => Ok(InstructionResult::Async(Box::pin(
-                checkcast(self, stack, *class_index),
-            ))),
-            Instruction::Instanceof(class_index) => Ok(InstructionResult::Async(Box::pin(
-                instanceof(self, stack, *class_index),
-            ))),
-            Instruction::Monitorenter => Ok(InstructionResult::Async(Box::pin(monitorenter(
-                self, stack,
-            )))),
-            Instruction::Monitorexit => {
-                Ok(InstructionResult::Async(Box::pin(monitorexit(self, stack))))
-            }
             Instruction::Wide => wide().map(InstructionResult::Sync),
-            Instruction::Multianewarray(index, dimensions) => Ok(InstructionResult::Async(
-                Box::pin(multianewarray(self, stack, *index, *dimensions)),
-            )),
+            Instruction::Invokedynamic(_)
+            | Instruction::New(_)
+            | Instruction::Anewarray(_)
+            | Instruction::Athrow
+            | Instruction::Checkcast(_)
+            | Instruction::Instanceof(_)
+            | Instruction::Monitorenter
+            | Instruction::Monitorexit
+            | Instruction::Multianewarray(_, _) => {
+                Ok(InstructionResult::Async(instruction.clone()))
+            }
             Instruction::Ifnull(address) => ifnull(stack, *address).map(InstructionResult::Sync),
             Instruction::Ifnonnull(address) => {
                 ifnonnull(stack, *address).map(InstructionResult::Sync)
@@ -856,8 +880,137 @@ mod tests {
     use crate::VM;
     use crate::configuration::ConfigurationBuilder;
     use crate::thread::Thread;
+    use ristretto_classfile::attributes::Attribute;
+    use ristretto_classfile::{ClassFile, ConstantPool, MethodAccessFlags};
     use ristretto_classloader::ClassPath;
     use std::path::PathBuf;
+    use std::task::{Context, Waker};
+
+    fn batch_test_frame(
+        code: impl FnOnce(u16) -> Vec<Instruction>,
+    ) -> Result<(Arc<Thread>, Frame)> {
+        let mut constant_pool = ConstantPool::default();
+        let this_class = constant_pool.add_class("BatchTest")?;
+        let name_index = constant_pool.add_utf8("test")?;
+        let descriptor_index = constant_pool.add_utf8("(I)I")?;
+        let code_index = constant_pool.add_utf8("Code")?;
+        let class = Class::from(
+            None,
+            ClassFile {
+                constant_pool,
+                this_class,
+                methods: vec![ristretto_classfile::Method {
+                    access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                    name_index,
+                    descriptor_index,
+                    attributes: vec![Attribute::Code {
+                        name_index: code_index,
+                        max_stack: 2,
+                        max_locals: 1,
+                        code: code(this_class),
+                        exception_table: Vec::new(),
+                        attributes: Vec::new(),
+                    }],
+                }],
+                ..Default::default()
+            },
+        )?;
+        let thread = Thread::new(&Weak::new(), 1);
+        let method = class.try_get_method("test", "(I)I")?;
+        let frame = Frame::with_parameters(
+            &Arc::downgrade(&thread),
+            &class,
+            &method,
+            vec![Value::Int(1_000)],
+        )?;
+        Ok((thread, frame))
+    }
+
+    #[tokio::test]
+    async fn test_batch_preserves_locals_stack_and_branches() -> Result<()> {
+        let (thread, frame) = batch_test_frame(|_| {
+            vec![
+                Instruction::Iconst_0,
+                Instruction::Iload_0,
+                Instruction::Ifeq(7),
+                Instruction::Iinc(0, -1),
+                Instruction::Iconst_1,
+                Instruction::Iadd,
+                Instruction::Goto(1),
+                Instruction::Ireturn,
+            ]
+        })?;
+
+        // The loop must stop at a batch boundary before finishing the method.
+        let mut result = frame.execute_batch(&thread).await?;
+        assert_eq!(ExecutionResult::Continue, result);
+        assert!(frame.state.try_lock().is_ok());
+        for _ in 0..100 {
+            result = frame.execute_batch(&thread).await?;
+            if result != ExecutionResult::Continue {
+                break;
+            }
+        }
+        assert_eq!(ExecutionResult::Return(Some(Value::Int(1_000))), result);
+        assert_eq!(7, frame.program_counter());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_batch_stops_at_return() -> Result<()> {
+        let (thread, frame) =
+            batch_test_frame(|_| vec![Instruction::Iconst_1, Instruction::Ireturn])?;
+        assert_eq!(
+            ExecutionResult::Return(Some(Value::Int(1))),
+            frame.execute_batch(&thread).await?
+        );
+        assert_eq!(1, frame.program_counter());
+        assert!(frame.state.try_lock().is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_batches_yield_with_sync_and_ready_async_handlers() -> Result<()> {
+        for ready_async in [false, true] {
+            let (thread, frame) = batch_test_frame(|class_index| {
+                if ready_async {
+                    // instanceof null uses an async handler that completes without awaiting.
+                    vec![
+                        Instruction::Aconst_null,
+                        Instruction::Instanceof(class_index),
+                        Instruction::Pop,
+                        Instruction::Goto(0),
+                    ]
+                } else {
+                    vec![Instruction::Goto(0)]
+                }
+            })?;
+
+            {
+                // Disable Tokio's implicit mutex budget to check the interpreter's own budget.
+                // Use a finite number of batches so a missing explicit yield fails, not hangs.
+                let mut execution = std::pin::pin!(tokio::task::unconstrained(async {
+                    for _ in 0..64 {
+                        assert_eq!(
+                            ExecutionResult::Continue,
+                            frame.execute_batch(&thread).await?
+                        );
+                    }
+                    Ok::<(), crate::Error>(())
+                }));
+                let mut context = Context::from_waker(Waker::noop());
+                assert!(execution.as_mut().poll(&mut context).is_pending());
+            }
+
+            // Cancelling a yielded batch releases its state guard, and the frame can resume.
+            assert!(frame.state.try_lock().is_ok());
+            assert_eq!(
+                ExecutionResult::Continue,
+                frame.execute_batch(&thread).await?
+            );
+        }
+        Ok(())
+    }
 
     async fn get_class(class_name: &str) -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -950,3 +1103,6 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod resolution_tests;
