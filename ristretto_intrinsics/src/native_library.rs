@@ -249,7 +249,16 @@ pub fn is_intrinsic_native_library(path: &str) -> bool {
         .unwrap_or(without_prefix);
     matches!(
         stem,
-        "jimage" | "net" | "nio" | "prefs" | "sctp" | "unpack" | "zip"
+        "awt"
+            | "javajpeg"
+            | "jpeg"
+            | "jimage"
+            | "net"
+            | "nio"
+            | "prefs"
+            | "sctp"
+            | "unpack"
+            | "zip"
     )
 }
 
@@ -380,6 +389,11 @@ mod tests {
     #[test]
     fn test_is_intrinsic_native_library() {
         for path in [
+            "awt",
+            "javajpeg",
+            "jpeg",
+            "libjavajpeg.so",
+            "javajpeg.dll",
             "jimage",
             "net",
             "nio.dll",

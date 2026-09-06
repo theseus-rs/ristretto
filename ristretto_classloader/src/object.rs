@@ -187,11 +187,11 @@ impl Object {
                         })?;
                 let accessing_class_fields = accessing_class_entry.object_fields();
                 for (local_index, field) in accessing_class_fields.iter().enumerate() {
-                    if key.matches_field(field) {
-                        let global_index = field_offset + local_index;
-                        if let Some(value) = self.values.get(global_index) {
-                            return Ok((global_index, field.clone(), value));
-                        }
+                    let global_index = field_offset + local_index;
+                    if key.matches_field(field)
+                        && let Some(value) = self.values.get(global_index)
+                    {
+                        return Ok((global_index, field.clone(), value));
                     }
                 }
 
@@ -204,11 +204,11 @@ impl Object {
                     };
                     let current_class_fields = current_class.object_fields();
                     for (local_index, field) in current_class_fields.iter().enumerate() {
-                        if key.matches_field(field) {
-                            let global_index = current_offset + local_index;
-                            if let Some(value) = self.values.get(global_index) {
-                                return Ok((global_index, field.clone(), value));
-                            }
+                        let global_index = current_offset + local_index;
+                        if key.matches_field(field)
+                            && let Some(value) = self.values.get(global_index)
+                        {
+                            return Ok((global_index, field.clone(), value));
                         }
                     }
                     current_offset += current_class_fields.len();

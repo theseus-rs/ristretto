@@ -487,25 +487,23 @@ fn decode_mutf8(input: &[u8]) -> Result<String> {
                 // Check if this is a surrogate (needs special handling)
                 if (0xD800..=0xDFFF).contains(&ch) {
                     // High surrogate; look for low surrogate
-                    if (0xD800..=0xDBFF).contains(&ch) && i + 5 < len {
-                        let next1 = input.get(i + 3).copied().unwrap_or(0);
-                        if next1 & 0xF0 == 0xE0 {
-                            let next2 = input.get(i + 4).copied().unwrap_or(0);
-                            let next3 = input.get(i + 5).copied().unwrap_or(0);
-                            let low = u32::from(next1 & 0x0F) << 12
-                                | u32::from(next2 & 0x3F) << 6
-                                | u32::from(next3 & 0x3F);
-                            if (0xDC00..=0xDFFF).contains(&low) {
-                                // Valid surrogate pair; decode to code point
-                                let code = 0x1_0000 + ((ch - 0xD800) << 10) + (low - 0xDC00);
-                                // Encode as 4-byte UTF-8
-                                result.push(0xF0 | ((code >> 18) as u8));
-                                result.push(0x80 | (((code >> 12) & 0x3F) as u8));
-                                result.push(0x80 | (((code >> 6) & 0x3F) as u8));
-                                result.push(0x80 | ((code & 0x3F) as u8));
-                                i += 6;
-                                continue;
-                            }
+                    let next1 = input.get(i + 3).copied().unwrap_or(0);
+                    if (0xD800..=0xDBFF).contains(&ch) && i + 5 < len && next1 & 0xF0 == 0xE0 {
+                        let next2 = input.get(i + 4).copied().unwrap_or(0);
+                        let next3 = input.get(i + 5).copied().unwrap_or(0);
+                        let low = u32::from(next1 & 0x0F) << 12
+                            | u32::from(next2 & 0x3F) << 6
+                            | u32::from(next3 & 0x3F);
+                        if (0xDC00..=0xDFFF).contains(&low) {
+                            // Valid surrogate pair; decode to code point
+                            let code = 0x1_0000 + ((ch - 0xD800) << 10) + (low - 0xDC00);
+                            // Encode as 4-byte UTF-8
+                            result.push(0xF0 | ((code >> 18) as u8));
+                            result.push(0x80 | (((code >> 12) & 0x3F) as u8));
+                            result.push(0x80 | (((code >> 6) & 0x3F) as u8));
+                            result.push(0x80 | ((code & 0x3F) as u8));
+                            i += 6;
+                            continue;
                         }
                     }
                     // Lone surrogate; use replacement character
