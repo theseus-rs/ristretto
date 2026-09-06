@@ -82,7 +82,7 @@ console = "0.16.4"
 core-foundation-sys = "0.8.7"
 coreaudio-sys = { version = "0.2.18", features = ["audio_unit"] }
 cpal = "0.18.2"
-cranelift = "0.134.3"
+cranelift = "0.135.1"
 criterion = { version = "0.8.2", default-features = false }
 dashmap = "6.2.1"
 dirs = "6.0.0"

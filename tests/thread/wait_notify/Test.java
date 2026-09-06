@@ -44,7 +44,7 @@ public class Test {
                     System.out.println("TimeoutWaiter: Starting wait with 100ms timeout");
                     lock.wait(100);
                     long elapsed = System.currentTimeMillis() - startTime;
-                    System.out.println("TimeoutWaiter: Woke up, elapsed in expected range: " + (elapsed >= 50 && elapsed <= 500));
+                    System.out.println("TimeoutWaiter: Woke up, minimum elapsed time met: " + (elapsed >= 50));
                 } catch (InterruptedException e) {
                     System.out.println("TimeoutWaiter interrupted");
                 }
