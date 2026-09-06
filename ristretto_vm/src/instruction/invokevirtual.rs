@@ -2,10 +2,11 @@ use crate::Error::InternalError;
 use crate::JavaError::NullPointerException;
 use crate::Result;
 use crate::frame::{ExecutionResult, Frame, MethodCall};
-use crate::instruction::{lookup_method, resolve_method_ref};
-use crate::method_ref_cache::InvokeKind;
+use crate::instruction::{lookup_method, receiver_class, resolve_method_ref};
+use crate::method_ref_cache::{InvokeKind, ReceiverTarget};
 use crate::operand_stack::OperandStack;
 use ristretto_classloader::Value;
+use ristretto_types::JavaError;
 
 /// Invokevirtual instruction implementation.
 ///
@@ -25,9 +26,12 @@ pub(crate) async fn invokevirtual(
 
     // +1 for the receiver (this)
     let parameters = stack.drain_last(resolution.param_count + 1);
-    let reference = match parameters.first() {
-        Some(Value::Object(Some(reference))) => reference,
-        Some(Value::Object(None)) => {
+    let receiver = parameters
+        .first()
+        .ok_or_else(|| InternalError("Expected object reference".to_string()))?;
+    let reference = match receiver {
+        Value::Object(Some(reference)) => reference,
+        Value::Object(None) => {
             return Err(NullPointerException(None).into());
         }
         _ => {
@@ -37,14 +41,26 @@ pub(crate) async fn invokevirtual(
 
     // Virtual dispatch: if method is not private, look up in receiver's actual class
     let (class, method) = if resolution.method.is_private() {
-        (resolution.declaring_class, resolution.method)
+        (
+            resolution.declaring_class.clone(),
+            resolution.method.clone(),
+        )
     } else {
-        let class_name = {
-            let guard = reference.read();
-            guard.class_name()?.clone()
+        let object_class = if let Some(class) = receiver_class(receiver)? {
+            class
+        } else {
+            let class_name = reference.read().class_name()?;
+            thread.class(&class_name).await?
         };
-        let object_class = thread.class(&class_name).await?;
-        match lookup_method(
+        if let Some(target) = resolution.dispatch.get(&object_class) {
+            return Ok(ExecutionResult::Call(MethodCall {
+                class: target.class.clone(),
+                method: target.method.clone(),
+                parameters,
+                has_return_type: resolution.has_return_type,
+            }));
+        }
+        let target = match lookup_method(
             &object_class,
             &resolution.method_name,
             &resolution.method_descriptor,
@@ -63,7 +79,29 @@ pub(crate) async fn invokevirtual(
             Err(e) => {
                 return Err(e);
             }
+        };
+        if target.1.is_static() {
+            return Err(JavaError::IncompatibleClassChangeError(format!(
+                "Method {}.{} is static",
+                target.0.name(),
+                resolution.method_name
+            ))
+            .into());
         }
+        if target.1.is_abstract() {
+            return Err(JavaError::AbstractMethodError(format!(
+                "Method {}.{} is abstract",
+                target.0.name(),
+                resolution.method_name
+            ))
+            .into());
+        }
+        resolution.dispatch.store(ReceiverTarget {
+            receiver_class: object_class,
+            class: target.0.clone(),
+            method: target.1.clone(),
+        });
+        target
     };
 
     Ok(ExecutionResult::Call(MethodCall {

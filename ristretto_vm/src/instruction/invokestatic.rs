@@ -18,10 +18,17 @@ pub(crate) async fn invokestatic(
     // Resolve the method with JPMS checks and caching
     let resolution = resolve_method_ref(frame, method_index, InvokeKind::Static).await?;
 
+    if !resolution.declaring_class.is_initialized()? {
+        frame
+            .thread()?
+            .initialize_class(&resolution.declaring_class)
+            .await?;
+    }
+
     let parameters = stack.drain_last(resolution.param_count);
     Ok(ExecutionResult::Call(MethodCall {
-        class: resolution.declaring_class,
-        method: resolution.method,
+        class: resolution.declaring_class.clone(),
+        method: resolution.method.clone(),
         parameters,
         has_return_type: resolution.has_return_type,
     }))

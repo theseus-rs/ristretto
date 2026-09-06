@@ -780,7 +780,7 @@ impl Thread {
     ///
     /// if the class initialization fails
     #[async_method]
-    async fn initialize_class(&self, class: &Arc<Class>) -> Result<()> {
+    pub(crate) async fn initialize_class(&self, class: &Arc<Class>) -> Result<()> {
         use crate::JavaError::{ExceptionInInitializerError, NoClassDefFoundError};
         use ristretto_classloader::InitializationAction;
 
