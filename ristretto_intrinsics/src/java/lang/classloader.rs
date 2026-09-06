@@ -18,21 +18,6 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 use zerocopy::transmute_ref;
 
-/// Returns true if the given path corresponds to a built-in native library that is implemented by
-/// Ristretto intrinsics rather than a host shared object.
-fn is_intrinsic_native_library(path: &str) -> bool {
-    let file_name = path.rsplit(['/', '\\']).next().unwrap_or(path);
-    let without_prefix = file_name.strip_prefix("lib").unwrap_or(file_name);
-    let stem = [".dylib", ".jnilib", ".dll", ".so", ".a"]
-        .iter()
-        .find_map(|suffix| without_prefix.strip_suffix(suffix))
-        .unwrap_or(without_prefix);
-    matches!(
-        stem,
-        "jimage" | "net" | "nio" | "prefs" | "sctp" | "unpack" | "zip"
-    )
-}
-
 /// Set the defining class loader and module on a class mirror created by defineClass.
 ///
 /// Per JVM spec §5.3.5, when defineClass is called, the class is defined by the given
@@ -380,7 +365,7 @@ pub async fn find_builtin_lib<T: Thread + 'static>(
     let library_name_str = parameters.pop()?.as_string()?;
     // These libraries are implemented by Ristretto intrinsics rather than host shared objects.
     // Java 8 and 11 load net, nio, and sctp before invoking the SCTP native entry points.
-    if is_intrinsic_native_library(&library_name_str) {
+    if crate::native_library::is_intrinsic_native_library(&library_name_str) {
         let library_name = library_name_str.to_object(&thread).await?;
         return Ok(Some(library_name));
     }
@@ -483,7 +468,9 @@ mod tests {
         let result = find_builtin_lib(thread.clone(), parameters).await?;
         assert_eq!(result, Some(Value::Object(None)));
 
-        for library in ["jimage", "net", "nio", "prefs", "sctp", "zip"] {
+        for library in [
+            "awt", "jpeg", "javajpeg", "jimage", "net", "nio", "prefs", "sctp", "zip",
+        ] {
             let mut parameters = Parameters::default();
             parameters.push(library.to_object(&thread).await?);
             let result = find_builtin_lib(thread.clone(), parameters).await?;

@@ -186,17 +186,12 @@ impl Resolver {
                 resolved_module.add_read(req.name.clone());
 
                 // Enqueue if not visited (unless static and not present)
-                if !visited.contains(&req.name) {
-                    if req.is_static() {
-                        // Static requires are optional; only add if the module exists
-                        if finder.find(&req.name).is_some() {
-                            queue.push_back(req.name.clone());
-                            visited.insert(req.name.clone());
-                        }
-                    } else {
-                        queue.push_back(req.name.clone());
-                        visited.insert(req.name.clone());
-                    }
+                // Static requires are optional; only add if the module exists.
+                if !visited.contains(&req.name)
+                    && (!req.is_static() || finder.find(&req.name).is_some())
+                {
+                    queue.push_back(req.name.clone());
+                    visited.insert(req.name.clone());
                 }
             }
 
@@ -317,17 +312,18 @@ impl Resolver {
                 };
 
                 for provider in providers {
-                    if !visited.contains(provider) && !resolved.contains_key(provider) {
-                        // Check limit-modules
-                        if let Some(ref limit) = self.limit_modules
-                            && !limit.contains(provider)
-                        {
-                            continue;
-                        }
-                        if finder.find(provider).is_some() {
-                            new_modules.push(provider.clone());
-                            visited.insert(provider.clone());
-                        }
+                    if visited.contains(provider) || resolved.contains_key(provider) {
+                        continue;
+                    }
+                    // Check limit-modules
+                    if let Some(ref limit) = self.limit_modules
+                        && !limit.contains(provider)
+                    {
+                        continue;
+                    }
+                    if finder.find(provider).is_some() {
+                        new_modules.push(provider.clone());
+                        visited.insert(provider.clone());
                     }
                 }
             }
@@ -398,13 +394,14 @@ impl Resolver {
             // Process requires
             for req in &descriptor.requires {
                 if req.is_static() {
-                    // Static dependencies are optional; only add read edge if found
-                    if finder.find(&req.name).is_some() {
-                        resolved_module.add_read(req.name.clone());
-                        if !visited.contains(&req.name) {
-                            queue.push_back(req.name.clone());
-                            visited.insert(req.name.clone());
-                        }
+                    // Static dependencies are optional; only add read edge if found.
+                    if finder.find(&req.name).is_none() {
+                        continue;
+                    }
+                    resolved_module.add_read(req.name.clone());
+                    if !visited.contains(&req.name) {
+                        queue.push_back(req.name.clone());
+                        visited.insert(req.name.clone());
                     }
                 } else if resolved.contains_key(&req.name) || visited.contains(&req.name) {
                     // Non-static dependency already resolved or queued
