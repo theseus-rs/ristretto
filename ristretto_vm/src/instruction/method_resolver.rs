@@ -33,46 +33,22 @@
 //! 3. **JPMS gate**: Check that target module exports the package
 //! 4. Java member access check (public/protected/package/private)
 //! 5. Method lookup in class hierarchy
-//! 6. Cache the resolved method or error
+//! 6. Cache the resolved method
 
 use crate::Result;
 use crate::frame::Frame;
-use crate::method_ref_cache::{
-    InvokeKind, MethodRefError, MethodRefErrorKind, MethodRefKey, ResolvedMethodRef,
-};
+use crate::method_ref_cache::{InvokeKind, MethodRefError, MethodRefErrorKind, ResolvedMethodRef};
 use crate::module_system::{ALL_UNNAMED, AccessCheckResult, ModuleSystem};
 use ristretto_classfile::Constant;
 use ristretto_classloader::{Class, Method};
 use std::sync::Arc;
-
-/// Result of method resolution containing all information needed for invocation.
-#[derive(Clone)]
-pub struct MethodResolution {
-    /// The class that declares the resolved method.
-    pub declaring_class: Arc<Class>,
-    /// The resolved method.
-    pub method: Arc<Method>,
-    /// Method name (cached for virtual dispatch).
-    pub method_name: String,
-    /// Method descriptor (cached for virtual dispatch).
-    pub method_descriptor: String,
-    /// Whether this is a polymorphic method (e.g., `MethodHandle.invoke`).
-    /// Cached to avoid `HashMap` lookup at invocation time.
-    pub is_polymorphic: bool,
-    /// Number of parameters to pop from the operand stack.
-    /// For polymorphic methods, this is computed from the call site descriptor.
-    pub param_count: usize,
-    /// Whether the method has a return value to push onto the operand stack.
-    /// For polymorphic methods, this is computed from the call site descriptor.
-    pub has_return_type: bool,
-}
 
 /// Resolves a method reference from the constant pool with JPMS access checking and caching.
 ///
 /// This is the unified entry point for all invoke instruction resolution. It:
 /// 1. Checks the method ref cache for a previously resolved method
 /// 2. On cache miss, performs full resolution with JPMS access checks
-/// 3. Caches the result (success or failure) for future invocations
+/// 3. Shares the successfully resolved record with future invocations
 ///
 /// # Arguments
 ///
@@ -82,7 +58,7 @@ pub struct MethodResolution {
 ///
 /// # Returns
 ///
-/// A `MethodResolution` containing the resolved method and declaring class.
+/// An `Arc<ResolvedMethodRef>` containing the resolved method and declaring class.
 ///
 /// # Errors
 ///
@@ -94,26 +70,14 @@ pub async fn resolve_method_ref(
     frame: &Frame,
     method_index: u16,
     invoke_kind: InvokeKind,
-) -> Result<MethodResolution> {
+) -> Result<Arc<ResolvedMethodRef>> {
     let thread = frame.thread()?;
-    let vm = thread.vm()?;
     let caller_class = frame.class();
-
-    // Create cache key
-    let cache_key = MethodRefKey::new(caller_class.name().to_string(), method_index);
-
-    // Check cache first
-    if let Some(result) = vm.method_ref_cache().get(&cache_key) {
-        let resolved = result?;
-        return Ok(MethodResolution {
-            declaring_class: resolved.declaring_class.clone(),
-            method: resolved.method.clone(),
-            method_name: resolved.method_name.clone(),
-            method_descriptor: resolved.method_descriptor.clone(),
-            is_polymorphic: resolved.is_polymorphic,
-            param_count: resolved.param_count,
-            has_return_type: resolved.has_return_type,
-        });
+    let entry = frame.method_refs()?.get(method_index).ok_or(
+        ristretto_classfile::Error::InvalidConstantPoolIndex(method_index),
+    )?;
+    if let Some(resolved) = entry.get(invoke_kind) {
+        return Ok(resolved.clone());
     }
 
     // Cache miss; perform resolution
@@ -197,30 +161,14 @@ pub async fn resolve_method_ref(
     // Cache the successful resolution
     // For polymorphic methods, we must use the call site descriptor from the constant pool, not the
     // method's declared descriptor, as each call site may have a different signature.
-    let resolved_ref = ResolvedMethodRef::new(
-        resolved_class.clone(),
-        method.clone(),
+    let resolved_ref = Arc::new(ResolvedMethodRef::new(
+        target_class,
+        resolved_class,
+        method,
         invoke_kind,
         method_descriptor.to_string(),
-    );
-
-    // Extract cached values before moving into cache
-    let is_polymorphic = resolved_ref.is_polymorphic;
-    let param_count = resolved_ref.param_count;
-    let has_return_type = resolved_ref.has_return_type;
-
-    vm.method_ref_cache()
-        .store_resolved(cache_key, resolved_ref);
-
-    Ok(MethodResolution {
-        declaring_class: resolved_class,
-        method,
-        method_name: method_name.to_string(),
-        method_descriptor: method_descriptor.to_string(),
-        is_polymorphic,
-        param_count,
-        has_return_type,
-    })
+    ));
+    Ok(entry.store(resolved_ref))
 }
 
 /// Validates that the class kind matches the invoke kind.
@@ -250,15 +198,28 @@ fn validate_class_kind(
             }
         }
         InvokeKind::Interface => {
-            if !target_class.is_interface() {
+            if !is_interface_method || !target_class.is_interface() {
                 return Err(IncompatibleClassChangeError(format!(
                     "{class_name} is not an interface"
                 ))
                 .into());
             }
         }
-        InvokeKind::Virtual | InvokeKind::Special => {
-            // These can work with both classes and interfaces in various situations
+        InvokeKind::Virtual => {
+            if is_interface_method || target_class.is_interface() {
+                return Err(IncompatibleClassChangeError(format!(
+                    "Expected class method reference: {class_name}"
+                ))
+                .into());
+            }
+        }
+        InvokeKind::Special => {
+            if is_interface_method != target_class.is_interface() {
+                return Err(IncompatibleClassChangeError(format!(
+                    "Class/interface method reference mismatch: {class_name}"
+                ))
+                .into());
+            }
         }
     }
 
@@ -283,17 +244,13 @@ fn validate_method_for_invoke(
                 .into());
             }
         }
-        InvokeKind::Virtual | InvokeKind::Interface => {
+        InvokeKind::Virtual | InvokeKind::Interface | InvokeKind::Special => {
             if method.is_static() {
                 return Err(IncompatibleClassChangeError(format!(
                     "Method {method_name}{method_descriptor} is static"
                 ))
                 .into());
             }
-        }
-        InvokeKind::Special => {
-            // invokespecial can call constructors, private methods, and superclass methods
-            // Additional validation may be needed based on context
         }
     }
 

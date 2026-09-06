@@ -1,6 +1,7 @@
 use crate::Error::InternalError;
 use crate::RustValue;
 use crate::call_site_cache::CallSiteCache;
+use crate::instruction::FieldRefCache;
 use crate::intrinsic_methods::MethodRegistry;
 use crate::java_object::JavaObject;
 use crate::jit::Compiler;
@@ -104,6 +105,8 @@ pub struct VM {
     call_site_cache: CallSiteCache,
     /// Method reference cache for caching resolved method references with access checks.
     method_ref_cache: MethodRefCache,
+    /// Field reference cache for caching resolved field references.
+    field_ref_cache: FieldRefCache,
     /// The monitor registry for object monitors.
     monitor_registry: MonitorRegistry,
     /// The garbage collector for the VM. Declared last so it drops after all other VM resources
@@ -212,6 +215,7 @@ impl VM {
                 string_pool: StringPool::new(),
                 call_site_cache: CallSiteCache::new(),
                 method_ref_cache: MethodRefCache::new(),
+                field_ref_cache: FieldRefCache::new(),
                 monitor_registry: MonitorRegistry::new(),
                 module_system,
             });
@@ -496,6 +500,10 @@ impl VM {
     /// so subsequent invocations are fast.
     pub(crate) fn method_ref_cache(&self) -> &MethodRefCache {
         &self.method_ref_cache
+    }
+
+    pub(crate) fn field_ref_cache(&self) -> &FieldRefCache {
+        &self.field_ref_cache
     }
 
     /// Get the monitor registry.
@@ -1185,7 +1193,6 @@ impl ristretto_types::VM for VM {
 mod tests {
     use super::*;
     use crate::configuration::{ConfigurationBuilder, ModuleExport, ModuleOpens, ModuleRead};
-    use crate::method_ref_cache::{MethodRefError, MethodRefErrorKind, MethodRefKey};
     use ristretto_classfile::{ClassAccessFlags, ClassFile, ConstantPool, JAVA_25};
     use ristretto_classloader::{ClassPath, ClassPathEntry, DEFAULT_JAVA_VERSION};
     use std::path::PathBuf;
@@ -1561,23 +1568,10 @@ mod tests {
     #[tokio::test]
     async fn test_method_ref_cache_stores_entries() -> Result<()> {
         let vm = test_vm().await?;
-
-        // Get initial cache size (may have entries from VM initialization)
-        let initial_size = vm.method_ref_cache().len();
-
-        // Store a failed resolution with a unique key
-        let key = MethodRefKey::new("unique/test/Class".to_string(), 65_000);
-        let error = MethodRefError::new(MethodRefErrorKind::NoSuchMethod, "test error".to_string());
-        vm.method_ref_cache().store_failed(key.clone(), error);
-
-        // Cache should have one more entry
-        assert_eq!(vm.method_ref_cache().len(), initial_size + 1);
-
-        // Retrieving the entry should return the cached error
-        let result = vm.method_ref_cache().get(&key);
-        assert!(result.is_some());
-        assert!(result.unwrap().is_err());
-
+        let class = vm.class("java/lang/Object").await?;
+        let first = vm.method_ref_cache().for_class(&class);
+        let second = vm.method_ref_cache().for_class(&class);
+        assert!(Arc::ptr_eq(&first, &second));
         Ok(())
     }
 

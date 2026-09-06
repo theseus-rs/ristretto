@@ -1,3 +1,8 @@
+#![expect(
+    clippy::expect_used,
+    reason = "benchmarks must fail instead of timing failed VM operations"
+)]
+
 use criterion::{Criterion, criterion_group, criterion_main};
 use ristretto_classfile::Error;
 use ristretto_classloader::ClassPath;
@@ -10,7 +15,7 @@ use tokio::sync::Mutex;
 const CARGO_MANIFEST: &str = env!("CARGO_MANIFEST_DIR");
 
 fn benchmarks(criterion: &mut Criterion) {
-    bench_lifecycle(criterion).ok();
+    bench_lifecycle(criterion).expect("VM benchmark setup must succeed");
 }
 
 fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
@@ -32,28 +37,34 @@ fn bench_lifecycle(criterion: &mut Criterion) -> Result<()> {
     criterion.bench_function("vm_init_int", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                vm_init(true).await.ok();
+                vm_init(true)
+                    .await
+                    .expect("interpreted VM initialization must succeed");
             });
         });
     });
     criterion.bench_function("vm_init", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                vm_init(false).await.ok();
+                vm_init(false)
+                    .await
+                    .expect("VM initialization must succeed");
             });
         });
     });
     criterion.bench_function("hello_world_int", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                hello_world(true).await.ok();
+                hello_world(true)
+                    .await
+                    .expect("interpreted Hello World must succeed");
             });
         });
     });
     criterion.bench_function("hello_world", |bencher| {
         bencher.iter(|| {
             runtime.block_on(async {
-                hello_world(false).await.ok();
+                hello_world(false).await.expect("Hello World must succeed");
             });
         });
     });
