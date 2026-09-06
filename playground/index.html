@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Write, compile, and run Java 8, 11, 17, 21, or 25 in your browser with the Ristretto playground. Your code stays on your device."
+    />
+    <meta name="theme-color" content="#f5f7f4" />
+    <script>
+      // Apply the local preference before the stylesheet paints the page.
+      let preference;
+      try {
+        preference = localStorage.getItem('ristretto-playground-theme');
+      } catch {}
+      document.documentElement.dataset.theme =
+        preference === 'light' || preference === 'dark'
+          ? preference
+          : matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light';
+    </script>
+    <title>Java Playground · Ristretto</title>
+    <script type="module" crossorigin src="/ristretto/playground/assets/index-DzMzdZHe.js"></script>
+    <link rel="stylesheet" crossorigin href="/ristretto/playground/assets/index-CL5oItgJ.css">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>
