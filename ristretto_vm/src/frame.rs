@@ -34,6 +34,9 @@ use std::sync::{Arc, Weak};
 use tokio::sync::Mutex;
 use tracing::{Level, debug, event_enabled};
 
+/// Maximum number of bytecodes executed while retaining the frame state lock.
+const INSTRUCTION_BATCH_SIZE: usize = 256;
+
 /// A resolved Java method invocation that the thread trampoline must dispatch.
 #[derive(Debug)]
 pub(crate) struct MethodCall {
@@ -279,56 +282,59 @@ impl Frame {
         thread.execute(&self.class, &self.method, &parameters).await
     }
 
-    /// Execute one bytecode instruction and return control to the thread trampoline when the
-    /// frame calls or returns.
-    pub(crate) async fn execute_instruction(&self, thread: &Thread) -> Result<ExecutionResult> {
+    /// Execute a bounded batch of bytecodes, returning early for method calls or returns.
+    ///
+    /// Keep the frame state locked across the batch to amortize locking and trampoline dispatch.
+    /// The program counter remains current for exceptions and stack walking, and the thread's
+    /// instruction budget preserves cooperative scheduling across batches and method calls.
+    pub(crate) async fn execute_batch(&self, thread: &Thread) -> Result<ExecutionResult> {
         let mut state = self.state.lock().await;
         let state = state.as_mut().ok_or_else(|| {
             InternalError("Interpreter frame state is not initialized".to_string())
         })?;
         let code = self.method.code();
-        let program_counter = self.program_counter.load(Ordering::Relaxed);
-        let Some(instruction) = code.get(program_counter) else {
-            return Err(InvalidProgramCounter(program_counter));
-        };
-
         let FrameState { locals, stack } = state;
 
-        if event_enabled!(Level::DEBUG) {
-            self.debug_execute(locals, stack, instruction)?;
-        }
+        for _ in 0..INSTRUCTION_BATCH_SIZE {
+            let program_counter = self.program_counter.load(Ordering::Relaxed);
+            let Some(instruction) = code.get(program_counter) else {
+                return Err(InvalidProgramCounter(program_counter));
+            };
 
-        let result = match self.process(locals, stack, instruction) {
-            Ok(InstructionResult::Sync(result)) => {
-                if thread.record_synchronous_instruction() {
-                    tokio::task::yield_now().await;
+            if event_enabled!(Level::DEBUG) {
+                self.debug_execute(locals, stack, instruction)?;
+            }
+
+            // An async handler can complete immediately, so every bytecode consumes budget.
+            // Yield before executing it, while the PC, locals and operand stack are consistent.
+            if thread.record_instruction() {
+                tokio::task::yield_now().await;
+            }
+
+            let result = match self.process(locals, stack, instruction) {
+                Ok(InstructionResult::Sync(result)) => Ok(result),
+                Ok(InstructionResult::Async(future)) => future.await,
+                Err(error) => Err(error),
+            };
+
+            match result {
+                Ok(ExecutionResult::Continue) => {
+                    self.program_counter
+                        .store(program_counter + 1, Ordering::Relaxed);
                 }
-                Ok(result)
-            }
-            Ok(InstructionResult::Async(future)) => {
-                thread.reset_instruction_yield_count();
-                future.await
-            }
-            Err(error) => Err(error),
-        };
-
-        match result {
-            Ok(ExecutionResult::Continue) => {
-                self.program_counter
-                    .store(program_counter + 1, Ordering::Relaxed);
-                Ok(ExecutionResult::Continue)
-            }
-            Ok(ExecutionResult::ContinueAtPosition(next_program_counter)) => {
-                self.program_counter
-                    .store(next_program_counter, Ordering::Relaxed);
-                Ok(ExecutionResult::Continue)
-            }
-            Ok(result @ (ExecutionResult::Return(_) | ExecutionResult::Call(_))) => Ok(result),
-            Err(error) => {
-                Self::handle_error_with_stack(self, stack, error).await?;
-                Ok(ExecutionResult::Continue)
+                Ok(ExecutionResult::ContinueAtPosition(next_program_counter)) => {
+                    self.program_counter
+                        .store(next_program_counter, Ordering::Relaxed);
+                }
+                Ok(result @ (ExecutionResult::Return(_) | ExecutionResult::Call(_))) => {
+                    return Ok(result);
+                }
+                Err(error) => {
+                    Self::handle_error_with_stack(self, stack, error).await?;
+                }
             }
         }
+        Ok(ExecutionResult::Continue)
     }
 
     /// Resume this frame after a method call completes successfully.
@@ -856,8 +862,137 @@ mod tests {
     use crate::VM;
     use crate::configuration::ConfigurationBuilder;
     use crate::thread::Thread;
+    use ristretto_classfile::attributes::Attribute;
+    use ristretto_classfile::{ClassFile, ConstantPool, MethodAccessFlags};
     use ristretto_classloader::ClassPath;
     use std::path::PathBuf;
+    use std::task::{Context, Waker};
+
+    fn batch_test_frame(
+        code: impl FnOnce(u16) -> Vec<Instruction>,
+    ) -> Result<(Arc<Thread>, Frame)> {
+        let mut constant_pool = ConstantPool::default();
+        let this_class = constant_pool.add_class("BatchTest")?;
+        let name_index = constant_pool.add_utf8("test")?;
+        let descriptor_index = constant_pool.add_utf8("(I)I")?;
+        let code_index = constant_pool.add_utf8("Code")?;
+        let class = Class::from(
+            None,
+            ClassFile {
+                constant_pool,
+                this_class,
+                methods: vec![ristretto_classfile::Method {
+                    access_flags: MethodAccessFlags::PUBLIC | MethodAccessFlags::STATIC,
+                    name_index,
+                    descriptor_index,
+                    attributes: vec![Attribute::Code {
+                        name_index: code_index,
+                        max_stack: 2,
+                        max_locals: 1,
+                        code: code(this_class),
+                        exception_table: Vec::new(),
+                        attributes: Vec::new(),
+                    }],
+                }],
+                ..Default::default()
+            },
+        )?;
+        let thread = Thread::new(&Weak::new(), 1);
+        let method = class.try_get_method("test", "(I)I")?;
+        let frame = Frame::with_parameters(
+            &Arc::downgrade(&thread),
+            &class,
+            &method,
+            vec![Value::Int(1_000)],
+        )?;
+        Ok((thread, frame))
+    }
+
+    #[tokio::test]
+    async fn test_batch_preserves_locals_stack_and_branches() -> Result<()> {
+        let (thread, frame) = batch_test_frame(|_| {
+            vec![
+                Instruction::Iconst_0,
+                Instruction::Iload_0,
+                Instruction::Ifeq(7),
+                Instruction::Iinc(0, -1),
+                Instruction::Iconst_1,
+                Instruction::Iadd,
+                Instruction::Goto(1),
+                Instruction::Ireturn,
+            ]
+        })?;
+
+        // The loop must stop at a batch boundary before finishing the method.
+        let mut result = frame.execute_batch(&thread).await?;
+        assert_eq!(ExecutionResult::Continue, result);
+        assert!(frame.state.try_lock().is_ok());
+        for _ in 0..100 {
+            result = frame.execute_batch(&thread).await?;
+            if result != ExecutionResult::Continue {
+                break;
+            }
+        }
+        assert_eq!(ExecutionResult::Return(Some(Value::Int(1_000))), result);
+        assert_eq!(7, frame.program_counter());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_batch_stops_at_return() -> Result<()> {
+        let (thread, frame) =
+            batch_test_frame(|_| vec![Instruction::Iconst_1, Instruction::Ireturn])?;
+        assert_eq!(
+            ExecutionResult::Return(Some(Value::Int(1))),
+            frame.execute_batch(&thread).await?
+        );
+        assert_eq!(1, frame.program_counter());
+        assert!(frame.state.try_lock().is_ok());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_batches_yield_with_sync_and_ready_async_handlers() -> Result<()> {
+        for ready_async in [false, true] {
+            let (thread, frame) = batch_test_frame(|class_index| {
+                if ready_async {
+                    // instanceof null uses an async handler that completes without awaiting.
+                    vec![
+                        Instruction::Aconst_null,
+                        Instruction::Instanceof(class_index),
+                        Instruction::Pop,
+                        Instruction::Goto(0),
+                    ]
+                } else {
+                    vec![Instruction::Goto(0)]
+                }
+            })?;
+
+            {
+                // Disable Tokio's implicit mutex budget to check the interpreter's own budget.
+                // Use a finite number of batches so a missing explicit yield fails, not hangs.
+                let mut execution = std::pin::pin!(tokio::task::unconstrained(async {
+                    for _ in 0..64 {
+                        assert_eq!(
+                            ExecutionResult::Continue,
+                            frame.execute_batch(&thread).await?
+                        );
+                    }
+                    Ok::<(), crate::Error>(())
+                }));
+                let mut context = Context::from_waker(Waker::noop());
+                assert!(execution.as_mut().poll(&mut context).is_pending());
+            }
+
+            // Cancelling a yielded batch releases its state guard, and the frame can resume.
+            assert!(frame.state.try_lock().is_ok());
+            assert_eq!(
+                ExecutionResult::Continue,
+                frame.execute_batch(&thread).await?
+            );
+        }
+        Ok(())
+    }
 
     async fn get_class(class_name: &str) -> Result<(Arc<VM>, Arc<Thread>, Arc<Class>)> {
         let cargo_manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
