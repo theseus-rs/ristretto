@@ -5,10 +5,9 @@ use crate::JavaError::{
 use crate::Result;
 use crate::assignable::Assignable;
 use crate::frame::{ExecutionResult, Frame, MethodCall};
-use crate::instruction::{lookup_method, resolve_method_ref};
-use crate::method_ref_cache::InvokeKind;
+use crate::instruction::{lookup_method, receiver_class, resolve_method_ref};
+use crate::method_ref_cache::{InvokeKind, ReceiverTarget};
 use crate::operand_stack::OperandStack;
-use ristretto_classfile::{FieldType, JavaStr};
 use ristretto_classloader::Value;
 
 /// Invokeinterface instruction implementation.
@@ -28,33 +27,38 @@ pub(crate) async fn invokeinterface(
     // Resolve the interface method with JPMS checks and caching
     let resolution = resolve_method_ref(frame, method_index, InvokeKind::Interface).await?;
 
-    let method_descriptor = JavaStr::cow_from_str(&resolution.method_descriptor);
-    let (method_parameters, method_return_type) =
-        FieldType::parse_method_descriptor(&method_descriptor)?;
-    let parameters = stack.drain_last(method_parameters.len() + 1);
-
-    let object_class = match parameters.first() {
-        Some(Value::Object(Some(reference))) => {
-            let class_name = {
-                let guard = reference.read();
-                guard.class_name()?.clone()
-            };
-            thread.class(&class_name).await?
-        }
-        Some(Value::Object(None)) => return Err(NullPointerException(None).into()),
-        _ => return Err(InternalError("Expected object reference".to_string())),
+    let parameters = stack.drain_last(resolution.param_count + 1);
+    let receiver = parameters
+        .first()
+        .ok_or_else(|| InternalError("Expected object reference".to_string()))?;
+    let object_class = if let Some(class) = receiver_class(receiver)? {
+        class
+    } else {
+        let Value::Object(Some(reference)) = receiver else {
+            return Err(NullPointerException(None).into());
+        };
+        let class_name = reference.read().class_name()?;
+        thread.class(&class_name).await?
     };
+    if let Some(target) = resolution.dispatch.get(&object_class) {
+        return Ok(ExecutionResult::Call(MethodCall {
+            class: target.class.clone(),
+            method: target.method.clone(),
+            parameters,
+            has_return_type: resolution.has_return_type,
+        }));
+    }
 
     // Check object implements interface
     if !resolution
-        .declaring_class
+        .referenced_class
         .is_assignable_from(&thread, &object_class)
         .await?
     {
         return Err(IncompatibleClassChangeError(format!(
             "{} does not implement {}",
             object_class.name(),
-            resolution.declaring_class.name()
+            resolution.referenced_class.name()
         ))
         .into());
     }
@@ -65,6 +69,15 @@ pub(crate) async fn invokeinterface(
         &resolution.method_name,
         &resolution.method_descriptor,
     )?;
+
+    if resolved_method.is_static() {
+        return Err(IncompatibleClassChangeError(format!(
+            "Method {}.{} is static",
+            resolved_class.name(),
+            resolution.method_name
+        ))
+        .into());
+    }
 
     // Check resolved method accessibility
     // Lambda methods (like lambda$andThen$0) are private but can be invoked through method handles
@@ -86,10 +99,16 @@ pub(crate) async fn invokeinterface(
         .into());
     }
 
+    resolution.dispatch.store(ReceiverTarget {
+        receiver_class: object_class,
+        class: resolved_class.clone(),
+        method: resolved_method.clone(),
+    });
+
     Ok(ExecutionResult::Call(MethodCall {
         class: resolved_class,
         method: resolved_method,
         parameters,
-        has_return_type: method_return_type.is_some(),
+        has_return_type: resolution.has_return_type,
     }))
 }

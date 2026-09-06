@@ -1,4 +1,5 @@
 use crate::Result;
+#[cfg(test)]
 use crate::frame::ExecutionResult::Continue;
 use crate::frame::{ExecutionResult, Frame};
 use crate::operand_stack::OperandStack;
@@ -10,9 +11,8 @@ use crate::operand_stack::OperandStack;
 /// 2. Initializes the class, and its superclasses, that declares the field [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5)
 /// 3. Gets the value of the static field
 ///
-/// Note: When `thread.class()` is called, it initializes the class and all its superclasses in
-/// order (from Object down to the referenced class). This ensures that any inherited static fields
-/// are properly initialized before we access them.
+/// The slow path initializes the referenced class and its superclasses. Cached accesses check
+/// initialization state before reading an inherited static field.
 ///
 /// # References
 ///
@@ -23,28 +23,13 @@ pub(crate) async fn getstatic(
     stack: &mut OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
-    let thread = frame.thread()?;
-    let constant_pool = frame.class().constant_pool();
-    let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
-    let (name_index, _descriptor_index) =
-        constant_pool.try_get_name_and_type(*name_and_type_index)?;
-    let class_name = constant_pool.try_get_class(*class_index)?;
-
-    // Initialize the class and its superclasses:
-    // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5
-    // This ensures parent classes are initialized first, which is required for inherited static
-    // fields to be properly set up.
-    let class = thread.class_java_str(class_name).await?;
-    let field_name = constant_pool.try_get_utf8(*name_index)?;
-
-    // Verify the field exists; searches class hierarchy per:
-    // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.2
-    let _field = class.static_field(field_name)?;
-
-    // Get the value (searches class hierarchy and returns from declaring class)
-    let value = class.static_value(field_name)?;
-    stack.push(value)?;
-    Ok(Continue)
+    crate::instruction::execute_field(
+        frame,
+        stack,
+        index,
+        ristretto_classfile::attributes::Instruction::Getstatic(index),
+    )
+    .await
 }
 
 /// Set the value of a static field from the operand stack.
@@ -54,9 +39,8 @@ pub(crate) async fn getstatic(
 /// 2. Initializes the class, and its superclasses, that declares the field [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5)
 /// 3. Sets the value of the static field
 ///
-/// Note: When `thread.class()` is called, it initializes the class and all its superclasses in
-/// order (from Object down to the referenced class). This ensures that any inherited static fields
-/// are properly initialized before we modify them.
+/// The slow path initializes the referenced class and its superclasses. Cached accesses check
+/// initialization state before writing an inherited static field.
 ///
 /// # References
 ///
@@ -67,28 +51,13 @@ pub(crate) async fn putstatic(
     stack: &mut OperandStack,
     index: u16,
 ) -> Result<ExecutionResult> {
-    let thread = frame.thread()?;
-    let constant_pool = frame.class().constant_pool();
-    let (class_index, name_and_type_index) = constant_pool.try_get_field_ref(index)?;
-    let (name_index, _descriptor_index) =
-        constant_pool.try_get_name_and_type(*name_and_type_index)?;
-    let class_name = constant_pool.try_get_class(*class_index)?;
-
-    // Initialize the class and its superclasses:
-    // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5
-    // This ensures parent classes are initialized first, which is required for inherited static
-    // fields to be properly set up.
-    let class = thread.class_java_str(class_name).await?;
-    let field_name = constant_pool.try_get_utf8(*name_index)?;
-
-    // Verify the field exists; searches class hierarchy per:
-    // https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.4.3.2
-    let _field = class.static_field(field_name)?;
-
-    // Set the value (searches class hierarchy and sets in declaring class)
-    let value = stack.pop()?;
-    class.set_static_value(field_name, value)?;
-    Ok(Continue)
+    crate::instruction::execute_field(
+        frame,
+        stack,
+        index,
+        ristretto_classfile::attributes::Instruction::Putstatic(index),
+    )
+    .await
 }
 
 #[cfg(test)]

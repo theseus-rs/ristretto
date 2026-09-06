@@ -30,6 +30,15 @@ impl OperandStack {
         self.stack.split_off(split_idx)
     }
 
+    /// Borrow an operand by its depth from the top without changing the stack.
+    pub(crate) fn peek_at(&self, depth: usize) -> Result<&Value> {
+        self.stack
+            .len()
+            .checked_sub(depth + 1)
+            .and_then(|index| self.stack.get(index))
+            .ok_or(OperandStackUnderflow)
+    }
+
     /// Clear the operand stack.
     pub fn clear(&mut self) {
         self.stack.clear();

@@ -78,6 +78,7 @@ mod method_ref_cache;
 mod module_system;
 pub mod monitor;
 mod operand_stack;
+mod reference_cache;
 mod rust_value;
 pub mod startup_trace;
 mod string_pool;
