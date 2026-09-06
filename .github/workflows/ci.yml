@@ -11,6 +11,11 @@ on:
 permissions:
   contents: read
 
+# Cancel superseded PR runs; give each main-branch run its own group.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   checks:
     name: Checks
