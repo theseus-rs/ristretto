@@ -156,12 +156,12 @@ impl ClassLoader {
             }
         } else {
             let class_path = self.class_path();
-            if let Ok(mut class_file) = class_path.read_class(class_name_str.as_ref()).await {
-                // Only set code source for non-bootstrap class loaders; bootstrap
-                // classes (JDK classes) have no ProtectionDomain.
-                if self.parent().await.is_none() {
-                    class_file.code_source_url = None;
-                }
+            // Root loaders omit code sources; avoid resolving a URL only to discard it.
+            let include_code_source = self.parent().await.is_some();
+            if let Ok(class_file) = class_path
+                .read_class_with_code_source(class_name_str.as_ref(), include_code_source)
+                .await
+            {
                 let class = Class::from(Some(self.this.clone()), class_file)?;
                 self.set_class_module_name(&class, &class_name_str)?;
                 return Ok(self
@@ -522,6 +522,7 @@ mod tests {
             .load(JavaStr::try_from_str(class_name)?)
             .await?;
         assert_eq!(class_name, class.name());
+        assert_eq!(None, class.class_file().code_source_url);
 
         // Load the same class again to test caching
         let class = class_loader
@@ -569,6 +570,30 @@ mod tests {
             .load(JavaStr::try_from_str("HelloWorld")?)
             .await?;
         assert_eq!("HelloWorld", class.name());
+        assert_eq!(None, class.class_file().code_source_url);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_load_child_class_code_source() -> Result<()> {
+        let classes_directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("classes");
+        let classes_jar = classes_directory.join("classes.jar");
+
+        for source in [classes_directory, classes_jar] {
+            let class_path = ClassPath::from(&[source]);
+            let expected_code_source = class_path.read_class("HelloWorld").await?.code_source_url;
+            assert!(expected_code_source.is_some());
+
+            let parent =
+                ClassLoader::new_builtin(ClassLoaderType::Bootstrap, ClassPath::new(Vec::new()));
+            let child = ClassLoader::new_builtin(ClassLoaderType::System, class_path);
+            child.set_parent(Some(parent)).await;
+
+            let class = child.load(JavaStr::try_from_str("HelloWorld")?).await?;
+            assert_eq!(expected_code_source, class.class_file().code_source_url);
+        }
         Ok(())
     }
 
