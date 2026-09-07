@@ -11,7 +11,7 @@ use ristretto_types::{Parameters, Result};
 use std::cmp::min;
 use std::sync::Arc;
 #[cfg(not(target_family = "wasm"))]
-use sysinfo::System;
+use sysinfo::{MemoryRefreshKind, System};
 
 #[intrinsic_method("java/lang/Runtime.availableProcessors()I", Any)]
 #[async_method]
@@ -72,7 +72,9 @@ pub async fn max_memory<T: Thread + 'static>(
 ) -> Result<Option<Value>> {
     #[cfg(not(target_family = "wasm"))]
     {
-        let sys = System::new_all();
+        // Bootstrap queries this value; avoid collecting unrelated CPU and process information.
+        let mut sys = System::new();
+        sys.refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
         let total_memory = min(sys.total_memory(), u64::try_from(i64::MAX)?);
         let total_memory = i64::try_from(total_memory)?;
         Ok(Some(Value::Long(total_memory)))
