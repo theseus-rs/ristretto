@@ -128,6 +128,10 @@ impl TypeStack {
 }
 
 #[cfg(test)]
+#[expect(
+    clippy::indexing_slicing,
+    reason = "tests inspect stack fixture elements"
+)]
 mod tests {
     use super::*;
 

@@ -17,7 +17,7 @@
 //! materialize every selected JAR after printing the tree.
 
 #![cfg_attr(
-    test,
+    all(test, not(target_family = "wasm")),
     expect(
         clippy::panic_in_result_fn,
         reason = "the example test uses assertions while propagating resolver errors"

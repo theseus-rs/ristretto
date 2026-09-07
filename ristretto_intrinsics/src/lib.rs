@@ -13,9 +13,15 @@
 #![cfg_attr(
     test,
     expect(
-        clippy::expect_used,
         clippy::panic_in_result_fn,
-        reason = "intrinsic unit tests use assertions and fixture setup expects in Result-returning tests"
+        reason = "intrinsic unit tests use assertions in Result-returning tests"
+    )
+)]
+#![cfg_attr(
+    all(test, not(target_family = "wasm")),
+    expect(
+        clippy::expect_used,
+        reason = "native intrinsic unit tests use fixture setup expects"
     )
 )]
 

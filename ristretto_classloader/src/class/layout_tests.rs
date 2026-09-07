@@ -97,6 +97,7 @@ fn verification_is_cached_and_invalidated_by_constant_pool_mutation() -> Result<
     Ok(())
 }
 
+#[cfg(not(target_family = "wasm"))]
 #[test]
 fn concurrent_layout_finalization_preserves_shared_storage() -> Result<()> {
     let base = class("Base", None, "base")?;

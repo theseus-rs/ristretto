@@ -22,6 +22,41 @@ impl LocalVariables {
         Self::new(vec![Value::Unused; max_size])
     }
 
+    /// Refill reusable local storage in JVM slot order, including wide-value placeholders.
+    pub(crate) fn reset(
+        &mut self,
+        parameters: impl IntoIterator<Item = Value>,
+        max_size: usize,
+    ) -> usize {
+        self.locals.clear();
+        // Reusing a large allocation in small recursive frames must not multiply retained
+        // capacity independently of their declared Java stack requirements.
+        if self.locals.capacity() > max_size.saturating_mul(4).max(16) {
+            self.locals.shrink_to(max_size);
+        }
+        self.locals.reserve(max_size);
+        for value in parameters {
+            let wide = matches!(value, Value::Long(_) | Value::Double(_));
+            self.locals.push(value);
+            if wide {
+                self.locals.push(Value::Unused);
+            }
+        }
+        let parameter_slots = self.locals.len();
+        if parameter_slots < max_size {
+            self.locals.resize(max_size, Value::Unused);
+        }
+        parameter_slots
+    }
+
+    pub(crate) fn clear(&mut self) {
+        self.locals.clear();
+    }
+
+    pub(crate) fn capacity(&self) -> usize {
+        self.locals.capacity()
+    }
+
     /// Get a value from the local variables.
     ///
     /// # Errors

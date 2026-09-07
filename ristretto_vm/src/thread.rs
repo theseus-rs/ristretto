@@ -3,7 +3,7 @@ use crate::JavaError::{RuntimeException, StackOverflowError, UnsatisfiedLinkErro
 use crate::Parameters;
 use crate::RustValue;
 use crate::configuration::{DEFAULT_MAX_JAVA_STACK_SIZE, JAVA_STACK_SLOT_SIZE, VerifyMode};
-use crate::frame::{ExecutionResult, MethodCall};
+use crate::frame::{CallParameters, ExecutionResult, FrameState, MethodCall};
 use crate::java_object::JavaObject;
 use crate::jit_runtime_helpers::ThreadRuntime;
 use crate::rust_value::process_values;
@@ -56,6 +56,7 @@ impl Drop for MonitorGuard {
 #[derive(Debug)]
 struct StackEntry {
     frame: Arc<Frame>,
+    state: Option<FrameState>,
     slots: usize,
     has_return_type: bool,
     _monitor: MonitorGuard,
@@ -64,6 +65,9 @@ struct StackEntry {
 #[derive(Debug)]
 struct JavaStack {
     entries: Vec<StackEntry>,
+    free_frames: Vec<Arc<Frame>>,
+    free_states: Vec<FrameState>,
+    pooled_slots: usize,
     used_slots: usize,
     max_slots: usize,
     overflow_reserve_depth: usize,
@@ -74,6 +78,9 @@ impl JavaStack {
         let entry_capacity = max_slots.saturating_add(STACK_OVERFLOW_RESERVE_SLOTS);
         Self {
             entries: Vec::with_capacity(entry_capacity),
+            free_frames: Vec::new(),
+            free_states: Vec::new(),
+            pooled_slots: 0,
             used_slots: 0,
             max_slots,
             overflow_reserve_depth: 0,
@@ -90,6 +97,7 @@ impl JavaStack {
     fn push(
         &mut self,
         frame: Arc<Frame>,
+        state: FrameState,
         has_return_type: bool,
         monitor: MonitorGuard,
     ) -> Result<()> {
@@ -98,6 +106,7 @@ impl JavaStack {
         self.used_slots = used_slots;
         self.entries.push(StackEntry {
             frame,
+            state: Some(state),
             slots,
             has_return_type,
             _monitor: monitor,
@@ -143,6 +152,7 @@ impl JavaStack {
     fn push_jit(&mut self, frame: Arc<Frame>, has_return_type: bool, monitor: MonitorGuard) {
         self.entries.push(StackEntry {
             frame,
+            state: None,
             slots: 0,
             has_return_type,
             _monitor: monitor,
@@ -155,9 +165,44 @@ impl JavaStack {
         Some(entry)
     }
 
-    fn truncate(&mut self, depth: usize) {
-        while self.entries.len() > depth {
-            let _ = self.pop();
+    fn take_frame(
+        &mut self,
+        thread: &Weak<Thread>,
+        class: &Arc<Class>,
+        method: &Arc<Method>,
+    ) -> Arc<Frame> {
+        while let Some(mut frame) = self.free_frames.pop() {
+            if let Some(metadata) = Arc::get_mut(&mut frame) {
+                metadata.reset(class, method);
+                return frame;
+            }
+        }
+        Arc::new(Frame::new(thread, class, method))
+    }
+
+    fn take_state(&mut self) -> FrameState {
+        let state = self.free_states.pop().unwrap_or_default();
+        self.pooled_slots -= state.capacity();
+        state
+    }
+
+    fn recycle(&mut self, frame: Arc<Frame>, state: Option<FrameState>) {
+        let limit = self.max_slots.saturating_add(STACK_OVERFLOW_RESERVE_SLOTS);
+        if let Some(mut state) = state {
+            state.clear();
+            let capacity = state.capacity();
+            if capacity <= limit.saturating_sub(self.pooled_slots) && self.free_states.len() < limit
+            {
+                self.pooled_slots += capacity;
+                self.free_states.push(state);
+            }
+        }
+        // Retained Arc/Weak snapshots must continue to describe the original invocation.
+        if Arc::strong_count(&frame) == 1
+            && Arc::weak_count(&frame) == 0
+            && self.free_frames.len() < limit
+        {
+            self.free_frames.push(frame);
         }
     }
 }
@@ -174,7 +219,30 @@ struct ExecutionBoundary<'a> {
 
 impl Drop for ExecutionBoundary<'_> {
     fn drop(&mut self) {
-        self.thread.stack.write().truncate(self.depth);
+        while self.thread.stack.read().entries.len() > self.depth {
+            let _ = self.thread.pop_frame();
+        }
+    }
+}
+
+/// Mutable interpreter storage is leased without holding a lock across Java execution.
+/// Dropping a suspended future restores the lease before `ExecutionBoundary` unwinds its frames.
+struct ActiveFrame<'a> {
+    thread: &'a Thread,
+    depth: usize,
+    frame: Arc<Frame>,
+    state: FrameState,
+}
+
+impl Drop for ActiveFrame<'_> {
+    fn drop(&mut self) {
+        let mut stack = self.thread.stack.write();
+        if let Some(entry) = stack.entries.get_mut(self.depth)
+            && Arc::ptr_eq(&entry.frame, &self.frame)
+        {
+            debug_assert!(entry.state.is_none());
+            entry.state = Some(std::mem::take(&mut self.state));
+        }
     }
 }
 
@@ -334,7 +402,7 @@ impl Thread {
         let entry = stack
             .entries
             .last()
-            .ok_or(InternalError("No frame".to_string()))?;
+            .ok_or_else(|| InternalError("No frame".to_string()))?;
         Ok(entry.frame.clone())
     }
 
@@ -1094,17 +1162,21 @@ impl Thread {
         let call = MethodCall {
             class: class.clone(),
             method: method.clone(),
-            parameters,
+            parameters: parameters.into(),
             has_return_type: false,
         };
 
-        match self.dispatch_method(call).await? {
+        match self.dispatch_method(call, None).await? {
             DispatchResult::FramePushed => self.run_interpreter(base_depth).await,
             DispatchResult::Completed(value) => Ok(value),
         }
     }
 
-    async fn dispatch_method(&self, call: MethodCall) -> Result<DispatchResult> {
+    async fn dispatch_method(
+        &self,
+        call: MethodCall,
+        caller: Option<&mut FrameState>,
+    ) -> Result<DispatchResult> {
         let MethodCall {
             class,
             method,
@@ -1117,7 +1189,7 @@ impl Thread {
         let vm = self.vm()?;
 
         let sync_monitor = self
-            .acquire_sync_monitor(&class, &method, &parameters)
+            .acquire_sync_monitor(&class, &method, parameters.as_slice(caller.as_deref())?)
             .await?;
         let monitor_guard = MonitorGuard::new(sync_monitor, self.id);
 
@@ -1148,7 +1220,7 @@ impl Thread {
             let Some(thread) = self.thread.upgrade() else {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
-            let parameters = Parameters::new(parameters);
+            let parameters = Parameters::new(parameters.into_values(caller)?);
             let result = rust_method(thread, parameters).await;
             drop(monitor_guard);
             Self::debug_result(&class, &method, &result);
@@ -1158,12 +1230,26 @@ impl Thread {
             let Some(thread) = self.thread.upgrade() else {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
-            let frame = Arc::new(Frame::new(&self.thread, &class, &method));
-            self.stack
-                .write()
-                .push_jit(frame, has_return_type, monitor_guard);
-            let result = jit::execute(&jit_method, &parameters, gc, &vm, &thread, &class);
-            let _ = self.stack.write().pop();
+            {
+                let mut stack = self.stack.write();
+                let frame = stack.take_frame(&self.thread, &class, &method);
+                stack.push_jit(frame, has_return_type, monitor_guard);
+            }
+            let result = jit::execute(
+                &jit_method,
+                parameters.as_slice(caller.as_deref())?,
+                gc,
+                &vm,
+                &thread,
+                &class,
+            );
+            self.pop_frame()?;
+            if let CallParameters::Stack(count) = parameters {
+                let caller = caller.ok_or_else(|| {
+                    InternalError("Missing caller for stack arguments".to_owned())
+                })?;
+                drop(caller.stack.drain_values(count)?);
+            }
             Self::debug_result(&class, &method, &result);
             return result.map(DispatchResult::Completed);
         } else if method.is_native() {
@@ -1174,75 +1260,114 @@ impl Thread {
         }
 
         let frame_slots = Frame::stack_slots_for(&method)?;
-        self.stack
-            .read()
-            .check_capacity(frame_slots, &class, &method)?;
-        let frame = Arc::new(Frame::with_parameters(
-            &self.thread,
-            &class,
-            &method,
-            parameters,
-        )?);
-        self.stack
-            .write()
-            .push(frame, has_return_type, monitor_guard)?;
+        let mut stack = self.stack.write();
+        stack.check_capacity(frame_slots, &class, &method)?;
+        let mut state = stack.take_state();
+        parameters.initialize(&mut state, &class, &method, caller)?;
+        let frame = stack.take_frame(&self.thread, &class, &method);
+        stack.push(frame, state, has_return_type, monitor_guard)?;
         Ok(DispatchResult::FramePushed)
+    }
+
+    fn active_frame(&self) -> Result<ActiveFrame<'_>> {
+        let mut stack = self.stack.write();
+        let depth = stack.entries.len().saturating_sub(1);
+        let entry = stack
+            .entries
+            .last_mut()
+            .ok_or_else(|| InternalError("Interpreter stack unexpectedly empty".to_owned()))?;
+        let state = entry
+            .state
+            .take()
+            .ok_or_else(|| InternalError("Interpreter frame state is already in use".to_owned()))?;
+        Ok(ActiveFrame {
+            thread: self,
+            depth,
+            frame: entry.frame.clone(),
+            state,
+        })
+    }
+
+    fn pop_frame(&self) -> Result<bool> {
+        let mut stack = self.stack.write();
+        let StackEntry {
+            frame,
+            state,
+            has_return_type,
+            _monitor: monitor,
+            ..
+        } = stack
+            .pop()
+            .ok_or_else(|| InternalError("Interpreter stack unexpectedly empty".to_owned()))?;
+        stack.recycle(frame, state);
+        drop(stack);
+        // Monitor release may wake another Java thread; do it outside the stack lock.
+        drop(monitor);
+        Ok(has_return_type)
     }
 
     async fn run_interpreter(&self, base_depth: usize) -> Result<Option<Value>> {
         loop {
-            let frame = {
-                let stack = self.stack.read();
-                let entry = stack.entries.last().ok_or_else(|| {
-                    InternalError("Interpreter stack unexpectedly empty".to_string())
-                })?;
-                entry.frame.clone()
-            };
-
-            match frame.execute_batch(self).await {
-                Ok(ExecutionResult::Continue) => {}
-                Ok(ExecutionResult::Call(call)) => {
-                    let has_return_type = call.has_return_type;
-                    match self.dispatch_method(call).await {
-                        Ok(DispatchResult::FramePushed) => {}
-                        Ok(DispatchResult::Completed(value)) => {
-                            if let Err(error) = frame.complete_call(value, has_return_type).await {
-                                self.propagate_error(base_depth, error, false).await?;
+            let mut active = self.active_frame()?;
+            let result = loop {
+                match active.frame.execute_batch(self, &mut active.state).await {
+                    Ok(ExecutionResult::Continue) => {}
+                    Ok(ExecutionResult::Call(call)) => {
+                        let has_return_type = call.has_return_type;
+                        match self.dispatch_method(call, Some(&mut active.state)).await {
+                            Ok(DispatchResult::FramePushed) => break Ok(None),
+                            Ok(DispatchResult::Completed(value)) => {
+                                if let Err(error) = active.frame.complete_call(
+                                    &mut active.state,
+                                    value,
+                                    has_return_type,
+                                ) {
+                                    break Err((error, false));
+                                }
                             }
-                        }
-                        Err(error) => {
-                            self.propagate_error(base_depth, error, false).await?;
+                            Err(error) => break Err((error, false)),
                         }
                     }
+                    Ok(ExecutionResult::Return(value)) => break Ok(Some(value)),
+                    Ok(ExecutionResult::ContinueAtPosition(_)) => {
+                        return Err(InternalError(
+                            "Frame returned an unprocessed branch result".to_owned(),
+                        ));
+                    }
+                    Err(error) => break Err((error, true)),
                 }
-                Ok(ExecutionResult::Return(value)) => {
-                    let entry = self.stack.write().pop().ok_or_else(|| {
-                        InternalError("Interpreter stack unexpectedly empty".to_string())
-                    })?;
-                    let has_return_type = entry.has_return_type;
-                    Self::debug_result(
-                        entry.frame.class(),
-                        entry.frame.method(),
-                        &Ok(value.clone()),
-                    );
-                    drop(entry);
-
+            };
+            if let Ok(Some(value)) = &result {
+                Self::debug_result(
+                    active.frame.class(),
+                    active.frame.method(),
+                    &Ok(value.clone()),
+                );
+            }
+            if let Err((error, true)) = &result {
+                Self::debug_error(active.frame.class(), active.frame.method(), error);
+            }
+            drop(active);
+            match result {
+                Ok(None) => {}
+                Ok(Some(value)) => {
+                    let has_return_type = self.pop_frame()?;
                     if self.stack.read().entries.len() == base_depth {
                         return Ok(value);
                     }
-
-                    let caller = self.current_frame()?;
-                    if let Err(error) = caller.complete_call(value, has_return_type).await {
+                    let mut caller = self.active_frame()?;
+                    let result =
+                        caller
+                            .frame
+                            .complete_call(&mut caller.state, value, has_return_type);
+                    drop(caller);
+                    if let Err(error) = result {
                         self.propagate_error(base_depth, error, false).await?;
                     }
                 }
-                Ok(ExecutionResult::ContinueAtPosition(_)) => {
-                    return Err(InternalError(
-                        "Frame returned an unprocessed branch result".to_string(),
-                    ));
-                }
-                Err(error) => {
-                    self.propagate_error(base_depth, error, true).await?;
+                Err((error, skip_current)) => {
+                    self.propagate_error(base_depth, error, skip_current)
+                        .await?;
                 }
             }
         }
@@ -1255,28 +1380,22 @@ impl Thread {
         skip_current: bool,
     ) -> Result<()> {
         if skip_current {
-            let entry =
-                self.stack.write().pop().ok_or_else(|| {
-                    InternalError("Interpreter stack unexpectedly empty".to_string())
-                })?;
-            Self::debug_error(entry.frame.class(), entry.frame.method(), &error);
-            drop(entry);
+            self.pop_frame()?;
         }
-
         loop {
             if self.stack.read().entries.len() == base_depth {
                 return Err(error);
             }
-
-            let frame = self.current_frame()?;
-            match frame.handle_error(error).await {
+            let mut active = self.active_frame()?;
+            let result = active.frame.handle_error(&mut active.state, error).await;
+            if let Err(error) = &result {
+                Self::debug_error(active.frame.class(), active.frame.method(), error);
+            }
+            drop(active);
+            match result {
                 Ok(()) => return Ok(()),
                 Err(next_error) => {
-                    let entry = self.stack.write().pop().ok_or_else(|| {
-                        InternalError("Interpreter stack unexpectedly empty".to_string())
-                    })?;
-                    Self::debug_error(entry.frame.class(), entry.frame.method(), &next_error);
-                    drop(entry);
+                    self.pop_frame()?;
                     error = next_error;
                 }
             }
@@ -1799,21 +1918,18 @@ mod tests {
         let (_vm, thread) = interpreted_test_thread().await?;
         let class = recursive_test_class(&thread).await?;
         let method = class.try_get_method("recurse", "(I)I")?;
-        let frame = Frame::with_parameters(
-            &Arc::downgrade(&thread),
-            &class,
-            &method,
-            vec![Value::Int(10)],
-        )?;
+        let frame = Frame::new(&Arc::downgrade(&thread), &class, &method);
+        let mut state = FrameState::default();
+        state.reset(&class, &method, [Value::Int(10)])?;
 
         assert_eq!(
             ExecutionResult::Call(MethodCall {
                 class,
                 method,
-                parameters: vec![Value::Int(9)],
+                parameters: vec![Value::Int(9)].into(),
                 has_return_type: true,
             }),
-            frame.execute_batch(&thread).await?
+            frame.execute_batch(&thread, &mut state).await?
         );
         assert_eq!(5, frame.program_counter());
         Ok(())
@@ -1914,6 +2030,84 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_frame_pool_preserves_snapshots_and_bounds_retained_storage() -> Result<()> {
+        let (_vm, thread) = interpreted_test_thread().await?;
+        let class = recursive_test_class(&thread).await?;
+        let method = class.try_get_method("recurse", "(I)I")?;
+        let other_method = class.try_get_method("catchArithmetic", "()I")?;
+        let mut pool = JavaStack::new(8);
+        let frame = pool.take_frame(&thread.thread, &class, &method);
+        let pointer = Arc::as_ptr(&frame);
+        let mut state = FrameState::default();
+        state.reset(&class, &method, [Value::Int(99)])?;
+        state.stack.push_int(17)?;
+        let capacity = state.capacity();
+        pool.recycle(frame, Some(state));
+        assert_eq!(capacity, pool.pooled_slots);
+        let mut state = pool.take_state();
+        assert!(state.locals.is_empty());
+        assert!(state.stack.is_empty());
+        state.reset(&class, &method, [Value::Int(2)])?;
+        assert_eq!(2, state.locals.get_int(0)?);
+        assert_eq!(capacity, state.capacity());
+        let frame = pool.take_frame(&thread.thread, &class, &other_method);
+        assert_eq!(pointer, Arc::as_ptr(&frame));
+        assert_eq!(0, frame.program_counter());
+        let observer = frame.clone();
+        pool.recycle(frame, Some(state));
+        assert!(pool.free_frames.is_empty());
+        let frame = pool.take_frame(&thread.thread, &class, &method);
+        assert!(!Arc::ptr_eq(&observer, &frame));
+        assert!(Arc::ptr_eq(observer.method(), &other_method));
+        let weak = Arc::downgrade(&frame);
+        pool.recycle(frame, None);
+        assert!(pool.free_frames.is_empty());
+        assert!(weak.upgrade().is_none());
+        // A historical large method must not leave unbounded buffers in the pool.
+        let oversized = FrameState {
+            locals: crate::LocalVariables::with_max_size(2_048),
+            ..FrameState::default()
+        };
+        pool.recycle(observer, Some(oversized));
+        assert_eq!(capacity, pool.pooled_slots);
+        assert!(pool.pooled_slots <= pool.max_slots + STACK_OVERFLOW_RESERVE_SLOTS);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_cancelled_execution_restores_leased_state_and_reuses_stack() -> Result<()> {
+        let (_vm, thread) = interpreted_test_thread().await?;
+        let class = recursive_test_class(&thread).await?;
+        let method = class.try_get_method("recurse", "(I)I")?;
+        {
+            let parameters = [Value::Int(4_000)];
+            let mut execution = std::pin::pin!(thread.execute(&class, &method, &parameters));
+            let mut context = std::task::Context::from_waker(std::task::Waker::noop());
+            assert!(execution.as_mut().poll(&mut context).is_pending());
+            let stack = thread.stack.read();
+            assert!(!stack.entries.is_empty());
+            assert!(stack.entries.iter().any(|entry| entry.state.is_none()));
+        }
+        {
+            let stack = thread.stack.read();
+            assert!(stack.entries.is_empty());
+            assert_eq!(0, stack.used_slots);
+            assert!(!stack.free_states.is_empty());
+            assert!(
+                stack
+                    .free_states
+                    .iter()
+                    .all(|state| state.locals.is_empty() && state.stack.is_empty())
+            );
+        }
+        assert_eq!(
+            Some(Value::Int(10)),
+            thread.execute(&class, &method, &[Value::Int(10)]).await?
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_execution_boundary_releases_frame_monitor() -> Result<()> {
         let (_vm, thread, class) = crate::test::class().await?;
         let method = class.try_get_method("test", "()V")?;
@@ -1929,6 +2123,7 @@ mod tests {
             };
             thread.stack.write().push(
                 frame,
+                FrameState::default(),
                 false,
                 MonitorGuard::new(Some(monitor.clone()), thread.id()),
             )?;

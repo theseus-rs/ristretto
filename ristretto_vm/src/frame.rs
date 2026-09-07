@@ -32,10 +32,9 @@ use ristretto_classloader::{Class, Method, Value};
 use ristretto_types::JavaError::StackOverflowError;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock, Weak};
-use tokio::sync::Mutex;
 use tracing::{Level, debug, event_enabled};
 
-/// Maximum number of bytecodes executed while retaining the frame state lock.
+/// Maximum number of bytecodes executed in one interpreter batch.
 const INSTRUCTION_BATCH_SIZE: usize = 256;
 
 /// A resolved Java method invocation that the thread trampoline must dispatch.
@@ -43,7 +42,7 @@ const INSTRUCTION_BATCH_SIZE: usize = 256;
 pub(crate) struct MethodCall {
     pub(crate) class: Arc<Class>,
     pub(crate) method: Arc<Method>,
-    pub(crate) parameters: Vec<Value>,
+    pub(crate) parameters: CallParameters,
     pub(crate) has_return_type: bool,
 }
 
@@ -125,63 +124,137 @@ pub struct Frame {
     class: Arc<Class>,
     method: Arc<Method>,
     program_counter: AtomicUsize,
-    state: Mutex<Option<FrameState>>,
     method_refs: OnceLock<Arc<ClassReferences<MethodRefEntry>>>,
     field_refs: OnceLock<Arc<ClassReferences<FieldRefEntry>>>,
 }
 
 #[derive(Debug)]
-struct FrameState {
-    locals: LocalVariables,
-    stack: OperandStack,
+pub(crate) struct FrameState {
+    pub(crate) locals: LocalVariables,
+    pub(crate) stack: OperandStack,
 }
 
-impl Frame {
-    /// Create a metadata-only frame for the specified class and method.
-    ///
-    /// JIT execution uses this frame for stack walking without allocating interpreter locals or an
-    /// operand stack. Interpreted calls use [`Frame::with_parameters`] instead.
-    pub fn new(thread: &Weak<Thread>, class: &Arc<Class>, method: &Arc<Method>) -> Self {
-        Frame {
-            thread: thread.clone(),
-            class: class.clone(),
-            method: method.clone(),
-            program_counter: AtomicUsize::new(0),
-            state: Mutex::new(None),
-            method_refs: OnceLock::new(),
-            field_refs: OnceLock::new(),
+impl Default for FrameState {
+    fn default() -> Self {
+        Self {
+            locals: LocalVariables::with_max_size(0),
+            stack: OperandStack::with_max_size(0),
         }
     }
+}
 
-    pub(crate) fn with_parameters(
-        thread: &Weak<Thread>,
-        class: &Arc<Class>,
-        method: &Arc<Method>,
-        mut parameters: Vec<Value>,
-    ) -> Result<Self> {
-        Self::adjust_parameters(&mut parameters, method.max_locals());
-        if parameters.len() > method.max_locals() {
+impl FrameState {
+    pub(crate) fn reset(
+        &mut self,
+        class: &Class,
+        method: &Method,
+        parameters: impl IntoIterator<Item = Value>,
+    ) -> Result<()> {
+        self.stack.reset(method.max_stack());
+        let slots = self.locals.reset(parameters, method.max_locals());
+        if slots > method.max_locals() {
             return Err(InternalError(format!(
-                "Method parameters require {} local-variable slots, but {}.{}{} declares {}",
-                parameters.len(),
+                "Method parameters require {slots} local-variable slots, but {}.{}{} declares {}",
                 class.name(),
                 method.name(),
                 method.descriptor(),
                 method.max_locals()
             )));
         }
-        Ok(Frame {
+        Ok(())
+    }
+
+    pub(crate) fn clear(&mut self) {
+        self.locals.clear();
+        self.stack.clear();
+    }
+
+    pub(crate) fn capacity(&self) -> usize {
+        self.locals.capacity() + self.stack.capacity()
+    }
+}
+
+/// Cached calls leave arguments on the caller's stack until the dispatch boundary.
+#[derive(Debug, PartialEq)]
+pub(crate) enum CallParameters {
+    Owned(Vec<Value>),
+    Stack(usize),
+}
+
+impl From<Vec<Value>> for CallParameters {
+    fn from(values: Vec<Value>) -> Self {
+        Self::Owned(values)
+    }
+}
+
+impl CallParameters {
+    pub(crate) fn as_slice<'a>(&'a self, caller: Option<&'a FrameState>) -> Result<&'a [Value]> {
+        match self {
+            Self::Owned(values) => Ok(values),
+            Self::Stack(count) => Self::caller(caller)?.stack.last_values(*count),
+        }
+    }
+
+    fn caller(caller: Option<&FrameState>) -> Result<&FrameState> {
+        caller.ok_or_else(|| InternalError("Missing caller for stack arguments".to_owned()))
+    }
+
+    pub(crate) fn into_values(self, caller: Option<&mut FrameState>) -> Result<Vec<Value>> {
+        match self {
+            Self::Owned(values) => Ok(values),
+            Self::Stack(count) => {
+                let caller = caller.ok_or_else(|| {
+                    InternalError("Missing caller for stack arguments".to_owned())
+                })?;
+                Ok(caller.stack.drain_values(count)?.collect())
+            }
+        }
+    }
+
+    pub(crate) fn initialize(
+        self,
+        state: &mut FrameState,
+        class: &Class,
+        method: &Method,
+        caller: Option<&mut FrameState>,
+    ) -> Result<()> {
+        match self {
+            Self::Owned(values) => state.reset(class, method, values),
+            Self::Stack(count) => {
+                let caller = caller.ok_or_else(|| {
+                    InternalError("Missing caller for stack arguments".to_owned())
+                })?;
+                state.reset(class, method, caller.stack.drain_values(count)?)
+            }
+        }
+    }
+}
+
+impl Frame {
+    /// Create a metadata-only frame for the specified class and method.
+    ///
+    /// JIT execution uses this frame for stack walking without allocating interpreter locals or an
+    /// operand stack. The thread owns interpreter storage separately.
+    pub fn new(thread: &Weak<Thread>, class: &Arc<Class>, method: &Arc<Method>) -> Self {
+        Frame {
             thread: thread.clone(),
             class: class.clone(),
             method: method.clone(),
             program_counter: AtomicUsize::new(0),
             method_refs: OnceLock::new(),
             field_refs: OnceLock::new(),
-            state: Mutex::new(Some(FrameState {
-                locals: LocalVariables::new(parameters),
-                stack: OperandStack::with_max_size(method.max_stack()),
-            })),
-        })
+        }
+    }
+
+    /// Reuse metadata only while its Arc is unique, so stack-walker snapshots remain stable.
+    pub(crate) fn reset(&mut self, class: &Arc<Class>, method: &Arc<Method>) {
+        if !Arc::ptr_eq(&self.class, class) {
+            self.method_refs.take();
+            self.field_refs.take();
+            self.class = class.clone();
+        }
+        self.method = method.clone();
+        self.program_counter.store(0, Ordering::Relaxed);
     }
 
     /// Get the thread that owns this frame.
@@ -282,14 +355,14 @@ impl Frame {
 
     /// Execute a bounded batch of bytecodes, returning early for method calls or returns.
     ///
-    /// Keep the frame state locked across the batch to amortize locking and trampoline dispatch.
+    /// The interpreter owns mutable state across the batch, including across async handlers.
     /// The program counter remains current for exceptions and stack walking, and the thread's
     /// instruction budget preserves cooperative scheduling across batches and method calls.
-    pub(crate) async fn execute_batch(&self, thread: &Thread) -> Result<ExecutionResult> {
-        let mut state = self.state.lock().await;
-        let state = state.as_mut().ok_or_else(|| {
-            InternalError("Interpreter frame state is not initialized".to_string())
-        })?;
+    pub(crate) async fn execute_batch(
+        &self,
+        thread: &Thread,
+        state: &mut FrameState,
+    ) -> Result<ExecutionResult> {
         let code = self.method.code();
         let FrameState { locals, stack } = state;
 
@@ -340,15 +413,12 @@ impl Frame {
     }
 
     /// Resume this frame after a method call completes successfully.
-    pub(crate) async fn complete_call(
+    pub(crate) fn complete_call(
         &self,
+        state: &mut FrameState,
         value: Option<Value>,
         has_return_type: bool,
     ) -> Result<()> {
-        let mut state = self.state.lock().await;
-        let state = state.as_mut().ok_or_else(|| {
-            InternalError("Interpreter frame state is not initialized".to_string())
-        })?;
         if has_return_type && let Some(value) = value {
             state.stack.push(value)?;
         }
@@ -357,11 +427,11 @@ impl Frame {
     }
 
     /// Deliver an error raised by a callee to this frame.
-    pub(crate) async fn handle_error(&self, error: crate::Error) -> Result<()> {
-        let mut state = self.state.lock().await;
-        let state = state.as_mut().ok_or_else(|| {
-            InternalError("Interpreter frame state is not initialized".to_string())
-        })?;
+    pub(crate) async fn handle_error(
+        &self,
+        state: &mut FrameState,
+        error: crate::Error,
+    ) -> Result<()> {
         Self::handle_error_with_stack(self, &mut state.stack, error).await
     }
 
@@ -397,47 +467,6 @@ impl Frame {
             .checked_add(method.max_stack())
             .and_then(|slots| slots.checked_add(1))
             .ok_or_else(|| StackOverflowError("Java stack slot count overflow".to_string()).into())
-    }
-
-    /// Adjusts the parameters vector to conform to JVM local variable layout rules.
-    ///
-    /// # Overview
-    ///
-    /// According to the JVM specification, `long` and `double` values occupy two consecutive
-    /// local variable slots. This method inserts `Value::Unused` placeholders after
-    /// each `Long` and `Double` value in the parameters vector to ensure proper layout
-    /// in the local variables array. It also ensures the total size matches `max_size` by
-    /// padding with additional `Value::Unused` entries if necessary.
-    ///
-    /// # JVM Specification
-    ///
-    /// The JVM uses indices to 32-bit address for local variables. Local variables that are `long`
-    /// or `double` occupy two consecutive slots due to their 64-bit width. However, this JVM
-    /// implementation is not constrained by the 32-bit limit, so second slot is reserved and should
-    /// not be used for accessing variables.
-    ///
-    /// # Examples
-    ///
-    /// ```text
-    /// // Before adjustment: [Int(1), Long(2), Float(3.0)]
-    /// // After adjustment:  [Int(1), Long(2), Unused, Float(3.0)]
-    /// ```
-    ///
-    /// # References
-    ///
-    /// - [JVMS §2.6.1](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-2.html#jvms-2.6.1)
-    fn adjust_parameters(parameters: &mut Vec<Value>, max_size: usize) {
-        for index in (0..parameters.len()).rev() {
-            if matches!(
-                parameters.get(index),
-                Some(Value::Long(_) | Value::Double(_))
-            ) {
-                parameters.insert(index + 1, Value::Unused);
-            }
-        }
-        if parameters.len() < max_size {
-            parameters.resize(max_size, Value::Unused);
-        }
     }
 
     /// Debug the execution of an instruction in this frame
@@ -889,7 +918,7 @@ mod tests {
 
     fn batch_test_frame(
         code: impl FnOnce(u16) -> Vec<Instruction>,
-    ) -> Result<(Arc<Thread>, Frame)> {
+    ) -> Result<(Arc<Thread>, Frame, FrameState)> {
         let mut constant_pool = ConstantPool::default();
         let this_class = constant_pool.add_class("BatchTest")?;
         let name_index = constant_pool.add_utf8("test")?;
@@ -918,18 +947,54 @@ mod tests {
         )?;
         let thread = Thread::new(&Weak::new(), 1);
         let method = class.try_get_method("test", "(I)I")?;
-        let frame = Frame::with_parameters(
-            &Arc::downgrade(&thread),
+        let frame = Frame::new(&Arc::downgrade(&thread), &class, &method);
+        let mut state = FrameState::default();
+        state.reset(&class, &method, [Value::Int(1_000)])?;
+        Ok((thread, frame, state))
+    }
+
+    #[test]
+    fn test_stack_arguments_fill_reused_wide_locals() -> Result<()> {
+        let (_thread, frame, _) = batch_test_frame(|_| vec![Instruction::Return])?;
+        let mut definition = frame.class().class_file().clone();
+        let definition_method = definition.methods.first_mut().expect("test method");
+        definition_method.descriptor_index = definition.constant_pool.add_utf8("(JD)D")?;
+        for attribute in &mut definition_method.attributes {
+            if let Attribute::Code { max_locals, .. } = attribute {
+                *max_locals = 6;
+            }
+        }
+        let class = Class::from(None, definition)?;
+        let method = class.try_get_method("test", "(JD)D")?;
+        let mut caller = FrameState::default();
+        caller.stack.reset(3);
+        caller.stack.push_int(19)?;
+        caller.stack.push_long(42)?;
+        caller.stack.push_double(2.0)?;
+        let mut destination = FrameState::default();
+        destination.reset(&class, &method, vec![Value::Int(99); 6])?;
+        CallParameters::Stack(2).initialize(
+            &mut destination,
             &class,
             &method,
-            vec![Value::Int(1_000)],
+            Some(&mut caller),
         )?;
-        Ok((thread, frame))
+        assert_eq!(19, caller.stack.pop_int()?);
+        assert!(caller.stack.is_empty());
+        assert_eq!(42, destination.locals.get_long(0)?);
+        assert_eq!(Value::Unused, destination.locals.get(1)?);
+        assert_eq!(Value::Double(2.0), destination.locals.get(2)?);
+        for index in [3, 4, 5] {
+            assert_eq!(Value::Unused, destination.locals.get(index)?);
+        }
+        assert!(destination.locals.get(6).is_err());
+        assert!(destination.stack.is_empty());
+        Ok(())
     }
 
     #[tokio::test]
     async fn test_batch_preserves_locals_stack_and_branches() -> Result<()> {
-        let (thread, frame) = batch_test_frame(|_| {
+        let (thread, frame, mut state) = batch_test_frame(|_| {
             vec![
                 Instruction::Iconst_0,
                 Instruction::Iload_0,
@@ -943,11 +1008,10 @@ mod tests {
         })?;
 
         // The loop must stop at a batch boundary before finishing the method.
-        let mut result = frame.execute_batch(&thread).await?;
+        let mut result = frame.execute_batch(&thread, &mut state).await?;
         assert_eq!(ExecutionResult::Continue, result);
-        assert!(frame.state.try_lock().is_ok());
         for _ in 0..100 {
-            result = frame.execute_batch(&thread).await?;
+            result = frame.execute_batch(&thread, &mut state).await?;
             if result != ExecutionResult::Continue {
                 break;
             }
@@ -959,21 +1023,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_batch_stops_at_return() -> Result<()> {
-        let (thread, frame) =
+        let (thread, frame, mut state) =
             batch_test_frame(|_| vec![Instruction::Iconst_1, Instruction::Ireturn])?;
         assert_eq!(
             ExecutionResult::Return(Some(Value::Int(1))),
-            frame.execute_batch(&thread).await?
+            frame.execute_batch(&thread, &mut state).await?
         );
         assert_eq!(1, frame.program_counter());
-        assert!(frame.state.try_lock().is_ok());
         Ok(())
     }
 
     #[tokio::test]
     async fn test_batches_yield_with_sync_and_ready_async_handlers() -> Result<()> {
         for ready_async in [false, true] {
-            let (thread, frame) = batch_test_frame(|class_index| {
+            let (thread, frame, mut state) = batch_test_frame(|class_index| {
                 if ready_async {
                     // instanceof null uses an async handler that completes without awaiting.
                     vec![
@@ -994,7 +1057,7 @@ mod tests {
                     for _ in 0..64 {
                         assert_eq!(
                             ExecutionResult::Continue,
-                            frame.execute_batch(&thread).await?
+                            frame.execute_batch(&thread, &mut state).await?
                         );
                     }
                     Ok::<(), crate::Error>(())
@@ -1003,11 +1066,10 @@ mod tests {
                 assert!(execution.as_mut().poll(&mut context).is_pending());
             }
 
-            // Cancelling a yielded batch releases its state guard, and the frame can resume.
-            assert!(frame.state.try_lock().is_ok());
+            // Cancelling a yielded batch ends the mutable borrow, and the frame can resume.
             assert_eq!(
                 ExecutionResult::Continue,
-                frame.execute_batch(&thread).await?
+                frame.execute_batch(&thread, &mut state).await?
             );
         }
         Ok(())
@@ -1039,18 +1101,42 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_reused_metadata_resets_pc_and_class_references() -> Result<()> {
+        let (vm, _thread, mut frame) = crate::test::frame().await?;
+        let original_class = frame.class().clone();
+        let original_method = frame.method().clone();
+        let methods = vm.method_ref_cache().for_class(&original_class);
+        let fields = vm.field_ref_cache().for_class(&original_class);
+        assert!(std::ptr::eq(frame.method_refs()?, methods.as_ref()));
+        assert!(std::ptr::eq(frame.field_refs()?, fields.as_ref()));
+        frame.program_counter.store(17, Ordering::Relaxed);
+        frame.reset(&original_class, &original_method);
+        assert_eq!(0, frame.program_counter());
+        assert!(std::ptr::eq(frame.method_refs()?, methods.as_ref()));
+        let mut definition = original_class.class_file().clone();
+        definition.this_class = definition.constant_pool.add_class("OtherFrameClass")?;
+        let other = Class::from(None, definition)?;
+        let method = other.try_get_method("test", "()V")?;
+        frame.reset(&other, &method);
+        assert!(!std::ptr::eq(frame.method_refs()?, methods.as_ref()));
+        assert!(!std::ptr::eq(frame.field_refs()?, fields.as_ref()));
+        assert!(Arc::ptr_eq(frame.method(), &method));
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_method_call_equality() -> Result<()> {
         let (_vm, _thread, frame) = crate::test::frame().await?;
         let call = MethodCall {
             class: frame.class().clone(),
             method: frame.method().clone(),
-            parameters: vec![Value::Int(42)],
+            parameters: vec![Value::Int(42)].into(),
             has_return_type: true,
         };
         let same_call = MethodCall {
             class: frame.class().clone(),
             method: frame.method().clone(),
-            parameters: vec![Value::Int(42)],
+            parameters: vec![Value::Int(42)].into(),
             has_return_type: true,
         };
 
@@ -1060,37 +1146,28 @@ mod tests {
 
     #[tokio::test]
     async fn test_with_parameters_rejects_too_many_local_slots() -> Result<()> {
-        let (_vm, thread, frame) = crate::test::frame().await?;
-        let result = Frame::with_parameters(
-            &Arc::downgrade(&thread),
-            frame.class(),
-            frame.method(),
-            vec![Value::Int(1)],
-        );
+        let (_vm, _thread, frame) = crate::test::frame().await?;
+        let result = FrameState::default().reset(frame.class(), frame.method(), [Value::Int(1)]);
 
         assert!(matches!(result, Err(InternalError(message)) if message ==
             "Method parameters require 1 local-variable slots, but Test.test()V declares 0"));
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_metadata_frame_does_not_allocate_interpreter_state() -> Result<()> {
-        let (_vm, _thread, frame) = crate::test::frame().await?;
-        assert!(frame.state.lock().await.is_none());
-        Ok(())
-    }
-
     #[test]
     fn test_adjust_parameters() {
-        let mut parameters = vec![
+        let parameters = vec![
             Value::Int(1),
             Value::Long(2),
             Value::Float(3.0),
             Value::Double(4.0),
         ];
-        Frame::adjust_parameters(&mut parameters, 8);
+        let mut locals = LocalVariables::with_max_size(0);
+        assert_eq!(6, locals.reset(parameters, 8));
         assert_eq!(
-            parameters,
+            (0..8)
+                .map(|index| locals.get(index).unwrap())
+                .collect::<Vec<_>>(),
             vec![
                 Value::Int(1),
                 Value::Long(2),

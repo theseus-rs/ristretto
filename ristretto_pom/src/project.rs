@@ -870,6 +870,10 @@ mod tests {
 
     #[test]
     #[cfg(not(target_family = "wasm"))]
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "test checks the fixture length first"
+    )]
     fn test_parse_pom() -> Result<()> {
         let xml = r"
 <project>

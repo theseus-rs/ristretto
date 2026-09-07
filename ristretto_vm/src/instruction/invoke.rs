@@ -3,7 +3,7 @@
 use crate::Error::InternalError;
 use crate::JavaError::NullPointerException;
 use crate::Result;
-use crate::frame::{ExecutionResult, Frame, MethodCall};
+use crate::frame::{CallParameters, ExecutionResult, Frame, MethodCall};
 use crate::method_ref_cache::InvokeKind;
 use crate::operand_stack::OperandStack;
 use ristretto_classloader::{Class, Reference, Value};
@@ -73,7 +73,7 @@ pub(crate) fn try_invoke(
     Ok(Some(ExecutionResult::Call(MethodCall {
         class,
         method,
-        parameters: stack.drain_last(resolution.param_count + receiver_count),
+        parameters: CallParameters::Stack(resolution.param_count + receiver_count),
         has_return_type: resolution.has_return_type,
     })))
 }

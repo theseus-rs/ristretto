@@ -568,6 +568,7 @@ async fn mutable_unlinked_receivers_are_rechecked() -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(target_family = "wasm"))]
 #[tokio::test]
 async fn receiver_cache_supports_concurrent_publication() -> Result<()> {
     let (_vm, thread) = crate::test::thread().await?;

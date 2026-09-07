@@ -83,8 +83,9 @@ async fn vm_init(interpreted: bool) -> Result<()> {
         .class_path(class_path)
         .interpreted(interpreted)
         .build()?;
-    let _ = VM::new(configuration).await?;
-    Ok(())
+    let vm = VM::new(configuration).await?;
+    // Stop daemon tasks before the next iteration so they release the VM and its GC threads.
+    vm.wait_for_non_daemon_threads().await
 }
 
 async fn hello_world(interpreted: bool) -> Result<()> {
@@ -103,7 +104,7 @@ async fn hello_world(interpreted: bool) -> Result<()> {
     let vm = VM::new(configuration).await?;
     let parameters: Vec<&str> = Vec::new();
     let _result = vm.invoke_main(&parameters).await?;
-    Ok(())
+    vm.wait_for_non_daemon_threads().await
 }
 
 criterion_group!(
