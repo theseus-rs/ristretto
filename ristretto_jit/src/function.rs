@@ -222,10 +222,11 @@ mod tests {
 
     #[test]
     fn test_function() -> Result<()> {
-        let function = Function::new(return_42);
-        assert!(format!("{function:?}").contains("Function"));
-        let cloned_function = function.clone();
-        drop(function);
+        let cloned_function = {
+            let function = Function::new(return_42);
+            assert!(format!("{function:?}").contains("Function"));
+            function.clone()
+        };
         let value = cloned_function
             .execute(&[], std::ptr::null())?
             .expect("value");

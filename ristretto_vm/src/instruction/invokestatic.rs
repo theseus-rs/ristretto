@@ -29,7 +29,7 @@ pub(crate) async fn invokestatic(
     Ok(ExecutionResult::Call(MethodCall {
         class: resolution.declaring_class.clone(),
         method: resolution.method.clone(),
-        parameters,
+        parameters: parameters.into(),
         has_return_type: resolution.has_return_type,
     }))
 }

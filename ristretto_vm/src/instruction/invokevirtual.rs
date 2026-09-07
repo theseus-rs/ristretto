@@ -56,7 +56,7 @@ pub(crate) async fn invokevirtual(
             return Ok(ExecutionResult::Call(MethodCall {
                 class: target.class.clone(),
                 method: target.method.clone(),
-                parameters,
+                parameters: parameters.into(),
                 has_return_type: resolution.has_return_type,
             }));
         }
@@ -107,7 +107,7 @@ pub(crate) async fn invokevirtual(
     Ok(ExecutionResult::Call(MethodCall {
         class,
         method,
-        parameters,
+        parameters: parameters.into(),
         has_return_type: resolution.has_return_type,
     }))
 }

@@ -110,13 +110,20 @@ async fn dispatch(
             frame.process_async(stack, &instruction).await?
         }
     };
-    let ExecutionResult::Call(call) = result else {
+    let ExecutionResult::Call(mut call) = result else {
         panic!("expected method call");
     };
+    if sync {
+        let CallParameters::Stack(count) = call.parameters else {
+            panic!("cached call must defer argument transfer");
+        };
+        assert_eq!(stack.len(), count);
+        call.parameters = stack.drain_values(count)?.collect::<Vec<_>>().into();
+    }
     assert!(stack.is_empty());
     assert!(call.has_return_type);
     assert_eq!(
-        call.parameters[call.parameters.len() - 2..],
+        call.parameters.as_slice(None)?[call.parameters.as_slice(None)?.len() - 2..],
         [Value::Long(17), Value::Double(2.0)]
     );
     Ok(call)
@@ -150,7 +157,7 @@ async fn caller_identity_shared_records_and_invocation_kind() -> Result<()> {
             )
             .await?;
             assert!(Arc::ptr_eq(&call.class, expected));
-            assert_eq!(call.parameters.len(), 2);
+            assert_eq!(call.parameters.as_slice(None)?.len(), 2);
         }
         // Static resolution cannot validate the same CP index for non-static bytecodes.
         for kind in [
@@ -261,7 +268,7 @@ async fn interface_default_override_and_rejected_targets() -> Result<()> {
             )
             .await?;
             assert!(Arc::ptr_eq(&call.class, expected));
-            assert_eq!(call.parameters.len(), 3);
+            assert_eq!(call.parameters.as_slice(None)?.len(), 3);
         }
     }
     let parent_only = target("ParentOnly", None, false)?;

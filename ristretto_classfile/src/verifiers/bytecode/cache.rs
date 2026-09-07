@@ -564,6 +564,7 @@ mod tests {
         assert_eq!(stats.descriptor_hits, 0);
     }
 
+    #[cfg(panic = "unwind")]
     #[test]
     fn test_cache_stats_poisoned_lock_is_ignored() {
         let cache = VerificationCache::new(true);

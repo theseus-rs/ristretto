@@ -793,7 +793,7 @@ mod tests {
     }
 
     #[test]
-    fn inet_address_values_and_socket_conversions() -> Result<()> {
+    fn inet_address_values() {
         let v4 = InetAddressValue::V4(Ipv4Addr::new(192, 0, 2, 1));
         assert_eq!(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 1)), v4.ip());
         assert_eq!(vec![192, 0, 2, 1], v4.octets());
@@ -804,49 +804,53 @@ mod tests {
         assert_eq!(IpAddr::V6(v6_address), v6.ip());
         assert_eq!(v6_address.octets(), v6.octets().as_slice());
         assert_eq!(7, v6.scope_id());
+    }
 
-        #[cfg(not(target_family = "wasm"))]
-        {
-            assert_eq!(
-                SocketAddr::from((Ipv4Addr::new(192, 0, 2, 1), 1234)),
-                std_socket_address(v4, 1234, false)?
-            );
-            assert_eq!(
-                SocketAddr::from((Ipv4Addr::new(192, 0, 2, 1).to_ipv6_mapped(), 1234)),
-                std_socket_address(v4, 1234, true)?
-            );
-            assert_eq!(
-                SocketAddr::from((Ipv6Addr::UNSPECIFIED, 1234)),
-                std_socket_address(InetAddressValue::V4(Ipv4Addr::UNSPECIFIED), 1234, true)?
-            );
-            assert_eq!(
-                SocketAddr::V6(SocketAddrV6::new(v6_address, 1234, 0, 7)),
-                std_socket_address(v6, 1234, true)?
-            );
-            assert!(std_socket_address(v6, 1234, false).is_err());
-            assert!(std_socket_address(v4, -1, false).is_err());
-            assert!(std_socket_address(v4, 65_536, false).is_err());
+    #[cfg(not(target_family = "wasm"))]
+    #[test]
+    fn socket_conversions() -> Result<()> {
+        let v4 = InetAddressValue::V4(Ipv4Addr::new(192, 0, 2, 1));
+        let v6_address = Ipv6Addr::new(0xfe80, 0, 0, 0, 0, 0, 0, 1);
+        let v6 = InetAddressValue::V6(v6_address, 7);
+        assert_eq!(
+            SocketAddr::from((Ipv4Addr::new(192, 0, 2, 1), 1234)),
+            std_socket_address(v4, 1234, false)?
+        );
+        assert_eq!(
+            SocketAddr::from((Ipv4Addr::new(192, 0, 2, 1).to_ipv6_mapped(), 1234)),
+            std_socket_address(v4, 1234, true)?
+        );
+        assert_eq!(
+            SocketAddr::from((Ipv6Addr::UNSPECIFIED, 1234)),
+            std_socket_address(InetAddressValue::V4(Ipv4Addr::UNSPECIFIED), 1234, true)?
+        );
+        assert_eq!(
+            SocketAddr::V6(SocketAddrV6::new(v6_address, 1234, 0, 7)),
+            std_socket_address(v6, 1234, true)?
+        );
+        assert!(std_socket_address(v6, 1234, false).is_err());
+        assert!(std_socket_address(v4, -1, false).is_err());
+        assert!(std_socket_address(v4, 65_536, false).is_err());
 
-            let mapped = Ipv4Addr::LOCALHOST.to_ipv6_mapped();
-            assert_eq!(
-                SocketAddr::from((Ipv4Addr::LOCALHOST, 80)),
-                std_socket_address(InetAddressValue::V6(mapped, 0), 80, false)?
-            );
-            assert_eq!(
-                InetAddressValue::V4(Ipv4Addr::LOCALHOST),
-                inet_address_from_socket(SocketAddr::from((mapped, 80)))
-            );
-            assert_eq!(
-                v6,
-                inet_address_from_socket(SocketAddr::V6(SocketAddrV6::new(v6_address, 80, 0, 7)))
-            );
-            assert_eq!(
-                SocketAddr::from((Ipv4Addr::new(192, 0, 2, 1), 1234)),
-                socket_address(v4, 1234, false)?
-                    .as_socket()
-                    .expect("internet address")
-            );
-        }
+        let mapped = Ipv4Addr::LOCALHOST.to_ipv6_mapped();
+        assert_eq!(
+            SocketAddr::from((Ipv4Addr::LOCALHOST, 80)),
+            std_socket_address(InetAddressValue::V6(mapped, 0), 80, false)?
+        );
+        assert_eq!(
+            InetAddressValue::V4(Ipv4Addr::LOCALHOST),
+            inet_address_from_socket(SocketAddr::from((mapped, 80)))
+        );
+        assert_eq!(
+            v6,
+            inet_address_from_socket(SocketAddr::V6(SocketAddrV6::new(v6_address, 80, 0, 7)))
+        );
+        assert_eq!(
+            SocketAddr::from((Ipv4Addr::new(192, 0, 2, 1), 1234)),
+            socket_address(v4, 1234, false)?
+                .as_socket()
+                .expect("internet address")
+        );
         Ok(())
     }
 

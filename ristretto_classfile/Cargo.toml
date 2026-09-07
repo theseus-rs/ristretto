@@ -27,10 +27,12 @@ anyhow = { workspace = true }
 criterion = { workspace = true }
 flate2 = { workspace = true }
 indoc = { workspace = true }
-reqwest = { workspace = true, features = ["rustls"] }
 tar = { workspace = true }
 tokio = { workspace = true }
 zip = { workspace = true, features = ["deflate"] }
+
+[target.'cfg(not(target_family = "wasm"))'.dev-dependencies]
+reqwest = { workspace = true, features = ["rustls"] }
 
 [[bench]]
 harness = false

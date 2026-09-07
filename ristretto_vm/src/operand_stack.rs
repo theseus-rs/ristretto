@@ -12,6 +12,7 @@ use std::fmt::Display;
 #[derive(Debug)]
 pub struct OperandStack {
     stack: Vec<Value>,
+    max_size: usize,
 }
 
 impl OperandStack {
@@ -19,7 +20,43 @@ impl OperandStack {
     pub fn with_max_size(max_size: usize) -> Self {
         OperandStack {
             stack: Vec::with_capacity(max_size),
+            max_size,
         }
+    }
+
+    pub(crate) fn reset(&mut self, max_size: usize) {
+        self.stack.clear();
+        // Reusing a large allocation in small recursive frames must not multiply retained
+        // capacity independently of their declared Java stack requirements.
+        if self.stack.capacity() > max_size.saturating_mul(4).max(16) {
+            self.stack.shrink_to(max_size);
+        }
+        self.stack.reserve(max_size);
+        self.max_size = max_size;
+    }
+
+    pub(crate) fn capacity(&self) -> usize {
+        self.stack.capacity()
+    }
+
+    /// Borrow call arguments without allocating a temporary argument vector.
+    pub(crate) fn last_values(&self, count: usize) -> Result<&[Value]> {
+        let start = self
+            .stack
+            .len()
+            .checked_sub(count)
+            .ok_or(OperandStackUnderflow)?;
+        self.stack.get(start..).ok_or(OperandStackUnderflow)
+    }
+
+    /// Move call arguments directly into the callee's local slots.
+    pub(crate) fn drain_values(&mut self, count: usize) -> Result<std::vec::Drain<'_, Value>> {
+        let start = self
+            .stack
+            .len()
+            .checked_sub(count)
+            .ok_or(OperandStackUnderflow)?;
+        Ok(self.stack.drain(start..))
     }
 
     /// Drain the last `n` values from the operand stack.
@@ -47,7 +84,7 @@ impl OperandStack {
     /// Push a value onto the operand stack.
     #[inline]
     pub fn push(&mut self, value: Value) -> Result<()> {
-        if self.stack.len() >= self.stack.capacity() {
+        if self.stack.len() >= self.max_size {
             return Err(OperandStackOverflow);
         }
         self.stack.push(value);
@@ -204,6 +241,42 @@ mod tests {
     use crate::operand_stack::OperandStack;
     use ristretto_classloader::Reference;
     use ristretto_gc::GarbageCollector;
+
+    #[test]
+    fn reused_capacity_preserves_declared_limit_and_arguments() -> Result<()> {
+        let mut stack = OperandStack::with_max_size(16);
+        stack.push_long(42)?;
+        let allocation = stack.stack.as_ptr();
+        stack.reset(2);
+        assert!(stack.is_empty());
+        stack.push_int(7)?;
+        stack.push_double(2.0)?;
+        assert!(matches!(stack.push_int(8), Err(OperandStackOverflow)));
+        assert!(matches!(stack.last_values(3), Err(OperandStackUnderflow)));
+        assert!(matches!(stack.drain_values(3), Err(OperandStackUnderflow)));
+        assert_eq!(2, stack.len());
+        assert_eq!(stack.last_values(1)?, &[Value::Double(2.0)]);
+        assert_eq!(stack.drain_values(1)?.next(), Some(Value::Double(2.0)));
+        assert_eq!(stack.pop_int()?, 7);
+        assert_eq!(allocation, stack.stack.as_ptr());
+        stack.reset(0);
+        assert!(matches!(stack.push_int(1), Err(OperandStackOverflow)));
+        Ok(())
+    }
+
+    #[test]
+    fn reuse_does_not_carry_large_buffers_into_small_frames() -> Result<()> {
+        let mut stack = OperandStack::with_max_size(16_384);
+        stack.reset(1);
+        assert!(stack.capacity() <= 16);
+        stack.push_int(42)?;
+        let mut locals = crate::LocalVariables::with_max_size(16_384);
+        locals.reset([Value::Int(7)], 1);
+        assert!(locals.capacity() <= 16);
+        assert_eq!(7, locals.get_int(0)?);
+        assert!(locals.get(1).is_err());
+        Ok(())
+    }
 
     #[test]
     fn test_drain_last() -> Result<()> {
