@@ -1177,31 +1177,15 @@ impl Class {
     /// if there is an issue accessing the parent class due to a poisoned lock.
     pub fn all_object_fields(&self) -> Result<Vec<Arc<Field>>> {
         let mut fields = Vec::with_capacity(self.object_fields.len());
-
-        // Collect all classes in hierarchy from root to current class
-        let mut class_hierarchy = Vec::new();
+        // Collect fields in reverse layout order while walking towards the root. Reversing the
+        // result preserves declaration order within each class without a separate hierarchy Vec.
+        fields.extend(self.object_fields.iter().rev().cloned());
         let mut current_class = self.parent()?;
         while let Some(class) = current_class {
-            class_hierarchy.push(class.clone());
+            fields.extend(class.object_fields().iter().rev().cloned());
             current_class = class.parent()?;
         }
-
-        // Reverse to go from root (Object) to current class
-        class_hierarchy.reverse();
-
-        // Process fields from parent to child to maintain correct ordering
-        for class in class_hierarchy {
-            let object_fields = class.object_fields();
-            for field in object_fields {
-                fields.push(field.clone());
-            }
-        }
-
-        // Add the fields from the current class
-        for field in &self.object_fields {
-            fields.push(field.clone());
-        }
-
+        fields.reverse();
         Ok(fields)
     }
 
@@ -2055,6 +2039,68 @@ mod tests {
         for (i, field) in fields.iter().enumerate() {
             assert_eq!(expected_names[i], field.name());
         }
+        Ok(())
+    }
+
+    #[test]
+    fn test_all_object_fields_inheritance_order_and_offsets() -> Result<()> {
+        fn class_with_fields(name: &str, names: &[&str]) -> Result<Arc<Class>> {
+            let mut constant_pool = ConstantPool::new();
+            let this_class = constant_pool.add_class(name)?;
+            let descriptor_index = constant_pool.add_utf8("I")?;
+            let mut fields = Vec::new();
+            for name in names {
+                fields.push(ristretto_classfile::Field {
+                    access_flags: FieldAccessFlags::PUBLIC,
+                    name_index: constant_pool.add_utf8(name)?,
+                    descriptor_index,
+                    field_type: FieldType::Base(BaseType::Int),
+                    attributes: Vec::new(),
+                });
+            }
+            Class::from(
+                None,
+                ClassFile {
+                    constant_pool,
+                    this_class,
+                    fields,
+                    ..Default::default()
+                },
+            )
+        }
+
+        let root = class_with_fields("Root", &["rootFirst", "shared"])?;
+        let empty = class_with_fields("Empty", &[])?;
+        empty.set_parent(Some(root.clone()))?;
+        let middle = class_with_fields("Middle", &["middleFirst", "shared"])?;
+        middle.set_parent(Some(empty))?;
+        let leaf = class_with_fields("Leaf", &["leafFirst", "leafLast"])?;
+        leaf.set_parent(Some(middle.clone()))?;
+
+        let fields = leaf.all_object_fields()?;
+        let names: Vec<_> = fields.iter().map(|field| field.name()).collect();
+        assert_eq!(
+            names,
+            [
+                "rootFirst",
+                "shared",
+                "middleFirst",
+                "shared",
+                "leafFirst",
+                "leafLast"
+            ]
+        );
+        assert_eq!(leaf.object_field_offset("shared")?, 3);
+        assert_eq!(leaf.object_field_offset("leafLast")?, 5);
+
+        let mut object = crate::Object::new(leaf)?;
+        object.set_value(1usize, Value::Int(11))?;
+        object.set_value(3usize, Value::Int(33))?;
+        object.set_value("leafLast", Value::Int(55))?;
+        assert_eq!(object.value_in_class(&root, "shared")?, Value::Int(11));
+        assert_eq!(object.value_in_class(&middle, "shared")?, Value::Int(33));
+        assert_eq!(object.value("shared")?, Value::Int(33));
+        assert_eq!(object.value(5usize)?, Value::Int(55));
         Ok(())
     }
 
