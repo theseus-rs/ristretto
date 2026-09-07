@@ -5,6 +5,7 @@ use crate::RustValue;
 use crate::configuration::{DEFAULT_MAX_JAVA_STACK_SIZE, JAVA_STACK_SLOT_SIZE, VerifyMode};
 use crate::frame::{ExecutionResult, MethodCall};
 use crate::java_object::JavaObject;
+use crate::jit_runtime_helpers::ThreadRuntime;
 use crate::rust_value::process_values;
 use crate::{Frame, Result, VM, jit};
 
@@ -223,6 +224,7 @@ pub struct Thread {
     java_object: Arc<RwLock<Value>>,
     stack: ParkingRwLock<JavaStack>,
     instruction_yield_count: AtomicU32,
+    jit_runtime: ThreadRuntime,
     /// Tracks class names currently being loaded via a Java classloader on this
     /// thread, preventing infinite recursion when `loadClass()` internally
     /// triggers further class resolution.
@@ -250,6 +252,7 @@ impl Thread {
             java_object: Arc::new(RwLock::new(java_object)),
             stack: ParkingRwLock::new(JavaStack::new(max_stack_slots)),
             instruction_yield_count: AtomicU32::new(0),
+            jit_runtime: ThreadRuntime::default(),
             java_cl_loading: Mutex::new(HashSet::new()),
             park_state: ParkState::new(),
         })
@@ -258,6 +261,10 @@ impl Thread {
     /// Get the identifier of the thread.
     pub fn id(&self) -> u64 {
         self.id
+    }
+
+    pub(crate) fn jit_runtime(&self) -> &ThreadRuntime {
+        &self.jit_runtime
     }
 
     /// Record a bytecode and return whether the executor should yield.
