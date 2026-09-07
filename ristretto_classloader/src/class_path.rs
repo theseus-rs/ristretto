@@ -58,12 +58,28 @@ impl ClassPath {
     ///
     /// if the class file is not found or cannot be read.
     pub async fn read_class<S: AsRef<str>>(&self, name: S) -> Result<ClassFile<'static>> {
+        self.read_class_with_code_source(name, true).await
+    }
+
+    /// Read a class, optionally resolving its code source URL.
+    ///
+    /// Root class loaders omit code sources, so they can skip the filesystem queries used to
+    /// construct a URL that would otherwise be discarded.
+    pub(crate) async fn read_class_with_code_source<S: AsRef<str>>(
+        &self,
+        name: S,
+        include_code_source: bool,
+    ) -> Result<ClassFile<'static>> {
         let name = name.as_ref();
 
         for class_path_entry in self.iter() {
             if let Ok(mut class_file) = class_path_entry.read_class(name).await {
                 let source = class_path_entry.name().to_string_lossy();
                 info!("load class {name} source: {source}");
+                if !include_code_source {
+                    class_file.code_source_url = None;
+                    return Ok(class_file);
+                }
                 let code_source_url = match class_path_entry {
                     ClassPathEntry::Directory(_)
                     | ClassPathEntry::Image(_)
