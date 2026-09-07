@@ -11,8 +11,7 @@ use crate::operand_stack::OperandStack;
 /// 2. Initializes the class, and its superclasses, that declares the field [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5)
 /// 3. Gets the value of the static field
 ///
-/// The slow path initializes the referenced class and its superclasses. Cached accesses check
-/// initialization state before reading an inherited static field.
+/// Only the actual declaring class is initialized, including for an inherited reference.
 ///
 /// # References
 ///
@@ -39,8 +38,7 @@ pub(crate) async fn getstatic(
 /// 2. Initializes the class, and its superclasses, that declares the field [JVMS §5.5](https://docs.oracle.com/javase/specs/jvms/se25/html/jvms-5.html#jvms-5.5)
 /// 3. Sets the value of the static field
 ///
-/// The slow path initializes the referenced class and its superclasses. Cached accesses check
-/// initialization state before writing an inherited static field.
+/// Only the actual declaring class is initialized, including for an inherited reference.
 ///
 /// # References
 ///
@@ -107,8 +105,23 @@ mod test {
 
     #[tokio::test]
     async fn test_putstatic() -> Result<()> {
-        let (_vm, _thread, frame, _class_index, field_index) =
-            test_class_field("Simple", "ANSWER", "I").await?;
+        let (_vm, thread, original_frame) = crate::test::frame().await?;
+        let mut definition = original_frame.class().class_file().clone();
+        let pool = &mut definition.constant_pool;
+        let name_index = pool.add_utf8("answer")?;
+        let descriptor_index = pool.add_utf8("I")?;
+        let field_index = pool.add_field_ref(definition.this_class, "answer", "I")?;
+        definition.fields.push(ristretto_classfile::Field {
+            access_flags: ristretto_classfile::FieldAccessFlags::PUBLIC
+                | ristretto_classfile::FieldAccessFlags::STATIC,
+            name_index,
+            descriptor_index,
+            field_type: ristretto_classfile::FieldType::parse("I")?,
+            attributes: vec![],
+        });
+        let class = ristretto_classloader::Class::from(None, definition)?;
+        let method = class.try_get_method("test", "()V")?;
+        let frame = Frame::new(&Arc::downgrade(&thread), &class, &method);
         let stack = &mut OperandStack::with_max_size(1);
         stack.push_int(3)?;
         let result = putstatic(&frame, stack, field_index).await?;

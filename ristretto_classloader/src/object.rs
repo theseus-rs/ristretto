@@ -92,13 +92,39 @@ impl Object {
     ///
     /// if the fields of the class cannot be read.
     pub fn new(class: Arc<Class>) -> Result<Self> {
-        let object_fields = class.all_object_fields()?;
+        let object_fields = class.object_field_layout()?;
         let values = object_fields
             .iter()
             .map(|field| field.default_value())
             .collect::<Vec<_>>()
             .into_boxed_slice();
+        drop(object_fields);
         Ok(Self { class, values })
+    }
+
+    /// Read an already resolved instance slot without rebuilding or searching the layout.
+    ///
+    /// # Errors
+    /// Returns an error if the slot is outside this object.
+    pub fn value_at_slot(&self, slot: usize) -> Result<Value> {
+        self.values.get(slot).cloned().ok_or_else(|| FieldNotFound {
+            class_name: self.class.name().to_owned(),
+            field_name: slot.to_string(),
+        })
+    }
+
+    /// Write an already resolved instance slot. The caller must validate the field's type and
+    /// access restrictions; bounds are always checked. Existing object locking still applies.
+    ///
+    /// # Errors
+    /// Returns an error if the slot is outside this object.
+    pub fn set_value_at_slot(&mut self, slot: usize, value: Value) -> Result<()> {
+        let destination = self.values.get_mut(slot).ok_or_else(|| FieldNotFound {
+            class_name: self.class.name().to_owned(),
+            field_name: slot.to_string(),
+        })?;
+        *destination = value;
+        Ok(())
     }
 
     /// Get the class.
@@ -117,8 +143,8 @@ impl Object {
         accessing_class: &Class,
         key: K,
     ) -> Result<(usize, Arc<Field>, &Value)> {
-        // TODO: Optimize this function to avoid the field resolution for every access.
-        let object_fields = self.class.all_object_fields()?;
+        // Linked classes share their immutable field metadata.
+        let object_fields = self.class.object_field_layout()?;
 
         // Fast path for numeric keys (direct index access)
         if key.is_numeric_key() {
@@ -628,7 +654,7 @@ impl Debug for Object {
         write!(f, "Object({})", self.class.name())?;
         let object_fields = self
             .class
-            .all_object_fields()
+            .object_field_layout()
             .map_err(|_| std::fmt::Error)?;
         if !object_fields.is_empty() {
             writeln!(f)?;

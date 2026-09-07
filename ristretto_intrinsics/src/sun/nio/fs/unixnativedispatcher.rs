@@ -182,7 +182,7 @@ fn set_optional_field(
     name: &str,
     value: Value,
 ) -> Result<()> {
-    let fields = object.class().all_object_fields()?;
+    let fields = object.class().object_field_layout()?;
     if fields.iter().any(|field| field.name() == name) {
         object.set_value(name, value)?;
     }

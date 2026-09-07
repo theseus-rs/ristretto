@@ -240,8 +240,11 @@ async fn interface_default_override_and_rejected_targets() -> Result<()> {
     let (vm, thread) = crate::test::thread().await?;
     let interface = target("DefaultInterface", Some(MethodAccessFlags::PUBLIC), true)?;
     thread.register_class(interface.clone()).await?;
-    let child_interface = target("ChildInterface", None, true)?;
-    child_interface.set_interfaces(vec![interface.clone()])?;
+    let mut child_definition = target("ChildInterface", None, true)?.class_file().clone();
+    child_definition
+        .interfaces
+        .push(child_definition.constant_pool.add_class(interface.name())?);
+    let child_interface = Class::from(None, child_definition)?;
     thread.register_class(child_interface.clone()).await?;
     let (frame, index) = caller(&thread, &child_interface)?;
     let defaults = target("DefaultReceiver", None, false)?;

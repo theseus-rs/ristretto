@@ -8,9 +8,10 @@ use ristretto_classfile::{
     ClassAccessFlags, ClassFile, Constant, ConstantPool, FieldAccessFlags, JavaStr, JavaString,
     MethodAccessFlags,
 };
+use std::borrow::Cow;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
-use std::sync::{Arc, LazyLock, RwLock, Weak};
+use std::sync::{Arc, LazyLock, OnceLock, RwLock, Weak};
 use tokio::sync::Notify;
 
 /// A list of methods that are designated as polymorphic in the Java Virtual Machine.
@@ -299,6 +300,10 @@ pub struct Class {
     source_file: Option<String>,
     class_file: ClassFile<'static>,
     parent: RwLock<Option<Arc<Class>>>,
+    /// Published after linking; ancestor slots are a stable prefix of descendant layouts.
+    field_layout: OnceLock<Box<[Arc<Field>]>>,
+    /// Verification is independent of linking and initialization.
+    verification: OnceLock<std::result::Result<(), String>>,
     interfaces: RwLock<Vec<Arc<Class>>>,
     /// Static fields declared in this class.
     /// These are initialized during class initialization (`<clinit>`).
@@ -426,6 +431,8 @@ impl Class {
             source_file,
             class_file,
             parent: RwLock::new(None),
+            field_layout: OnceLock::new(),
+            verification: OnceLock::new(),
             interfaces: RwLock::new(Vec::new()),
             static_fields,
             static_values,
@@ -514,6 +521,8 @@ impl Class {
             source_file,
             class_file,
             parent: RwLock::new(None),
+            field_layout: OnceLock::new(),
+            verification: OnceLock::new(),
             interfaces: RwLock::new(Vec::new()),
             static_fields,
             static_values,
@@ -961,6 +970,19 @@ impl Class {
             .parent
             .write()
             .map_err(|error| PoisonedLock(error.to_string()))?;
+        if self.is_linked() {
+            let same = match (&*parent_guard, &parent) {
+                (Some(old), Some(new)) => Arc::ptr_eq(old, new),
+                (None, None) => true,
+                _ => false,
+            };
+            if !same {
+                return Err(InternalError(format!(
+                    "Cannot change superclass of linked {}",
+                    self.name()
+                )));
+            }
+        }
         *parent_guard = parent;
         Ok(())
     }
@@ -989,6 +1011,18 @@ impl Class {
             .interfaces
             .write()
             .map_err(|error| PoisonedLock(error.to_string()))?;
+        if self.is_linked()
+            && (interfaces_guard.len() != interfaces.len()
+                || !interfaces_guard
+                    .iter()
+                    .zip(&interfaces)
+                    .all(|(a, b)| Arc::ptr_eq(a, b)))
+        {
+            return Err(InternalError(format!(
+                "Cannot change interfaces of linked {}",
+                self.name()
+            )));
+        }
         *interfaces_guard = interfaces;
         Ok(())
     }
@@ -1001,7 +1035,88 @@ impl Class {
 
     /// Get a mutable constant pool
     pub fn constant_pool_mut(&mut self) -> &mut ConstantPool<'static> {
+        self.verification.take();
         &mut self.class_file.constant_pool
+    }
+
+    /// Verify this definition once, retaining both success and failure.
+    /// The VM must apply its verification policy before calling this method.
+    pub fn verify_cached(&self) -> &std::result::Result<(), String> {
+        self.verification
+            .get_or_init(|| self.class_file.verify().map_err(|error| error.to_string()))
+    }
+
+    /// Whether the superclass, interfaces and field layout have been finalized.
+    #[must_use]
+    pub fn is_linked(&self) -> bool {
+        self.field_layout.get().is_some()
+    }
+
+    /// Finalize the inherited instance layout after linking all ancestors and interfaces.
+    /// Subsequent attempts to change the hierarchy are rejected; identical links are allowed.
+    ///
+    /// # Errors
+    /// Returns an error if dependencies are not linked or a hierarchy lock is poisoned.
+    pub fn finalize_field_layout(&self) -> Result<()> {
+        // Use the same locks as the setters, so publishing and hierarchy mutation cannot race.
+        let parent = self
+            .parent
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        let interfaces = self
+            .interfaces
+            .read()
+            .map_err(|error| PoisonedLock(error.to_string()))?;
+        if self.is_linked() {
+            return Ok(());
+        }
+        if (self.class_file.super_class != 0 && parent.is_none())
+            || interfaces.len() != self.class_file.interfaces.len()
+            || interfaces.iter().any(|class| !class.is_linked())
+        {
+            return Err(InternalError(format!(
+                "Incomplete links for {}",
+                self.name()
+            )));
+        }
+        let mut fields = if let Some(parent) = parent.as_ref() {
+            parent
+                .field_layout
+                .get()
+                .ok_or_else(|| InternalError(format!("Unlinked parent of {}", self.name())))?
+                .to_vec()
+        } else {
+            Vec::new()
+        };
+        fields.extend(self.object_fields.iter().cloned());
+        let _ = self.field_layout.set(fields.into_boxed_slice());
+        Ok(())
+    }
+
+    /// Borrow the immutable layout of a linked class. Unlinked standalone classes retain the
+    /// historical behavior of rebuilding their layout, allowing callers to finish their links.
+    ///
+    /// # Errors
+    /// Returns an error if a hierarchy lock is poisoned.
+    pub fn object_field_layout(&self) -> Result<Cow<'_, [Arc<Field>]>> {
+        if let Some(fields) = self.field_layout.get() {
+            return Ok(Cow::Borrowed(fields));
+        }
+        Ok(Cow::Owned(self.build_object_fields()?))
+    }
+
+    /// Get storage for a static field declared in this class, by its local static-field index.
+    ///
+    /// # Errors
+    /// Returns an error for an invalid index.
+    pub fn static_storage(&self, index: usize) -> Result<Arc<RwLock<Value>>> {
+        self.static_values
+            .get(index)
+            .cloned()
+            .ok_or_else(|| FieldNotFound {
+                class_name: self.name().to_owned(),
+                field_name: index.to_string(),
+            })
     }
 
     /// Get the declared fields for the class. The fields are returned in the order they are defined
@@ -1176,6 +1291,10 @@ impl Class {
     ///
     /// if there is an issue accessing the parent class due to a poisoned lock.
     pub fn all_object_fields(&self) -> Result<Vec<Arc<Field>>> {
+        Ok(self.object_field_layout()?.into_owned())
+    }
+
+    fn build_object_fields(&self) -> Result<Vec<Arc<Field>>> {
         let mut fields = Vec::with_capacity(self.object_fields.len());
         // Collect fields in reverse layout order while walking towards the root. Reversing the
         // result preserves declaration order within each class without a separate hierarchy Vec.
@@ -1197,7 +1316,7 @@ impl Class {
     /// if the field is not found.
     pub fn object_field_offset<S: AsRef<str>>(&self, name: S) -> Result<usize> {
         let name = name.as_ref().to_string();
-        let fields = self.all_object_fields()?;
+        let fields = self.object_field_layout()?;
         for (offset, field) in fields.iter().enumerate().rev() {
             if field.name() == name {
                 return Ok(offset);
@@ -1463,6 +1582,9 @@ impl PartialEq for Class {
             && *self_object == *other_object
     }
 }
+
+#[cfg(test)]
+mod layout_tests;
 
 #[cfg(test)]
 mod tests {

@@ -104,3 +104,7 @@ ignored = [
 [[bench]]
 harness = false
 name = "vm"
+
+[[bench]]
+harness = false
+name = "compiler"

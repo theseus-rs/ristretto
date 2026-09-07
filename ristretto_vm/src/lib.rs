@@ -65,6 +65,7 @@ mod assignable;
 mod call_site_cache;
 mod compiler;
 mod configuration;
+mod field_ref_cache;
 mod frame;
 mod instruction;
 mod intrinsic_methods;

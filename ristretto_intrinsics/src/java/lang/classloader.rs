@@ -3,7 +3,7 @@ use crate::java::lang::class::{get_class, get_class_no_init};
 use ristretto_classfile::VerifyMode;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11, JavaStr};
-use ristretto_classloader::{Class, Reference, Value};
+use ristretto_classloader::{Class, ClassLoader, ClassLoaderType, Reference, Value};
 use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
 use ristretto_macros::async_method;
@@ -15,7 +15,7 @@ use ristretto_types::JavaObject;
 use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 use zerocopy::transmute_ref;
 
 /// Set the defining class loader and module on a class mirror created by defineClass.
@@ -50,6 +50,50 @@ fn set_defining_class_loader(class: &Value, class_loader: &Value) -> Result<()> 
     Ok(())
 }
 
+/// Recover Rust loader metadata when Java calls a native definition method. A built-in
+/// application loader can have a JDK-created mirror as well as the VM-created mirror.
+async fn defining_class_loader<T: Thread + 'static>(
+    thread: &Arc<T>,
+    java_loader: &Value,
+) -> Result<Option<Weak<ClassLoader>>> {
+    let vm = thread.vm()?;
+    let root = vm.class_loader().read().await.clone();
+    let builtin_type = if java_loader.is_null() {
+        Some(ClassLoaderType::Bootstrap)
+    } else {
+        let (holder, field) = if *vm.java_class_file_version() <= JAVA_8 {
+            ("java/lang/ClassLoader", "scl")
+        } else {
+            ("jdk/internal/loader/ClassLoaders", "APP_LOADER")
+        };
+        // Read existing metadata only: do not initialize a loader while defining a class.
+        let app_loader = root
+            .find_loaded(JavaStr::try_from_str(holder)?)
+            .await
+            .and_then(|class| class.static_value(field).ok());
+        matches!(
+            (java_loader, app_loader),
+            (Value::Object(Some(expected)), Some(Value::Object(Some(actual))))
+                if Gc::ptr_eq(expected, &actual)
+        )
+        .then_some(ClassLoaderType::System)
+    };
+    let mut current = Some(root);
+    while let Some(loader) = current {
+        if builtin_type.is_some() && loader.loader_type() == builtin_type {
+            return Ok(Some(Arc::downgrade(&loader)));
+        }
+        if let (Value::Object(Some(expected)), Some(Value::Object(Some(actual)))) =
+            (java_loader, loader.object().await)
+            && Gc::ptr_eq(expected, &actual)
+        {
+            return Ok(Some(Arc::downgrade(&loader)));
+        }
+        current = loader.parent().await;
+    }
+    Ok(None)
+}
+
 /// Create a `java.lang.Class` object from a byte array.
 /// This method is used by the `defineClass0`, `defineClass1`, and `defineClass2` native methods.
 /// The `defineClass0` method is used by Java 8 and earlier versions.
@@ -59,6 +103,7 @@ async fn class_object_from_bytes<T: Thread + 'static>(
     bytes: &[u8],
     offset: i32,
     length: i32,
+    defining_class_loader: Option<Weak<ClassLoader>>,
 ) -> Result<Value> {
     let bytes_length = i32::try_from(bytes.len())?;
     let end = offset
@@ -114,9 +159,9 @@ async fn class_object_from_bytes<T: Thread + 'static>(
 
     let class = if is_hidden_like {
         let suffix = vm.next_hidden_class_suffix()?;
-        Class::from_hidden(None, class_file, suffix)?
+        Class::from_hidden(defining_class_loader, class_file, suffix)?
     } else {
-        Class::from(None, class_file)?
+        Class::from(defining_class_loader, class_file)?
     };
 
     // Register the class with the VM so it can be found later.
@@ -144,8 +189,12 @@ pub async fn define_class_0_0<T: Thread + 'static>(
         let bytes: &[u8] = transmute_ref!(&*bytes);
         bytes.to_vec()
     };
-    let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
-    if let Some(expected_class_name) = parameters.pop_reference()? {
+    let expected_class_name = parameters.pop_reference()?;
+    let class_loader = parameters.pop()?;
+    let defining_loader = defining_class_loader(&thread, &class_loader).await?;
+    let class =
+        class_object_from_bytes(&thread, None, &bytes, offset, length, defining_loader).await?;
+    if let Some(expected_class_name) = expected_class_name {
         let expected_class_name = expected_class_name.read().as_string()?;
         let class = class.as_object_ref()?;
         let class_name = class.class().name();
@@ -153,6 +202,7 @@ pub async fn define_class_0_0<T: Thread + 'static>(
             return Err(NoClassDefFoundError(class_name.to_string()).into());
         }
     }
+    set_defining_class_loader(&class, &class_loader)?;
     Ok(Some(class))
 }
 
@@ -175,8 +225,19 @@ pub async fn define_class_1_0<T: Thread + 'static>(
         let bytes: &[u8] = transmute_ref!(&*bytes);
         bytes.to_vec()
     };
-    let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
-    if let Some(expected_class_name) = parameters.pop_reference()? {
+    let expected_class_name = parameters.pop_reference()?;
+    let class_loader = parameters.pop()?;
+    let defining_loader = defining_class_loader(&thread, &class_loader).await?;
+    let class = class_object_from_bytes(
+        &thread,
+        source_file,
+        &bytes,
+        offset,
+        length,
+        defining_loader,
+    )
+    .await?;
+    if let Some(expected_class_name) = expected_class_name {
         let expected_class_name = expected_class_name.read().as_string()?;
         let class_object = class.as_object_ref()?;
         let class_name = class_object.class().name();
@@ -184,6 +245,7 @@ pub async fn define_class_1_0<T: Thread + 'static>(
             return Err(NoClassDefFoundError(class_name.to_string()).into());
         }
     }
+    set_defining_class_loader(&class, &class_loader)?;
     Ok(Some(class))
 }
 
@@ -214,8 +276,19 @@ pub async fn define_class_2_0<T: Thread + 'static>(
     };
 
     let bytes: Vec<u8> = buffer.iter().copied().skip(buffer_offset).collect();
-    let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
-    if let Some(expected_class_name) = parameters.pop_reference()? {
+    let expected_class_name = parameters.pop_reference()?;
+    let class_loader = parameters.pop()?;
+    let defining_loader = defining_class_loader(&thread, &class_loader).await?;
+    let class = class_object_from_bytes(
+        &thread,
+        source_file,
+        &bytes,
+        offset,
+        length,
+        defining_loader,
+    )
+    .await?;
+    if let Some(expected_class_name) = expected_class_name {
         let expected_class_name = expected_class_name.read().as_string()?;
         let class_object = class.as_object_ref()?;
         let class_name = class_object.class().name();
@@ -223,6 +296,7 @@ pub async fn define_class_2_0<T: Thread + 'static>(
             return Err(NoClassDefFoundError(class_name.to_string()).into());
         }
     }
+    set_defining_class_loader(&class, &class_loader)?;
     Ok(Some(class))
 }
 
@@ -250,7 +324,11 @@ pub async fn define_class_0_1<T: Thread + 'static>(
     let _name = parameters.pop()?.as_string()?;
     let lookup = parameters.pop()?;
     let lookup_class = get_class(&thread, &lookup).await?;
-    let class = class_object_from_bytes(&thread, None, &bytes, offset, length).await?;
+    // Runtime package identity includes the defining loader in the Rust class metadata.
+    let defining_class_loader = lookup_class.class_loader()?.as_ref().map(Arc::downgrade);
+    let class =
+        class_object_from_bytes(&thread, None, &bytes, offset, length, defining_class_loader)
+            .await?;
     // JVMS 5.3.5 and MethodHandles.Lookup#defineHiddenClass require a generated
     // hidden class to live in the lookup class's runtime package and module. The
     // class bytes alone do not carry module membership, so inherit it explicitly.
@@ -289,7 +367,16 @@ pub async fn define_class_1_1<T: Thread + 'static>(
     };
     let _name = parameters.pop()?;
     let class_loader = parameters.pop()?;
-    let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
+    let defining_loader = defining_class_loader(&thread, &class_loader).await?;
+    let class = class_object_from_bytes(
+        &thread,
+        source_file,
+        &bytes,
+        offset,
+        length,
+        defining_loader,
+    )
+    .await?;
     set_defining_class_loader(&class, &class_loader)?;
     Ok(Some(class))
 }
@@ -321,8 +408,18 @@ pub async fn define_class_2_1<T: Thread + 'static>(
     };
 
     let bytes: Vec<u8> = buffer.iter().copied().skip(buffer_offset).collect();
-    let class = class_object_from_bytes(&thread, source_file, &bytes, offset, length).await?;
+    let _name = parameters.pop()?;
     let class_loader = parameters.pop()?;
+    let defining_loader = defining_class_loader(&thread, &class_loader).await?;
+    let class = class_object_from_bytes(
+        &thread,
+        source_file,
+        &bytes,
+        offset,
+        length,
+        defining_loader,
+    )
+    .await?;
     set_defining_class_loader(&class, &class_loader)?;
     Ok(Some(class))
 }
@@ -459,6 +556,67 @@ pub async fn retrieve_directives<T: Thread + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn test_native_definition_preserves_builtin_loader_identity() -> Result<()> {
+        let (vm, thread) = crate::test::java25_thread().await?;
+        let loaders = thread.class("jdk/internal/loader/ClassLoaders").await?;
+        let java_loader = loaders.static_value("APP_LOADER")?;
+        assert!(!java_loader.is_null());
+        let app_class = java_loader.as_object_ref()?.class().clone();
+        let expected = vm.class_loader().read().await.clone();
+        assert_eq!(expected.loader_type(), Some(ClassLoaderType::System));
+        let bytes = include_bytes!("../../../../classes/Minimum.class");
+        let byte_values = bytes
+            .iter()
+            .map(|value| i8::from_ne_bytes([*value]))
+            .collect();
+        let bytes_value =
+            Value::new_object(vm.garbage_collector(), Reference::ByteArray(byte_values));
+        let parameters = Parameters::new(vec![
+            java_loader.clone(),
+            Value::Object(None),
+            bytes_value,
+            Value::Int(0),
+            Value::Int(i32::try_from(bytes.len())?),
+            Value::Object(None),
+            Value::Object(None),
+        ]);
+        let mirror = define_class_1_1(thread.clone(), parameters)
+            .await?
+            .expect("defined class");
+        let class = get_class_no_init(&*thread, &mirror).await?;
+        assert!(Arc::ptr_eq(
+            &expected,
+            &class.class_loader()?.expect("defining loader")
+        ));
+        let actual = mirror.as_object_ref()?.value("classLoader")?;
+        assert!(matches!(
+            (&java_loader, &actual),
+            (Value::Object(Some(expected)), Value::Object(Some(actual)))
+                if Gc::ptr_eq(expected, actual)
+        ));
+
+        // Another instance of the same built-in loader class is a different loader.
+        let other_instance = Value::from_object(
+            vm.garbage_collector(),
+            ristretto_classloader::Object::new(app_class.clone())?,
+        );
+        assert!(
+            defining_class_loader(&thread, &other_instance)
+                .await?
+                .is_none()
+        );
+
+        // A same-named class from an unrelated loader must not acquire system privileges.
+        let unrelated = Class::from(None, app_class.class_file().clone())?;
+        let unrelated = Value::from_object(
+            vm.garbage_collector(),
+            ristretto_classloader::Object::new(unrelated)?,
+        );
+        assert!(defining_class_loader(&thread, &unrelated).await?.is_none());
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_find_builtin_lib() -> Result<()> {

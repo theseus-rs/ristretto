@@ -57,7 +57,7 @@ mod invokestatic;
 mod invokevirtual;
 mod ldc;
 mod long;
-mod method_resolver;
+pub(crate) mod method_resolver;
 mod module_access;
 mod monitor;
 mod nop;

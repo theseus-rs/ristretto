@@ -1,7 +1,7 @@
 use crate::Error::InternalError;
 use crate::RustValue;
 use crate::call_site_cache::CallSiteCache;
-use crate::instruction::FieldRefCache;
+use crate::field_ref_cache::FieldRefCache;
 use crate::intrinsic_methods::MethodRegistry;
 use crate::java_object::JavaObject;
 use crate::jit::Compiler;
@@ -494,16 +494,15 @@ impl VM {
         &self.member_handles
     }
 
-    /// Get the method reference cache for caching resolved method refs.
-    ///
-    /// JPMS access checks are performed at resolution time and cached,
-    /// so subsequent invocations are fast.
-    pub(crate) fn method_ref_cache(&self) -> &MethodRefCache {
-        &self.method_ref_cache
-    }
-
+    /// Get the per-class constant-pool tables for resolved fields.
     pub(crate) fn field_ref_cache(&self) -> &FieldRefCache {
         &self.field_ref_cache
+    }
+
+    /// Get the method reference cache for caching resolved method refs.
+    /// JPMS access checks are performed at resolution time and cached.
+    pub(crate) fn method_ref_cache(&self) -> &MethodRefCache {
+        &self.method_ref_cache
     }
 
     /// Get the monitor registry.

@@ -105,7 +105,16 @@ export async function createEngine(assets: Assets, emit: (event: Event) => void)
           'exitError' in error &&
           'code' in error
         ) {
-          send({ id: request.id, type: 'done', exitCode: Number(error.code) });
+          const exitCode = Number(error.code);
+          if (exitCode === 0) {
+            send({ id: request.id, type: 'done', exitCode });
+          } else {
+            send({
+              id: request.id,
+              type: 'error',
+              message: `Java exited unsuccessfully (code ${exitCode}).`,
+            });
+          }
         } else {
           send({
             id: request.id,

@@ -57,11 +57,27 @@ mod test {
     }
 
     async fn test_put_and_get_field() -> Result<()> {
-        let (_vm, _thread, frame, class_index, field_index) =
-            test_class_field("java.lang.Integer", "value", "I").await?;
+        let (vm, thread, original_frame) = crate::test::frame().await?;
+        let mut definition = original_frame.class().class_file().clone();
+        let pool = &mut definition.constant_pool;
+        let name_index = pool.add_utf8("value")?;
+        let descriptor_index = pool.add_utf8("I")?;
+        let field_index = pool.add_field_ref(definition.this_class, "value", "I")?;
+        definition.fields.push(ristretto_classfile::Field {
+            access_flags: ristretto_classfile::FieldAccessFlags::PUBLIC,
+            name_index,
+            descriptor_index,
+            field_type: ristretto_classfile::FieldType::parse("I")?,
+            attributes: vec![],
+        });
+        let class = ristretto_classloader::Class::from(None, definition)?;
+        let method = class.try_get_method("test", "()V")?;
+        let frame = Frame::new(&Arc::downgrade(&thread), &class, &method);
         let stack = &mut OperandStack::with_max_size(4);
-        let result = new(&frame, stack, class_index).await?;
-        assert_eq!(Continue, result);
+        stack.push(Value::from_object(
+            vm.garbage_collector(),
+            ristretto_classloader::Object::new(class)?,
+        ))?;
 
         let result = dup(stack)?;
         assert_eq!(Continue, result);

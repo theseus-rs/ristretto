@@ -360,6 +360,10 @@ async fn execute_jshell(
     unsafe_code,
     reason = "wit-bindgen generates the canonical component ABI exports"
 )]
+#[expect(
+    clippy::same_length_and_capacity,
+    reason = "wit-bindgen lifts canonical ABI strings with capacity equal to their length"
+)]
 mod component {
     wit_bindgen::generate!({ path: "wit", world: "playground" });
     struct Engine;

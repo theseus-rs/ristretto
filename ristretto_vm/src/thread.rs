@@ -546,6 +546,39 @@ impl Thread {
             }
         };
 
+        self.link_class(class).await
+    }
+
+    /// Load a symbolic reference through the referring class's defining loader.
+    #[async_method]
+    pub(crate) async fn load_referenced_class(
+        &self,
+        caller: &Arc<Class>,
+        name: &JavaStr,
+    ) -> Result<Arc<Class>> {
+        if caller.java_name() == name {
+            return self.link_class(caller.clone()).await;
+        }
+        if let Some(loader) = caller.class_loader()? {
+            let class = match loader.load(name).await {
+                Ok(class) => class,
+                Err(ristretto_classloader::Error::ClassNotFound(_)) => {
+                    // Java-defined loaders register definitions through the existing native
+                    // defineClass bridge. Preserve that fallback after the defining loader.
+                    self.load_class_via_java_classloader(&self.vm()?, name)
+                        .await?
+                }
+                Err(error) => return Err(error.into()),
+            };
+            return self.link_class(class).await;
+        }
+        self.load_and_link_class(name).await
+    }
+
+    #[async_method]
+    async fn link_class(&self, class: Arc<Class>) -> Result<Arc<Class>> {
+        let vm = self.vm()?;
+        let class_name = class.name();
         // Check class version compatibility
         if class.class_file().version > *vm.java_class_file_version() {
             return Err(UnsupportedClassFileVersion(
@@ -572,11 +605,15 @@ impl Thread {
             VerifyMode::None => false,
         };
 
-        if should_verify && let Err(error) = class.class_file().verify() {
+        if should_verify && let Err(error) = class.verify_cached() {
             return Err(VerifyError(format!(
                 "Verification failed for class {class_name}: {error}"
             ))
             .into());
+        }
+
+        if class.is_linked() {
+            return Ok(class);
         }
 
         // Link: resolve interfaces and recursively link them
@@ -593,7 +630,7 @@ impl Thread {
             for interface_index in interface_indices {
                 let interface_name = class.constant_pool().try_get_class(interface_index)?;
                 // Pass &JavaStr directly from constant pool; no String allocation
-                let interface_class = self.load_and_link_class(interface_name).await?;
+                let interface_class = self.load_referenced_class(&class, interface_name).await?;
                 interfaces.push(interface_class);
             }
             class.set_interfaces(interfaces)?;
@@ -606,16 +643,28 @@ impl Thread {
             if super_class_index == 0 {
                 // Default to java/lang/Object; zero-copy via try_from_str on static ASCII
                 let object_name = JavaStr::try_from_str("java/lang/Object")?;
-                let super_class = self.load_and_link_class(object_name).await?;
+                let super_class = self.load_referenced_class(&class, object_name).await?;
                 class.set_parent(Some(super_class))?;
             } else {
                 let super_class_name = class.constant_pool().try_get_class(super_class_index)?;
                 // Pass &JavaStr directly from constant pool; no String allocation
-                let super_class = self.load_and_link_class(super_class_name).await?;
+                let super_class = self.load_referenced_class(&class, super_class_name).await?;
                 class.set_parent(Some(super_class))?;
             }
         }
 
+        // Native definition paths can install links before the interpreter sees the class.
+        if let Some(parent) = class.parent()?
+            && !parent.is_linked()
+        {
+            self.link_class(parent).await?;
+        }
+        for interface in class.interfaces()? {
+            if !interface.is_linked() {
+                self.link_class(interface).await?;
+            }
+        }
+        class.finalize_field_layout()?;
         Ok(class)
     }
 
@@ -2029,7 +2078,7 @@ mod tests {
     #[tokio::test]
     async fn test_disabled_audio_returns_unsatisfied_link_error() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let mut constant_pool = ristretto_classfile::ConstantPool::default();
+        let mut constant_pool = ConstantPool::default();
         let this_class =
             constant_pool.add_class("com/sun/media/sound/DirectAudioDeviceProvider")?;
         let name_index = constant_pool.add_utf8("nGetNumDevices")?;
@@ -2042,7 +2091,7 @@ mod tests {
             descriptor_index,
             ..Default::default()
         };
-        let class_file = ristretto_classfile::ClassFile {
+        let class_file = ClassFile {
             constant_pool,
             this_class,
             methods: vec![method],
