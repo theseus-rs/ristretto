@@ -1,0 +1,5 @@
+package ristretto:playground;
+
+world playground {
+    export execute: func(request: string);
+}

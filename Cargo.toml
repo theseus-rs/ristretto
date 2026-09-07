@@ -16,7 +16,6 @@ default-members = [
 ]
 members = [
     "examples/*",
-    "playground/runner",
     "ristretto_classfile",
     "ristretto_classloader",
     "ristretto_gc",
@@ -31,6 +30,7 @@ members = [
     "ristretto_test_util",
     "ristretto_types",
     "ristretto_vm",
+    "web/runner",
 ]
 resolver = "3"
 

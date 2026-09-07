@@ -17,6 +17,8 @@ compiler implementation.
 
 Try the [Java playground](https://theseus-rs.github.io/ristretto/playground/) to compile and run
 Java entirely in your browser, without installing a JDK.
+[JShell](https://theseus-rs.github.io/ristretto/jshell/) evaluates Java snippets,
+expressions, and methods in a persistent interactive session.
 
 The Ristretto `java` runtime can be installed using the following methods:
 

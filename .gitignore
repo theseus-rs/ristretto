@@ -12,9 +12,9 @@
 /public/
 
 # Browser playground build artifacts
-/playground/node_modules/
-/playground/dist/
-/playground/generated/
-/playground/public/runtime/
-/playground/test-results*/
-/playground/playwright-report/
+/web/node_modules/
+/web/dist/
+/web/generated/
+/web/public/runtime/
+/web/test-results*/
+/web/playwright-report/

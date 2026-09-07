@@ -33,27 +33,31 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: playground/package-lock.json
+          cache-dependency-path: web/package-lock.json
       - uses: actions/cache@v4
         with:
           path: ~/.ristretto/linux-x64
-          key: playground-corretto-${{ hashFiles('playground/jdks.json') }}
+          key: playground-corretto-${{ hashFiles('web/jdks.json') }}
       - name: Install pinned Java runtimes
-        working-directory: playground
+        working-directory: web
         run: npm run install:jdks
-      - name: Build playground
-        working-directory: playground
+      - name: Build web applications
+        working-directory: web
         run: |
           npm ci
           npm run format:check
           npm run test:unit
           npm run build:runtime
           npm run build
+      - name: Check JShell runtimes
+        working-directory: web
+        timeout-minutes: 30
+        run: npm run test:shell
       - name: Build documentation
         run: |
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/oranda/releases/download/v0.6.1/oranda-installer.sh | sh
           oranda build
-          cp -R playground/dist public/playground
+          cp -R web/dist/. public/
           touch public/.nojekyll
       - uses: actions/upload-artifact@v4
         with:
@@ -77,16 +81,16 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: playground/package-lock.json
+          cache-dependency-path: web/package-lock.json
       - uses: actions/download-artifact@v4
         with:
           name: playground-site
           path: public
       - name: Test Java in browser
-        working-directory: playground
+        working-directory: web
         run: |
           npm ci
-          cp -R ../public/playground dist
+          cp -R ../public dist
           npx playwright install --with-deps ${{ matrix.browser }}
           npm test -- --project=${{ matrix.browser }}
       - name: Upload browser failure evidence
@@ -94,7 +98,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playground-browser-${{ matrix.browser }}
-          path: playground/test-results
+          path: web/test-results
           retention-days: 7
 
   deploy:

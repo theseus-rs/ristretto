@@ -1,0 +1,163 @@
+.shell-workbench {
+  overflow: hidden;
+}
+.session-label {
+  color: var(--subtle);
+  font-size: 11px;
+  margin-left: 6px;
+}
+.shell-console-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 22px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-soft);
+}
+.shell-console-header > div {
+  display: flex;
+  gap: 22px;
+}
+.shell-scroll {
+  height: max(340px, calc(100dvh - 350px));
+  max-height: 850px;
+  overflow: auto;
+  background: var(--editor-bg);
+  scroll-behavior: auto;
+}
+#shell-output {
+  margin: 0;
+  padding: 22px 24px 18px;
+  min-height: 100%;
+  font:
+    14px/1.8 'SFMono-Regular',
+    Consolas,
+    'Liberation Mono',
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+#shell-output .shell-command {
+  color: var(--accent);
+}
+#shell-output .stderr {
+  color: var(--error);
+}
+#shell-output .notice {
+  color: var(--muted);
+}
+.shell-prompt-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 20px 14px 24px;
+  background: var(--editor-bg);
+  border-top: 1px solid var(--border-soft);
+}
+#shell-prompt {
+  flex: 0 0 7ch;
+  color: var(--accent);
+  font:
+    14px/1.7 'SFMono-Regular',
+    Consolas,
+    'Liberation Mono',
+    monospace;
+  padding-top: 5px;
+  white-space: pre;
+}
+#shell-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 0;
+  max-height: 200px;
+  overflow: auto;
+}
+#shell-submit {
+  align-self: flex-end;
+  min-width: 70px;
+}
+#shell-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 22px;
+  background: var(--surface-2);
+  font-size: 11px;
+  color: var(--muted);
+}
+#shell-progress {
+  width: 130px;
+  accent-color: var(--accent);
+}
+#shell-completions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 22px;
+  max-height: 180px;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+#shell-completions button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 5px 9px;
+  font: 12px monospace;
+}
+#shell-completions button[aria-selected='true'],
+#shell-completions button:hover {
+  color: var(--accent);
+  background: var(--tint);
+  border-color: var(--accent);
+}
+.workspace-footer .shell-shortcuts {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--subtle);
+  font-size: 10px;
+}
+.shell-shortcuts kbd {
+  font: 10px monospace;
+}
+.shell-workbench .console-footer {
+  min-height: 38px;
+}
+#shell-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 700px) {
+  .session-label {
+    display: none;
+  }
+  .workspace-footer .shell-shortcuts {
+    display: none;
+  }
+  #shell-output {
+    padding: 16px 14px;
+    font-size: 12px;
+  }
+  .shell-prompt-row {
+    padding: 12px 14px;
+    gap: 7px;
+  }
+  #shell-prompt {
+    font-size: 12px;
+  }
+  #shell-submit {
+    min-width: 52px;
+    padding: 7px 9px;
+  }
+  .shell-scroll {
+    height: max(350px, calc(100dvh - 400px));
+  }
+  .shell-workbench .toolbar .actions {
+    flex-wrap: wrap;
+  }
+}
