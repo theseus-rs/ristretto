@@ -21,62 +21,85 @@ use crate::JavaError::{
     NegativeArraySizeException, NullPointerException,
 };
 use crate::instruction::convert_error_to_throwable;
+use crate::reference_cache::{ClassReferences, ReferenceCache};
 use crate::{Result, Thread, VM};
 use portable_atomic::AtomicI64;
 use ristretto_classfile::BaseType;
 use ristretto_classloader::{Class, Object, Reference, Value};
 use ristretto_gc::sync::{Mutex, RwLock};
-use ristretto_gc::{GarbageCollector, Gc};
+use ristretto_gc::{GarbageCollector, Gc, GcRootGuard};
 use std::future::Future;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, OnceLock};
 use tokio::runtime::Handle;
 
-/// Runtime context passed to JIT-compiled code as an opaque pointer.
-///
-/// Contains everything the runtime helper functions need to interact with the VM:
-/// the garbage collector for allocations, the VM/Thread for method resolution
-/// and invocation, the currently executing method's class for constant pool access,
-/// and a pending exception slot used by exception helpers.
-///
-/// This struct is stored on the stack of `jit::execute` and a pointer to it is passed
-/// as the 4th parameter to JIT-compiled functions. The pointer is then forwarded to
-/// runtime helpers which reconstruct the context via `GarbageCollector::from_raw_ptr`
-/// style accessors.
-///
-/// The pending exception slot stores a raw `Gc` pointer. To ensure the throwable is
-/// not collected by the concurrent GC between when it is stored (e.g., by `jit_athrow`
-/// or `store_pending_error`) and when it is consumed (`take_pending_exception`), the
-/// slot is paired with a GC root id that is registered on store and removed on take.
-/// All access to the pending exception MUST go through `set_pending_exception` /
-/// `take_pending_exception` so the rooting invariants are preserved.
-///
-/// The pending-exception fields use atomic types because the runtime context is shared
-/// across threads via a raw `*const u8` passed into JIT-compiled code; while today's
-/// helpers do not move the pointer between OS threads, the type system provides no
-/// barrier and a future helper containing an `await` boundary could resume on a
-/// different worker thread. Atomic access keeps the slot well-defined under any such
-/// future evolution at negligible cost on the (already rare) exception path.
-/// A field-resolution cache entry. Computed on first use of a given constant-pool field
-/// reference index, then reused for the lifetime of the `RuntimeContext` (i.e. for one
-/// JIT-compiled method invocation). Caching avoids repeated constant-pool parsing,
-/// async class lookups and string allocations on every helper call.
+/// A resolved field shared by invocations of methods in the same referring class.
+#[derive(Debug)]
 struct ResolvedField {
     field_class: Arc<Class>,
     field_name: Arc<str>,
     /// Owned descriptor copy so narrow-typed `putfield`/`putstatic` can box i32 inputs as
     /// the matching `Value` variant without re-resolving the constant pool.
     descriptor: Arc<str>,
-    /// Tracks whether this field's declaring class has been initialized at this call site.
-    /// `getstatic`/`putstatic` per JVMS §5.5 are class-initialization triggers; once init
-    /// has run successfully we don't need to re-enter the (lock-acquiring) `class()` path.
-    initialized: std::sync::atomic::AtomicBool,
 }
 
-/// Cached failure preserved verbatim so JVMS §5.4.3 ("subsequent attempts to resolve the
-/// symbolic reference must throw the same exception") is honored. `crate::Error` is not
-/// `Clone`, so we keep the formatted message and rebuild a faithful `InternalError`
-/// (carrying the original error's `Display` text) on subsequent helper calls.
+/// Only successful symbolic resolutions are shared. Initialization state is checked by
+/// each active use, including recursive initialization and use by another Java thread.
+#[derive(Debug, Default)]
+struct ResolvedReferences {
+    class: OnceLock<Arc<Class>>,
+    field: OnceLock<Arc<ResolvedField>>,
+}
+
+#[derive(Debug)]
+struct ExceptionClasses {
+    throwable: Arc<Class>,
+    sentinel: Arc<Class>,
+}
+
+/// VM-owned metadata without references back to the VM or its threads.
+#[derive(Debug)]
+pub(crate) struct SharedRuntime {
+    exceptions: OnceLock<Arc<ExceptionClasses>>,
+    references: ReferenceCache<ResolvedReferences>,
+}
+
+impl SharedRuntime {
+    pub(crate) fn new() -> Self {
+        Self {
+            exceptions: OnceLock::new(),
+            references: ReferenceCache::new(),
+        }
+    }
+
+    fn exception_classes(&self, thread: &Thread) -> Result<Arc<ExceptionClasses>> {
+        if let Some(classes) = self.exceptions.get() {
+            return Ok(classes.clone());
+        }
+        // Loading can re-enter compiled Java code. Do not hold a OnceLock initializer
+        // across Java execution, and do not publish partially initialized classes.
+        let classes = Arc::new(run_async(async {
+            Ok::<_, crate::Error>(ExceptionClasses {
+                throwable: thread.class("java/lang/Throwable").await?,
+                sentinel: thread.class("java/lang/VirtualMachineError").await?,
+            })
+        })?);
+        if classes.throwable.is_initialized()? && classes.sentinel.is_initialized()? {
+            return Ok(self.exceptions.get_or_init(|| classes).clone());
+        }
+        Ok(classes)
+    }
+}
+
+/// A sentinel is leased exclusively to one invocation and remains rooted while idle.
+/// Nested calls take distinct sentinels; escaped throwables are never returned here.
+#[derive(Debug, Default)]
+pub(crate) struct ThreadRuntime {
+    sentinels: Mutex<Vec<GcRootGuard<RwLock<Reference>>>>,
+}
+
+/// Existing invocation-local failure representation. This preserves the formatted
+/// message, not the original error variant; keep it out of the VM-wide success tables.
 #[derive(Clone)]
 struct CachedResolutionError {
     message: Arc<str>,
@@ -106,32 +129,23 @@ pub(crate) struct RuntimeContext {
     /// Strong owner for `gc`, allowing runtime helpers to create root guards without
     /// reconstructing ownership from the raw context pointer.
     gc_owner: Arc<GarbageCollector>,
-    /// Cloned Arcs that own their respective targets so a future refactor moving the JIT call
-    /// into another task / thread cannot dangle these pointers. Cost: 4 atomic increments per
-    /// JIT call (negligible).
+    /// Owning references keep helper targets alive throughout the compiled invocation.
     vm: Arc<VM>,
     thread: Arc<Thread>,
     class: Arc<Class>,
-    /// Cached `Arc<java/lang/Throwable>` resolved once at construction so the throw path does
-    /// not async-resolve it on every `athrow`.
-    throwable_class: Arc<Class>,
+    /// Exception metadata resolved once per VM.
+    exception_classes: Arc<ExceptionClasses>,
     /// Pre-allocated sentinel throwable used by [`store_pending_error`] when normal throwable
     /// construction fails;converts an unrecoverable VM-internal error into a Java-level
     /// throwable instead of killing the host process.
     sentinel_throwable: i64,
-    /// GC root id for `sentinel_throwable` (kept rooted for the lifetime of the context).
-    sentinel_throwable_root: AtomicUsize,
-    /// Per-call-site resolution cache for field references. Stores both successes and
-    /// failures (the `Err` arm) so JVMS §5.4.3 is honored: a failed resolution at a given
-    /// CP index produces the same error on every subsequent attempt during the same JIT
-    /// method invocation.
-    field_cache: RwLock<
-        ahash::AHashMap<u16, std::result::Result<Arc<ResolvedField>, CachedResolutionError>>,
-    >,
-    /// Per-call-site resolution cache for class references. See `field_cache` for the
-    /// JVMS §5.4.3 invariant.
-    class_cache:
-        RwLock<ahash::AHashMap<u16, std::result::Result<Arc<Class>, CachedResolutionError>>>,
+    sentinel: Option<GcRootGuard<RwLock<Reference>>>,
+    sentinel_used: AtomicBool,
+    /// Look up the VM-owned constant-pool table only if a helper needs resolution.
+    references: OnceLock<Arc<ClassReferences<ResolvedReferences>>>,
+    /// Failure maps are created only on error; successful lookups need no map lock.
+    field_errors: OnceLock<RwLock<ahash::AHashMap<u16, CachedResolutionError>>>,
+    class_errors: OnceLock<RwLock<ahash::AHashMap<u16, CachedResolutionError>>>,
     /// Pending exception Gc pointer encoded as i64 (0 == none).
     pending_exception: AtomicI64,
     /// GC root id for `pending_exception` (0 == not currently rooted).
@@ -155,39 +169,39 @@ unsafe impl Sync for RuntimeContext {}
 impl RuntimeContext {
     /// Creates a new `RuntimeContext` from the given VM components.
     ///
-    /// Resolves `java/lang/Throwable` and pre-allocates a sentinel `VirtualMachineError`
-    /// throwable up-front so the throw path needs no async work and never aborts the host
-    /// process when normal throwable construction fails.
+    /// Reuses VM exception metadata and leases a rooted emergency throwable from the
+    /// thread. After warmup, construction requires no Java execution or GC allocation.
     pub fn new(
         gc: &Arc<GarbageCollector>,
         vm: &Arc<VM>,
         thread: &Arc<Thread>,
         class: &Arc<Class>,
     ) -> Result<Self> {
-        let throwable_class = run_async(async { thread.class("java/lang/Throwable").await })?;
-        // VirtualMachineError is the JVMS-mandated parent for unrecoverable VM-internal
-        // failures. We resolve and instantiate it once so a later failure inside
-        // `convert_error_to_throwable` does not cascade into a host abort.
-        let sentinel_class =
-            run_async(async { thread.class("java/lang/VirtualMachineError").await })?;
-        let sentinel_object = Object::new(sentinel_class)?;
-        // The sentinel can escape into interpreter or native Rust values after this
-        // JIT context returns. Keep its allocation under the same VM ownership as Value.
-        let sentinel_gc =
-            Gc::new(gc, RwLock::new(Reference::Object(sentinel_object))).into_retained();
-        let sentinel_ptr = sentinel_gc.as_ptr_i64();
-        let sentinel_root = gc.add_root(&sentinel_gc);
+        let exception_classes = vm.jit_runtime().exception_classes(thread)?;
+        let pooled = thread.jit_runtime().sentinels.lock().pop();
+        let sentinel = match pooled {
+            Some(sentinel) => sentinel,
+            None => Gc::new(
+                gc,
+                RwLock::new(Reference::Object(Object::new(
+                    exception_classes.sentinel.clone(),
+                )?)),
+            ),
+        };
+        let sentinel_throwable = sentinel.as_ptr_i64();
         Ok(Self {
             gc: std::ptr::from_ref::<GarbageCollector>(gc).cast::<u8>(),
             gc_owner: Arc::clone(gc),
             vm: Arc::clone(vm),
             thread: Arc::clone(thread),
             class: Arc::clone(class),
-            throwable_class,
-            sentinel_throwable: sentinel_ptr,
-            sentinel_throwable_root: AtomicUsize::new(sentinel_root),
-            field_cache: RwLock::new(ahash::AHashMap::new()),
-            class_cache: RwLock::new(ahash::AHashMap::new()),
+            exception_classes,
+            sentinel_throwable,
+            sentinel: Some(sentinel),
+            sentinel_used: AtomicBool::new(false),
+            references: OnceLock::new(),
+            field_errors: OnceLock::new(),
+            class_errors: OnceLock::new(),
             pending_exception: AtomicI64::new(0),
             pending_exception_root: AtomicUsize::new(0),
             transient_roots: Mutex::new(Vec::new()),
@@ -204,6 +218,13 @@ impl RuntimeContext {
         &self.gc_owner
     }
 
+    fn references(&self, index: u16) -> Result<&ResolvedReferences> {
+        self.references
+            .get_or_init(|| self.vm.jit_runtime().references.for_class(&self.class))
+            .get(index)
+            .ok_or_else(|| ristretto_classfile::Error::InvalidConstantPoolIndex(index).into())
+    }
+
     /// Returns the current pending exception Gc pointer (0 if none).
     pub fn pending_exception(&self) -> i64 {
         self.pending_exception.load(Ordering::Acquire)
@@ -216,6 +237,9 @@ impl RuntimeContext {
     ///
     /// `gc_ptr` of 0 clears the pending exception (and unroots the prior one).
     fn set_pending_exception(&self, gc_ptr: i64) {
+        if gc_ptr == self.sentinel_throwable {
+            self.sentinel_used.store(true, Ordering::Release);
+        }
         // Install the new GC root *before* publishing the pointer so the slot never
         // refers to an unrooted allocation that a concurrent GC pass could reclaim.
         let new_root_id = if gc_ptr != 0 {
@@ -301,9 +325,14 @@ impl Drop for RuntimeContext {
         if root_id != 0 {
             gc_from_context(self.as_ptr()).remove_root_by_id(root_id);
         }
-        let sentinel_root = self.sentinel_throwable_root.load(Ordering::Acquire);
-        if sentinel_root != 0 {
-            gc_from_context(self.as_ptr()).remove_root_by_id(sentinel_root);
+        if let Some(sentinel) = self.sentinel.take() {
+            if self.sentinel_used.load(Ordering::Acquire) {
+                // Java/Rust Values can outlive this context. Preserve the previous
+                // VM-lifetime ownership of an emergency throwable once it escapes.
+                let _ = sentinel.into_retained();
+            } else {
+                self.thread.jit_runtime().sentinels.lock().push(sentinel);
+            }
         }
     }
 }
@@ -1379,36 +1408,15 @@ fn set_top_frame_pc(ctx: &RuntimeContext, bci: i32) {
 
 /// Resolve a class reference by constant pool index using the executing method's class.
 ///
-/// Used by call sites that JVMS §5.5 lists as initiation triggers for class initialization
-/// (`new`, `anewarray`, `multianewarray`, `getstatic`, `putstatic`).
-///
-/// Per JVMS §5.4.3, both successful resolutions and failures are cached on the
-/// `RuntimeContext`: subsequent attempts at the same CP index return the cached outcome
-/// (same `Arc<Class>` on success, or an `InternalError` carrying the original failure's
-/// formatted message on failure).
+/// Active uses must check initialization even when another invocation already resolved
+/// the reference. Resolution alone, or recursive initialization by another context, does
+/// not imply that initialization has completed.
 fn resolve_class_ref(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<Class>> {
-    if let Some(entry) = ctx.class_cache.read().get(&cp_index).cloned() {
-        return entry.map_err(|cached| cached.to_error());
+    let class = resolve_class_ref_no_init(ctx, cp_index)?;
+    if !class.is_initialized()? {
+        run_async(async { ctx.thread.initialize_class(&class).await })?;
     }
-    let class = class_from_ctx(ctx);
-    let constant_pool = class.constant_pool();
-    let class_name = constant_pool.try_get_class(cp_index)?;
-    let thread = thread_from_ctx(ctx);
-    match run_async(async { thread.class_java_str(class_name).await }) {
-        Ok(resolved) => {
-            ctx.class_cache
-                .write()
-                .insert(cp_index, Ok(Arc::clone(&resolved)));
-            Ok(resolved)
-        }
-        Err(error) => {
-            let cached = CachedResolutionError::from_error(&error);
-            ctx.class_cache
-                .write()
-                .insert(cp_index, Err(cached.clone()));
-            Err(error)
-        }
-    }
+    Ok(class)
 }
 
 /// Resolve a class reference WITHOUT triggering `<clinit>`. JVMS §5.5 lists only
@@ -1416,27 +1424,30 @@ fn resolve_class_ref(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<Class>> 
 /// `putfield`, `checkcast` and `instanceof` should resolve and link the class but must NOT
 /// initialize it.
 ///
-/// Failures are cached per JVMS §5.4.3 (see `resolve_class_ref`).
+/// Successful references are shared by class identity; failures retain their existing
+/// invocation-local lifetime.
 fn resolve_class_ref_no_init(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<Class>> {
-    if let Some(entry) = ctx.class_cache.read().get(&cp_index).cloned() {
-        return entry.map_err(|cached| cached.to_error());
+    if let Some(errors) = ctx.class_errors.get()
+        && let Some(error) = errors.read().get(&cp_index)
+    {
+        return Err(error.to_error());
+    }
+    let entry = &ctx.references(cp_index)?.class;
+    if let Some(class) = entry.get() {
+        return Ok(class.clone());
     }
     let class = class_from_ctx(ctx);
     let constant_pool = class.constant_pool();
     let class_name = constant_pool.try_get_class(cp_index)?;
     let thread = thread_from_ctx(ctx);
     match run_async(async { thread.load_and_link_class(class_name).await }) {
-        Ok(resolved) => {
-            ctx.class_cache
-                .write()
-                .insert(cp_index, Ok(Arc::clone(&resolved)));
-            Ok(resolved)
-        }
+        Ok(resolved) => Ok(entry.get_or_init(|| resolved).clone()),
         Err(error) => {
             let cached = CachedResolutionError::from_error(&error);
-            ctx.class_cache
+            ctx.class_errors
+                .get_or_init(RwLock::default)
                 .write()
-                .insert(cp_index, Err(cached.clone()));
+                .insert(cp_index, cached);
             Err(error)
         }
     }
@@ -1451,10 +1462,16 @@ fn resolve_class_ref_no_init(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<
 /// trigger initialization through their own `getstatic`/`putstatic` semantics handled by
 /// the static-field accessors on `Class`.
 ///
-/// Failures are cached per JVMS §5.4.3 (see `resolve_class_ref`).
+/// Successful references are shared; failures remain local to the invocation.
 fn resolve_field_ref(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<ResolvedField>> {
-    if let Some(entry) = ctx.field_cache.read().get(&cp_index).cloned() {
-        return entry.map_err(|cached| cached.to_error());
+    if let Some(errors) = ctx.field_errors.get()
+        && let Some(error) = errors.read().get(&cp_index)
+    {
+        return Err(error.to_error());
+    }
+    let entry = &ctx.references(cp_index)?.field;
+    if let Some(field) = entry.get() {
+        return Ok(field.clone());
     }
     let class = class_from_ctx(ctx);
     let constant_pool = class.constant_pool();
@@ -1472,21 +1489,16 @@ fn resolve_field_ref(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<Resolved
             field_class,
             field_name,
             descriptor,
-            initialized: std::sync::atomic::AtomicBool::new(false),
         }))
     })();
     match result {
-        Ok(resolved) => {
-            ctx.field_cache
-                .write()
-                .insert(cp_index, Ok(Arc::clone(&resolved)));
-            Ok(resolved)
-        }
+        Ok(resolved) => Ok(entry.get_or_init(|| resolved).clone()),
         Err(error) => {
             let cached = CachedResolutionError::from_error(&error);
-            ctx.field_cache
+            ctx.field_errors
+                .get_or_init(RwLock::default)
                 .write()
-                .insert(cp_index, Err(cached.clone()));
+                .insert(cp_index, cached);
             Err(error)
         }
     }
@@ -1495,16 +1507,12 @@ fn resolve_field_ref(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<Resolved
 /// Resolve a `field_ref` for static-field call sites, ensuring the declaring class is
 /// initialized per JVMS §5.5 (`getstatic`/`putstatic` are initiation triggers).
 ///
-/// The initialization side-effect runs at most once per (call-site, declaring-class) pair
-/// per JIT invocation: the result-side `initialized` flag on `ResolvedField` short-circuits
-/// the (lock-taking) `Thread::class` re-entry on subsequent calls at the same CP index.
+/// Consult the class's initialization state, rather than publishing a shared success
+/// flag when a recursive call returns before `<clinit>` has completed.
 fn resolve_field_ref_static(ctx: &RuntimeContext, cp_index: u16) -> Result<Arc<ResolvedField>> {
     let resolved = resolve_field_ref(ctx, cp_index)?;
-    if !resolved.initialized.load(Ordering::Acquire) {
-        let thread = thread_from_ctx(ctx);
-        let class_name = resolved.field_class.name().to_string();
-        run_async(async { thread.class(&class_name).await })?;
-        resolved.initialized.store(true, Ordering::Release);
+    if !resolved.field_class.is_initialized()? {
+        run_async(async { ctx.thread.initialize_class(&resolved.field_class).await })?;
     }
     Ok(resolved)
 }
@@ -2524,7 +2532,7 @@ extern "C" fn jit_checkcast(
 }
 
 fn jit_checkcast_impl(ctx: &RuntimeContext, object_ptr: i64, cp_class_index: u16) -> Result<bool> {
-    let target_class = resolve_class_ref(ctx, cp_class_index)?;
+    let target_class = resolve_class_ref_no_init(ctx, cp_class_index)?;
     let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(object_ptr)?;
     let thread = thread_from_ctx(ctx);
     is_instance_of(thread, &gc_ref, &target_class)
@@ -2608,7 +2616,7 @@ extern "C" fn jit_athrow(context: *const u8, bci: i32, exception_ptr: i64) {
 fn is_athrow_operand_throwable(ctx: &RuntimeContext, exception_ptr: i64) -> Result<bool> {
     let thread = thread_from_ctx(ctx);
     let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(exception_ptr)?;
-    is_instance_of(thread, &gc_ref, &ctx.throwable_class)
+    is_instance_of(thread, &gc_ref, &ctx.exception_classes.throwable)
 }
 
 extern "C" fn jit_pending_exception(context: *const u8) -> i64 {
@@ -2671,11 +2679,14 @@ fn jit_exception_matches_impl(
     exception_ptr: i64,
     cp_class_index: u16,
 ) -> Result<bool> {
-    let target_class = resolve_class_ref(ctx, cp_class_index)?;
+    let target_class = resolve_class_ref_no_init(ctx, cp_class_index)?;
     let gc_ref: Gc<RwLock<Reference>> = Gc::from_raw_i64(exception_ptr)?;
     let thread = thread_from_ctx(ctx);
     is_instance_of(thread, &gc_ref, &target_class)
 }
+
+#[cfg(all(test, not(target_family = "wasm")))]
+mod context_tests;
 
 #[cfg(all(test, not(target_family = "wasm")))]
 mod tests {
@@ -2997,7 +3008,7 @@ mod tests {
         let ctx = RuntimeContext::new(vm.garbage_collector(), &vm, &thread, &class)?;
         let direct = thread.class("java/lang/Throwable").await?;
         // Cached arc must point to the same class instance.
-        assert!(Arc::ptr_eq(&ctx.throwable_class, &direct));
+        assert!(Arc::ptr_eq(&ctx.exception_classes.throwable, &direct));
         Ok(())
     }
 
@@ -3079,15 +3090,15 @@ mod tests {
         Ok(())
     }
 
-    /// H3: Field/class resolution caches exist on `RuntimeContext` so repeated helper
-    /// invocations against the same constant-pool index reuse the prior resolution rather
-    /// than re-acquiring the class table lock.
+    /// References are looked up lazily, so methods without symbolic references do not
+    /// allocate a constant-pool table.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn regression_h3_resolution_caches_present_and_initially_empty() -> Result<()> {
         let (vm, thread, class) = test::class().await?;
         let ctx = RuntimeContext::new(vm.garbage_collector(), &vm, &thread, &class)?;
-        assert_eq!(ctx.field_cache.read().len(), 0);
-        assert_eq!(ctx.class_cache.read().len(), 0);
+        assert!(ctx.references.get().is_none());
+        assert!(ctx.field_errors.get().is_none());
+        assert!(ctx.class_errors.get().is_none());
         Ok(())
     }
 

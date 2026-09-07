@@ -5,6 +5,7 @@ use crate::field_ref_cache::FieldRefCache;
 use crate::intrinsic_methods::MethodRegistry;
 use crate::java_object::JavaObject;
 use crate::jit::Compiler;
+use crate::jit_runtime_helpers::SharedRuntime;
 use crate::method_ref_cache::MethodRefCache;
 use crate::module_system::ModuleSystem;
 use crate::monitor::MonitorRegistry;
@@ -80,6 +81,8 @@ pub struct VM {
     method_registry: MethodRegistry,
     /// The JIT compiler (per-VM instance with its own cache and background compilation)
     compiler: Option<Compiler>,
+    /// Metadata shared by JIT runtime contexts in this VM.
+    jit_runtime: SharedRuntime,
     /// Counter for generating unique hidden class name suffixes
     hidden_class_counter: AtomicU64,
     /// Per-VM native memory manager.
@@ -202,6 +205,7 @@ impl VM {
                 java_class_file_version,
                 method_registry,
                 compiler,
+                jit_runtime: SharedRuntime::new(),
                 hidden_class_counter: AtomicU64::new(1),
                 next_thread_id: AtomicU64::new(1),
                 next_nio_fd: AtomicI32::new(ristretto_types::FIRST_NIO_FD),
@@ -503,6 +507,10 @@ impl VM {
     /// JPMS access checks are performed at resolution time and cached.
     pub(crate) fn method_ref_cache(&self) -> &MethodRefCache {
         &self.method_ref_cache
+    }
+
+    pub(crate) fn jit_runtime(&self) -> &SharedRuntime {
+        &self.jit_runtime
     }
 
     /// Get the monitor registry.
