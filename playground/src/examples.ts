@@ -6,7 +6,6 @@ export const examples = {
     public static void main(String[] args) {
         System.out.println("Hello, world! ☕");
 
-        // Make yourself a little something.
         String language = "Java";
         int cups = 3;
 

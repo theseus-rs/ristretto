@@ -38,11 +38,20 @@ function loadWorker() {
 
 const runIcon =
   '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 3 11 7-11 7Z" fill="currentColor"/></svg>';
+const themePreferences = ['system', 'light', 'dark'] as const;
+type ThemePreference = (typeof themePreferences)[number];
+const themeLabels = { system: 'System', light: 'Light', dark: 'Dark' };
+const themeIcons = {
+  system: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',
+  light:
+    '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
+  dark: '<path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/>',
+};
 const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
   <header class="site-header">
     <a class="brand" href="../"><img src="${logo}" alt="" /><span>ristretto<span class="brand-divider">/</span><span class="brand-product">playground</span></span></a>
-    <div class="header-actions"><label class="theme-picker" for="theme"><span>Theme</span><select id="theme" aria-label="Color theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label><a class="github-link" href="https://github.com/theseus-rs/ristretto" target="_blank" rel="noreferrer">View on GitHub <span aria-hidden="true">↗</span></a></div>
+    <div class="header-actions"><button id="theme" class="theme-toggle" type="button" aria-label="Color theme"></button><a class="github-link" href="https://github.com/theseus-rs/ristretto" target="_blank" rel="noreferrer">View on GitHub <span aria-hidden="true">↗</span></a></div>
   </header>
   <main>
     <section class="intro">
@@ -89,23 +98,18 @@ const statusText = element<HTMLSpanElement>('status-text');
 const loading = element<HTMLDivElement>('loading');
 const progress = element<HTMLProgressElement>('progress');
 const elapsed = element<HTMLSpanElement>('elapsed');
-const themePicker = element<HTMLSelectElement>('theme');
+const themeButton = element<HTMLButtonElement>('theme');
 const systemTheme = matchMedia('(prefers-color-scheme: dark)');
 const themeKey = 'ristretto-playground-theme';
-let themePreference = 'system';
+let themePreference: ThemePreference = 'system';
 try {
   const saved = localStorage.getItem(themeKey);
   if (saved === 'light' || saved === 'dark') themePreference = saved;
 } catch {
   /* Theme controls also work when browser storage is unavailable. */
 }
-themePicker.value = themePreference;
 const selectedTheme = (): Theme =>
-  themePreference === 'system'
-    ? systemTheme.matches
-      ? 'dark'
-      : 'light'
-    : (themePreference as Theme);
+  themePreference === 'system' ? (systemTheme.matches ? 'dark' : 'light') : themePreference;
 const themeCompartment = new Compartment();
 document.documentElement.dataset.theme = selectedTheme();
 const storageKey = 'ristretto-playground-source-v1';
@@ -175,16 +179,25 @@ const editor = new EditorView({
   parent: element('editor'),
 });
 
+function nextThemePreference(): ThemePreference {
+  return themePreferences[
+    (themePreferences.indexOf(themePreference) + 1) % themePreferences.length
+  ];
+}
 function applyTheme() {
   const theme = selectedTheme();
+  const label = `Color theme: ${themeLabels[themePreference]}. Switch to ${themeLabels[nextThemePreference()]}.`;
+  themeButton.setAttribute('aria-label', label);
+  themeButton.title = label;
+  themeButton.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${themeIcons[themePreference]}</svg>`;
   document.documentElement.dataset.theme = theme;
   document
     .querySelector('meta[name="theme-color"]')
     ?.setAttribute('content', theme === 'dark' ? '#1e1f22' : '#f5f7f4');
   editor.dispatch({ effects: themeCompartment.reconfigure(editorTheme(theme)) });
 }
-themePicker.addEventListener('change', () => {
-  themePreference = themePicker.value;
+themeButton.addEventListener('click', () => {
+  themePreference = nextThemePreference();
   try {
     if (themePreference === 'system') localStorage.removeItem(themeKey);
     else localStorage.setItem(themeKey, themePreference);
@@ -200,7 +213,6 @@ window.addEventListener('storage', (event) => {
   if (event.key !== themeKey && event.key !== null) return;
   themePreference =
     event.newValue === 'light' || event.newValue === 'dark' ? event.newValue : 'system';
-  themePicker.value = themePreference;
   applyTheme();
 });
 applyTheme();
@@ -210,7 +222,9 @@ let active = false;
 let requestId = 0;
 let watchdog: ReturnType<typeof setTimeout>;
 let clock: ReturnType<typeof setInterval>;
-let started = 0;
+let timingPhase: 'loading' | 'compiling' | 'running' | undefined;
+let phaseStarted = 0;
+let phaseDurations: { loading?: number; compiling?: number; running?: number } = {};
 let pending: { text: string; stream: string }[] = [];
 let renderFrame = 0;
 
@@ -248,7 +262,27 @@ function setStatus(text: string, state = 'ready') {
   statusText.textContent = text;
   status.dataset.state = state;
 }
+function updateElapsed() {
+  if (timingPhase) phaseDurations[timingPhase] = performance.now() - phaseStarted;
+  const times: string[] = [];
+  if (phaseDurations.compiling !== undefined)
+    times.push(`Compile: ${(phaseDurations.compiling / 1000).toFixed(2)}s`);
+  if (phaseDurations.running !== undefined)
+    times.push(`Run: ${(phaseDurations.running / 1000).toFixed(2)}s`);
+  elapsed.textContent = times.length
+    ? times.join(' · ')
+    : phaseDurations.loading !== undefined
+      ? `Loading: ${(phaseDurations.loading / 1000).toFixed(2)}s`
+      : '';
+}
+function setTimingPhase(phase: typeof timingPhase) {
+  updateElapsed();
+  timingPhase = phase;
+  phaseStarted = performance.now();
+  updateElapsed();
+}
 function finish(text: string, state = 'ready') {
+  setTimingPhase(undefined);
   worker?.terminate();
   worker = undefined;
   active = false;
@@ -286,17 +320,15 @@ async function start(action: Request['action']) {
   const javaVersion = Number(versionPicker.value) as JavaVersion;
   versionPicker.disabled = true;
   active = true;
-  started = performance.now();
-  elapsed.textContent = '';
+  phaseDurations = {};
+  setTimingPhase('loading');
   runButton.disabled = compileButton.disabled = true;
   stopButton.disabled = false;
   setStatus('Loading Java…', 'busy');
   loading.hidden = false;
   progress.value = 0;
   timeout(LOAD_TIMEOUT, 'Runtime loading');
-  clock = setInterval(() => {
-    elapsed.textContent = `${((performance.now() - started) / 1000).toFixed(1)}s`;
-  }, 100);
+  clock = setInterval(updateElapsed, 100);
   try {
     const [url, assets] = await Promise.all([
       loadWorker(),
@@ -314,6 +346,7 @@ async function start(action: Request['action']) {
       switch (event.type) {
         case 'phase':
           if (event.phase !== 'loading') {
+            setTimingPhase(event.phase);
             loading.hidden = true;
             const compiling = event.phase === 'compiling';
             setStatus(compiling ? 'Compiling…' : 'Running…', 'busy');
@@ -332,6 +365,7 @@ async function start(action: Request['action']) {
           append(event.text, event.stream);
           break;
         case 'compiled':
+          setTimingPhase(undefined);
           if (action === 'compile')
             append(
               `Compilation successful · ${event.classes} class${event.classes === 1 ? '' : 'es'} generated.\n`,

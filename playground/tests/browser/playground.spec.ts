@@ -23,10 +23,15 @@ test('compiles and runs Java 25 locally, including examples and cached offline e
   await expect(page.locator('#status')).toContainText('Finished successfully', { timeout: 1000 });
   await expect(page.getByLabel('Console output')).toContainText('Hello, world! ☕');
   await expect(page.getByLabel('Console output')).toContainText('Cup 3 of Java');
+  const elapsed = page.locator('#elapsed');
+  await expect(elapsed).toHaveText(/^Compile: \d+\.\d{2}s · Run: \d+\.\d{2}s$/);
+  const completedTiming = await elapsed.textContent();
   await page.screenshot({
     path: `test-results/playground-desktop-${test.info().project.name}.png`,
     fullPage: true,
   });
+  await page.getByRole('button', { name: 'Clear output' }).click();
+  await expect(elapsed).toHaveText(completedTiming!);
 
   for (const [example, output] of [
     ['collections', 'RISTRETTO'],
@@ -52,6 +57,7 @@ test('compiles and runs Java 25 locally, including examples and cached offline e
     timeout: 755_000,
   });
   await expect(page.locator('#status')).toContainText('Compiled successfully', { timeout: 1000 });
+  await expect(elapsed).toHaveText(/^Compile: \d+\.\d{2}s$/);
   await expect(page.getByLabel('Console output')).toContainText('2 classes generated');
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Stop', exact: true })).toBeDisabled({
@@ -59,6 +65,7 @@ test('compiles and runs Java 25 locally, including examples and cached offline e
   });
   await expect(page.locator('#status')).toContainText('Finished successfully', { timeout: 1000 });
   await expect(page.getByLabel('Console output')).toContainText('cached 42');
+  await expect(elapsed).toHaveText(/^Compile: \d+\.\d{2}s · Run: \d+\.\d{2}s$/);
   expect(errors).toEqual([]);
   expect(
     requests
@@ -77,6 +84,7 @@ test('reports compilation and runtime errors and recovers after stopping a progr
     timeout: 755_000,
   });
   await expect(page.getByLabel('Console output')).toContainText('Main.java:1:');
+  await expect(page.locator('#elapsed')).toHaveText(/^Compile: \d+\.\d{2}s$/);
   await source(
     page,
     'public class Main { public static void main(String[] args) { throw new IllegalStateException("test failure"); } }',
@@ -86,6 +94,7 @@ test('reports compilation and runtime errors and recovers after stopping a progr
     timeout: 755_000,
   });
   await expect(page.getByLabel('Console output')).toContainText('test failure');
+  await expect(page.locator('#elapsed')).toHaveText(/^Compile: \d+\.\d{2}s · Run: \d+\.\d{2}s$/);
 
   await source(
     page,
@@ -95,6 +104,7 @@ test('reports compilation and runtime errors and recovers after stopping a progr
   await expect(page.getByLabel('Console output')).toContainText('started', { timeout: 755_000 });
   await page.getByRole('button', { name: 'Stop', exact: true }).click();
   await expect(page.locator('#status')).toContainText('Stopped');
+  await expect(page.locator('#elapsed')).toHaveText(/^Compile: \d+\.\d{2}s · Run: \d+\.\d{2}s$/);
   await source(
     page,
     'public class Main { public static void main(String[] args) { System.out.print("fresh"); } }',

@@ -6,9 +6,11 @@ test('follows the system and remembers a local theme override without changing c
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('./');
   const root = page.locator('html');
-  const picker = page.getByRole('combobox', { name: 'Color theme' });
+  const themeButton = page.getByRole('button', { name: /^Color theme:/ });
   const editor = page.getByRole('textbox', { name: 'Java source code' });
-  await expect(picker).toHaveValue('system');
+  await expect(themeButton).toHaveAccessibleName('Color theme: System. Switch to Light.');
+  await expect(themeButton).toHaveAttribute('title', 'Color theme: System. Switch to Light.');
+  await expect(themeButton.locator('svg')).toBeVisible();
   await expect(root).toHaveAttribute('data-theme', 'light');
   await expect(page.locator('.cm-editor')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   const source = 'public class Main { int value = 42; String text = "coffee"; }';
@@ -17,20 +19,23 @@ test('follows the system and remembers a local theme override without changing c
   await expect(root).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('.cm-editor')).toHaveCSS('background-color', 'rgb(30, 31, 34)');
   await expect(editor).toHaveText(source);
-  await picker.selectOption('light');
+  await themeButton.focus();
+  await themeButton.press('Enter');
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem('ristretto-playground-source-v1')))
     .toContain('coffee');
   await page.reload();
-  await expect(picker).toHaveValue('light');
+  await expect(themeButton).toHaveAccessibleName('Color theme: Light. Switch to Dark.');
   await expect(root).toHaveAttribute('data-theme', 'light');
   await expect(editor).toHaveText(source);
-  await picker.selectOption('dark');
+  await themeButton.click();
   await page.emulateMedia({ colorScheme: 'light' });
   await expect(root).toHaveAttribute('data-theme', 'dark');
   await page.reload();
-  await expect(picker).toHaveValue('dark');
-  await picker.selectOption('system');
+  await expect(themeButton).toHaveAccessibleName('Color theme: Dark. Switch to System.');
+  await themeButton.focus();
+  await themeButton.press('Space');
+  await expect(themeButton).toHaveAccessibleName('Color theme: System. Switch to Light.');
   await expect(root).toHaveAttribute('data-theme', 'light');
   expect(await page.evaluate(() => localStorage.getItem('ristretto-playground-theme'))).toBeNull();
   await page.emulateMedia({ colorScheme: 'dark' });
@@ -76,7 +81,10 @@ test('can switch themes when browser storage is unavailable', async ({ page }) =
   });
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('./');
-  await page.getByRole('combobox', { name: 'Color theme' }).selectOption('dark');
+  const themeButton = page.getByRole('button', { name: /^Color theme:/ });
+  await themeButton.click();
+  await themeButton.click();
+  await expect(themeButton).toHaveAccessibleName('Color theme: Dark. Switch to System.');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
