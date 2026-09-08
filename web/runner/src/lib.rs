@@ -18,6 +18,7 @@ const OUTPUT_LIMIT: usize = 1024 * 1024;
 struct RuntimePaths {
     java_home: PathBuf,
     workspace: PathBuf,
+    languages: PathBuf,
 }
 
 impl Default for RuntimePaths {
@@ -28,6 +29,8 @@ impl Default for RuntimePaths {
                 .map_or_else(|| PathBuf::from("/jdk"), PathBuf::from),
             workspace: std::env::var_os("RISTRETTO_PLAYGROUND_WORKSPACE")
                 .map_or_else(|| PathBuf::from("/workspace"), PathBuf::from),
+            languages: std::env::var_os("RISTRETTO_PLAYGROUND_LANGUAGES")
+                .map_or_else(|| PathBuf::from("/languages"), PathBuf::from),
         }
     }
 }
@@ -40,6 +43,10 @@ struct Request {
     java_version: u16,
     class_name: String,
     source: String,
+    #[serde(default)]
+    language: Language,
+    #[serde(default)]
+    scala_version: Option<String>,
     #[serde(default)]
     operation: ShellOperation,
     #[serde(default)]
@@ -59,8 +66,20 @@ enum ShellOperation {
 #[serde(rename_all = "lowercase")]
 enum Action {
     Compile,
+    Check,
     Run,
     Jshell,
+}
+
+#[derive(Debug, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+enum Language {
+    #[default]
+    Java,
+    Kotlin,
+    Groovy,
+    Scala,
+    Clojure,
 }
 
 fn emit(event: &serde_json::Value) -> io::Result<()> {
@@ -142,7 +161,16 @@ async fn execute(
     let id = request.id;
     let written = Arc::new(AtomicUsize::new(0));
     if request.action == Action::Jshell {
+        if request.language != Language::Java {
+            return Err("JShell requires Java".into());
+        }
         return execute_jshell(request, paths).await;
+    }
+    if request.language != Language::Java {
+        return execute_script(request, paths).await;
+    }
+    if request.action == Action::Check {
+        return Err("Use Compile to check Java source".into());
     }
     let output_id = Arc::new(AtomicU32::new(id));
     emit(&json!({"id": id, "type": "phase", "phase": "compiling"}))?;
@@ -178,6 +206,88 @@ async fn execute(
             // A throwable belongs to this VM's heap; preserve its message before dropping it.
             return Err(error.to_string().into());
         }
+    }
+    emit(&json!({"id": id, "type": "done"}))?;
+    Ok(())
+}
+
+async fn execute_script(
+    request: &Request,
+    paths: &RuntimePaths,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if request.java_version != 25 {
+        return Err("Scripts require the bundled Java 25 runtime".into());
+    }
+    if !matches!(request.action, Action::Check | Action::Run) {
+        return Err("Scripts support Check and Run".into());
+    }
+    let scala_version = request.scala_version.as_deref().unwrap_or("3");
+    if request.language == Language::Scala && !matches!(scala_version, "2.13" | "3") {
+        return Err("Unsupported Scala version".into());
+    }
+    let bridge = match request.language {
+        Language::Kotlin => "KotlinScript",
+        Language::Groovy => "GroovyScript",
+        Language::Scala => "ScalaScript",
+        Language::Clojure => "ClojureScript",
+        Language::Java => return Err("Expected a script language".into()),
+    };
+    let mut jars = std::fs::read_dir(&paths.languages)?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .collect::<Result<Vec<_>, _>>()?;
+    jars.retain(|path| {
+        path.extension().is_some_and(|extension| extension == "jar")
+            && path.file_name().is_none_or(|name| name != "jdk-api.jar")
+    });
+    jars.sort();
+    if jars.is_empty() {
+        return Err("Missing script runtime assets".into());
+    }
+    if request.language == Language::Scala {
+        let classes = paths.workspace.join("classes");
+        std::fs::create_dir_all(&classes)?;
+        jars.push(classes);
+    }
+    let id = request.id;
+    let output_id = Arc::new(AtomicU32::new(id));
+    let written = Arc::new(AtomicUsize::new(0));
+    let (phase, method) = if request.action == Action::Check {
+        ("checking", "check(Ljava/lang/String;)V")
+    } else {
+        ("running", "run(Ljava/lang/String;)V")
+    };
+    emit(&json!({"id": id, "type": "phase", "phase": phase}))?;
+    let config = configuration(&output_id, &written, paths)
+        .class_path(ClassPath::from(jars.as_slice()))
+        .add_system_property("ristretto.scala.version", scala_version)
+        .add_system_property("ristretto.language.path", paths.languages.to_string_lossy())
+        .add_system_property("java.awt.headless", "true")
+        // The browser worker runs on one thread; fork/join work must stay on its caller.
+        .add_system_property("java.util.concurrent.ForkJoinPool.common.parallelism", "0")
+        .add_system_property("kotlin.environment.keepalive", "false")
+        .add_system_property("sun.reflect.inflationThreshold", "2147483647")
+        .build()?;
+    let vm = VM::new(config).await?;
+    let result = async {
+        vm.invoke(bridge, method, &[request.source.as_str()])
+            .await?;
+        if request.action == Action::Check {
+            emit(&json!({"id": id, "type": "checked"}))?;
+        }
+        Ok::<(), ristretto_vm::Error>(())
+    }
+    .await;
+    if let Err(error) = result {
+        if let ristretto_vm::Error::Throwable(ref throwable) = error {
+            let _result = vm
+                .invoke(
+                    "java.lang.Throwable",
+                    "printStackTrace()V",
+                    std::slice::from_ref(throwable),
+                )
+                .await;
+        }
+        return Err(error.to_string().into());
     }
     emit(&json!({"id": id, "type": "done"}))?;
     Ok(())

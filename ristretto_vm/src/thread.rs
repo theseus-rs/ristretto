@@ -967,7 +967,24 @@ impl Thread {
                                 // Step 8: <clinit> threw, mark as Erroneous
                                 let error_msg = format!("{error:#}");
                                 class.fail_initialization(error_msg.clone())?;
-                                // Wrap in ExceptionInInitializerError (only first time)
+                                if let crate::Error::Throwable(ref cause) = error {
+                                    use crate::assignable::Assignable;
+                                    let cause_class = cause.as_object_ref()?.class().clone();
+                                    let error_class = self.class("java/lang/Error").await?;
+                                    // JVMS 5.5: Error subclasses propagate unchanged. Other
+                                    // throwables retain their cause in the initialization error.
+                                    if error_class.is_assignable_from(self, &cause_class).await? {
+                                        return Err(error);
+                                    }
+                                    let wrapped = self
+                                        .object(
+                                            "java/lang/ExceptionInInitializerError",
+                                            "Ljava/lang/Throwable;",
+                                            std::slice::from_ref(cause),
+                                        )
+                                        .await?;
+                                    return Err(crate::Error::Throwable(wrapped));
+                                }
                                 return Err(ExceptionInInitializerError(error_msg).into());
                             }
                         }

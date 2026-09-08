@@ -22,7 +22,7 @@ test('follows the system and remembers a local theme override without changing c
   await themeButton.focus();
   await themeButton.press('Enter');
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem('ristretto-playground-source-v1')))
+    .poll(() => page.evaluate(() => localStorage.getItem('ristretto-playground-source-v2')))
     .toContain('coffee');
   await page.reload();
   await expect(themeButton).toHaveAccessibleName('Color theme: Light. Switch to Dark.');
@@ -51,7 +51,9 @@ test('uses balanced side margins on wide and mobile screens in both themes', asy
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1080 });
     for (const colorScheme of ['light', 'dark'] as const) {
       await page.emulateMedia({ colorScheme });
-      const bounds = await page.getByRole('region', { name: 'Java playground' }).boundingBox();
+      const bounds = await page
+        .getByRole('region', { name: 'Programming playground' })
+        .boundingBox();
       expect(bounds).not.toBeNull();
       const margin = width > 900 ? 32 : 16;
       expect(bounds!.x).toBeCloseTo(margin, 0);

@@ -1,15 +1,28 @@
-# Java in the browser
+# JVM languages in the browser
 
 [Open the playground](https://theseus-rs.github.io/ristretto/playground/) or
 [open JShell](https://theseus-rs.github.io/ristretto/jshell/). The dropdown beside **ristretto /**
 switches between pages. Everything runs entirely on your device using Ristretto WebAssembly and
 a reduced Corretto JDK, with no execution server.
 
+Choose Java, Kotlin, Groovy, Scala, or Clojure using **Language**. Java supports
+JDK 8, 11, 17, 21, and 25; Scala offers 2.13 and 3. The other languages use Java 25 automatically,
+while hiding the Java version selector and preserving your Java version choice. Kotlin, Groovy, Scala, and Clojure accept scripts with
+top-level statements. Each language and Scala generation retains its own draft and examples.
+
+**Compile** checks Java. **Check** compiles Kotlin, Groovy, and Scala scripts without running
+the script body. Clojure Check validates reader syntax only, with reader evaluation disabled;
+name resolution and evaluation happen during **Run**. Run starts a fresh program without a separate Check step. Cmd+Enter
+and Ctrl+Enter run from the editor. JShell displays elapsed time while submissions are running.
+
 ## Build and test
 
 Requirements: the repository's Rust toolchain and Node.js 24 or newer. The JDK installer downloads
 the Linux Corretto JDKs pinned with SHA-256 in `jdks.json`. On macOS, also install matching native
-JDKs so `jlink` can process the Linux modules.
+JDKs so `jlink` can process the Linux modules. `build:runtime` also downloads compiler and
+library JARs pinned in `languages.json`, verifies their hashes, and builds the script bridges
+using the native Java 25 toolchain. JARs are cached in `~/.ristretto/languages`; set
+`PLAYGROUND_LANGUAGE_CACHE` to override this directory.
 
 ```sh
 rustup target add wasm32-wasip2
@@ -23,6 +36,7 @@ npm run build
 npx playwright install --with-deps chromium firefox webkit
 npm run test:unit
 npm run test:shell
+npm run test:languages
 npm test
 npm run preview
 ```
@@ -47,14 +61,14 @@ Additional checks:
 - The first action downloads the selected JDK and a shared WebAssembly engine. Assets are verified
   with SHA-256 and cached in memory, including for offline use. Browser storage retains assets
   across visits when available. Reloading the site still requires a connection.
-- Files exist only in memory under `/jdk`, `/workspace`, and `/tmp`. Programs cannot access host
+- Files exist only in memory under `/jdk`, `/languages`, `/workspace`, and `/tmp`. Programs cannot access host
   files or environment variables. Java allocations remain until the VM shuts down.
-- Runtime loading is limited to 120 seconds. Java compilation and each JShell submission have
-  a 10 minute limit; Java program execution has a 30 second limit. Combined stdout and stderr are
+- Runtime loading is limited to 120 seconds. Script checking and execution, Java compilation, and each JShell submission have
+  a 10 minute limit. Script Run includes any compilation required to execute the source, without a separate Check step. Java program execution has a 30 second limit. Combined stdout and stderr are
   limited to 1 MiB per request. Exceeding a limit ends the worker and its session.
 - Compilation is interpreted and typically takes tens of seconds in Chromium and WebKit, or
   several minutes in Firefox.
-- External dependencies, interactive standard input, GUI, networking, and subprocesses are
+- Multi-file projects, dependency directives, external dependencies, interactive standard input, GUI, networking, and subprocesses are
   unavailable. Standard input returns EOF; program arguments are empty. Some Java APIs are not
   yet implemented.
 - Nonzero `System.exit` values are reported as failures without preserving the exit code.

@@ -16,6 +16,7 @@ import { transpileBytes } from '@bytecodealliance/jco-transpile';
 import { zipSync } from 'fflate';
 import { licenses } from './licenses.mjs';
 import jdks from '../jdks.json' with { type: 'json' };
+import { buildLanguages } from './build-languages.mjs';
 
 const playground = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const root = resolve(playground, '..');
@@ -71,6 +72,8 @@ for (const [name, bytes] of Object.entries(files)) {
   }
 }
 const notices = [];
+let scriptJavaHome;
+let scriptJdkModules;
 for (const { major, version } of jdks) {
   const jdk = join(
     process.env.PLAYGROUND_JDK_ROOT ?? join(homedir(), '.ristretto', 'linux-x64'),
@@ -94,13 +97,20 @@ for (const { major, version } of jdks) {
     const jlink =
       process.env[`PLAYGROUND_JLINK_${major}`] ??
       (process.platform === 'darwin' ? macJlink : join(jdk, 'bin', 'jlink'));
+    if (major === 25) {
+      scriptJavaHome = dirname(dirname(jlink));
+      scriptJdkModules = join(jdk, 'jmods');
+    }
     imageDir = join(root, 'target', `playground-jdk-${major}`);
     rmSync(imageDir, { recursive: true, force: true });
     run(jlink, [
       '--module-path',
       join(jdk, 'jmods'),
       '--add-modules',
-      'java.base,java.compiler,jdk.compiler,jdk.zipfs,jdk.jshell',
+      'java.base,java.compiler,jdk.compiler,jdk.zipfs,jdk.jshell' +
+        (major === 25
+          ? ',java.desktop,java.management,java.logging,java.scripting,java.sql,jdk.unsupported'
+          : ''),
       // Ristretto reads uncompressed jimage entries. Compress the transport archive instead.
       '--endian',
       'little',
@@ -178,15 +188,29 @@ for (const { major, version } of jdks) {
       notices.push(`\n--- ${path} ---\n${Buffer.from(bytes).toString('utf8')}`);
   }
 }
+const scriptAssets = await buildLanguages(
+  root,
+  scriptJavaHome,
+  asset,
+  join(root, 'target/playground-jdk-25'),
+  scriptJdkModules,
+);
+manifest.languages = scriptAssets.manifest;
+notices.push(...scriptAssets.notices);
 writeFileSync(
   join(assets, 'THIRD_PARTY_LICENSES.txt'),
   licenses(root, playground) + notices.join('\n\n') + '\n',
 );
 writeFileSync(join(generated, 'runtime-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-for (const item of [...Object.values(manifest.files), ...Object.values(manifest.jdks)]) {
+const allAssets = [
+  ...Object.values(manifest.files),
+  ...Object.values(manifest.jdks),
+  ...Object.values(manifest.languages),
+];
+for (const item of allAssets) {
   if (item.size >= 100 * 1024 * 1024)
     throw new Error(`Asset exceeds GitHub's file limit: ${item.file}`);
 }
 console.log(
-  `Runtime assets: ${([...Object.values(manifest.files), ...Object.values(manifest.jdks)].reduce((sum, item) => sum + item.size, 0) / 1024 / 1024).toFixed(1)} MiB`,
+  `Runtime assets: ${(allAssets.reduce((sum, item) => sum + item.size, 0) / 1024 / 1024).toFixed(1)} MiB`,
 );

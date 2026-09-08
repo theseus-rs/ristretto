@@ -26,7 +26,7 @@ pub mod kqueuearraywrapper;
 #[cfg(target_os = "macos")]
 pub mod kqueueport;
 pub mod nativesocketaddress;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 pub mod nativethread;
 #[cfg(not(target_family = "wasm"))]
 pub mod net;
@@ -51,7 +51,7 @@ pub mod unixasynchronoussocketchannelimpl;
 pub mod unixdispatcher;
 #[cfg(not(target_family = "wasm"))]
 pub mod unixdomainsockets;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 pub mod unixfiledispatcherimpl;
 #[cfg(target_os = "windows")]
 pub mod wepoll;
@@ -68,3 +68,6 @@ pub mod windowsselectorimpl_subselector;
 
 pub(crate) const IOS_INTERRUPTED: i32 = -3;
 pub(crate) const IOS_UNAVAILABLE: i32 = -2;
+
+#[cfg(target_os = "wasi")]
+pub mod wasi_ioutil;

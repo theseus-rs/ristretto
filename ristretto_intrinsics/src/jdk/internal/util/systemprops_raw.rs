@@ -132,6 +132,15 @@ pub async fn vm_properties<T: Thread + 'static>(
         "java.vm.specification.name".to_string(),
         "Java Virtual Machine Specification".to_string(),
     );
+    system_properties.insert(
+        "java.vm.specification.version".to_string(),
+        vm.java_major_version().to_string(),
+    );
+    system_properties.insert(
+        "java.vm.specification.vendor".to_string(),
+        "Oracle and Ristretto".to_string(),
+    );
+    system_properties.insert("java.vm.vendor".to_string(), "ristretto".to_string());
     system_properties.insert("java.vm.version".to_string(), vm_version.to_string());
     system_properties.insert("java.vm.name".to_string(), vm_name);
     system_properties

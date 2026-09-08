@@ -147,6 +147,14 @@ public class Main {
             "package example; public class Main { public static void main(String[] args) { throw new RuntimeException(\"boom\"); } }",
             "example.Main.main(Main.java:1)",
         ),
+        (
+            "package example; public class Main { static class Broken { static int value = fail(); static int fail() { throw new IllegalStateException(\"initialization cause\"); } } public static void main(String[] args) { System.out.println(Broken.value); } }",
+            "Caused by: java.lang.IllegalStateException: initialization cause",
+        ),
+        (
+            "package example; public class Main { static class Broken { static int value = fail(); static int fail() { throw new AssertionError(\"original error\"); } } public static void main(String[] args) { System.out.println(Broken.value); } }",
+            "java.lang.AssertionError: original error",
+        ),
     ] {
         let response = request(workspace, &java_home, 25, "run", source)?;
         assert_eq!(Some(0), response.code);

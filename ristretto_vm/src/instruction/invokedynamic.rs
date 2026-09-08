@@ -1175,12 +1175,15 @@ pub(crate) async fn invokedynamic(
         .await?
     {
         // It's a CallSite; extract the target MethodHandle
-        // Use the actual runtime class (e.g., ConstantCallSite) not the abstract CallSite class
-        let get_target_method =
-            object_class.try_get_method("getTarget", "()Ljava/lang/invoke/MethodHandle;")?;
+        // Subclasses may inherit getTarget from MutableCallSite or ConstantCallSite.
+        let (target_class, get_target_method) = crate::instruction::lookup_method(
+            &object_class,
+            "getTarget",
+            "()Ljava/lang/invoke/MethodHandle;",
+        )?;
         thread
             .try_execute(
-                &object_class,
+                &target_class,
                 &get_target_method,
                 &[call_site_or_method_handle],
             )

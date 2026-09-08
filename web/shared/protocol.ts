@@ -3,19 +3,37 @@ export type JavaVersion = (typeof JAVA_VERSIONS)[number];
 export const isJavaVersion = (value: unknown): value is JavaVersion =>
   JAVA_VERSIONS.some((version) => version === value);
 
+export const LANGUAGES = ['java', 'kotlin', 'groovy', 'scala', 'clojure'] as const;
+export type Language = (typeof LANGUAGES)[number];
+export type ScalaVersion = '2.13' | '3';
+export type ScriptTarget = 'kotlin' | 'groovy' | 'scala2' | 'scala3' | 'clojure';
+export type Target = 'java' | ScriptTarget;
+export const isLanguage = (value: unknown): value is Language =>
+  LANGUAGES.some((language) => language === value);
+export function executionTarget(language: Language, scalaVersion: ScalaVersion): Target {
+  return language === 'scala' ? (scalaVersion === '2.13' ? 'scala2' : 'scala3') : language;
+}
+
 export type Request = {
   javaVersion: JavaVersion;
   id: number;
-  action: 'compile' | 'run' | 'jshell';
+  action: 'compile' | 'check' | 'run' | 'jshell';
+  language?: Language;
+  scalaVersion?: ScalaVersion;
   className: string;
   source: string;
   operation?: 'input' | 'complete' | 'cancel';
   cursor?: number;
 };
 export type Event =
-  | { id: number; type: 'phase'; phase: 'loading' | 'compiling' | 'running' | 'evaluating' }
+  | {
+      id: number;
+      type: 'phase';
+      phase: 'loading' | 'compiling' | 'checking' | 'running' | 'evaluating';
+    }
   | { id: number; type: 'progress'; loaded: number; total: number }
   | { id: number; type: 'compiled'; classes: number }
+  | { id: number; type: 'checked' }
   | { id: number; type: 'output'; stream: 'stdout' | 'stderr'; text: string }
   | { id: number; type: 'done'; exitCode?: number }
   | {

@@ -243,7 +243,7 @@ pub async fn init<T: Thread + 'static>(
     Ok(None)
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "wasi"))]
 #[intrinsic_method("sun/nio/ch/FileDispatcherImpl.init0()V", GreaterThanOrEqual(JAVA_21))]
 #[async_method]
 pub async fn init_0<T: Thread + 'static>(

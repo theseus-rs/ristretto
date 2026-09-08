@@ -1,26 +1,26 @@
 #[cfg(target_os = "windows")]
 use ristretto_classfile::JAVA_8;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::JAVA_11;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::VersionSpecification::Any;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::VersionSpecification::Equal;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_classloader::Reference;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classloader::Value;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_macros::async_method;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_macros::intrinsic_method;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_types::Thread;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_types::{Parameters, Result};
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use std::sync::Arc;
 
 #[cfg(target_os = "windows")]
@@ -309,7 +309,7 @@ fn split_null_terminated(bytes: &[i8]) -> Vec<String> {
     result
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method("java/lang/ProcessImpl.init()V", GreaterThanOrEqual(JAVA_11))]
 #[async_method]
 pub async fn init<T: Thread + 'static>(

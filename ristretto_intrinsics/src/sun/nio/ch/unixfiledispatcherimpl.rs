@@ -13,6 +13,7 @@ use ristretto_types::Thread;
 use ristretto_types::VM;
 use ristretto_types::{Parameters, Result};
 use std::io::SeekFrom;
+#[cfg(target_family = "unix")]
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::sync::Arc;
 
@@ -24,7 +25,20 @@ fn io_status(operation: &str, error: &std::io::Error) -> Result<i64> {
     }
 }
 
+#[cfg_attr(
+    target_os = "wasi",
+    expect(
+        clippy::unused_async,
+        reason = "native platforms read metadata asynchronously"
+    )
+)]
 async fn file_key<V: VM>(vm: &V, fd: i64) -> Option<(u64, u64)> {
+    #[cfg(target_os = "wasi")]
+    {
+        let _ = (vm, fd);
+        None
+    }
+    #[cfg(target_family = "unix")]
     managed_files::metadata(vm.file_handles(), fd)
         .await
         .ok()
@@ -54,8 +68,11 @@ pub async fn allocation_granularity_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
+    #[cfg(target_family = "unix")]
     #[expect(unsafe_code)]
     let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+    #[cfg(target_os = "wasi")]
+    let page_size = 65536;
     if page_size <= 0 {
         return Err(JavaError::IoException(
             "allocationGranularity0: unable to determine the system page size".to_string(),
@@ -83,6 +100,7 @@ pub async fn available_0<T: Thread + 'static>(
     let vm = thread.vm()?;
     let file_handles = vm.file_handles();
     let metadata = managed_files::metadata(file_handles, fd).await.ok();
+    #[cfg(target_family = "unix")]
     if metadata.as_ref().is_some_and(|value| {
         let kind = value.file_type();
         kind.is_char_device() || kind.is_fifo() || kind.is_socket()
@@ -144,6 +162,7 @@ pub async fn close_int_fd<T: Thread + 'static>(
         regions.remove_fd(i64::from(fd));
     }
     managed_files::close(vm.file_handles(), i64::from(fd)).await;
+    #[cfg(target_family = "unix")]
     let _ = super::posix::close_descriptor(&*vm, fd)?;
     #[cfg(not(target_family = "wasm"))]
     vm.socket_handles().remove(&fd).await;
@@ -196,6 +215,20 @@ pub async fn is_other_0<T: Thread + 'static>(
     Ok(Some(Value::Int(i32::from(is_other))))
 }
 
+#[cfg(target_os = "wasi")]
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn lock_0<T: Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    super::filedispatcherimpl::lock_0(thread, parameters).await
+}
+
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/nio/ch/UnixFileDispatcherImpl.lock0(Ljava/io/FileDescriptor;ZJJZ)I",
     GreaterThanOrEqual(JAVA_21)
@@ -470,6 +503,20 @@ pub async fn readv_0<T: Thread + 'static>(
     Ok(Some(Value::Long(total)))
 }
 
+#[cfg(target_os = "wasi")]
+#[intrinsic_method(
+    "sun/nio/ch/UnixFileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V",
+    GreaterThanOrEqual(JAVA_21)
+)]
+#[async_method]
+pub async fn release_0<T: Thread + 'static>(
+    thread: Arc<T>,
+    parameters: Parameters,
+) -> Result<Option<Value>> {
+    super::filedispatcherimpl::release_0(thread, parameters).await
+}
+
+#[cfg(target_family = "unix")]
 #[intrinsic_method(
     "sun/nio/ch/UnixFileDispatcherImpl.release0(Ljava/io/FileDescriptor;JJ)V",
     GreaterThanOrEqual(JAVA_21)

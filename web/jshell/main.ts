@@ -79,6 +79,15 @@ let continuation = false;
 let closed = false;
 let watchdog: ReturnType<typeof setTimeout>;
 let started = 0;
+let clock: ReturnType<typeof setInterval> | undefined;
+function updateElapsed() {
+  element('shell-elapsed').textContent = `${((performance.now() - started) / 1000).toFixed(2)}s`;
+}
+function stopClock() {
+  if (clock !== undefined) updateElapsed();
+  clearInterval(clock);
+  clock = undefined;
+}
 let activeOperation: Request['operation'];
 let completionSource = '';
 let completionCursor = 0;
@@ -224,10 +233,9 @@ function controls() {
 }
 function finish() {
   clearTimeout(watchdog);
+  stopClock();
   busy = false;
   loading.hidden = true;
-  if (activeOperation === 'input' && started)
-    element('shell-elapsed').textContent = `${((performance.now() - started) / 1000).toFixed(2)}s`;
   controls();
   if (focusOnReady && !closed) editor.focus();
   focusOnReady = false;
@@ -301,7 +309,12 @@ async function request(source: string, operation: Request['operation'] = 'input'
   activeOperation = operation;
   const id = ++requestId;
   const currentGeneration = generation;
-  started = performance.now();
+  if (operation === 'input') {
+    stopClock();
+    started = performance.now();
+    updateElapsed();
+    clock = setInterval(updateElapsed, 100);
+  }
   focusOnReady = true;
   hideCompletions();
   controls();
@@ -470,6 +483,7 @@ function clearScreen() {
   editor.focus();
 }
 function restart() {
+  stopClock();
   generation++;
   requestId++;
   worker?.terminate();
@@ -530,6 +544,9 @@ document.addEventListener('keydown', (event) => {
     clearScreen();
   }
 });
-window.addEventListener('beforeunload', save);
+window.addEventListener('beforeunload', () => {
+  stopClock();
+  save();
+});
 element('runtime-label').textContent = `Java ${version.value}`;
 void request('');

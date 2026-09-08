@@ -341,7 +341,9 @@ pub async fn get_component_type<T: Thread + 'static>(
     let component = class
         .component_type()
         .ok_or_else(|| InternalError("array class has no component type".to_string()))?;
-    let component_class = thread.class(component).await?;
+    let component_class = thread
+        .load_and_link_class(&JavaStr::cow_from_str(component))
+        .await?;
     let class_object = component_class.to_object(&thread).await?;
 
     Ok(Some(class_object))
@@ -396,7 +398,9 @@ pub async fn get_declared_classes_0<T: Thread + 'static>(
         let class = class.as_object_ref()?;
         class.value("name")?.as_string()?
     };
-    let class = thread.class(&class_name).await?;
+    let class = thread
+        .load_and_link_class(&JavaStr::cow_from_str(&class_name))
+        .await?;
     let mut declared_classes = Vec::new();
 
     let class_file = class.class_file();
@@ -424,7 +428,7 @@ pub async fn get_declared_classes_0<T: Thread + 'static>(
             continue;
         }
         let inner_class_name = constant_pool.try_get_class(inner_class.class_info_index)?;
-        let class = thread.class_java_str(inner_class_name).await?;
+        let class = thread.load_and_link_class(inner_class_name).await?;
         let class = class.to_object(&thread).await?;
         declared_classes.push(class);
     }
@@ -469,7 +473,9 @@ pub async fn get_declared_constructors_0<T: Thread + 'static>(
         let mut parameters = Vec::new();
         for parameter in method.parameters() {
             let class_name = parameter.class_name();
-            let class = thread.class(&class_name).await?;
+            let class = thread
+                .load_and_link_class(&JavaStr::cow_from_str(&class_name))
+                .await?;
             parameters.push(class.to_object(&thread).await?);
         }
         let parameter_types = {
@@ -577,7 +583,9 @@ pub async fn get_declared_fields_0<T: Thread + 'static>(
         let field_name = { thread.intern_string(field.name()).await? };
 
         let field_type_class_name = field.field_type().class_name();
-        let field_type_class = thread.class(&field_type_class_name).await?;
+        let field_type_class = thread
+            .load_and_link_class(&JavaStr::cow_from_str(&field_type_class_name))
+            .await?;
         let field_type = field_type_class.to_object(&thread).await?;
         let modifiers = Value::Int(i32::from(access_flags.bits()));
         let slot = if access_flags.contains(FieldAccessFlags::STATIC) {
@@ -696,7 +704,9 @@ pub async fn get_declared_methods_0<T: Thread + 'static>(
         let mut parameters = Vec::new();
         for parameter in method.parameters() {
             let class_name = parameter.class_name();
-            let class = thread.class(&class_name).await?;
+            let class = thread
+                .load_and_link_class(&JavaStr::cow_from_str(&class_name))
+                .await?;
             parameters.push(class.to_object(&thread).await?);
         }
         let parameter_types = {
@@ -705,7 +715,9 @@ pub async fn get_declared_methods_0<T: Thread + 'static>(
         };
         let return_type = if let Some(return_type) = method.return_type() {
             let class_name = return_type.class_name();
-            let class = thread.class(&class_name).await?;
+            let class = thread
+                .load_and_link_class(&JavaStr::cow_from_str(&class_name))
+                .await?;
             class.to_object(&thread).await?
         } else {
             let class = thread.class("void").await?;
@@ -835,7 +847,9 @@ pub async fn get_declaring_class_0<T: Thread + 'static>(
         .map(|(class_name, _)| class_name)
     {
         Some(outer_class_name) if !outer_class_name.is_empty() => {
-            let class = thread.class(outer_class_name).await?;
+            let class = thread
+                .load_and_link_class(&JavaStr::cow_from_str(outer_class_name))
+                .await?;
             let class = class.to_object(&thread).await?;
             Ok(Some(class))
         }
@@ -861,7 +875,7 @@ pub async fn get_enclosing_method_0<T: Thread + 'static>(
         {
             let constant_pool = &class_file.constant_pool;
             let class_name = constant_pool.try_get_class(*class_index)?;
-            let class = thread.class_java_str(class_name).await?;
+            let class = thread.load_and_link_class(class_name).await?;
             let class = class.to_object(&thread).await?;
             let (method_name, method_descriptor) = if *method_index == 0 {
                 (Value::Object(None), Value::Object(None))
@@ -908,7 +922,7 @@ pub async fn get_exceptions<T: Thread + 'static>(
         {
             for exception_index in exception_indexes {
                 let class_name = constant_pool.try_get_class(*exception_index)?;
-                let exception = thread.class_java_str(class_name).await?;
+                let exception = thread.load_and_link_class(class_name).await?;
                 let exception = exception.to_object(thread).await?;
                 exceptions.push(exception);
             }
@@ -958,7 +972,9 @@ pub async fn get_interfaces_0<T: Thread + 'static>(
         let class = class.as_object_ref()?;
         class.value("name")?.as_string()?
     };
-    let class = thread.class(&class_name).await?;
+    let class = thread
+        .load_and_link_class(&JavaStr::cow_from_str(&class_name))
+        .await?;
     let mut interfaces = Vec::new();
 
     for interface in class.interfaces()? {
@@ -1049,7 +1065,7 @@ pub async fn get_nest_host_0<T: Thread + 'static>(
         {
             let constant_pool = &class_file.constant_pool;
             let host_class_name = constant_pool.try_get_class(*host_class_index)?;
-            let host_class = thread.class_java_str(host_class_name).await?;
+            let host_class = thread.load_and_link_class(host_class_name).await?;
             let host_class_object = host_class.to_object(&thread).await?;
             return Ok(Some(host_class_object));
         }
@@ -1077,7 +1093,7 @@ pub async fn get_nest_members_0<T: Thread + 'static>(
             let constant_pool = &class_file.constant_pool;
             for class_index in class_indexes {
                 let class_name = constant_pool.try_get_class(*class_index)?;
-                let member_class = thread.class_java_str(class_name).await?;
+                let member_class = thread.load_and_link_class(class_name).await?;
                 let member_object = member_class.to_object(&thread).await?;
                 members.push(member_object);
             }
@@ -1256,7 +1272,9 @@ pub async fn get_record_components_0<T: Thread + 'static>(
 
                 // Resolve type from descriptor
                 let type_class_name = FieldType::parse_java_str(descriptor)?.class_name();
-                let type_class = thread.class(&type_class_name).await?;
+                let type_class = thread
+                    .load_and_link_class(&JavaStr::cow_from_str(&type_class_name))
+                    .await?;
                 let type_object = type_class.to_object(&thread).await?;
 
                 let mut generic_signature = Value::Object(None);
@@ -1385,7 +1403,9 @@ async fn create_accessor_method<T: Thread + 'static>(
         };
 
         let return_type_class_name = expected_return_type.class_name();
-        let return_type_class = thread.class(&return_type_class_name).await?;
+        let return_type_class = thread
+            .load_and_link_class(&JavaStr::cow_from_str(&return_type_class_name))
+            .await?;
         let return_type_value = return_type_class.to_object(thread).await?;
 
         let checked_exceptions = get_exceptions(thread, class, method).await?;

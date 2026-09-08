@@ -1,0 +1,182 @@
+{
+  "kotlin": {
+    "version": "2.4.10",
+    "javaVersion": 25,
+    "artifacts": [
+      {
+        "file": "kotlin-scripting-jvm-host-2.4.10.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-scripting-jvm-host/2.4.10/kotlin-scripting-jvm-host-2.4.10.jar",
+        "sha256": "0a69931e502f547e68e9e53d0508dd3ead3b9f8aaae1238a4808ba0c065f03f2"
+      },
+      {
+        "file": "kotlin-script-runtime-2.4.10.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-script-runtime/2.4.10/kotlin-script-runtime-2.4.10.jar",
+        "sha256": "f4a5b30c2fdfbe386b097101b7989dbeea3743c06396136664784e08e15c6899"
+      },
+      {
+        "file": "kotlin-stdlib-2.4.10.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.4.10/kotlin-stdlib-2.4.10.jar",
+        "sha256": "4ec0293bc3751423b203f1d8493251c57c42e73eb6377a6b8560d0974ff0a6df"
+      },
+      {
+        "file": "annotations-13.0.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/annotations/13.0/annotations-13.0.jar",
+        "sha256": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478"
+      },
+      {
+        "file": "kotlin-scripting-common-2.4.10.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-scripting-common/2.4.10/kotlin-scripting-common-2.4.10.jar",
+        "sha256": "d5399982cdbf5994f7f3a731afacfbc5c21b797d97ffd7328b62cea670103076"
+      },
+      {
+        "file": "kotlin-scripting-jvm-2.4.10.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-scripting-jvm/2.4.10/kotlin-scripting-jvm-2.4.10.jar",
+        "sha256": "0b7518219da69b427e0b3f840f13e280db9e61a839c7d3ff094de4630ddbc9f5"
+      },
+      {
+        "file": "kotlin-compiler-embeddable-2.4.10.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-compiler-embeddable/2.4.10/kotlin-compiler-embeddable-2.4.10.jar",
+        "sha256": "9309638a2ee03e6bde9ef4b7444055a94b84ab906563675d71ff9aecb64da913"
+      },
+      {
+        "file": "kotlin-build-tools-api-2.4.10.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-build-tools-api/2.4.10/kotlin-build-tools-api-2.4.10.jar",
+        "sha256": "3953d283e7710c990672e403a87df393d9726a9bf3e172194ebb5c33e062fcb0"
+      },
+      {
+        "file": "kotlin-reflect-2.4.10.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-reflect/2.4.10/kotlin-reflect-2.4.10.jar",
+        "sha256": "25a1aef7454d46548ecaaf51021b0e52e38141a62ed75af124da109b7324c4e5"
+      },
+      {
+        "file": "kotlin-daemon-embeddable-2.4.10.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-daemon-embeddable/2.4.10/kotlin-daemon-embeddable-2.4.10.jar",
+        "sha256": "547d969a2eab602fe0bdfd9fcb1b563a5c6d30099d3351394d6427eba8288467"
+      },
+      {
+        "file": "kotlinx-coroutines-core-jvm-1.8.0.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-core-jvm/1.8.0/kotlinx-coroutines-core-jvm-1.8.0.jar",
+        "sha256": "9860906a1937490bf5f3b06d2f0e10ef451e65b95b269f22daf68a3d1f5065c5"
+      },
+      {
+        "file": "kotlin-scripting-compiler-embeddable-2.4.10.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-scripting-compiler-embeddable/2.4.10/kotlin-scripting-compiler-embeddable-2.4.10.jar",
+        "sha256": "156c68ff816251c9d297c90d77e7e8e513eaad594277cee50a36faeddbe88935"
+      },
+      {
+        "file": "kotlin-scripting-compiler-impl-embeddable-2.4.10.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-scripting-compiler-impl-embeddable/2.4.10/kotlin-scripting-compiler-impl-embeddable-2.4.10.jar",
+        "sha256": "1dcfc5495d8c74966fcbbd39240a9c0f8ab36bb4faad2ea5ffc000c5d7785171"
+      }
+    ]
+  },
+  "groovy": {
+    "version": "5.0.8",
+    "javaVersion": 25,
+    "artifacts": [
+      {
+        "file": "groovy-5.0.8.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/apache/groovy/groovy/5.0.8/groovy-5.0.8.jar",
+        "sha256": "942993eee2a6a8f5fcbc1bc76c1ab18d179d598c9b29c8fc96a0138b162e0fa8"
+      }
+    ]
+  },
+  "scala2": {
+    "version": "2.13.18",
+    "javaVersion": 25,
+    "artifacts": [
+      {
+        "file": "scala-compiler-2.13.18.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/scala-lang/scala-compiler/2.13.18/scala-compiler-2.13.18.jar",
+        "sha256": "2f15891fcae7aad30a3892194fb2abb6224cf7ce5d2bd90fba7f1c48682fca21"
+      },
+      {
+        "file": "scala-library-2.13.18.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/2.13.18/scala-library-2.13.18.jar",
+        "sha256": "4e85d96ff7bc7dc627985523c3541b9917aaa08e956391380c42db21a2c4e5a0"
+      },
+      {
+        "file": "scala-reflect-2.13.18.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/scala-lang/scala-reflect/2.13.18/scala-reflect-2.13.18.jar",
+        "sha256": "6935ff1982b2ac93d695f15aa66921be2f602921277afe002f018fd8c7d6e29b"
+      },
+      {
+        "file": "java-diff-utils-4.16.jar",
+        "url": "https://repo.maven.apache.org/maven2/io/github/java-diff-utils/java-diff-utils/4.16/java-diff-utils-4.16.jar",
+        "sha256": "620403030d676a4a27f780a3acec7438dee1b1651a1c804fa6bb11bb07399a6f"
+      },
+      {
+        "file": "jline-3.29.0-jdk8.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/jline/jline/3.29.0/jline-3.29.0-jdk8.jar",
+        "sha256": "ed2680487642df95379f220c09c0f77e25095713387e2bc00c2d6581bb79c804"
+      }
+    ]
+  },
+  "scala3": {
+    "version": "3.9.0",
+    "javaVersion": 25,
+    "artifacts": [
+      {
+        "file": "scala3-compiler_3-3.9.0.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/scala-lang/scala3-compiler_3/3.9.0/scala3-compiler_3-3.9.0.jar",
+        "sha256": "3e2c09a5ca6cef17a55f2f66e123815f9c4ea061fce20d0e9d2371989405a61a"
+      },
+      {
+        "file": "scala3-interfaces-3.9.0.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/scala-lang/scala3-interfaces/3.9.0/scala3-interfaces-3.9.0.jar",
+        "sha256": "64dfde1d2c6309d65a01c5f3ea836137eb84338dcadeb16f85764561ef4e10db"
+      },
+      {
+        "file": "tasty-core_3-3.9.0.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/scala-lang/tasty-core_3/3.9.0/tasty-core_3-3.9.0.jar",
+        "sha256": "66e12dda98bb23e864f3a31f8527c8338bf47bce9b85cc380b368c69c1ba8d0f"
+      },
+      {
+        "file": "scala3-library_3-3.9.0.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/scala-lang/scala3-library_3/3.9.0/scala3-library_3-3.9.0.jar",
+        "sha256": "9343f9651453945fc6a9b75bb4fd230418ee28a1f88ea28ee429f3ebe0511aba"
+      },
+      {
+        "file": "scala-library-3.9.0.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/3.9.0/scala-library-3.9.0.jar",
+        "sha256": "b844bf6fb3080c73df6b9c523b7a69b9ef4a980bb15e5c37c35443d1d0b0e0cd"
+      },
+      {
+        "file": "scala-asm-9.9.0-scala-1.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/scala-lang/modules/scala-asm/9.9.0-scala-1/scala-asm-9.9.0-scala-1.jar",
+        "sha256": "75ac366e8ecb691e06a7e85041eed0f67919a646e5262fa0901225698c104375"
+      },
+      {
+        "file": "compiler-interface-1.12.0.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/scala-sbt/compiler-interface/1.12.0/compiler-interface-1.12.0.jar",
+        "sha256": "92f487a505eafdd0a033e4ff4f38a81509a655c76257c64e6808dd873cc145c3"
+      },
+      {
+        "file": "util-interface-1.11.5.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/scala-sbt/util-interface/1.11.5/util-interface-1.11.5.jar",
+        "sha256": "1fc950a9e1a35385e79316e23c120d4fd184f6a7af0274e00a703b0dc76376af"
+      }
+    ]
+  },
+  "clojure": {
+    "version": "1.12.6",
+    "javaVersion": 25,
+    "artifacts": [
+      {
+        "file": "clojure-1.12.6.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/clojure/clojure/1.12.6/clojure-1.12.6.jar",
+        "sha256": "21b578db389a8e74b286ce79c4a7f86ec641e26d88b12f18d69030916b0e18ca"
+      },
+      {
+        "file": "spec.alpha-0.5.238.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/clojure/spec.alpha/0.5.238/spec.alpha-0.5.238.jar",
+        "sha256": "94cd99b6ea639641f37af4860a643b6ed399ee5a8be5d717cff0b663c8d75077"
+      },
+      {
+        "file": "core.specs.alpha-0.4.74.jar",
+        "url": "https://repo.maven.apache.org/maven2/org/clojure/core.specs.alpha/0.4.74/core.specs.alpha-0.4.74.jar",
+        "sha256": "eb73ac08cf49ba840c88ba67beef11336ca554333d9408808d78946e0feb9ddb"
+      }
+    ]
+  }
+}

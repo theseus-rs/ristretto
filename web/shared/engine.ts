@@ -7,6 +7,30 @@ import { EventDecoder, OUTPUT_LIMIT, type Event, type Request } from './protocol
 const encoder = new TextEncoder();
 type Assets = [string, Uint8Array<ArrayBuffer>][];
 
+const openAt = filesystem.types.Descriptor.prototype.openAt;
+const statAt = filesystem.types.Descriptor.prototype.statAt;
+// The shim reports ENOTDIR when an intermediate directory is missing. Java libraries
+// rely on ENOENT to distinguish an absent configuration file from a broken path.
+filesystem.types.Descriptor.prototype.openAt = function (...args) {
+  try {
+    return openAt.apply(this, args);
+  } catch (error) {
+    if (error === 'not-directory') {
+      const [flags, path] = args;
+      const segments = path.split('/');
+      for (let count = 1; count < segments.length; count++) {
+        try {
+          statAt.call(this, flags, segments.slice(0, count).join('/') || '.');
+        } catch (parentError) {
+          if (parentError === 'no-entry') throw parentError;
+          break;
+        }
+      }
+    }
+    throw error;
+  }
+};
+
 /** Instantiate once per worker. Repeated calls retain JShell's VM and in-memory files. */
 export async function createEngine(assets: Assets, emit: (event: Event) => void) {
   let request: Request;
@@ -24,19 +48,23 @@ export async function createEngine(assets: Assets, emit: (event: Event) => void)
   const decoder = new EventDecoder(send);
   const files = new Map(assets);
   type Tree = { dir?: Record<string, Tree>; source?: Uint8Array };
-  const jdk: Tree = { dir: Object.create(null) };
-  for (const [path, source] of Object.entries(unzipSync(files.get('jdk.zip')!))) {
-    const names = path.split('/').filter(Boolean);
-    if (names.some((name) => name === '..' || name === '__proto__'))
-      throw new Error('Invalid runtime archive path');
-    let directory = jdk;
-    for (const name of names.slice(0, -1))
-      directory = directory.dir![name] ??= { dir: Object.create(null) };
-    if (!path.endsWith('/')) directory.dir![names.at(-1)!] = { source };
+  function archive(bytes: Uint8Array): Tree {
+    const tree: Tree = { dir: Object.create(null) };
+    for (const [path, source] of Object.entries(unzipSync(bytes))) {
+      const names = path.split('/').filter(Boolean);
+      if (names.some((name) => name === '..' || name === '__proto__'))
+        throw new Error('Invalid runtime archive path');
+      let directory = tree;
+      for (const name of names.slice(0, -1))
+        directory = directory.dir![name] ??= { dir: Object.create(null) };
+      if (!path.endsWith('/')) directory.dir![names.at(-1)!] = { source };
+    }
+    return tree;
   }
   const root: Tree = {
     dir: {
-      jdk,
+      jdk: archive(files.get('jdk.zip')!),
+      languages: files.has('language.zip') ? archive(files.get('language.zip')!) : { dir: {} },
       workspace: { dir: {} },
       tmp: { dir: {} },
     },

@@ -63,12 +63,19 @@ pub(crate) async fn invokeinterface(
         .into());
     }
 
-    // Find the method implementation in the actual receiver class
-    let (resolved_class, resolved_method) = lookup_method(
-        &object_class,
-        &resolution.method_name,
-        &resolution.method_descriptor,
-    )?;
+    // A resolved private method is invoked directly; it cannot be overridden.
+    let (resolved_class, resolved_method) = if resolution.method.is_private() {
+        (
+            resolution.declaring_class.clone(),
+            resolution.method.clone(),
+        )
+    } else {
+        lookup_method(
+            &object_class,
+            &resolution.method_name,
+            &resolution.method_descriptor,
+        )?
+    };
 
     if resolved_method.is_static() {
         return Err(IncompatibleClassChangeError(format!(
@@ -80,8 +87,9 @@ pub(crate) async fn invokeinterface(
     }
 
     // Check resolved method accessibility
-    // Lambda methods (like lambda$andThen$0) are private but can be invoked through method handles
-    if !resolved_method.is_public() && !resolution.method_name.starts_with("lambda$") {
+    // JVMS 6.5 permits private interface methods, including nestmate calls.
+    // Member access was checked during resolution.
+    if !resolved_method.is_public() && !resolved_method.is_private() {
         return Err(IllegalAccessError(format!(
             "Method {}.{} is not public",
             resolved_class.name(),

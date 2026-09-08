@@ -1,27 +1,27 @@
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classfile::VersionSpecification::Any;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 use ristretto_classfile::mutf8;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 use ristretto_classloader::Reference;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classloader::Value;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_macros::async_method;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_macros::intrinsic_method;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_types::Thread;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 use ristretto_types::VM;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_types::{Parameters, Result};
-#[cfg(not(target_family = "wasm"))]
+#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use std::sync::Arc;
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 use zerocopy::transmute_ref;
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method("java/lang/ProcessEnvironment.environ()[[B", Any)]
 #[async_method]
 pub async fn environ<T: Thread + 'static>(

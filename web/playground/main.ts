@@ -1,7 +1,9 @@
 import { EditorView, basicSetup } from 'codemirror';
 import { keymap } from '@codemirror/view';
-import { Compartment } from '@codemirror/state';
-import { java } from '@codemirror/lang-java';
+import { Compartment, Prec } from '@codemirror/state';
+import { languageNames, filenames, languageSupport } from './languages';
+import definitions from '../languages.json';
+import { restoreState, storageKey, legacyStorageKey } from './state';
 import { editorTheme } from '../shared/editor-theme';
 import { siteHeader, initializeSiteHeader } from '../shared/site-header';
 import { initializeAppearance, selectedTheme } from '../shared/appearance';
@@ -12,7 +14,10 @@ import {
   LOAD_TIMEOUT,
   RUN_TIMEOUT,
   JAVA_VERSIONS,
-  isJavaVersion,
+  LANGUAGES,
+  executionTarget,
+  type Language,
+  type ScalaVersion,
   type JavaVersion,
   type Event,
   type Request,
@@ -26,30 +31,30 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
   ${siteHeader('playground')}
   <main>
-    <section class="workbench" aria-label="Java playground">
+    <section class="workbench" aria-label="Programming playground">
       <div class="toolbar">
-        <div class="pickers"><div class="version-picker"><label for="java-version">Java version</label><select id="java-version">${JAVA_VERSIONS.map((version) => `<option value="${version}" ${version === 25 ? 'selected' : ''}>${version}</option>`).join('')}</select></div><div class="example-picker"><label for="example">Start with</label><select id="example">${Object.entries(
-          examples,
+        <div class="pickers"><div class="version-picker"><label for="programming-language">Language</label><select id="programming-language">${LANGUAGES.map((value) => `<option value="${value}">${languageNames[value]}</option>`).join('')}</select></div><div class="version-picker" id="scala-picker" hidden><label for="scala-version">Scala version</label><select id="scala-version"><option value="2.13">2.13</option><option value="3" selected>3</option></select></div><div class="version-picker" id="java-picker"><label for="java-version">Java version</label><select id="java-version">${JAVA_VERSIONS.map((version) => `<option value="${version}" ${version === 25 ? 'selected' : ''}>${version}</option>`).join('')}</select></div><div class="example-picker"><label for="example">Start with</label><select id="example">${Object.entries(
+          examples.java,
         )
           .map(([key, example]) => `<option value="${key}">${example.title}</option>`)
           .join('')}</select></div></div>
         <div class="actions"><button id="compile" class="button secondary">Compile</button><button id="stop" class="button stop" disabled><span aria-hidden="true">■</span> Stop</button><button id="run" class="button primary">${runIcon} Run<span class="shortcut" aria-hidden="true">⌘ ↵</span></button></div>
       </div>
       <div class="panes">
-        <section class="source-pane" aria-label="Java source">
+        <section id="source-pane" class="source-pane" aria-label="Java source">
           <div class="pane-header source-header"><span class="file-label"><span class="java-icon" aria-hidden="true">☕</span><span id="filename">Main.java</span></span><span id="language-label" class="language-label">JAVA 25</span></div>
           <div id="editor"></div>
-          <div class="editor-footer"><label for="class-name">Main class</label><input id="class-name" value="Main" spellcheck="false" autocomplete="off" aria-describedby="main-help" /><span id="cursor">Ln 1, Col 1</span></div>
+          <div class="editor-footer"><span id="main-class-control"><label for="class-name">Main class</label><input id="class-name" value="Main" spellcheck="false" autocomplete="off" aria-describedby="main-help" /></span><span id="cursor">Ln 1, Col 1</span></div>
         </section>
         <section class="output-pane" aria-label="Program output">
           <div class="pane-header"><span class="console-label"><span aria-hidden="true">›_</span> Console</span><button id="clear" class="text-button">Clear output</button></div>
-          <div class="console-body"><div id="empty-output"><span class="empty-icon" aria-hidden="true">›_</span><p>Hit <b>Run</b> to compile your Java<br />and see the output.</p><kbd>⌘ / Ctrl + Enter</kbd></div><pre id="output" aria-label="Console output" tabindex="0"></pre></div>
+          <div class="console-body"><div id="empty-output"><span class="empty-icon" aria-hidden="true">›_</span><p>Hit <b>Run</b> to run your code<br />and see the output.</p><kbd>⌘ / Ctrl + Enter</kbd></div><pre id="output" aria-label="Console output" tabindex="0"></pre></div>
           <div class="console-footer"><span id="status" role="status" aria-live="polite" data-state="ready"><span class="status-dot"></span><span id="status-text">Ready when you are</span></span><span id="elapsed"></span></div>
         </section>
       </div>
-      <div id="loading" hidden><progress id="progress" max="1" value="0" aria-label="Java runtime download"></progress><span id="loading-text">Loading Java…</span></div>
+      <div id="loading" hidden><progress id="progress" max="1" value="0" aria-label="Runtime download"></progress><span id="loading-text">Loading Java…</span></div>
     </section>
-    <footer class="workspace-footer"><span><span class="status-dot"></span> Powered by Ristretto <span class="footer-divider">·</span> <span id="runtime-label">Java 25</span></span><details><summary>Good to know <span aria-hidden="true">＋</span></summary><div class="help-card"><p id="main-help">Use a <code>public static void main(String[] args)</code> entry point. Set Main class to its fully qualified name when using a package.</p><p>Compile checks your source. Run compiles it again and starts a fresh program. Standard input is closed and arguments are empty.</p><p>Core Java libraries, collections, streams, and records are included. External dependencies, GUI, networking, and process execution are unavailable. Ristretto is an evolving JVM; some Java APIs may be unsupported.</p><p>Compilation may take several minutes in Firefox and stops after 10 minutes; execution after 30 seconds or 1 MiB of output. Stop interrupts either phase.</p><p>The first run of each version downloads its Java runtime. Switching versions preserves your code. Later runs reuse locally cached assets when browser storage is available.</p><a href="${import.meta.env.BASE_URL}notices.html" target="_blank" rel="noreferrer">Third-party notices ↗</a></div></details></footer>
+    <footer class="workspace-footer"><span><span class="status-dot"></span> <span id="runtime-label">Java 25</span></span><details><summary>Good to know <span aria-hidden="true">＋</span></summary><div class="help-card"><p id="main-help">Use a <code>public static void main(String[] args)</code> entry point. Set Main class to its fully qualified name when using a package.</p><p>Compile checks Java source; Check validates scripts without running their bodies. Clojure Check validates reader syntax; names and execution errors are checked by Run. Run starts a fresh program without a separate Check step. Standard input is closed and arguments are empty.</p><p>Java and the selected language’s standard libraries are included. External dependencies, GUI, networking, and process execution are unavailable. Ristretto is an evolving JVM; some Java APIs may be unsupported.</p><p>Compilation, script checking, and script execution stop after 10 minutes; Java execution stops after 30 seconds. Output is limited to 1 MiB. Compilation may take several minutes in Firefox. Stop interrupts either phase.</p><p>The first run of each version downloads its Java runtime. Switching languages or versions preserves a separate draft for each language and Scala generation. Later runs reuse locally cached assets when browser storage is available.</p><a href="${import.meta.env.BASE_URL}notices.html" target="_blank" rel="noreferrer">Third-party notices ↗</a></div></details></footer>
   </main>`;
 
 const element = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -59,6 +64,8 @@ const stopButton = element<HTMLButtonElement>('stop');
 const className = element<HTMLInputElement>('class-name');
 const examplePicker = element<HTMLSelectElement>('example');
 const versionPicker = element<HTMLSelectElement>('java-version');
+const languagePicker = element<HTMLSelectElement>('programming-language');
+const scalaPicker = element<HTMLSelectElement>('scala-version');
 const output = element<HTMLPreElement>('output');
 const emptyOutput = element<HTMLDivElement>('empty-output');
 const status = element<HTMLSpanElement>('status');
@@ -68,53 +75,72 @@ const progress = element<HTMLProgressElement>('progress');
 const elapsed = element<HTMLSpanElement>('elapsed');
 const themeCompartment = new Compartment();
 document.documentElement.dataset.theme = selectedTheme();
-const storageKey = 'ristretto-playground-source-v1';
-let initialSource: string = examples.hello.source;
+const languageCompartment = new Compartment();
+const attributesCompartment = new Compartment();
+let state = restoreState(null, null);
 try {
-  const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
-  if (isJavaVersion(saved?.javaVersion)) versionPicker.value = String(saved.javaVersion);
-  if (typeof saved?.source === 'string' && typeof saved?.className === 'string') {
-    initialSource = saved.source;
-    className.value = saved.className;
-  }
+  state = restoreState(localStorage.getItem(storageKey), localStorage.getItem(legacyStorageKey));
 } catch {
-  /* Editing and execution work without browser storage. */
+  /* Storage is optional. */
 }
-
+let language = state.language;
+let target = executionTarget(language, state.scalaVersion);
+languagePicker.value = language;
+scalaPicker.value = state.scalaVersion;
+versionPicker.value = String(state.javaVersion);
+const initialSource = state.drafts[target]?.source ?? examples[target].hello.source;
+className.value = state.drafts[target]?.className ?? 'Main';
 let saveTimer: ReturnType<typeof setTimeout>;
-const save = () => {
+function rememberDraft() {
+  state.drafts[target] = {
+    source: editor.state.doc.toString(),
+    className: className.value,
+    example: examplePicker.value,
+  };
+}
+function persist() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({
-          source: editor.state.doc.toString(),
-          className: className.value,
-          javaVersion: Number(versionPicker.value),
-        }),
-      );
-    } catch {
-      /* Storage is optional. */
-    }
-  }, 200);
-};
+  rememberDraft();
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(state));
+  } catch {
+    /* Storage is optional. */
+  }
+}
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(persist, 200);
+}
 const editor = new EditorView({
   doc: initialSource,
   extensions: [
     basicSetup,
-    java(),
+    languageCompartment.of(languageSupport(language)),
     themeCompartment.of(editorTheme(selectedTheme())),
-    keymap.of([
-      {
-        key: 'Mod-Enter',
-        run: () => {
-          start('run');
-          return true;
+    Prec.highest(
+      keymap.of([
+        {
+          key: 'Meta-Enter',
+          run: () => {
+            void start('run');
+            return true;
+          },
         },
-      },
-    ]),
-    EditorView.contentAttributes.of({ 'aria-label': 'Java source code', spellcheck: 'false' }),
+        {
+          key: 'Ctrl-Enter',
+          run: () => {
+            void start('run');
+            return true;
+          },
+        },
+      ]),
+    ),
+    attributesCompartment.of(
+      EditorView.contentAttributes.of({
+        'aria-label': `${languageNames[language]} source code`,
+        spellcheck: 'false',
+      }),
+    ),
     EditorView.theme({
       '&': { height: '100%', fontSize: '14px' },
       '.cm-scroller': {
@@ -145,9 +171,10 @@ let active = false;
 let requestId = 0;
 let watchdog: ReturnType<typeof setTimeout>;
 let clock: ReturnType<typeof setInterval>;
-let timingPhase: 'loading' | 'compiling' | 'running' | undefined;
+let timingPhase: 'loading' | 'compiling' | 'checking' | 'running' | undefined;
 let phaseStarted = 0;
-let phaseDurations: { loading?: number; compiling?: number; running?: number } = {};
+let phaseDurations: { loading?: number; compiling?: number; checking?: number; running?: number } =
+  {};
 let pending: { text: string; stream: string }[] = [];
 let renderFrame = 0;
 
@@ -188,6 +215,8 @@ function setStatus(text: string, state = 'ready') {
 function updateElapsed() {
   if (timingPhase) phaseDurations[timingPhase] = performance.now() - phaseStarted;
   const times: string[] = [];
+  if (phaseDurations.checking !== undefined)
+    times.push(`Check: ${(phaseDurations.checking / 1000).toFixed(2)}s`);
   if (phaseDurations.compiling !== undefined)
     times.push(`Compile: ${(phaseDurations.compiling / 1000).toFixed(2)}s`);
   if (phaseDurations.running !== undefined)
@@ -214,7 +243,8 @@ function finish(text: string, state = 'ready') {
   loading.hidden = true;
   runButton.disabled = compileButton.disabled = false;
   stopButton.disabled = true;
-  versionPicker.disabled = false;
+  versionPicker.disabled = language !== 'java';
+  languagePicker.disabled = scalaPicker.disabled = examplePicker.disabled = false;
   flushOutput();
   setStatus(text, state);
 }
@@ -231,7 +261,10 @@ function timeout(ms: number, phase: string) {
 async function start(action: Request['action']) {
   if (active) return;
   const name = className.value.trim();
-  if (!name || !name.split('.').every((part) => /^[\p{L}_$][\p{L}\p{N}_$]*$/u.test(part))) {
+  if (
+    language === 'java' &&
+    (!name || !name.split('.').every((part) => /^[\p{L}_$][\p{L}\p{N}_$]*$/u.test(part)))
+  ) {
     className.setCustomValidity('Enter a Java class name, such as Main or example.Main.');
     className.reportValidity();
     return;
@@ -240,14 +273,15 @@ async function start(action: Request['action']) {
   clearOutput();
   const id = ++requestId;
   const source = editor.state.doc.toString();
-  const javaVersion = Number(versionPicker.value) as JavaVersion;
+  const javaVersion = language === 'java' ? (Number(versionPicker.value) as JavaVersion) : 25;
+  languagePicker.disabled = scalaPicker.disabled = examplePicker.disabled = true;
   versionPicker.disabled = true;
   active = true;
   phaseDurations = {};
   setTimingPhase('loading');
   runButton.disabled = compileButton.disabled = true;
   stopButton.disabled = false;
-  setStatus('Loading Java…', 'busy');
+  setStatus(`Loading ${languageNames[language]}…`, 'busy');
   loading.hidden = false;
   progress.value = 0;
   timeout(LOAD_TIMEOUT, 'Runtime loading');
@@ -255,12 +289,16 @@ async function start(action: Request['action']) {
   try {
     const [url, assets] = await Promise.all([
       loadWorker(),
-      loadRuntime(javaVersion, ({ loaded, total }) => {
-        if (!active || requestId !== id) return;
-        progress.value = loaded / total;
-        element('loading-text').textContent =
-          `Loading Java · ${(loaded / 1024 / 1024).toFixed(1)} / ${(total / 1024 / 1024).toFixed(1)} MiB`;
-      }),
+      loadRuntime(
+        javaVersion,
+        ({ loaded, total }) => {
+          if (!active || requestId !== id) return;
+          progress.value = loaded / total;
+          element('loading-text').textContent =
+            `Loading ${languageNames[language]} · ${(loaded / 1024 / 1024).toFixed(1)} / ${(total / 1024 / 1024).toFixed(1)} MiB`;
+        },
+        target,
+      ),
     ]);
     if (!active || requestId !== id) return;
     worker = new Worker(url, { type: 'module' });
@@ -268,13 +306,20 @@ async function start(action: Request['action']) {
       if (event.id !== id || id !== requestId || !worker) return;
       switch (event.type) {
         case 'phase':
-          if (event.phase === 'compiling' || event.phase === 'running') {
+          if (
+            event.phase === 'compiling' ||
+            event.phase === 'checking' ||
+            event.phase === 'running'
+          ) {
             setTimingPhase(event.phase);
             loading.hidden = true;
-            const compiling = event.phase === 'compiling';
-            setStatus(compiling ? 'Compiling…' : 'Running…', 'busy');
+            const compiling = event.phase !== 'running';
+            setStatus(
+              event.phase === 'checking' ? 'Checking…' : compiling ? 'Compiling…' : 'Running…',
+              'busy',
+            );
             timeout(
-              compiling ? COMPILE_TIMEOUT : RUN_TIMEOUT,
+              compiling || language !== 'java' ? COMPILE_TIMEOUT : RUN_TIMEOUT,
               compiling ? 'Compilation' : 'Execution',
             );
           }
@@ -282,10 +327,20 @@ async function start(action: Request['action']) {
         case 'progress':
           progress.value = event.loaded / event.total;
           element('loading-text').textContent =
-            `Loading Java · ${(event.loaded / 1024 / 1024).toFixed(1)} / ${(event.total / 1024 / 1024).toFixed(1)} MiB`;
+            `Loading ${languageNames[language]} · ${(event.loaded / 1024 / 1024).toFixed(1)} / ${(event.total / 1024 / 1024).toFixed(1)} MiB`;
           break;
         case 'output':
           append(event.text, event.stream);
+          break;
+        case 'checked':
+          setTimingPhase(undefined);
+          if (action === 'check')
+            append(
+              language === 'clojure'
+                ? 'Syntax checked. Names and execution errors are checked by Run.\n'
+                : 'Script checked successfully.\n',
+              'notice',
+            );
           break;
         case 'compiled':
           setTimingPhase(undefined);
@@ -299,11 +354,15 @@ async function start(action: Request['action']) {
           if (!output.textContent && pending.length === 0)
             append('Program finished without output.\n', 'notice');
           finish(
-            action === 'compile'
-              ? 'Compiled successfully'
-              : event.exitCode === undefined
-                ? 'Finished successfully'
-                : `Exited with code ${event.exitCode}`,
+            action === 'check'
+              ? language === 'clojure'
+                ? 'Syntax checked'
+                : 'Checked successfully'
+              : action === 'compile'
+                ? 'Compiled successfully'
+                : event.exitCode === undefined
+                  ? 'Finished successfully'
+                  : `Exited with code ${event.exitCode}`,
           );
           break;
         case 'error':
@@ -314,14 +373,19 @@ async function start(action: Request['action']) {
     };
     worker.onerror = (event) => {
       if (id !== requestId || !worker) return;
-      append(
-        `\n${event.message || 'The Java runtime stopped unexpectedly. Try again.'}\n`,
-        'stderr',
-      );
+      append(`\n${event.message || 'The runtime stopped unexpectedly. Try again.'}\n`, 'stderr');
       finish('Runtime error · try again', 'error');
     };
     worker.postMessage({
-      request: { id, action, className: name, source, javaVersion } satisfies Request,
+      request: {
+        id,
+        action,
+        className: name,
+        source,
+        javaVersion,
+        language,
+        scalaVersion: state.scalaVersion,
+      } satisfies Request,
       assets,
     });
   } catch (error) {
@@ -336,22 +400,84 @@ async function start(action: Request['action']) {
 
 function updateVersion() {
   const version = Number(versionPicker.value);
-  element('language-label').textContent = `JAVA ${version}`;
-  element('runtime-label').textContent = `Java ${version}`;
+  state.javaVersion = version as JavaVersion;
+  const label =
+    target === 'java'
+      ? `Java ${version}`
+      : `${languageNames[language]} ${definitions[target].version}`;
+  element('language-label').textContent = label.toUpperCase();
+  element('runtime-label').textContent = label;
+  versionPicker.disabled = active || language !== 'java';
+  element('java-picker').hidden = language !== 'java';
+  element('scala-picker').hidden = language !== 'scala';
+  element('main-class-control').hidden = language !== 'java';
+  element('source-pane').setAttribute('aria-label', `${languageNames[language]} source`);
+  compileButton.textContent = language === 'java' ? 'Compile' : 'Check';
+  element('main-help').textContent =
+    language === 'java'
+      ? 'Use a public static void main(String[] args) entry point. Set Main class to its fully qualified name when using a package.'
+      : 'Write a script with top-level statements, imports, and definitions. No main function is needed. External dependency directives and additional source files are unavailable.';
+  updateFilename();
   for (const option of examplePicker.options) {
-    const example = examples[option.value as keyof typeof examples];
-    option.disabled = example.minimumVersion > version;
+    const example = examples[target][option.value];
+    option.disabled = language === 'java' && example.minimumVersion > version;
     option.textContent =
       example.title + (option.disabled ? ` (Java ${example.minimumVersion}+)` : '');
   }
 }
+function updateFilename() {
+  element('filename').textContent =
+    language === 'java'
+      ? `${className.value.split('.').at(-1) || 'Main'}.java`
+      : filenames[language];
+}
+function populateExamples() {
+  examplePicker.replaceChildren(
+    ...Object.entries(examples[target]).map(([key, example]) => new Option(example.title, key)),
+  );
+  const selected = state.drafts[target]?.example;
+  examplePicker.value = selected && examples[target][selected] ? selected : 'hello';
+}
+function switchLanguage() {
+  rememberDraft();
+  language = state.language = languagePicker.value as Language;
+  state.scalaVersion = scalaPicker.value as ScalaVersion;
+  target = executionTarget(language, state.scalaVersion);
+  const draft = state.drafts[target];
+  editor.dispatch({
+    changes: {
+      from: 0,
+      to: editor.state.doc.length,
+      insert: draft?.source ?? examples[target].hello.source,
+    },
+    effects: [
+      languageCompartment.reconfigure(languageSupport(language)),
+      attributesCompartment.reconfigure(
+        EditorView.contentAttributes.of({
+          'aria-label': `${languageNames[language]} source code`,
+          spellcheck: 'false',
+        }),
+      ),
+    ],
+  });
+  className.value = draft?.className ?? 'Main';
+  className.setCustomValidity('');
+  populateExamples();
+  updateVersion();
+  clearOutput();
+  elapsed.textContent = '';
+  setStatus('Ready when you are');
+  persist();
+}
+populateExamples();
 updateVersion();
+languagePicker.onchange = scalaPicker.onchange = switchLanguage;
 versionPicker.onchange = () => {
   updateVersion();
   save();
 };
-runButton.onclick = () => start('run');
-compileButton.onclick = () => start('compile');
+runButton.onclick = () => void start('run');
+compileButton.onclick = () => void start(language === 'java' ? 'compile' : 'check');
 stopButton.onclick = () => {
   append('\nStopped.\n', 'notice');
   finish('Stopped');
@@ -359,31 +485,17 @@ stopButton.onclick = () => {
 element('clear').onclick = clearOutput;
 className.oninput = () => {
   className.setCustomValidity('');
-  element('filename').textContent = `${className.value.split('.').at(-1) || 'Main'}.java`;
+  updateFilename();
   save();
 };
-className.oninput(new InputEvent('input'));
 examplePicker.onchange = () => {
-  const example = examples[examplePicker.value as keyof typeof examples];
+  const example = examples[target][examplePicker.value];
   editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: example.source } });
   className.value = 'Main';
-  element('filename').textContent = 'Main.java';
+  updateFilename();
   save();
   editor.focus();
 };
-window.addEventListener('beforeunload', () => {
-  try {
-    localStorage.setItem(
-      storageKey,
-      JSON.stringify({
-        source: editor.state.doc.toString(),
-        className: className.value,
-        javaVersion: Number(versionPicker.value),
-      }),
-    );
-  } catch {
-    /* Optional storage. */
-  }
-});
+window.addEventListener('beforeunload', persist);
 if (!navigator.userAgent.includes('Mac'))
   document.querySelector('.shortcut')!.textContent = 'Ctrl ↵';

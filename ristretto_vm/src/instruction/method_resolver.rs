@@ -365,71 +365,56 @@ pub fn lookup_method(
         current = parent.parent()?;
     }
 
-    // Search interfaces for methods (including abstract interface methods). Per JVMS §5.4.3.3,
-    // method resolution searches super-interfaces for a maximally specific super interface method.
-    // For a class, we need to search all implemented interfaces
-    let mut interfaces_to_check: Vec<Arc<Class>> = class.interfaces()?;
-
-    // If the class itself is an interface, also check its super-interfaces directly
-    // (class.interfaces() returns super-interfaces for an interface)
-
-    // Track visited interfaces to avoid duplicates
+    // Collect every candidate before choosing: traversal order must not let a
+    // parent interface's default override a more specific subinterface method.
+    let mut interfaces = class.interfaces()?;
+    let mut parent = class.parent()?;
+    while let Some(current) = parent {
+        interfaces.extend(current.interfaces()?);
+        parent = current.parent()?;
+    }
     let mut visited = std::collections::HashSet::new();
-    visited.insert(class.name().to_string());
-
-    // First pass: look for non-abstract (default) methods
-    let mut abstract_method: Option<(Arc<Class>, Arc<Method>)> = None;
-
-    while let Some(interface) = interfaces_to_check.pop() {
-        // Skip if already visited
+    let mut candidates = Vec::new();
+    while let Some(interface) = interfaces.pop() {
         if !visited.insert(interface.name().to_string()) {
             continue;
         }
-
-        // Check for method in interface
-        if let Some(method) = interface.method(name, descriptor) {
-            if !method.is_abstract() {
-                // Found a concrete default method; return immediately
-                return Ok((interface, method));
-            } else if abstract_method.is_none() {
-                // Record the first abstract method we find
-                abstract_method = Some((interface.clone(), method));
-            }
+        interfaces.extend(interface.interfaces()?);
+        if let Some(method) = interface.method(name, descriptor)
+            && !method.is_private()
+            && !method.is_static()
+        {
+            candidates.push((interface, method));
         }
-
-        // Add super-interfaces
-        interfaces_to_check.extend(interface.interfaces()?);
     }
 
-    // Second pass: search the entire class hierarchy's interfaces
-    // This handles the case where a superclass implements an interface with the method
-    let mut class_to_check = class.parent()?;
-    while let Some(parent_class) = class_to_check {
-        let mut parent_interfaces: Vec<Arc<Class>> = parent_class.interfaces()?;
-
-        while let Some(interface) = parent_interfaces.pop() {
-            if !visited.insert(interface.name().to_string()) {
-                continue;
+    let mut shadowed = std::collections::HashSet::new();
+    for (interface, _) in &candidates {
+        let mut parents = interface.interfaces()?;
+        let mut seen = std::collections::HashSet::new();
+        while let Some(parent) = parents.pop() {
+            if seen.insert(parent.name().to_string()) {
+                shadowed.insert(parent.name().to_string());
+                parents.extend(parent.interfaces()?);
             }
-
-            if let Some(method) = interface.method(name, descriptor) {
-                if !method.is_abstract() {
-                    return Ok((interface, method));
-                } else if abstract_method.is_none() {
-                    abstract_method = Some((interface.clone(), method));
-                }
-            }
-
-            parent_interfaces.extend(interface.interfaces()?);
         }
-
-        class_to_check = parent_class.parent()?;
     }
-
-    // If we found an abstract interface method, return it. This allows method resolution to succeed
-    // even when the method is abstract. The actual implementation will be found at dispatch time.
-    if let Some((interface, method)) = abstract_method {
-        return Ok((interface, method));
+    candidates.retain(|(interface, _)| !shadowed.contains(interface.name()));
+    let mut concrete = candidates
+        .iter()
+        .filter(|(_, method)| !method.is_abstract());
+    if let Some(selected) = concrete.next() {
+        if concrete.next().is_some() {
+            return Err(crate::JavaError::IncompatibleClassChangeError(format!(
+                "Conflicting interface defaults for {name}{descriptor} in {}",
+                class.name()
+            ))
+            .into());
+        }
+        return Ok(selected.clone());
+    }
+    if let Some(selected) = candidates.into_iter().next() {
+        return Ok(selected);
     }
 
     Err(crate::JavaError::NoSuchMethodError(format!(

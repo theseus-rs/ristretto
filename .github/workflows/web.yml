@@ -41,6 +41,10 @@ jobs:
       - name: Install pinned Java runtimes
         working-directory: web
         run: npm run install:jdks
+      - uses: actions/cache@v4
+        with:
+          path: ~/.ristretto/languages
+          key: playground-languages-${{ hashFiles('web/languages.json') }}
       - name: Build web applications
         working-directory: web
         run: |
@@ -53,6 +57,10 @@ jobs:
         working-directory: web
         timeout-minutes: 30
         run: npm run test:shell
+      - name: Check script runtimes
+        working-directory: web
+        timeout-minutes: 65
+        run: npm run test:languages
       - name: Build documentation
         run: |
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/axodotdev/oranda/releases/download/v0.6.1/oranda-installer.sh | sh
@@ -86,7 +94,7 @@ jobs:
         with:
           name: playground-site
           path: public
-      - name: Test Java in browser
+      - name: Test playgrounds in browser
         working-directory: web
         run: |
           npm ci

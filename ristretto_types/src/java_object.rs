@@ -314,6 +314,21 @@ fn to_class_loader_object<'a, T: Thread + 'static>(
     class_loader: &'a Arc<ClassLoader>,
 ) -> crate::BoxFuture<'a, Result<Value>> {
     Box::pin(async move {
+        // Reuse the JDK's application loader and its boot/platform parent chain.
+        // A separate BuiltinClassLoader with a null parent cannot load uncached JDK classes.
+        if class_loader.loader_type() == Some(ClassLoaderType::System) {
+            let vm = thread.vm()?;
+            let root = vm.class_loader().read().await.clone();
+            if let Some(loaders) = root
+                .find_loaded(JavaStr::try_from_str("jdk/internal/loader/ClassLoaders")?)
+                .await
+                && let Some(object) = loaders.static_value("APP_LOADER").ok()
+                && !object.is_null()
+            {
+                class_loader.set_object(Some(object.clone())).await;
+                return Ok(object);
+            }
+        }
         if let Some(object) = class_loader.object().await {
             return Ok(object);
         }
@@ -710,7 +725,9 @@ fn get_component_type_object<'a, T: Thread + 'static>(
 ) -> crate::BoxFuture<'a, Result<Value>> {
     Box::pin(async move {
         if let Some(component_type) = class.component_type() {
-            let component_type_class = thread.class(component_type).await?;
+            let component_type_class = thread
+                .load_and_link_class(&JavaStr::cow_from_str(component_type))
+                .await?;
             to_class_object(thread, &component_type_class).await
         } else {
             Ok(Value::Object(None))
@@ -727,7 +744,9 @@ impl<T: Thread + 'static> JavaObject<T> for Arc<Class> {
             let vm = thread.vm()?;
             if *vm.java_class_file_version() > JAVA_8 && class.is_array() {
                 let component_type = class.component_type().unwrap_or_default();
-                let component_type_class = thread.class(component_type).await?;
+                let component_type_class = thread
+                    .load_and_link_class(&JavaStr::cow_from_str(component_type))
+                    .await?;
                 let component_type_object = to_class_object(thread, &component_type_class).await?;
                 {
                     let mut object = class_object.as_object_mut()?;

@@ -144,4 +144,48 @@ mod test {
         assert!(result.is_err());
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_final_static_helper_depends_on_class_file_version() -> Result<()> {
+        for (version, allowed) in [
+            (ristretto_classfile::JAVA_8, true),
+            (ristretto_classfile::JAVA_9, false),
+        ] {
+            let (_vm, thread, original_frame) = crate::test::frame().await?;
+            let mut definition = original_frame.class().class_file().clone();
+            definition.version = version;
+            let pool = &mut definition.constant_pool;
+            let name_index = pool.add_utf8("answer")?;
+            let descriptor_index = pool.add_utf8("I")?;
+            let field_index = pool.add_field_ref(definition.this_class, "answer", "I")?;
+            definition.fields.push(ristretto_classfile::Field {
+                access_flags: ristretto_classfile::FieldAccessFlags::PUBLIC
+                    | ristretto_classfile::FieldAccessFlags::STATIC
+                    | ristretto_classfile::FieldAccessFlags::FINAL,
+                name_index,
+                descriptor_index,
+                field_type: ristretto_classfile::FieldType::parse("I")?,
+                attributes: vec![],
+            });
+            let class = ristretto_classloader::Class::from(None, definition)?;
+            let method = class.try_get_method("test", "()V")?;
+            let frame = Frame::new(&Arc::downgrade(&thread), &class, &method);
+            let stack = &mut OperandStack::with_max_size(1);
+            stack.push_int(42)?;
+            let result = putstatic(&frame, stack, field_index).await;
+            if allowed {
+                result?;
+                getstatic(&frame, stack, field_index).await?;
+                assert_eq!(Value::Int(42), stack.pop()?);
+            } else {
+                assert!(matches!(
+                    result,
+                    Err(crate::Error::JavaError(
+                        crate::JavaError::IllegalAccessError(_)
+                    ))
+                ));
+            }
+        }
+        Ok(())
+    }
 }

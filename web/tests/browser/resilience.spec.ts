@@ -96,7 +96,7 @@ test('keeps the editor and controls usable on a narrow screen and autosaves', as
   await page.getByRole('textbox', { name: 'Main class' }).fill('Saved');
   await page.getByLabel('Java version').selectOption('11');
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem('ristretto-playground-source-v1')))
+    .poll(() => page.evaluate(() => localStorage.getItem('ristretto-playground-source-v2')))
     .toContain('public class Saved');
   await page.reload();
   await expect(page.getByRole('textbox', { name: 'Java source code' })).toHaveText(

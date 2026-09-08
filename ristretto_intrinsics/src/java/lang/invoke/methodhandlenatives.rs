@@ -1470,9 +1470,24 @@ async fn resolve_method<T: Thread + 'static>(
             false,
         ),
         _ => {
-            // First try the specified class
-            match class.try_get_method(&method_name, &method_descriptor) {
-                Ok(m) => (class.clone(), m, false),
+            // Resolve inherited class methods too (constructors are never inherited).
+            let mut declaring_class = class.clone();
+            let declared = loop {
+                match declaring_class.try_get_method(&method_name, &method_descriptor) {
+                    Ok(method) => break Ok(method),
+                    Err(error) => {
+                        if method_name == "<init>" || declaring_class.is_interface() {
+                            break Err(error);
+                        }
+                        let Some(parent) = declaring_class.parent()? else {
+                            break Err(error);
+                        };
+                        declaring_class = parent;
+                    }
+                }
+            };
+            match declared {
+                Ok(m) => (declaring_class, m, false),
                 Err(_)
                     if method_name.starts_with("lambda$") && class.name() == "java/lang/Object" =>
                 {
@@ -1619,6 +1634,7 @@ async fn resolve_method<T: Thread + 'static>(
 
     let modifiers = i32::from(method_access_flags.bits());
     let flags = flags | modifiers;
+    let declaring_class = resolved_class.to_object(thread).await?;
     {
         // vmindex is used by OpenJDK MethodHandle implementation.
         // For methods, it's typically a vtable index or similar.
@@ -1627,6 +1643,7 @@ async fn resolve_method<T: Thread + 'static>(
         let vmindex = 0i64.to_object(thread).await?;
         let mut member_self = member_self.as_object_mut()?;
         member_self.set_value("flags", Value::from(flags))?;
+        member_self.set_value("clazz", declaring_class)?;
         member_self.set_value("vmindex", vmindex)?;
     }
     Ok(Some(member_self))
@@ -1952,9 +1969,9 @@ pub async fn set_call_site_target_normal<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let method_handle = parameters.pop()?;
     let call_site = parameters.pop()?;
     let mut call_site = call_site.as_object_mut()?;
-    let method_handle = parameters.pop()?;
     call_site.set_value("target", method_handle)?;
     Ok(None)
 }
@@ -1968,9 +1985,9 @@ pub async fn set_call_site_target_volatile<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
+    let method_handle = parameters.pop()?;
     let call_site = parameters.pop()?;
     let mut call_site = call_site.as_object_mut()?;
-    let method_handle = parameters.pop()?;
     call_site.set_value("target", method_handle)?;
     Ok(None)
 }

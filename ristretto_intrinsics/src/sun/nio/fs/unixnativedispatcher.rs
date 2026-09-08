@@ -34,7 +34,7 @@ use std::os::unix::fs::MetadataExt;
 #[cfg(any(target_family = "unix", target_family = "wasm"))]
 use std::sync::Arc;
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 use super::managed_files;
 #[cfg(target_family = "unix")]
 use super::native_resources;
@@ -1432,7 +1432,7 @@ pub async fn fsetxattr_0<T: Thread + 'static>(
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method(
     "sun/nio/fs/UnixNativeDispatcher.fstat(ILsun/nio/fs/UnixFileAttributes;)V",
     LessThanOrEqual(JAVA_17)
@@ -1445,7 +1445,7 @@ pub async fn fstat<T: Thread + 'static>(
     fstat_0(thread, parameters).await
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method(
     "sun/nio/fs/UnixNativeDispatcher.fstat0(ILsun/nio/fs/UnixFileAttributes;)V",
     GreaterThanOrEqual(JAVA_21)
@@ -1465,7 +1465,10 @@ pub async fn fstat_0<T: Thread + 'static>(
     let metadata = match managed_files::metadata(vm.file_handles(), i64::from(fd)).await {
         Ok(m) => m,
         Err(e) => {
+            #[cfg(target_family = "unix")]
             let errno = e.raw_os_error().unwrap_or(9 /* EBADF */);
+            #[cfg(target_os = "wasi")]
+            let errno = wasm_linux_errno(&e);
             return Err(throw_unix_exception(&thread, errno).await);
         }
     };
@@ -2122,7 +2125,7 @@ pub async fn lutimes_0<T: Thread + 'static>(
     }
 }
 
-#[cfg(target_family = "unix")]
+#[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.mkdir0(JI)V", Any)]
 #[async_method]
 pub async fn mkdir_0<T: Thread + 'static>(
@@ -2148,9 +2151,8 @@ pub async fn mkdir_0<T: Thread + 'static>(
     #[cfg(not(target_family = "unix"))]
     {
         let _ = mode;
-        if let Err(e) = std::fs::create_dir(&path_str) {
-            let errno = e.raw_os_error().unwrap_or(5);
-            return Err(throw_unix_exception(&thread, errno).await);
+        if let Err(error) = std::fs::create_dir(path_from_bytes(&path_str)) {
+            return Err(throw_unix_exception(&thread, wasm_linux_errno(&error)).await);
         }
         Ok(None)
     }
@@ -2216,6 +2218,26 @@ pub async fn open_0<T: Thread + 'static>(
         Err(error) => {
             Err(throw_unix_exception(&thread, error.raw_os_error().unwrap_or(libc::EIO)).await)
         }
+    }
+}
+
+#[cfg(target_os = "wasi")]
+#[intrinsic_method("sun/nio/fs/UnixNativeDispatcher.open0(JII)I", Any)]
+#[async_method]
+pub async fn open_0<T: Thread + 'static>(
+    thread: Arc<T>,
+    mut parameters: Parameters,
+) -> Result<Option<Value>> {
+    let mode = parameters.pop_int()?;
+    let flags = parameters.pop_int()?;
+    let address = parameters.pop_long()?;
+    let vm = thread.vm()?;
+    let path = path_from_bytes(&read_native_path(&*vm, address)?);
+    match managed_files::open_path(vm.file_handles(), vm.resource_manager(), &path, flags, mode)
+        .await
+    {
+        Ok(fd) => Ok(Some(Value::Int(i32::try_from(fd)?))),
+        Err(error) => Err(throw_unix_exception(&thread, wasm_linux_errno(&error)).await),
     }
 }
 

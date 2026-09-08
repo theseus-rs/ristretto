@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import jdks from '../jdks.json' with { type: 'json' };
-import { unzipSync } from 'fflate';
+import { unzipSync, zipSync } from 'fflate';
 import manifest from '../generated/runtime-manifest.json' with { type: 'json' };
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +20,11 @@ for (const { major } of jdks) {
   const temporary = resolve(workspace, 'tmp');
   mkdirSync(workspace, { recursive: true });
   mkdirSync(temporary, { recursive: true });
+  for (const name of ['first', 'second']) {
+    const path = resolve(workspace, `${name}.jar`);
+    writeFileSync(path, zipSync({ [`${name}.txt`]: new TextEncoder().encode(name) }));
+    utimesSync(path, 0, 0);
+  }
   writeFileSync(
     resolve(workspace, 'request.json'),
     JSON.stringify({
@@ -32,6 +37,13 @@ public class Main {
   public static void main(String[] args) throws Exception {
     System.out.println("Java " + System.getProperty("java.version") + " ☕");
     if (!System.getProperty("java.version").startsWith("${major === 8 ? '1.8.' : major + '.'}")) throw new AssertionError("runtime version");
+    if (!"${major === 8 ? '1.8' : major}".equals(System.getProperty("java.vm.specification.version"))) throw new AssertionError("VM specification version");
+    ${
+      major >= 11
+        ? `if (Main.class.getClassLoader() != ClassLoader.getSystemClassLoader()) throw new AssertionError("system class loader identity");
+    Main.class.getClassLoader().loadClass("java.nio.file.LinkPermission");`
+        : ''
+    }
     if (args.length != 0 || System.in.read() != -1) throw new AssertionError("input");
     if ("😀".hashCode() != 1772899) throw new AssertionError("UTF-16 hash");
     java.util.concurrent.atomic.AtomicReference<Object> reference = new java.util.concurrent.atomic.AtomicReference<>(new Object());
@@ -54,6 +66,11 @@ public class Main {
     }
     try { Paths.get("/jdk/missing").toRealPath(); throw new AssertionError("missing path"); }
     catch (NoSuchFileException expected) { }
+    try (java.util.jar.JarFile first = new java.util.jar.JarFile("/workspace/first.jar");
+         java.util.jar.JarFile second = new java.util.jar.JarFile("/workspace/second.jar")) {
+      if (first.getJarEntry("first.txt") == null || second.getJarEntry("second.txt") == null)
+        throw new AssertionError("distinct ZIP file identities");
+    }
     System.out.println("Filesystem and input checks passed.");
   }
 }`,

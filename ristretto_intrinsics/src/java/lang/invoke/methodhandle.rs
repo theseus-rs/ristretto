@@ -1078,7 +1078,7 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
 
     // For constant_* methods, extract the constant from the MethodHandle's bound arguments.
     // When used as a vmentry, the first arg is the carrier BoundMethodHandle whose LambdaForm's
-    // vmentry is constant_* itself - the constant is in its argL0 field. When called from
+    // vmentry is constant_* itself - its bound field contains the constant. When called from
     // LambdaForm interpretation with a BoundMethodHandle that IS the constant value (not a
     // carrier), we must return it as-is. We distinguish by checking whether the BMH's own
     // form vmentry is a constant_* method.
@@ -1103,7 +1103,14 @@ async fn dispatch_holder_method_internal<T: Thread + 'static>(
                         .unwrap_or(false);
 
                     if is_constant_carrier {
-                        mh_obj.value("argL0").ok()
+                        let field = match method_name {
+                            "constant_I" => "argI0",
+                            "constant_J" => "argJ0",
+                            "constant_F" => "argF0",
+                            "constant_D" => "argD0",
+                            _ => "argL0",
+                        };
+                        mh_obj.value(field).ok()
                     } else {
                         None
                     }

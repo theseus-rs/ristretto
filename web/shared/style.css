@@ -205,6 +205,7 @@ main {
 }
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
@@ -387,6 +388,11 @@ main {
 }
 .editor-footer label {
   flex-shrink: 0;
+}
+#main-class-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .editor-footer #cursor {
   margin-left: auto;
@@ -716,6 +722,7 @@ progress::-moz-progress-bar {
 
 .pickers {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 20px;
 }

@@ -83,12 +83,13 @@ impl ResolvedFieldRef {
     pub(crate) fn check_write(&self, frame: &Frame) -> Result<()> {
         if self.field.access_flags().contains(FieldAccessFlags::FINAL)
             && (!Arc::ptr_eq(frame.class(), &self.declaring_class)
-                || frame.method().name()
-                    != if self.is_static() {
-                        "<clinit>"
-                    } else {
-                        "<init>"
-                    })
+                || (self.declaring_class.class_file().version >= ristretto_classfile::JAVA_9
+                    && frame.method().name()
+                        != if self.is_static() {
+                            "<clinit>"
+                        } else {
+                            "<init>"
+                        }))
         {
             return Err(IllegalAccessError(format!(
                 "Cannot write final field {}.{} from {}.{}",

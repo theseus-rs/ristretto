@@ -1,4 +1,4 @@
-import type { JavaVersion } from './protocol';
+import type { JavaVersion, Target } from './protocol';
 import manifest from '../generated/runtime-manifest.json';
 
 const assetRoot = new URL(`${import.meta.env.BASE_URL}runtime/`, location.origin);
@@ -8,8 +8,13 @@ type Asset = { file: string; sha256: string; size: number };
 const retained = new Map<string, Promise<Uint8Array<ArrayBuffer>>>();
 
 /** Fetch only the selected JDK and share verified WASM assets across versions. */
-export async function loadRuntime(version: JavaVersion, onProgress: (progress: Progress) => void) {
+export async function loadRuntime(
+  version: JavaVersion,
+  onProgress: (progress: Progress) => void,
+  target: Target = 'java',
+) {
   const files: Record<string, Asset> = { ...manifest.files, 'jdk.zip': manifest.jdks[version] };
+  if (target !== 'java') files['language.zip'] = manifest.languages[target];
   const loaded = new Map<string, number>();
   const total = Object.values(files).reduce((sum, entry) => sum + entry.size, 0);
   return Promise.all(
@@ -48,7 +53,7 @@ async function fetchAsset(entry: Asset, report: (size: number) => void) {
   }
   const cached = !!response;
   response ??= await fetch(url);
-  if (!response.ok) throw new Error(`Could not load Java runtime (${response.status}). Try again.`);
+  if (!response.ok) throw new Error(`Could not load runtime (${response.status}). Try again.`);
   const chunks: Uint8Array[] = [];
   const reader = response.body?.getReader();
   if (!reader) throw new Error('The browser could not read a runtime asset.');
@@ -76,7 +81,7 @@ async function fetchAsset(entry: Asset, report: (size: number) => void) {
     } catch {
       /* Retry can fetch a fresh asset. */
     }
-    throw new Error('The downloaded Java runtime was incomplete. Try again.');
+    throw new Error('The downloaded runtime was incomplete. Try again.');
   }
   if (!cached) {
     try {

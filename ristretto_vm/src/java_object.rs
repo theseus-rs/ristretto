@@ -271,6 +271,21 @@ impl JavaObject for Value {
 }
 
 async fn to_class_loader_object(thread: &Thread, class_loader: &Arc<ClassLoader>) -> Result<Value> {
+    // Reuse the JDK's application loader and its boot/platform parent chain.
+    // A separate BuiltinClassLoader with a null parent cannot load uncached JDK classes.
+    if class_loader.loader_type() == Some(ClassLoaderType::System) {
+        let vm = thread.vm()?;
+        let root = vm.class_loader().read().await.clone();
+        if let Some(loaders) = root
+            .find_loaded(JavaStr::try_from_str("jdk/internal/loader/ClassLoaders")?)
+            .await
+            && let Some(object) = loaders.static_value("APP_LOADER").ok()
+            && !object.is_null()
+        {
+            class_loader.set_object(Some(object.clone())).await;
+            return Ok(object);
+        }
+    }
     if let Some(object) = class_loader.object().await {
         return Ok(object);
     }
@@ -780,7 +795,9 @@ async fn build_class_constructor_params(
 /// An error will be returned if the component type cannot be converted to a Class object.
 async fn get_component_type_object(thread: &Thread, class: &Arc<Class>) -> Result<Value> {
     if let Some(component_type) = class.component_type() {
-        let component_type_class = thread.class(component_type).await?;
+        let component_type_class = thread
+            .load_and_link_class(&JavaStr::cow_from_str(component_type))
+            .await?;
         Box::pin(to_class_object(thread, &component_type_class)).await
     } else {
         Ok(Value::Object(None))
@@ -798,7 +815,9 @@ impl JavaObject for Arc<Class> {
                     "array class missing component type".to_string(),
                 ));
             };
-            let component_type_class = thread.class(component_type).await?;
+            let component_type_class = thread
+                .load_and_link_class(&JavaStr::cow_from_str(component_type))
+                .await?;
             let component_type_object = to_class_object(thread, &component_type_class).await?;
             {
                 let mut object = class_object.as_object_mut()?;

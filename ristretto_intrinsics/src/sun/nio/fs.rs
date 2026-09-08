@@ -20,6 +20,8 @@ pub(crate) mod native_resources;
 pub mod registryfiletypedetector;
 #[cfg(target_family = "unix")]
 pub mod unixcopyfile;
+#[cfg(target_os = "wasi")]
+pub mod unixfileattributes;
 #[cfg(target_family = "unix")]
 pub mod unixfilesystem;
 pub mod unixnativedispatcher;
