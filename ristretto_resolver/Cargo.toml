@@ -19,7 +19,7 @@ fancy-regex = { workspace = true }
 futures-util = { workspace = true }
 md-5 = { workspace = true }
 quick-xml = { workspace = true, features = ["serialize"] }
-ristretto_pom = { path = "../ristretto_pom", version = "0.33.0" }
+ristretto_pom = { path = "../ristretto_pom", version = "0.33.1" }
 serde = { workspace = true, features = ["derive"] }
 sha1 = { workspace = true }
 sha2 = { workspace = true }
