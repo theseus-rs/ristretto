@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -16,8 +15,7 @@ use std::sync::Arc;
     "sun/java2d/xr/XRBackendNative.GCRectanglesNative(IJ[II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn gc_rectangles_native<T: Thread + 'static>(
+pub fn gc_rectangles_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -35,8 +33,7 @@ pub async fn gc_rectangles_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRAddGlyphsNative(I[JI[BI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn xr_add_glyphs_native<T: Thread + 'static>(
+pub fn xr_add_glyphs_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,8 +52,7 @@ pub async fn xr_add_glyphs_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRCreateLinearGradientPaintNative([F[SIIIIII)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn xr_create_linear_gradient_paint_native<T: Thread + 'static>(
+pub fn xr_create_linear_gradient_paint_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -78,8 +74,7 @@ pub async fn xr_create_linear_gradient_paint_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRCreateRadialGradientPaintNative([F[SIIIIII)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn xr_create_radial_gradient_paint_native<T: Thread + 'static>(
+pub fn xr_create_radial_gradient_paint_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -101,8 +96,7 @@ pub async fn xr_create_radial_gradient_paint_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRFreeGlyphsNative(I[II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn xr_free_glyphs_native<T: Thread + 'static>(
+pub fn xr_free_glyphs_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -119,8 +113,7 @@ pub async fn xr_free_glyphs_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRSetClipNative(JIIIILsun/java2d/pipe/Region;Z)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn xr_set_clip_native<T: Thread + 'static>(
+pub fn xr_set_clip_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -142,8 +135,7 @@ pub async fn xr_set_clip_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRSetTransformNative(IIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn xr_set_transform_native<T: Thread + 'static>(
+pub fn xr_set_transform_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -164,8 +156,7 @@ pub async fn xr_set_transform_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRenderCompositeTextNative(IIIIIJ[I[III)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_render_composite_text_native<T: Thread + 'static>(
+pub fn x_render_composite_text_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -189,8 +180,7 @@ pub async fn x_render_composite_text_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRenderCreateGlyphSetNative(J)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_render_create_glyph_set_native<T: Thread + 'static>(
+pub fn x_render_create_glyph_set_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -205,8 +195,7 @@ pub async fn x_render_create_glyph_set_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRenderRectanglesNative(IBSSSS[II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_render_rectangles_native<T: Thread + 'static>(
+pub fn x_render_rectangles_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -228,8 +217,7 @@ pub async fn x_render_rectangles_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.copyArea(IIJIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn copy_area<T: Thread + 'static>(
+pub fn copy_area<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -249,8 +237,7 @@ pub async fn copy_area<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/xr/XRBackendNative.createGC(I)J", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn create_gc<T: Thread + 'static>(
+pub fn create_gc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -265,8 +252,7 @@ pub async fn create_gc<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.createPictureNative(IJ)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn create_picture_native<T: Thread + 'static>(
+pub fn create_picture_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -282,8 +268,7 @@ pub async fn create_picture_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.createPixmap(IIII)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn create_pixmap<T: Thread + 'static>(
+pub fn create_pixmap<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -298,8 +283,7 @@ pub async fn create_pixmap<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/xr/XRBackendNative.freeGC(J)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn free_gc<T: Thread + 'static>(
+pub fn free_gc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -314,8 +298,7 @@ pub async fn free_gc<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.freePicture(I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn free_picture<T: Thread + 'static>(
+pub fn free_picture<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -330,8 +313,7 @@ pub async fn free_picture<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.freePixmap(I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn free_pixmap<T: Thread + 'static>(
+pub fn free_pixmap<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -343,8 +325,7 @@ pub async fn free_pixmap<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/xr/XRBackendNative.initIDs()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -355,8 +336,7 @@ pub async fn init_ids<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.padBlitNative(BIIIIIIIIIIIIIIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn pad_blit_native<T: Thread + 'static>(
+pub fn pad_blit_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -390,8 +370,7 @@ pub async fn pad_blit_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.putMaskNative(IJ[BIIIIIIIIFJ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn put_mask_native<T: Thread + 'static>(
+pub fn put_mask_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -418,8 +397,7 @@ pub async fn put_mask_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.renderComposite(BIIIIIIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn render_composite<T: Thread + 'static>(
+pub fn render_composite<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -445,8 +423,7 @@ pub async fn render_composite<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.renderCompositeTrapezoidsNative(BIJIII[I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn render_composite_trapezoids_native<T: Thread + 'static>(
+pub fn render_composite_trapezoids_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -467,8 +444,7 @@ pub async fn render_composite_trapezoids_native<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.renderRectangle(IBSSSSIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn render_rectangle<T: Thread + 'static>(
+pub fn render_rectangle<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -492,8 +468,7 @@ pub async fn render_rectangle<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.setFilter(II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn set_filter<T: Thread + 'static>(
+pub fn set_filter<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -509,8 +484,7 @@ pub async fn set_filter<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.setGCExposures(JZ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn set_gc_exposures<T: Thread + 'static>(
+pub fn set_gc_exposures<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -526,8 +500,7 @@ pub async fn set_gc_exposures<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.setGCForeground(JI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn set_gc_foreground<T: Thread + 'static>(
+pub fn set_gc_foreground<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -543,8 +516,7 @@ pub async fn set_gc_foreground<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.setGCMode(JZ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn set_gc_mode<T: Thread + 'static>(
+pub fn set_gc_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -560,8 +532,7 @@ pub async fn set_gc_mode<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.setPictureRepeat(II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn set_picture_repeat<T: Thread + 'static>(
+pub fn set_picture_repeat<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -578,8 +549,7 @@ pub async fn set_picture_repeat<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.GCRectanglesNative(IJ[II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn gcrectangles_native_linux_ge_v11<T: Thread + 'static>(
+pub fn gcrectangles_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -598,8 +568,7 @@ pub async fn gcrectangles_native_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRAddGlyphsNative(I[JI[BI)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xradd_glyphs_native_linux_ge_v11<T: Thread + 'static>(
+pub fn xradd_glyphs_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -619,8 +588,7 @@ pub async fn xradd_glyphs_native_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRCreateLinearGradientPaintNative([F[SIIIIII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xrcreate_linear_gradient_paint_native_linux_ge_v11<T: Thread + 'static>(
+pub fn xrcreate_linear_gradient_paint_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -643,8 +611,7 @@ pub async fn xrcreate_linear_gradient_paint_native_linux_ge_v11<T: Thread + 'sta
     "sun/java2d/xr/XRBackendNative.XRCreateRadialGradientPaintNative([F[SIIIIII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xrcreate_radial_gradient_paint_native_linux_ge_v11<T: Thread + 'static>(
+pub fn xrcreate_radial_gradient_paint_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -667,8 +634,7 @@ pub async fn xrcreate_radial_gradient_paint_native_linux_ge_v11<T: Thread + 'sta
     "sun/java2d/xr/XRBackendNative.XRFreeGlyphsNative(I[II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xrfree_glyphs_native_linux_ge_v11<T: Thread + 'static>(
+pub fn xrfree_glyphs_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -686,8 +652,7 @@ pub async fn xrfree_glyphs_native_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRSetClipNative(JIIIILsun/java2d/pipe/Region;Z)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xrset_clip_native_linux_ge_v11<T: Thread + 'static>(
+pub fn xrset_clip_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -710,8 +675,7 @@ pub async fn xrset_clip_native_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRSetTransformNative(IIIIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xrset_transform_native_linux_ge_v11<T: Thread + 'static>(
+pub fn xrset_transform_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -733,8 +697,7 @@ pub async fn xrset_transform_native_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRenderCompositeTextNative(IIIIIJ[I[III)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xrender_composite_text_native_linux_ge_v11<T: Thread + 'static>(
+pub fn xrender_composite_text_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -759,8 +722,7 @@ pub async fn xrender_composite_text_native_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRenderCreateGlyphSetNative(J)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xrender_create_glyph_set_native_linux_ge_v11<T: Thread + 'static>(
+pub fn xrender_create_glyph_set_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -776,8 +738,7 @@ pub async fn xrender_create_glyph_set_native_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.XRenderRectanglesNative(IBSSSS[II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xrender_rectangles_native_linux_ge_v11<T: Thread + 'static>(
+pub fn xrender_rectangles_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -800,8 +761,7 @@ pub async fn xrender_rectangles_native_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.copyArea(IIJIIIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn copy_area_linux_ge_v11<T: Thread + 'static>(
+pub fn copy_area_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -825,8 +785,7 @@ pub async fn copy_area_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.createGC(I)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn create_gc_linux_ge_v11<T: Thread + 'static>(
+pub fn create_gc_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -842,8 +801,7 @@ pub async fn create_gc_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.createPictureNative(IJ)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn create_picture_native_linux_ge_v11<T: Thread + 'static>(
+pub fn create_picture_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -860,8 +818,7 @@ pub async fn create_picture_native_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.createPixmap(IIII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn create_pixmap_linux_ge_v11<T: Thread + 'static>(
+pub fn create_pixmap_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -880,8 +837,7 @@ pub async fn create_pixmap_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.freeGC(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn free_gc_linux_ge_v11<T: Thread + 'static>(
+pub fn free_gc_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -897,8 +853,7 @@ pub async fn free_gc_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.freePicture(I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn free_picture_linux_ge_v11<T: Thread + 'static>(
+pub fn free_picture_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -914,8 +869,7 @@ pub async fn free_picture_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.freePixmap(I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn free_pixmap_linux_ge_v11<T: Thread + 'static>(
+pub fn free_pixmap_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -931,8 +885,7 @@ pub async fn free_pixmap_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.initIDs()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_ids_linux_ge_v11<T: Thread + 'static>(
+pub fn init_ids_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -947,8 +900,7 @@ pub async fn init_ids_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.padBlitNative(BIIIIIIIIIIIIIIIIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn pad_blit_native_linux_ge_v11<T: Thread + 'static>(
+pub fn pad_blit_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -983,8 +935,7 @@ pub async fn pad_blit_native_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.putMaskNative(IJ[BIIIIIIIIFJ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn put_mask_native_linux_ge_v11<T: Thread + 'static>(
+pub fn put_mask_native_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1012,8 +963,7 @@ pub async fn put_mask_native_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.renderComposite(BIIIIIIIIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn render_composite_linux_ge_v11<T: Thread + 'static>(
+pub fn render_composite_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1040,8 +990,7 @@ pub async fn render_composite_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.renderRectangle(IBSSSSIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn render_rectangle_linux_ge_v11<T: Thread + 'static>(
+pub fn render_rectangle_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1066,8 +1015,7 @@ pub async fn render_rectangle_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.setFilter(II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_filter_linux_ge_v11<T: Thread + 'static>(
+pub fn set_filter_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1084,8 +1032,7 @@ pub async fn set_filter_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.setGCExposures(JZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_gcexposures_linux_ge_v11<T: Thread + 'static>(
+pub fn set_gcexposures_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1102,8 +1049,7 @@ pub async fn set_gcexposures_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.setGCForeground(JI)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_gcforeground_linux_ge_v11<T: Thread + 'static>(
+pub fn set_gcforeground_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1120,8 +1066,7 @@ pub async fn set_gcforeground_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.setGCMode(JZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_gcmode_linux_ge_v11<T: Thread + 'static>(
+pub fn set_gcmode_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1138,8 +1083,7 @@ pub async fn set_gcmode_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRBackendNative.setPictureRepeat(II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_picture_repeat_linux_ge_v11<T: Thread + 'static>(
+pub fn set_picture_repeat_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1166,8 +1110,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.GCRectanglesNative(IJ[II)V",
             result.unwrap_err().to_string()
@@ -1186,8 +1129,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.XRAddGlyphsNative(I[JI[BI)V",
             result.unwrap_err().to_string()
@@ -1209,8 +1151,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.XRCreateLinearGradientPaintNative([F[SIIIIII)I",
             result.unwrap_err().to_string()
@@ -1232,8 +1173,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.XRCreateRadialGradientPaintNative([F[SIIIIII)I",
             result.unwrap_err().to_string()
@@ -1246,8 +1186,7 @@ mod tests {
         let result = xr_free_glyphs_native(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.XRFreeGlyphsNative(I[II)V",
             result.unwrap_err().to_string()
@@ -1268,8 +1207,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.XRSetClipNative(JIIIILsun/java2d/pipe/Region;Z)V",
             result.unwrap_err().to_string()
@@ -1290,8 +1228,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.XRSetTransformNative(IIIIIII)V",
             result.unwrap_err().to_string()
@@ -1315,8 +1252,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.XRenderCompositeTextNative(IIIIIJ[I[III)V",
             result.unwrap_err().to_string()
@@ -1327,7 +1263,7 @@ mod tests {
     async fn test_x_render_create_glyph_set_native() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result =
-            x_render_create_glyph_set_native(thread, Parameters::new(vec![Value::Long(0)])).await;
+            x_render_create_glyph_set_native(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.XRenderCreateGlyphSetNative(J)I",
             result.unwrap_err().to_string()
@@ -1349,8 +1285,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.XRenderRectanglesNative(IBSSSS[II)V",
             result.unwrap_err().to_string()
@@ -1373,8 +1308,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.copyArea(IIJIIIIII)V",
             result.unwrap_err().to_string()
@@ -1384,7 +1318,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_gc() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = create_gc(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = create_gc(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.createGC(I)J",
             result.unwrap_err().to_string()
@@ -1395,8 +1329,7 @@ mod tests {
     async fn test_create_picture_native() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result =
-            create_picture_native(thread, Parameters::new(vec![Value::Int(0), Value::Long(0)]))
-                .await;
+            create_picture_native(thread, Parameters::new(vec![Value::Int(0), Value::Long(0)]));
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.createPictureNative(IJ)I",
             result.unwrap_err().to_string()
@@ -1414,8 +1347,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.createPixmap(IIII)I",
             result.unwrap_err().to_string()
@@ -1425,7 +1357,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_gc() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = free_gc(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = free_gc(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.freeGC(J)V",
             result.unwrap_err().to_string()
@@ -1435,7 +1367,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_picture() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = free_picture(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = free_picture(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.freePicture(I)V",
             result.unwrap_err().to_string()
@@ -1445,7 +1377,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_pixmap() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = free_pixmap(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = free_pixmap(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.freePixmap(I)V",
             result.unwrap_err().to_string()
@@ -1455,7 +1387,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1487,8 +1419,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.padBlitNative(BIIIIIIIIIIIIIIIIIII)V",
             result.unwrap_err().to_string()
@@ -1515,8 +1446,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.putMaskNative(IJ[BIIIIIIIIFJ)V",
             result.unwrap_err().to_string()
@@ -1542,8 +1472,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.renderComposite(BIIIIIIIIIII)V",
             result.unwrap_err().to_string()
@@ -1564,8 +1493,7 @@ mod tests {
                 Value::Int(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.renderCompositeTrapezoidsNative(BIJIII[I)V",
             result.unwrap_err().to_string()
@@ -1589,8 +1517,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.renderRectangle(IBSSSSIIII)V",
             result.unwrap_err().to_string()
@@ -1600,7 +1527,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_filter() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = set_filter(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+        let result = set_filter(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]));
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.setFilter(II)V",
             result.unwrap_err().to_string()
@@ -1613,8 +1540,7 @@ mod tests {
         let result = set_gc_exposures(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.setGCExposures(JZ)V",
             result.unwrap_err().to_string()
@@ -1625,7 +1551,7 @@ mod tests {
     async fn test_set_gc_foreground() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result =
-            set_gc_foreground(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+            set_gc_foreground(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.setGCForeground(JI)V",
             result.unwrap_err().to_string()
@@ -1638,8 +1564,7 @@ mod tests {
         let result = set_gc_mode(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.setGCMode(JZ)V",
             result.unwrap_err().to_string()
@@ -1650,7 +1575,7 @@ mod tests {
     async fn test_set_picture_repeat() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result =
-            set_picture_repeat(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+            set_picture_repeat(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]));
         assert_eq!(
             "sun.java2d.xr.XRBackendNative.setPictureRepeat(II)V",
             result.unwrap_err().to_string()
@@ -1669,8 +1594,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.GCRectanglesNative(IJ[II)V",
             result.unwrap_err().to_string()
@@ -1690,8 +1614,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.XRAddGlyphsNative(I[JI[BI)V",
             result.unwrap_err().to_string()
@@ -1714,8 +1637,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.XRCreateLinearGradientPaintNative([F[SIIIIII)I",
             result.unwrap_err().to_string()
@@ -1738,8 +1660,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.XRCreateRadialGradientPaintNative([F[SIIIIII)I",
             result.unwrap_err().to_string()
@@ -1753,8 +1674,7 @@ mod tests {
         let result = xrfree_glyphs_native_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.XRFreeGlyphsNative(I[II)V",
             result.unwrap_err().to_string()
@@ -1776,8 +1696,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.XRSetClipNative(JIIIILsun/java2d/pipe/Region;Z)V",
             result.unwrap_err().to_string()
@@ -1799,8 +1718,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.XRSetTransformNative(IIIIIII)V",
             result.unwrap_err().to_string()
@@ -1825,8 +1743,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.XRenderCompositeTextNative(IIIIIJ[I[III)V",
             result.unwrap_err().to_string()
@@ -1840,8 +1757,7 @@ mod tests {
         let result = xrender_create_glyph_set_native_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.XRenderCreateGlyphSetNative(J)I",
             result.unwrap_err().to_string()
@@ -1864,8 +1780,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.XRenderRectanglesNative(IBSSSS[II)V",
             result.unwrap_err().to_string()
@@ -1889,8 +1804,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.copyArea(IIJIIIIII)V",
             result.unwrap_err().to_string()
@@ -1901,7 +1815,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_gc_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create_gc_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = create_gc_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.createGC(I)J",
             result.unwrap_err().to_string()
@@ -1915,8 +1829,7 @@ mod tests {
         let result = create_picture_native_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.createPictureNative(IJ)I",
             result.unwrap_err().to_string()
@@ -1935,8 +1848,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.createPixmap(IIII)I",
             result.unwrap_err().to_string()
@@ -1947,7 +1859,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_gc_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = free_gc_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = free_gc_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.freeGC(J)V",
             result.unwrap_err().to_string()
@@ -1958,7 +1870,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_picture_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = free_picture_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = free_picture_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.freePicture(I)V",
             result.unwrap_err().to_string()
@@ -1969,7 +1881,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_pixmap_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = free_pixmap_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = free_pixmap_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.freePixmap(I)V",
             result.unwrap_err().to_string()
@@ -1980,7 +1892,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids_linux_ge_v11(thread, Parameters::default()).await;
+        let result = init_ids_linux_ge_v11(thread, Parameters::default());
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.initIDs()V",
             result.unwrap_err().to_string()
@@ -2015,8 +1927,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.padBlitNative(BIIIIIIIIIIIIIIIIIII)V",
             result.unwrap_err().to_string()
@@ -2044,8 +1955,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.putMaskNative(IJ[BIIIIIIIIFJ)V",
             result.unwrap_err().to_string()
@@ -2072,8 +1982,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.renderComposite(BIIIIIIIIIII)V",
             result.unwrap_err().to_string()
@@ -2098,8 +2007,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.renderRectangle(IBSSSSIIII)V",
             result.unwrap_err().to_string()
@@ -2111,8 +2019,7 @@ mod tests {
     async fn test_set_filter_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            set_filter_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]))
-                .await;
+            set_filter_linux_ge_v11(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]));
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.setFilter(II)V",
             result.unwrap_err().to_string()
@@ -2126,8 +2033,7 @@ mod tests {
         let result = set_gcexposures_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.setGCExposures(JZ)V",
             result.unwrap_err().to_string()
@@ -2141,8 +2047,7 @@ mod tests {
         let result = set_gcforeground_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.setGCForeground(JI)V",
             result.unwrap_err().to_string()
@@ -2156,8 +2061,7 @@ mod tests {
         let result = set_gcmode_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.setGCMode(JZ)V",
             result.unwrap_err().to_string()
@@ -2171,8 +2075,7 @@ mod tests {
         let result = set_picture_repeat_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRBackendNative.setPictureRepeat(II)V",
             result.unwrap_err().to_string()

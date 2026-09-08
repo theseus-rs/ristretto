@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/security/krb5/Config.getWindowsDirectory(Z)Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn get_windows_directory<T: Thread + 'static>(
+pub fn get_windows_directory<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,7 +28,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_windows_directory() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_windows_directory(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = get_windows_directory(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "sun.security.krb5.Config.getWindowsDirectory(Z)Ljava/lang/String;",
             result.unwrap_err().to_string()

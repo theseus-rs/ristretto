@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/lwawt/macosx/CDesktopPeer._lsOpenFile(Ljava/lang/String;ILjava/lang/String;)I",
     Any
 )]
-#[async_method]
-pub async fn ls_open_file<T: Thread + 'static>(
+pub fn ls_open_file<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn ls_open_file<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CDesktopPeer._lsOpenURI(Ljava/lang/String;I)I", Any)]
-#[async_method]
-pub async fn ls_open_uri<T: Thread + 'static>(
+pub fn ls_open_uri<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,8 +51,7 @@ mod tests {
                 Value::Int(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CDesktopPeer._lsOpenFile(Ljava/lang/String;ILjava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -68,8 +64,7 @@ mod tests {
         let result = ls_open_uri(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CDesktopPeer._lsOpenURI(Ljava/lang/String;I)I",
             result.unwrap_err().to_string()

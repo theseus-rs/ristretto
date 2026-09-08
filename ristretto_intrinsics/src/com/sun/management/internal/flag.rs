@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "com/sun/management/internal/Flag.getAllFlagNames()[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_all_flag_names<T: Thread + 'static>(
+pub fn get_all_flag_names<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn get_all_flag_names<T: Thread + 'static>(
     "com/sun/management/internal/Flag.getFlags([Ljava/lang/String;[Lcom/sun/management/internal/Flag;I)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_flags<T: Thread + 'static>(
+pub fn get_flags<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -42,8 +39,7 @@ pub async fn get_flags<T: Thread + 'static>(
     "com/sun/management/internal/Flag.getInternalFlagCount()I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_internal_flag_count<T: Thread + 'static>(
+pub fn get_internal_flag_count<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -57,8 +53,7 @@ pub async fn get_internal_flag_count<T: Thread + 'static>(
     "com/sun/management/internal/Flag.initialize()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn initialize<T: Thread + 'static>(
+pub fn initialize<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -69,8 +64,7 @@ pub async fn initialize<T: Thread + 'static>(
     "com/sun/management/internal/Flag.setBooleanValue(Ljava/lang/String;Z)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_boolean_value<T: Thread + 'static>(
+pub fn set_boolean_value<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -86,8 +80,7 @@ pub async fn set_boolean_value<T: Thread + 'static>(
     "com/sun/management/internal/Flag.setDoubleValue(Ljava/lang/String;D)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_double_value<T: Thread + 'static>(
+pub fn set_double_value<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -103,8 +96,7 @@ pub async fn set_double_value<T: Thread + 'static>(
     "com/sun/management/internal/Flag.setLongValue(Ljava/lang/String;J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_long_value<T: Thread + 'static>(
+pub fn set_long_value<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -120,8 +112,7 @@ pub async fn set_long_value<T: Thread + 'static>(
     "com/sun/management/internal/Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_string_value<T: Thread + 'static>(
+pub fn set_string_value<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -141,7 +132,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_all_flag_names() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_all_flag_names(thread, Parameters::default()).await;
+        let result = get_all_flag_names(thread, Parameters::default());
         assert_eq!(
             "com.sun.management.internal.Flag.getAllFlagNames()[Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -158,8 +149,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "com.sun.management.internal.Flag.getFlags([Ljava/lang/String;[Lcom/sun/management/internal/Flag;I)I",
             result.unwrap_err().to_string()
@@ -169,7 +159,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_internal_flag_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_internal_flag_count(thread, Parameters::default()).await;
+        let result = get_internal_flag_count(thread, Parameters::default());
         assert_eq!(
             "com.sun.management.internal.Flag.getInternalFlagCount()I",
             result.unwrap_err().to_string()
@@ -179,7 +169,7 @@ mod tests {
     #[tokio::test]
     async fn test_initialize() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = initialize(thread, Parameters::default()).await?;
+        let result = initialize(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -190,8 +180,7 @@ mod tests {
         let result = set_boolean_value(
             thread,
             Parameters::new(vec![Value::Object(None), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com.sun.management.internal.Flag.setBooleanValue(Ljava/lang/String;Z)V",
             result.unwrap_err().to_string()
@@ -204,8 +193,7 @@ mod tests {
         let result = set_double_value(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Double(0.0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com.sun.management.internal.Flag.setDoubleValue(Ljava/lang/String;D)V",
             result.unwrap_err().to_string()
@@ -218,8 +206,7 @@ mod tests {
         let result = set_long_value(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com.sun.management.internal.Flag.setLongValue(Ljava/lang/String;J)V",
             result.unwrap_err().to_string()
@@ -232,8 +219,7 @@ mod tests {
         let result = set_string_value(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com.sun.management.internal.Flag.setStringValue(Ljava/lang/String;Ljava/lang/String;)V",
             result.unwrap_err().to_string()

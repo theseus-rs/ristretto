@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/security/mscapi/CSignature$RSA.generatePublicKeyBlob(I[B[B)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn generate_public_key_blob<T: Thread + 'static>(
+pub fn generate_public_key_blob<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -41,8 +39,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/security/mscapi/CSignature$RSA.generatePublicKeyBlob(I[B[B)[B",
             result.unwrap_err().to_string()

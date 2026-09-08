@@ -2,7 +2,7 @@ use portable_atomic::AtomicI64;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::{JavaError, Parameters, Result, Thread, VM};
 use std::collections::HashMap;
@@ -241,8 +241,7 @@ fn poll_sockets(
 }
 
 #[intrinsic_method("sun/nio/ch/WEPoll.close(J)V", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn close<T: Thread + 'static>(
+pub fn close<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -257,8 +256,7 @@ pub async fn close<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WEPoll.create()J", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn create<T: Thread + 'static>(
+pub fn create<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -274,8 +272,7 @@ pub async fn create<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WEPoll.ctl(JIJI)I", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn ctl<T: Thread + 'static>(
+pub fn ctl<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -311,8 +308,7 @@ pub async fn ctl<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WEPoll.dataOffset()I", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn data_offset<T: Thread + 'static>(
+pub fn data_offset<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -320,8 +316,7 @@ pub async fn data_offset<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WEPoll.eventSize()I", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn event_size<T: Thread + 'static>(
+pub fn event_size<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -329,8 +324,7 @@ pub async fn event_size<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WEPoll.eventsOffset()I", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn events_offset<T: Thread + 'static>(
+pub fn events_offset<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -338,7 +332,6 @@ pub async fn events_offset<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WEPoll.wait(JJII)I", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn wait<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

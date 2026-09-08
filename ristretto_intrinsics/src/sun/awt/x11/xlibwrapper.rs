@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -9,8 +8,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/X11/XlibWrapper.CallErrorHandler(JJJ)I", Any)]
-#[async_method]
-pub async fn call_error_handler<T: Thread + 'static>(
+pub fn call_error_handler<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,8 +21,7 @@ pub async fn call_error_handler<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DefaultScreen(J)J", Any)]
-#[async_method]
-pub async fn default_screen<T: Thread + 'static>(
+pub fn default_screen<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -35,8 +32,7 @@ pub async fn default_screen<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DisplayHeight(JJ)J", Any)]
-#[async_method]
-pub async fn display_height<T: Thread + 'static>(
+pub fn display_height<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -48,8 +44,7 @@ pub async fn display_height<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DisplayHeightMM(JJ)J", Any)]
-#[async_method]
-pub async fn display_height_mm<T: Thread + 'static>(
+pub fn display_height_mm<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -61,8 +56,7 @@ pub async fn display_height_mm<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DisplayWidth(JJ)J", Any)]
-#[async_method]
-pub async fn display_width<T: Thread + 'static>(
+pub fn display_width<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -74,8 +68,7 @@ pub async fn display_width<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DisplayWidthMM(JJ)J", Any)]
-#[async_method]
-pub async fn display_width_mm<T: Thread + 'static>(
+pub fn display_width_mm<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -87,8 +80,7 @@ pub async fn display_width_mm<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.DoesBackingStore(J)I", Any)]
-#[async_method]
-pub async fn does_backing_store<T: Thread + 'static>(
+pub fn does_backing_store<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,8 +91,7 @@ pub async fn does_backing_store<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.ExitSecondaryLoop()V", Any)]
-#[async_method]
-pub async fn exit_secondary_loop<T: Thread + 'static>(
+pub fn exit_secondary_loop<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -110,8 +101,7 @@ pub async fn exit_secondary_loop<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.GetProperty(JJJ)Ljava/lang/String;", Any)]
-#[async_method]
-pub async fn get_property<T: Thread + 'static>(
+pub fn get_property<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -124,8 +114,7 @@ pub async fn get_property<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.InternAtom(JLjava/lang/String;I)J", Any)]
-#[async_method]
-pub async fn intern_atom<T: Thread + 'static>(
+pub fn intern_atom<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -138,8 +127,7 @@ pub async fn intern_atom<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.IsKanaKeyboard(J)Z", Any)]
-#[async_method]
-pub async fn is_kana_keyboard<T: Thread + 'static>(
+pub fn is_kana_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -150,8 +138,7 @@ pub async fn is_kana_keyboard<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.IsKeypadKey(J)Z", Any)]
-#[async_method]
-pub async fn is_keypad_key<T: Thread + 'static>(
+pub fn is_keypad_key<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -162,8 +149,7 @@ pub async fn is_keypad_key<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.IsSunKeyboard(J)Z", Any)]
-#[async_method]
-pub async fn is_sun_keyboard<T: Thread + 'static>(
+pub fn is_sun_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -174,8 +160,7 @@ pub async fn is_sun_keyboard<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.IsXsunKPBehavior(J)Z", Any)]
-#[async_method]
-pub async fn is_xsun_kpbehavior<T: Thread + 'static>(
+pub fn is_xsun_kpbehavior<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -186,8 +171,7 @@ pub async fn is_xsun_kpbehavior<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.PrintXErrorEvent(JJ)V", Any)]
-#[async_method]
-pub async fn print_xerror_event<T: Thread + 'static>(
+pub fn print_xerror_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -199,8 +183,7 @@ pub async fn print_xerror_event<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.RootWindow(JJ)J", Any)]
-#[async_method]
-pub async fn root_window<T: Thread + 'static>(
+pub fn root_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -212,8 +195,7 @@ pub async fn root_window<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.ScreenCount(J)I", Any)]
-#[async_method]
-pub async fn screen_count<T: Thread + 'static>(
+pub fn screen_count<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -224,8 +206,7 @@ pub async fn screen_count<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.ScreenOfDisplay(JJ)J", Any)]
-#[async_method]
-pub async fn screen_of_display<T: Thread + 'static>(
+pub fn screen_of_display<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -237,8 +218,7 @@ pub async fn screen_of_display<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.ServerVendor(J)Ljava/lang/String;", Any)]
-#[async_method]
-pub async fn server_vendor<T: Thread + 'static>(
+pub fn server_vendor<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -249,8 +229,7 @@ pub async fn server_vendor<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.SetBitmapShape(JJII[I)V", Any)]
-#[async_method]
-pub async fn set_bitmap_shape<T: Thread + 'static>(
+pub fn set_bitmap_shape<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -265,8 +244,7 @@ pub async fn set_bitmap_shape<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.SetProperty(JJJLjava/lang/String;)V", Any)]
-#[async_method]
-pub async fn set_property<T: Thread + 'static>(
+pub fn set_property<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -283,8 +261,7 @@ pub async fn set_property<T: Thread + 'static>(
     "sun/awt/X11/XlibWrapper.SetRectangularShape(JJIIIILsun/java2d/pipe/Region;)V",
     Any
 )]
-#[async_method]
-pub async fn set_rectangular_shape<T: Thread + 'static>(
+pub fn set_rectangular_shape<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -301,8 +278,7 @@ pub async fn set_rectangular_shape<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.SetToolkitErrorHandler()J", Any)]
-#[async_method]
-pub async fn set_toolkit_error_handler<T: Thread + 'static>(
+pub fn set_toolkit_error_handler<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -312,8 +288,7 @@ pub async fn set_toolkit_error_handler<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.SetZOrder(JJJ)V", Any)]
-#[async_method]
-pub async fn set_zorder<T: Thread + 'static>(
+pub fn set_zorder<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -326,8 +301,7 @@ pub async fn set_zorder<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.VendorRelease(J)I", Any)]
-#[async_method]
-pub async fn vendor_release<T: Thread + 'static>(
+pub fn vendor_release<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -338,8 +312,7 @@ pub async fn vendor_release<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XAllocColor(JJJ)Z", Any)]
-#[async_method]
-pub async fn xalloc_color<T: Thread + 'static>(
+pub fn xalloc_color<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -352,8 +325,7 @@ pub async fn xalloc_color<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XAllocSizeHints()J", Any)]
-#[async_method]
-pub async fn xalloc_size_hints<T: Thread + 'static>(
+pub fn xalloc_size_hints<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -363,8 +335,7 @@ pub async fn xalloc_size_hints<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XAllocWMHints()J", Any)]
-#[async_method]
-pub async fn xalloc_wmhints<T: Thread + 'static>(
+pub fn xalloc_wmhints<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -374,8 +345,7 @@ pub async fn xalloc_wmhints<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XBell(JI)V", Any)]
-#[async_method]
-pub async fn xbell<T: Thread + 'static>(
+pub fn xbell<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -384,8 +354,7 @@ pub async fn xbell<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XBell(JI)V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XChangeActivePointerGrab(JIJJ)V", Any)]
-#[async_method]
-pub async fn xchange_active_pointer_grab<T: Thread + 'static>(
+pub fn xchange_active_pointer_grab<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -399,8 +368,7 @@ pub async fn xchange_active_pointer_grab<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XChangePropertyImpl(JJJJIIJI)V", Any)]
-#[async_method]
-pub async fn xchange_property_impl<T: Thread + 'static>(
+pub fn xchange_property_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -421,8 +389,7 @@ pub async fn xchange_property_impl<T: Thread + 'static>(
     "sun/awt/X11/XlibWrapper.XChangePropertyS(JJJJIILjava/lang/String;)V",
     Any
 )]
-#[async_method]
-pub async fn xchange_property_s<T: Thread + 'static>(
+pub fn xchange_property_s<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -439,8 +406,7 @@ pub async fn xchange_property_s<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XChangeWindowAttributes(JJJJ)V", Any)]
-#[async_method]
-pub async fn xchange_window_attributes<T: Thread + 'static>(
+pub fn xchange_window_attributes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -454,8 +420,7 @@ pub async fn xchange_window_attributes<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XClearWindow(JJ)V", Any)]
-#[async_method]
-pub async fn xclear_window<T: Thread + 'static>(
+pub fn xclear_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -467,8 +432,7 @@ pub async fn xclear_window<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCloseDisplay(J)V", Any)]
-#[async_method]
-pub async fn xclose_display<T: Thread + 'static>(
+pub fn xclose_display<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -479,8 +443,7 @@ pub async fn xclose_display<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XConfigureWindow(JJJJ)V", Any)]
-#[async_method]
-pub async fn xconfigure_window<T: Thread + 'static>(
+pub fn xconfigure_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -494,8 +457,7 @@ pub async fn xconfigure_window<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XConvertCase(JJJ)V", Any)]
-#[async_method]
-pub async fn xconvert_case<T: Thread + 'static>(
+pub fn xconvert_case<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -508,8 +470,7 @@ pub async fn xconvert_case<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XConvertSelection(JJJJJJ)V", Any)]
-#[async_method]
-pub async fn xconvert_selection<T: Thread + 'static>(
+pub fn xconvert_selection<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -525,8 +486,7 @@ pub async fn xconvert_selection<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreateBitmapFromData(JJJII)J", Any)]
-#[async_method]
-pub async fn xcreate_bitmap_from_data<T: Thread + 'static>(
+pub fn xcreate_bitmap_from_data<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -541,8 +501,7 @@ pub async fn xcreate_bitmap_from_data<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreateFontCursor(JI)I", Any)]
-#[async_method]
-pub async fn xcreate_font_cursor<T: Thread + 'static>(
+pub fn xcreate_font_cursor<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -554,8 +513,7 @@ pub async fn xcreate_font_cursor<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreateGC(JJJJ)J", Any)]
-#[async_method]
-pub async fn xcreate_gc<T: Thread + 'static>(
+pub fn xcreate_gc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -569,8 +527,7 @@ pub async fn xcreate_gc<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreateImage(JJIIIJIIII)J", Any)]
-#[async_method]
-pub async fn xcreate_image<T: Thread + 'static>(
+pub fn xcreate_image<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -590,8 +547,7 @@ pub async fn xcreate_image<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreatePixmap(JJIII)J", Any)]
-#[async_method]
-pub async fn xcreate_pixmap<T: Thread + 'static>(
+pub fn xcreate_pixmap<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -606,8 +562,7 @@ pub async fn xcreate_pixmap<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreatePixmapCursor(JJJJJII)J", Any)]
-#[async_method]
-pub async fn xcreate_pixmap_cursor<T: Thread + 'static>(
+pub fn xcreate_pixmap_cursor<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -624,8 +579,7 @@ pub async fn xcreate_pixmap_cursor<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XCreateWindow(JJIIIIIIJJJJ)J", Any)]
-#[async_method]
-pub async fn xcreate_window<T: Thread + 'static>(
+pub fn xcreate_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -647,8 +601,7 @@ pub async fn xcreate_window<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XDeleteProperty(JJJ)V", Any)]
-#[async_method]
-pub async fn xdelete_property<T: Thread + 'static>(
+pub fn xdelete_property<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -661,8 +614,7 @@ pub async fn xdelete_property<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XDestroyImage(J)V", Any)]
-#[async_method]
-pub async fn xdestroy_image<T: Thread + 'static>(
+pub fn xdestroy_image<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -673,8 +625,7 @@ pub async fn xdestroy_image<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XDestroyWindow(JJ)V", Any)]
-#[async_method]
-pub async fn xdestroy_window<T: Thread + 'static>(
+pub fn xdestroy_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -686,8 +637,7 @@ pub async fn xdestroy_window<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XDisplayString(J)J", Any)]
-#[async_method]
-pub async fn xdisplay_string<T: Thread + 'static>(
+pub fn xdisplay_string<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -698,8 +648,7 @@ pub async fn xdisplay_string<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XEventsQueued(JI)I", Any)]
-#[async_method]
-pub async fn xevents_queued<T: Thread + 'static>(
+pub fn xevents_queued<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -711,8 +660,7 @@ pub async fn xevents_queued<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFilterEvent(JJ)Z", Any)]
-#[async_method]
-pub async fn xfilter_event<T: Thread + 'static>(
+pub fn xfilter_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -724,8 +672,7 @@ pub async fn xfilter_event<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFlush(J)V", Any)]
-#[async_method]
-pub async fn xflush<T: Thread + 'static>(
+pub fn xflush<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -733,8 +680,7 @@ pub async fn xflush<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XFlush(J)V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFree(J)V", Any)]
-#[async_method]
-pub async fn xfree<T: Thread + 'static>(
+pub fn xfree<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -742,8 +688,7 @@ pub async fn xfree<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XFree(J)V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFreeCursor(JJ)V", Any)]
-#[async_method]
-pub async fn xfree_cursor<T: Thread + 'static>(
+pub fn xfree_cursor<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -755,8 +700,7 @@ pub async fn xfree_cursor<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFreeGC(JJ)V", Any)]
-#[async_method]
-pub async fn xfree_gc<T: Thread + 'static>(
+pub fn xfree_gc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -765,8 +709,7 @@ pub async fn xfree_gc<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XFreeGC(JJ)V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFreeModifiermap(J)V", Any)]
-#[async_method]
-pub async fn xfree_modifiermap<T: Thread + 'static>(
+pub fn xfree_modifiermap<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -777,8 +720,7 @@ pub async fn xfree_modifiermap<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XFreePixmap(JJ)V", Any)]
-#[async_method]
-pub async fn xfree_pixmap<T: Thread + 'static>(
+pub fn xfree_pixmap<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -790,8 +732,7 @@ pub async fn xfree_pixmap<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetAtomName(JJ)Ljava/lang/String;", Any)]
-#[async_method]
-pub async fn xget_atom_name<T: Thread + 'static>(
+pub fn xget_atom_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -806,8 +747,7 @@ pub async fn xget_atom_name<T: Thread + 'static>(
     "sun/awt/X11/XlibWrapper.XGetDefault(JLjava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn xget_default<T: Thread + 'static>(
+pub fn xget_default<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -817,8 +757,7 @@ pub async fn xget_default<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XGetDefault(JLjava/lang/String;Ljava/lang/String;)Ljava/lang/String;".to_string()).into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetGeometry(JJJJJJJJJ)I", Any)]
-#[async_method]
-pub async fn xget_geometry<T: Thread + 'static>(
+pub fn xget_geometry<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -837,8 +776,7 @@ pub async fn xget_geometry<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetIconSizes(JJJJ)I", Any)]
-#[async_method]
-pub async fn xget_icon_sizes<T: Thread + 'static>(
+pub fn xget_icon_sizes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -852,8 +790,7 @@ pub async fn xget_icon_sizes<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetInputFocus(J)J", Any)]
-#[async_method]
-pub async fn xget_input_focus<T: Thread + 'static>(
+pub fn xget_input_focus<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -864,8 +801,7 @@ pub async fn xget_input_focus<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetModifierMapping(J)J", Any)]
-#[async_method]
-pub async fn xget_modifier_mapping<T: Thread + 'static>(
+pub fn xget_modifier_mapping<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -876,8 +812,7 @@ pub async fn xget_modifier_mapping<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetPointerMapping(JJI)I", Any)]
-#[async_method]
-pub async fn xget_pointer_mapping<T: Thread + 'static>(
+pub fn xget_pointer_mapping<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -890,8 +825,7 @@ pub async fn xget_pointer_mapping<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetSelectionOwner(JJ)J", Any)]
-#[async_method]
-pub async fn xget_selection_owner<T: Thread + 'static>(
+pub fn xget_selection_owner<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -903,8 +837,7 @@ pub async fn xget_selection_owner<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetVisualInfo(JJJJ)J", Any)]
-#[async_method]
-pub async fn xget_visual_info<T: Thread + 'static>(
+pub fn xget_visual_info<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -918,8 +851,7 @@ pub async fn xget_visual_info<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetWMHints(JJJ)V", Any)]
-#[async_method]
-pub async fn xget_wmhints<T: Thread + 'static>(
+pub fn xget_wmhints<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -932,8 +864,7 @@ pub async fn xget_wmhints<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetWMNormalHints(JJJJ)I", Any)]
-#[async_method]
-pub async fn xget_wmnormal_hints<T: Thread + 'static>(
+pub fn xget_wmnormal_hints<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -947,8 +878,7 @@ pub async fn xget_wmnormal_hints<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetWindowAttributes(JJJ)I", Any)]
-#[async_method]
-pub async fn xget_window_attributes<T: Thread + 'static>(
+pub fn xget_window_attributes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -961,8 +891,7 @@ pub async fn xget_window_attributes<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGetWindowProperty(JJJJJJJJJJJJ)I", Any)]
-#[async_method]
-pub async fn xget_window_property<T: Thread + 'static>(
+pub fn xget_window_property<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -984,8 +913,7 @@ pub async fn xget_window_property<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGrabKeyboard(JJIIIJ)I", Any)]
-#[async_method]
-pub async fn xgrab_keyboard<T: Thread + 'static>(
+pub fn xgrab_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1001,8 +929,7 @@ pub async fn xgrab_keyboard<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGrabPointer(JJIIIIJJJ)I", Any)]
-#[async_method]
-pub async fn xgrab_pointer<T: Thread + 'static>(
+pub fn xgrab_pointer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1021,8 +948,7 @@ pub async fn xgrab_pointer<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XGrabServer(J)V", Any)]
-#[async_method]
-pub async fn xgrab_server<T: Thread + 'static>(
+pub fn xgrab_server<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1033,8 +959,7 @@ pub async fn xgrab_server<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XIconifyWindow(JJJ)I", Any)]
-#[async_method]
-pub async fn xiconify_window<T: Thread + 'static>(
+pub fn xiconify_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1047,8 +972,7 @@ pub async fn xiconify_window<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XInternAtoms(J[Ljava/lang/String;ZJ)I", Any)]
-#[async_method]
-pub async fn xintern_atoms<T: Thread + 'static>(
+pub fn xintern_atoms<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1062,8 +986,7 @@ pub async fn xintern_atoms<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XKeycodeToKeysym(JII)J", Any)]
-#[async_method]
-pub async fn xkeycode_to_keysym<T: Thread + 'static>(
+pub fn xkeycode_to_keysym<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1076,8 +999,7 @@ pub async fn xkeycode_to_keysym<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XKeysymToKeycode(JJ)I", Any)]
-#[async_method]
-pub async fn xkeysym_to_keycode<T: Thread + 'static>(
+pub fn xkeysym_to_keycode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1089,8 +1011,7 @@ pub async fn xkeysym_to_keycode<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XLowerWindow(JJ)V", Any)]
-#[async_method]
-pub async fn xlower_window<T: Thread + 'static>(
+pub fn xlower_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1102,8 +1023,7 @@ pub async fn xlower_window<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMapRaised(JJ)V", Any)]
-#[async_method]
-pub async fn xmap_raised<T: Thread + 'static>(
+pub fn xmap_raised<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1115,8 +1035,7 @@ pub async fn xmap_raised<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMapWindow(JJ)V", Any)]
-#[async_method]
-pub async fn xmap_window<T: Thread + 'static>(
+pub fn xmap_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1128,8 +1047,7 @@ pub async fn xmap_window<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMaskEvent(JJJ)V", Any)]
-#[async_method]
-pub async fn xmask_event<T: Thread + 'static>(
+pub fn xmask_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1142,8 +1060,7 @@ pub async fn xmask_event<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMaxRequestSize(J)J", Any)]
-#[async_method]
-pub async fn xmax_request_size<T: Thread + 'static>(
+pub fn xmax_request_size<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1154,8 +1071,7 @@ pub async fn xmax_request_size<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMoveResizeWindow(JJIIII)V", Any)]
-#[async_method]
-pub async fn xmove_resize_window<T: Thread + 'static>(
+pub fn xmove_resize_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1171,8 +1087,7 @@ pub async fn xmove_resize_window<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XMoveWindow(JJII)V", Any)]
-#[async_method]
-pub async fn xmove_window<T: Thread + 'static>(
+pub fn xmove_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1186,8 +1101,7 @@ pub async fn xmove_window<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XNextEvent(JJ)V", Any)]
-#[async_method]
-pub async fn xnext_event<T: Thread + 'static>(
+pub fn xnext_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1199,8 +1113,7 @@ pub async fn xnext_event<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XNextSecondaryLoopEvent(JJ)Z", Any)]
-#[async_method]
-pub async fn xnext_secondary_loop_event<T: Thread + 'static>(
+pub fn xnext_secondary_loop_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1212,8 +1125,7 @@ pub async fn xnext_secondary_loop_event<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XOpenDisplay(J)J", Any)]
-#[async_method]
-pub async fn xopen_display<T: Thread + 'static>(
+pub fn xopen_display<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1224,8 +1136,7 @@ pub async fn xopen_display<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XPeekEvent(JJ)V", Any)]
-#[async_method]
-pub async fn xpeek_event<T: Thread + 'static>(
+pub fn xpeek_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1237,8 +1148,7 @@ pub async fn xpeek_event<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XPutBackEvent(JJ)V", Any)]
-#[async_method]
-pub async fn xput_back_event<T: Thread + 'static>(
+pub fn xput_back_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1250,8 +1160,7 @@ pub async fn xput_back_event<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XPutImage(JJJJIIIIII)V", Any)]
-#[async_method]
-pub async fn xput_image<T: Thread + 'static>(
+pub fn xput_image<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1271,8 +1180,7 @@ pub async fn xput_image<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XQueryBestCursor(JJIIJJ)Z", Any)]
-#[async_method]
-pub async fn xquery_best_cursor<T: Thread + 'static>(
+pub fn xquery_best_cursor<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1291,8 +1199,7 @@ pub async fn xquery_best_cursor<T: Thread + 'static>(
     "sun/awt/X11/XlibWrapper.XQueryExtension(JLjava/lang/String;JJJ)Z",
     Any
 )]
-#[async_method]
-pub async fn xquery_extension<T: Thread + 'static>(
+pub fn xquery_extension<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1307,8 +1214,7 @@ pub async fn xquery_extension<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XQueryKeymap(JJ)V", Any)]
-#[async_method]
-pub async fn xquery_keymap<T: Thread + 'static>(
+pub fn xquery_keymap<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1320,8 +1226,7 @@ pub async fn xquery_keymap<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XQueryPointer(JJJJJJJJJ)Z", Any)]
-#[async_method]
-pub async fn xquery_pointer<T: Thread + 'static>(
+pub fn xquery_pointer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1340,8 +1245,7 @@ pub async fn xquery_pointer<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XQueryTree(JJJJJJ)I", Any)]
-#[async_method]
-pub async fn xquery_tree<T: Thread + 'static>(
+pub fn xquery_tree<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1357,8 +1261,7 @@ pub async fn xquery_tree<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XRaiseWindow(JJ)V", Any)]
-#[async_method]
-pub async fn xraise_window<T: Thread + 'static>(
+pub fn xraise_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1370,8 +1273,7 @@ pub async fn xraise_window<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XRefreshKeyboardMapping(J)V", Any)]
-#[async_method]
-pub async fn xrefresh_keyboard_mapping<T: Thread + 'static>(
+pub fn xrefresh_keyboard_mapping<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1382,8 +1284,7 @@ pub async fn xrefresh_keyboard_mapping<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XReparentWindow(JJJII)V", Any)]
-#[async_method]
-pub async fn xreparent_window<T: Thread + 'static>(
+pub fn xreparent_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1398,8 +1299,7 @@ pub async fn xreparent_window<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XResizeWindow(JJII)V", Any)]
-#[async_method]
-pub async fn xresize_window<T: Thread + 'static>(
+pub fn xresize_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1413,8 +1313,7 @@ pub async fn xresize_window<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XRestackWindows(JJI)V", Any)]
-#[async_method]
-pub async fn xrestack_windows<T: Thread + 'static>(
+pub fn xrestack_windows<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1427,8 +1326,7 @@ pub async fn xrestack_windows<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XScreenNumberOfScreen(J)J", Any)]
-#[async_method]
-pub async fn xscreen_number_of_screen<T: Thread + 'static>(
+pub fn xscreen_number_of_screen<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1439,8 +1337,7 @@ pub async fn xscreen_number_of_screen<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSelectInput(JJJ)V", Any)]
-#[async_method]
-pub async fn xselect_input<T: Thread + 'static>(
+pub fn xselect_input<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1453,8 +1350,7 @@ pub async fn xselect_input<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSendEvent(JJZJJ)I", Any)]
-#[async_method]
-pub async fn xsend_event<T: Thread + 'static>(
+pub fn xsend_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1469,8 +1365,7 @@ pub async fn xsend_event<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetCloseDownMode(JI)V", Any)]
-#[async_method]
-pub async fn xset_close_down_mode<T: Thread + 'static>(
+pub fn xset_close_down_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1482,8 +1377,7 @@ pub async fn xset_close_down_mode<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetErrorHandler(J)V", Any)]
-#[async_method]
-pub async fn xset_error_handler<T: Thread + 'static>(
+pub fn xset_error_handler<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1494,8 +1388,7 @@ pub async fn xset_error_handler<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetInputFocus(JJ)V", Any)]
-#[async_method]
-pub async fn xset_input_focus<T: Thread + 'static>(
+pub fn xset_input_focus<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1507,8 +1400,7 @@ pub async fn xset_input_focus<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetInputFocus2(JJJ)V", Any)]
-#[async_method]
-pub async fn xset_input_focus2<T: Thread + 'static>(
+pub fn xset_input_focus2<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1524,8 +1416,7 @@ pub async fn xset_input_focus2<T: Thread + 'static>(
     "sun/awt/X11/XlibWrapper.XSetLocaleModifiers(Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn xset_locale_modifiers<T: Thread + 'static>(
+pub fn xset_locale_modifiers<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1537,8 +1428,7 @@ pub async fn xset_locale_modifiers<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetMinMaxHints(JJIIIIJ)V", Any)]
-#[async_method]
-pub async fn xset_min_max_hints<T: Thread + 'static>(
+pub fn xset_min_max_hints<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1555,8 +1445,7 @@ pub async fn xset_min_max_hints<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetSelectionOwner(JJJJ)V", Any)]
-#[async_method]
-pub async fn xset_selection_owner<T: Thread + 'static>(
+pub fn xset_selection_owner<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1570,8 +1459,7 @@ pub async fn xset_selection_owner<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetTransientFor(JJJ)V", Any)]
-#[async_method]
-pub async fn xset_transient_for<T: Thread + 'static>(
+pub fn xset_transient_for<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1584,8 +1472,7 @@ pub async fn xset_transient_for<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetWMHints(JJJ)V", Any)]
-#[async_method]
-pub async fn xset_wmhints<T: Thread + 'static>(
+pub fn xset_wmhints<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1598,8 +1485,7 @@ pub async fn xset_wmhints<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetWMNormalHints(JJJ)V", Any)]
-#[async_method]
-pub async fn xset_wmnormal_hints<T: Thread + 'static>(
+pub fn xset_wmnormal_hints<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1612,8 +1498,7 @@ pub async fn xset_wmnormal_hints<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetWindowBackground(JJJ)V", Any)]
-#[async_method]
-pub async fn xset_window_background<T: Thread + 'static>(
+pub fn xset_window_background<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1626,8 +1511,7 @@ pub async fn xset_window_background<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSetWindowBackgroundPixmap(JJJ)V", Any)]
-#[async_method]
-pub async fn xset_window_background_pixmap<T: Thread + 'static>(
+pub fn xset_window_background_pixmap<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1640,8 +1524,7 @@ pub async fn xset_window_background_pixmap<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XShapeQueryExtension(JJJ)Z", Any)]
-#[async_method]
-pub async fn xshape_query_extension<T: Thread + 'static>(
+pub fn xshape_query_extension<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1654,8 +1537,7 @@ pub async fn xshape_query_extension<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSupportsLocale()Z", Any)]
-#[async_method]
-pub async fn xsupports_locale<T: Thread + 'static>(
+pub fn xsupports_locale<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1665,8 +1547,7 @@ pub async fn xsupports_locale<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSync(JI)V", Any)]
-#[async_method]
-pub async fn xsync<T: Thread + 'static>(
+pub fn xsync<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1675,8 +1556,7 @@ pub async fn xsync<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XlibWrapper.XSync(JI)V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XSynchronize(JZ)I", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn xsynchronize<T: Thread + 'static>(
+pub fn xsynchronize<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1691,8 +1571,7 @@ pub async fn xsynchronize<T: Thread + 'static>(
     "sun/awt/X11/XlibWrapper.XTextPropertyToStringList([BJ)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn xtext_property_to_string_list<T: Thread + 'static>(
+pub fn xtext_property_to_string_list<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1704,8 +1583,7 @@ pub async fn xtext_property_to_string_list<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XTranslateCoordinates(JJJJJJJJ)I", Any)]
-#[async_method]
-pub async fn xtranslate_coordinates<T: Thread + 'static>(
+pub fn xtranslate_coordinates<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1723,8 +1601,7 @@ pub async fn xtranslate_coordinates<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XUngrabKeyboard(JJ)V", Any)]
-#[async_method]
-pub async fn xungrab_keyboard<T: Thread + 'static>(
+pub fn xungrab_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1736,8 +1613,7 @@ pub async fn xungrab_keyboard<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XUngrabPointer(JJ)V", Any)]
-#[async_method]
-pub async fn xungrab_pointer<T: Thread + 'static>(
+pub fn xungrab_pointer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1749,8 +1625,7 @@ pub async fn xungrab_pointer<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XUngrabServer(J)V", Any)]
-#[async_method]
-pub async fn xungrab_server<T: Thread + 'static>(
+pub fn xungrab_server<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1761,8 +1636,7 @@ pub async fn xungrab_server<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XUnmapWindow(JJ)V", Any)]
-#[async_method]
-pub async fn xunmap_window<T: Thread + 'static>(
+pub fn xunmap_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1774,8 +1648,7 @@ pub async fn xunmap_window<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XWindowEvent(JJJJ)V", Any)]
-#[async_method]
-pub async fn xwindow_event<T: Thread + 'static>(
+pub fn xwindow_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1789,8 +1662,7 @@ pub async fn xwindow_event<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeAllocateBackBufferName(JJI)J", Any)]
-#[async_method]
-pub async fn xdbe_allocate_back_buffer_name<T: Thread + 'static>(
+pub fn xdbe_allocate_back_buffer_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1803,8 +1675,7 @@ pub async fn xdbe_allocate_back_buffer_name<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeBeginIdiom(J)I", Any)]
-#[async_method]
-pub async fn xdbe_begin_idiom<T: Thread + 'static>(
+pub fn xdbe_begin_idiom<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1815,8 +1686,7 @@ pub async fn xdbe_begin_idiom<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeDeallocateBackBufferName(JJ)I", Any)]
-#[async_method]
-pub async fn xdbe_deallocate_back_buffer_name<T: Thread + 'static>(
+pub fn xdbe_deallocate_back_buffer_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1828,8 +1698,7 @@ pub async fn xdbe_deallocate_back_buffer_name<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeEndIdiom(J)I", Any)]
-#[async_method]
-pub async fn xdbe_end_idiom<T: Thread + 'static>(
+pub fn xdbe_end_idiom<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1840,8 +1709,7 @@ pub async fn xdbe_end_idiom<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeQueryExtension(JJJ)I", Any)]
-#[async_method]
-pub async fn xdbe_query_extension<T: Thread + 'static>(
+pub fn xdbe_query_extension<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1854,8 +1722,7 @@ pub async fn xdbe_query_extension<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XdbeSwapBuffers(JJI)I", Any)]
-#[async_method]
-pub async fn xdbe_swap_buffers<T: Thread + 'static>(
+pub fn xdbe_swap_buffers<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1868,8 +1735,7 @@ pub async fn xdbe_swap_buffers<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbFreeKeyboard(JJZ)V", Any)]
-#[async_method]
-pub async fn xkb_free_keyboard<T: Thread + 'static>(
+pub fn xkb_free_keyboard<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1882,8 +1748,7 @@ pub async fn xkb_free_keyboard<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbGetEffectiveGroup(J)I", Any)]
-#[async_method]
-pub async fn xkb_get_effective_group<T: Thread + 'static>(
+pub fn xkb_get_effective_group<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1894,8 +1759,7 @@ pub async fn xkb_get_effective_group<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbGetMap(JJJ)J", Any)]
-#[async_method]
-pub async fn xkb_get_map<T: Thread + 'static>(
+pub fn xkb_get_map<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1908,8 +1772,7 @@ pub async fn xkb_get_map<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbGetUpdatedMap(JJJ)J", Any)]
-#[async_method]
-pub async fn xkb_get_updated_map<T: Thread + 'static>(
+pub fn xkb_get_updated_map<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1922,8 +1785,7 @@ pub async fn xkb_get_updated_map<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbKeycodeToKeysym(JIII)J", Any)]
-#[async_method]
-pub async fn xkb_keycode_to_keysym<T: Thread + 'static>(
+pub fn xkb_keycode_to_keysym<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1937,8 +1799,7 @@ pub async fn xkb_keycode_to_keysym<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbLibraryVersion(JJ)Z", Any)]
-#[async_method]
-pub async fn xkb_library_version<T: Thread + 'static>(
+pub fn xkb_library_version<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1950,8 +1811,7 @@ pub async fn xkb_library_version<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbQueryExtension(JJJJJJ)Z", Any)]
-#[async_method]
-pub async fn xkb_query_extension<T: Thread + 'static>(
+pub fn xkb_query_extension<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1967,8 +1827,7 @@ pub async fn xkb_query_extension<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbSelectEventDetails(JJJJJ)V", Any)]
-#[async_method]
-pub async fn xkb_select_event_details<T: Thread + 'static>(
+pub fn xkb_select_event_details<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1983,8 +1842,7 @@ pub async fn xkb_select_event_details<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbSelectEvents(JJJJ)V", Any)]
-#[async_method]
-pub async fn xkb_select_events<T: Thread + 'static>(
+pub fn xkb_select_events<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1998,8 +1856,7 @@ pub async fn xkb_select_events<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbSetDetectableAutoRepeat(JZ)V", Any)]
-#[async_method]
-pub async fn xkb_set_detectable_auto_repeat<T: Thread + 'static>(
+pub fn xkb_set_detectable_auto_repeat<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2011,8 +1868,7 @@ pub async fn xkb_set_detectable_auto_repeat<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.XkbTranslateKeyCode(JIJJJ)Z", Any)]
-#[async_method]
-pub async fn xkb_translate_key_code<T: Thread + 'static>(
+pub fn xkb_translate_key_code<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2027,8 +1883,7 @@ pub async fn xkb_translate_key_code<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.copyIntArray(JLjava/lang/Object;I)V", Any)]
-#[async_method]
-pub async fn copy_int_array<T: Thread + 'static>(
+pub fn copy_int_array<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2041,8 +1896,7 @@ pub async fn copy_int_array<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.copyLongArray(JLjava/lang/Object;I)V", Any)]
-#[async_method]
-pub async fn copy_long_array<T: Thread + 'static>(
+pub fn copy_long_array<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2055,8 +1909,7 @@ pub async fn copy_long_array<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.getAddress(Ljava/lang/Object;)J", Any)]
-#[async_method]
-pub async fn get_address<T: Thread + 'static>(
+pub fn get_address<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2067,8 +1920,7 @@ pub async fn get_address<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.getScreenOfWindow(JJ)J", Any)]
-#[async_method]
-pub async fn get_screen_of_window<T: Thread + 'static>(
+pub fn get_screen_of_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2080,8 +1932,7 @@ pub async fn get_screen_of_window<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.getStringBytes(J)[B", Any)]
-#[async_method]
-pub async fn get_string_bytes<T: Thread + 'static>(
+pub fn get_string_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2092,8 +1943,7 @@ pub async fn get_string_bytes<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XlibWrapper.memcpy(JJJ)V", Any)]
-#[async_method]
-pub async fn memcpy<T: Thread + 'static>(
+pub fn memcpy<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2114,8 +1964,7 @@ mod tests {
         let result = call_error_handler(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.CallErrorHandler(JJJ)I",
             result.unwrap_err().to_string()
@@ -2126,7 +1975,7 @@ mod tests {
     #[tokio::test]
     async fn test_default_screen() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = default_screen(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = default_screen(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.DefaultScreen(J)J",
             result.unwrap_err().to_string()
@@ -2140,8 +1989,7 @@ mod tests {
         let result = display_height(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.DisplayHeight(JJ)J",
             result.unwrap_err().to_string()
@@ -2155,8 +2003,7 @@ mod tests {
         let result = display_height_mm(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.DisplayHeightMM(JJ)J",
             result.unwrap_err().to_string()
@@ -2170,8 +2017,7 @@ mod tests {
         let result = display_width(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.DisplayWidth(JJ)J",
             result.unwrap_err().to_string()
@@ -2185,8 +2031,7 @@ mod tests {
         let result = display_width_mm(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.DisplayWidthMM(JJ)J",
             result.unwrap_err().to_string()
@@ -2197,7 +2042,7 @@ mod tests {
     #[tokio::test]
     async fn test_does_backing_store() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = does_backing_store(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = does_backing_store(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.DoesBackingStore(J)I",
             result.unwrap_err().to_string()
@@ -2208,7 +2053,7 @@ mod tests {
     #[tokio::test]
     async fn test_exit_secondary_loop() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = exit_secondary_loop(thread, Parameters::default()).await;
+        let result = exit_secondary_loop(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/XlibWrapper.ExitSecondaryLoop()V",
             result.unwrap_err().to_string()
@@ -2222,8 +2067,7 @@ mod tests {
         let result = get_property(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.GetProperty(JJJ)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -2237,8 +2081,7 @@ mod tests {
         let result = intern_atom(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.InternAtom(JLjava/lang/String;I)J",
             result.unwrap_err().to_string()
@@ -2249,7 +2092,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_kana_keyboard() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_kana_keyboard(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = is_kana_keyboard(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.IsKanaKeyboard(J)Z",
             result.unwrap_err().to_string()
@@ -2260,7 +2103,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_keypad_key() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_keypad_key(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = is_keypad_key(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.IsKeypadKey(J)Z",
             result.unwrap_err().to_string()
@@ -2271,7 +2114,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_sun_keyboard() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_sun_keyboard(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = is_sun_keyboard(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.IsSunKeyboard(J)Z",
             result.unwrap_err().to_string()
@@ -2282,7 +2125,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_xsun_kpbehavior() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_xsun_kpbehavior(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = is_xsun_kpbehavior(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.IsXsunKPBehavior(J)Z",
             result.unwrap_err().to_string()
@@ -2296,8 +2139,7 @@ mod tests {
         let result = print_xerror_event(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.PrintXErrorEvent(JJ)V",
             result.unwrap_err().to_string()
@@ -2311,8 +2153,7 @@ mod tests {
         let result = root_window(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.RootWindow(JJ)J",
             result.unwrap_err().to_string()
@@ -2323,7 +2164,7 @@ mod tests {
     #[tokio::test]
     async fn test_screen_count() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = screen_count(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = screen_count(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.ScreenCount(J)I",
             result.unwrap_err().to_string()
@@ -2337,8 +2178,7 @@ mod tests {
         let result = screen_of_display(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.ScreenOfDisplay(JJ)J",
             result.unwrap_err().to_string()
@@ -2349,7 +2189,7 @@ mod tests {
     #[tokio::test]
     async fn test_server_vendor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = server_vendor(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = server_vendor(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.ServerVendor(J)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -2369,8 +2209,7 @@ mod tests {
                 Value::Int(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.SetBitmapShape(JJII[I)V",
             result.unwrap_err().to_string()
@@ -2389,8 +2228,7 @@ mod tests {
                 Value::Long(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.SetProperty(JJJLjava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -2412,8 +2250,7 @@ mod tests {
                 Value::Int(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.SetRectangularShape(JJIIIILsun/java2d/pipe/Region;)V",
             result.unwrap_err().to_string()
@@ -2424,7 +2261,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_toolkit_error_handler() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_toolkit_error_handler(thread, Parameters::default()).await;
+        let result = set_toolkit_error_handler(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/XlibWrapper.SetToolkitErrorHandler()J",
             result.unwrap_err().to_string()
@@ -2438,8 +2275,7 @@ mod tests {
         let result = set_zorder(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.SetZOrder(JJJ)V",
             result.unwrap_err().to_string()
@@ -2450,7 +2286,7 @@ mod tests {
     #[tokio::test]
     async fn test_vendor_release() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = vendor_release(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = vendor_release(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.VendorRelease(J)I",
             result.unwrap_err().to_string()
@@ -2464,8 +2300,7 @@ mod tests {
         let result = xalloc_color(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XAllocColor(JJJ)Z",
             result.unwrap_err().to_string()
@@ -2476,7 +2311,7 @@ mod tests {
     #[tokio::test]
     async fn test_xalloc_size_hints() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xalloc_size_hints(thread, Parameters::default()).await;
+        let result = xalloc_size_hints(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XAllocSizeHints()J",
             result.unwrap_err().to_string()
@@ -2487,7 +2322,7 @@ mod tests {
     #[tokio::test]
     async fn test_xalloc_wmhints() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xalloc_wmhints(thread, Parameters::default()).await;
+        let result = xalloc_wmhints(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XAllocWMHints()J",
             result.unwrap_err().to_string()
@@ -2498,7 +2333,7 @@ mod tests {
     #[tokio::test]
     async fn test_xbell() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xbell(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+        let result = xbell(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XBell(JI)V",
             result.unwrap_err().to_string()
@@ -2517,8 +2352,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XChangeActivePointerGrab(JIJJ)V",
             result.unwrap_err().to_string()
@@ -2541,8 +2375,7 @@ mod tests {
                 Value::Long(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XChangePropertyImpl(JJJJIIJI)V",
             result.unwrap_err().to_string()
@@ -2564,8 +2397,7 @@ mod tests {
                 Value::Int(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XChangePropertyS(JJJJIILjava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -2584,8 +2416,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XChangeWindowAttributes(JJJJ)V",
             result.unwrap_err().to_string()
@@ -2599,8 +2430,7 @@ mod tests {
         let result = xclear_window(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XClearWindow(JJ)V",
             result.unwrap_err().to_string()
@@ -2611,7 +2441,7 @@ mod tests {
     #[tokio::test]
     async fn test_xclose_display() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xclose_display(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xclose_display(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XCloseDisplay(J)V",
             result.unwrap_err().to_string()
@@ -2630,8 +2460,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XConfigureWindow(JJJJ)V",
             result.unwrap_err().to_string()
@@ -2645,8 +2474,7 @@ mod tests {
         let result = xconvert_case(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XConvertCase(JJJ)V",
             result.unwrap_err().to_string()
@@ -2667,8 +2495,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XConvertSelection(JJJJJJ)V",
             result.unwrap_err().to_string()
@@ -2688,8 +2515,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XCreateBitmapFromData(JJJII)J",
             result.unwrap_err().to_string()
@@ -2701,7 +2527,7 @@ mod tests {
     async fn test_xcreate_font_cursor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            xcreate_font_cursor(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+            xcreate_font_cursor(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XCreateFontCursor(JI)I",
             result.unwrap_err().to_string()
@@ -2720,8 +2546,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XCreateGC(JJJJ)J",
             result.unwrap_err().to_string()
@@ -2746,8 +2571,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XCreateImage(JJIIIJIIII)J",
             result.unwrap_err().to_string()
@@ -2767,8 +2591,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XCreatePixmap(JJIII)J",
             result.unwrap_err().to_string()
@@ -2790,8 +2613,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XCreatePixmapCursor(JJJJJII)J",
             result.unwrap_err().to_string()
@@ -2818,8 +2640,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XCreateWindow(JJIIIIIIJJJJ)J",
             result.unwrap_err().to_string()
@@ -2833,8 +2654,7 @@ mod tests {
         let result = xdelete_property(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XDeleteProperty(JJJ)V",
             result.unwrap_err().to_string()
@@ -2845,7 +2665,7 @@ mod tests {
     #[tokio::test]
     async fn test_xdestroy_image() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xdestroy_image(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xdestroy_image(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XDestroyImage(J)V",
             result.unwrap_err().to_string()
@@ -2859,8 +2679,7 @@ mod tests {
         let result = xdestroy_window(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XDestroyWindow(JJ)V",
             result.unwrap_err().to_string()
@@ -2871,7 +2690,7 @@ mod tests {
     #[tokio::test]
     async fn test_xdisplay_string() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xdisplay_string(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xdisplay_string(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XDisplayString(J)J",
             result.unwrap_err().to_string()
@@ -2882,8 +2701,7 @@ mod tests {
     #[tokio::test]
     async fn test_xevents_queued() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            xevents_queued(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+        let result = xevents_queued(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XEventsQueued(JI)I",
             result.unwrap_err().to_string()
@@ -2897,8 +2715,7 @@ mod tests {
         let result = xfilter_event(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XFilterEvent(JJ)Z",
             result.unwrap_err().to_string()
@@ -2909,7 +2726,7 @@ mod tests {
     #[tokio::test]
     async fn test_xflush() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xflush(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xflush(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XFlush(J)V",
             result.unwrap_err().to_string()
@@ -2920,7 +2737,7 @@ mod tests {
     #[tokio::test]
     async fn test_xfree() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xfree(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xfree(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XFree(J)V",
             result.unwrap_err().to_string()
@@ -2934,8 +2751,7 @@ mod tests {
         let result = xfree_cursor(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XFreeCursor(JJ)V",
             result.unwrap_err().to_string()
@@ -2949,8 +2765,7 @@ mod tests {
         let result = xfree_gc(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XFreeGC(JJ)V",
             result.unwrap_err().to_string()
@@ -2961,7 +2776,7 @@ mod tests {
     #[tokio::test]
     async fn test_xfree_modifiermap() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xfree_modifiermap(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xfree_modifiermap(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XFreeModifiermap(J)V",
             result.unwrap_err().to_string()
@@ -2975,8 +2790,7 @@ mod tests {
         let result = xfree_pixmap(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XFreePixmap(JJ)V",
             result.unwrap_err().to_string()
@@ -2990,8 +2804,7 @@ mod tests {
         let result = xget_atom_name(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetAtomName(JJ)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -3009,8 +2822,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetDefault(JLjava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -3034,8 +2846,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetGeometry(JJJJJJJJJ)I",
             result.unwrap_err().to_string()
@@ -3054,8 +2865,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetIconSizes(JJJJ)I",
             result.unwrap_err().to_string()
@@ -3066,7 +2876,7 @@ mod tests {
     #[tokio::test]
     async fn test_xget_input_focus() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xget_input_focus(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xget_input_focus(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetInputFocus(J)J",
             result.unwrap_err().to_string()
@@ -3077,7 +2887,7 @@ mod tests {
     #[tokio::test]
     async fn test_xget_modifier_mapping() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xget_modifier_mapping(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xget_modifier_mapping(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetModifierMapping(J)J",
             result.unwrap_err().to_string()
@@ -3091,8 +2901,7 @@ mod tests {
         let result = xget_pointer_mapping(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetPointerMapping(JJI)I",
             result.unwrap_err().to_string()
@@ -3106,8 +2915,7 @@ mod tests {
         let result = xget_selection_owner(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetSelectionOwner(JJ)J",
             result.unwrap_err().to_string()
@@ -3126,8 +2934,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetVisualInfo(JJJJ)J",
             result.unwrap_err().to_string()
@@ -3141,8 +2948,7 @@ mod tests {
         let result = xget_wmhints(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetWMHints(JJJ)V",
             result.unwrap_err().to_string()
@@ -3161,8 +2967,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetWMNormalHints(JJJJ)I",
             result.unwrap_err().to_string()
@@ -3176,8 +2981,7 @@ mod tests {
         let result = xget_window_attributes(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetWindowAttributes(JJJ)I",
             result.unwrap_err().to_string()
@@ -3204,8 +3008,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGetWindowProperty(JJJJJJJJJJJJ)I",
             result.unwrap_err().to_string()
@@ -3226,8 +3029,7 @@ mod tests {
                 Value::Int(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGrabKeyboard(JJIIIJ)I",
             result.unwrap_err().to_string()
@@ -3251,8 +3053,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGrabPointer(JJIIIIJJJ)I",
             result.unwrap_err().to_string()
@@ -3263,7 +3064,7 @@ mod tests {
     #[tokio::test]
     async fn test_xgrab_server() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xgrab_server(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xgrab_server(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XGrabServer(J)V",
             result.unwrap_err().to_string()
@@ -3277,8 +3078,7 @@ mod tests {
         let result = xiconify_window(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XIconifyWindow(JJJ)I",
             result.unwrap_err().to_string()
@@ -3297,8 +3097,7 @@ mod tests {
                 Value::from(false),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XInternAtoms(J[Ljava/lang/String;ZJ)I",
             result.unwrap_err().to_string()
@@ -3312,8 +3111,7 @@ mod tests {
         let result = xkeycode_to_keysym(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XKeycodeToKeysym(JII)J",
             result.unwrap_err().to_string()
@@ -3327,8 +3125,7 @@ mod tests {
         let result = xkeysym_to_keycode(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XKeysymToKeycode(JJ)I",
             result.unwrap_err().to_string()
@@ -3342,8 +3139,7 @@ mod tests {
         let result = xlower_window(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XLowerWindow(JJ)V",
             result.unwrap_err().to_string()
@@ -3357,8 +3153,7 @@ mod tests {
         let result = xmap_raised(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XMapRaised(JJ)V",
             result.unwrap_err().to_string()
@@ -3372,8 +3167,7 @@ mod tests {
         let result = xmap_window(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XMapWindow(JJ)V",
             result.unwrap_err().to_string()
@@ -3387,8 +3181,7 @@ mod tests {
         let result = xmask_event(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XMaskEvent(JJJ)V",
             result.unwrap_err().to_string()
@@ -3399,7 +3192,7 @@ mod tests {
     #[tokio::test]
     async fn test_xmax_request_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xmax_request_size(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xmax_request_size(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XMaxRequestSize(J)J",
             result.unwrap_err().to_string()
@@ -3420,8 +3213,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XMoveResizeWindow(JJIIII)V",
             result.unwrap_err().to_string()
@@ -3440,8 +3232,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XMoveWindow(JJII)V",
             result.unwrap_err().to_string()
@@ -3455,8 +3246,7 @@ mod tests {
         let result = xnext_event(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XNextEvent(JJ)V",
             result.unwrap_err().to_string()
@@ -3470,8 +3260,7 @@ mod tests {
         let result = xnext_secondary_loop_event(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XNextSecondaryLoopEvent(JJ)Z",
             result.unwrap_err().to_string()
@@ -3482,7 +3271,7 @@ mod tests {
     #[tokio::test]
     async fn test_xopen_display() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xopen_display(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xopen_display(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XOpenDisplay(J)J",
             result.unwrap_err().to_string()
@@ -3496,8 +3285,7 @@ mod tests {
         let result = xpeek_event(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XPeekEvent(JJ)V",
             result.unwrap_err().to_string()
@@ -3511,8 +3299,7 @@ mod tests {
         let result = xput_back_event(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XPutBackEvent(JJ)V",
             result.unwrap_err().to_string()
@@ -3537,8 +3324,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XPutImage(JJJJIIIIII)V",
             result.unwrap_err().to_string()
@@ -3559,8 +3345,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XQueryBestCursor(JJIIJJ)Z",
             result.unwrap_err().to_string()
@@ -3580,8 +3365,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XQueryExtension(JLjava/lang/String;JJJ)Z",
             result.unwrap_err().to_string()
@@ -3595,8 +3379,7 @@ mod tests {
         let result = xquery_keymap(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XQueryKeymap(JJ)V",
             result.unwrap_err().to_string()
@@ -3620,8 +3403,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XQueryPointer(JJJJJJJJJ)Z",
             result.unwrap_err().to_string()
@@ -3642,8 +3424,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XQueryTree(JJJJJJ)I",
             result.unwrap_err().to_string()
@@ -3657,8 +3438,7 @@ mod tests {
         let result = xraise_window(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XRaiseWindow(JJ)V",
             result.unwrap_err().to_string()
@@ -3669,7 +3449,7 @@ mod tests {
     #[tokio::test]
     async fn test_xrefresh_keyboard_mapping() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xrefresh_keyboard_mapping(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xrefresh_keyboard_mapping(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XRefreshKeyboardMapping(J)V",
             result.unwrap_err().to_string()
@@ -3689,8 +3469,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XReparentWindow(JJJII)V",
             result.unwrap_err().to_string()
@@ -3709,8 +3488,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XResizeWindow(JJII)V",
             result.unwrap_err().to_string()
@@ -3724,8 +3502,7 @@ mod tests {
         let result = xrestack_windows(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XRestackWindows(JJI)V",
             result.unwrap_err().to_string()
@@ -3736,7 +3513,7 @@ mod tests {
     #[tokio::test]
     async fn test_xscreen_number_of_screen() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xscreen_number_of_screen(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xscreen_number_of_screen(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XScreenNumberOfScreen(J)J",
             result.unwrap_err().to_string()
@@ -3750,8 +3527,7 @@ mod tests {
         let result = xselect_input(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSelectInput(JJJ)V",
             result.unwrap_err().to_string()
@@ -3771,8 +3547,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSendEvent(JJZJJ)I",
             result.unwrap_err().to_string()
@@ -3784,8 +3559,7 @@ mod tests {
     async fn test_xset_close_down_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            xset_close_down_mode(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]))
-                .await;
+            xset_close_down_mode(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetCloseDownMode(JI)V",
             result.unwrap_err().to_string()
@@ -3796,7 +3570,7 @@ mod tests {
     #[tokio::test]
     async fn test_xset_error_handler() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xset_error_handler(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xset_error_handler(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetErrorHandler(J)V",
             result.unwrap_err().to_string()
@@ -3810,8 +3584,7 @@ mod tests {
         let result = xset_input_focus(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetInputFocus(JJ)V",
             result.unwrap_err().to_string()
@@ -3825,8 +3598,7 @@ mod tests {
         let result = xset_input_focus2(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetInputFocus2(JJJ)V",
             result.unwrap_err().to_string()
@@ -3837,8 +3609,7 @@ mod tests {
     #[tokio::test]
     async fn test_xset_locale_modifiers() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            xset_locale_modifiers(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = xset_locale_modifiers(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetLocaleModifiers(Ljava/lang/String;)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -3860,8 +3631,7 @@ mod tests {
                 Value::Int(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetMinMaxHints(JJIIIIJ)V",
             result.unwrap_err().to_string()
@@ -3880,8 +3650,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetSelectionOwner(JJJJ)V",
             result.unwrap_err().to_string()
@@ -3895,8 +3664,7 @@ mod tests {
         let result = xset_transient_for(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetTransientFor(JJJ)V",
             result.unwrap_err().to_string()
@@ -3910,8 +3678,7 @@ mod tests {
         let result = xset_wmhints(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetWMHints(JJJ)V",
             result.unwrap_err().to_string()
@@ -3925,8 +3692,7 @@ mod tests {
         let result = xset_wmnormal_hints(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetWMNormalHints(JJJ)V",
             result.unwrap_err().to_string()
@@ -3940,8 +3706,7 @@ mod tests {
         let result = xset_window_background(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetWindowBackground(JJJ)V",
             result.unwrap_err().to_string()
@@ -3955,8 +3720,7 @@ mod tests {
         let result = xset_window_background_pixmap(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSetWindowBackgroundPixmap(JJJ)V",
             result.unwrap_err().to_string()
@@ -3970,8 +3734,7 @@ mod tests {
         let result = xshape_query_extension(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XShapeQueryExtension(JJJ)Z",
             result.unwrap_err().to_string()
@@ -3982,7 +3745,7 @@ mod tests {
     #[tokio::test]
     async fn test_xsupports_locale() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xsupports_locale(thread, Parameters::default()).await;
+        let result = xsupports_locale(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSupportsLocale()Z",
             result.unwrap_err().to_string()
@@ -3993,7 +3756,7 @@ mod tests {
     #[tokio::test]
     async fn test_xsync() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xsync(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+        let result = xsync(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSync(JI)V",
             result.unwrap_err().to_string()
@@ -4007,8 +3770,7 @@ mod tests {
         let result = xsynchronize(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XSynchronize(JZ)I",
             result.unwrap_err().to_string()
@@ -4022,8 +3784,7 @@ mod tests {
         let result = xtext_property_to_string_list(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XTextPropertyToStringList([BJ)[Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -4046,8 +3807,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XTranslateCoordinates(JJJJJJJJ)I",
             result.unwrap_err().to_string()
@@ -4061,8 +3821,7 @@ mod tests {
         let result = xungrab_keyboard(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XUngrabKeyboard(JJ)V",
             result.unwrap_err().to_string()
@@ -4076,8 +3835,7 @@ mod tests {
         let result = xungrab_pointer(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XUngrabPointer(JJ)V",
             result.unwrap_err().to_string()
@@ -4088,7 +3846,7 @@ mod tests {
     #[tokio::test]
     async fn test_xungrab_server() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xungrab_server(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xungrab_server(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XUngrabServer(J)V",
             result.unwrap_err().to_string()
@@ -4102,8 +3860,7 @@ mod tests {
         let result = xunmap_window(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XUnmapWindow(JJ)V",
             result.unwrap_err().to_string()
@@ -4122,8 +3879,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XWindowEvent(JJJJ)V",
             result.unwrap_err().to_string()
@@ -4137,8 +3893,7 @@ mod tests {
         let result = xdbe_allocate_back_buffer_name(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XdbeAllocateBackBufferName(JJI)J",
             result.unwrap_err().to_string()
@@ -4149,7 +3904,7 @@ mod tests {
     #[tokio::test]
     async fn test_xdbe_begin_idiom() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xdbe_begin_idiom(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xdbe_begin_idiom(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XdbeBeginIdiom(J)I",
             result.unwrap_err().to_string()
@@ -4163,8 +3918,7 @@ mod tests {
         let result = xdbe_deallocate_back_buffer_name(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XdbeDeallocateBackBufferName(JJ)I",
             result.unwrap_err().to_string()
@@ -4175,7 +3929,7 @@ mod tests {
     #[tokio::test]
     async fn test_xdbe_end_idiom() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xdbe_end_idiom(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xdbe_end_idiom(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XdbeEndIdiom(J)I",
             result.unwrap_err().to_string()
@@ -4189,8 +3943,7 @@ mod tests {
         let result = xdbe_query_extension(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XdbeQueryExtension(JJJ)I",
             result.unwrap_err().to_string()
@@ -4204,8 +3957,7 @@ mod tests {
         let result = xdbe_swap_buffers(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XdbeSwapBuffers(JJI)I",
             result.unwrap_err().to_string()
@@ -4219,8 +3971,7 @@ mod tests {
         let result = xkb_free_keyboard(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XkbFreeKeyboard(JJZ)V",
             result.unwrap_err().to_string()
@@ -4231,7 +3982,7 @@ mod tests {
     #[tokio::test]
     async fn test_xkb_get_effective_group() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = xkb_get_effective_group(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = xkb_get_effective_group(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XkbGetEffectiveGroup(J)I",
             result.unwrap_err().to_string()
@@ -4245,8 +3996,7 @@ mod tests {
         let result = xkb_get_map(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XkbGetMap(JJJ)J",
             result.unwrap_err().to_string()
@@ -4260,8 +4010,7 @@ mod tests {
         let result = xkb_get_updated_map(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XkbGetUpdatedMap(JJJ)J",
             result.unwrap_err().to_string()
@@ -4280,8 +4029,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XkbKeycodeToKeysym(JIII)J",
             result.unwrap_err().to_string()
@@ -4295,8 +4043,7 @@ mod tests {
         let result = xkb_library_version(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XkbLibraryVersion(JJ)Z",
             result.unwrap_err().to_string()
@@ -4317,8 +4064,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XkbQueryExtension(JJJJJJ)Z",
             result.unwrap_err().to_string()
@@ -4338,8 +4084,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XkbSelectEventDetails(JJJJJ)V",
             result.unwrap_err().to_string()
@@ -4358,8 +4103,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XkbSelectEvents(JJJJ)V",
             result.unwrap_err().to_string()
@@ -4373,8 +4117,7 @@ mod tests {
         let result = xkb_set_detectable_auto_repeat(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XkbSetDetectableAutoRepeat(JZ)V",
             result.unwrap_err().to_string()
@@ -4394,8 +4137,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.XkbTranslateKeyCode(JIJJJ)Z",
             result.unwrap_err().to_string()
@@ -4409,8 +4151,7 @@ mod tests {
         let result = copy_int_array(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.copyIntArray(JLjava/lang/Object;I)V",
             result.unwrap_err().to_string()
@@ -4424,8 +4165,7 @@ mod tests {
         let result = copy_long_array(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.copyLongArray(JLjava/lang/Object;I)V",
             result.unwrap_err().to_string()
@@ -4436,7 +4176,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_address() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_address(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_address(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.getAddress(Ljava/lang/Object;)J",
             result.unwrap_err().to_string()
@@ -4450,8 +4190,7 @@ mod tests {
         let result = get_screen_of_window(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.getScreenOfWindow(JJ)J",
             result.unwrap_err().to_string()
@@ -4462,7 +4201,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_string_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_string_bytes(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_string_bytes(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/X11/XlibWrapper.getStringBytes(J)[B",
             result.unwrap_err().to_string()
@@ -4476,8 +4215,7 @@ mod tests {
         let result = memcpy(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XlibWrapper.memcpy(JJJ)V",
             result.unwrap_err().to_string()

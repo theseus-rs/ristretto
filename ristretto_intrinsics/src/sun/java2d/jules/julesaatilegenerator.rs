@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/java2d/jules/JulesAATileGenerator.freePixmanImgPtr(J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn free_pixman_img_ptr<T: Thread + 'static>(
+pub fn free_pixman_img_ptr<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn free_pixman_img_ptr<T: Thread + 'static>(
     "sun/java2d/jules/JulesAATileGenerator.rasterizeTrapezoidsNative(J[I[II[BII)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn rasterize_trapezoids_native<T: Thread + 'static>(
+pub fn rasterize_trapezoids_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -53,7 +50,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_pixman_img_ptr() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = free_pixman_img_ptr(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = free_pixman_img_ptr(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.jules.JulesAATileGenerator.freePixmanImgPtr(J)V",
             result.unwrap_err().to_string()
@@ -74,8 +71,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.jules.JulesAATileGenerator.rasterizeTrapezoidsNative(J[I[II[BII)J",
             result.unwrap_err().to_string()

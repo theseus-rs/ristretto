@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -64,8 +63,7 @@ mod addr_const {
     "sun/nio/ch/NativeSocketAddress.AFINET()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn afinet<T: Thread + 'static>(
+pub fn afinet<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -76,8 +74,7 @@ pub async fn afinet<T: Thread + 'static>(
     "sun/nio/ch/NativeSocketAddress.AFINET6()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn afinet_6<T: Thread + 'static>(
+pub fn afinet_6<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -88,8 +85,7 @@ pub async fn afinet_6<T: Thread + 'static>(
     "sun/nio/ch/NativeSocketAddress.offsetFamily()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn offset_family<T: Thread + 'static>(
+pub fn offset_family<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -100,8 +96,7 @@ pub async fn offset_family<T: Thread + 'static>(
     "sun/nio/ch/NativeSocketAddress.offsetSin4Addr()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn offset_sin_4_addr<T: Thread + 'static>(
+pub fn offset_sin_4_addr<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -112,8 +107,7 @@ pub async fn offset_sin_4_addr<T: Thread + 'static>(
     "sun/nio/ch/NativeSocketAddress.offsetSin4Port()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn offset_sin_4_port<T: Thread + 'static>(
+pub fn offset_sin_4_port<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -124,8 +118,7 @@ pub async fn offset_sin_4_port<T: Thread + 'static>(
     "sun/nio/ch/NativeSocketAddress.offsetSin6Addr()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn offset_sin_6_addr<T: Thread + 'static>(
+pub fn offset_sin_6_addr<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -136,8 +129,7 @@ pub async fn offset_sin_6_addr<T: Thread + 'static>(
     "sun/nio/ch/NativeSocketAddress.offsetSin6FlowInfo()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn offset_sin_6_flow_info<T: Thread + 'static>(
+pub fn offset_sin_6_flow_info<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -148,8 +140,7 @@ pub async fn offset_sin_6_flow_info<T: Thread + 'static>(
     "sun/nio/ch/NativeSocketAddress.offsetSin6Port()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn offset_sin_6_port<T: Thread + 'static>(
+pub fn offset_sin_6_port<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -160,8 +151,7 @@ pub async fn offset_sin_6_port<T: Thread + 'static>(
     "sun/nio/ch/NativeSocketAddress.offsetSin6ScopeId()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn offset_sin_6_scope_id<T: Thread + 'static>(
+pub fn offset_sin_6_scope_id<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -172,8 +162,7 @@ pub async fn offset_sin_6_scope_id<T: Thread + 'static>(
     "sun/nio/ch/NativeSocketAddress.sizeofFamily()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn sizeof_family<T: Thread + 'static>(
+pub fn sizeof_family<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -184,8 +173,7 @@ pub async fn sizeof_family<T: Thread + 'static>(
     "sun/nio/ch/NativeSocketAddress.sizeofSockAddr4()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn sizeof_sock_addr_4<T: Thread + 'static>(
+pub fn sizeof_sock_addr_4<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -196,8 +184,7 @@ pub async fn sizeof_sock_addr_4<T: Thread + 'static>(
     "sun/nio/ch/NativeSocketAddress.sizeofSockAddr6()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn sizeof_sock_addr_6<T: Thread + 'static>(
+pub fn sizeof_sock_addr_6<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -211,7 +198,7 @@ mod tests {
     #[tokio::test]
     async fn test_afinet() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = afinet(thread, Parameters::default()).await?;
+        let result = afinet(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::AF_INET)));
         Ok(())
     }
@@ -219,7 +206,7 @@ mod tests {
     #[tokio::test]
     async fn test_afinet_6() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = afinet_6(thread, Parameters::default()).await?;
+        let result = afinet_6(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::AF_INET6)));
         Ok(())
     }
@@ -227,7 +214,7 @@ mod tests {
     #[tokio::test]
     async fn test_offset_family() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = offset_family(thread, Parameters::default()).await?;
+        let result = offset_family(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::OFFSET_FAMILY)));
         Ok(())
     }
@@ -235,7 +222,7 @@ mod tests {
     #[tokio::test]
     async fn test_offset_sin_4_addr() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = offset_sin_4_addr(thread, Parameters::default()).await?;
+        let result = offset_sin_4_addr(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::OFFSET_SIN4_ADDR)));
         Ok(())
     }
@@ -243,7 +230,7 @@ mod tests {
     #[tokio::test]
     async fn test_offset_sin_4_port() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = offset_sin_4_port(thread, Parameters::default()).await?;
+        let result = offset_sin_4_port(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::OFFSET_SIN4_PORT)));
         Ok(())
     }
@@ -251,7 +238,7 @@ mod tests {
     #[tokio::test]
     async fn test_offset_sin_6_addr() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = offset_sin_6_addr(thread, Parameters::default()).await?;
+        let result = offset_sin_6_addr(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::OFFSET_SIN6_ADDR)));
         Ok(())
     }
@@ -259,7 +246,7 @@ mod tests {
     #[tokio::test]
     async fn test_offset_sin_6_flow_info() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = offset_sin_6_flow_info(thread, Parameters::default()).await?;
+        let result = offset_sin_6_flow_info(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::OFFSET_SIN6_FLOWINFO)));
         Ok(())
     }
@@ -267,7 +254,7 @@ mod tests {
     #[tokio::test]
     async fn test_offset_sin_6_port() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = offset_sin_6_port(thread, Parameters::default()).await?;
+        let result = offset_sin_6_port(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::OFFSET_SIN6_PORT)));
         Ok(())
     }
@@ -275,7 +262,7 @@ mod tests {
     #[tokio::test]
     async fn test_offset_sin_6_scope_id() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = offset_sin_6_scope_id(thread, Parameters::default()).await?;
+        let result = offset_sin_6_scope_id(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::OFFSET_SIN6_SCOPEID)));
         Ok(())
     }
@@ -283,7 +270,7 @@ mod tests {
     #[tokio::test]
     async fn test_sizeof_family() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = sizeof_family(thread, Parameters::default()).await?;
+        let result = sizeof_family(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::SIZEOF_FAMILY)));
         Ok(())
     }
@@ -291,7 +278,7 @@ mod tests {
     #[tokio::test]
     async fn test_sizeof_sock_addr_4() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = sizeof_sock_addr_4(thread, Parameters::default()).await?;
+        let result = sizeof_sock_addr_4(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::SIZEOF_SOCKADDR4)));
         Ok(())
     }
@@ -299,7 +286,7 @@ mod tests {
     #[tokio::test]
     async fn test_sizeof_sock_addr_6() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = sizeof_sock_addr_6(thread, Parameters::default()).await?;
+        let result = sizeof_sock_addr_6(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(addr_const::SIZEOF_SOCKADDR6)));
         Ok(())
     }

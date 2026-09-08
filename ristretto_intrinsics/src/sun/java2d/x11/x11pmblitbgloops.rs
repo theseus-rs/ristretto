@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -16,8 +15,7 @@ use std::sync::Arc;
     "sun/java2d/x11/X11PMBlitBgLoops.nativeBlitBg(JJJIIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn native_blit_bg<T: Thread + 'static>(
+pub fn native_blit_bg<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -42,8 +40,7 @@ pub async fn native_blit_bg<T: Thread + 'static>(
     "sun/java2d/x11/X11PMBlitBgLoops.nativeBlitBg(JJJIIIIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn native_blit_bg_linux_ge_v11<T: Thread + 'static>(
+pub fn native_blit_bg_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -84,8 +81,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11PMBlitBgLoops.nativeBlitBg(JJJIIIIIII)V",
             result.unwrap_err().to_string()
@@ -110,8 +106,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11PMBlitBgLoops.nativeBlitBg(JJJIIIIIII)V",
             result.unwrap_err().to_string()

@@ -5,7 +5,6 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(target_family = "wasm")]
 use ristretto_types::JavaError;
@@ -21,8 +20,7 @@ use sysinfo::{Pid, ProcessesToUpdate, Signal, System};
     "java/lang/ProcessHandleImpl.destroy0(JJZ)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn destroy_0<T: Thread + 'static>(
+pub fn destroy_0<T: Thread + 'static>(
     _thread: Arc<T>,
     #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,8 +57,7 @@ pub async fn destroy_0<T: Thread + 'static>(
     "java/lang/ProcessHandleImpl.getCurrentPid0()J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_current_pid_0<T: Thread + 'static>(
+pub fn get_current_pid_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -83,8 +80,7 @@ pub async fn get_current_pid_0<T: Thread + 'static>(
     GreaterThanOrEqual(JAVA_11)
 )]
 #[cfg_attr(not(target_family = "wasm"), expect(clippy::similar_names))]
-#[async_method]
-pub async fn get_process_pids_0<T: Thread + 'static>(
+pub fn get_process_pids_0<T: Thread + 'static>(
     _thread: Arc<T>,
     #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -178,8 +174,7 @@ pub async fn get_process_pids_0<T: Thread + 'static>(
     "java/lang/ProcessHandleImpl.initNative()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_native<T: Thread + 'static>(
+pub fn init_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -190,8 +185,7 @@ pub async fn init_native<T: Thread + 'static>(
     "java/lang/ProcessHandleImpl.isAlive0(J)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn is_alive_0<T: Thread + 'static>(
+pub fn is_alive_0<T: Thread + 'static>(
     _thread: Arc<T>,
     #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -225,8 +219,7 @@ pub async fn is_alive_0<T: Thread + 'static>(
     "java/lang/ProcessHandleImpl.parent0(JJ)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn parent_0<T: Thread + 'static>(
+pub fn parent_0<T: Thread + 'static>(
     _thread: Arc<T>,
     #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -264,7 +257,6 @@ pub async fn parent_0<T: Thread + 'static>(
     "java/lang/ProcessHandleImpl.waitForProcessExit0(JZ)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn wait_for_process_exit_0<T: Thread + 'static>(
     _thread: Arc<T>,
     #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
@@ -312,7 +304,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_current_pid_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_current_pid_0(thread, Parameters::default()).await?;
+        let result = get_current_pid_0(thread, Parameters::default())?;
         let pid = i64::from(process::id());
         assert_eq!(result, Some(Value::Long(pid)));
         Ok(())
@@ -321,7 +313,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_native() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_native(thread, Parameters::default()).await?;
+        let result = init_native(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -330,7 +322,7 @@ mod tests {
     async fn test_is_alive_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let pid = Value::Long(i64::from(process::id()));
-        let result = is_alive_0(thread, Parameters::new(vec![pid])).await?;
+        let result = is_alive_0(thread, Parameters::new(vec![pid]))?;
         let start_time = result.unwrap_or(Value::Long(0)).as_i64()?;
         assert!(start_time > 0);
         Ok(())

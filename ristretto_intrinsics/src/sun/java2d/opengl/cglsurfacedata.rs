@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -9,8 +8,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/opengl/CGLSurfaceData.clearWindow()V", Any)]
-#[async_method]
-pub async fn clear_window<T: Thread + 'static>(
+pub fn clear_window<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -24,8 +22,7 @@ pub async fn clear_window<T: Thread + 'static>(
     "sun/java2d/opengl/CGLSurfaceData.createCGLContextOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn create_cgl_context_on_surface<T: Thread + 'static>(
+pub fn create_cgl_context_on_surface<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,8 +35,7 @@ pub async fn create_cgl_context_on_surface<T: Thread + 'static>(
     "sun/java2d/opengl/CGLSurfaceData.destroyCGLContext(J)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn destroy_cgl_context<T: Thread + 'static>(
+pub fn destroy_cgl_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,8 +50,7 @@ pub async fn destroy_cgl_context<T: Thread + 'static>(
     "sun/java2d/opengl/CGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V",
     Any
 )]
-#[async_method]
-pub async fn init_ops<T: Thread + 'static>(
+pub fn init_ops<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -77,8 +72,7 @@ pub async fn init_ops<T: Thread + 'static>(
     "sun/java2d/opengl/CGLSurfaceData.makeCGLContextCurrentOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)Z",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn make_cgl_context_current_on_surface<T: Thread + 'static>(
+pub fn make_cgl_context_current_on_surface<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -91,8 +85,7 @@ pub async fn make_cgl_context_current_on_surface<T: Thread + 'static>(
     "sun/java2d/opengl/CGLSurfaceData.validate(IIIIZ)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn validate<T: Thread + 'static>(
+pub fn validate<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -114,7 +107,7 @@ mod tests {
     #[tokio::test]
     async fn test_clear_window() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = clear_window(thread, Parameters::default()).await;
+        let result = clear_window(thread, Parameters::default());
         assert_eq!(
             "sun.java2d.opengl.CGLSurfaceData.clearWindow()",
             result.unwrap_err().to_string()
@@ -127,8 +120,7 @@ mod tests {
         let result = create_cgl_context_on_surface(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.opengl.CGLSurfaceData.createCGLContextOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)J",
             result.unwrap_err().to_string()
@@ -138,7 +130,7 @@ mod tests {
     #[tokio::test]
     async fn test_destroy_cgl_context() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = destroy_cgl_context(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = destroy_cgl_context(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.opengl.CGLSurfaceData.destroyCGLContext(J)V",
             result.unwrap_err().to_string()
@@ -159,8 +151,7 @@ mod tests {
                 Value::Int(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.opengl.CGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JJJIIZ)V",
             result.unwrap_err().to_string()
@@ -173,8 +164,7 @@ mod tests {
         let result = make_cgl_context_current_on_surface(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.opengl.CGLSurfaceData.makeCGLContextCurrentOnSurface(Lsun/java2d/opengl/CGLSurfaceData;J)Z",
             result.unwrap_err().to_string()
@@ -193,8 +183,7 @@ mod tests {
                 Value::Int(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.opengl.CGLSurfaceData.validate(IIIIZ)V",
             result.unwrap_err().to_string()

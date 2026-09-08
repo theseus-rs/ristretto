@@ -1,7 +1,6 @@
 use crate::bounds;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -15,8 +14,7 @@ const ADLER32_MOD: u32 = 65_521;
 /// Parameters: adler (current adler32), b (byte to add)
 /// Returns: updated adler32 value
 #[intrinsic_method("java/util/zip/Adler32.update(II)I", Any)]
-#[async_method]
-pub async fn update<T: Thread + 'static>(
+pub fn update<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,8 +36,7 @@ pub async fn update<T: Thread + 'static>(
 
 /// Update Adler-32 checksum from a direct byte buffer.
 #[intrinsic_method("java/util/zip/Adler32.updateByteBuffer(IJII)I", Any)]
-#[async_method]
-pub async fn update_byte_buffer<T: Thread + 'static>(
+pub fn update_byte_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -52,8 +49,7 @@ pub async fn update_byte_buffer<T: Thread + 'static>(
 
 /// Update Adler-32 checksum from a byte array.
 #[intrinsic_method("java/util/zip/Adler32.updateBytes(I[BII)I", Any)]
-#[async_method]
-pub async fn update_bytes<T: Thread + 'static>(
+pub fn update_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -127,7 +123,7 @@ mod tests {
         parameters.push_int(1); // adler
         parameters.push_int(i32::from(b'a')); // byte 'a'
 
-        let result = update(thread.clone(), parameters).await?;
+        let result = update(thread.clone(), parameters)?;
         let adler = result.expect("adler value").as_i32()?;
 
         // For byte 'a' (97): s1 = (1 + 97) % 65521 = 98, s2 = (0 + 98) % 65521 = 98
@@ -147,7 +143,7 @@ mod tests {
             let mut parameters = Parameters::default();
             parameters.push_int(adler);
             parameters.push_int(i32::from(byte));
-            let result = update(thread.clone(), parameters).await?;
+            let result = update(thread.clone(), parameters)?;
             adler = result.expect("adler value").as_i32()?;
         }
 
@@ -175,7 +171,7 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(3); // length
 
-        let result = update_bytes(thread, parameters).await?;
+        let result = update_bytes(thread, parameters)?;
         let adler = result.expect("adler value").as_i32()?;
 
         // Same as updating byte by byte
@@ -208,7 +204,7 @@ mod tests {
         parameters.push_int(1); // offset; skip 'x'
         parameters.push_int(3); // length; just 'a', 'b', 'c'
 
-        let result = update_bytes(thread, parameters).await?;
+        let result = update_bytes(thread, parameters)?;
         let adler = result.expect("adler value").as_i32()?;
 
         // Same as "abc"
@@ -226,7 +222,7 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(3); // length
 
-        let result = update_bytes(thread, parameters).await;
+        let result = update_bytes(thread, parameters);
         assert!(result.is_err());
     }
 
@@ -249,7 +245,7 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(0); // length = 0
 
-        let result = update_bytes(thread, parameters).await?;
+        let result = update_bytes(thread, parameters)?;
         let adler = result.expect("adler value").as_i32()?;
 
         // Adler unchanged with zero length
@@ -268,7 +264,7 @@ mod tests {
         parameters.push_int(0); // offset
         parameters.push_int(0); // length = 0
 
-        let result = update_byte_buffer(thread, parameters).await?;
+        let result = update_byte_buffer(thread, parameters)?;
         let adler = result.expect("adler value").as_i32()?;
 
         // Adler unchanged with zero length

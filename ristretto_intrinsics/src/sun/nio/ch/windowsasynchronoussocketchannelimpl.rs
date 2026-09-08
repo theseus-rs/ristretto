@@ -5,7 +5,6 @@ use crate::sun::nio::ch::iocp::{
 };
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError;
@@ -168,7 +167,6 @@ fn post_if_open<V: VM + ?Sized>(
     "sun/nio/ch/WindowsAsynchronousSocketChannelImpl.closesocket0(J)V",
     Any
 )]
-#[async_method]
 pub async fn closesocket0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -189,7 +187,6 @@ pub async fn closesocket0<T: Thread + 'static>(
     "sun/nio/ch/WindowsAsynchronousSocketChannelImpl.connect0(JZLjava/net/InetAddress;IJ)I",
     Any
 )]
-#[async_method]
 #[expect(clippy::too_many_lines)]
 pub async fn connect0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -311,8 +308,7 @@ pub async fn connect0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousSocketChannelImpl.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -320,7 +316,6 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousSocketChannelImpl.read0(JIJJ)I", Any)]
-#[async_method]
 pub async fn read0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -391,7 +386,6 @@ pub async fn read0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousSocketChannelImpl.shutdown0(JI)V", Any)]
-#[async_method]
 pub async fn shutdown0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -421,7 +415,6 @@ pub async fn shutdown0<T: Thread + 'static>(
     "sun/nio/ch/WindowsAsynchronousSocketChannelImpl.updateConnectContext(J)V",
     Any
 )]
-#[async_method]
 pub async fn update_connect_context<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -445,7 +438,6 @@ pub async fn update_connect_context<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousSocketChannelImpl.write0(JIJJ)I", Any)]
-#[async_method]
 pub async fn write0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -543,7 +535,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(None, result.expect("initIDs"));
     }
 

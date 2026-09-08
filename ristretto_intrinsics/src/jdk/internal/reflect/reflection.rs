@@ -3,7 +3,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::attributes::Attribute;
 use ristretto_classloader::{Class, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Frame;
 use ristretto_types::JavaObject;
@@ -21,7 +20,6 @@ struct BootModuleReferenceState {
     "jdk/internal/reflect/Reflection.areNestMates(Ljava/lang/Class;Ljava/lang/Class;)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn are_nest_mates<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -71,7 +69,6 @@ async fn get_nest_host<T: Thread + 'static>(
     "jdk/internal/reflect/Reflection.getCallerClass()Ljava/lang/Class;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_caller_class<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -222,7 +219,6 @@ fn is_caller_sensitive_frame<F: Frame>(frame: &F) -> Result<bool> {
     "jdk/internal/reflect/Reflection.getClassAccessFlags(Ljava/lang/Class;)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_class_access_flags<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

@@ -2,7 +2,6 @@ use crate::jdk;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -12,7 +11,6 @@ use std::sync::Arc;
     "sun/reflect/ConstantPool.getClassAt0(Ljava/lang/Object;I)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_class_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -24,7 +22,6 @@ pub async fn get_class_at_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getClassAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_class_at_if_loaded_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -36,7 +33,6 @@ pub async fn get_class_at_if_loaded_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getDoubleAt0(Ljava/lang/Object;I)D",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_double_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -48,7 +44,6 @@ pub async fn get_double_at_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getFieldAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_field_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -60,7 +55,6 @@ pub async fn get_field_at_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getFieldAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Field;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_field_at_if_loaded_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -72,7 +66,6 @@ pub async fn get_field_at_if_loaded_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getFloatAt0(Ljava/lang/Object;I)F",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_float_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -84,7 +77,6 @@ pub async fn get_float_at_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getIntAt0(Ljava/lang/Object;I)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_int_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -96,7 +88,6 @@ pub async fn get_int_at_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getLongAt0(Ljava/lang/Object;I)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_long_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -108,7 +99,6 @@ pub async fn get_long_at_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getMemberRefInfoAt0(Ljava/lang/Object;I)[Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_member_ref_info_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -120,7 +110,6 @@ pub async fn get_member_ref_info_at_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getMethodAt0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_method_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -132,7 +121,6 @@ pub async fn get_method_at_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getMethodAtIfLoaded0(Ljava/lang/Object;I)Ljava/lang/reflect/Member;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_method_at_if_loaded_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -144,7 +132,6 @@ pub async fn get_method_at_if_loaded_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getSize0(Ljava/lang/Object;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_size_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -156,7 +143,6 @@ pub async fn get_size_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getStringAt0(Ljava/lang/Object;I)Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_string_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -168,7 +154,6 @@ pub async fn get_string_at_0<T: Thread + 'static>(
     "sun/reflect/ConstantPool.getUTF8At0(Ljava/lang/Object;I)Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_utf_8_at_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,

@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(not(target_os = "linux"))]
 use ristretto_types::JavaError;
@@ -29,7 +28,6 @@ fn unsupported_operation_error(method: &str) -> Result<Option<Value>> {
 }
 
 #[intrinsic_method("jdk/internal/platform/CgroupMetrics.getTotalMemorySize0()J", Any)]
-#[async_method]
 pub async fn get_total_memory_size0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
@@ -47,7 +45,6 @@ pub async fn get_total_memory_size0<T: Thread + 'static>(
     "jdk/internal/platform/CgroupMetrics.getTotalSwapSize0()J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_total_swap_size0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
@@ -65,7 +62,6 @@ pub async fn get_total_swap_size0<T: Thread + 'static>(
     "jdk/internal/platform/CgroupMetrics.isContainerized0()Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn is_containerized0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
@@ -80,8 +76,7 @@ pub async fn is_containerized0<T: Thread + 'static>(
     }
 }
 #[intrinsic_method("jdk/internal/platform/CgroupMetrics.isUseContainerSupport()Z", Any)]
-#[async_method]
-pub async fn is_use_container_support<T: Thread + 'static>(
+pub fn is_use_container_support<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -448,7 +443,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_use_container_support() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = is_use_container_support(thread, Parameters::default()).await;
+        let result = is_use_container_support(thread, Parameters::default());
         #[cfg(target_os = "linux")]
         assert_eq!(result?, Some(Value::from(true)));
         #[cfg(not(target_os = "linux"))]

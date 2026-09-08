@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/tracing/dtrace/JVM.activate0(Ljava/lang/String;[Lsun/tracing/dtrace/DTraceProvider;)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn activate_0<T: Thread + 'static>(
+pub fn activate_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,8 +28,7 @@ pub async fn activate_0<T: Thread + 'static>(
     "sun/tracing/dtrace/JVM.defineClass0(Ljava/lang/ClassLoader;Ljava/lang/String;[BII)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn define_class_0<T: Thread + 'static>(
+pub fn define_class_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,8 +41,7 @@ pub async fn define_class_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/tracing/dtrace/JVM.dispose0(J)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn dispose_0<T: Thread + 'static>(
+pub fn dispose_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -57,8 +53,7 @@ pub async fn dispose_0<T: Thread + 'static>(
     "sun/tracing/dtrace/JVM.isEnabled0(Ljava/lang/reflect/Method;)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn is_enabled_0<T: Thread + 'static>(
+pub fn is_enabled_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -70,8 +65,7 @@ pub async fn is_enabled_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/tracing/dtrace/JVM.isSupported0()Z", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn is_supported_0<T: Thread + 'static>(
+pub fn is_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -91,8 +85,7 @@ mod tests {
         let result = activate_0(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.tracing.dtrace.JVM.activate0(Ljava/lang/String;[Lsun/tracing/dtrace/DTraceProvider;)J",
             result.unwrap_err().to_string()
@@ -111,8 +104,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.tracing.dtrace.JVM.defineClass0(Ljava/lang/ClassLoader;Ljava/lang/String;[BII)Ljava/lang/Class;",
             result.unwrap_err().to_string()
@@ -122,7 +114,7 @@ mod tests {
     #[tokio::test]
     async fn test_dispose_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = dispose_0(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = dispose_0(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.tracing.dtrace.JVM.dispose0(J)",
             result.unwrap_err().to_string()
@@ -132,7 +124,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_enabled_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = is_enabled_0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = is_enabled_0(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.tracing.dtrace.JVM.isEnabled0(Ljava/lang/reflect/Method;)Z",
             result.unwrap_err().to_string()
@@ -142,7 +134,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_supported_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = is_supported_0(thread, Parameters::default()).await;
+        let result = is_supported_0(thread, Parameters::default());
         assert_eq!(
             "sun.tracing.dtrace.JVM.isSupported0()Z",
             result.unwrap_err().to_string()

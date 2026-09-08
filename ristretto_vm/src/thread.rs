@@ -1,6 +1,5 @@
 use crate::Error::{InternalError, UnsupportedClassFileVersion};
 use crate::JavaError::{RuntimeException, StackOverflowError, UnsatisfiedLinkError, VerifyError};
-use crate::Parameters;
 use crate::RustValue;
 use crate::configuration::{DEFAULT_MAX_JAVA_STACK_SIZE, JAVA_STACK_SLOT_SIZE, VerifyMode};
 use crate::frame::{CallParameters, ExecutionResult, FrameState, MethodCall};
@@ -8,6 +7,7 @@ use crate::java_object::JavaObject;
 use crate::jit_runtime_helpers::ThreadRuntime;
 use crate::rust_value::process_values;
 use crate::{Frame, Result, VM, jit};
+use crate::{IntrinsicMethod, Parameters};
 
 use parking_lot::RwLock as ParkingRwLock;
 use ristretto_classfile::attributes::Attribute;
@@ -1238,7 +1238,10 @@ impl Thread {
                 return Err(InternalError("Call stack is not available".to_string()));
             };
             let parameters = Parameters::new(parameters.into_values(caller)?);
-            let result = rust_method(thread, parameters).await;
+            let result = match rust_method {
+                IntrinsicMethod::Sync(function) => function(thread, parameters),
+                IntrinsicMethod::Async(function) => function(thread, parameters).await,
+            };
             drop(monitor_guard);
             Self::debug_result(&class, &method, &result);
             return result.map(DispatchResult::Completed);
@@ -2151,6 +2154,82 @@ mod tests {
             .await
             .map_err(|error| InternalError(error.to_string()))??;
         monitor.release(thread.id() + 1)?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_sync_and_async_intrinsic_dispatch_releases_monitor() -> Result<()> {
+        let (vm, thread) = crate::test::thread().await?;
+        let class = thread.class("java/lang/Object").await?;
+        let object = Value::from_object(vm.garbage_collector(), Object::new(class.clone())?);
+        let monitor_id = {
+            let reference = object.as_reference()?;
+            get_monitor_id(&reference)
+                .ok_or_else(|| InternalError("object monitor ID missing".to_owned()))?
+        };
+        let monitor = vm.monitor_registry().monitor(monitor_id);
+
+        for (name, descriptor, arguments, asynchronous, succeeds) in [
+            ("hashCode", "()I", vec![object.clone()], false, true),
+            // The receiver acquires the monitor; the invalid trailing operand fails inside
+            // the synchronous intrinsic, exercising cleanup after an intrinsic error.
+            (
+                "hashCode",
+                "()I",
+                vec![object.clone(), Value::Int(1)],
+                false,
+                false,
+            ),
+            ("notify", "()V", vec![object.clone()], false, true),
+            (
+                "getClass",
+                "()Ljava/lang/Class;",
+                vec![object.clone()],
+                true,
+                true,
+            ),
+            (
+                "wait0",
+                "(J)V",
+                vec![object.clone(), Value::Long(1)],
+                true,
+                true,
+            ),
+            (
+                "wait0",
+                "(J)V",
+                vec![object.clone(), Value::Long(-1)],
+                true,
+                false,
+            ),
+        ] {
+            let intrinsic = vm.method_registry().method(class.name(), name, descriptor);
+            assert_eq!(
+                matches!(intrinsic, Some(IntrinsicMethod::Async(_))),
+                asynchronous
+            );
+            assert!(intrinsic.is_some());
+            let original = class.try_get_method(name, descriptor)?;
+            let mut definition = original.definition().clone();
+            definition.access_flags |= MethodAccessFlags::SYNCHRONIZED;
+            let method = Arc::new(Method::new_synthetic(
+                definition,
+                name.to_owned(),
+                descriptor.to_owned(),
+                original.parameters().clone(),
+                original.return_type().cloned(),
+            ));
+            let result = thread.execute(&class, &method, &arguments).await;
+            assert_eq!(succeeds, result.is_ok(), "{name}: {result:?}");
+            if succeeds {
+                assert_eq!(descriptor.ends_with('V'), result?.is_none());
+            }
+            assert!(!monitor.is_owned_by(thread.id()));
+            tokio::time::timeout(Duration::from_secs(1), monitor.acquire(thread.id() + 1))
+                .await
+                .map_err(|error| InternalError(error.to_string()))??;
+            monitor.release(thread.id() + 1)?;
+        }
         Ok(())
     }
 

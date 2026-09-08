@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(not(target_os = "linux"))]
 use ristretto_types::JavaError;
@@ -48,7 +47,6 @@ async fn register_raw_fd<T: Thread + 'static>(thread: &Arc<T>, raw_fd: i32) -> R
 }
 
 #[intrinsic_method("sun/nio/fs/LinuxWatchService.configureBlocking(IZ)V", Any)]
-#[async_method]
 pub async fn configure_blocking<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -87,8 +85,7 @@ pub async fn configure_blocking<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/LinuxWatchService.eventOffsets()[I", Any)]
-#[async_method]
-pub async fn event_offsets<T: Thread + 'static>(
+pub fn event_offsets<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,8 +99,7 @@ pub async fn event_offsets<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/LinuxWatchService.eventSize()I", Any)]
-#[async_method]
-pub async fn event_size<T: Thread + 'static>(
+pub fn event_size<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -112,7 +108,6 @@ pub async fn event_size<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/LinuxWatchService.inotifyAddWatch(IJI)I", Any)]
-#[async_method]
 pub async fn inotify_add_watch<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -154,7 +149,6 @@ pub async fn inotify_add_watch<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/LinuxWatchService.inotifyInit()I", Any)]
-#[async_method]
 pub async fn inotify_init<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -181,7 +175,6 @@ pub async fn inotify_init<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/LinuxWatchService.inotifyRmWatch(II)V", Any)]
-#[async_method]
 pub async fn inotify_rm_watch<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -210,7 +203,6 @@ pub async fn inotify_rm_watch<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/LinuxWatchService.poll(II)I", Any)]
-#[async_method]
 pub async fn poll<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -268,7 +260,6 @@ pub async fn poll<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/LinuxWatchService.socketpair([I)V", Any)]
-#[async_method]
 pub async fn socketpair<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -349,14 +340,14 @@ mod tests {
     #[tokio::test]
     async fn test_event_offsets() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = event_offsets(thread, Parameters::default()).await.unwrap();
+        let result = event_offsets(thread, Parameters::default()).unwrap();
         assert!(result.is_some());
     }
 
     #[tokio::test]
     async fn test_event_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = event_size(thread, Parameters::default()).await.unwrap();
+        let result = event_size(thread, Parameters::default()).unwrap();
         assert_eq!(Some(Value::Int(16)), result);
     }
 

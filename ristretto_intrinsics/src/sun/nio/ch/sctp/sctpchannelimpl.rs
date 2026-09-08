@@ -7,7 +7,7 @@ use crate::java::io::socketfiledescriptor::get_fd;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::{JavaError, Parameters, Result, Thread, VM};
 use socket2::Socket;
@@ -376,7 +376,6 @@ async fn handle_notification<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpChannelImpl.checkConnect(Ljava/io/FileDescriptor;ZZ)I",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn check_connect<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -445,8 +444,7 @@ pub async fn check_connect<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpChannelImpl.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -457,7 +455,6 @@ pub async fn init_ids<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpChannelImpl.receive0(ILsun/nio/ch/sctp/ResultContainer;JIZ)I",
     Any
 )]
-#[async_method]
 pub async fn receive0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -601,7 +598,6 @@ fn send_packet(
     "sun/nio/ch/sctp/SctpChannelImpl.send0(IJILjava/net/InetAddress;IIIZI)I",
     Any
 )]
-#[async_method]
 pub async fn send0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -684,7 +680,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        assert_eq!(None, init_ids(thread, Parameters::default()).await?);
+        assert_eq!(None, init_ids(thread, Parameters::default())?);
         Ok(())
     }
 

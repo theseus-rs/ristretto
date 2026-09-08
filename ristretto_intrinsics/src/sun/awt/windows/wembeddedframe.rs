@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/windows/WEmbeddedFrame.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -19,8 +17,7 @@ pub async fn init_ids<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WEmbeddedFrame.isPrinterDC(J)Z", Any)]
-#[async_method]
-pub async fn is_printer_dc<T: Thread + 'static>(
+pub fn is_printer_dc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -34,8 +31,7 @@ pub async fn is_printer_dc<T: Thread + 'static>(
     "sun/awt/windows/WEmbeddedFrame.notifyModalBlockedImpl(Lsun/awt/windows/WEmbeddedFramePeer;Lsun/awt/windows/WWindowPeer;Z)V",
     Any
 )]
-#[async_method]
-pub async fn notify_modal_blocked_impl<T: Thread + 'static>(
+pub fn notify_modal_blocked_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -45,8 +41,7 @@ pub async fn notify_modal_blocked_impl<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WEmbeddedFrame.notifyModalBlockedImpl(Lsun/awt/windows/WEmbeddedFramePeer;Lsun/awt/windows/WWindowPeer;Z)V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/windows/WEmbeddedFrame.printBand(J[BIIIIIIIII)V", Any)]
-#[async_method]
-pub async fn print_band<T: Thread + 'static>(
+pub fn print_band<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -75,7 +70,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WEmbeddedFrame.initIDs()V",
             result.unwrap_err().to_string()
@@ -86,7 +81,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_printer_dc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_printer_dc(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = is_printer_dc(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WEmbeddedFrame.isPrinterDC(J)Z",
             result.unwrap_err().to_string()
@@ -104,8 +99,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WEmbeddedFrame.notifyModalBlockedImpl(Lsun/awt/windows/WEmbeddedFramePeer;Lsun/awt/windows/WWindowPeer;Z)V",
             result.unwrap_err().to_string()
@@ -131,8 +125,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WEmbeddedFrame.printBand(J[BIIIIIIIII)V",
             result.unwrap_err().to_string()

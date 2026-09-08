@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -16,8 +15,7 @@ use std::sync::Arc;
     "sun/java2d/x11/X11Renderer.XDoPath(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_do_path<T: Thread + 'static>(
+pub fn x_do_path<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -35,8 +33,7 @@ pub async fn x_do_path<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawArc(JJIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_draw_arc<T: Thread + 'static>(
+pub fn x_draw_arc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -58,8 +55,7 @@ pub async fn x_draw_arc<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawLine(JJIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_draw_line<T: Thread + 'static>(
+pub fn x_draw_line<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -79,8 +75,7 @@ pub async fn x_draw_line<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawOval(JJIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_draw_oval<T: Thread + 'static>(
+pub fn x_draw_oval<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -100,8 +95,7 @@ pub async fn x_draw_oval<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawPoly(JJII[I[IIZ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_draw_poly<T: Thread + 'static>(
+pub fn x_draw_poly<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -123,8 +117,7 @@ pub async fn x_draw_poly<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawRect(JJIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_draw_rect<T: Thread + 'static>(
+pub fn x_draw_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -144,8 +137,7 @@ pub async fn x_draw_rect<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawRoundRect(JJIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_draw_round_rect<T: Thread + 'static>(
+pub fn x_draw_round_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -167,8 +159,7 @@ pub async fn x_draw_round_rect<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillArc(JJIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_fill_arc<T: Thread + 'static>(
+pub fn x_fill_arc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -190,8 +181,7 @@ pub async fn x_fill_arc<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillOval(JJIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_fill_oval<T: Thread + 'static>(
+pub fn x_fill_oval<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -211,8 +201,7 @@ pub async fn x_fill_oval<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillPoly(JJII[I[II)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_fill_poly<T: Thread + 'static>(
+pub fn x_fill_poly<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -233,8 +222,7 @@ pub async fn x_fill_poly<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillRect(JJIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_fill_rect<T: Thread + 'static>(
+pub fn x_fill_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -254,8 +242,7 @@ pub async fn x_fill_rect<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillRoundRect(JJIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_fill_round_rect<T: Thread + 'static>(
+pub fn x_fill_round_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -277,8 +264,7 @@ pub async fn x_fill_round_rect<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillSpans(JJLsun/java2d/pipe/SpanIterator;JII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn x_fill_spans<T: Thread + 'static>(
+pub fn x_fill_spans<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -298,8 +284,7 @@ pub async fn x_fill_spans<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.devCopyArea(JJIIIIII)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn dev_copy_area<T: Thread + 'static>(
+pub fn dev_copy_area<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -322,8 +307,7 @@ pub async fn dev_copy_area<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDoPath(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xdo_path_linux_ge_v11<T: Thread + 'static>(
+pub fn xdo_path_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -342,8 +326,7 @@ pub async fn xdo_path_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawArc(JJIIIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xdraw_arc_linux_ge_v11<T: Thread + 'static>(
+pub fn xdraw_arc_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -366,8 +349,7 @@ pub async fn xdraw_arc_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawLine(JJIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xdraw_line_linux_ge_v11<T: Thread + 'static>(
+pub fn xdraw_line_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -388,8 +370,7 @@ pub async fn xdraw_line_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawOval(JJIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xdraw_oval_linux_ge_v11<T: Thread + 'static>(
+pub fn xdraw_oval_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -410,8 +391,7 @@ pub async fn xdraw_oval_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawPoly(JJII[I[IIZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xdraw_poly_linux_ge_v11<T: Thread + 'static>(
+pub fn xdraw_poly_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -434,8 +414,7 @@ pub async fn xdraw_poly_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawRect(JJIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xdraw_rect_linux_ge_v11<T: Thread + 'static>(
+pub fn xdraw_rect_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -456,8 +435,7 @@ pub async fn xdraw_rect_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XDrawRoundRect(JJIIIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xdraw_round_rect_linux_ge_v11<T: Thread + 'static>(
+pub fn xdraw_round_rect_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -480,8 +458,7 @@ pub async fn xdraw_round_rect_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillArc(JJIIIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xfill_arc_linux_ge_v11<T: Thread + 'static>(
+pub fn xfill_arc_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -504,8 +481,7 @@ pub async fn xfill_arc_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillOval(JJIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xfill_oval_linux_ge_v11<T: Thread + 'static>(
+pub fn xfill_oval_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -526,8 +502,7 @@ pub async fn xfill_oval_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillPoly(JJII[I[II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xfill_poly_linux_ge_v11<T: Thread + 'static>(
+pub fn xfill_poly_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -549,8 +524,7 @@ pub async fn xfill_poly_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillRect(JJIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xfill_rect_linux_ge_v11<T: Thread + 'static>(
+pub fn xfill_rect_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -571,8 +545,7 @@ pub async fn xfill_rect_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillRoundRect(JJIIIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xfill_round_rect_linux_ge_v11<T: Thread + 'static>(
+pub fn xfill_round_rect_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -595,8 +568,7 @@ pub async fn xfill_round_rect_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.XFillSpans(JJLsun/java2d/pipe/SpanIterator;JII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xfill_spans_linux_ge_v11<T: Thread + 'static>(
+pub fn xfill_spans_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -617,8 +589,7 @@ pub async fn xfill_spans_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/x11/X11Renderer.devCopyArea(JJIIIIII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn dev_copy_area_linux_ge_v11<T: Thread + 'static>(
+pub fn dev_copy_area_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -654,8 +625,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XDoPath(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V",
             result.unwrap_err().to_string()
@@ -677,8 +647,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XDrawArc(JJIIIIII)V",
             result.unwrap_err().to_string()
@@ -698,8 +667,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XDrawLine(JJIIII)V",
             result.unwrap_err().to_string()
@@ -719,8 +687,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XDrawOval(JJIIII)V",
             result.unwrap_err().to_string()
@@ -742,8 +709,7 @@ mod tests {
                 Value::Int(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XDrawPoly(JJII[I[IIZ)V",
             result.unwrap_err().to_string()
@@ -763,8 +729,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XDrawRect(JJIIII)V",
             result.unwrap_err().to_string()
@@ -786,8 +751,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XDrawRoundRect(JJIIIIII)V",
             result.unwrap_err().to_string()
@@ -809,8 +773,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XFillArc(JJIIIIII)V",
             result.unwrap_err().to_string()
@@ -830,8 +793,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XFillOval(JJIIII)V",
             result.unwrap_err().to_string()
@@ -852,8 +814,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XFillPoly(JJII[I[II)V",
             result.unwrap_err().to_string()
@@ -873,8 +834,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XFillRect(JJIIII)V",
             result.unwrap_err().to_string()
@@ -896,8 +856,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XFillRoundRect(JJIIIIII)V",
             result.unwrap_err().to_string()
@@ -917,8 +876,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.XFillSpans(JJLsun/java2d/pipe/SpanIterator;JII)V",
             result.unwrap_err().to_string()
@@ -940,8 +898,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.x11.X11Renderer.devCopyArea(JJIIIIII)V",
             result.unwrap_err().to_string()
@@ -963,8 +920,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XDoPath(Lsun/java2d/SunGraphics2D;JJIILjava/awt/geom/Path2D$Float;Z)V",
             result.unwrap_err().to_string()
@@ -987,8 +943,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XDrawArc(JJIIIIII)V",
             result.unwrap_err().to_string()
@@ -1009,8 +964,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XDrawLine(JJIIII)V",
             result.unwrap_err().to_string()
@@ -1031,8 +985,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XDrawOval(JJIIII)V",
             result.unwrap_err().to_string()
@@ -1055,8 +1008,7 @@ mod tests {
                 Value::Int(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XDrawPoly(JJII[I[IIZ)V",
             result.unwrap_err().to_string()
@@ -1077,8 +1029,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XDrawRect(JJIIII)V",
             result.unwrap_err().to_string()
@@ -1101,8 +1052,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XDrawRoundRect(JJIIIIII)V",
             result.unwrap_err().to_string()
@@ -1125,8 +1075,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XFillArc(JJIIIIII)V",
             result.unwrap_err().to_string()
@@ -1147,8 +1096,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XFillOval(JJIIII)V",
             result.unwrap_err().to_string()
@@ -1170,8 +1118,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XFillPoly(JJII[I[II)V",
             result.unwrap_err().to_string()
@@ -1192,8 +1139,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XFillRect(JJIIII)V",
             result.unwrap_err().to_string()
@@ -1216,8 +1162,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XFillRoundRect(JJIIIIII)V",
             result.unwrap_err().to_string()
@@ -1238,8 +1183,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.XFillSpans(JJLsun/java2d/pipe/SpanIterator;JII)V",
             result.unwrap_err().to_string()
@@ -1262,8 +1206,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/x11/X11Renderer.devCopyArea(JJIIIIII)V",
             result.unwrap_err().to_string()

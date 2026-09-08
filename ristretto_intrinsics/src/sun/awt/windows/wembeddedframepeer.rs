@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/windows/WEmbeddedFramePeer.create(Lsun/awt/windows/WComponentPeer;)V",
     Any
 )]
-#[async_method]
-pub async fn create<T: Thread + 'static>(
+pub fn create<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn create<T: Thread + 'static>(
     "sun/awt/windows/WEmbeddedFramePeer.getBoundsPrivate()Ljava/awt/Rectangle;",
     Any
 )]
-#[async_method]
-pub async fn get_bounds_private<T: Thread + 'static>(
+pub fn get_bounds_private<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -45,7 +42,7 @@ mod tests {
     #[tokio::test]
     async fn test_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = create(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WEmbeddedFramePeer.create(Lsun/awt/windows/WComponentPeer;)V",
             result.unwrap_err().to_string()
@@ -56,7 +53,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_bounds_private() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_bounds_private(thread, Parameters::default()).await;
+        let result = get_bounds_private(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WEmbeddedFramePeer.getBoundsPrivate()Ljava/awt/Rectangle;",
             result.unwrap_err().to_string()

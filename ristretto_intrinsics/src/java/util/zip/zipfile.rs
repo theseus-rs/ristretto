@@ -4,7 +4,6 @@ use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
 use ristretto_gc::sync::RwLock;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM as _};
@@ -90,8 +89,7 @@ fn dos_datetime_to_long(dt: zip::DateTime) -> i64 {
 
 /// Implementation of `ZipFile` methods for Java 8 and earlier
 #[intrinsic_method("java/util/zip/ZipFile.close(J)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn close<T: Thread + 'static>(
+pub fn close<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -115,8 +113,7 @@ pub async fn close<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.freeEntry(JJ)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn free_entry<T: Thread + 'static>(
+pub fn free_entry<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -131,8 +128,7 @@ pub async fn free_entry<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getCommentBytes(J)[B", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_comment_bytes<T: Thread + 'static>(
+pub fn get_comment_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -169,8 +165,16 @@ pub async fn get_comment_bytes<T: Thread + 'static>(
 // Note: `getEntry(J[BZ)J` is not registered as an intrinsic because it is not present as a native
 // method in the supported JDK distributions; the public entry point is `getEntry(J[B)J` which
 // dispatches to this helper.
-#[async_method]
-pub async fn get_entry<T: Thread + 'static>(
+
+/// Looks up an entry in an open ZIP archive.
+///
+/// # Errors
+/// Returns errors for invalid arguments or ZIP handle state.
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "shared ZIP implementation keeps the intrinsic calling convention"
+)]
+pub fn get_entry<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -242,18 +246,16 @@ pub async fn get_entry<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntry(J[B)J", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_entry_no_add_slash<T: Thread + 'static>(
+pub fn get_entry_no_add_slash<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
     parameters.push_int(0);
-    get_entry(thread, parameters).await
+    get_entry(thread, parameters)
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryBytes(JI)[B", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_entry_bytes<T: Thread + 'static>(
+pub fn get_entry_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -306,8 +308,7 @@ pub async fn get_entry_bytes<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryCSize(J)J", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_entry_c_size<T: Thread + 'static>(
+pub fn get_entry_c_size<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -344,8 +345,7 @@ pub async fn get_entry_c_size<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryCrc(J)J", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_entry_crc<T: Thread + 'static>(
+pub fn get_entry_crc<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -381,8 +381,7 @@ pub async fn get_entry_crc<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryFlag(J)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_entry_flag<T: Thread + 'static>(
+pub fn get_entry_flag<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -418,8 +417,7 @@ pub async fn get_entry_flag<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryMethod(J)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_entry_method<T: Thread + 'static>(
+pub fn get_entry_method<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -455,8 +453,7 @@ pub async fn get_entry_method<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntrySize(J)J", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_entry_size<T: Thread + 'static>(
+pub fn get_entry_size<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -493,8 +490,7 @@ pub async fn get_entry_size<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getEntryTime(J)J", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_entry_time<T: Thread + 'static>(
+pub fn get_entry_time<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -530,8 +526,7 @@ pub async fn get_entry_time<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getManifestNum(J)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_manifest_num<T: Thread + 'static>(
+pub fn get_manifest_num<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -560,8 +555,7 @@ pub async fn get_manifest_num<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getNextEntry(JI)J", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_next_entry<T: Thread + 'static>(
+pub fn get_next_entry<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -593,8 +587,7 @@ pub async fn get_next_entry<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.getTotal(J)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_total<T: Thread + 'static>(
+pub fn get_total<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -617,8 +610,7 @@ pub async fn get_total<T: Thread + 'static>(
     "java/util/zip/ZipFile.getZipMessage(J)Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_zip_message<T: Thread + 'static>(
+pub fn get_zip_message<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -628,8 +620,7 @@ pub async fn get_zip_message<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.initIDs()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -640,8 +631,7 @@ pub async fn init_ids<T: Thread + 'static>(
     "java/util/zip/ZipFile.open(Ljava/lang/String;IJZ)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn open<T: Thread + 'static>(
+pub fn open<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -756,8 +746,7 @@ pub async fn open<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.read(JJJ[BII)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn read<T: Thread + 'static>(
+pub fn read<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -859,8 +848,7 @@ pub async fn read<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/util/zip/ZipFile.startsWithLOC(J)Z", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn starts_with_loc<T: Thread + 'static>(
+pub fn starts_with_loc<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -974,7 +962,7 @@ mod tests {
         parameters.push_long(0); // last_modified
         parameters.push_int(0); // use_mmap
 
-        let result = open(thread.clone(), parameters).await?;
+        let result = open(thread.clone(), parameters)?;
         let handle = result.expect("expected handle").as_i64()?;
         assert!(handle > 0);
         Ok(handle)
@@ -983,7 +971,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -998,7 +986,7 @@ mod tests {
         // Close
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = close(thread, parameters).await?;
+        let result = close(thread, parameters)?;
         assert!(result.is_none());
         Ok(())
     }
@@ -1013,7 +1001,7 @@ mod tests {
         parameters.push_long(0);
         parameters.push_int(0);
 
-        let result = open(thread, parameters).await;
+        let result = open(thread, parameters);
         assert!(result.is_err());
         Ok(())
     }
@@ -1029,7 +1017,7 @@ mod tests {
         parameters.push_long(0);
         parameters.push_int(0);
 
-        let result = open(thread, parameters).await;
+        let result = open(thread, parameters);
         assert!(result.is_err());
         Ok(())
     }
@@ -1042,14 +1030,14 @@ mod tests {
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = get_total(thread.clone(), parameters).await?;
+        let result = get_total(thread.clone(), parameters)?;
         // We created 4 entries: hello.txt, compressed.txt, testdir/, META-INF/MANIFEST.MF
         assert_eq!(Some(Value::Int(4)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1069,52 +1057,52 @@ mod tests {
         parameters.push_reference(name_ref);
         parameters.push_int(0); // add_slash = false
 
-        let result = get_entry(thread.clone(), parameters).await?;
+        let result = get_entry(thread.clone(), parameters)?;
         let entry_handle = result.expect("expected entry handle").as_i64()?;
         assert!(entry_handle > 0, "entry handle should be > 0");
 
         // Test getEntrySize - "Hello, World!" = 13 bytes
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
-        let result = get_entry_size(thread.clone(), parameters).await?;
+        let result = get_entry_size(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Long(13)), result);
 
         // Test getEntryCSize stored, so compressed size == uncompressed size
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
-        let result = get_entry_c_size(thread.clone(), parameters).await?;
+        let result = get_entry_c_size(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Long(13)), result);
 
         // Test getEntryCrc
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
-        let result = get_entry_crc(thread.clone(), parameters).await?;
+        let result = get_entry_crc(thread.clone(), parameters)?;
         let crc_value = result.expect("expected CRC").as_i64()?;
         assert!(crc_value != 0, "CRC should not be 0 for non-empty content");
 
         // Test getEntryMethod; should be 0 (stored)
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
-        let result = get_entry_method(thread.clone(), parameters).await?;
+        let result = get_entry_method(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Int(0)), result);
 
         // Test getEntryFlag
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
-        let result = get_entry_flag(thread.clone(), parameters).await?;
+        let result = get_entry_flag(thread.clone(), parameters)?;
         let _flag = result.expect("expected flag").as_i32()?;
 
         // Test getEntryTime
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
-        let result = get_entry_time(thread.clone(), parameters).await?;
+        let result = get_entry_time(thread.clone(), parameters)?;
         let _time = result.expect("expected time").as_i64()?;
 
         // Test getEntryBytes; type 0 = name
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
         parameters.push_int(0); // name
-        let result = get_entry_bytes(thread.clone(), parameters).await?;
+        let result = get_entry_bytes(thread.clone(), parameters)?;
         let name_value = result.expect("expected name bytes");
         let name_bytes = name_value.as_byte_vec_ref()?;
         let name_u8: Vec<u8> = name_bytes.iter().map(|&b| b.cast_unsigned()).collect();
@@ -1125,12 +1113,12 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
         parameters.push_long(entry_handle);
-        free_entry(thread.clone(), parameters).await?;
+        free_entry(thread.clone(), parameters)?;
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1149,13 +1137,13 @@ mod tests {
         parameters.push_reference(name_ref);
         parameters.push_int(0);
 
-        let result = get_entry(thread.clone(), parameters).await?;
+        let result = get_entry(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Long(0)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1170,12 +1158,12 @@ mod tests {
         parameters.push_reference(None);
         parameters.push_int(0);
 
-        let result = get_entry(thread.clone(), parameters).await?;
+        let result = get_entry(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Long(0)), result);
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1195,14 +1183,14 @@ mod tests {
         parameters.push_reference(name_ref);
         parameters.push_int(1); // add_slash = true
 
-        let result = get_entry(thread.clone(), parameters).await?;
+        let result = get_entry(thread.clone(), parameters)?;
         let entry_handle = result.expect("expected entry handle").as_i64()?;
         assert!(entry_handle > 0, "should find testdir/ with add_slash");
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1222,27 +1210,27 @@ mod tests {
         parameters.push_reference(name_ref);
         parameters.push_int(0);
 
-        let result = get_entry(thread.clone(), parameters).await?;
+        let result = get_entry(thread.clone(), parameters)?;
         let entry_handle = result.expect("expected entry handle").as_i64()?;
         assert!(entry_handle > 0);
 
         // Check uncompressed size
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
-        let result = get_entry_size(thread.clone(), parameters).await?;
+        let result = get_entry_size(thread.clone(), parameters)?;
         let size = result.expect("expected size").as_i64()?;
         assert_eq!(size, 45, "uncompressed size should be 45 bytes");
 
         // Check method is deflated (8)
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
-        let result = get_entry_method(thread.clone(), parameters).await?;
+        let result = get_entry_method(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Int(8)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1256,7 +1244,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
         parameters.push_int(0);
-        let result = get_next_entry(thread.clone(), parameters).await?;
+        let result = get_next_entry(thread.clone(), parameters)?;
         let entry_handle = result.expect("expected entry handle").as_i64()?;
         assert!(entry_handle > 0);
 
@@ -1264,13 +1252,13 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
         parameters.push_int(100);
-        let result = get_next_entry(thread.clone(), parameters).await?;
+        let result = get_next_entry(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Long(0)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1282,13 +1270,13 @@ mod tests {
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = get_manifest_num(thread.clone(), parameters).await?;
+        let result = get_manifest_num(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Int(1)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1300,14 +1288,14 @@ mod tests {
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = get_comment_bytes(thread.clone(), parameters).await?;
+        let result = get_comment_bytes(thread.clone(), parameters)?;
         // Default zip has no comment
         assert_eq!(Some(Value::Object(None)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1317,7 +1305,7 @@ mod tests {
 
         let mut parameters = Parameters::default();
         parameters.push_long(1);
-        let result = get_zip_message(thread, parameters).await?;
+        let result = get_zip_message(thread, parameters)?;
         assert_eq!(Some(Value::Object(None)), result);
         Ok(())
     }
@@ -1338,7 +1326,7 @@ mod tests {
         parameters.push_reference(name_ref);
         parameters.push_int(0);
 
-        let result = get_entry(thread.clone(), parameters).await?;
+        let result = get_entry(thread.clone(), parameters)?;
         let entry_handle = result.expect("expected entry handle").as_i64()?;
 
         // Create output buffer
@@ -1358,7 +1346,7 @@ mod tests {
         parameters.push_int(0); // off
         parameters.push_int(20); // len
 
-        let result = read(thread.clone(), parameters).await?;
+        let result = read(thread.clone(), parameters)?;
         let bytes_read = result.expect("expected bytes read").as_i32()?;
         assert_eq!(13, bytes_read); // "Hello, World!" is 13 bytes
 
@@ -1379,13 +1367,13 @@ mod tests {
         parameters.push_int(0);
         parameters.push_int(10);
 
-        let result = read(thread.clone(), parameters).await?;
+        let result = read(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Int(-1)), result); // EOF
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1405,7 +1393,7 @@ mod tests {
         parameters.push_reference(name_ref);
         parameters.push_int(0);
 
-        let result = get_entry(thread.clone(), parameters).await?;
+        let result = get_entry(thread.clone(), parameters)?;
         let entry_handle = result.expect("expected entry handle").as_i64()?;
 
         // Create output buffer large enough
@@ -1425,7 +1413,7 @@ mod tests {
         parameters.push_int(0); // off
         parameters.push_int(5); // len
 
-        let result = read(thread.clone(), parameters).await?;
+        let result = read(thread.clone(), parameters)?;
         let bytes_read = result.expect("expected bytes read").as_i32()?;
         assert_eq!(5, bytes_read);
 
@@ -1439,7 +1427,7 @@ mod tests {
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1455,7 +1443,7 @@ mod tests {
         parameters.push_int(0); // off
         parameters.push_int(10); // len
 
-        let result = read(thread, parameters).await;
+        let result = read(thread, parameters);
         assert!(result.is_err());
         Ok(())
     }
@@ -1475,7 +1463,7 @@ mod tests {
         parameters.push_reference(name_ref);
         parameters.push_int(0);
 
-        let result = get_entry(thread.clone(), parameters).await?;
+        let result = get_entry(thread.clone(), parameters)?;
         let entry_handle = result.expect("expected entry handle").as_i64()?;
 
         let output_bytes: Vec<i8> = vec![0i8; 5];
@@ -1493,12 +1481,12 @@ mod tests {
         parameters.push_int(0);
         parameters.push_int(0); // len = 0
 
-        let result = read(thread.clone(), parameters).await?;
+        let result = read(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Int(0)), result);
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1510,13 +1498,13 @@ mod tests {
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = starts_with_loc(thread.clone(), parameters).await?;
+        let result = starts_with_loc(thread.clone(), parameters)?;
         assert_eq!(Some(Value::from(true)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1536,20 +1524,20 @@ mod tests {
         parameters.push_reference(name_ref);
         parameters.push_int(0);
 
-        let result = get_entry(thread.clone(), parameters).await?;
+        let result = get_entry(thread.clone(), parameters)?;
         let entry_handle = result.expect("expected entry handle").as_i64()?;
 
         // Free it
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
         parameters.push_long(entry_handle);
-        let result = free_entry(thread.clone(), parameters).await?;
+        let result = free_entry(thread.clone(), parameters)?;
         assert!(result.is_none());
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1563,14 +1551,14 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
         parameters.push_int(0);
-        let result = get_next_entry(thread.clone(), parameters).await?;
+        let result = get_next_entry(thread.clone(), parameters)?;
         let entry_handle = result.expect("expected entry handle").as_i64()?;
         assert!(entry_handle > 0);
 
         // Close should also remove entry handles
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread.clone(), parameters).await?;
+        close(thread.clone(), parameters)?;
 
         // Verify the entry handle is gone
         let state = get_zip_file_state(&thread)?;
@@ -1595,40 +1583,40 @@ mod tests {
         parameters.push_reference(name_ref);
         parameters.push_int(0);
 
-        let result = get_entry(thread.clone(), parameters).await?;
+        let result = get_entry(thread.clone(), parameters)?;
         let entry_handle = result.expect("expected entry handle").as_i64()?;
 
         // Type 0 = name
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
         parameters.push_int(0);
-        let result = get_entry_bytes(thread.clone(), parameters).await?;
+        let result = get_entry_bytes(thread.clone(), parameters)?;
         assert!(result.expect("expected name").is_object());
 
         // Type 1 = extra (may be empty/null)
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
         parameters.push_int(1);
-        let _result = get_entry_bytes(thread.clone(), parameters).await?;
+        let _result = get_entry_bytes(thread.clone(), parameters)?;
 
         // Type 2 = comment (empty for our entries)
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
         parameters.push_int(2);
-        let result = get_entry_bytes(thread.clone(), parameters).await?;
+        let result = get_entry_bytes(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Object(None)), result);
 
         // Invalid type
         let mut parameters = Parameters::default();
         parameters.push_long(entry_handle);
         parameters.push_int(99);
-        let result = get_entry_bytes(thread.clone(), parameters).await?;
+        let result = get_entry_bytes(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Object(None)), result);
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1641,12 +1629,12 @@ mod tests {
         // Close first
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread.clone(), parameters).await?;
+        close(thread.clone(), parameters)?;
 
         // Now try to get total; should error
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = get_total(thread, parameters).await;
+        let result = get_total(thread, parameters);
         assert!(result.is_err());
         Ok(())
     }
@@ -1667,7 +1655,7 @@ mod tests {
         parameters.push_reference(name_ref);
         parameters.push_int(0);
 
-        let result = get_entry(thread.clone(), parameters).await?;
+        let result = get_entry(thread.clone(), parameters)?;
         let entry_handle = result.expect("expected entry handle").as_i64()?;
 
         // Create output buffer large enough
@@ -1687,7 +1675,7 @@ mod tests {
         parameters.push_int(0);
         parameters.push_int(100);
 
-        let result = read(thread.clone(), parameters).await?;
+        let result = read(thread.clone(), parameters)?;
         let bytes_read = result.expect("expected bytes read").as_i32()?;
         assert_eq!(45, bytes_read);
 
@@ -1704,7 +1692,7 @@ mod tests {
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1724,14 +1712,14 @@ mod tests {
         // Verify we can get the total number of entries
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = get_total(thread.clone(), parameters).await?;
+        let result = get_total(thread.clone(), parameters)?;
         let total = result.expect("expected total").as_i32()?;
         assert!(total > 0, "classes.jar should have entries");
 
         // Cleanup
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 
@@ -1743,11 +1731,11 @@ mod tests {
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread.clone(), parameters).await?;
+        close(thread.clone(), parameters)?;
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = get_comment_bytes(thread, parameters).await;
+        let result = get_comment_bytes(thread, parameters);
         assert!(result.is_err());
         Ok(())
     }
@@ -1774,12 +1762,12 @@ mod tests {
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        let result = get_manifest_num(thread.clone(), parameters).await?;
+        let result = get_manifest_num(thread.clone(), parameters)?;
         assert_eq!(Some(Value::Int(0)), result);
 
         let mut parameters = Parameters::default();
         parameters.push_long(handle);
-        close(thread, parameters).await?;
+        close(thread, parameters)?;
         Ok(())
     }
 }

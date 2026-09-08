@@ -3,15 +3,13 @@ use console::Term;
 use ristretto_classfile::VersionSpecification::{GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("java/io/Console.echo(Z)Z", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn echo<T: Thread + 'static>(
+pub fn echo<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -24,8 +22,7 @@ pub async fn echo<T: Thread + 'static>(
     "java/io/Console.encoding()Ljava/lang/String;",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn encoding<T: Thread + 'static>(
+pub fn encoding<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -34,8 +31,7 @@ pub async fn encoding<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/Console.istty()Z", LessThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn istty<T: Thread + 'static>(
+pub fn istty<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -52,8 +48,7 @@ pub async fn istty<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/Console.ttyStatus()I", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn tty_status<T: Thread + 'static>(
+pub fn tty_status<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -69,10 +64,7 @@ mod tests {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         parameters.push_bool(true);
-        let enabled = echo(thread, parameters)
-            .await?
-            .expect("enabled")
-            .as_bool()?;
+        let enabled = echo(thread, parameters)?.expect("enabled").as_bool()?;
         assert!(!enabled);
         Ok(())
     }
@@ -80,9 +72,7 @@ mod tests {
     #[tokio::test]
     async fn test_encoding() -> Result<()> {
         let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
-        let value = encoding(thread, Parameters::default())
-            .await?
-            .expect("encoding");
+        let value = encoding(thread, Parameters::default())?.expect("encoding");
         assert!(value.is_null());
         Ok(())
     }
@@ -90,9 +80,7 @@ mod tests {
     #[tokio::test]
     async fn test_tty_status() -> Result<()> {
         let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
-        let value = tty_status(thread, Parameters::default())
-            .await?
-            .expect("tty_status");
+        let value = tty_status(thread, Parameters::default())?.expect("tty_status");
         assert_eq!(0, value.as_i32()?);
         Ok(())
     }
@@ -101,7 +89,7 @@ mod tests {
     async fn test_istty() -> Result<()> {
         // This test is mainly for coverage as the test is using the same state to verify the result
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = istty(thread, Parameters::default()).await?.expect("istty");
+        let result = istty(thread, Parameters::default())?.expect("istty");
         let is_tty = result.as_bool()?;
         let terminal = Term::stdout();
         let expected_is_terminal = terminal.is_term();

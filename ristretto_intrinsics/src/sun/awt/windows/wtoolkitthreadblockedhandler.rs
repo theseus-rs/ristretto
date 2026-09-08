@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/windows/WToolkitThreadBlockedHandler.startSecondaryEventLoop()V",
     Any
 )]
-#[async_method]
-pub async fn start_secondary_event_loop<T: Thread + 'static>(
+pub fn start_secondary_event_loop<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,7 +28,7 @@ mod tests {
     #[tokio::test]
     async fn test_start_secondary_event_loop() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = start_secondary_event_loop(thread, Parameters::default()).await;
+        let result = start_secondary_event_loop(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WToolkitThreadBlockedHandler.startSecondaryEventLoop()V",
             result.unwrap_err().to_string()

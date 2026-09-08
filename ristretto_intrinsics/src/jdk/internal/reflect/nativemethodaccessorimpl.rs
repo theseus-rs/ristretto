@@ -3,7 +3,6 @@ use ristretto_classfile::MethodAccessFlags;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::{Class as RistrettoClass, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Frame;
 use ristretto_types::JavaError::IllegalAccessException;
@@ -48,7 +47,6 @@ async fn get_caller_info<T: Thread + 'static>(
     "jdk/internal/reflect/NativeMethodAccessorImpl.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
 #[expect(clippy::too_many_lines)]
 pub async fn invoke_0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -345,9 +343,9 @@ pub(crate) mod tests {
     use super::*;
     use ristretto_classloader::Reference;
     use ristretto_types::JavaObject;
-    use ristretto_vm::IntrinsicMethod;
+    use ristretto_vm::AsyncIntrinsicMethod;
 
-    pub async fn invoke_test(invoke: IntrinsicMethod) -> Result<()> {
+    pub async fn invoke_test(invoke: AsyncIntrinsicMethod) -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
         let integer_class = thread.class("java/lang/Integer").await?;
         let integer_class_object = integer_class.to_object(&thread).await?;

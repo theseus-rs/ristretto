@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/instrument/InstrumentationImpl.appendToClassLoaderSearch0(JLjava/lang/String;Z)V",
     Any
 )]
-#[async_method]
-pub async fn append_to_class_loader_search_0<T: Thread + 'static>(
+pub fn append_to_class_loader_search_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,8 +29,7 @@ pub async fn append_to_class_loader_search_0<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.getAllLoadedClasses0(J)[Ljava/lang/Class;",
     Any
 )]
-#[async_method]
-pub async fn get_all_loaded_classes_0<T: Thread + 'static>(
+pub fn get_all_loaded_classes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -47,8 +44,7 @@ pub async fn get_all_loaded_classes_0<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.getInitiatedClasses0(JLjava/lang/ClassLoader;)[Ljava/lang/Class;",
     Any
 )]
-#[async_method]
-pub async fn get_initiated_classes_0<T: Thread + 'static>(
+pub fn get_initiated_classes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -61,8 +57,7 @@ pub async fn get_initiated_classes_0<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.getObjectSize0(JLjava/lang/Object;)J",
     Any
 )]
-#[async_method]
-pub async fn get_object_size_0<T: Thread + 'static>(
+pub fn get_object_size_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -78,8 +73,7 @@ pub async fn get_object_size_0<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.isModifiableClass0(JLjava/lang/Class;)Z",
     Any
 )]
-#[async_method]
-pub async fn is_modifiable_class_0<T: Thread + 'static>(
+pub fn is_modifiable_class_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,8 +89,7 @@ pub async fn is_modifiable_class_0<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.isRetransformClassesSupported0(J)Z",
     Any
 )]
-#[async_method]
-pub async fn is_retransform_classes_supported_0<T: Thread + 'static>(
+pub fn is_retransform_classes_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -111,8 +104,7 @@ pub async fn is_retransform_classes_supported_0<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.jarFile(J)Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn jar_file<T: Thread + 'static>(
+pub fn jar_file<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -127,8 +119,7 @@ pub async fn jar_file<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.loadAgent0(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn load_agent_0<T: Thread + 'static>(
+pub fn load_agent_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -143,8 +134,7 @@ pub async fn load_agent_0<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.redefineClasses0(J[Ljava/lang/instrument/ClassDefinition;)V",
     Any
 )]
-#[async_method]
-pub async fn redefine_classes_0<T: Thread + 'static>(
+pub fn redefine_classes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -157,8 +147,7 @@ pub async fn redefine_classes_0<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.retransformClasses0(J[Ljava/lang/Class;)V",
     Any
 )]
-#[async_method]
-pub async fn retransform_classes_0<T: Thread + 'static>(
+pub fn retransform_classes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -174,8 +163,7 @@ pub async fn retransform_classes_0<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.setHasRetransformableTransformers(JZ)V",
     Any
 )]
-#[async_method]
-pub async fn set_has_retransformable_transformers<T: Thread + 'static>(
+pub fn set_has_retransformable_transformers<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -191,8 +179,7 @@ pub async fn set_has_retransformable_transformers<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.setHasTransformers(JZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_has_transformers<T: Thread + 'static>(
+pub fn set_has_transformers<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -208,8 +195,7 @@ pub async fn set_has_transformers<T: Thread + 'static>(
     "sun/instrument/InstrumentationImpl.setNativeMethodPrefixes(J[Ljava/lang/String;Z)V",
     Any
 )]
-#[async_method]
-pub async fn set_native_method_prefixes<T: Thread + 'static>(
+pub fn set_native_method_prefixes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -230,7 +216,7 @@ mod tests {
     #[tokio::test]
     async fn test_load_agent_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = load_agent_0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = load_agent_0(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.instrument.InstrumentationImpl.loadAgent0(Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -243,8 +229,7 @@ mod tests {
         let result = set_has_transformers(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.instrument.InstrumentationImpl.setHasTransformers(JZ)V",
             result.unwrap_err().to_string()
@@ -254,7 +239,7 @@ mod tests {
     #[tokio::test]
     async fn test_jar_file() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = jar_file(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = jar_file(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.instrument.InstrumentationImpl.jarFile(J)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -271,8 +256,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.instrument.InstrumentationImpl.appendToClassLoaderSearch0(JLjava/lang/String;Z)V",
             result.unwrap_err().to_string()
@@ -282,7 +266,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_all_loaded_classes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_all_loaded_classes_0(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_all_loaded_classes_0(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.instrument.InstrumentationImpl.getAllLoadedClasses0(J)[Ljava/lang/Class;",
             result.unwrap_err().to_string()
@@ -295,8 +279,7 @@ mod tests {
         let result = get_initiated_classes_0(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.instrument.InstrumentationImpl.getInitiatedClasses0(JLjava/lang/ClassLoader;)[Ljava/lang/Class;",
             result.unwrap_err().to_string()
@@ -309,8 +292,7 @@ mod tests {
         let result = get_object_size_0(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.instrument.InstrumentationImpl.getObjectSize0(JLjava/lang/Object;)J",
             result.unwrap_err().to_string()
@@ -323,8 +305,7 @@ mod tests {
         let result = is_modifiable_class_0(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.instrument.InstrumentationImpl.isModifiableClass0(JLjava/lang/Class;)Z",
             result.unwrap_err().to_string()
@@ -335,7 +316,7 @@ mod tests {
     async fn test_is_retransform_classes_supported_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            is_retransform_classes_supported_0(thread, Parameters::new(vec![Value::Long(0)])).await;
+            is_retransform_classes_supported_0(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.instrument.InstrumentationImpl.isRetransformClassesSupported0(J)Z",
             result.unwrap_err().to_string()
@@ -348,8 +329,7 @@ mod tests {
         let result = redefine_classes_0(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.instrument.InstrumentationImpl.redefineClasses0(J[Ljava/lang/instrument/ClassDefinition;)V",
             result.unwrap_err().to_string()
@@ -362,8 +342,7 @@ mod tests {
         let result = retransform_classes_0(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.instrument.InstrumentationImpl.retransformClasses0(J[Ljava/lang/Class;)V",
             result.unwrap_err().to_string()
@@ -376,8 +355,7 @@ mod tests {
         let result = set_has_retransformable_transformers(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.instrument.InstrumentationImpl.setHasRetransformableTransformers(JZ)V",
             result.unwrap_err().to_string()
@@ -394,8 +372,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.instrument.InstrumentationImpl.setNativeMethodPrefixes(J[Ljava/lang/String;Z)V",
             result.unwrap_err().to_string()

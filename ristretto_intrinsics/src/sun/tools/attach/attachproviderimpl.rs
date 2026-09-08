@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/tools/attach/AttachProviderImpl.enumProcesses([II)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn enum_processes<T: Thread + 'static>(
+pub fn enum_processes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn enum_processes<T: Thread + 'static>(
     "sun/tools/attach/AttachProviderImpl.isLibraryLoadedByProcess(Ljava/lang/String;I)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn is_library_loaded_by_process<T: Thread + 'static>(
+pub fn is_library_loaded_by_process<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -45,8 +42,7 @@ pub async fn is_library_loaded_by_process<T: Thread + 'static>(
     "sun/tools/attach/AttachProviderImpl.tempPath()Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn temp_path<T: Thread + 'static>(
+pub fn temp_path<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,8 +55,7 @@ pub async fn temp_path<T: Thread + 'static>(
     "sun/tools/attach/AttachProviderImpl.volumeFlags(Ljava/lang/String;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn volume_flags<T: Thread + 'static>(
+pub fn volume_flags<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,8 +77,7 @@ mod tests {
         let result = enum_processes(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/AttachProviderImpl.enumProcesses([II)I",
             result.unwrap_err().to_string()
@@ -97,8 +91,7 @@ mod tests {
         let result = is_library_loaded_by_process(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/AttachProviderImpl.isLibraryLoadedByProcess(Ljava/lang/String;I)Z",
             result.unwrap_err().to_string()
@@ -109,7 +102,7 @@ mod tests {
     #[tokio::test]
     async fn test_temp_path() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = temp_path(thread, Parameters::default()).await;
+        let result = temp_path(thread, Parameters::default());
         assert_eq!(
             "sun/tools/attach/AttachProviderImpl.tempPath()Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -120,7 +113,7 @@ mod tests {
     #[tokio::test]
     async fn test_volume_flags() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = volume_flags(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = volume_flags(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/tools/attach/AttachProviderImpl.volumeFlags(Ljava/lang/String;)J",
             result.unwrap_err().to_string()

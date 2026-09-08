@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/lwawt/macosx/CInputMethod.getNativeLocale()Ljava/util/Locale;",
     Any
 )]
-#[async_method]
-pub async fn get_native_locale<T: Thread + 'static>(
+pub fn get_native_locale<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,8 +21,7 @@ pub async fn get_native_locale<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CInputMethod.nativeEndComposition(J)V", Any)]
-#[async_method]
-pub async fn native_end_composition<T: Thread + 'static>(
+pub fn native_end_composition<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -39,8 +36,7 @@ pub async fn native_end_composition<T: Thread + 'static>(
     "sun/lwawt/macosx/CInputMethod.nativeGetCurrentInputMethodInfo()Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn native_get_current_input_method_info<T: Thread + 'static>(
+pub fn native_get_current_input_method_info<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,8 +51,7 @@ pub async fn native_get_current_input_method_info<T: Thread + 'static>(
     "sun/lwawt/macosx/CInputMethod.nativeHandleEvent(Lsun/lwawt/LWComponentPeer;Ljava/awt/AWTEvent;)V",
     Any
 )]
-#[async_method]
-pub async fn native_handle_event<T: Thread + 'static>(
+pub fn native_handle_event<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +61,7 @@ pub async fn native_handle_event<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CInputMethod.nativeInit()V", Any)]
-#[async_method]
-pub async fn native_init<T: Thread + 'static>(
+pub fn native_init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -81,8 +75,7 @@ pub async fn native_init<T: Thread + 'static>(
     "sun/lwawt/macosx/CInputMethod.nativeNotifyPeer(JLsun/lwawt/macosx/CInputMethod;)V",
     Any
 )]
-#[async_method]
-pub async fn native_notify_peer<T: Thread + 'static>(
+pub fn native_notify_peer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,8 +92,7 @@ pub async fn native_notify_peer<T: Thread + 'static>(
     "sun/lwawt/macosx/CInputMethod.setNativeLocale(Ljava/lang/String;Z)Z",
     Any
 )]
-#[async_method]
-pub async fn set_native_locale<T: Thread + 'static>(
+pub fn set_native_locale<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -119,7 +111,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_native_locale() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_native_locale(thread, Parameters::default()).await;
+        let result = get_native_locale(thread, Parameters::default());
         assert_eq!(
             "sun.lwawt.macosx.CInputMethod.getNativeLocale()Ljava/util/Locale;",
             result.unwrap_err().to_string()
@@ -129,7 +121,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_end_composition() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_end_composition(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = native_end_composition(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CInputMethod.nativeEndComposition(J)V",
             result.unwrap_err().to_string()
@@ -139,7 +131,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_get_current_input_method_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_get_current_input_method_info(thread, Parameters::default()).await;
+        let result = native_get_current_input_method_info(thread, Parameters::default());
         assert_eq!(
             "sun.lwawt.macosx.CInputMethod.nativeGetCurrentInputMethodInfo()Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -152,8 +144,7 @@ mod tests {
         let result = native_handle_event(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CInputMethod.nativeHandleEvent(Lsun/lwawt/LWComponentPeer;Ljava/awt/AWTEvent;)V",
             result.unwrap_err().to_string()
@@ -163,7 +154,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_init(thread, Parameters::default()).await;
+        let result = native_init(thread, Parameters::default());
         assert_eq!(
             "sun.lwawt.macosx.CInputMethod.nativeInit()V",
             result.unwrap_err().to_string()
@@ -176,8 +167,7 @@ mod tests {
         let result = native_notify_peer(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CInputMethod.nativeNotifyPeer(JLsun/lwawt/macosx/CInputMethod;)V",
             result.unwrap_err().to_string()
@@ -190,8 +180,7 @@ mod tests {
         let result = set_native_locale(
             thread,
             Parameters::new(vec![Value::Object(None), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CInputMethod.setNativeLocale(Ljava/lang/String;Z)Z",
             result.unwrap_err().to_string()

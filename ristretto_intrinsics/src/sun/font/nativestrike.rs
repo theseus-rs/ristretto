@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -16,8 +15,7 @@ use std::sync::Arc;
     "sun/font/NativeStrike.createNullScalerContext()J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn create_null_scaler_context<T: Thread + 'static>(
+pub fn create_null_scaler_context<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,8 +29,7 @@ pub async fn create_null_scaler_context<T: Thread + 'static>(
     "sun/font/NativeStrike.createScalerContext([BID)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn create_scaler_context<T: Thread + 'static>(
+pub fn create_scaler_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -46,8 +43,7 @@ pub async fn create_scaler_context<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/NativeStrike.getMaxGlyph(J)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_max_glyph<T: Thread + 'static>(
+pub fn get_max_glyph<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -60,8 +56,7 @@ pub async fn get_max_glyph<T: Thread + 'static>(
     "sun/font/NativeStrike.createNullScalerContext()J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn create_null_scaler_context_linux_ge_v11<T: Thread + 'static>(
+pub fn create_null_scaler_context_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -76,8 +71,7 @@ pub async fn create_null_scaler_context_linux_ge_v11<T: Thread + 'static>(
     "sun/font/NativeStrike.createScalerContext([BID)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn create_scaler_context_linux_ge_v11<T: Thread + 'static>(
+pub fn create_scaler_context_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -92,8 +86,7 @@ pub async fn create_scaler_context_linux_ge_v11<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/font/NativeStrike.getMaxGlyph(J)I", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn get_max_glyph_linux_ge_v11<T: Thread + 'static>(
+pub fn get_max_glyph_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -108,7 +101,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_null_scaler_context() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = create_null_scaler_context(thread, Parameters::default()).await;
+        let result = create_null_scaler_context(thread, Parameters::default());
         assert_eq!(
             "sun.font.NativeStrike.createNullScalerContext()J",
             result.unwrap_err().to_string()
@@ -121,8 +114,7 @@ mod tests {
         let result = create_scaler_context(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Double(0.0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.NativeStrike.createScalerContext([BID)J",
             result.unwrap_err().to_string()
@@ -132,7 +124,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_max_glyph() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = get_max_glyph(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_max_glyph(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.font.NativeStrike.getMaxGlyph(J)I",
             result.unwrap_err().to_string()
@@ -143,7 +135,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_null_scaler_context_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create_null_scaler_context_linux_ge_v11(thread, Parameters::default()).await;
+        let result = create_null_scaler_context_linux_ge_v11(thread, Parameters::default());
         assert_eq!(
             "sun/font/NativeStrike.createNullScalerContext()J",
             result.unwrap_err().to_string()
@@ -157,8 +149,7 @@ mod tests {
         let result = create_scaler_context_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Double(0.0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/font/NativeStrike.createScalerContext([BID)J",
             result.unwrap_err().to_string()
@@ -169,8 +160,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_max_glyph_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            get_max_glyph_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_max_glyph_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/font/NativeStrike.getMaxGlyph(J)I",
             result.unwrap_err().to_string()

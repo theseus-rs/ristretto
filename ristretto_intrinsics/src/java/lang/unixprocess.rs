@@ -1,15 +1,13 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, Thread};
 use std::sync::Arc;
 use sysinfo::{Pid, ProcessesToUpdate, Signal, System};
 
 #[intrinsic_method("java/lang/UNIXProcess.destroyProcess(IZ)V", Equal(JAVA_8))]
-#[async_method]
-pub async fn destroy_process<T: Thread + 'static>(
+pub fn destroy_process<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,7 +30,6 @@ pub async fn destroy_process<T: Thread + 'static>(
 /// In Java 8 and earlier, `UNIXProcess` was the process class on Unix platforms; both share
 /// the same parameter layout.
 #[intrinsic_method("java/lang/UNIXProcess.forkAndExec(I[B[B[BI[BI[B[IZ)I", Equal(JAVA_8))]
-#[async_method]
 pub async fn fork_and_exec<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -41,8 +38,7 @@ pub async fn fork_and_exec<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/UNIXProcess.init()V", Equal(JAVA_8))]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +46,7 @@ pub async fn init<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/UNIXProcess.waitForProcessExit(I)I", Equal(JAVA_8))]
-#[async_method]
-pub async fn wait_for_process_exit<T: Thread + 'static>(
+pub fn wait_for_process_exit<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,7 +77,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_int(999_999);
         parameters.push_bool(false);
-        let result = destroy_process(thread, parameters).await?;
+        let result = destroy_process(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -93,7 +88,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push_int(999_999);
         parameters.push_bool(true);
-        let result = destroy_process(thread, parameters).await?;
+        let result = destroy_process(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -152,7 +147,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = init(thread, Parameters::default()).await?;
+        let result = init(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -162,7 +157,7 @@ mod tests {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         parameters.push_int(999_999);
-        let result = wait_for_process_exit(thread, parameters).await?;
+        let result = wait_for_process_exit(thread, parameters)?;
         assert_eq!(result, Some(Value::Int(-1)));
         Ok(())
     }
@@ -190,7 +185,7 @@ mod tests {
 
         let mut parameters = Parameters::default();
         parameters.push_int(child_pid);
-        let result = wait_for_process_exit(thread, parameters).await?;
+        let result = wait_for_process_exit(thread, parameters)?;
         assert!(result == Some(Value::Int(0)) || result == Some(Value::Int(-1)));
         Ok(())
     }

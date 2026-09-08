@@ -7,7 +7,6 @@ use ristretto_classfile::VersionSpecification::{
 };
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError::IoException;
 use ristretto_types::Parameters;
@@ -104,7 +103,6 @@ pub(crate) fn raw_file_descriptor(file: &File) -> Result<i64> {
 }
 
 #[intrinsic_method("java/io/FileDescriptor.close0()V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -152,7 +150,6 @@ pub async fn close_0<T: Thread + 'static>(
 
 #[intrinsic_method("java/io/FileDescriptor.getAppend(I)Z", GreaterThanOrEqual(JAVA_11))]
 #[expect(clippy::match_same_arms)]
-#[async_method]
 pub async fn get_append<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -186,8 +183,7 @@ pub async fn get_append<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileDescriptor.getHandle(I)J", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn get_handle<T: Thread + 'static>(
+pub fn get_handle<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -197,8 +193,7 @@ pub async fn get_handle<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileDescriptor.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -206,7 +201,6 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileDescriptor.sync()V", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn sync<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -215,7 +209,6 @@ pub async fn sync<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileDescriptor.sync0()V", GreaterThan(JAVA_17))]
-#[async_method]
 pub async fn sync_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -250,8 +243,7 @@ pub async fn sync_0<T: Thread + 'static>(
 
 #[cfg(target_os = "windows")]
 #[intrinsic_method("java/io/FileDescriptor.set(I)J", Equal(JAVA_8))]
-#[async_method]
-pub async fn set<T: Thread + 'static>(
+pub fn set<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -288,7 +280,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -297,13 +289,13 @@ mod tests {
     #[tokio::test]
     async fn test_set() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set(thread.clone(), Parameters::new(vec![Value::Int(0)])).await?;
+        let result = set(thread.clone(), Parameters::new(vec![Value::Int(0)]))?;
         assert!(matches!(result, Some(Value::Long(_))));
-        let result = set(thread.clone(), Parameters::new(vec![Value::Int(1)])).await?;
+        let result = set(thread.clone(), Parameters::new(vec![Value::Int(1)]))?;
         assert!(matches!(result, Some(Value::Long(_))));
-        let result = set(thread.clone(), Parameters::new(vec![Value::Int(2)])).await?;
+        let result = set(thread.clone(), Parameters::new(vec![Value::Int(2)]))?;
         assert!(matches!(result, Some(Value::Long(_))));
-        let result = set(thread, Parameters::new(vec![Value::Int(99)])).await?;
+        let result = set(thread, Parameters::new(vec![Value::Int(99)]))?;
         assert_eq!(Some(Value::Long(-1)), result);
         Ok(())
     }

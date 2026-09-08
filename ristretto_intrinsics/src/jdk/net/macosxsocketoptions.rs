@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "jdk/net/MacOSXSocketOptions.getIpDontFragment0(IZ)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn get_ip_dont_fragment_0<T: Thread + 'static>(
+pub fn get_ip_dont_fragment_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -25,8 +23,7 @@ pub async fn get_ip_dont_fragment_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.getSoPeerCred0(I)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_so_peer_cred_0<T: Thread + 'static>(
+pub fn get_so_peer_cred_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,8 +35,7 @@ pub async fn get_so_peer_cred_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.getTcpKeepAliveIntvl0(I)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_tcp_keep_alive_intvl_0<T: Thread + 'static>(
+pub fn get_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -51,8 +47,7 @@ pub async fn get_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.getTcpKeepAliveProbes0(I)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_tcp_keep_alive_probes_0<T: Thread + 'static>(
+pub fn get_tcp_keep_alive_probes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -64,8 +59,7 @@ pub async fn get_tcp_keep_alive_probes_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.getTcpKeepAliveTime0(I)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_tcp_keep_alive_time_0<T: Thread + 'static>(
+pub fn get_tcp_keep_alive_time_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -77,8 +71,7 @@ pub async fn get_tcp_keep_alive_time_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.getTcpkeepAliveProbes0(I)I",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn get_tcpkeep_alive_probes_0<T: Thread + 'static>(
+pub fn get_tcpkeep_alive_probes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -90,8 +83,7 @@ pub async fn get_tcpkeep_alive_probes_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.ipDontFragmentSupported0()Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn ip_dont_fragment_supported_0<T: Thread + 'static>(
+pub fn ip_dont_fragment_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,8 +94,7 @@ pub async fn ip_dont_fragment_supported_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.keepAliveOptionsSupported0()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn keep_alive_options_supported_0<T: Thread + 'static>(
+pub fn keep_alive_options_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -114,8 +105,7 @@ pub async fn keep_alive_options_supported_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.setIpDontFragment0(IZZ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn set_ip_dont_fragment_0<T: Thread + 'static>(
+pub fn set_ip_dont_fragment_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -129,8 +119,7 @@ pub async fn set_ip_dont_fragment_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.setTcpKeepAliveIntvl0(II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_tcp_keep_alive_intvl_0<T: Thread + 'static>(
+pub fn set_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -143,8 +132,7 @@ pub async fn set_tcp_keep_alive_intvl_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.setTcpKeepAliveProbes0(II)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn set_tcp_keep_alive_probes_0<T: Thread + 'static>(
+pub fn set_tcp_keep_alive_probes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -157,8 +145,7 @@ pub async fn set_tcp_keep_alive_probes_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.setTcpKeepAliveTime0(II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_tcp_keep_alive_time_0<T: Thread + 'static>(
+pub fn set_tcp_keep_alive_time_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -171,8 +158,7 @@ pub async fn set_tcp_keep_alive_time_0<T: Thread + 'static>(
     "jdk/net/MacOSXSocketOptions.setTcpkeepAliveProbes0(II)V",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn set_tcpkeep_alive_probes_0<T: Thread + 'static>(
+pub fn set_tcpkeep_alive_probes_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -188,49 +174,49 @@ mod tests {
     #[tokio::test]
     async fn test_get_ip_dont_fragment_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_ip_dont_fragment_0(thread, Parameters::default()).await;
+        let result = get_ip_dont_fragment_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_so_peer_cred_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_so_peer_cred_0(thread, Parameters::default()).await;
+        let result = get_so_peer_cred_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_tcp_keep_alive_intvl_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_tcp_keep_alive_intvl_0(thread, Parameters::default()).await;
+        let result = get_tcp_keep_alive_intvl_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_tcp_keep_alive_probes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_tcp_keep_alive_probes_0(thread, Parameters::default()).await;
+        let result = get_tcp_keep_alive_probes_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_tcp_keep_alive_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_tcp_keep_alive_time_0(thread, Parameters::default()).await;
+        let result = get_tcp_keep_alive_time_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_get_tcpkeep_alive_probes_0() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = get_tcpkeep_alive_probes_0(thread, Parameters::default()).await;
+        let result = get_tcpkeep_alive_probes_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_ip_dont_fragment_supported_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = ip_dont_fragment_supported_0(thread, Parameters::default()).await?;
+        let result = ip_dont_fragment_supported_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -238,7 +224,7 @@ mod tests {
     #[tokio::test]
     async fn test_keep_alive_options_supported_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = keep_alive_options_supported_0(thread, Parameters::default()).await?;
+        let result = keep_alive_options_supported_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::from(true)));
         Ok(())
     }
@@ -246,35 +232,35 @@ mod tests {
     #[tokio::test]
     async fn test_set_ip_dont_fragment_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_ip_dont_fragment_0(thread, Parameters::default()).await;
+        let result = set_ip_dont_fragment_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_set_tcp_keep_alive_intvl_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_tcp_keep_alive_intvl_0(thread, Parameters::default()).await;
+        let result = set_tcp_keep_alive_intvl_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_set_tcp_keep_alive_probes_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_tcp_keep_alive_probes_0(thread, Parameters::default()).await;
+        let result = set_tcp_keep_alive_probes_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_set_tcp_keep_alive_time_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_tcp_keep_alive_time_0(thread, Parameters::default()).await;
+        let result = set_tcp_keep_alive_time_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_set_tcpkeep_alive_probes_0() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = set_tcpkeep_alive_probes_0(thread, Parameters::default()).await;
+        let result = set_tcpkeep_alive_probes_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 }

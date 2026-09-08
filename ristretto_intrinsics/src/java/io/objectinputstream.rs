@@ -2,7 +2,6 @@ use crate::bounds;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError::{IllegalArgumentException, NullPointerException};
 use ristretto_types::Thread;
@@ -13,8 +12,7 @@ use std::sync::Arc;
     "java/io/ObjectInputStream.bytesToDoubles([BI[DII)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn bytes_to_doubles<T: Thread + 'static>(
+pub fn bytes_to_doubles<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +64,7 @@ pub async fn bytes_to_doubles<T: Thread + 'static>(
     "java/io/ObjectInputStream.bytesToFloats([BI[FII)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn bytes_to_floats<T: Thread + 'static>(
+pub fn bytes_to_floats<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -135,7 +132,7 @@ mod tests {
         parameters.push_int(0); // destination position
         parameters.push_int(2); // number of doubles
 
-        let _ = bytes_to_doubles(thread, parameters).await?;
+        let _ = bytes_to_doubles(thread, parameters)?;
         let bytes = destination.as_double_vec_ref()?;
         assert_eq!(&*bytes, vec![3.0f64, 42.0f64]);
         Ok(())
@@ -157,7 +154,7 @@ mod tests {
         parameters.push_int(0); // destination position
         parameters.push_int(2); // number of floats
 
-        let _ = bytes_to_floats(thread, parameters).await?;
+        let _ = bytes_to_floats(thread, parameters)?;
         let bytes = destination.as_float_vec_ref()?;
         assert_eq!(&*bytes, vec![3.0f32, 42.0f32]);
         Ok(())

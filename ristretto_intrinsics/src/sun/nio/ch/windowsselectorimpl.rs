@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result, VM};
@@ -19,7 +18,6 @@ async fn raw_socket<V: VM + ?Sized>(vm: &V, fd: i32) -> Option<usize> {
     "sun/nio/ch/WindowsSelectorImpl.discardUrgentData(I)Z",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 #[expect(unsafe_code)]
 pub async fn discard_urgent_data<T: Thread + 'static>(
     thread: Arc<T>,
@@ -49,7 +47,6 @@ pub async fn discard_urgent_data<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WindowsSelectorImpl.resetWakeupSocket0(I)V", Any)]
-#[async_method]
 #[expect(unsafe_code)]
 pub async fn reset_wakeup_socket0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -85,7 +82,6 @@ pub async fn reset_wakeup_socket0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WindowsSelectorImpl.setWakeupSocket0(I)V", Any)]
-#[async_method]
 #[expect(unsafe_code)]
 pub async fn set_wakeup_socket0<T: Thread + 'static>(
     thread: Arc<T>,

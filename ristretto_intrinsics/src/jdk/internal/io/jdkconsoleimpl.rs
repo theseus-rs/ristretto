@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_types::JavaError::IoException;
@@ -16,8 +15,7 @@ use std::sync::Arc;
 /// standard input handle to flip the `ENABLE_ECHO_INPUT` bit. On `wasm` targets there is no
 /// controllable terminal, so the requested state is returned as the "previous" value (a no-op).
 #[intrinsic_method("jdk/internal/io/JdkConsoleImpl.echo(Z)Z", GreaterThanOrEqual(JAVA_21))]
-#[async_method]
-pub async fn echo<T: Thread + 'static>(
+pub fn echo<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -125,7 +123,7 @@ mod tests {
         // error; otherwise the call succeeds and returns a boolean. Accept either, but require
         // that a successful result is a boolean `Value`. The `wasm` no-op implementation must
         // never fail.
-        match echo(thread, parameters).await {
+        match echo(thread, parameters) {
             Ok(Some(value)) => {
                 let _ = value.as_bool()?;
             }
@@ -146,7 +144,7 @@ mod tests {
         let (_vm, thread) = crate::test::java21_thread().await?;
         let mut parameters = Parameters::default();
         parameters.push_bool(false);
-        let value = echo(thread, parameters).await?.expect("value");
+        let value = echo(thread, parameters)?.expect("value");
         assert!(!value.as_bool()?);
         Ok(())
     }

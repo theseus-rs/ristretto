@@ -2,7 +2,6 @@ use ristretto_classfile::JAVA_8;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "java/lang/ClassLoader$NativeLibrary.find(Ljava/lang/String;)J",
     Equal(JAVA_8)
 )]
-#[async_method]
-pub async fn find<T: Thread + 'static>(
+pub fn find<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,20 +29,18 @@ pub async fn find<T: Thread + 'static>(
     "java/lang/ClassLoader$NativeLibrary.findEntry(Ljava/lang/String;)J",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn find_entry<T: Thread + 'static>(
+pub fn find_entry<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    find(thread, parameters).await
+    find(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/lang/ClassLoader$NativeLibrary.load(Ljava/lang/String;Z)V",
     Equal(JAVA_8)
 )]
-#[async_method]
-pub async fn load<T: Thread + 'static>(
+pub fn load<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -67,8 +63,7 @@ pub async fn load<T: Thread + 'static>(
     "java/lang/ClassLoader$NativeLibrary.load0(Ljava/lang/String;ZZ)Z",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn load_0<T: Thread + 'static>(
+pub fn load_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -91,8 +86,7 @@ pub async fn load_0<T: Thread + 'static>(
     "java/lang/ClassLoader$NativeLibrary.load0(Ljava/lang/String;Z)Z",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn load_0_early_java_11<T: Thread + 'static>(
+pub fn load_0_early_java_11<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -113,8 +107,7 @@ pub async fn load_0_early_java_11<T: Thread + 'static>(
     "java/lang/ClassLoader$NativeLibrary.unload(Ljava/lang/String;Z)V",
     Equal(JAVA_8)
 )]
-#[async_method]
-pub async fn unload_0<T: Thread + 'static>(
+pub fn unload_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -131,8 +124,7 @@ pub async fn unload_0<T: Thread + 'static>(
     "java/lang/ClassLoader$NativeLibrary.unload(Ljava/lang/String;ZJ)V",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn unload_1<T: Thread + 'static>(
+pub fn unload_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -162,7 +154,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(native_library);
         parameters.push("missing".to_object(&thread).await?);
-        let result = find(thread, parameters).await?;
+        let result = find(thread, parameters)?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
@@ -177,7 +169,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(native_library);
         parameters.push("missing".to_object(&thread).await?);
-        let result = find_entry(thread, parameters).await?;
+        let result = find_entry(thread, parameters)?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
@@ -237,7 +229,7 @@ mod tests {
         parameters.push(native_library_value);
         parameters.push("sctp".to_object(&thread).await?); // name
         parameters.push_bool(true); // is_builtin
-        let result = load(thread, parameters).await?;
+        let result = load(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -254,7 +246,7 @@ mod tests {
         parameters.push("sctp".to_object(&thread).await?);
         parameters.push_bool(true);
         parameters.push_bool(true);
-        let result = load_0(thread, parameters).await?;
+        let result = load_0(thread, parameters)?;
         assert_eq!(result, Some(Value::from(true)));
         let native_library = native_library.as_object_ref()?;
         assert_eq!(native_library.value("handle")?, Value::Long(1));
@@ -276,7 +268,7 @@ mod tests {
         parameters.push(native_library.clone());
         parameters.push("sctp".to_object(&thread).await?);
         parameters.push_bool(true);
-        let result = load_0_early_java_11(thread, parameters).await?;
+        let result = load_0_early_java_11(thread, parameters)?;
         assert_eq!(result, Some(Value::from(true)));
         let native_library = native_library.as_object_ref()?;
         assert_eq!(native_library.value("handle")?, Value::Long(1));
@@ -298,7 +290,7 @@ mod tests {
         parameters.push(native_library);
         parameters.push("sctp".to_object(&thread).await?);
         parameters.push_bool(true);
-        let result = unload_0(thread, parameters).await?;
+        let result = unload_0(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -308,7 +300,7 @@ mod tests {
         let (_vm, thread) = crate::test::java11_thread().await?;
         let name = "sctp".to_object(&thread).await?;
         let parameters = Parameters::new(vec![name, Value::Int(1), Value::Long(0)]);
-        let result = unload_1(thread, parameters).await?;
+        let result = unload_1(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }

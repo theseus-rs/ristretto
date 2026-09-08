@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_25};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{JavaObject, Parameters, Result, Thread, VM};
 use std::env;
@@ -294,8 +293,7 @@ fn cups_available() -> bool {
 }
 
 #[intrinsic_method("sun/print/CUPSPrinter.canConnect(Ljava/lang/String;I)Z", Any)]
-#[async_method]
-pub async fn can_connect<T: Thread + 'static>(
+pub fn can_connect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -311,7 +309,6 @@ pub async fn can_connect<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/print/CUPSPrinter.getCupsDefaultPrinter()Ljava/lang/String;", Any)]
-#[async_method]
 pub async fn get_cups_default_printer<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -329,7 +326,6 @@ pub async fn get_cups_default_printer<T: Thread + 'static>(
     "sun/print/CUPSPrinter.getCupsDefaultPrinters()[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_cups_default_printers<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -356,8 +352,7 @@ pub async fn get_cups_default_printers<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/print/CUPSPrinter.getCupsPort()I", Any)]
-#[async_method]
-pub async fn get_cups_port<T: Thread + 'static>(
+pub fn get_cups_port<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -365,7 +360,6 @@ pub async fn get_cups_port<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/print/CUPSPrinter.getCupsServer()Ljava/lang/String;", Any)]
-#[async_method]
 pub async fn get_cups_server<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -379,7 +373,6 @@ pub async fn get_cups_server<T: Thread + 'static>(
     "sun/print/CUPSPrinter.getMedia(Ljava/lang/String;)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn get_media<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -409,7 +402,6 @@ pub async fn get_media<T: Thread + 'static>(
     "sun/print/CUPSPrinter.getOutputBins(Ljava/lang/String;)[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_method]
 pub async fn get_output_bins<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -436,8 +428,7 @@ pub async fn get_output_bins<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/print/CUPSPrinter.getPageSizes(Ljava/lang/String;)[F", Any)]
-#[async_method]
-pub async fn get_page_sizes<T: Thread + 'static>(
+pub fn get_page_sizes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -480,7 +471,6 @@ pub async fn get_page_sizes<T: Thread + 'static>(
     "sun/print/CUPSPrinter.getResolutions(Ljava/lang/String;Ljava/util/ArrayList;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_resolutions<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -529,8 +519,7 @@ pub async fn get_resolutions<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/print/CUPSPrinter.initIDs()Z", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -671,7 +660,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push(server);
         params.push(Value::Int(1)); // unprivileged port unlikely to be open
-        let result = can_connect(thread, params).await?;
+        let result = can_connect(thread, params)?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -700,7 +689,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_cups_port_returns_valid_port() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_cups_port(thread, Parameters::default()).await?;
+        let result = get_cups_port(thread, Parameters::default())?;
         let Some(Value::Int(port)) = result else {
             panic!("expected Int, got {result:?}");
         };
@@ -750,7 +739,7 @@ mod tests {
             .await?;
         let mut params = Parameters::default();
         params.push(printer);
-        let result = get_page_sizes(thread, params).await?;
+        let result = get_page_sizes(thread, params)?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -772,7 +761,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids_returns_boolean() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert!(matches!(result, Some(Value::Int(0 | 1))));
         Ok(())
     }

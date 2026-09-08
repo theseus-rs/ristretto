@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCopyNSImageIntoArray(J[IIIII)V", Any)]
-#[async_method]
-pub async fn native_copy_ns_image_into_array<T: Thread + 'static>(
+pub fn native_copy_ns_image_into_array<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn native_copy_ns_image_into_array<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromArray([III)J", Any)]
-#[async_method]
-pub async fn native_create_ns_image_from_array<T: Thread + 'static>(
+pub fn native_create_ns_image_from_array<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -41,8 +38,7 @@ pub async fn native_create_ns_image_from_array<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromArrays([[I[I[I)J", Any)]
-#[async_method]
-pub async fn native_create_ns_image_from_arrays<T: Thread + 'static>(
+pub fn native_create_ns_image_from_arrays<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -56,8 +52,7 @@ pub async fn native_create_ns_image_from_arrays<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromBytes([B)J", Any)]
-#[async_method]
-pub async fn native_create_ns_image_from_bytes<T: Thread + 'static>(
+pub fn native_create_ns_image_from_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,8 +67,7 @@ pub async fn native_create_ns_image_from_bytes<T: Thread + 'static>(
     "sun/lwawt/macosx/CImage.nativeCreateNSImageFromFileContents(Ljava/lang/String;)J",
     Any
 )]
-#[async_method]
-pub async fn native_create_ns_image_from_file_contents<T: Thread + 'static>(
+pub fn native_create_ns_image_from_file_contents<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -86,8 +80,7 @@ pub async fn native_create_ns_image_from_file_contents<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeCreateNSImageFromIconSelector(I)J", Any)]
-#[async_method]
-pub async fn native_create_ns_image_from_icon_selector<T: Thread + 'static>(
+pub fn native_create_ns_image_from_icon_selector<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,8 +95,7 @@ pub async fn native_create_ns_image_from_icon_selector<T: Thread + 'static>(
     "sun/lwawt/macosx/CImage.nativeCreateNSImageFromImageName(Ljava/lang/String;)J",
     Any
 )]
-#[async_method]
-pub async fn native_create_ns_image_from_image_name<T: Thread + 'static>(
+pub fn native_create_ns_image_from_image_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -118,8 +110,7 @@ pub async fn native_create_ns_image_from_image_name<T: Thread + 'static>(
     "sun/lwawt/macosx/CImage.nativeCreateNSImageOfFileFromLaunchServices(Ljava/lang/String;)J",
     Any
 )]
-#[async_method]
-pub async fn native_create_ns_image_of_file_from_launch_services<T: Thread + 'static>(
+pub fn native_create_ns_image_of_file_from_launch_services<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -135,8 +126,7 @@ pub async fn native_create_ns_image_of_file_from_launch_services<T: Thread + 'st
     "sun/lwawt/macosx/CImage.nativeGetNSImageRepresentationSizes(JDD)[Ljava/awt/geom/Dimension2D;",
     Any
 )]
-#[async_method]
-pub async fn native_get_ns_image_representation_sizes<T: Thread + 'static>(
+pub fn native_get_ns_image_representation_sizes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -150,8 +140,7 @@ pub async fn native_get_ns_image_representation_sizes<T: Thread + 'static>(
     "sun/lwawt/macosx/CImage.nativeGetNSImageSize(J)Ljava/awt/geom/Dimension2D;",
     Any
 )]
-#[async_method]
-pub async fn native_get_ns_image_size<T: Thread + 'static>(
+pub fn native_get_ns_image_size<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -163,8 +152,7 @@ pub async fn native_get_ns_image_size<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeGetPlatformImageBytes([III)[B", Any)]
-#[async_method]
-pub async fn native_get_platform_image_bytes<T: Thread + 'static>(
+pub fn native_get_platform_image_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -181,8 +169,7 @@ pub async fn native_get_platform_image_bytes<T: Thread + 'static>(
     "sun/lwawt/macosx/CImage.nativeResizeNSImageRepresentations(JDD)V",
     Any
 )]
-#[async_method]
-pub async fn native_resize_ns_image_representations<T: Thread + 'static>(
+pub fn native_resize_ns_image_representations<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -196,8 +183,7 @@ pub async fn native_resize_ns_image_representations<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CImage.nativeSetNSImageSize(JDD)V", Any)]
-#[async_method]
-pub async fn native_set_ns_image_size<T: Thread + 'static>(
+pub fn native_set_ns_image_size<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -227,8 +213,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeCopyNSImageIntoArray(J[IIIII)V",
             result.unwrap_err().to_string()
@@ -241,8 +226,7 @@ mod tests {
         let result = native_create_ns_image_from_array(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeCreateNSImageFromArray([III)J",
             result.unwrap_err().to_string()
@@ -259,8 +243,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeCreateNSImageFromArrays([[I[I[I)J",
             result.unwrap_err().to_string()
@@ -271,8 +254,7 @@ mod tests {
     async fn test_native_create_ns_image_from_bytes() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            native_create_ns_image_from_bytes(thread, Parameters::new(vec![Value::Object(None)]))
-                .await;
+            native_create_ns_image_from_bytes(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeCreateNSImageFromBytes([B)J",
             result.unwrap_err().to_string()
@@ -285,8 +267,7 @@ mod tests {
         let result = native_create_ns_image_from_file_contents(
             thread,
             Parameters::new(vec![Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeCreateNSImageFromFileContents(Ljava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -297,8 +278,7 @@ mod tests {
     async fn test_native_create_ns_image_from_icon_selector() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            native_create_ns_image_from_icon_selector(thread, Parameters::new(vec![Value::Int(0)]))
-                .await;
+            native_create_ns_image_from_icon_selector(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeCreateNSImageFromIconSelector(I)J",
             result.unwrap_err().to_string()
@@ -311,8 +291,7 @@ mod tests {
         let result = native_create_ns_image_from_image_name(
             thread,
             Parameters::new(vec![Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeCreateNSImageFromImageName(Ljava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -322,8 +301,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_create_ns_image_of_file_from_launch_services() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let _ = native_create_ns_image_of_file_from_launch_services(thread, Parameters::default())
-            .await;
+        let _ = native_create_ns_image_of_file_from_launch_services(thread, Parameters::default());
     }
 
     #[tokio::test]
@@ -332,8 +310,7 @@ mod tests {
         let result = native_get_ns_image_representation_sizes(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Double(0.0), Value::Double(0.0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeGetNSImageRepresentationSizes(JDD)[Ljava/awt/geom/Dimension2D;",
             result.unwrap_err().to_string()
@@ -343,7 +320,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_get_ns_image_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_get_ns_image_size(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = native_get_ns_image_size(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeGetNSImageSize(J)Ljava/awt/geom/Dimension2D;",
             result.unwrap_err().to_string()
@@ -356,8 +333,7 @@ mod tests {
         let result = native_get_platform_image_bytes(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeGetPlatformImageBytes([III)[B",
             result.unwrap_err().to_string()
@@ -370,8 +346,7 @@ mod tests {
         let result = native_resize_ns_image_representations(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Double(0.0), Value::Double(0.0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeResizeNSImageRepresentations(JDD)V",
             result.unwrap_err().to_string()
@@ -384,8 +359,7 @@ mod tests {
         let result = native_set_ns_image_size(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Double(0.0), Value::Double(0.0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CImage.nativeSetNSImageSize(JDD)V",
             result.unwrap_err().to_string()

@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.dbGetPixelNative(JII)I", Any)]
-#[async_method]
-pub async fn db_get_pixel_native<T: Thread + 'static>(
+pub fn db_get_pixel_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -22,8 +20,7 @@ pub async fn db_get_pixel_native<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.dbSetPixelNative(JIII)V", Any)]
-#[async_method]
-pub async fn db_set_pixel_native<T: Thread + 'static>(
+pub fn db_set_pixel_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -37,8 +34,7 @@ pub async fn db_set_pixel_native<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.getNativeResourceNative(JI)J", Any)]
-#[async_method]
-pub async fn get_native_resource_native<T: Thread + 'static>(
+pub fn get_native_resource_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +46,7 @@ pub async fn get_native_resource_native<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.initFlipBackbuffer(JJIII)Z", Any)]
-#[async_method]
-pub async fn init_flip_backbuffer<T: Thread + 'static>(
+pub fn init_flip_backbuffer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +61,7 @@ pub async fn init_flip_backbuffer<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.initOps(III)V", Any)]
-#[async_method]
-pub async fn init_ops<T: Thread + 'static>(
+pub fn init_ops<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -80,8 +74,7 @@ pub async fn init_ops<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.initRTSurface(JZ)Z", Any)]
-#[async_method]
-pub async fn init_rtsurface<T: Thread + 'static>(
+pub fn init_rtsurface<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -93,8 +86,7 @@ pub async fn init_rtsurface<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.initTexture(JZZ)Z", Any)]
-#[async_method]
-pub async fn init_texture<T: Thread + 'static>(
+pub fn init_texture<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -107,8 +99,7 @@ pub async fn init_texture<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/java2d/d3d/D3DSurfaceData.updateWindowAccelImpl(JJII)Z", Any)]
-#[async_method]
-pub async fn update_window_accel_impl<T: Thread + 'static>(
+pub fn update_window_accel_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -132,8 +123,7 @@ mod tests {
         let result = db_get_pixel_native(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/d3d/D3DSurfaceData.dbGetPixelNative(JII)I",
             result.unwrap_err().to_string()
@@ -151,8 +141,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/d3d/D3DSurfaceData.dbSetPixelNative(JIII)V",
             result.unwrap_err().to_string()
@@ -165,8 +154,7 @@ mod tests {
         let result = get_native_resource_native(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/d3d/D3DSurfaceData.getNativeResourceNative(JI)J",
             result.unwrap_err().to_string()
@@ -185,8 +173,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/d3d/D3DSurfaceData.initFlipBackbuffer(JJIII)Z",
             result.unwrap_err().to_string()
@@ -199,8 +186,7 @@ mod tests {
         let result = init_ops(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/d3d/D3DSurfaceData.initOps(III)V",
             result.unwrap_err().to_string()
@@ -213,8 +199,7 @@ mod tests {
         let result = init_rtsurface(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/d3d/D3DSurfaceData.initRTSurface(JZ)Z",
             result.unwrap_err().to_string()
@@ -227,8 +212,7 @@ mod tests {
         let result = init_texture(
             thread,
             Parameters::new(vec![Value::Long(0), Value::from(false), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/d3d/D3DSurfaceData.initTexture(JZZ)Z",
             result.unwrap_err().to_string()
@@ -246,8 +230,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/d3d/D3DSurfaceData.updateWindowAccelImpl(JJII)Z",
             result.unwrap_err().to_string()

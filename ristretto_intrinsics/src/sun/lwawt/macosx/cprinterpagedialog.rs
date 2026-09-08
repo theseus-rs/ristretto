@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CPrinterPageDialog.showDialog()Z", Any)]
-#[async_method]
-pub async fn show_dialog<T: Thread + 'static>(
+pub fn show_dialog<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,7 +24,7 @@ mod tests {
     #[tokio::test]
     async fn test_show_dialog() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = show_dialog(thread, Parameters::default()).await;
+        let result = show_dialog(thread, Parameters::default());
         assert_eq!(
             "sun.lwawt.macosx.CPrinterPageDialog.showDialog()Z",
             result.unwrap_err().to_string()

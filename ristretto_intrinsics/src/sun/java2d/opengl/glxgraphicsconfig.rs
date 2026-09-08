@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -16,8 +15,7 @@ use std::sync::Arc;
     "sun/java2d/opengl/GLXGraphicsConfig.getGLXConfigInfo(II)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_glx_config_info<T: Thread + 'static>(
+pub fn get_glx_config_info<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -33,8 +31,7 @@ pub async fn get_glx_config_info<T: Thread + 'static>(
     "sun/java2d/opengl/GLXGraphicsConfig.getOGLCapabilities(J)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_ogl_capabilities<T: Thread + 'static>(
+pub fn get_ogl_capabilities<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,8 +46,7 @@ pub async fn get_ogl_capabilities<T: Thread + 'static>(
     "sun/java2d/opengl/GLXGraphicsConfig.initConfig(JJ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn init_config<T: Thread + 'static>(
+pub fn init_config<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -67,8 +63,7 @@ pub async fn init_config<T: Thread + 'static>(
     "sun/java2d/opengl/GLXGraphicsConfig.getGLXConfigInfo(II)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_glxconfig_info_linux_ge_v11<T: Thread + 'static>(
+pub fn get_glxconfig_info_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -85,8 +80,7 @@ pub async fn get_glxconfig_info_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/opengl/GLXGraphicsConfig.getOGLCapabilities(J)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_oglcapabilities_linux_ge_v11<T: Thread + 'static>(
+pub fn get_oglcapabilities_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,8 +96,7 @@ pub async fn get_oglcapabilities_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/opengl/GLXGraphicsConfig.initConfig(JJ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_config_linux_ge_v11<T: Thread + 'static>(
+pub fn init_config_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -123,7 +116,7 @@ mod tests {
     async fn test_get_glx_config_info() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result =
-            get_glx_config_info(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)])).await;
+            get_glx_config_info(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]));
         assert_eq!(
             "sun.java2d.opengl.GLXGraphicsConfig.getGLXConfigInfo(II)J",
             result.unwrap_err().to_string()
@@ -133,7 +126,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_ogl_capabilities() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = get_ogl_capabilities(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_ogl_capabilities(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.opengl.GLXGraphicsConfig.getOGLCapabilities(J)I",
             result.unwrap_err().to_string()
@@ -146,8 +139,7 @@ mod tests {
         let result = init_config(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.opengl.GLXGraphicsConfig.initConfig(JJ)V",
             result.unwrap_err().to_string()
@@ -161,8 +153,7 @@ mod tests {
         let result = get_glxconfig_info_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/opengl/GLXGraphicsConfig.getGLXConfigInfo(II)J",
             result.unwrap_err().to_string()
@@ -174,7 +165,7 @@ mod tests {
     async fn test_get_oglcapabilities_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            get_oglcapabilities_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)])).await;
+            get_oglcapabilities_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/java2d/opengl/GLXGraphicsConfig.getOGLCapabilities(J)I",
             result.unwrap_err().to_string()
@@ -188,8 +179,7 @@ mod tests {
         let result = init_config_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/opengl/GLXGraphicsConfig.initConfig(JJ)V",
             result.unwrap_err().to_string()

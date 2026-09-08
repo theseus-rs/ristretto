@@ -1,15 +1,13 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/EPollPort.close0(I)V", Equal(JAVA_8))]
-#[async_method]
-pub async fn close0<T: Thread + 'static>(
+pub fn close0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -20,7 +18,6 @@ pub async fn close0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPollPort.drain1(I)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn drain1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -34,7 +31,6 @@ pub async fn drain1<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPollPort.interrupt(I)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn interrupt<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -47,8 +43,7 @@ pub async fn interrupt<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/EPollPort.socketpair([I)V", Equal(JAVA_8))]
-#[async_method]
-pub async fn socketpair<T: Thread + 'static>(
+pub fn socketpair<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,7 +94,7 @@ mod tests {
     #[tokio::test]
     async fn test_close0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close0(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = close0(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(None, result.expect("close"));
     }
 
@@ -120,7 +115,7 @@ mod tests {
     #[tokio::test]
     async fn test_socketpair() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socketpair(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = socketpair(thread, Parameters::new(vec![Value::Object(None)]));
         assert!(result.is_err());
     }
 }

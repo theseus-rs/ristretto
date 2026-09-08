@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("java/awt/Cursor.finalizeImpl(J)V", Any)]
-#[async_method]
-pub async fn finalize_impl<T: Thread + 'static>(
+pub fn finalize_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -18,8 +16,7 @@ pub async fn finalize_impl<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/awt/Cursor.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -33,7 +30,7 @@ mod tests {
     #[tokio::test]
     async fn test_finalize_impl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = finalize_impl(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = finalize_impl(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "java.awt.Cursor.finalizeImpl(J)V",
             result.unwrap_err().to_string()
@@ -43,7 +40,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

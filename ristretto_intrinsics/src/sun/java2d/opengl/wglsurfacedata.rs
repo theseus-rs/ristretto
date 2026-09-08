@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/java2d/opengl/WGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JLsun/awt/windows/WComponentPeer;J)V",
     Any
 )]
-#[async_method]
-pub async fn init_ops<T: Thread + 'static>(
+pub fn init_ops<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn init_ops<T: Thread + 'static>(
     "sun/java2d/opengl/WGLSurfaceData.updateWindowAccelImpl(JLsun/awt/windows/WComponentPeer;II)Z",
     Any
 )]
-#[async_method]
-pub async fn update_window_accel_impl<T: Thread + 'static>(
+pub fn update_window_accel_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,8 +51,7 @@ mod tests {
                 Value::Object(None),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/opengl/WGLSurfaceData.initOps(Lsun/java2d/opengl/OGLGraphicsConfig;JLsun/awt/windows/WComponentPeer;J)V",
             result.unwrap_err().to_string()
@@ -74,8 +70,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/opengl/WGLSurfaceData.updateWindowAccelImpl(JLsun/awt/windows/WComponentPeer;II)Z",
             result.unwrap_err().to_string()

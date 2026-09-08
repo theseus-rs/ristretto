@@ -2,7 +2,6 @@ use portable_atomic::{AtomicI64, AtomicU64};
 use ristretto_classfile::JAVA_14;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError;
@@ -451,8 +450,7 @@ async fn is_valid_io_handle<T: Thread + 'static>(thread: &Arc<T>, handle: i64) -
 }
 
 #[intrinsic_method("sun/nio/ch/Iocp.close0(J)V", Any)]
-#[async_method]
-pub async fn close0<T: Thread + 'static>(
+pub fn close0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -463,7 +461,6 @@ pub async fn close0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Iocp.createIoCompletionPort(JJII)J", Any)]
-#[async_method]
 pub async fn create_io_completion_port<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -482,7 +479,6 @@ pub async fn create_io_completion_port<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Iocp.getErrorMessage(I)Ljava/lang/String;", Any)]
-#[async_method]
 pub async fn get_error_message<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -502,7 +498,6 @@ pub async fn get_error_message<T: Thread + 'static>(
     "sun/nio/ch/Iocp.getQueuedCompletionStatus(JLsun/nio/ch/Iocp$CompletionStatus;)V",
     Any
 )]
-#[async_method]
 pub async fn get_queued_completion_status<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -536,8 +531,7 @@ pub async fn get_queued_completion_status<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Iocp.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -545,8 +539,7 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/Iocp.postQueuedCompletionStatus(JI)V", Any)]
-#[async_method]
-pub async fn post_queued_completion_status<T: Thread + 'static>(
+pub fn post_queued_completion_status<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -600,10 +593,7 @@ mod tests {
     #[tokio::test]
     async fn test_close0_ignores_invalid_handle() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        assert_eq!(
-            None,
-            close0(thread, Parameters::new(vec![Value::Long(0)])).await?
-        );
+        assert_eq!(None, close0(thread, Parameters::new(vec![Value::Long(0)]))?);
         Ok(())
     }
 
@@ -657,7 +647,7 @@ mod tests {
         assert_eq!(Some(Value::Long(port)), result);
 
         vm.socket_handles().remove(&socket_descriptor).await;
-        close0(thread, Parameters::new(vec![Value::Long(port)])).await?;
+        close0(thread, Parameters::new(vec![Value::Long(port)]))?;
         Ok(())
     }
 
@@ -687,8 +677,7 @@ mod tests {
         post_queued_completion_status(
             thread.clone(),
             Parameters::new(vec![Value::Long(port), Value::Int(-17)]),
-        )
-        .await?;
+        )?;
         get_queued_completion_status(
             thread.clone(),
             Parameters::new(vec![Value::Long(port), status.clone()]),
@@ -701,7 +690,7 @@ mod tests {
         assert_eq!(-17, object.value("completionKey")?.as_i32()?);
         assert_eq!(0, object.value("overlapped")?.as_i64()?);
         drop(object);
-        close0(thread, Parameters::new(vec![Value::Long(port)])).await?;
+        close0(thread, Parameters::new(vec![Value::Long(port)]))?;
         Ok(())
     }
 
@@ -742,8 +731,7 @@ mod tests {
         let result = post_queued_completion_status(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert!(matches!(
             result,
             Err(ristretto_types::Error::JavaError(JavaError::IoException(_)))
@@ -771,8 +759,7 @@ mod tests {
         post_queued_completion_status(
             thread.clone(),
             Parameters::new(vec![Value::Long(port), Value::Int(42)]),
-        )
-        .await?;
+        )?;
 
         let port_state = state(thread.vm()?.as_ref())?
             .port(port)
@@ -787,7 +774,7 @@ mod tests {
         assert_eq!(42, packet.completion_key);
         assert_eq!(0, packet.overlapped);
 
-        close0(thread, Parameters::new(vec![Value::Long(port)])).await?;
+        close0(thread, Parameters::new(vec![Value::Long(port)]))?;
         Ok(())
     }
 
@@ -881,7 +868,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        assert_eq!(None, init_ids(thread, Parameters::default()).await?);
+        assert_eq!(None, init_ids(thread, Parameters::default())?);
         Ok(())
     }
 }

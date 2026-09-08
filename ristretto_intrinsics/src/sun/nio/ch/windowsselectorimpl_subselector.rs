@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaError;
@@ -74,7 +73,6 @@ fn set_fd_array(array: &Value, descriptors: &[i32]) -> Result<()> {
 }
 
 #[intrinsic_method("sun/nio/ch/WindowsSelectorImpl$SubSelector.poll0(JI[I[I[IJJ)I", Any)]
-#[async_method]
 #[expect(unsafe_code)]
 #[expect(clippy::too_many_lines)]
 pub async fn poll0<T: Thread + 'static>(

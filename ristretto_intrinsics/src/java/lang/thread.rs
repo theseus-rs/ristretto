@@ -2,7 +2,6 @@ use bitflags::bitflags;
 use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::VM;
 use ristretto_types::handles::ThreadHandle;
@@ -85,8 +84,7 @@ async fn get_thread<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.clearInterruptEvent()V", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn clear_interrupt_event<T: Thread + 'static>(
+pub fn clear_interrupt_event<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,7 +93,6 @@ pub async fn clear_interrupt_event<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.countStackFrames()I", LessThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn count_stack_frames<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -109,7 +106,6 @@ pub async fn count_stack_frames<T: Thread + 'static>(
     "java/lang/Thread.currentCarrierThread()Ljava/lang/Thread;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn current_carrier_thread<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -119,7 +115,6 @@ pub async fn current_carrier_thread<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.currentThread()Ljava/lang/Thread;", Any)]
-#[async_method]
 pub async fn current_thread<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -132,8 +127,7 @@ pub async fn current_thread<T: Thread + 'static>(
     "java/lang/Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;",
     Any
 )]
-#[async_method]
-pub async fn dump_threads<T: Thread + 'static>(
+pub fn dump_threads<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -149,8 +143,7 @@ pub async fn dump_threads<T: Thread + 'static>(
     "java/lang/Thread.ensureMaterializedForStackWalk(Ljava/lang/Object;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn ensure_materialized_for_stack_walk<T: Thread + 'static>(
+pub fn ensure_materialized_for_stack_walk<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -161,8 +154,7 @@ pub async fn ensure_materialized_for_stack_walk<T: Thread + 'static>(
     "java/lang/Thread.findScopedValueBindings()Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn find_scoped_value_bindings<T: Thread + 'static>(
+pub fn find_scoped_value_bindings<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -176,8 +168,7 @@ pub async fn find_scoped_value_bindings<T: Thread + 'static>(
     "java/lang/Thread.getNextThreadIdOffset()J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn get_next_thread_id_offset<T: Thread + 'static>(
+pub fn get_next_thread_id_offset<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -191,8 +182,7 @@ pub async fn get_next_thread_id_offset<T: Thread + 'static>(
     "java/lang/Thread.getStackTrace0()Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn get_stack_trace_0<T: Thread + 'static>(
+pub fn get_stack_trace_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -203,7 +193,6 @@ pub async fn get_stack_trace_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.getThreads()[Ljava/lang/Thread;", Any)]
-#[async_method]
 pub async fn get_threads<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -225,8 +214,7 @@ pub async fn get_threads<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.holdsLock(Ljava/lang/Object;)Z", Any)]
-#[async_method]
-pub async fn holds_lock<T: Thread + 'static>(
+pub fn holds_lock<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -243,7 +231,6 @@ pub async fn holds_lock<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.interrupt0()V", Any)]
-#[async_method]
 pub async fn interrupt_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -256,7 +243,6 @@ pub async fn interrupt_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.isAlive()Z", LessThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn is_alive<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -267,7 +253,6 @@ pub async fn is_alive<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.isInterrupted(Z)Z", LessThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn is_interrupted<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -284,8 +269,7 @@ pub async fn is_interrupted<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.registerNatives()V", Any)]
-#[async_method]
-pub async fn register_natives<T: Thread + 'static>(
+pub fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -293,8 +277,7 @@ pub async fn register_natives<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.resume0()V", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn resume_0<T: Thread + 'static>(
+pub fn resume_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -308,8 +291,7 @@ pub async fn resume_0<T: Thread + 'static>(
     "java/lang/Thread.scopedValueCache()[Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn scoped_value_cache<T: Thread + 'static>(
+pub fn scoped_value_cache<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -323,8 +305,7 @@ pub async fn scoped_value_cache<T: Thread + 'static>(
     "java/lang/Thread.setCurrentThread(Ljava/lang/Thread;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn set_current_thread<T: Thread + 'static>(
+pub fn set_current_thread<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -336,7 +317,6 @@ pub async fn set_current_thread<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.setNativeName(Ljava/lang/String;)V", Any)]
-#[async_method]
 pub async fn set_native_name<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -353,8 +333,7 @@ pub async fn set_native_name<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.setPriority0(I)V", Any)]
-#[async_method]
-pub async fn set_priority_0<T: Thread + 'static>(
+pub fn set_priority_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -438,8 +417,7 @@ pub async fn set_priority_0<T: Thread + 'static>(
     "java/lang/Thread.setScopedValueCache([Ljava/lang/Object;)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn set_scoped_value_cache<T: Thread + 'static>(
+pub fn set_scoped_value_cache<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -451,7 +429,6 @@ pub async fn set_scoped_value_cache<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.sleep(J)V", LessThanOrEqual(JAVA_17))]
-#[async_method]
 #[cfg_attr(target_family = "wasm", expect(clippy::needless_pass_by_value))]
 pub async fn sleep<T: Thread + 'static>(
     #[cfg_attr(target_family = "wasm", expect(unused_variables))] thread: Arc<T>,
@@ -484,7 +461,6 @@ pub async fn sleep<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.sleep0(J)V", Equal(JAVA_21))]
-#[async_method]
 pub async fn sleep_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -493,7 +469,6 @@ pub async fn sleep_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.sleepNanos0(J)V", GreaterThanOrEqual(JAVA_25))]
-#[async_method]
 #[cfg_attr(target_family = "wasm", expect(clippy::needless_pass_by_value))]
 pub async fn sleep_nanos_0<T: Thread + 'static>(
     #[cfg_attr(target_family = "wasm", expect(unused_variables))] thread: Arc<T>,
@@ -527,7 +502,6 @@ pub async fn sleep_nanos_0<T: Thread + 'static>(
 
 #[intrinsic_method("java/lang/Thread.start0()V", Any)]
 #[expect(clippy::too_many_lines)]
-#[async_method]
 pub async fn start_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -759,8 +733,7 @@ pub async fn start_0<T: Thread + 'static>(
     "java/lang/Thread.stop0(Ljava/lang/Object;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn stop_0<T: Thread + 'static>(
+pub fn stop_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -771,8 +744,7 @@ pub async fn stop_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.suspend0()V", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn suspend_0<T: Thread + 'static>(
+pub fn suspend_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -783,7 +755,6 @@ pub async fn suspend_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.yield()V", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn r#yield<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
@@ -802,7 +773,6 @@ pub async fn r#yield<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Thread.yield0()V", GreaterThanOrEqual(JAVA_21))]
-#[async_method]
 pub async fn yield_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -837,7 +807,7 @@ mod tests {
         thread.interrupt();
         assert!(thread.is_interrupted(false));
 
-        let result = clear_interrupt_event(thread.clone(), Parameters::default()).await?;
+        let result = clear_interrupt_event(thread.clone(), Parameters::default())?;
         assert_eq!(result, None);
         assert!(!thread.is_interrupted(false));
         Ok(())
@@ -870,7 +840,7 @@ mod tests {
     #[tokio::test]
     async fn test_dump_threads() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dump_threads(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = dump_threads(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "java.lang.Thread.dumpThreads([Ljava/lang/Thread;)[[Ljava/lang/StackTraceElement;",
             result.unwrap_err().to_string()
@@ -881,9 +851,7 @@ mod tests {
     async fn test_ensure_materialized_for_stack_walk() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let parameters = Parameters::default();
-        let value = ensure_materialized_for_stack_walk(thread, parameters)
-            .await
-            .expect("value");
+        let value = ensure_materialized_for_stack_walk(thread, parameters).expect("value");
         assert!(value.is_none());
         Ok(())
     }
@@ -891,7 +859,7 @@ mod tests {
     #[tokio::test]
     async fn test_find_scoped_value_bindings() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = find_scoped_value_bindings(thread, Parameters::default()).await;
+        let result = find_scoped_value_bindings(thread, Parameters::default());
         assert_eq!(
             "java.lang.Thread.findScopedValueBindings()Ljava/lang/Object;",
             result.unwrap_err().to_string()
@@ -901,7 +869,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_next_thread_id_offset() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = get_next_thread_id_offset(thread, Parameters::default()).await?;
+        let result = get_next_thread_id_offset(thread, Parameters::default())?;
         let thread_id = result.unwrap_or(Value::Long(0)).as_i64()?;
         assert!(thread_id > 0);
         Ok(())
@@ -910,7 +878,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_stack_trace_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_stack_trace_0(thread, Parameters::default()).await;
+        let result = get_stack_trace_0(thread, Parameters::default());
         assert_eq!(
             "java.lang.Thread.getStackTrace0()Ljava/lang/Object;",
             result.unwrap_err().to_string()
@@ -932,7 +900,7 @@ mod tests {
     #[tokio::test]
     async fn test_holds_lock() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = holds_lock(thread, Parameters::default()).await;
+        let result = holds_lock(thread, Parameters::default());
         assert!(result.is_err());
         Ok(())
     }
@@ -980,7 +948,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Parameters::default()).await?;
+        let result = register_natives(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -988,14 +956,14 @@ mod tests {
     #[tokio::test]
     async fn test_resume_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = resume_0(thread, Parameters::default()).await;
+        let result = resume_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_scoped_value_cache() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = scoped_value_cache(thread, Parameters::default()).await;
+        let result = scoped_value_cache(thread, Parameters::default());
         assert_eq!(
             "java.lang.Thread.scopedValueCache()[Ljava/lang/Object;",
             result.unwrap_err().to_string()
@@ -1005,7 +973,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_current_thread() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_current_thread(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_current_thread(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "java.lang.Thread.setCurrentThread(Ljava/lang/Thread;)V",
             result.unwrap_err().to_string()
@@ -1019,7 +987,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(thread_instance);
         parameters.push(Value::Int(7)); // newPriority
-        let result = set_priority_0(thread, parameters).await?;
+        let result = set_priority_0(thread, parameters)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -1027,8 +995,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_scoped_value_cache() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            set_scoped_value_cache(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_scoped_value_cache(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "java.lang.Thread.setScopedValueCache([Ljava/lang/Object;)V",
             result.unwrap_err().to_string()
@@ -1074,14 +1041,14 @@ mod tests {
     #[tokio::test]
     async fn test_stop_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = stop_0(thread, Parameters::default()).await;
+        let result = stop_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_suspend_0() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = suspend_0(thread, Parameters::default()).await;
+        let result = suspend_0(thread, Parameters::default());
         assert!(result.is_err());
     }
 

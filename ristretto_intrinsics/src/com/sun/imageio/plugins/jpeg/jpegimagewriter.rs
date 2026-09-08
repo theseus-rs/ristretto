@@ -2,14 +2,12 @@ use super::codec::Config;
 use super::support::{self, WRITER};
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageWriter.abortWrite(J)V", Any)]
-#[async_method]
 pub async fn abort_write<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -22,8 +20,7 @@ pub async fn abort_write<T: Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageWriter.disposeWriter(J)V", Any)]
-#[async_method]
-pub async fn dispose_writer<T: Thread + 'static>(
+pub fn dispose_writer<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,8 +37,7 @@ pub async fn dispose_writer<T: Thread + 'static>(
     "com/sun/imageio/plugins/jpeg/JPEGImageWriter.initJPEGImageWriter()J",
     Any
 )]
-#[async_method]
-pub async fn init_jpeg_image_writer<T: Thread + 'static>(
+pub fn init_jpeg_image_writer<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -52,8 +48,7 @@ pub async fn init_jpeg_image_writer<T: Thread + 'static>(
     "com/sun/imageio/plugins/jpeg/JPEGImageWriter.initWriterIDs(Ljava/lang/Class;Ljava/lang/Class;)V",
     Any
 )]
-#[async_method]
-pub async fn init_writer_ids<T: Thread + 'static>(
+pub fn init_writer_ids<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -65,7 +60,6 @@ pub async fn init_writer_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageWriter.resetWriter(J)V", Any)]
-#[async_method]
 pub async fn reset_writer<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -76,7 +70,6 @@ pub async fn reset_writer<T: Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/imageio/plugins/jpeg/JPEGImageWriter.setDest(J)V", Any)]
-#[async_method]
 pub async fn set_dest<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -90,7 +83,6 @@ pub async fn set_dest<T: Thread + 'static>(
     "com/sun/imageio/plugins/jpeg/JPEGImageWriter.writeImage(J[BIII[IIIIII[Ljavax/imageio/plugins/jpeg/JPEGQTable;Z[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;ZZZI[I[I[I[I[IZI)Z",
     Any
 )]
-#[async_method]
 #[expect(
     clippy::too_many_lines,
     reason = "ImageIO native operation marshals its Java arguments and runs the scanline callback protocol"
@@ -268,7 +260,6 @@ pub async fn write_image<T: Thread + 'static>(
     "com/sun/imageio/plugins/jpeg/JPEGImageWriter.writeTables(J[Ljavax/imageio/plugins/jpeg/JPEGQTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;[Ljavax/imageio/plugins/jpeg/JPEGHuffmanTable;)V",
     Any
 )]
-#[async_method]
 pub async fn write_tables<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -304,8 +295,7 @@ mod tests {
     async fn lifecycle_and_vm_isolation() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let (_other_vm, other_thread) = crate::test::thread().await?;
-        let id = init_jpeg_image_writer(thread.clone(), Parameters::default())
-            .await?
+        let id = init_jpeg_image_writer(thread.clone(), Parameters::default())?
             .expect("writer handle")
             .as_i64()?;
         assert!(id > 0);
@@ -321,14 +311,14 @@ mod tests {
         reset_writer(thread.clone(), Parameters::new(vec![Value::Long(id)])).await?;
         assert!(!ctx.aborted());
         set_dest(thread.clone(), Parameters::new(vec![Value::Long(id)])).await?;
-        dispose_writer(thread.clone(), Parameters::new(vec![Value::Long(id)])).await?;
+        dispose_writer(thread.clone(), Parameters::new(vec![Value::Long(id)]))?;
         assert!(support::state(thread.as_ref())?.contexts.read().is_empty());
         assert!(
             reset_writer(thread.clone(), Parameters::new(vec![Value::Long(id)]))
                 .await
                 .is_err()
         );
-        dispose_writer(thread, Parameters::new(vec![Value::Long(id)])).await?;
+        dispose_writer(thread, Parameters::new(vec![Value::Long(id)]))?;
         Ok(())
     }
 }

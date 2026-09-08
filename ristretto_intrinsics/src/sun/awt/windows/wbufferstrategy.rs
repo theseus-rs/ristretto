@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/awt/windows/WBufferStrategy.getDrawBuffer(Ljava/awt/Component;)Ljava/awt/Image;",
     Equal(JAVA_8)
 )]
-#[async_method]
-pub async fn get_draw_buffer<T: Thread + 'static>(
+pub fn get_draw_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn get_draw_buffer<T: Thread + 'static>(
     "sun/awt/windows/WBufferStrategy.initIDs(Ljava/lang/Class;)V",
     Equal(JAVA_8)
 )]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -48,7 +45,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_draw_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_draw_buffer(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_draw_buffer(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WBufferStrategy.getDrawBuffer(Ljava/awt/Component;)Ljava/awt/Image;",
             result.unwrap_err().to_string()
@@ -59,7 +56,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = init_ids(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WBufferStrategy.initIDs(Ljava/lang/Class;)V",
             result.unwrap_err().to_string()

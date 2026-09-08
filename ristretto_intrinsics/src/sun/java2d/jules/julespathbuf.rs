@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/java2d/jules/JulesPathBuf.tesselateFillNative([I[BII[IIIIIII)[I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn tesselate_fill_native<T: Thread + 'static>(
+pub fn tesselate_fill_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,8 +36,7 @@ pub async fn tesselate_fill_native<T: Thread + 'static>(
     "sun/java2d/jules/JulesPathBuf.tesselateStrokeNative([I[BII[IIDIID[DIDDDDDDDIIII)[I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn tesselate_stroke_native<T: Thread + 'static>(
+pub fn tesselate_stroke_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,8 +92,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.jules.JulesPathBuf.tesselateFillNative([I[BII[IIIIIII)[I",
             result.unwrap_err().to_string()
@@ -133,8 +129,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.jules.JulesPathBuf.tesselateStrokeNative([I[BII[IIDIID[DIDDDDDDDIIII)[I",
             result.unwrap_err().to_string()

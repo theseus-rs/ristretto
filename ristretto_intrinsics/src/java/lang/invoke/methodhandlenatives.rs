@@ -73,8 +73,7 @@ bitflags! {
     "java/lang/invoke/MethodHandleNatives.clearCallSiteContext(Ljava/lang/invoke/MethodHandleNatives$CallSiteContext;)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
-pub async fn clear_call_site_context<T: Thread + 'static>(
+pub fn clear_call_site_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -90,7 +89,6 @@ pub async fn clear_call_site_context<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.copyOutBootstrapArguments(Ljava/lang/Class;[III[Ljava/lang/Object;IZLjava/lang/Object;)V",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
 pub async fn copy_out_bootstrap_arguments<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -477,7 +475,6 @@ async fn resolve_method_handle<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.expand(Ljava/lang/invoke/MemberName;)V",
     Any
 )]
-#[async_method]
 pub async fn expand<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -491,8 +488,7 @@ pub async fn expand<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.getConstant(I)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_constant<T: Thread + 'static>(
+pub fn get_constant<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -508,7 +504,6 @@ pub async fn get_constant<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.getMemberVMInfo(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
 pub async fn get_member_vm_info<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -554,7 +549,6 @@ fn collect_interfaces(class: &Arc<Class>, result: &mut Vec<Arc<Class>>) -> Resul
     "java/lang/invoke/MethodHandleNatives.getMembers(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Class;I[Ljava/lang/invoke/MemberName;)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 #[expect(clippy::too_many_lines)]
 pub async fn get_members<T: Thread + 'static>(
     thread: Arc<T>,
@@ -734,7 +728,6 @@ pub async fn get_members<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.getNamedCon(I[Ljava/lang/Object;)I",
     Any
 )]
-#[async_method]
 pub async fn get_named_con<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -811,7 +804,6 @@ pub async fn get_named_con<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.init(Ljava/lang/invoke/MemberName;Ljava/lang/Object;)V",
     Any
 )]
-#[async_method]
 pub async fn init<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -989,7 +981,6 @@ fn init_from_field<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.objectFieldOffset(Ljava/lang/invoke/MemberName;)J",
     Any
 )]
-#[async_method]
 pub async fn object_field_offset<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1071,8 +1062,7 @@ fn resolve_holder_methods(
 }
 
 #[intrinsic_method("java/lang/invoke/MethodHandleNatives.registerNatives()V", Any)]
-#[async_method]
-pub async fn register_natives<T: Thread + 'static>(
+pub fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1875,7 +1865,6 @@ pub fn check_field_access(
     "java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;)Ljava/lang/invoke/MemberName;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn resolve_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1900,7 +1889,6 @@ pub async fn resolve_0<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;Z)Ljava/lang/invoke/MemberName;",
     Equal(JAVA_11)
 )]
-#[async_method]
 pub async fn resolve_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1935,7 +1923,6 @@ pub async fn resolve_1<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.resolve(Ljava/lang/invoke/MemberName;Ljava/lang/Class;IZ)Ljava/lang/invoke/MemberName;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn resolve_2<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1964,8 +1951,7 @@ pub async fn resolve_2<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.setCallSiteTargetNormal(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
     Any
 )]
-#[async_method]
-pub async fn set_call_site_target_normal<T: Thread + 'static>(
+pub fn set_call_site_target_normal<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1980,8 +1966,7 @@ pub async fn set_call_site_target_normal<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.setCallSiteTargetVolatile(Ljava/lang/invoke/CallSite;Ljava/lang/invoke/MethodHandle;)V",
     Any
 )]
-#[async_method]
-pub async fn set_call_site_target_volatile<T: Thread + 'static>(
+pub fn set_call_site_target_volatile<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1996,8 +1981,7 @@ pub async fn set_call_site_target_volatile<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.staticFieldBase(Ljava/lang/invoke/MemberName;)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
-pub async fn static_field_base<T: Thread + 'static>(
+pub fn static_field_base<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -2011,7 +1995,6 @@ pub async fn static_field_base<T: Thread + 'static>(
     "java/lang/invoke/MethodHandleNatives.staticFieldOffset(Ljava/lang/invoke/MemberName;)J",
     Any
 )]
-#[async_method]
 pub async fn static_field_offset<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -2042,7 +2025,7 @@ mod tests {
         let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
         let mut parameters = Parameters::default();
         parameters.push(Value::Object(None));
-        let result = clear_call_site_context(thread, parameters).await?;
+        let result = clear_call_site_context(thread, parameters)?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -2119,7 +2102,7 @@ mod tests {
         let mut parameters = Parameters::default();
         // GC_COUNT_MAX constant index
         parameters.push(Value::Int(0));
-        let result = get_constant(thread, parameters).await?;
+        let result = get_constant(thread, parameters)?;
         // GC_COUNT_MAX = 0 (no limit)
         assert_eq!(Some(Value::Int(0)), result);
         Ok(())
@@ -2319,7 +2302,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Parameters::default()).await?;
+        let result = register_natives(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -2346,13 +2329,14 @@ mod tests {
             collector,
             Reference::Object(Object::new(method_handle_class)?),
         );
-        parameters.push(method_handle);
         let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
         let call_site =
             Value::new_object(collector, Reference::Object(Object::new(call_site_class)?));
-        parameters.push(call_site);
-        let result = set_call_site_target_normal(thread, parameters).await?;
+        parameters.push(call_site.clone());
+        parameters.push(method_handle.clone());
+        let result = set_call_site_target_normal(thread, parameters)?;
         assert_eq!(None, result);
+        assert_eq!(method_handle, call_site.as_object_ref()?.value("target")?);
         Ok(())
     }
 
@@ -2366,13 +2350,14 @@ mod tests {
             collector,
             Reference::Object(Object::new(method_handle_class)?),
         );
-        parameters.push(method_handle);
         let call_site_class = thread.class("java.lang.invoke.CallSite").await?;
         let call_site =
             Value::new_object(collector, Reference::Object(Object::new(call_site_class)?));
-        parameters.push(call_site);
-        let result = set_call_site_target_volatile(thread, parameters).await?;
+        parameters.push(call_site.clone());
+        parameters.push(method_handle.clone());
+        let result = set_call_site_target_volatile(thread, parameters)?;
         assert_eq!(None, result);
+        assert_eq!(method_handle, call_site.as_object_ref()?.value("target")?);
         Ok(())
     }
 
@@ -2389,7 +2374,7 @@ mod tests {
             thread.vm()?.garbage_collector(),
             Reference::Object(member_name),
         ));
-        let result = static_field_base(thread, parameters).await?;
+        let result = static_field_base(thread, parameters)?;
         assert_eq!(Some(class), result);
         Ok(())
     }

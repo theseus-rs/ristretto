@@ -3,7 +3,6 @@ use ristretto_classfile::ClassFile;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Class, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError::ClassFormatError;
 use ristretto_types::JavaObject;
@@ -17,7 +16,6 @@ use zerocopy::transmute_ref;
     "java/lang/reflect/Proxy.defineClass0(Ljava/lang/ClassLoader;Ljava/lang/String;[BII)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn define_class_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

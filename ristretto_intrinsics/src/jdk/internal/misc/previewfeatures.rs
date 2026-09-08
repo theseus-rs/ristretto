@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::VM;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "jdk/internal/misc/PreviewFeatures.isPreviewEnabled()Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn is_preview_enabled<T: Thread + 'static>(
+pub fn is_preview_enabled<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,7 +28,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_preview_enabled() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let value = is_preview_enabled(thread, Parameters::default()).await?;
+        let value = is_preview_enabled(thread, Parameters::default())?;
         assert_eq!(value, Some(Value::from(false)));
         Ok(())
     }

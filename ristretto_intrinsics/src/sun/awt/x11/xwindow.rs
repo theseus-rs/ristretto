@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -9,8 +8,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/X11/XWindow.getAWTKeyCodeForKeySym(I)I", Any)]
-#[async_method]
-pub async fn get_awtkey_code_for_key_sym<T: Thread + 'static>(
+pub fn get_awtkey_code_for_key_sym<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,8 +19,7 @@ pub async fn get_awtkey_code_for_key_sym<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XWindow.getKeySymForAWTKeyCode(I)I", Any)]
-#[async_method]
-pub async fn get_key_sym_for_awtkey_code<T: Thread + 'static>(
+pub fn get_key_sym_for_awtkey_code<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -36,8 +33,7 @@ pub async fn get_key_sym_for_awtkey_code<T: Thread + 'static>(
     "sun/awt/X11/XWindow.getNativeColor(Ljava/awt/Color;Ljava/awt/GraphicsConfiguration;)I",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_native_color<T: Thread + 'static>(
+pub fn get_native_color<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +46,7 @@ pub async fn get_native_color<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XWindow.getTopWindow(JJ)J", LessThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn get_top_window<T: Thread + 'static>(
+pub fn get_top_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -60,8 +55,7 @@ pub async fn get_top_window<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XWindow.getTopWindow(JJ)J".to_string()).into())
 }
 #[intrinsic_method("sun/awt/X11/XWindow.getWMInsets(JJJJJJ)V", LessThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn get_wminsets<T: Thread + 'static>(
+pub fn get_wminsets<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -80,8 +74,7 @@ pub async fn get_wminsets<T: Thread + 'static>(
     "sun/awt/X11/XWindow.getWindowBounds(JJJJJ)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_window_bounds<T: Thread + 'static>(
+pub fn get_window_bounds<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -96,8 +89,7 @@ pub async fn get_window_bounds<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XWindow.haveCurrentX11InputMethodInstance()Z", Any)]
-#[async_method]
-pub async fn have_current_x11_input_method_instance<T: Thread + 'static>(
+pub fn have_current_x11_input_method_instance<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -107,16 +99,14 @@ pub async fn have_current_x11_input_method_instance<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XWindow.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/X11/XWindow.initIDs()V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/X11/XWindow.x11inputMethodLookupString(J[J)Z", Any)]
-#[async_method]
-pub async fn x11input_method_lookup_string<T: Thread + 'static>(
+pub fn x11input_method_lookup_string<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -136,8 +126,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_awtkey_code_for_key_sym() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            get_awtkey_code_for_key_sym(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_awtkey_code_for_key_sym(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XWindow.getAWTKeyCodeForKeySym(I)I",
             result.unwrap_err().to_string()
@@ -148,8 +137,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_key_sym_for_awtkey_code() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            get_key_sym_for_awtkey_code(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_key_sym_for_awtkey_code(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XWindow.getKeySymForAWTKeyCode(I)I",
             result.unwrap_err().to_string()
@@ -163,8 +151,7 @@ mod tests {
         let result = get_native_color(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XWindow.getNativeColor(Ljava/awt/Color;Ljava/awt/GraphicsConfiguration;)I",
             result.unwrap_err().to_string()
@@ -178,8 +165,7 @@ mod tests {
         let result = get_top_window(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XWindow.getTopWindow(JJ)J",
             result.unwrap_err().to_string()
@@ -200,8 +186,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XWindow.getWMInsets(JJJJJJ)V",
             result.unwrap_err().to_string()
@@ -221,8 +206,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XWindow.getWindowBounds(JJJJJ)V",
             result.unwrap_err().to_string()
@@ -233,7 +217,7 @@ mod tests {
     #[tokio::test]
     async fn test_have_current_x11_input_method_instance() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = have_current_x11_input_method_instance(thread, Parameters::default()).await;
+        let result = have_current_x11_input_method_instance(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/XWindow.haveCurrentX11InputMethodInstance()Z",
             result.unwrap_err().to_string()
@@ -244,7 +228,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/XWindow.initIDs()V",
             result.unwrap_err().to_string()
@@ -258,8 +242,7 @@ mod tests {
         let result = x11input_method_lookup_string(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XWindow.x11inputMethodLookupString(J[J)Z",
             result.unwrap_err().to_string()

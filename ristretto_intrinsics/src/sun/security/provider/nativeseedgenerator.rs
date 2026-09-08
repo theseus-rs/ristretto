@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -10,8 +9,7 @@ use std::sync::Arc;
     "sun/security/provider/NativeSeedGenerator.nativeGenerateSeed([B)Z",
     Any
 )]
-#[async_method]
-pub async fn native_generate_seed<T: Thread + 'static>(
+pub fn native_generate_seed<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,9 +42,7 @@ mod tests {
             thread.vm().expect("vm").garbage_collector(),
             Reference::ByteArray(arr),
         );
-        let result = native_generate_seed(thread, Parameters::new(vec![value]))
-            .await
-            .expect("seed");
+        let result = native_generate_seed(thread, Parameters::new(vec![value])).expect("seed");
         assert_eq!(Some(Value::Int(1)), result);
     }
 }

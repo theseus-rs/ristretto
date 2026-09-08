@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "com/apple/eawt/_AppMiscHandlers.nativeDisableSuddenTermination()V",
     Any
 )]
-#[async_method]
-pub async fn native_disable_sudden_termination<T: Thread + 'static>(
+pub fn native_disable_sudden_termination<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn native_disable_sudden_termination<T: Thread + 'static>(
     "com/apple/eawt/_AppMiscHandlers.nativeEnableSuddenTermination()V",
     Any
 )]
-#[async_method]
-pub async fn native_enable_sudden_termination<T: Thread + 'static>(
+pub fn native_enable_sudden_termination<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,8 +35,7 @@ pub async fn native_enable_sudden_termination<T: Thread + 'static>(
 }
 
 #[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeOpenHelpViewer()V", Any)]
-#[async_method]
-pub async fn native_open_help_viewer<T: Thread + 'static>(
+pub fn native_open_help_viewer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +46,7 @@ pub async fn native_open_help_viewer<T: Thread + 'static>(
 }
 
 #[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeRequestActivation(Z)V", Any)]
-#[async_method]
-pub async fn native_request_activation<T: Thread + 'static>(
+pub fn native_request_activation<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -63,8 +58,7 @@ pub async fn native_request_activation<T: Thread + 'static>(
 }
 
 #[intrinsic_method("com/apple/eawt/_AppMiscHandlers.nativeRequestUserAttention(Z)V", Any)]
-#[async_method]
-pub async fn native_request_user_attention<T: Thread + 'static>(
+pub fn native_request_user_attention<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,7 +76,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_disable_sudden_termination() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_disable_sudden_termination(thread, Parameters::default()).await;
+        let result = native_disable_sudden_termination(thread, Parameters::default());
         assert_eq!(
             "com.apple.eawt._AppMiscHandlers.nativeDisableSuddenTermination()V",
             result.unwrap_err().to_string()
@@ -92,7 +86,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_enable_sudden_termination() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_enable_sudden_termination(thread, Parameters::default()).await;
+        let result = native_enable_sudden_termination(thread, Parameters::default());
         assert_eq!(
             "com.apple.eawt._AppMiscHandlers.nativeEnableSuddenTermination()V",
             result.unwrap_err().to_string()
@@ -102,7 +96,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_open_help_viewer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_open_help_viewer(thread, Parameters::default()).await;
+        let result = native_open_help_viewer(thread, Parameters::default());
         assert_eq!(
             "com.apple.eawt._AppMiscHandlers.nativeOpenHelpViewer()V",
             result.unwrap_err().to_string()
@@ -112,8 +106,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_request_activation() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            native_request_activation(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = native_request_activation(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "com.apple.eawt._AppMiscHandlers.nativeRequestActivation(Z)V",
             result.unwrap_err().to_string()
@@ -124,7 +117,7 @@ mod tests {
     async fn test_native_request_user_attention() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            native_request_user_attention(thread, Parameters::new(vec![Value::from(false)])).await;
+            native_request_user_attention(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "com.apple.eawt._AppMiscHandlers.nativeRequestUserAttention(Z)V",
             result.unwrap_err().to_string()

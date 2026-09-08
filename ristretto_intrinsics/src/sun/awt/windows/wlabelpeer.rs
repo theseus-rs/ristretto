@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/windows/WLabelPeer.create(Lsun/awt/windows/WComponentPeer;)V",
     Any
 )]
-#[async_method]
-pub async fn create<T: Thread + 'static>(
+pub fn create<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,8 +21,7 @@ pub async fn create<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WLabelPeer.lazyPaint()V", Any)]
-#[async_method]
-pub async fn lazy_paint<T: Thread + 'static>(
+pub fn lazy_paint<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -34,8 +31,7 @@ pub async fn lazy_paint<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WLabelPeer.setAlignment(I)V", Any)]
-#[async_method]
-pub async fn set_alignment<T: Thread + 'static>(
+pub fn set_alignment<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -46,8 +42,7 @@ pub async fn set_alignment<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WLabelPeer.setText(Ljava/lang/String;)V", Any)]
-#[async_method]
-pub async fn set_text<T: Thread + 'static>(
+pub fn set_text<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,7 +61,7 @@ mod tests {
     #[tokio::test]
     async fn test_create() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = create(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WLabelPeer.create(Lsun/awt/windows/WComponentPeer;)V",
             result.unwrap_err().to_string()
@@ -77,7 +72,7 @@ mod tests {
     #[tokio::test]
     async fn test_lazy_paint() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = lazy_paint(thread, Parameters::default()).await;
+        let result = lazy_paint(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WLabelPeer.lazyPaint()V",
             result.unwrap_err().to_string()
@@ -88,7 +83,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_alignment() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_alignment(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = set_alignment(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WLabelPeer.setAlignment(I)V",
             result.unwrap_err().to_string()
@@ -99,7 +94,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_text() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_text(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_text(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WLabelPeer.setText(Ljava/lang/String;)V",
             result.unwrap_err().to_string()

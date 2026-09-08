@@ -3,7 +3,6 @@ use portable_atomic::AtomicI64;
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -130,7 +129,6 @@ unsafe extern "C" {
     "sun/nio/fs/BsdNativeDispatcher.clonefile0(JJI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn clonefile_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -167,8 +165,7 @@ pub async fn clonefile_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.endfsstat(J)V", Any)]
-#[async_method]
-pub async fn endfsstat<T: Thread + 'static>(
+pub fn endfsstat<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -197,7 +194,6 @@ pub async fn endfsstat<T: Thread + 'static>(
     "sun/nio/fs/BsdNativeDispatcher.fsetattrlist0(IIJJJJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 #[cfg_attr(not(target_os = "macos"), expect(clippy::needless_pass_by_value))]
 pub async fn fsetattrlist_0<T: Thread + 'static>(
     #[cfg_attr(not(target_os = "macos"), expect(unused_variables))] thread: Arc<T>,
@@ -230,8 +226,7 @@ pub async fn fsetattrlist_0<T: Thread + 'static>(
     "sun/nio/fs/BsdNativeDispatcher.fsstatEntry(JLsun/nio/fs/UnixMountEntry;)I",
     Any
 )]
-#[async_method]
-pub async fn fsstat_entry<T: Thread + 'static>(
+pub fn fsstat_entry<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -314,7 +309,6 @@ pub async fn fsstat_entry<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.getfsstat()J", Any)]
-#[async_method]
 #[cfg_attr(not(target_os = "macos"), expect(clippy::needless_pass_by_value))]
 pub async fn getfsstat<T: Thread + 'static>(
     #[cfg_attr(not(target_os = "macos"), expect(unused_variables))] thread: Arc<T>,
@@ -360,7 +354,6 @@ pub async fn getfsstat<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.getmntonname0(J)[B", Any)]
-#[async_method]
 pub async fn getmntonname_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -400,8 +393,7 @@ pub async fn getmntonname_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/fs/BsdNativeDispatcher.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -412,7 +404,6 @@ pub async fn init_ids<T: Thread + 'static>(
     "sun/nio/fs/BsdNativeDispatcher.setattrlist0(JIJJJJ)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn setattrlist_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -611,7 +602,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push_long(0); // null handle
-        let result = endfsstat(thread, params).await?;
+        let result = endfsstat(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -619,7 +610,7 @@ mod tests {
     #[tokio::test]
     async fn test_endfsstat_default_params() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = endfsstat(thread, Parameters::default()).await;
+        let result = endfsstat(thread, Parameters::default());
         assert!(matches!(
             result,
             Err(ristretto_types::Error::ParametersUnderflow)
@@ -662,7 +653,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push_long(0); // null handle
         params.push(Value::Object(None)); // null mount entry
-        let result = fsstat_entry(thread, params).await;
+        let result = fsstat_entry(thread, params);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), Some(Value::Int(-1)));
     }
@@ -670,7 +661,7 @@ mod tests {
     #[tokio::test]
     async fn test_fsstat_entry_default_params() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fsstat_entry(thread, Parameters::default()).await;
+        let result = fsstat_entry(thread, Parameters::default());
         assert!(matches!(
             result,
             Err(ristretto_types::Error::ParametersUnderflow)
@@ -690,7 +681,7 @@ mod tests {
                 // Clean up
                 let mut params = Parameters::default();
                 params.push_long(handle);
-                let result = endfsstat(thread, params).await;
+                let result = endfsstat(thread, params);
                 assert!(result.is_ok());
             }
             _ => panic!("Expected Long value"),
@@ -750,7 +741,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Between, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/java2d/metal/MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_mtl_config_info<T: Thread + 'static>(
+pub fn get_mtl_config_info<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -29,8 +27,7 @@ pub async fn get_mtl_config_info<T: Thread + 'static>(
     "sun/java2d/metal/MTLGraphicsConfig.isMetalFrameworkAvailable()Z",
     Between(JAVA_17, JAVA_21)
 )]
-#[async_method]
-pub async fn is_metal_framework_available<T: Thread + 'static>(
+pub fn is_metal_framework_available<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,8 +41,7 @@ pub async fn is_metal_framework_available<T: Thread + 'static>(
     "sun/java2d/metal/MTLGraphicsConfig.nativeGetMaxTextureSize()I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn native_get_max_texture_size<T: Thread + 'static>(
+pub fn native_get_max_texture_size<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,8 +55,7 @@ pub async fn native_get_max_texture_size<T: Thread + 'static>(
     "sun/java2d/metal/MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn try_load_metal_library<T: Thread + 'static>(
+pub fn try_load_metal_library<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,8 +77,7 @@ mod tests {
         let result = get_mtl_config_info(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.metal.MTLGraphicsConfig.getMTLConfigInfo(ILjava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -93,7 +87,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_metal_framework_available() {
         let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
-        let result = is_metal_framework_available(thread, Parameters::default()).await;
+        let result = is_metal_framework_available(thread, Parameters::default());
         assert_eq!(
             "sun.java2d.metal.MTLGraphicsConfig.isMetalFrameworkAvailable()Z",
             result.unwrap_err().to_string()
@@ -103,7 +97,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_get_max_texture_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_get_max_texture_size(thread, Parameters::default()).await;
+        let result = native_get_max_texture_size(thread, Parameters::default());
         assert_eq!(
             "sun.java2d.metal.MTLGraphicsConfig.nativeGetMaxTextureSize()I",
             result.unwrap_err().to_string()
@@ -116,8 +110,7 @@ mod tests {
         let result = try_load_metal_library(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.metal.MTLGraphicsConfig.tryLoadMetalLibrary(ILjava/lang/String;)Z",
             result.unwrap_err().to_string()

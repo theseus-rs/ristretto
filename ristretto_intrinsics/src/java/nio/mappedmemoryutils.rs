@@ -3,7 +3,6 @@ use crate::sun::nio::fs::managed_files;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_17, JAVA_25};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError::IoException;
 use ristretto_types::Thread;
@@ -18,7 +17,6 @@ use std::sync::Arc;
     "java/nio/MappedMemoryUtils.force0(Ljava/io/FileDescriptor;JJ)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn force_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -73,8 +71,7 @@ pub async fn force_0<T: Thread + 'static>(
     "java/nio/MappedMemoryUtils.isLoaded0(JJJ)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn is_loaded_0<T: Thread + 'static>(
+pub fn is_loaded_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -87,8 +84,7 @@ pub async fn is_loaded_0<T: Thread + 'static>(
 
 /// `MappedMemoryUtils.load0(long address, long length)` (Java >= 17). No-op.
 #[intrinsic_method("java/nio/MappedMemoryUtils.load0(JJ)V", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn load_0<T: Thread + 'static>(
+pub fn load_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -99,8 +95,7 @@ pub async fn load_0<T: Thread + 'static>(
     "java/nio/MappedMemoryUtils.registerNatives()V",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_method]
-pub async fn register_natives<T: Thread + 'static>(
+pub fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -109,8 +104,7 @@ pub async fn register_natives<T: Thread + 'static>(
 
 /// `MappedMemoryUtils.unload0(long address, long length)` (Java >= 17). No-op.
 #[intrinsic_method("java/nio/MappedMemoryUtils.unload0(JJ)V", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn unload_0<T: Thread + 'static>(
+pub fn unload_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -152,7 +146,7 @@ mod tests {
         params.push_long(0);
         params.push_long(16);
         params.push_long(1);
-        let result = is_loaded_0(thread, params).await?;
+        let result = is_loaded_0(thread, params)?;
         #[cfg(target_os = "windows")]
         let expected = 0;
         #[cfg(not(target_os = "windows"))]
@@ -167,7 +161,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push_long(0);
         params.push_long(16);
-        let result = load_0(thread, params).await?;
+        let result = load_0(thread, params)?;
         assert!(result.is_none());
         Ok(())
     }
@@ -178,7 +172,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push_long(0);
         params.push_long(16);
-        let result = unload_0(thread, params).await?;
+        let result = unload_0(thread, params)?;
         assert!(result.is_none());
         Ok(())
     }
@@ -186,7 +180,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Parameters::default()).await?;
+        let result = register_natives(thread, Parameters::default())?;
         assert!(result.is_none());
         Ok(())
     }

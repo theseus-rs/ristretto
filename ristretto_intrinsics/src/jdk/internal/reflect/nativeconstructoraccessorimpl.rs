@@ -2,7 +2,6 @@ use crate::java::lang::class;
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::{Class, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Frame;
@@ -61,7 +60,6 @@ async fn get_caller_module<T: Thread + 'static>(thread: &Arc<T>) -> Result<Optio
     "jdk/internal/reflect/NativeConstructorAccessorImpl.newInstance0(Ljava/lang/reflect/Constructor;[Ljava/lang/Object;)Ljava/lang/Object;",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
 pub async fn new_instance_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -162,9 +160,9 @@ pub(crate) mod tests {
     use super::*;
     use ristretto_classloader::Reference;
     use ristretto_types::JavaObject;
-    use ristretto_vm::IntrinsicMethod;
+    use ristretto_vm::AsyncIntrinsicMethod;
 
-    pub async fn new_instance_test(new_instance: IntrinsicMethod) -> Result<()> {
+    pub async fn new_instance_test(new_instance: AsyncIntrinsicMethod) -> Result<()> {
         let (vm, thread) = crate::test::thread().await.expect("thread");
         let integer_class = thread.class("java/lang/Integer").await?;
         let integer_class_object = integer_class.to_object(&thread).await?;

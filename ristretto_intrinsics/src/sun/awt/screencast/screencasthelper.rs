@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/awt/screencast/ScreencastHelper.closeSession()V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn close_session<T: Thread + 'static>(
+pub fn close_session<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn close_session<T: Thread + 'static>(
     "sun/awt/screencast/ScreencastHelper.getRGBPixelsImpl(IIII[I[ILjava/lang/String;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_rgbpixels_impl<T: Thread + 'static>(
+pub fn get_rgbpixels_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -48,8 +45,7 @@ pub async fn get_rgbpixels_impl<T: Thread + 'static>(
     "sun/awt/screencast/ScreencastHelper.loadPipewire(IZ)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn load_pipewire<T: Thread + 'static>(
+pub fn load_pipewire<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -64,8 +60,7 @@ pub async fn load_pipewire<T: Thread + 'static>(
     "sun/awt/screencast/ScreencastHelper.remoteDesktopKeyImpl(ZILjava/lang/String;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn remote_desktop_key_impl<T: Thread + 'static>(
+pub fn remote_desktop_key_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,8 +77,7 @@ pub async fn remote_desktop_key_impl<T: Thread + 'static>(
     "sun/awt/screencast/ScreencastHelper.remoteDesktopMouseButtonImpl(ZILjava/lang/String;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn remote_desktop_mouse_button_impl<T: Thread + 'static>(
+pub fn remote_desktop_mouse_button_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -100,8 +94,7 @@ pub async fn remote_desktop_mouse_button_impl<T: Thread + 'static>(
     "sun/awt/screencast/ScreencastHelper.remoteDesktopMouseMoveImpl(IILjava/lang/String;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn remote_desktop_mouse_move_impl<T: Thread + 'static>(
+pub fn remote_desktop_mouse_move_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -118,8 +111,7 @@ pub async fn remote_desktop_mouse_move_impl<T: Thread + 'static>(
     "sun/awt/screencast/ScreencastHelper.remoteDesktopMouseWheelImpl(ILjava/lang/String;)I",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn remote_desktop_mouse_wheel_impl<T: Thread + 'static>(
+pub fn remote_desktop_mouse_wheel_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -140,7 +132,7 @@ mod tests {
     #[tokio::test]
     async fn test_close_session() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close_session(thread, Parameters::default()).await;
+        let result = close_session(thread, Parameters::default());
         assert_eq!(
             "sun/awt/screencast/ScreencastHelper.closeSession()V",
             result.unwrap_err().to_string()
@@ -162,8 +154,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/screencast/ScreencastHelper.getRGBPixelsImpl(IIII[I[ILjava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -177,8 +168,7 @@ mod tests {
         let result = load_pipewire(
             thread,
             Parameters::new(vec![Value::Int(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/screencast/ScreencastHelper.loadPipewire(IZ)Z",
             result.unwrap_err().to_string()
@@ -192,8 +182,7 @@ mod tests {
         let result = remote_desktop_key_impl(
             thread,
             Parameters::new(vec![Value::from(false), Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/screencast/ScreencastHelper.remoteDesktopKeyImpl(ZILjava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -207,8 +196,7 @@ mod tests {
         let result = remote_desktop_mouse_button_impl(
             thread,
             Parameters::new(vec![Value::from(false), Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/screencast/ScreencastHelper.remoteDesktopMouseButtonImpl(ZILjava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -222,8 +210,7 @@ mod tests {
         let result = remote_desktop_mouse_move_impl(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/screencast/ScreencastHelper.remoteDesktopMouseMoveImpl(IILjava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -237,8 +224,7 @@ mod tests {
         let result = remote_desktop_mouse_wheel_impl(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/screencast/ScreencastHelper.remoteDesktopMouseWheelImpl(ILjava/lang/String;)I",
             result.unwrap_err().to_string()

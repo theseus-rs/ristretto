@@ -1,7 +1,7 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::{JavaError, JavaObject, Parameters, Result, Thread, VM as _};
 use std::collections::{HashMap, VecDeque};
 use std::path::Path;
@@ -296,8 +296,7 @@ async fn wrap_byte_buffer<T: Thread + 'static>(thread: &Arc<T>, data: Vec<u8>) -
     "com/sun/java/util/jar/pack/NativeUnpack.finish()J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn finish<T: Thread + 'static>(
+pub fn finish<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -321,7 +320,6 @@ pub async fn finish<T: Thread + 'static>(
     "com/sun/java/util/jar/pack/NativeUnpack.getNextFile([Ljava/lang/Object;)Z",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_next_file<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -387,7 +385,6 @@ pub async fn get_next_file<T: Thread + 'static>(
     "com/sun/java/util/jar/pack/NativeUnpack.getOption(Ljava/lang/String;)Ljava/lang/String;",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -414,8 +411,7 @@ pub async fn get_option<T: Thread + 'static>(
     "com/sun/java/util/jar/pack/NativeUnpack.getUnusedInput()Ljava/nio/ByteBuffer;",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_unused_input<T: Thread + 'static>(
+pub fn get_unused_input<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -427,8 +423,7 @@ pub async fn get_unused_input<T: Thread + 'static>(
     "com/sun/java/util/jar/pack/NativeUnpack.initIDs()V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -439,8 +434,7 @@ pub async fn init_ids<T: Thread + 'static>(
     "com/sun/java/util/jar/pack/NativeUnpack.setOption(Ljava/lang/String;Ljava/lang/String;)Z",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_option<T: Thread + 'static>(
+pub fn set_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -470,7 +464,6 @@ pub async fn set_option<T: Thread + 'static>(
     "com/sun/java/util/jar/pack/NativeUnpack.start(Ljava/nio/ByteBuffer;J)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn start<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -552,8 +545,7 @@ mod tests {
         let result = set_option(
             thread.clone(),
             Parameters::new(vec![Value::Object(None), property.clone(), value.clone()]),
-        )
-        .await?;
+        )?;
         assert_eq!(Some(Value::from(true)), result);
         let result = get_option(thread, Parameters::new(vec![Value::Object(None), property]))
             .await?

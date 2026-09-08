@@ -3,7 +3,6 @@ use crate::net_helpers::socket_io_error;
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use ristretto_types::{JavaError, Parameters, Result, VM};
 use std::sync::Arc;
 
 #[intrinsic_method("java/net/SocketOutputStream.init()V", LessThanOrEqual(JAVA_17))]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,7 +21,6 @@ pub async fn init<T: Thread + 'static>(
     "java/net/SocketOutputStream.socketWrite0(Ljava/io/FileDescriptor;[BII)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn socket_write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -105,7 +102,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::java17_thread().await?;
-        let result = init(thread, Parameters::default()).await?;
+        let result = init(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }

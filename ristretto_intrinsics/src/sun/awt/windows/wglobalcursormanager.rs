@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/windows/WGlobalCursorManager.findHeavyweightUnderCursor(Z)Ljava/awt/Component;",
     Any
 )]
-#[async_method]
-pub async fn find_heavyweight_under_cursor<T: Thread + 'static>(
+pub fn find_heavyweight_under_cursor<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn find_heavyweight_under_cursor<T: Thread + 'static>(
     "sun/awt/windows/WGlobalCursorManager.getCursorPos(Ljava/awt/Point;)V",
     Any
 )]
-#[async_method]
-pub async fn get_cursor_pos<T: Thread + 'static>(
+pub fn get_cursor_pos<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -42,8 +39,7 @@ pub async fn get_cursor_pos<T: Thread + 'static>(
     "sun/awt/windows/WGlobalCursorManager.getLocationOnScreen(Ljava/awt/Component;)Ljava/awt/Point;",
     Any
 )]
-#[async_method]
-pub async fn get_location_on_screen<T: Thread + 'static>(
+pub fn get_location_on_screen<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,8 +50,7 @@ pub async fn get_location_on_screen<T: Thread + 'static>(
     "sun/awt/windows/WGlobalCursorManager.setCursor(Ljava/awt/Component;Ljava/awt/Cursor;Z)V",
     Any
 )]
-#[async_method]
-pub async fn set_cursor<T: Thread + 'static>(
+pub fn set_cursor<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -78,7 +73,7 @@ mod tests {
     async fn test_find_heavyweight_under_cursor() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            find_heavyweight_under_cursor(thread, Parameters::new(vec![Value::from(false)])).await;
+            find_heavyweight_under_cursor(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "sun/awt/windows/WGlobalCursorManager.findHeavyweightUnderCursor(Z)Ljava/awt/Component;",
             result.unwrap_err().to_string()
@@ -89,7 +84,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_cursor_pos() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_cursor_pos(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_cursor_pos(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WGlobalCursorManager.getCursorPos(Ljava/awt/Point;)V",
             result.unwrap_err().to_string()
@@ -100,8 +95,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_location_on_screen() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            get_location_on_screen(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_location_on_screen(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WGlobalCursorManager.getLocationOnScreen(Ljava/awt/Component;)Ljava/awt/Point;",
             result.unwrap_err().to_string()
@@ -119,8 +113,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WGlobalCursorManager.setCursor(Ljava/awt/Component;Ljava/awt/Cursor;Z)V",
             result.unwrap_err().to_string()

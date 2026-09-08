@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -13,8 +12,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/font/NativeFont.countGlyphs([BI)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn count_glyphs<T: Thread + 'static>(
+pub fn count_glyphs<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -24,8 +22,7 @@ pub async fn count_glyphs<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/NativeFont.fontExists([B)Z", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn font_exists<T: Thread + 'static>(
+pub fn font_exists<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -37,8 +34,7 @@ pub async fn font_exists<T: Thread + 'static>(
     "sun/font/NativeFont.getFontMetrics(J)Lsun/font/StrikeMetrics;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_font_metrics<T: Thread + 'static>(
+pub fn get_font_metrics<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +46,7 @@ pub async fn get_font_metrics<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/NativeFont.getGlyphAdvance(JI)F", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_glyph_advance<T: Thread + 'static>(
+pub fn get_glyph_advance<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -64,8 +59,7 @@ pub async fn get_glyph_advance<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/NativeFont.getGlyphImage(JI)J", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_glyph_image<T: Thread + 'static>(
+pub fn get_glyph_image<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -81,8 +75,7 @@ pub async fn get_glyph_image<T: Thread + 'static>(
     "sun/font/NativeFont.getGlyphImageNoDefault(JI)J",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_glyph_image_no_default<T: Thread + 'static>(
+pub fn get_glyph_image_no_default<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,8 +88,7 @@ pub async fn get_glyph_image_no_default<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/NativeFont.haveBitmapFonts([B)Z", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn have_bitmap_fonts<T: Thread + 'static>(
+pub fn have_bitmap_fonts<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -109,8 +101,7 @@ pub async fn have_bitmap_fonts<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/font/NativeFont.countGlyphs([BI)I", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn count_glyphs_linux_ge_v11<T: Thread + 'static>(
+pub fn count_glyphs_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -121,8 +112,7 @@ pub async fn count_glyphs_linux_ge_v11<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/font/NativeFont.fontExists([B)Z", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn font_exists_linux_ge_v11<T: Thread + 'static>(
+pub fn font_exists_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -135,8 +125,7 @@ pub async fn font_exists_linux_ge_v11<T: Thread + 'static>(
     "sun/font/NativeFont.getFontMetrics(J)Lsun/font/StrikeMetrics;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_font_metrics_linux_ge_v11<T: Thread + 'static>(
+pub fn get_font_metrics_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -152,8 +141,7 @@ pub async fn get_font_metrics_linux_ge_v11<T: Thread + 'static>(
     "sun/font/NativeFont.getGlyphAdvance(JI)F",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_glyph_advance_linux_ge_v11<T: Thread + 'static>(
+pub fn get_glyph_advance_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -167,8 +155,7 @@ pub async fn get_glyph_advance_linux_ge_v11<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/font/NativeFont.getGlyphImage(JI)J", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn get_glyph_image_linux_ge_v11<T: Thread + 'static>(
+pub fn get_glyph_image_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -185,8 +172,7 @@ pub async fn get_glyph_image_linux_ge_v11<T: Thread + 'static>(
     "sun/font/NativeFont.getGlyphImageNoDefault(JI)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_glyph_image_no_default_linux_ge_v11<T: Thread + 'static>(
+pub fn get_glyph_image_no_default_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -203,8 +189,7 @@ pub async fn get_glyph_image_no_default_linux_ge_v11<T: Thread + 'static>(
     "sun/font/NativeFont.haveBitmapFonts([B)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn have_bitmap_fonts_linux_ge_v11<T: Thread + 'static>(
+pub fn have_bitmap_fonts_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -225,8 +210,7 @@ mod tests {
         let result = count_glyphs(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.NativeFont.countGlyphs([BI)I",
             result.unwrap_err().to_string()
@@ -236,7 +220,7 @@ mod tests {
     #[tokio::test]
     async fn test_font_exists() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = font_exists(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = font_exists(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.font.NativeFont.fontExists([B)Z",
             result.unwrap_err().to_string()
@@ -246,7 +230,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_font_metrics() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = get_font_metrics(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_font_metrics(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.font.NativeFont.getFontMetrics(J)Lsun/font/StrikeMetrics;",
             result.unwrap_err().to_string()
@@ -257,7 +241,7 @@ mod tests {
     async fn test_get_glyph_advance() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
         let result =
-            get_glyph_advance(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+            get_glyph_advance(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun.font.NativeFont.getGlyphAdvance(JI)F",
             result.unwrap_err().to_string()
@@ -267,8 +251,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_glyph_image() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result =
-            get_glyph_image(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+        let result = get_glyph_image(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun.font.NativeFont.getGlyphImage(JI)J",
             result.unwrap_err().to_string()
@@ -281,8 +264,7 @@ mod tests {
         let result = get_glyph_image_no_default(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.NativeFont.getGlyphImageNoDefault(JI)J",
             result.unwrap_err().to_string()
@@ -292,7 +274,7 @@ mod tests {
     #[tokio::test]
     async fn test_have_bitmap_fonts() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = have_bitmap_fonts(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = have_bitmap_fonts(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.font.NativeFont.haveBitmapFonts([B)Z",
             result.unwrap_err().to_string()
@@ -306,8 +288,7 @@ mod tests {
         let result = count_glyphs_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/font/NativeFont.countGlyphs([BI)I",
             result.unwrap_err().to_string()
@@ -318,8 +299,7 @@ mod tests {
     #[tokio::test]
     async fn test_font_exists_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            font_exists_linux_ge_v11(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = font_exists_linux_ge_v11(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/font/NativeFont.fontExists([B)Z",
             result.unwrap_err().to_string()
@@ -330,8 +310,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_font_metrics_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            get_font_metrics_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_font_metrics_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/font/NativeFont.getFontMetrics(J)Lsun/font/StrikeMetrics;",
             result.unwrap_err().to_string()
@@ -345,8 +324,7 @@ mod tests {
         let result = get_glyph_advance_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/font/NativeFont.getGlyphAdvance(JI)F",
             result.unwrap_err().to_string()
@@ -360,8 +338,7 @@ mod tests {
         let result = get_glyph_image_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/font/NativeFont.getGlyphImage(JI)J",
             result.unwrap_err().to_string()
@@ -375,8 +352,7 @@ mod tests {
         let result = get_glyph_image_no_default_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/font/NativeFont.getGlyphImageNoDefault(JI)J",
             result.unwrap_err().to_string()
@@ -388,8 +364,7 @@ mod tests {
     async fn test_have_bitmap_fonts_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            have_bitmap_fonts_linux_ge_v11(thread, Parameters::new(vec![Value::Object(None)]))
-                .await;
+            have_bitmap_fonts_linux_ge_v11(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/font/NativeFont.haveBitmapFonts([B)Z",
             result.unwrap_err().to_string()

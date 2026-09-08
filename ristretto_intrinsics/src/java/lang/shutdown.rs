@@ -1,14 +1,12 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/Shutdown.beforeHalt()V", Any)]
-#[async_method]
-pub async fn before_halt<T: Thread + 'static>(
+pub fn before_halt<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -16,8 +14,7 @@ pub async fn before_halt<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Shutdown.halt0(I)V", Any)]
-#[async_method]
-pub async fn halt_0<T: Thread + 'static>(
+pub fn halt_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,7 +29,7 @@ mod tests {
     #[tokio::test]
     async fn test_before_halt() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = before_halt(thread, Parameters::default()).await?;
+        let result = before_halt(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }

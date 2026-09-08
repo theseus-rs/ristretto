@@ -3,7 +3,6 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(target_family = "wasm")]
 use ristretto_types::JavaError;
@@ -19,7 +18,6 @@ use sysinfo::{Pid, ProcessesToUpdate, System};
     "java/lang/ProcessHandleImpl$Info.info0(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn info_0<T: Thread + 'static>(
     thread: Arc<T>,
     #[cfg_attr(target_family = "wasm", expect(unused_mut))] mut parameters: Parameters,
@@ -72,8 +70,7 @@ pub async fn info_0<T: Thread + 'static>(
     "java/lang/ProcessHandleImpl$Info.initIDs()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -214,7 +211,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }

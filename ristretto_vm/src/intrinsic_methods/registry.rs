@@ -4,48 +4,32 @@ use crate::{Parameters, Result};
 use ahash::AHashMap;
 use ristretto_classfile::Version;
 use ristretto_classloader::Value;
-use std::future::Future;
-use std::pin::Pin;
+use ristretto_types::BoxFuture;
 use std::sync::Arc;
 use tracing::error;
 
-/// An intrinsic method represents a native Java method required by the Java Virtual Machine (JVM)
-/// that is implemented in Rust.
-///
-/// Intrinsic methods are native functions that implement Java functionality directly
-/// in Rust rather than in Java bytecode. These methods are registered with the VM
-/// and are called when their corresponding Java native methods are invoked.
-///
-/// # Usage
-///
-/// Intrinsic methods are registered in the `MethodRegistry` with their corresponding
-/// Java class name, method name, and method descriptor. When a Java program calls
-/// a native method, the VM looks up the implementation in this registry and executes
-/// the corresponding Rust function.
-#[cfg(not(target_family = "wasm"))]
-pub type IntrinsicMethod = fn(
-    thread: Arc<Thread>,
-    parameters: Parameters,
-) -> Pin<Box<dyn Future<Output = Result<Option<Value>>> + Send>>;
+/// Function pointer for an intrinsic that completes synchronously.
+pub type SyncIntrinsicMethod = fn(Arc<Thread>, Parameters) -> Result<Option<Value>>;
 
-/// An intrinsic method represents a native Java method required by the Java Virtual Machine (JVM)
-/// that is implemented in Rust.
+/// Function pointer for an intrinsic that may suspend, with platform-appropriate future bounds.
+pub type AsyncIntrinsicMethod =
+    fn(Arc<Thread>, Parameters) -> BoxFuture<'static, Result<Option<Value>>>;
+
+/// A Java intrinsic implemented in Rust, either synchronously or asynchronously.
 ///
-/// Intrinsic methods are native functions that implement Java functionality directly
-/// in Rust rather than in Java bytecode. These methods are registered with the VM
-/// and are called when their corresponding Java native methods are invoked.
+/// Synchronous implementations return directly without allocating or polling a future.
+/// Asynchronous implementations use the platform's [`BoxFuture`] bounds: `Send` on
+/// native targets, and no `Send` requirement on WebAssembly.
 ///
-/// # Usage
-///
-/// Intrinsic methods are registered in the `MethodRegistry` with their corresponding
-/// Java class name, method name, and method descriptor. When a Java program calls
-/// a native method, the VM looks up the implementation in this registry and executes
-/// the corresponding Rust function.
-#[cfg(target_family = "wasm")]
-pub type IntrinsicMethod = fn(
-    thread: Arc<Thread>,
-    parameters: Parameters,
-) -> Pin<Box<dyn Future<Output = Result<Option<Value>>>>>;
+/// The registry selects the variant from the intrinsic function's `async` declaration.
+/// Match the variant to invoke a method; this replaces the former async function-pointer alias.
+#[derive(Clone, Copy, Debug)]
+pub enum IntrinsicMethod {
+    /// A function that completes synchronously.
+    Sync(SyncIntrinsicMethod),
+    /// A function that may suspend while executing.
+    Async(AsyncIntrinsicMethod),
+}
 
 /// Registry for mapping Java intrinsic methods to their Rust implementations.
 ///

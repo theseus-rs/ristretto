@@ -1,13 +1,11 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
 
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nClose(J)V", Any)]
-#[async_method]
-pub async fn n_close<T: ristretto_types::Thread + 'static>(
+pub fn n_close<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn n_close<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nGetMessages(J)V", Any)]
-#[async_method]
-pub async fn n_get_messages<T: ristretto_types::Thread + 'static>(
+pub fn n_get_messages<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -57,9 +54,8 @@ pub async fn n_get_messages<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nGetTimeStamp(J)J", Any)]
-#[async_method]
 #[expect(clippy::cast_possible_truncation)]
-pub async fn n_get_time_stamp<T: ristretto_types::Thread + 'static>(
+pub fn n_get_time_stamp<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -89,7 +85,6 @@ pub async fn n_get_time_stamp<T: ristretto_types::Thread + 'static>(
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nOpen(I)J", Any)]
 #[cfg_attr(not(target_family = "wasm"), expect(clippy::cast_sign_loss))]
 #[expect(clippy::too_many_lines)]
-#[async_method]
 pub async fn n_open<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -264,8 +259,7 @@ pub async fn n_open<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nStart(J)V", Any)]
-#[async_method]
-pub async fn n_start<T: ristretto_types::Thread + 'static>(
+pub fn n_start<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -282,8 +276,7 @@ pub async fn n_start<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiInDevice.nStop(J)V", Any)]
-#[async_method]
-pub async fn n_stop<T: ristretto_types::Thread + 'static>(
+pub fn n_stop<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -308,7 +301,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Long(0));
-        let result = n_close(thread, params).await?;
+        let result = n_close(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -318,7 +311,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Long(0));
-        let result = n_get_messages(thread, params).await?;
+        let result = n_get_messages(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -328,7 +321,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Long(0));
-        let result = n_get_time_stamp(thread, params).await?;
+        let result = n_get_time_stamp(thread, params)?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
@@ -348,7 +341,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Long(0));
-        let result = n_start(thread, params).await?;
+        let result = n_start(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -358,7 +351,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Long(0));
-        let result = n_stop(thread, params).await?;
+        let result = n_stop(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }

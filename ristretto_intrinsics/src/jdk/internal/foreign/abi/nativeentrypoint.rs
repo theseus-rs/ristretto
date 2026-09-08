@@ -12,7 +12,6 @@ use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::{Reference, Value};
 use ristretto_gc::sync::RwLock as GcRwLock;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -294,8 +293,7 @@ fn validate_stub(stub: &DowncallStub, java_major_version: u16) -> Result<()> {
     "jdk/internal/foreign/abi/NativeEntryPoint.freeDowncallStub0(J)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn free_downcall_stub_0<T: Thread + 'static>(
+pub fn free_downcall_stub_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -309,8 +307,7 @@ pub async fn free_downcall_stub_0<T: Thread + 'static>(
     "jdk/internal/foreign/abi/NativeEntryPoint.makeDowncallStub(Ljava/lang/invoke/MethodType;Ljdk/internal/foreign/abi/ABIDescriptor;[Ljdk/internal/foreign/abi/VMStorage;[Ljdk/internal/foreign/abi/VMStorage;ZIZ)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn make_downcall_stub<T: Thread + 'static>(
+pub fn make_downcall_stub<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -354,8 +351,7 @@ pub async fn make_downcall_stub<T: Thread + 'static>(
     "jdk/internal/foreign/abi/NativeEntryPoint.registerNatives()V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn register_natives<T: Thread + 'static>(
+pub fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -482,8 +478,7 @@ mod tests {
     async fn test_make_and_free_downcall_stub() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let parameters = minimal_stub_parameters(&thread).await?;
-        let handle = make_downcall_stub(Arc::clone(&thread), parameters)
-            .await?
+        let handle = make_downcall_stub(Arc::clone(&thread), parameters)?
             .expect("handle")
             .as_i64()?;
         assert_ne!(handle, 0);
@@ -491,12 +486,10 @@ mod tests {
         let result = free_downcall_stub_0(
             Arc::clone(&thread),
             Parameters::new(vec![Value::Long(handle)]),
-        )
-        .await?;
+        )?;
         assert_eq!(result, Some(Value::from(true)));
 
-        let result =
-            free_downcall_stub_0(thread, Parameters::new(vec![Value::Long(handle)])).await?;
+        let result = free_downcall_stub_0(thread, Parameters::new(vec![Value::Long(handle)]))?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -508,8 +501,7 @@ mod tests {
             let result = free_downcall_stub_0(
                 Arc::clone(&thread),
                 Parameters::new(vec![Value::Long(handle)]),
-            )
-            .await?;
+            )?;
             assert_eq!(result, Some(Value::from(false)));
         }
         Ok(())
@@ -520,12 +512,10 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let first_parameters = minimal_stub_parameters(&thread).await?;
         let second_parameters = minimal_stub_parameters(&thread).await?;
-        let first = make_downcall_stub(Arc::clone(&thread), first_parameters)
-            .await?
+        let first = make_downcall_stub(Arc::clone(&thread), first_parameters)?
             .expect("first")
             .as_i64()?;
-        let second = make_downcall_stub(thread, second_parameters)
-            .await?
+        let second = make_downcall_stub(thread, second_parameters)?
             .expect("second")
             .as_i64()?;
         assert_ne!(first, second);
@@ -539,17 +529,16 @@ mod tests {
         let (_first_vm, first_thread) = crate::test::thread().await?;
         let (_second_vm, second_thread) = crate::test::thread().await?;
         let parameters = minimal_stub_parameters(&first_thread).await?;
-        let handle = make_downcall_stub(Arc::clone(&first_thread), parameters)
-            .await?
+        let handle = make_downcall_stub(Arc::clone(&first_thread), parameters)?
             .expect("handle")
             .as_i64()?;
 
         let result =
-            free_downcall_stub_0(second_thread, Parameters::new(vec![Value::Long(handle)])).await?;
+            free_downcall_stub_0(second_thread, Parameters::new(vec![Value::Long(handle)]))?;
         assert_eq!(result, Some(Value::from(false)));
 
         let result =
-            free_downcall_stub_0(first_thread, Parameters::new(vec![Value::Long(handle)])).await?;
+            free_downcall_stub_0(first_thread, Parameters::new(vec![Value::Long(handle)]))?;
         assert_eq!(result, Some(Value::from(true)));
         Ok(())
     }
@@ -570,8 +559,7 @@ mod tests {
             Value::Int(4),
             Value::from(true),
         ]);
-        let handle = make_downcall_stub(Arc::clone(&thread), parameters)
-            .await?
+        let handle = make_downcall_stub(Arc::clone(&thread), parameters)?
             .expect("handle")
             .as_i64()?;
 
@@ -675,9 +663,8 @@ mod tests {
             Value::Int(0),
             Value::from(false),
         ]);
-        let error = make_downcall_stub(thread, parameters)
-            .await
-            .expect_err("null metadata must be rejected");
+        let error =
+            make_downcall_stub(thread, parameters).expect_err("null metadata must be rejected");
         assert!(error.to_string().contains("method type cannot be null"));
         Ok(())
     }
@@ -694,11 +681,7 @@ mod tests {
             Value::Int(0),
             Value::from(false),
         ]);
-        assert!(
-            make_downcall_stub(java21_thread, java21_parameters)
-                .await
-                .is_err()
-        );
+        assert!(make_downcall_stub(java21_thread, java21_parameters).is_err());
 
         let (_java25_vm, java25_thread) = crate::test::java25_thread().await?;
         let java25_parameters = Parameters::new(vec![
@@ -710,8 +693,7 @@ mod tests {
             Value::Int(0),
             Value::from(false),
         ]);
-        let handle = make_downcall_stub(java25_thread, java25_parameters)
-            .await?
+        let handle = make_downcall_stub(java25_thread, java25_parameters)?
             .expect("handle")
             .as_i64()?;
         assert_ne!(handle, 0);
@@ -721,7 +703,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Parameters::default()).await?;
+        let result = register_natives(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

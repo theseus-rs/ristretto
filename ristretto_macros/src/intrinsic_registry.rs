@@ -74,6 +74,7 @@ impl Parse for IntrinsicMethodArgs {
 /// Data for a single intrinsic method.
 struct IntrinsicMethodData {
     function_name: String,
+    is_async: bool,
     version_specification: VersionSpecification,
     /// Cfg conditions that must all be satisfied for this method to be available.
     /// Each string is the token content inside `#[cfg(...)]`.
@@ -330,6 +331,7 @@ fn process_item(
                 .or_default()
                 .push(IntrinsicMethodData {
                     function_name,
+                    is_async: function.sig.asyncness.is_some(),
                     version_specification,
                     cfg_conditions,
                 });
@@ -442,8 +444,9 @@ fn generate_intrinsic_method_map(
             if !data.version_specification.matches(version) {
                 continue;
             }
+            let variant = if data.is_async { "Async" } else { "Sync" };
             let function = format!(
-                "{}::<crate::thread::Thread> as IntrinsicMethod",
+                "IntrinsicMethod::{variant}({}::<crate::thread::Thread>)",
                 data.function_name
             );
             groups
@@ -697,6 +700,7 @@ mod tests {
     ) -> IntrinsicMethodData {
         IntrinsicMethodData {
             function_name: function_name.to_string(),
+            is_async: false,
             version_specification,
             cfg_conditions: cfg_conditions.iter().map(ToString::to_string).collect(),
         }
@@ -1175,6 +1179,30 @@ mod tests {
         assert!(output.contains("\"pkg/B.b()V\""));
         assert!(output.contains("# [cfg (target_os = \"macos\")]"));
         assert!(!output.contains("pkg/Skipped.skip()V"));
+        assert!(output.contains("IntrinsicMethod :: Sync"));
+    }
+
+    #[test]
+    fn registry_detects_sync_and_async_declarations() {
+        let source: syn::File = syn::parse_quote! {
+            #[intrinsic_method("pkg/Example.sync()I", Any)]
+            pub fn sync<T>() {}
+            #[intrinsic_method("pkg/Example.async()I", GreaterThanOrEqual(JAVA_11))]
+            pub async fn r#async<T>() {}
+        };
+        let mut methods = AHashMap::default();
+        for item in &source.items {
+            process_item("ristretto_intrinsics::example", item, &[], &mut methods);
+        }
+        assert!(!methods["pkg/Example.sync()I"][0].is_async);
+        assert!(methods["pkg/Example.async()I"][0].is_async);
+        let java_8 = generate_intrinsic_method_map("JAVA_8", &JAVA_8, &methods).to_string();
+        assert!(java_8.contains("IntrinsicMethod :: Sync"));
+        assert!(!java_8.contains("IntrinsicMethod :: Async"));
+        let java_11 = generate_intrinsic_method_map("JAVA_11", &JAVA_11, &methods).to_string();
+        assert!(java_11.contains("IntrinsicMethod :: Sync"));
+        assert!(java_11.contains("IntrinsicMethod :: Async"));
+        assert!(java_11.contains("r#async"));
     }
 
     #[test]

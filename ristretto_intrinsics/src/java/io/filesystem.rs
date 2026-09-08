@@ -218,7 +218,11 @@ pub async fn canonicalize_with_prefix<T: Thread + 'static>(
     Ok(Some(canonical))
 }
 
-pub async fn check_access<T: Thread + 'static>(
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "shared filesystem implementation keeps the intrinsic calling convention"
+)]
+pub fn check_access<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -304,7 +308,11 @@ pub async fn delete<T: Thread + 'static>(
     Ok(Some(Value::from(deleted)))
 }
 
-pub async fn get_boolean_attributes<T: Thread + 'static>(
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "shared filesystem implementation keeps the intrinsic calling convention"
+)]
+pub fn get_boolean_attributes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -389,7 +397,7 @@ pub async fn get_length<T: Thread + 'static>(
     Ok(Some(Value::Long(length)))
 }
 
-pub async fn get_name_max<T: Thread + 'static>(
+pub fn get_name_max<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -400,7 +408,11 @@ pub async fn get_name_max<T: Thread + 'static>(
     Ok(Some(Value::Long(255)))
 }
 
-pub async fn get_space<T: Thread + 'static>(
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "shared filesystem implementation keeps the intrinsic calling convention"
+)]
+pub fn get_space<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -465,7 +477,11 @@ pub async fn list<T: Thread + 'static>(
     Ok(Some(paths))
 }
 
-pub async fn list_roots<T: Thread + 'static>(
+#[expect(
+    clippy::unnecessary_wraps,
+    reason = "shared implementation keeps the intrinsic calling convention"
+)]
+pub fn list_roots<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -499,7 +515,11 @@ pub async fn rename<T: Thread + 'static>(
     Ok(Some(Value::from(success)))
 }
 
-pub async fn set_last_modified_time<T: Thread + 'static>(
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "shared filesystem implementation keeps the intrinsic calling convention"
+)]
+pub fn set_last_modified_time<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

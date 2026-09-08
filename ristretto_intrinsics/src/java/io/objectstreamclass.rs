@@ -1,7 +1,6 @@
 use crate::java::lang::class::get_class;
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -11,7 +10,6 @@ use std::sync::Arc;
     "java/io/ObjectStreamClass.hasStaticInitializer(Ljava/lang/Class;)Z",
     Any
 )]
-#[async_method]
 pub async fn has_static_initializer<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -23,8 +21,7 @@ pub async fn has_static_initializer<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/ObjectStreamClass.initNative()V", Any)]
-#[async_method]
-pub async fn init_native<T: Thread + 'static>(
+pub fn init_native<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -63,7 +60,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_native() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_native(thread, Parameters::default()).await?;
+        let result = init_native(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }

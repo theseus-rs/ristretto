@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classfile::{JAVA_8, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "java/lang/SecurityManager.classDepth(Ljava/lang/String;)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn class_depth<T: Thread + 'static>(
+pub fn class_depth<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn class_depth<T: Thread + 'static>(
     "java/lang/SecurityManager.classLoaderDepth0()I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn class_loader_depth_0<T: Thread + 'static>(
+pub fn class_loader_depth_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -43,8 +40,7 @@ pub async fn class_loader_depth_0<T: Thread + 'static>(
     "java/lang/SecurityManager.currentClassLoader0()Ljava/lang/ClassLoader;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn current_class_loader_0<T: Thread + 'static>(
+pub fn current_class_loader_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -58,8 +54,7 @@ pub async fn current_class_loader_0<T: Thread + 'static>(
     "java/lang/SecurityManager.currentLoadedClass0()Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn current_loaded_class_0<T: Thread + 'static>(
+pub fn current_loaded_class_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -73,8 +68,7 @@ pub async fn current_loaded_class_0<T: Thread + 'static>(
     "java/lang/SecurityManager.getClassContext()[Ljava/lang/Class;",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn get_class_context<T: Thread + 'static>(
+pub fn get_class_context<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -91,7 +85,7 @@ mod tests {
     #[tokio::test]
     async fn test_class_depth() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = class_depth(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = class_depth(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "java.lang.SecurityManager.classDepth(Ljava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -101,7 +95,7 @@ mod tests {
     #[tokio::test]
     async fn test_class_loader_depth_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = class_loader_depth_0(thread, Parameters::default()).await;
+        let result = class_loader_depth_0(thread, Parameters::default());
         assert_eq!(
             "java.lang.SecurityManager.classLoaderDepth0()I",
             result.unwrap_err().to_string()
@@ -111,7 +105,7 @@ mod tests {
     #[tokio::test]
     async fn test_current_class_loader_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = current_class_loader_0(thread, Parameters::default()).await;
+        let result = current_class_loader_0(thread, Parameters::default());
         assert_eq!(
             "java.lang.SecurityManager.currentClassLoader0()Ljava/lang/ClassLoader;",
             result.unwrap_err().to_string()
@@ -121,7 +115,7 @@ mod tests {
     #[tokio::test]
     async fn test_current_loaded_class_0() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = current_loaded_class_0(thread, Parameters::default()).await;
+        let result = current_loaded_class_0(thread, Parameters::default());
         assert_eq!(
             "java.lang.SecurityManager.currentLoadedClass0()Ljava/lang/Class;",
             result.unwrap_err().to_string()
@@ -131,7 +125,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_class_context() {
         let (_vm, thread) = crate::test::java21_thread().await.expect("thread");
-        let result = get_class_context(thread, Parameters::default()).await;
+        let result = get_class_context(thread, Parameters::default());
         assert_eq!(
             "java.lang.SecurityManager.getClassContext()[Ljava/lang/Class;",
             result.unwrap_err().to_string()

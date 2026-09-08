@@ -3,7 +3,6 @@ use crate::net_helpers::inet_socket_address;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -277,7 +276,6 @@ async fn inet_socket_address_value<T: Thread + 'static>(
     "sun/nio/ch/DatagramChannelImpl.disconnect0(Ljava/io/FileDescriptor;Z)V",
     Any
 )]
-#[async_method]
 pub async fn disconnect_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -383,8 +381,7 @@ pub async fn disconnect_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/DatagramChannelImpl.initIDs()V", LessThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -395,7 +392,6 @@ pub async fn init_ids<T: Thread + 'static>(
     "sun/nio/ch/DatagramChannelImpl.receive0(Ljava/io/FileDescriptor;JIZ)I",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn receive_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -478,7 +474,6 @@ pub async fn receive_0_0<T: Thread + 'static>(
     "sun/nio/ch/DatagramChannelImpl.receive0(Ljava/io/FileDescriptor;JIJZ)I",
     GreaterThan(JAVA_11)
 )]
-#[async_method]
 pub async fn receive_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -552,7 +547,6 @@ pub async fn receive_0_1<T: Thread + 'static>(
     "sun/nio/ch/DatagramChannelImpl.send0(ZLjava/io/FileDescriptor;JILjava/net/InetAddress;I)I",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn send_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -617,7 +611,6 @@ pub async fn send_0_0<T: Thread + 'static>(
     "sun/nio/ch/DatagramChannelImpl.send0(Ljava/io/FileDescriptor;JIJI)I",
     GreaterThan(JAVA_11)
 )]
-#[async_method]
 pub async fn send_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -691,7 +684,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::java11_thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

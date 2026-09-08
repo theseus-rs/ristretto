@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -15,8 +14,7 @@ use std::sync::Arc;
     "sun/misc/URLClassPath.getLookupCacheForClassLoader(Ljava/lang/ClassLoader;Ljava/lang/String;)[I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_lookup_cache_for_class_loader<T: Thread + 'static>(
+pub fn get_lookup_cache_for_class_loader<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,8 +28,7 @@ pub async fn get_lookup_cache_for_class_loader<T: Thread + 'static>(
     "sun/misc/URLClassPath.getLookupCacheURLs(Ljava/lang/ClassLoader;)[Ljava/net/URL;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_lookup_cache_urls<T: Thread + 'static>(
+pub fn get_lookup_cache_urls<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -46,8 +43,7 @@ pub async fn get_lookup_cache_urls<T: Thread + 'static>(
     "sun/misc/URLClassPath.knownToNotExist0(Ljava/lang/ClassLoader;Ljava/lang/String;)Z",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn known_to_not_exist_0<T: Thread + 'static>(
+pub fn known_to_not_exist_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -61,7 +57,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_lookup_cache_for_class_loader() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = get_lookup_cache_for_class_loader(thread, Parameters::default()).await?;
+        let result = get_lookup_cache_for_class_loader(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -69,7 +65,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_lookup_cache_urls() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = get_lookup_cache_urls(thread, Parameters::default()).await?;
+        let result = get_lookup_cache_urls(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -77,7 +73,7 @@ mod tests {
     #[tokio::test]
     async fn test_known_to_not_exist_0() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = known_to_not_exist_0(thread, Parameters::default()).await?;
+        let result = known_to_not_exist_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }

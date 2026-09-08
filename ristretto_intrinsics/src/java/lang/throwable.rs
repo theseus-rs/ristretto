@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Any, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11};
 use ristretto_classloader::{Object, Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaObject;
 use ristretto_types::VM;
@@ -10,7 +9,6 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("java/lang/Throwable.fillInStackTrace(I)Ljava/lang/Throwable;", Any)]
-#[async_method]
 pub async fn fill_in_stack_trace<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -127,8 +125,7 @@ pub async fn fill_in_stack_trace<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Throwable.getStackTraceDepth()I", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn get_stack_trace_depth<T: Thread + 'static>(
+pub fn get_stack_trace_depth<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -147,8 +144,7 @@ pub async fn get_stack_trace_depth<T: Thread + 'static>(
     "java/lang/Throwable.getStackTraceElement(I)Ljava/lang/StackTraceElement;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn get_stack_trace_element<T: Thread + 'static>(
+pub fn get_stack_trace_element<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -240,7 +236,7 @@ mod tests {
         let throwable = create_throwable_with_stack_trace(&vm, &thread, 0).await?;
         let mut parameters = Parameters::default();
         parameters.push(throwable);
-        let result = get_stack_trace_depth(thread, parameters).await?;
+        let result = get_stack_trace_depth(thread, parameters)?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -251,7 +247,7 @@ mod tests {
         let throwable = create_throwable_with_stack_trace(&vm, &thread, 3).await?;
         let mut parameters = Parameters::default();
         parameters.push(throwable);
-        let result = get_stack_trace_depth(thread, parameters).await?;
+        let result = get_stack_trace_depth(thread, parameters)?;
         assert_eq!(result, Some(Value::Int(3)));
         Ok(())
     }
@@ -270,7 +266,7 @@ mod tests {
             Value::new_object(vm.garbage_collector(), Reference::Object(throwable_object));
         let mut parameters = Parameters::default();
         parameters.push(throwable);
-        let result = get_stack_trace_depth(thread, parameters).await?;
+        let result = get_stack_trace_depth(thread, parameters)?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -282,7 +278,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(throwable);
         parameters.push(Value::Int(0));
-        let result = get_stack_trace_element(thread, parameters).await?;
+        let result = get_stack_trace_element(thread, parameters)?;
         assert!(result.is_some());
         let element = result.expect("element");
         let element_ref = element.as_object_ref()?;
@@ -300,7 +296,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(throwable);
         parameters.push(Value::Int(1));
-        let result = get_stack_trace_element(thread, parameters).await?;
+        let result = get_stack_trace_element(thread, parameters)?;
         assert!(result.is_some());
         let element = result.expect("element");
         let element_ref = element.as_object_ref()?;
@@ -318,7 +314,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(throwable);
         parameters.push(Value::Int(2));
-        let result = get_stack_trace_element(thread, parameters).await?;
+        let result = get_stack_trace_element(thread, parameters)?;
         assert!(result.is_some());
         let element = result.expect("element");
         let element_ref = element.as_object_ref()?;
@@ -338,7 +334,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(throwable);
         parameters.push(Value::Int(5));
-        let result = get_stack_trace_element(thread, parameters).await;
+        let result = get_stack_trace_element(thread, parameters);
         assert!(result.is_err());
     }
 }

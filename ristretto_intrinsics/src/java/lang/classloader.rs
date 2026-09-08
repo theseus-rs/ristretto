@@ -6,7 +6,6 @@ use ristretto_classfile::{ClassFile, JAVA_8, JAVA_11, JavaStr};
 use ristretto_classloader::{Class, ClassLoader, ClassLoaderType, Reference, Value};
 use ristretto_gc::Gc;
 use ristretto_gc::sync::RwLock;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError::{
     ClassFormatError, IndexOutOfBoundsException, NoClassDefFoundError,
@@ -175,7 +174,6 @@ async fn class_object_from_bytes<T: Thread + 'static>(
     "java/lang/ClassLoader.defineClass0(Ljava/lang/String;[BIILjava/security/ProtectionDomain;)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn define_class_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -210,7 +208,6 @@ pub async fn define_class_0_0<T: Thread + 'static>(
     "java/lang/ClassLoader.defineClass1(Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn define_class_1_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -253,7 +250,6 @@ pub async fn define_class_1_0<T: Thread + 'static>(
     "java/lang/ClassLoader.defineClass2(Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn define_class_2_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -304,7 +300,6 @@ pub async fn define_class_2_0<T: Thread + 'static>(
     "java/lang/ClassLoader.defineClass0(Ljava/lang/ClassLoader;Ljava/lang/Class;Ljava/lang/String;[BIILjava/security/ProtectionDomain;ZILjava/lang/Object;)Ljava/lang/Class;",
     GreaterThan(JAVA_11)
 )]
-#[async_method]
 pub async fn define_class_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -350,7 +345,6 @@ pub async fn define_class_0_1<T: Thread + 'static>(
     "java/lang/ClassLoader.defineClass1(Ljava/lang/ClassLoader;Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
 pub async fn define_class_1_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -385,7 +379,6 @@ pub async fn define_class_1_1<T: Thread + 'static>(
     "java/lang/ClassLoader.defineClass2(Ljava/lang/ClassLoader;Ljava/lang/String;Ljava/nio/ByteBuffer;IILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class;",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
 pub async fn define_class_2_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -428,7 +421,6 @@ pub async fn define_class_2_1<T: Thread + 'static>(
     "java/lang/ClassLoader.findBootstrapClass(Ljava/lang/String;)Ljava/lang/Class;",
     Any
 )]
-#[async_method]
 pub async fn find_bootstrap_class<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -454,7 +446,6 @@ pub async fn find_bootstrap_class<T: Thread + 'static>(
     "java/lang/ClassLoader.findBuiltinLib(Ljava/lang/String;)Ljava/lang/String;",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn find_builtin_lib<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -473,7 +464,6 @@ pub async fn find_builtin_lib<T: Thread + 'static>(
     "java/lang/ClassLoader.findLoadedClass0(Ljava/lang/String;)Ljava/lang/Class;",
     Any
 )]
-#[async_method]
 pub async fn find_loaded_class_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -497,7 +487,6 @@ pub async fn find_loaded_class_0<T: Thread + 'static>(
     "java/lang/ClassLoader.initSystemClassLoader()Ljava/lang/ClassLoader;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn init_system_class_loader<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -519,8 +508,7 @@ pub async fn init_system_class_loader<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/ClassLoader.registerNatives()V", Any)]
-#[async_method]
-pub async fn register_natives<T: Thread + 'static>(
+pub fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -531,8 +519,7 @@ pub async fn register_natives<T: Thread + 'static>(
     "java/lang/ClassLoader.resolveClass0(Ljava/lang/Class;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn resolve_class_0<T: Thread + 'static>(
+pub fn resolve_class_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -544,8 +531,7 @@ pub async fn resolve_class_0<T: Thread + 'static>(
     "java/lang/ClassLoader.retrieveDirectives()Ljava/lang/AssertionStatusDirectives;",
     Any
 )]
-#[async_method]
-pub async fn retrieve_directives<T: Thread + 'static>(
+pub fn retrieve_directives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -654,7 +640,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Parameters::default()).await?;
+        let result = register_natives(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -662,7 +648,7 @@ mod tests {
     #[tokio::test]
     async fn test_resolve_class_0() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = resolve_class_0(thread, Parameters::default()).await?;
+        let result = resolve_class_0(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -670,7 +656,7 @@ mod tests {
     #[tokio::test]
     async fn test_retrieve_directives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = retrieve_directives(thread, Parameters::default()).await?;
+        let result = retrieve_directives(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }

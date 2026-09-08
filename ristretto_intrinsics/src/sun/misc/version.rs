@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaObject;
 use ristretto_types::Thread;
@@ -47,7 +46,6 @@ async fn set_version_fields<T: Thread + 'static>(thread: &Arc<T>, prefix: &str) 
     "sun/misc/Version.getJdkSpecialVersion()Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_jdk_special_version<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -57,7 +55,6 @@ pub async fn get_jdk_special_version<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/misc/Version.getJdkVersionInfo()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn get_jdk_version_info<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -70,7 +67,6 @@ pub async fn get_jdk_version_info<T: Thread + 'static>(
     "sun/misc/Version.getJvmSpecialVersion()Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_jvm_special_version<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -80,7 +76,6 @@ pub async fn get_jvm_special_version<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/misc/Version.getJvmVersionInfo()Z", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn get_jvm_version_info<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,

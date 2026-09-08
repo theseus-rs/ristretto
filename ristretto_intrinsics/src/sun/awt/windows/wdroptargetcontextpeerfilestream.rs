@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/windows/WDropTargetContextPeerFileStream.freeStgMedium(J)V",
     Any
 )]
-#[async_method]
-pub async fn free_stg_medium<T: Thread + 'static>(
+pub fn free_stg_medium<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,7 +29,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_stg_medium() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = free_stg_medium(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = free_stg_medium(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WDropTargetContextPeerFileStream.freeStgMedium(J)V",
             result.unwrap_err().to_string()

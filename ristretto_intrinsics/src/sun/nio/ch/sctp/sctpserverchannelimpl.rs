@@ -3,7 +3,7 @@ use crate::java::io::socketfiledescriptor::set_fd;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::handles::{SocketHandle, SocketType};
 use ristretto_types::{JavaError, Parameters, Result, Thread, VM};
@@ -50,7 +50,6 @@ fn accept_socket(
     "sun/nio/ch/sctp/SctpServerChannelImpl.accept0(Ljava/io/FileDescriptor;Ljava/io/FileDescriptor;[Ljava/net/InetSocketAddress;)I",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn accept0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -122,8 +121,7 @@ pub async fn accept0<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpServerChannelImpl.initIDs()V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -143,7 +141,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        assert_eq!(None, init_ids(thread, Parameters::default()).await?);
+        assert_eq!(None, init_ids(thread, Parameters::default())?);
         Ok(())
     }
 }

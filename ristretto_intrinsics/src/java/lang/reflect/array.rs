@@ -257,7 +257,6 @@ fn extract_array_element(
     "java/lang/reflect/Array.get(Ljava/lang/Object;I)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
 pub async fn get<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -285,8 +284,7 @@ pub async fn get<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getBoolean(Ljava/lang/Object;I)Z", Any)]
-#[async_method]
-pub async fn get_boolean<T: Thread + 'static>(
+pub fn get_boolean<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -314,8 +312,7 @@ pub async fn get_boolean<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getByte(Ljava/lang/Object;I)B", Any)]
-#[async_method]
-pub async fn get_byte<T: Thread + 'static>(
+pub fn get_byte<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -343,8 +340,7 @@ pub async fn get_byte<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getChar(Ljava/lang/Object;I)C", Any)]
-#[async_method]
-pub async fn get_char<T: Thread + 'static>(
+pub fn get_char<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -372,8 +368,7 @@ pub async fn get_char<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getDouble(Ljava/lang/Object;I)D", Any)]
-#[async_method]
-pub async fn get_double<T: Thread + 'static>(
+pub fn get_double<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -401,8 +396,7 @@ pub async fn get_double<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getFloat(Ljava/lang/Object;I)F", Any)]
-#[async_method]
-pub async fn get_float<T: Thread + 'static>(
+pub fn get_float<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -435,8 +429,7 @@ pub async fn get_float<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getInt(Ljava/lang/Object;I)I", Any)]
-#[async_method]
-pub async fn get_int<T: Thread + 'static>(
+pub fn get_int<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -461,8 +454,7 @@ pub async fn get_int<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getLength(Ljava/lang/Object;)I", Any)]
-#[async_method]
-pub async fn get_length<T: Thread + 'static>(
+pub fn get_length<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -488,8 +480,7 @@ pub async fn get_length<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getLong(Ljava/lang/Object;I)J", Any)]
-#[async_method]
-pub async fn get_long<T: Thread + 'static>(
+pub fn get_long<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -514,8 +505,7 @@ pub async fn get_long<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.getShort(Ljava/lang/Object;I)S", Any)]
-#[async_method]
-pub async fn get_short<T: Thread + 'static>(
+pub fn get_short<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -543,7 +533,6 @@ pub async fn get_short<T: Thread + 'static>(
     "java/lang/reflect/Array.multiNewArray(Ljava/lang/Class;[I)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
 pub async fn multi_new_array<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -654,7 +643,6 @@ async fn create_multi_dimensional_array<T: Thread + 'static>(
     "java/lang/reflect/Array.newArray(Ljava/lang/Class;I)Ljava/lang/Object;",
     Any
 )]
-#[async_method]
 pub async fn new_array<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -693,8 +681,7 @@ pub async fn new_array<T: Thread + 'static>(
     "java/lang/reflect/Array.set(Ljava/lang/Object;ILjava/lang/Object;)V",
     Any
 )]
-#[async_method]
-pub async fn set<T: Thread + 'static>(
+pub fn set<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -725,8 +712,7 @@ pub async fn set<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setBoolean(Ljava/lang/Object;IZ)V", Any)]
-#[async_method]
-pub async fn set_boolean<T: Thread + 'static>(
+pub fn set_boolean<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -754,8 +740,7 @@ pub async fn set_boolean<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setByte(Ljava/lang/Object;IB)V", Any)]
-#[async_method]
-pub async fn set_byte<T: Thread + 'static>(
+pub fn set_byte<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -781,8 +766,7 @@ pub async fn set_byte<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setChar(Ljava/lang/Object;IC)V", Any)]
-#[async_method]
-pub async fn set_char<T: Thread + 'static>(
+pub fn set_char<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -808,8 +792,7 @@ pub async fn set_char<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setDouble(Ljava/lang/Object;ID)V", Any)]
-#[async_method]
-pub async fn set_double<T: Thread + 'static>(
+pub fn set_double<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -835,8 +818,7 @@ pub async fn set_double<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setFloat(Ljava/lang/Object;IF)V", Any)]
-#[async_method]
-pub async fn set_float<T: Thread + 'static>(
+pub fn set_float<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -862,8 +844,7 @@ pub async fn set_float<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setInt(Ljava/lang/Object;II)V", Any)]
-#[async_method]
-pub async fn set_int<T: Thread + 'static>(
+pub fn set_int<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -893,8 +874,7 @@ pub async fn set_int<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setLong(Ljava/lang/Object;IJ)V", Any)]
-#[async_method]
-pub async fn set_long<T: Thread + 'static>(
+pub fn set_long<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -928,8 +908,7 @@ pub async fn set_long<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/reflect/Array.setShort(Ljava/lang/Object;IS)V", Any)]
-#[async_method]
-pub async fn set_short<T: Thread + 'static>(
+pub fn set_short<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -969,7 +948,7 @@ mod tests {
         let index = Value::Int(0);
         let expected = 42i32;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
-        let _ = set(thread.clone(), parameters).await?;
+        let _ = set(thread.clone(), parameters)?;
         let parameters = Parameters::new(vec![array, index]);
         let result = get(thread, parameters).await?.expect("value");
         let value = result.as_i32()?;
@@ -987,9 +966,9 @@ mod tests {
         let index = Value::Int(0);
         let expected = true;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
-        let _ = set_boolean(thread.clone(), parameters).await?;
+        let _ = set_boolean(thread.clone(), parameters)?;
         let parameters = Parameters::new(vec![array, index]);
-        let result = get_boolean(thread, parameters).await?.expect("value");
+        let result = get_boolean(thread, parameters)?.expect("value");
         let value = result.as_bool()?;
         assert_eq!(value, expected);
         Ok(())
@@ -1002,9 +981,9 @@ mod tests {
         let index = Value::Int(0);
         let expected = 42i8;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
-        let _ = set_byte(thread.clone(), parameters).await?;
+        let _ = set_byte(thread.clone(), parameters)?;
         let parameters = Parameters::new(vec![array, index]);
-        let result = get_byte(thread, parameters).await?.expect("value");
+        let result = get_byte(thread, parameters)?.expect("value");
         let value = result.as_i8()?;
         assert_eq!(value, expected);
         Ok(())
@@ -1020,9 +999,9 @@ mod tests {
         let index = Value::Int(0);
         let expected = 42u16;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
-        let _ = set_char(thread.clone(), parameters).await?;
+        let _ = set_char(thread.clone(), parameters)?;
         let parameters = Parameters::new(vec![array, index]);
-        let result = get_char(thread, parameters).await?.expect("value");
+        let result = get_char(thread, parameters)?.expect("value");
         let value = result.as_u16()?;
         assert_eq!(value, expected);
         Ok(())
@@ -1038,9 +1017,9 @@ mod tests {
         let index = Value::Int(0);
         let expected = 42.0f64;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
-        let _ = set_double(thread.clone(), parameters).await?;
+        let _ = set_double(thread.clone(), parameters)?;
         let parameters = Parameters::new(vec![array, index]);
-        let result = get_double(thread, parameters).await?.expect("value");
+        let result = get_double(thread, parameters)?.expect("value");
         let value = result.as_f64()?;
         let value = value - expected;
         assert!(value.abs() < f64::EPSILON);
@@ -1057,9 +1036,9 @@ mod tests {
         let index = Value::Int(0);
         let expected = 42f32;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
-        let _ = set_float(thread.clone(), parameters).await?;
+        let _ = set_float(thread.clone(), parameters)?;
         let parameters = Parameters::new(vec![array, index]);
-        let result = get_float(thread, parameters).await?.expect("value");
+        let result = get_float(thread, parameters)?.expect("value");
         let value = result.as_f32()?;
         let value = value - expected;
         assert!(value.abs() < f32::EPSILON);
@@ -1076,9 +1055,9 @@ mod tests {
         let index = Value::Int(0);
         let expected = 42i32;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
-        let _ = set_int(thread.clone(), parameters).await?;
+        let _ = set_int(thread.clone(), parameters)?;
         let parameters = Parameters::new(vec![array, index]);
-        let result = get_int(thread, parameters).await?.expect("value");
+        let result = get_int(thread, parameters)?.expect("value");
         let value = result.as_i32()?;
         assert_eq!(value, expected);
         Ok(())
@@ -1092,7 +1071,7 @@ mod tests {
             Reference::from(vec![1, 2, 3]),
         );
         let parameters = Parameters::new(vec![array]);
-        let result = get_length(thread, parameters).await?.expect("Array length");
+        let result = get_length(thread, parameters)?.expect("Array length");
         let length = result.as_i32()?;
         assert_eq!(length, 3);
         Ok(())
@@ -1108,9 +1087,9 @@ mod tests {
         let index = Value::Int(0);
         let expected = 42i64;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
-        let _ = set_long(thread.clone(), parameters).await?;
+        let _ = set_long(thread.clone(), parameters)?;
         let parameters = Parameters::new(vec![array, index]);
-        let result = get_long(thread, parameters).await?.expect("value");
+        let result = get_long(thread, parameters)?.expect("value");
         let value = result.as_i64()?;
         assert_eq!(value, expected);
         Ok(())
@@ -1126,9 +1105,9 @@ mod tests {
         let index = Value::Int(0);
         let expected = 42i16;
         let parameters = Parameters::new(vec![array.clone(), index.clone(), Value::from(expected)]);
-        let _ = set_short(thread.clone(), parameters).await?;
+        let _ = set_short(thread.clone(), parameters)?;
         let parameters = Parameters::new(vec![array, index]);
-        let result = get_short(thread, parameters).await?.expect("value");
+        let result = get_short(thread, parameters)?.expect("value");
         let value = result.as_i16()?;
         assert_eq!(value, expected);
         Ok(())
@@ -1214,7 +1193,7 @@ mod tests {
         let params = Parameters::new(vec![class_object, Value::Int(3)]);
         let result = new_array(thread.clone(), params).await?.expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 3);
         Ok(())
     }
@@ -1227,7 +1206,7 @@ mod tests {
         let params = Parameters::new(vec![class_object, Value::Int(2)]);
         let result = new_array(thread.clone(), params).await?.expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 2);
         Ok(())
     }
@@ -1240,7 +1219,7 @@ mod tests {
         let params = Parameters::new(vec![class_object, Value::Int(4)]);
         let result = new_array(thread.clone(), params).await?.expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 4);
         Ok(())
     }
@@ -1253,7 +1232,7 @@ mod tests {
         let params = Parameters::new(vec![class_object, Value::Int(5)]);
         let result = new_array(thread.clone(), params).await?.expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 5);
         Ok(())
     }
@@ -1266,7 +1245,7 @@ mod tests {
         let params = Parameters::new(vec![class_object, Value::Int(6)]);
         let result = new_array(thread.clone(), params).await?.expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 6);
         Ok(())
     }
@@ -1279,7 +1258,7 @@ mod tests {
         let params = Parameters::new(vec![class_object, Value::Int(7)]);
         let result = new_array(thread.clone(), params).await?.expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 7);
         Ok(())
     }
@@ -1292,7 +1271,7 @@ mod tests {
         let params = Parameters::new(vec![class_object, Value::Int(8)]);
         let result = new_array(thread.clone(), params).await?.expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 8);
         Ok(())
     }
@@ -1305,7 +1284,7 @@ mod tests {
         let params = Parameters::new(vec![class_object, Value::Int(9)]);
         let result = new_array(thread.clone(), params).await?.expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 9);
         Ok(())
     }
@@ -1318,7 +1297,7 @@ mod tests {
         let params = Parameters::new(vec![class_object, Value::Int(0)]);
         let result = new_array(thread.clone(), params).await?.expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 0);
         Ok(())
     }
@@ -1355,7 +1334,7 @@ mod tests {
     async fn test_get_boolean_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0)]);
-        assert!(get_boolean(thread, params).await.is_err());
+        assert!(get_boolean(thread, params).is_err());
         Ok(())
     }
 
@@ -1363,7 +1342,7 @@ mod tests {
     async fn test_get_byte_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0)]);
-        assert!(get_byte(thread, params).await.is_err());
+        assert!(get_byte(thread, params).is_err());
         Ok(())
     }
 
@@ -1371,7 +1350,7 @@ mod tests {
     async fn test_get_char_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0)]);
-        assert!(get_char(thread, params).await.is_err());
+        assert!(get_char(thread, params).is_err());
         Ok(())
     }
 
@@ -1379,7 +1358,7 @@ mod tests {
     async fn test_get_double_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0)]);
-        assert!(get_double(thread, params).await.is_err());
+        assert!(get_double(thread, params).is_err());
         Ok(())
     }
 
@@ -1387,7 +1366,7 @@ mod tests {
     async fn test_get_float_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0)]);
-        assert!(get_float(thread, params).await.is_err());
+        assert!(get_float(thread, params).is_err());
         Ok(())
     }
 
@@ -1395,7 +1374,7 @@ mod tests {
     async fn test_get_int_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0)]);
-        assert!(get_int(thread, params).await.is_err());
+        assert!(get_int(thread, params).is_err());
         Ok(())
     }
 
@@ -1403,7 +1382,7 @@ mod tests {
     async fn test_get_long_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0)]);
-        assert!(get_long(thread, params).await.is_err());
+        assert!(get_long(thread, params).is_err());
         Ok(())
     }
 
@@ -1411,7 +1390,7 @@ mod tests {
     async fn test_get_short_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0)]);
-        assert!(get_short(thread, params).await.is_err());
+        assert!(get_short(thread, params).is_err());
         Ok(())
     }
 
@@ -1419,7 +1398,7 @@ mod tests {
     async fn test_get_length_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None)]);
-        assert!(get_length(thread, params).await.is_err());
+        assert!(get_length(thread, params).is_err());
         Ok(())
     }
 
@@ -1427,7 +1406,7 @@ mod tests {
     async fn test_set_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(1)]);
-        assert!(set(thread, params).await.is_err());
+        assert!(set(thread, params).is_err());
         Ok(())
     }
 
@@ -1435,7 +1414,7 @@ mod tests {
     async fn test_set_boolean_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(1)]);
-        assert!(set_boolean(thread, params).await.is_err());
+        assert!(set_boolean(thread, params).is_err());
         Ok(())
     }
 
@@ -1443,7 +1422,7 @@ mod tests {
     async fn test_set_byte_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(1)]);
-        assert!(set_byte(thread, params).await.is_err());
+        assert!(set_byte(thread, params).is_err());
         Ok(())
     }
 
@@ -1451,7 +1430,7 @@ mod tests {
     async fn test_set_char_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(1)]);
-        assert!(set_char(thread, params).await.is_err());
+        assert!(set_char(thread, params).is_err());
         Ok(())
     }
 
@@ -1459,7 +1438,7 @@ mod tests {
     async fn test_set_double_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Double(1.0)]);
-        assert!(set_double(thread, params).await.is_err());
+        assert!(set_double(thread, params).is_err());
         Ok(())
     }
 
@@ -1467,7 +1446,7 @@ mod tests {
     async fn test_set_float_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Float(1.0)]);
-        assert!(set_float(thread, params).await.is_err());
+        assert!(set_float(thread, params).is_err());
         Ok(())
     }
 
@@ -1475,7 +1454,7 @@ mod tests {
     async fn test_set_int_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(1)]);
-        assert!(set_int(thread, params).await.is_err());
+        assert!(set_int(thread, params).is_err());
         Ok(())
     }
 
@@ -1483,7 +1462,7 @@ mod tests {
     async fn test_set_long_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Long(1)]);
-        assert!(set_long(thread, params).await.is_err());
+        assert!(set_long(thread, params).is_err());
         Ok(())
     }
 
@@ -1491,7 +1470,7 @@ mod tests {
     async fn test_set_short_null_array() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
         let params = Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(1)]);
-        assert!(set_short(thread, params).await.is_err());
+        assert!(set_short(thread, params).is_err());
         Ok(())
     }
 
@@ -1503,7 +1482,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(5)]);
-        assert!(get_boolean(thread, params).await.is_err());
+        assert!(get_boolean(thread, params).is_err());
         Ok(())
     }
 
@@ -1512,7 +1491,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let array = Value::new_object(thread.vm()?.garbage_collector(), Reference::from(vec![0i8]));
         let params = Parameters::new(vec![array, Value::Int(5)]);
-        assert!(get_byte(thread, params).await.is_err());
+        assert!(get_byte(thread, params).is_err());
         Ok(())
     }
 
@@ -1524,7 +1503,7 @@ mod tests {
             Reference::from(vec![0 as char]),
         );
         let params = Parameters::new(vec![array, Value::Int(5)]);
-        assert!(get_char(thread, params).await.is_err());
+        assert!(get_char(thread, params).is_err());
         Ok(())
     }
 
@@ -1536,7 +1515,7 @@ mod tests {
             Reference::from(vec![0.0f64]),
         );
         let params = Parameters::new(vec![array, Value::Int(5)]);
-        assert!(get_double(thread, params).await.is_err());
+        assert!(get_double(thread, params).is_err());
         Ok(())
     }
 
@@ -1548,7 +1527,7 @@ mod tests {
             Reference::from(vec![0f32]),
         );
         let params = Parameters::new(vec![array, Value::Int(5)]);
-        assert!(get_float(thread, params).await.is_err());
+        assert!(get_float(thread, params).is_err());
         Ok(())
     }
 
@@ -1560,7 +1539,7 @@ mod tests {
             Reference::from(vec![0i32]),
         );
         let params = Parameters::new(vec![array, Value::Int(5)]);
-        assert!(get_int(thread, params).await.is_err());
+        assert!(get_int(thread, params).is_err());
         Ok(())
     }
 
@@ -1572,7 +1551,7 @@ mod tests {
             Reference::from(vec![0i64]),
         );
         let params = Parameters::new(vec![array, Value::Int(5)]);
-        assert!(get_long(thread, params).await.is_err());
+        assert!(get_long(thread, params).is_err());
         Ok(())
     }
 
@@ -1584,7 +1563,7 @@ mod tests {
             Reference::from(vec![0i16]),
         );
         let params = Parameters::new(vec![array, Value::Int(5)]);
-        assert!(get_short(thread, params).await.is_err());
+        assert!(get_short(thread, params).is_err());
         Ok(())
     }
 
@@ -1596,7 +1575,7 @@ mod tests {
             Reference::from(vec![0i32]),
         );
         let params = Parameters::new(vec![array, Value::Int(-1)]);
-        assert!(get_int(thread, params).await.is_err());
+        assert!(get_int(thread, params).is_err());
         Ok(())
     }
 
@@ -1608,7 +1587,7 @@ mod tests {
             Reference::from(vec![0i32]),
         );
         let params = Parameters::new(vec![array, Value::Int(-1), Value::Int(1)]);
-        assert!(set_int(thread, params).await.is_err());
+        assert!(set_int(thread, params).is_err());
         Ok(())
     }
 
@@ -1620,7 +1599,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(5), Value::Int(1)]);
-        assert!(set_boolean(thread, params).await.is_err());
+        assert!(set_boolean(thread, params).is_err());
         Ok(())
     }
 
@@ -1629,7 +1608,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let array = Value::new_object(thread.vm()?.garbage_collector(), Reference::from(vec![0i8]));
         let params = Parameters::new(vec![array, Value::Int(5), Value::Int(1)]);
-        assert!(set_byte(thread, params).await.is_err());
+        assert!(set_byte(thread, params).is_err());
         Ok(())
     }
 
@@ -1641,7 +1620,7 @@ mod tests {
             Reference::from(vec![0 as char]),
         );
         let params = Parameters::new(vec![array, Value::Int(5), Value::Int(1)]);
-        assert!(set_char(thread, params).await.is_err());
+        assert!(set_char(thread, params).is_err());
         Ok(())
     }
 
@@ -1653,7 +1632,7 @@ mod tests {
             Reference::from(vec![0.0f64]),
         );
         let params = Parameters::new(vec![array, Value::Int(5), Value::Double(1.0)]);
-        assert!(set_double(thread, params).await.is_err());
+        assert!(set_double(thread, params).is_err());
         Ok(())
     }
 
@@ -1665,7 +1644,7 @@ mod tests {
             Reference::from(vec![0f32]),
         );
         let params = Parameters::new(vec![array, Value::Int(5), Value::Float(1.0)]);
-        assert!(set_float(thread, params).await.is_err());
+        assert!(set_float(thread, params).is_err());
         Ok(())
     }
 
@@ -1677,7 +1656,7 @@ mod tests {
             Reference::from(vec![0i32]),
         );
         let params = Parameters::new(vec![array, Value::Int(5), Value::Int(1)]);
-        assert!(set_int(thread, params).await.is_err());
+        assert!(set_int(thread, params).is_err());
         Ok(())
     }
 
@@ -1689,7 +1668,7 @@ mod tests {
             Reference::from(vec![0i64]),
         );
         let params = Parameters::new(vec![array, Value::Int(5), Value::Long(1)]);
-        assert!(set_long(thread, params).await.is_err());
+        assert!(set_long(thread, params).is_err());
         Ok(())
     }
 
@@ -1701,7 +1680,7 @@ mod tests {
             Reference::from(vec![0i16]),
         );
         let params = Parameters::new(vec![array, Value::Int(5), Value::Int(1)]);
-        assert!(set_short(thread, params).await.is_err());
+        assert!(set_short(thread, params).is_err());
         Ok(())
     }
 
@@ -1713,7 +1692,7 @@ mod tests {
             Reference::from(vec![0i32]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        assert!(get_boolean(thread, params).await.is_err());
+        assert!(get_boolean(thread, params).is_err());
         Ok(())
     }
 
@@ -1725,7 +1704,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        assert!(get_byte(thread, params).await.is_err());
+        assert!(get_byte(thread, params).is_err());
         Ok(())
     }
 
@@ -1737,7 +1716,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        assert!(get_char(thread, params).await.is_err());
+        assert!(get_char(thread, params).is_err());
         Ok(())
     }
 
@@ -1749,7 +1728,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        assert!(get_short(thread, params).await.is_err());
+        assert!(get_short(thread, params).is_err());
         Ok(())
     }
 
@@ -1761,7 +1740,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        assert!(get_int(thread, params).await.is_err());
+        assert!(get_int(thread, params).is_err());
         Ok(())
     }
 
@@ -1773,7 +1752,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        assert!(get_long(thread, params).await.is_err());
+        assert!(get_long(thread, params).is_err());
         Ok(())
     }
 
@@ -1785,7 +1764,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        assert!(get_float(thread, params).await.is_err());
+        assert!(get_float(thread, params).is_err());
         Ok(())
     }
 
@@ -1797,7 +1776,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        assert!(get_double(thread, params).await.is_err());
+        assert!(get_double(thread, params).is_err());
         Ok(())
     }
 
@@ -1809,7 +1788,7 @@ mod tests {
             Reference::from(vec![0i32]),
         );
         let params = Parameters::new(vec![array, Value::Int(0), Value::Int(1)]);
-        assert!(set_boolean(thread, params).await.is_err());
+        assert!(set_boolean(thread, params).is_err());
         Ok(())
     }
 
@@ -1821,7 +1800,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0), Value::Int(1)]);
-        assert!(set_byte(thread, params).await.is_err());
+        assert!(set_byte(thread, params).is_err());
         Ok(())
     }
 
@@ -1833,7 +1812,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0), Value::Int(1)]);
-        assert!(set_char(thread, params).await.is_err());
+        assert!(set_char(thread, params).is_err());
         Ok(())
     }
 
@@ -1845,7 +1824,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0), Value::Int(1)]);
-        assert!(set_short(thread, params).await.is_err());
+        assert!(set_short(thread, params).is_err());
         Ok(())
     }
 
@@ -1857,7 +1836,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0), Value::Int(1)]);
-        assert!(set_int(thread, params).await.is_err());
+        assert!(set_int(thread, params).is_err());
         Ok(())
     }
 
@@ -1869,7 +1848,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0), Value::Long(1)]);
-        assert!(set_long(thread, params).await.is_err());
+        assert!(set_long(thread, params).is_err());
         Ok(())
     }
 
@@ -1881,7 +1860,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0), Value::Float(1.0)]);
-        assert!(set_float(thread, params).await.is_err());
+        assert!(set_float(thread, params).is_err());
         Ok(())
     }
 
@@ -1893,7 +1872,7 @@ mod tests {
             Reference::from(vec![false]),
         );
         let params = Parameters::new(vec![array, Value::Int(0), Value::Double(1.0)]);
-        assert!(set_double(thread, params).await.is_err());
+        assert!(set_double(thread, params).is_err());
         Ok(())
     }
 
@@ -1905,7 +1884,7 @@ mod tests {
             Reference::from(vec![42i8]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_short(thread, params).await?.expect("value");
+        let result = get_short(thread, params)?.expect("value");
         assert_eq!(result.as_i16()?, 42);
         Ok(())
     }
@@ -1918,7 +1897,7 @@ mod tests {
             Reference::from(vec![42i8]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_int(thread, params).await?.expect("value");
+        let result = get_int(thread, params)?.expect("value");
         assert_eq!(result.as_i32()?, 42);
         Ok(())
     }
@@ -1931,7 +1910,7 @@ mod tests {
             Reference::from(vec![42i16]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_int(thread, params).await?.expect("value");
+        let result = get_int(thread, params)?.expect("value");
         assert_eq!(result.as_i32()?, 42);
         Ok(())
     }
@@ -1944,7 +1923,7 @@ mod tests {
             Reference::from(vec![42 as char]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_int(thread, params).await?.expect("value");
+        let result = get_int(thread, params)?.expect("value");
         assert_eq!(result.as_i32()?, 42);
         Ok(())
     }
@@ -1957,7 +1936,7 @@ mod tests {
             Reference::from(vec![42i8]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_long(thread, params).await?.expect("value");
+        let result = get_long(thread, params)?.expect("value");
         assert_eq!(result.as_i64()?, 42);
         Ok(())
     }
@@ -1970,7 +1949,7 @@ mod tests {
             Reference::from(vec![42i16]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_long(thread, params).await?.expect("value");
+        let result = get_long(thread, params)?.expect("value");
         assert_eq!(result.as_i64()?, 42);
         Ok(())
     }
@@ -1983,7 +1962,7 @@ mod tests {
             Reference::from(vec![42 as char]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_long(thread, params).await?.expect("value");
+        let result = get_long(thread, params)?.expect("value");
         assert_eq!(result.as_i64()?, 42);
         Ok(())
     }
@@ -1996,7 +1975,7 @@ mod tests {
             Reference::from(vec![42i32]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_long(thread, params).await?.expect("value");
+        let result = get_long(thread, params)?.expect("value");
         assert_eq!(result.as_i64()?, 42);
         Ok(())
     }
@@ -2009,7 +1988,7 @@ mod tests {
             Reference::from(vec![42i8]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_float(thread, params).await?.expect("value");
+        let result = get_float(thread, params)?.expect("value");
         let diff = result.as_f32()? - 42.0;
         assert!(diff.abs() < f32::EPSILON);
         Ok(())
@@ -2023,7 +2002,7 @@ mod tests {
             Reference::from(vec![42i16]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_float(thread, params).await?.expect("value");
+        let result = get_float(thread, params)?.expect("value");
         let diff = result.as_f32()? - 42.0;
         assert!(diff.abs() < f32::EPSILON);
         Ok(())
@@ -2037,7 +2016,7 @@ mod tests {
             Reference::from(vec![42 as char]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_float(thread, params).await?.expect("value");
+        let result = get_float(thread, params)?.expect("value");
         let diff = result.as_f32()? - 42.0;
         assert!(diff.abs() < f32::EPSILON);
         Ok(())
@@ -2051,7 +2030,7 @@ mod tests {
             Reference::from(vec![42i32]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_float(thread, params).await?.expect("value");
+        let result = get_float(thread, params)?.expect("value");
         let diff = result.as_f32()? - 42.0;
         assert!(diff.abs() < f32::EPSILON);
         Ok(())
@@ -2065,7 +2044,7 @@ mod tests {
             Reference::from(vec![42i64]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_float(thread, params).await?.expect("value");
+        let result = get_float(thread, params)?.expect("value");
         let diff = result.as_f32()? - 42.0;
         assert!(diff.abs() < f32::EPSILON);
         Ok(())
@@ -2079,7 +2058,7 @@ mod tests {
             Reference::from(vec![42i8]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 42.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2093,7 +2072,7 @@ mod tests {
             Reference::from(vec![42i16]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 42.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2107,7 +2086,7 @@ mod tests {
             Reference::from(vec![42 as char]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 42.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2121,7 +2100,7 @@ mod tests {
             Reference::from(vec![42i32]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 42.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2135,7 +2114,7 @@ mod tests {
             Reference::from(vec![42i64]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 42.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2149,7 +2128,7 @@ mod tests {
             Reference::from(vec![42.0f32]),
         );
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 42.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2163,9 +2142,9 @@ mod tests {
             Reference::from(vec![0i16]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_byte(thread.clone(), params).await?;
+        set_byte(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_short(thread, params).await?.expect("value");
+        let result = get_short(thread, params)?.expect("value");
         assert_eq!(result.as_i16()?, 42);
         Ok(())
     }
@@ -2178,9 +2157,9 @@ mod tests {
             Reference::from(vec![0i32]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_byte(thread.clone(), params).await?;
+        set_byte(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_int(thread, params).await?.expect("value");
+        let result = get_int(thread, params)?.expect("value");
         assert_eq!(result.as_i32()?, 42);
         Ok(())
     }
@@ -2193,9 +2172,9 @@ mod tests {
             Reference::from(vec![0i64]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_byte(thread.clone(), params).await?;
+        set_byte(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_long(thread, params).await?.expect("value");
+        let result = get_long(thread, params)?.expect("value");
         assert_eq!(result.as_i64()?, 42);
         Ok(())
     }
@@ -2208,9 +2187,9 @@ mod tests {
             Reference::from(vec![0f32]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_byte(thread.clone(), params).await?;
+        set_byte(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_float(thread, params).await?.expect("value");
+        let result = get_float(thread, params)?.expect("value");
         let diff = result.as_f32()? - 42.0;
         assert!(diff.abs() < f32::EPSILON);
         Ok(())
@@ -2224,9 +2203,9 @@ mod tests {
             Reference::from(vec![0.0f64]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_byte(thread.clone(), params).await?;
+        set_byte(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 42.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2240,9 +2219,9 @@ mod tests {
             Reference::from(vec![0i32]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(65)]);
-        set_char(thread.clone(), params).await?;
+        set_char(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_int(thread, params).await?.expect("value");
+        let result = get_int(thread, params)?.expect("value");
         assert_eq!(result.as_i32()?, 65);
         Ok(())
     }
@@ -2255,9 +2234,9 @@ mod tests {
             Reference::from(vec![0i64]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(65)]);
-        set_char(thread.clone(), params).await?;
+        set_char(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_long(thread, params).await?.expect("value");
+        let result = get_long(thread, params)?.expect("value");
         assert_eq!(result.as_i64()?, 65);
         Ok(())
     }
@@ -2270,9 +2249,9 @@ mod tests {
             Reference::from(vec![0f32]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(65)]);
-        set_char(thread.clone(), params).await?;
+        set_char(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_float(thread, params).await?.expect("value");
+        let result = get_float(thread, params)?.expect("value");
         let diff = result.as_f32()? - 65.0;
         assert!(diff.abs() < f32::EPSILON);
         Ok(())
@@ -2286,9 +2265,9 @@ mod tests {
             Reference::from(vec![0.0f64]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(65)]);
-        set_char(thread.clone(), params).await?;
+        set_char(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 65.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2302,9 +2281,9 @@ mod tests {
             Reference::from(vec![0i32]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_short(thread.clone(), params).await?;
+        set_short(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_int(thread, params).await?.expect("value");
+        let result = get_int(thread, params)?.expect("value");
         assert_eq!(result.as_i32()?, 42);
         Ok(())
     }
@@ -2317,9 +2296,9 @@ mod tests {
             Reference::from(vec![0i64]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_short(thread.clone(), params).await?;
+        set_short(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_long(thread, params).await?.expect("value");
+        let result = get_long(thread, params)?.expect("value");
         assert_eq!(result.as_i64()?, 42);
         Ok(())
     }
@@ -2332,9 +2311,9 @@ mod tests {
             Reference::from(vec![0f32]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_short(thread.clone(), params).await?;
+        set_short(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_float(thread, params).await?.expect("value");
+        let result = get_float(thread, params)?.expect("value");
         let diff = result.as_f32()? - 42.0;
         assert!(diff.abs() < f32::EPSILON);
         Ok(())
@@ -2348,9 +2327,9 @@ mod tests {
             Reference::from(vec![0.0f64]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_short(thread.clone(), params).await?;
+        set_short(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 42.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2364,9 +2343,9 @@ mod tests {
             Reference::from(vec![0i64]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_int(thread.clone(), params).await?;
+        set_int(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_long(thread, params).await?.expect("value");
+        let result = get_long(thread, params)?.expect("value");
         assert_eq!(result.as_i64()?, 42);
         Ok(())
     }
@@ -2379,9 +2358,9 @@ mod tests {
             Reference::from(vec![0f32]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_int(thread.clone(), params).await?;
+        set_int(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_float(thread, params).await?.expect("value");
+        let result = get_float(thread, params)?.expect("value");
         let diff = result.as_f32()? - 42.0;
         assert!(diff.abs() < f32::EPSILON);
         Ok(())
@@ -2395,9 +2374,9 @@ mod tests {
             Reference::from(vec![0.0f64]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Int(42)]);
-        set_int(thread.clone(), params).await?;
+        set_int(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 42.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2411,9 +2390,9 @@ mod tests {
             Reference::from(vec![0f32]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Long(42)]);
-        set_long(thread.clone(), params).await?;
+        set_long(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_float(thread, params).await?.expect("value");
+        let result = get_float(thread, params)?.expect("value");
         let diff = result.as_f32()? - 42.0;
         assert!(diff.abs() < f32::EPSILON);
         Ok(())
@@ -2427,9 +2406,9 @@ mod tests {
             Reference::from(vec![0.0f64]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Long(42)]);
-        set_long(thread.clone(), params).await?;
+        set_long(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 42.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2443,9 +2422,9 @@ mod tests {
             Reference::from(vec![0.0f64]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Float(42.0)]);
-        set_float(thread.clone(), params).await?;
+        set_float(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - 42.0;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2459,7 +2438,7 @@ mod tests {
             Reference::from(vec![false, true]),
         );
         let params = Parameters::new(vec![array]);
-        let result = get_length(thread, params).await?.expect("length");
+        let result = get_length(thread, params)?.expect("length");
         assert_eq!(result.as_i32()?, 2);
         Ok(())
     }
@@ -2472,7 +2451,7 @@ mod tests {
             Reference::from(vec![1i8, 2i8, 3i8]),
         );
         let params = Parameters::new(vec![array]);
-        let result = get_length(thread, params).await?.expect("length");
+        let result = get_length(thread, params)?.expect("length");
         assert_eq!(result.as_i32()?, 3);
         Ok(())
     }
@@ -2485,7 +2464,7 @@ mod tests {
             Reference::from(vec!['a', 'b']),
         );
         let params = Parameters::new(vec![array]);
-        let result = get_length(thread, params).await?.expect("length");
+        let result = get_length(thread, params)?.expect("length");
         assert_eq!(result.as_i32()?, 2);
         Ok(())
     }
@@ -2498,7 +2477,7 @@ mod tests {
             Reference::from(vec![1i16]),
         );
         let params = Parameters::new(vec![array]);
-        let result = get_length(thread, params).await?.expect("length");
+        let result = get_length(thread, params)?.expect("length");
         assert_eq!(result.as_i32()?, 1);
         Ok(())
     }
@@ -2511,7 +2490,7 @@ mod tests {
             Reference::from(vec![1i64, 2i64, 3i64, 4i64]),
         );
         let params = Parameters::new(vec![array]);
-        let result = get_length(thread, params).await?.expect("length");
+        let result = get_length(thread, params)?.expect("length");
         assert_eq!(result.as_i32()?, 4);
         Ok(())
     }
@@ -2524,7 +2503,7 @@ mod tests {
             Reference::from(vec![1.0f32, 2.0f32]),
         );
         let params = Parameters::new(vec![array]);
-        let result = get_length(thread, params).await?.expect("length");
+        let result = get_length(thread, params)?.expect("length");
         assert_eq!(result.as_i32()?, 2);
         Ok(())
     }
@@ -2537,7 +2516,7 @@ mod tests {
             Reference::from(vec![1.0f64]),
         );
         let params = Parameters::new(vec![array]);
-        let result = get_length(thread, params).await?.expect("length");
+        let result = get_length(thread, params)?.expect("length");
         assert_eq!(result.as_i32()?, 1);
         Ok(())
     }
@@ -2550,7 +2529,7 @@ mod tests {
             Reference::from(Vec::<i32>::new()),
         );
         let params = Parameters::new(vec![array]);
-        let result = get_length(thread, params).await?.expect("length");
+        let result = get_length(thread, params)?.expect("length");
         assert_eq!(result.as_i32()?, 0);
         Ok(())
     }
@@ -2584,7 +2563,7 @@ mod tests {
             .await?
             .expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 3);
         Ok(())
     }
@@ -2603,7 +2582,7 @@ mod tests {
             .await?
             .expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 3);
         Ok(())
     }
@@ -2622,7 +2601,7 @@ mod tests {
             .await?
             .expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 3);
         Ok(())
     }
@@ -2641,7 +2620,7 @@ mod tests {
             .await?
             .expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 3);
         Ok(())
     }
@@ -2660,7 +2639,7 @@ mod tests {
             .await?
             .expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 3);
         Ok(())
     }
@@ -2679,7 +2658,7 @@ mod tests {
             .await?
             .expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 3);
         Ok(())
     }
@@ -2698,7 +2677,7 @@ mod tests {
             .await?
             .expect("array");
         let len_params = Parameters::new(vec![result]);
-        let len = get_length(thread, len_params).await?.expect("length");
+        let len = get_length(thread, len_params)?.expect("length");
         assert_eq!(len.as_i32()?, 3);
         Ok(())
     }
@@ -2713,7 +2692,7 @@ mod tests {
         // Value::Int(1) is unboxed as PrimitiveValue::Int, not Boolean,
         // so setting into a BooleanArray via generic set should fail
         let params = Parameters::new(vec![array, Value::Int(0), Value::Int(1)]);
-        assert!(set(thread, params).await.is_err());
+        assert!(set(thread, params).is_err());
         Ok(())
     }
 
@@ -2725,9 +2704,9 @@ mod tests {
             Reference::from(vec![0i64]),
         );
         let params = Parameters::new(vec![array.clone(), Value::Int(0), Value::Long(99)]);
-        set(thread.clone(), params).await?;
+        set(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_long(thread, params).await?.expect("value");
+        let result = get_long(thread, params)?.expect("value");
         assert_eq!(result.as_i64()?, 99);
         Ok(())
     }
@@ -2744,9 +2723,9 @@ mod tests {
             Value::Int(0),
             Value::Float(std::f32::consts::PI),
         ]);
-        set(thread.clone(), params).await?;
+        set(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_float(thread, params).await?.expect("value");
+        let result = get_float(thread, params)?.expect("value");
         let diff = result.as_f32()? - std::f32::consts::PI;
         assert!(diff.abs() < f32::EPSILON);
         Ok(())
@@ -2764,9 +2743,9 @@ mod tests {
             Value::Int(0),
             Value::Double(std::f64::consts::E),
         ]);
-        set(thread.clone(), params).await?;
+        set(thread.clone(), params)?;
         let params = Parameters::new(vec![array, Value::Int(0)]);
-        let result = get_double(thread, params).await?.expect("value");
+        let result = get_double(thread, params)?.expect("value");
         let diff = result.as_f64()? - std::f64::consts::E;
         assert!(diff.abs() < f64::EPSILON);
         Ok(())
@@ -2780,7 +2759,7 @@ mod tests {
             Reference::from(vec![0i32]),
         );
         let params = Parameters::new(vec![array, Value::Int(5), Value::Int(1)]);
-        assert!(set(thread, params).await.is_err());
+        assert!(set(thread, params).is_err());
         Ok(())
     }
 

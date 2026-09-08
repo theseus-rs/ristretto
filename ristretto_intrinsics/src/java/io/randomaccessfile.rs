@@ -9,7 +9,6 @@ use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_17};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
 use ristretto_types::JavaError::RuntimeException;
@@ -53,7 +52,6 @@ fn resolve_path<T: Thread + 'static>(thread: &Arc<T>, path: &str) -> Result<Path
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.close0()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -62,7 +60,6 @@ pub async fn close_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.getFilePointer()J", Any)]
-#[async_method]
 pub async fn get_file_pointer<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -106,8 +103,7 @@ pub async fn get_file_pointer<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -115,7 +111,6 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.length()J", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn length<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -124,7 +119,6 @@ pub async fn length<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.length0()J", GreaterThanOrEqual(JAVA_21))]
-#[async_method]
 pub async fn length_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -170,7 +164,6 @@ pub async fn length_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.open0(Ljava/lang/String;I)V", Any)]
-#[async_method]
 pub async fn open_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -274,7 +267,6 @@ pub async fn open_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.read0()I", Any)]
-#[async_method]
 pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -306,7 +298,6 @@ pub async fn read_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.readBytes([BII)I", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn read_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -318,7 +309,6 @@ pub async fn read_bytes<T: Thread + 'static>(
     "java/io/RandomAccessFile.readBytes0([BII)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn read_bytes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -399,7 +389,6 @@ pub async fn read_bytes_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.seek0(J)V", Any)]
-#[async_method]
 pub async fn seek_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -438,7 +427,6 @@ pub async fn seek_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.setLength(J)V", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn set_length<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -447,7 +435,6 @@ pub async fn set_length<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.setLength0(J)V", GreaterThanOrEqual(JAVA_21))]
-#[async_method]
 pub async fn set_length_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -489,7 +476,6 @@ pub async fn set_length_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.write0(I)V", Any)]
-#[async_method]
 pub async fn write_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -509,7 +495,6 @@ pub async fn write_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/RandomAccessFile.writeBytes([BII)V", LessThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn write_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -521,7 +506,6 @@ pub async fn write_bytes<T: Thread + 'static>(
     "java/io/RandomAccessFile.writeBytes0([BII)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn write_bytes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -635,7 +619,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }

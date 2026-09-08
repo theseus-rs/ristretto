@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -13,8 +12,7 @@ use std::sync::Arc;
 /// If they differ, the process is running as setUID.
 /// On non-Unix platforms (Windows, WASM), setUID does not apply and this always returns `false`.
 #[intrinsic_method("java/util/logging/FileHandler.isSetUID()Z", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn is_set_uid<T: Thread + 'static>(
+pub fn is_set_uid<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,7 +48,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_set_uid() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = is_set_uid(thread, Parameters::default()).await?;
+        let result = is_set_uid(thread, Parameters::default())?;
         // On most test environments, the process is not running as setUID
         assert_eq!(result, Some(Value::from(false)));
         Ok(())

@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -8,8 +7,7 @@ use std::sync::Arc;
 use zerocopy::transmute;
 
 #[intrinsic_method("java/lang/Double.doubleToRawLongBits(D)J", Any)]
-#[async_method]
-pub async fn double_to_raw_long_bits<T: Thread + 'static>(
+pub fn double_to_raw_long_bits<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -19,8 +17,7 @@ pub async fn double_to_raw_long_bits<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Double.longBitsToDouble(J)D", Any)]
-#[async_method]
-pub async fn long_bits_to_double<T: Thread + 'static>(
+pub fn long_bits_to_double<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,7 +37,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let mut parameters = Parameters::default();
         parameters.push_double(42.0);
-        let value = double_to_raw_long_bits(thread, parameters).await?;
+        let value = double_to_raw_long_bits(thread, parameters)?;
         assert_eq!(Some(Value::Long(4_631_107_791_820_423_168)), value);
         Ok(())
     }
@@ -50,7 +47,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await?;
         let mut parameters = Parameters::default();
         parameters.push_long(4_631_107_791_820_423_168);
-        let value = long_bits_to_double(thread, parameters).await?;
+        let value = long_bits_to_double(thread, parameters)?;
         assert_eq!(Some(Value::Double(42.0)), value);
         Ok(())
     }

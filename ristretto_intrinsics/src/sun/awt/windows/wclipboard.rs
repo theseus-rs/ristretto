@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/awt/windows/WClipboard.closeClipboard()V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn close_clipboard<T: Thread + 'static>(
+pub fn close_clipboard<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn close_clipboard<T: Thread + 'static>(
     "sun/awt/windows/WClipboard.closeClipboard0()V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn close_clipboard0<T: Thread + 'static>(
+pub fn close_clipboard0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -37,8 +34,7 @@ pub async fn close_clipboard0<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WClipboard.getClipboardData(J)[B", Any)]
-#[async_method]
-pub async fn get_clipboard_data<T: Thread + 'static>(
+pub fn get_clipboard_data<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,8 +45,7 @@ pub async fn get_clipboard_data<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WClipboard.getClipboardFormats()[J", Any)]
-#[async_method]
-pub async fn get_clipboard_formats<T: Thread + 'static>(
+pub fn get_clipboard_formats<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -60,8 +55,7 @@ pub async fn get_clipboard_formats<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WClipboard.init()V", Any)]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -71,8 +65,7 @@ pub async fn init<T: Thread + 'static>(
     "sun/awt/windows/WClipboard.openClipboard(Lsun/awt/datatransfer/SunClipboard;)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn open_clipboard<T: Thread + 'static>(
+pub fn open_clipboard<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -87,8 +80,7 @@ pub async fn open_clipboard<T: Thread + 'static>(
     "sun/awt/windows/WClipboard.openClipboard0(Lsun/awt/datatransfer/SunClipboard;)V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn open_clipboard0<T: Thread + 'static>(
+pub fn open_clipboard0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -100,8 +92,7 @@ pub async fn open_clipboard0<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WClipboard.publishClipboardData(J[B)V", Any)]
-#[async_method]
-pub async fn publish_clipboard_data<T: Thread + 'static>(
+pub fn publish_clipboard_data<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -116,8 +107,7 @@ pub async fn publish_clipboard_data<T: Thread + 'static>(
     "sun/awt/windows/WClipboard.registerClipboard()V",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn register_clipboard<T: Thread + 'static>(
+pub fn register_clipboard<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -127,8 +117,7 @@ pub async fn register_clipboard<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WClipboard.registerClipboardViewer()V", Any)]
-#[async_method]
-pub async fn register_clipboard_viewer<T: Thread + 'static>(
+pub fn register_clipboard_viewer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -146,7 +135,7 @@ mod tests {
     #[tokio::test]
     async fn test_close_clipboard() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close_clipboard(thread, Parameters::default()).await;
+        let result = close_clipboard(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WClipboard.closeClipboard()V",
             result.unwrap_err().to_string()
@@ -157,7 +146,7 @@ mod tests {
     #[tokio::test]
     async fn test_close_clipboard0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close_clipboard0(thread, Parameters::default()).await;
+        let result = close_clipboard0(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WClipboard.closeClipboard0()V",
             result.unwrap_err().to_string()
@@ -168,7 +157,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_clipboard_data() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_clipboard_data(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_clipboard_data(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WClipboard.getClipboardData(J)[B",
             result.unwrap_err().to_string()
@@ -179,7 +168,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_clipboard_formats() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_clipboard_formats(thread, Parameters::default()).await;
+        let result = get_clipboard_formats(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WClipboard.getClipboardFormats()[J",
             result.unwrap_err().to_string()
@@ -190,7 +179,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init(thread, Parameters::default()).await;
+        let result = init(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WClipboard.init()V",
             result.unwrap_err().to_string()
@@ -201,7 +190,7 @@ mod tests {
     #[tokio::test]
     async fn test_open_clipboard() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = open_clipboard(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = open_clipboard(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WClipboard.openClipboard(Lsun/awt/datatransfer/SunClipboard;)V",
             result.unwrap_err().to_string()
@@ -212,7 +201,7 @@ mod tests {
     #[tokio::test]
     async fn test_open_clipboard0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = open_clipboard0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = open_clipboard0(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WClipboard.openClipboard0(Lsun/awt/datatransfer/SunClipboard;)V",
             result.unwrap_err().to_string()
@@ -226,8 +215,7 @@ mod tests {
         let result = publish_clipboard_data(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WClipboard.publishClipboardData(J[B)V",
             result.unwrap_err().to_string()
@@ -238,7 +226,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_clipboard() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = register_clipboard(thread, Parameters::default()).await;
+        let result = register_clipboard(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WClipboard.registerClipboard()V",
             result.unwrap_err().to_string()
@@ -249,7 +237,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_clipboard_viewer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = register_clipboard_viewer(thread, Parameters::default()).await;
+        let result = register_clipboard_viewer(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WClipboard.registerClipboardViewer()V",
             result.unwrap_err().to_string()

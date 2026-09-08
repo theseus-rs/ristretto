@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_11, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/security/mscapi/CRSACipher.cngEncryptDecrypt([I[BIJZ)[B",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn cng_encrypt_decrypt<T: Thread + 'static>(
+pub fn cng_encrypt_decrypt<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -31,8 +29,7 @@ pub async fn cng_encrypt_decrypt<T: Thread + 'static>(
     "sun/security/mscapi/CRSACipher.encryptDecrypt([I[BIJZ)[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn encrypt_decrypt<T: Thread + 'static>(
+pub fn encrypt_decrypt<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -64,8 +61,7 @@ mod tests {
                 Value::Long(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/security/mscapi/CRSACipher.cngEncryptDecrypt([I[BIJZ)[B",
             result.unwrap_err().to_string()
@@ -85,8 +81,7 @@ mod tests {
                 Value::Long(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/security/mscapi/CRSACipher.encryptDecrypt([I[BIJZ)[B",
             result.unwrap_err().to_string()

@@ -3,7 +3,6 @@ use ahash::AHashMap;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::{JAVA_17, JAVA_21, JAVA_25};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::JavaObject;
@@ -16,7 +15,6 @@ use std::sync::Arc;
     "jdk/internal/util/SystemProps$Raw.platformProperties()[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn platform_properties<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -109,7 +107,6 @@ fn push_property(
     "jdk/internal/util/SystemProps$Raw.vmProperties()[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn vm_properties<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,

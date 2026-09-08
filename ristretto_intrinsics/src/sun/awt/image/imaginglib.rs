@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/image/ImagingLib.convolveBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;Ljava/awt/image/Kernel;I)I",
     Any
 )]
-#[async_method]
-pub async fn convolve_bi<T: Thread + 'static>(
+pub fn convolve_bi<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn convolve_bi<T: Thread + 'static>(
     "sun/awt/image/ImagingLib.convolveRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;Ljava/awt/image/Kernel;I)I",
     Any
 )]
-#[async_method]
-pub async fn convolve_raster<T: Thread + 'static>(
+pub fn convolve_raster<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,8 +37,7 @@ pub async fn convolve_raster<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/awt/image/ImagingLib.init()Z", Any)]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -52,8 +48,7 @@ pub async fn init<T: Thread + 'static>(
     "sun/awt/image/ImagingLib.lookupByteBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;[[B)I",
     Any
 )]
-#[async_method]
-pub async fn lookup_byte_bi<T: Thread + 'static>(
+pub fn lookup_byte_bi<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -67,8 +62,7 @@ pub async fn lookup_byte_bi<T: Thread + 'static>(
     "sun/awt/image/ImagingLib.lookupByteRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;[[B)I",
     Any
 )]
-#[async_method]
-pub async fn lookup_byte_raster<T: Thread + 'static>(
+pub fn lookup_byte_raster<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,8 +76,7 @@ pub async fn lookup_byte_raster<T: Thread + 'static>(
     "sun/awt/image/ImagingLib.transformBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;[DI)I",
     Any
 )]
-#[async_method]
-pub async fn transform_bi<T: Thread + 'static>(
+pub fn transform_bi<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -98,8 +91,7 @@ pub async fn transform_bi<T: Thread + 'static>(
     "sun/awt/image/ImagingLib.transformRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;[DI)I",
     Any
 )]
-#[async_method]
-pub async fn transform_raster<T: Thread + 'static>(
+pub fn transform_raster<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -125,8 +117,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.awt.image.ImagingLib.convolveBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;Ljava/awt/image/Kernel;I)I",
             result.unwrap_err().to_string()
@@ -144,8 +135,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.awt.image.ImagingLib.convolveRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;Ljava/awt/image/Kernel;I)I",
             result.unwrap_err().to_string()
@@ -155,7 +145,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init(thread, Parameters::default()).await;
+        let result = init(thread, Parameters::default());
         assert_eq!(
             "sun.awt.image.ImagingLib.init()Z",
             result.unwrap_err().to_string()
@@ -172,8 +162,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.awt.image.ImagingLib.lookupByteBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;[[B)I",
             result.unwrap_err().to_string()
@@ -190,8 +179,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.awt.image.ImagingLib.lookupByteRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;[[B)I",
             result.unwrap_err().to_string()
@@ -209,8 +197,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.awt.image.ImagingLib.transformBI(Ljava/awt/image/BufferedImage;Ljava/awt/image/BufferedImage;[DI)I",
             result.unwrap_err().to_string()
@@ -228,8 +215,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.awt.image.ImagingLib.transformRaster(Ljava/awt/image/Raster;Ljava/awt/image/Raster;[DI)I",
             result.unwrap_err().to_string()

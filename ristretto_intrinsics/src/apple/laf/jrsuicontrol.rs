@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("apple/laf/JRSUIControl.disposeCFDictionary(J)V", Any)]
-#[async_method]
-pub async fn dispose_cf_dictionary<T: Thread + 'static>(
+pub fn dispose_cf_dictionary<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,8 +19,7 @@ pub async fn dispose_cf_dictionary<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/laf/JRSUIControl.getCFDictionary(Z)J", Any)]
-#[async_method]
-pub async fn get_cf_dictionary<T: Thread + 'static>(
+pub fn get_cf_dictionary<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -34,8 +31,7 @@ pub async fn get_cf_dictionary<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/laf/JRSUIControl.getNativeHitPart(JJJDDDDDD)I", Any)]
-#[async_method]
-pub async fn get_native_hit_part<T: Thread + 'static>(
+pub fn get_native_hit_part<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,8 +51,7 @@ pub async fn get_native_hit_part<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/laf/JRSUIControl.getNativePartBounds([DJJJDDDDI)V", Any)]
-#[async_method]
-pub async fn get_native_part_bounds<T: Thread + 'static>(
+pub fn get_native_part_bounds<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -79,8 +74,7 @@ pub async fn get_native_part_bounds<T: Thread + 'static>(
     "apple/laf/JRSUIControl.getNativeScrollBarOffsetChange(JJJDDDDIII)D",
     Any
 )]
-#[async_method]
-pub async fn get_native_scroll_bar_offset_change<T: Thread + 'static>(
+pub fn get_native_scroll_bar_offset_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -101,8 +95,7 @@ pub async fn get_native_scroll_bar_offset_change<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/laf/JRSUIControl.getPtrOfBuffer(Ljava/nio/ByteBuffer;)J", Any)]
-#[async_method]
-pub async fn get_ptr_of_buffer<T: Thread + 'static>(
+pub fn get_ptr_of_buffer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -114,8 +107,7 @@ pub async fn get_ptr_of_buffer<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/laf/JRSUIControl.initNativeJRSUI()I", Any)]
-#[async_method]
-pub async fn init_native_jrsui<T: Thread + 'static>(
+pub fn init_native_jrsui<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -126,8 +118,7 @@ pub async fn init_native_jrsui<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/laf/JRSUIControl.paintChangesImage([IIIJJJDDDDJ)I", Any)]
-#[async_method]
-pub async fn paint_changes_image<T: Thread + 'static>(
+pub fn paint_changes_image<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -149,8 +140,7 @@ pub async fn paint_changes_image<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/laf/JRSUIControl.paintChangesToCGContext(JJJJDDDDJ)I", Any)]
-#[async_method]
-pub async fn paint_changes_to_cg_context<T: Thread + 'static>(
+pub fn paint_changes_to_cg_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -170,8 +160,7 @@ pub async fn paint_changes_to_cg_context<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/laf/JRSUIControl.paintImage([IIIJJJDDDD)I", Any)]
-#[async_method]
-pub async fn paint_image<T: Thread + 'static>(
+pub fn paint_image<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -192,8 +181,7 @@ pub async fn paint_image<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/laf/JRSUIControl.paintToCGContext(JJJJDDDD)I", Any)]
-#[async_method]
-pub async fn paint_to_cg_context<T: Thread + 'static>(
+pub fn paint_to_cg_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -212,8 +200,7 @@ pub async fn paint_to_cg_context<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/laf/JRSUIControl.syncChanges(JJ)I", Any)]
-#[async_method]
-pub async fn sync_changes<T: Thread + 'static>(
+pub fn sync_changes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -232,7 +219,7 @@ mod tests {
     #[tokio::test]
     async fn test_dispose_cf_dictionary() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dispose_cf_dictionary(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = dispose_cf_dictionary(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "apple.laf.JRSUIControl.disposeCFDictionary(J)V",
             result.unwrap_err().to_string()
@@ -242,7 +229,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_cf_dictionary() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_cf_dictionary(thread, Parameters::new(vec![Value::from(false)])).await;
+        let result = get_cf_dictionary(thread, Parameters::new(vec![Value::from(false)]));
         assert_eq!(
             "apple.laf.JRSUIControl.getCFDictionary(Z)J",
             result.unwrap_err().to_string()
@@ -265,8 +252,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Double(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "apple.laf.JRSUIControl.getNativeHitPart(JJJDDDDDD)I",
             result.unwrap_err().to_string()
@@ -289,8 +275,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "apple.laf.JRSUIControl.getNativePartBounds([DJJJDDDDI)V",
             result.unwrap_err().to_string()
@@ -314,8 +299,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "apple.laf.JRSUIControl.getNativeScrollBarOffsetChange(JJJDDDDIII)D",
             result.unwrap_err().to_string()
@@ -325,7 +309,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_ptr_of_buffer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_ptr_of_buffer(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_ptr_of_buffer(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "apple.laf.JRSUIControl.getPtrOfBuffer(Ljava/nio/ByteBuffer;)J",
             result.unwrap_err().to_string()
@@ -335,7 +319,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_native_jrsui() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_native_jrsui(thread, Parameters::default()).await;
+        let result = init_native_jrsui(thread, Parameters::default());
         assert_eq!(
             "apple.laf.JRSUIControl.initNativeJRSUI()I",
             result.unwrap_err().to_string()
@@ -360,8 +344,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "apple.laf.JRSUIControl.paintChangesImage([IIIJJJDDDDJ)I",
             result.unwrap_err().to_string()
@@ -384,8 +367,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "apple.laf.JRSUIControl.paintChangesToCGContext(JJJJDDDDJ)I",
             result.unwrap_err().to_string()
@@ -409,8 +391,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Double(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "apple.laf.JRSUIControl.paintImage([IIIJJJDDDD)I",
             result.unwrap_err().to_string()
@@ -432,8 +413,7 @@ mod tests {
                 Value::Double(0.0),
                 Value::Double(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "apple.laf.JRSUIControl.paintToCGContext(JJJJDDDD)I",
             result.unwrap_err().to_string()
@@ -446,8 +426,7 @@ mod tests {
         let result = sync_changes(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "apple.laf.JRSUIControl.syncChanges(JJ)I",
             result.unwrap_err().to_string()

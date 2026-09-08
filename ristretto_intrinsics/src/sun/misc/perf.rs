@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 use ristretto_types::Thread;
@@ -30,7 +29,6 @@ async fn create_byte_buffer<T: Thread + 'static>(
     "sun/misc/Perf.attach(Ljava/lang/String;II)Ljava/nio/ByteBuffer;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn attach<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -46,7 +44,6 @@ pub async fn attach<T: Thread + 'static>(
     "sun/misc/Perf.createByteArray(Ljava/lang/String;II[BI)Ljava/nio/ByteBuffer;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn create_byte_array<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -72,7 +69,6 @@ pub async fn create_byte_array<T: Thread + 'static>(
     "sun/misc/Perf.createLong(Ljava/lang/String;IIJ)Ljava/nio/ByteBuffer;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn create_long<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -91,8 +87,7 @@ pub async fn create_long<T: Thread + 'static>(
     "sun/misc/Perf.detach(Ljava/nio/ByteBuffer;)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn detach<T: Thread + 'static>(
+pub fn detach<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,8 +97,7 @@ pub async fn detach<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/misc/Perf.highResCounter()J", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn high_res_counter<T: Thread + 'static>(
+pub fn high_res_counter<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -114,8 +108,7 @@ pub async fn high_res_counter<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/misc/Perf.highResFrequency()J", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn high_res_frequency<T: Thread + 'static>(
+pub fn high_res_frequency<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -123,8 +116,7 @@ pub async fn high_res_frequency<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/misc/Perf.registerNatives()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn register_natives<T: Thread + 'static>(
+pub fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -196,7 +188,6 @@ mod tests {
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
         )
-        .await
         .expect("detach");
         assert_eq!(None, result);
     }
@@ -204,25 +195,21 @@ mod tests {
     #[tokio::test]
     async fn test_high_res_counter() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = high_res_counter(thread, Parameters::default())
-            .await
-            .expect("counter");
+        let result = high_res_counter(thread, Parameters::default()).expect("counter");
         assert!(matches!(result, Some(Value::Long(value)) if value > 0));
     }
 
     #[tokio::test]
     async fn test_high_res_frequency() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = high_res_frequency(thread, Parameters::default())
-            .await
-            .expect("frequency");
+        let result = high_res_frequency(thread, Parameters::default()).expect("frequency");
         assert_eq!(Some(Value::Long(1_000_000_000)), result);
     }
 
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = register_natives(thread, Parameters::default()).await?;
+        let result = register_natives(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

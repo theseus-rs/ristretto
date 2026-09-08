@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CDropTargetContextPeer.addTransfer(JJJ)V", Any)]
-#[async_method]
-pub async fn add_transfer<T: Thread + 'static>(
+pub fn add_transfer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,8 +21,7 @@ pub async fn add_transfer<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CDropTargetContextPeer.dropDone(JJZZI)V", Any)]
-#[async_method]
-pub async fn drop_done<T: Thread + 'static>(
+pub fn drop_done<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,8 +37,7 @@ pub async fn drop_done<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/lwawt/macosx/CDropTargetContextPeer.startTransfer(JJ)J", Any)]
-#[async_method]
-pub async fn start_transfer<T: Thread + 'static>(
+pub fn start_transfer<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -63,8 +59,7 @@ mod tests {
         let result = add_transfer(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CDropTargetContextPeer.addTransfer(JJJ)V",
             result.unwrap_err().to_string()
@@ -83,8 +78,7 @@ mod tests {
                 Value::from(false),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CDropTargetContextPeer.dropDone(JJZZI)V",
             result.unwrap_err().to_string()
@@ -97,8 +91,7 @@ mod tests {
         let result = start_transfer(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.lwawt.macosx.CDropTargetContextPeer.startTransfer(JJ)J",
             result.unwrap_err().to_string()

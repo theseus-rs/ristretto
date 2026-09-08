@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/lwawt/macosx/CAccessibility.focusChanged()V", Any)]
-#[async_method]
-pub async fn focus_changed<T: Thread + 'static>(
+pub fn focus_changed<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -23,8 +21,7 @@ pub async fn focus_changed<T: Thread + 'static>(
     "sun/lwawt/macosx/CAccessibility.roleKey(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn role_key<T: Thread + 'static>(
+pub fn role_key<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -39,7 +36,7 @@ mod tests {
     #[tokio::test]
     async fn test_focus_changed() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = focus_changed(thread, Parameters::default()).await;
+        let result = focus_changed(thread, Parameters::default());
         assert_eq!(
             "sun.lwawt.macosx.CAccessibility.focusChanged()V",
             result.unwrap_err().to_string()
@@ -49,7 +46,7 @@ mod tests {
     #[tokio::test]
     async fn test_role_key() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = role_key(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = role_key(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.lwawt.macosx.CAccessibility.roleKey(Ljavax/accessibility/AccessibleRole;)Ljava/lang/String;",
             result.unwrap_err().to_string()

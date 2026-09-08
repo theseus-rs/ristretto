@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/awt/windows/WInputMethod.createNativeContext()I", Any)]
-#[async_method]
-pub async fn create_native_context<T: Thread + 'static>(
+pub fn create_native_context<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -19,8 +17,7 @@ pub async fn create_native_context<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WInputMethod.destroyNativeContext(I)V", Any)]
-#[async_method]
-pub async fn destroy_native_context<T: Thread + 'static>(
+pub fn destroy_native_context<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -34,8 +31,7 @@ pub async fn destroy_native_context<T: Thread + 'static>(
     "sun/awt/windows/WInputMethod.disableNativeIME(Lsun/awt/windows/WComponentPeer;)V",
     Any
 )]
-#[async_method]
-pub async fn disable_native_ime<T: Thread + 'static>(
+pub fn disable_native_ime<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +46,7 @@ pub async fn disable_native_ime<T: Thread + 'static>(
     "sun/awt/windows/WInputMethod.enableNativeIME(Lsun/awt/windows/WComponentPeer;IZ)V",
     Any
 )]
-#[async_method]
-pub async fn enable_native_ime<T: Thread + 'static>(
+pub fn enable_native_ime<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -65,8 +60,7 @@ pub async fn enable_native_ime<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WInputMethod.endCompositionNative(IZ)V", Any)]
-#[async_method]
-pub async fn end_composition_native<T: Thread + 'static>(
+pub fn end_composition_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -78,8 +72,7 @@ pub async fn end_composition_native<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WInputMethod.getConversionStatus(I)I", Any)]
-#[async_method]
-pub async fn get_conversion_status<T: Thread + 'static>(
+pub fn get_conversion_status<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -93,8 +86,7 @@ pub async fn get_conversion_status<T: Thread + 'static>(
     "sun/awt/windows/WInputMethod.getNativeIMMDescription()Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn get_native_immdescription<T: Thread + 'static>(
+pub fn get_native_immdescription<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -107,8 +99,7 @@ pub async fn get_native_immdescription<T: Thread + 'static>(
     "sun/awt/windows/WInputMethod.getNativeLocale()Ljava/util/Locale;",
     Any
 )]
-#[async_method]
-pub async fn get_native_locale<T: Thread + 'static>(
+pub fn get_native_locale<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -118,8 +109,7 @@ pub async fn get_native_locale<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WInputMethod.getOpenStatus(I)Z", Any)]
-#[async_method]
-pub async fn get_open_status<T: Thread + 'static>(
+pub fn get_open_status<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -133,8 +123,7 @@ pub async fn get_open_status<T: Thread + 'static>(
     "sun/awt/windows/WInputMethod.handleNativeIMEEvent(Lsun/awt/windows/WComponentPeer;Ljava/awt/AWTEvent;)V",
     Any
 )]
-#[async_method]
-pub async fn handle_native_imeevent<T: Thread + 'static>(
+pub fn handle_native_imeevent<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -143,8 +132,7 @@ pub async fn handle_native_imeevent<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WInputMethod.handleNativeIMEEvent(Lsun/awt/windows/WComponentPeer;Ljava/awt/AWTEvent;)V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/windows/WInputMethod.isCompositionStringAvailable(I)Z", Any)]
-#[async_method]
-pub async fn is_composition_string_available<T: Thread + 'static>(
+pub fn is_composition_string_available<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -158,8 +146,7 @@ pub async fn is_composition_string_available<T: Thread + 'static>(
     "sun/awt/windows/WInputMethod.openCandidateWindow(Lsun/awt/windows/WComponentPeer;II)V",
     Any
 )]
-#[async_method]
-pub async fn open_candidate_window<T: Thread + 'static>(
+pub fn open_candidate_window<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -173,8 +160,7 @@ pub async fn open_candidate_window<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WInputMethod.setConversionStatus(II)V", Any)]
-#[async_method]
-pub async fn set_conversion_status<T: Thread + 'static>(
+pub fn set_conversion_status<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -189,8 +175,7 @@ pub async fn set_conversion_status<T: Thread + 'static>(
     "sun/awt/windows/WInputMethod.setNativeLocale(Ljava/lang/String;Z)Z",
     Any
 )]
-#[async_method]
-pub async fn set_native_locale<T: Thread + 'static>(
+pub fn set_native_locale<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -202,8 +187,7 @@ pub async fn set_native_locale<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WInputMethod.setOpenStatus(IZ)V", Any)]
-#[async_method]
-pub async fn set_open_status<T: Thread + 'static>(
+pub fn set_open_status<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -218,8 +202,7 @@ pub async fn set_open_status<T: Thread + 'static>(
     "sun/awt/windows/WInputMethod.setStatusWindowVisible(Lsun/awt/windows/WComponentPeer;Z)V",
     Any
 )]
-#[async_method]
-pub async fn set_status_window_visible<T: Thread + 'static>(
+pub fn set_status_window_visible<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -240,7 +223,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_native_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create_native_context(thread, Parameters::default()).await;
+        let result = create_native_context(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WInputMethod.createNativeContext()I",
             result.unwrap_err().to_string()
@@ -251,7 +234,7 @@ mod tests {
     #[tokio::test]
     async fn test_destroy_native_context() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = destroy_native_context(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = destroy_native_context(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WInputMethod.destroyNativeContext(I)V",
             result.unwrap_err().to_string()
@@ -262,7 +245,7 @@ mod tests {
     #[tokio::test]
     async fn test_disable_native_ime() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = disable_native_ime(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = disable_native_ime(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WInputMethod.disableNativeIME(Lsun/awt/windows/WComponentPeer;)V",
             result.unwrap_err().to_string()
@@ -276,8 +259,7 @@ mod tests {
         let result = enable_native_ime(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WInputMethod.enableNativeIME(Lsun/awt/windows/WComponentPeer;IZ)V",
             result.unwrap_err().to_string()
@@ -291,8 +273,7 @@ mod tests {
         let result = end_composition_native(
             thread,
             Parameters::new(vec![Value::Int(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WInputMethod.endCompositionNative(IZ)V",
             result.unwrap_err().to_string()
@@ -303,7 +284,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_conversion_status() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_conversion_status(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_conversion_status(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WInputMethod.getConversionStatus(I)I",
             result.unwrap_err().to_string()
@@ -314,7 +295,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_native_immdescription() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_native_immdescription(thread, Parameters::default()).await;
+        let result = get_native_immdescription(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WInputMethod.getNativeIMMDescription()Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -325,7 +306,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_native_locale() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_native_locale(thread, Parameters::default()).await;
+        let result = get_native_locale(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WInputMethod.getNativeLocale()Ljava/util/Locale;",
             result.unwrap_err().to_string()
@@ -336,7 +317,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_open_status() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_open_status(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = get_open_status(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WInputMethod.getOpenStatus(I)Z",
             result.unwrap_err().to_string()
@@ -350,8 +331,7 @@ mod tests {
         let result = handle_native_imeevent(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WInputMethod.handleNativeIMEEvent(Lsun/awt/windows/WComponentPeer;Ljava/awt/AWTEvent;)V",
             result.unwrap_err().to_string()
@@ -362,8 +342,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_composition_string_available() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            is_composition_string_available(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = is_composition_string_available(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WInputMethod.isCompositionStringAvailable(I)Z",
             result.unwrap_err().to_string()
@@ -377,8 +356,7 @@ mod tests {
         let result = open_candidate_window(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WInputMethod.openCandidateWindow(Lsun/awt/windows/WComponentPeer;II)V",
             result.unwrap_err().to_string()
@@ -390,8 +368,7 @@ mod tests {
     async fn test_set_conversion_status() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            set_conversion_status(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]))
-                .await;
+            set_conversion_status(thread, Parameters::new(vec![Value::Int(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WInputMethod.setConversionStatus(II)V",
             result.unwrap_err().to_string()
@@ -405,8 +382,7 @@ mod tests {
         let result = set_native_locale(
             thread,
             Parameters::new(vec![Value::Object(None), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WInputMethod.setNativeLocale(Ljava/lang/String;Z)Z",
             result.unwrap_err().to_string()
@@ -420,8 +396,7 @@ mod tests {
         let result = set_open_status(
             thread,
             Parameters::new(vec![Value::Int(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WInputMethod.setOpenStatus(IZ)V",
             result.unwrap_err().to_string()
@@ -435,8 +410,7 @@ mod tests {
         let result = set_status_window_visible(
             thread,
             Parameters::new(vec![Value::Object(None), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WInputMethod.setStatusWindowVisible(Lsun/awt/windows/WComponentPeer;Z)V",
             result.unwrap_err().to_string()

@@ -5,7 +5,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -16,8 +15,7 @@ use std::sync::Arc;
     "sun/java2d/xr/XRSurfaceData.XRInitSurface(IIIJI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn xr_init_surface<T: Thread + 'static>(
+pub fn xr_init_surface<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -36,8 +34,7 @@ pub async fn xr_init_surface<T: Thread + 'static>(
     "sun/java2d/xr/XRSurfaceData.freeXSDOPicture(J)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn free_xsdo_picture<T: Thread + 'static>(
+pub fn free_xsdo_picture<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,8 +46,7 @@ pub async fn free_xsdo_picture<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/xr/XRSurfaceData.initIDs()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -61,8 +57,7 @@ pub async fn init_ids<T: Thread + 'static>(
     "sun/java2d/xr/XRSurfaceData.initXRPicture(JI)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn init_xr_picture<T: Thread + 'static>(
+pub fn init_xr_picture<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -79,8 +74,7 @@ pub async fn init_xr_picture<T: Thread + 'static>(
     "sun/java2d/xr/XRSurfaceData.XRInitSurface(IIIJI)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn xrinit_surface_linux_ge_v11<T: Thread + 'static>(
+pub fn xrinit_surface_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -100,8 +94,7 @@ pub async fn xrinit_surface_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRSurfaceData.freeXSDOPicture(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn free_xsdopicture_linux_ge_v11<T: Thread + 'static>(
+pub fn free_xsdopicture_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -114,8 +107,7 @@ pub async fn free_xsdopicture_linux_ge_v11<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/java2d/xr/XRSurfaceData.initIDs()V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn init_ids_linux_ge_v11<T: Thread + 'static>(
+pub fn init_ids_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -130,8 +122,7 @@ pub async fn init_ids_linux_ge_v11<T: Thread + 'static>(
     "sun/java2d/xr/XRSurfaceData.initXRPicture(JI)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_xrpicture_linux_ge_v11<T: Thread + 'static>(
+pub fn init_xrpicture_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -159,8 +150,7 @@ mod tests {
                 Value::Long(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.xr.XRSurfaceData.XRInitSurface(IIIJI)V",
             result.unwrap_err().to_string()
@@ -170,7 +160,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_xsdo_picture() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = free_xsdo_picture(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = free_xsdo_picture(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.xr.XRSurfaceData.freeXSDOPicture(J)V",
             result.unwrap_err().to_string()
@@ -180,7 +170,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::java8_thread().await?;
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -188,8 +178,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_xr_picture() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result =
-            init_xr_picture(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+        let result = init_xr_picture(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun.java2d.xr.XRSurfaceData.initXRPicture(JI)V",
             result.unwrap_err().to_string()
@@ -209,8 +198,7 @@ mod tests {
                 Value::Long(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRSurfaceData.XRInitSurface(IIIJI)V",
             result.unwrap_err().to_string()
@@ -221,8 +209,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_xsdopicture_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            free_xsdopicture_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = free_xsdopicture_linux_ge_v11(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/java2d/xr/XRSurfaceData.freeXSDOPicture(J)V",
             result.unwrap_err().to_string()
@@ -233,7 +220,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids_linux_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids_linux_ge_v11(thread, Parameters::default()).await;
+        let result = init_ids_linux_ge_v11(thread, Parameters::default());
         assert_eq!(
             "sun/java2d/xr/XRSurfaceData.initIDs()V",
             result.unwrap_err().to_string()
@@ -247,8 +234,7 @@ mod tests {
         let result = init_xrpicture_linux_ge_v11(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/java2d/xr/XRSurfaceData.initXRPicture(JI)V",
             result.unwrap_err().to_string()

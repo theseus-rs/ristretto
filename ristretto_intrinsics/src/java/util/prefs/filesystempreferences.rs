@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, Thread, VM};
 use std::sync::Arc;
@@ -13,7 +12,6 @@ use std::sync::Arc;
     "java/util/prefs/FileSystemPreferences.chmod(Ljava/lang/String;I)I",
     Any
 )]
-#[async_method]
 pub async fn chmod<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
@@ -34,7 +32,6 @@ pub async fn chmod<T: Thread + 'static>(
     "java/util/prefs/FileSystemPreferences.lockFile0(Ljava/lang/String;IZ)[I",
     Any
 )]
-#[async_method]
 pub async fn lock_file_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -56,7 +53,6 @@ pub async fn lock_file_0<T: Thread + 'static>(
 /// Unlocks a previously locked file and closes the file descriptor.
 /// Returns 0 on success, errno on failure.
 #[intrinsic_method("java/util/prefs/FileSystemPreferences.unlockFile0(I)I", Any)]
-#[async_method]
 pub async fn unlock_file_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,

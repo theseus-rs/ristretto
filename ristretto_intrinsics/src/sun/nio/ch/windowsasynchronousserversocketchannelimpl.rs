@@ -3,7 +3,6 @@ use crate::sun::nio::ch::iocp::{
 };
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -31,7 +30,6 @@ async fn socket_fd<V: VM + ?Sized>(vm: &V, socket: i64, operation: &str) -> Resu
     "sun/nio/ch/WindowsAsynchronousServerSocketChannelImpl.accept0(JJJJ)I",
     Any
 )]
-#[async_method]
 #[expect(clippy::too_many_lines)]
 pub async fn accept0<T: Thread + 'static>(
     thread: Arc<T>,
@@ -156,7 +154,6 @@ pub async fn accept0<T: Thread + 'static>(
     "sun/nio/ch/WindowsAsynchronousServerSocketChannelImpl.closesocket0(J)V",
     Any
 )]
-#[async_method]
 pub async fn closesocket0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -177,8 +174,7 @@ pub async fn closesocket0<T: Thread + 'static>(
     "sun/nio/ch/WindowsAsynchronousServerSocketChannelImpl.initIDs()V",
     Any
 )]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -189,7 +185,6 @@ pub async fn init_ids<T: Thread + 'static>(
     "sun/nio/ch/WindowsAsynchronousServerSocketChannelImpl.updateAcceptContext(JJ)V",
     Any
 )]
-#[async_method]
 pub async fn update_accept_context<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -257,7 +252,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(None, result.expect("initIDs"));
     }
 

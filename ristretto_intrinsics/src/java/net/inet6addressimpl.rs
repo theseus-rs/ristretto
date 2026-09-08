@@ -5,7 +5,6 @@ use crate::net_helpers::{
 use ristretto_classfile::JAVA_17;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_types::Error::InternalError;
@@ -14,7 +13,6 @@ use std::net::IpAddr;
 use std::sync::Arc;
 
 #[intrinsic_method("java/net/Inet6AddressImpl.getHostByAddr([B)Ljava/lang/String;", Any)]
-#[async_method]
 pub async fn get_host_by_addr<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -45,7 +43,6 @@ pub async fn get_host_by_addr<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/Inet6AddressImpl.getLocalHostName()Ljava/lang/String;", Any)]
-#[async_method]
 pub async fn get_local_host_name<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -59,7 +56,6 @@ pub async fn get_local_host_name<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/Inet6AddressImpl.isReachable0([BII[BII)Z", Any)]
-#[async_method]
 pub async fn is_reachable_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
@@ -150,7 +146,6 @@ async fn do_lookup_all_host_addr<T: Thread + 'static>(
     "java/net/Inet6AddressImpl.lookupAllHostAddr(Ljava/lang/String;)[Ljava/net/InetAddress;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn lookup_all_host_addr_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -162,7 +157,6 @@ pub async fn lookup_all_host_addr_0<T: Thread + 'static>(
     "java/net/Inet6AddressImpl.lookupAllHostAddr(Ljava/lang/String;I)[Ljava/net/InetAddress;",
     GreaterThan(JAVA_17)
 )]
-#[async_method]
 pub async fn lookup_all_host_addr_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

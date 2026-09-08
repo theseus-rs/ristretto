@@ -1,14 +1,12 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nAvailable(JZ)I", Any)]
-#[async_method]
-pub async fn n_available<T: ristretto_types::Thread + 'static>(
+pub fn n_available<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,8 +38,7 @@ pub async fn n_available<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nClose(JZ)V", Any)]
-#[async_method]
-pub async fn n_close<T: ristretto_types::Thread + 'static>(
+pub fn n_close<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -64,8 +61,7 @@ pub async fn n_close<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nFlush(JZ)V", Any)]
-#[async_method]
-pub async fn n_flush<T: ristretto_types::Thread + 'static>(
+pub fn n_flush<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -88,9 +84,8 @@ pub async fn n_flush<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nGetBufferSize(JZ)I", Any)]
-#[async_method]
 #[expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-pub async fn n_get_buffer_size<T: ristretto_types::Thread + 'static>(
+pub fn n_get_buffer_size<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -109,8 +104,7 @@ pub async fn n_get_buffer_size<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nGetBytePosition(JZJ)J", Any)]
-#[async_method]
-pub async fn n_get_byte_position<T: ristretto_types::Thread + 'static>(
+pub fn n_get_byte_position<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -134,7 +128,6 @@ pub async fn n_get_byte_position<T: ristretto_types::Thread + 'static>(
     "com/sun/media/sound/DirectAudioDevice.nGetFormats(IIZLjava/util/Vector;)V",
     Any
 )]
-#[async_method]
 pub async fn n_get_formats<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -186,8 +179,7 @@ pub async fn n_get_formats<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nIsStillDraining(JZ)Z", Any)]
-#[async_method]
-pub async fn n_is_still_draining<T: ristretto_types::Thread + 'static>(
+pub fn n_is_still_draining<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -217,8 +209,7 @@ pub async fn n_is_still_draining<T: ristretto_types::Thread + 'static>(
     clippy::cast_sign_loss
 )]
 #[cfg_attr(not(target_family = "wasm"), expect(clippy::cast_possible_wrap))]
-#[async_method]
-pub async fn n_open<T: ristretto_types::Thread + 'static>(
+pub fn n_open<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -509,13 +500,12 @@ pub async fn n_open<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nRead(J[BIII)I", Any)]
-#[async_method]
 #[expect(
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
     clippy::cast_possible_wrap
 )]
-pub async fn n_read<T: ristretto_types::Thread + 'static>(
+pub fn n_read<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -544,8 +534,7 @@ pub async fn n_read<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nRequiresServicing(JZ)Z", Any)]
-#[async_method]
-pub async fn n_requires_servicing<T: ristretto_types::Thread + 'static>(
+pub fn n_requires_servicing<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -553,8 +542,7 @@ pub async fn n_requires_servicing<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nService(JZ)V", Any)]
-#[async_method]
-pub async fn n_service<T: ristretto_types::Thread + 'static>(
+pub fn n_service<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -562,8 +550,7 @@ pub async fn n_service<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nSetBytePosition(JZJ)V", Any)]
-#[async_method]
-pub async fn n_set_byte_position<T: ristretto_types::Thread + 'static>(
+pub fn n_set_byte_position<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -583,8 +570,7 @@ pub async fn n_set_byte_position<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nStart(JZ)V", Any)]
-#[async_method]
-pub async fn n_start<T: ristretto_types::Thread + 'static>(
+pub fn n_start<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -607,8 +593,7 @@ pub async fn n_start<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nStop(JZ)V", Any)]
-#[async_method]
-pub async fn n_stop<T: ristretto_types::Thread + 'static>(
+pub fn n_stop<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -631,12 +616,11 @@ pub async fn n_stop<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/DirectAudioDevice.nWrite(J[BIIIFF)I", Any)]
-#[async_method]
 #[cfg_attr(
     not(all(target_family = "wasm", target_os = "unknown")),
     expect(clippy::cast_sign_loss)
 )]
-pub async fn n_write<T: ristretto_types::Thread + 'static>(
+pub fn n_write<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -826,7 +810,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push(Value::Long(0));
         params.push(Value::Int(1)); // is_source
-        let result = n_available(thread, params).await?;
+        let result = n_available(thread, params)?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -837,7 +821,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push(Value::Long(0));
         params.push(Value::Int(1));
-        let result = n_close(thread, params).await?;
+        let result = n_close(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -848,7 +832,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push(Value::Long(0));
         params.push(Value::Int(1));
-        let result = n_flush(thread, params).await?;
+        let result = n_flush(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -859,7 +843,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push(Value::Long(0));
         params.push(Value::Int(1));
-        let result = n_get_buffer_size(thread, params).await?;
+        let result = n_get_buffer_size(thread, params)?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -871,7 +855,7 @@ mod tests {
         params.push(Value::Long(0));
         params.push(Value::Int(1));
         params.push(Value::Long(0));
-        let result = n_get_byte_position(thread, params).await?;
+        let result = n_get_byte_position(thread, params)?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
@@ -889,7 +873,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push(Value::Long(0));
         params.push(Value::Int(1));
-        let result = n_is_still_draining(thread, params).await?;
+        let result = n_is_still_draining(thread, params)?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -897,7 +881,7 @@ mod tests {
     #[tokio::test]
     async fn test_n_requires_servicing() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_requires_servicing(thread, Parameters::default()).await?;
+        let result = n_requires_servicing(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -905,7 +889,7 @@ mod tests {
     #[tokio::test]
     async fn test_n_service() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_service(thread, Parameters::default()).await?;
+        let result = n_service(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -917,7 +901,7 @@ mod tests {
         params.push(Value::Long(0));
         params.push(Value::Int(1));
         params.push(Value::Long(0));
-        let result = n_set_byte_position(thread, params).await?;
+        let result = n_set_byte_position(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -928,7 +912,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push(Value::Long(0));
         params.push(Value::Int(1));
-        let result = n_start(thread, params).await?;
+        let result = n_start(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -939,7 +923,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push(Value::Long(0));
         params.push(Value::Int(1));
-        let result = n_stop(thread, params).await?;
+        let result = n_stop(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -953,7 +937,7 @@ mod tests {
         params.push(Value::Int(0)); // offset
         params.push(Value::Int(0)); // len
         params.push(Value::Int(0)); // conversion_size
-        let result = n_read(thread, params).await?;
+        let result = n_read(thread, params)?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -969,7 +953,7 @@ mod tests {
         params.push(Value::Int(0)); // conversion_size
         params.push(Value::Float(1.0)); // left
         params.push(Value::Float(1.0)); // right
-        let result = n_write(thread, params).await?;
+        let result = n_write(thread, params)?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }

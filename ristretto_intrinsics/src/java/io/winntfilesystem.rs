@@ -5,7 +5,7 @@ use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, Thread};
 use std::sync::Arc;
 
@@ -13,7 +13,6 @@ use std::sync::Arc;
     "java/io/WinNTFileSystem.canonicalize0(Ljava/lang/String;)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn canonicalize_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -25,7 +24,6 @@ pub async fn canonicalize_0<T: Thread + 'static>(
     "java/io/WinNTFileSystem.canonicalizeWithPrefix0(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn canonicalize_with_prefix_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -37,31 +35,28 @@ pub async fn canonicalize_with_prefix_0<T: Thread + 'static>(
     "java/io/WinNTFileSystem.checkAccess(Ljava/io/File;I)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn check_access<T: Thread + 'static>(
+pub fn check_access<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::check_access(thread, parameters).await
+    filesystem::check_access(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/WinNTFileSystem.checkAccess0(Ljava/io/File;I)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn check_access_0<T: Thread + 'static>(
+pub fn check_access_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::check_access(thread, parameters).await
+    filesystem::check_access(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/WinNTFileSystem.createDirectory(Ljava/io/File;)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn create_directory<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -73,7 +68,6 @@ pub async fn create_directory<T: Thread + 'static>(
     "java/io/WinNTFileSystem.createDirectory0(Ljava/io/File;)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn create_directory_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -85,7 +79,6 @@ pub async fn create_directory_0<T: Thread + 'static>(
     "java/io/WinNTFileSystem.createFileExclusively(Ljava/lang/String;)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn create_file_exclusively<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -97,7 +90,6 @@ pub async fn create_file_exclusively<T: Thread + 'static>(
     "java/io/WinNTFileSystem.createFileExclusively0(Ljava/lang/String;)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn create_file_exclusively_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -109,7 +101,6 @@ pub async fn create_file_exclusively_0<T: Thread + 'static>(
     "java/io/WinNTFileSystem.delete0(Ljava/io/File;)Z",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn delete_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -118,7 +109,6 @@ pub async fn delete_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/WinNTFileSystem.delete0(Ljava/io/File;Z)Z", Equal(JAVA_25))]
-#[async_method]
 pub async fn delete_0_with_flag<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -131,7 +121,6 @@ pub async fn delete_0_with_flag<T: Thread + 'static>(
     "java/io/WinNTFileSystem.getFinalPath0(Ljava/lang/String;)Ljava/lang/String;",
     Equal(JAVA_25)
 )]
-#[async_method]
 pub async fn get_final_path_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -143,28 +132,25 @@ pub async fn get_final_path_0<T: Thread + 'static>(
     "java/io/WinNTFileSystem.getBooleanAttributes(Ljava/io/File;)I",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_boolean_attributes<T: Thread + 'static>(
+pub fn get_boolean_attributes<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::get_boolean_attributes(thread, parameters).await
+    filesystem::get_boolean_attributes(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/WinNTFileSystem.getBooleanAttributes0(Ljava/io/File;)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn get_boolean_attributes_0<T: Thread + 'static>(
+pub fn get_boolean_attributes_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::get_boolean_attributes(thread, parameters).await
+    filesystem::get_boolean_attributes(thread, parameters)
 }
 
 #[intrinsic_method("java/io/WinNTFileSystem.getDriveDirectory(I)Ljava/lang/String;", Any)]
-#[async_method]
 pub async fn get_drive_directory<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -176,7 +162,6 @@ pub async fn get_drive_directory<T: Thread + 'static>(
     "java/io/WinNTFileSystem.getLastModifiedTime(Ljava/io/File;)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_last_modified_time<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -188,7 +173,6 @@ pub async fn get_last_modified_time<T: Thread + 'static>(
     "java/io/WinNTFileSystem.getLastModifiedTime0(Ljava/io/File;)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn get_last_modified_time_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -200,7 +184,6 @@ pub async fn get_last_modified_time_0<T: Thread + 'static>(
     "java/io/WinNTFileSystem.getLength(Ljava/io/File;)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_length<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -212,7 +195,6 @@ pub async fn get_length<T: Thread + 'static>(
     "java/io/WinNTFileSystem.getLength0(Ljava/io/File;)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn get_length_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -224,26 +206,23 @@ pub async fn get_length_0<T: Thread + 'static>(
     "java/io/WinNTFileSystem.getNameMax0(Ljava/lang/String;)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_name_max_0<T: Thread + 'static>(
+pub fn get_name_max_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::get_name_max(thread, parameters).await
+    filesystem::get_name_max(thread, parameters)
 }
 
 #[intrinsic_method("java/io/WinNTFileSystem.getSpace0(Ljava/io/File;I)J", Any)]
-#[async_method]
-pub async fn get_space_0<T: Thread + 'static>(
+pub fn get_space_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::get_space(thread, parameters).await
+    filesystem::get_space(thread, parameters)
 }
 
 #[intrinsic_method("java/io/WinNTFileSystem.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -254,7 +233,6 @@ pub async fn init_ids<T: Thread + 'static>(
     "java/io/WinNTFileSystem.list(Ljava/io/File;)[Ljava/lang/String;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn list<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -266,7 +244,6 @@ pub async fn list<T: Thread + 'static>(
     "java/io/WinNTFileSystem.list0(Ljava/io/File;)[Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn list_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -275,16 +252,14 @@ pub async fn list_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/WinNTFileSystem.listRoots0()I", Any)]
-#[async_method]
-pub async fn list_roots_0<T: Thread + 'static>(
+pub fn list_roots_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::list_roots(thread, parameters).await
+    filesystem::list_roots(thread, parameters)
 }
 
 #[intrinsic_method("java/io/WinNTFileSystem.rename0(Ljava/io/File;Ljava/io/File;)Z", Any)]
-#[async_method]
 pub async fn rename_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -296,31 +271,28 @@ pub async fn rename_0<T: Thread + 'static>(
     "java/io/WinNTFileSystem.setLastModifiedTime(Ljava/io/File;J)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn set_last_modified_time<T: Thread + 'static>(
+pub fn set_last_modified_time<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::set_last_modified_time(thread, parameters).await
+    filesystem::set_last_modified_time(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/WinNTFileSystem.setLastModifiedTime0(Ljava/io/File;J)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn set_last_modified_time_0<T: Thread + 'static>(
+pub fn set_last_modified_time_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    filesystem::set_last_modified_time(thread, parameters).await
+    filesystem::set_last_modified_time(thread, parameters)
 }
 
 #[intrinsic_method(
     "java/io/WinNTFileSystem.setPermission(Ljava/io/File;IZZ)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn set_permission<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -332,7 +304,6 @@ pub async fn set_permission<T: Thread + 'static>(
     "java/io/WinNTFileSystem.setPermission0(Ljava/io/File;IZZ)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn set_permission_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -344,7 +315,6 @@ pub async fn set_permission_0<T: Thread + 'static>(
     "java/io/WinNTFileSystem.setReadOnly(Ljava/io/File;)Z",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn set_read_only<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -356,7 +326,6 @@ pub async fn set_read_only<T: Thread + 'static>(
     "java/io/WinNTFileSystem.setReadOnly0(Ljava/io/File;)Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn set_read_only_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -424,7 +393,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         parameters.push_int(FileAccessMode::READ.bits());
-        let value = check_access(thread, parameters).await?.expect("name max");
+        let value = check_access(thread, parameters)?.expect("name max");
         let has_access = value.as_bool()?;
         assert!(has_access);
         Ok(())
@@ -494,9 +463,7 @@ mod tests {
         let (_file, file_object) = create_file(&thread, "get_boolean_attributes_0").await?;
         let mut parameters = Parameters::default();
         parameters.push(file_object);
-        let value = get_boolean_attributes(thread, parameters)
-            .await?
-            .expect("attributes");
+        let value = get_boolean_attributes(thread, parameters)?.expect("attributes");
         let attributes = value.as_i32()?;
         assert!(attributes > 0);
         Ok(())
@@ -575,7 +542,7 @@ mod tests {
         let path = "get_name_max_0.txt".to_object(&thread).await?;
         let mut parameters = Parameters::default();
         parameters.push(path);
-        let value = get_name_max_0(thread, parameters).await?.expect("name max");
+        let value = get_name_max_0(thread, parameters)?.expect("name max");
         let length = value.as_i64()?;
         assert_eq!(255, length);
         Ok(())
@@ -589,7 +556,7 @@ mod tests {
             let mut parameters = Parameters::default();
             parameters.push(file_object);
             parameters.push_int(space_type);
-            let value = get_space_0(thread, parameters).await?.expect("space");
+            let value = get_space_0(thread, parameters)?.expect("space");
             let space = value.as_i64()?;
 
             if space_type > 2 {
@@ -604,7 +571,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }
@@ -629,9 +596,7 @@ mod tests {
     #[tokio::test]
     async fn test_list_roots_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let value = list_roots_0(thread, Parameters::default())
-            .await?
-            .expect("roots");
+        let value = list_roots_0(thread, Parameters::default())?.expect("roots");
         let count = value.as_i32()?;
         assert!(count > 0);
         Ok(())
@@ -665,9 +630,7 @@ mod tests {
         let mut parameters = Parameters::default();
         parameters.push(file_object);
         parameters.push_long(0);
-        let value = set_last_modified_time(thread, parameters)
-            .await?
-            .expect("success");
+        let value = set_last_modified_time(thread, parameters)?.expect("success");
         let success = value.as_bool()?;
         assert!(success);
         Ok(())

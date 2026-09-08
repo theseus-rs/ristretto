@@ -4,13 +4,12 @@ use crate::java::io::socketfiledescriptor::get_fd;
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, Thread};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/nio/ch/IOUtil.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -18,8 +17,7 @@ pub async fn init_ids<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.iovMax()I", Any)]
-#[async_method]
-pub async fn iov_max<T: Thread + 'static>(
+pub fn iov_max<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn iov_max<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.writevMax()J", GreaterThanOrEqual(JAVA_21))]
-#[async_method]
-pub async fn writev_max<T: Thread + 'static>(
+pub fn writev_max<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -36,8 +33,7 @@ pub async fn writev_max<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.fdVal(Ljava/io/FileDescriptor;)I", Any)]
-#[async_method]
-pub async fn fd_val<T: Thread + 'static>(
+pub fn fd_val<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -45,8 +41,7 @@ pub async fn fd_val<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/IOUtil.setfdVal(Ljava/io/FileDescriptor;I)V", Any)]
-#[async_method]
-pub async fn set_fd_val<T: Thread + 'static>(
+pub fn set_fd_val<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {

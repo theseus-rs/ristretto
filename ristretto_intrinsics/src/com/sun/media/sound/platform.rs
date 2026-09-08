@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 use ristretto_classfile::{JAVA_8, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
@@ -10,8 +9,7 @@ use std::sync::Arc;
     "com/sun/media/sound/Platform.nGetExtraLibraries()Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn n_get_extra_libraries<T: ristretto_types::Thread + 'static>(
+pub fn n_get_extra_libraries<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -22,8 +20,7 @@ pub async fn n_get_extra_libraries<T: ristretto_types::Thread + 'static>(
     "com/sun/media/sound/Platform.nGetLibraryForFeature(I)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn n_get_library_for_feature<T: ristretto_types::Thread + 'static>(
+pub fn n_get_library_for_feature<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -34,8 +31,7 @@ pub async fn n_get_library_for_feature<T: ristretto_types::Thread + 'static>(
     "com/sun/media/sound/Platform.nIsBigEndian()Z",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn n_is_big_endian<T: ristretto_types::Thread + 'static>(
+pub fn n_is_big_endian<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,8 +40,7 @@ pub async fn n_is_big_endian<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/Platform.nIsSigned8()Z", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn n_is_signed_8<T: ristretto_types::Thread + 'static>(
+pub fn n_is_signed_8<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,7 +54,7 @@ mod tests {
     #[tokio::test]
     async fn test_n_get_extra_libraries() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_get_extra_libraries(thread, Parameters::default()).await?;
+        let result = n_get_extra_libraries(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -67,7 +62,7 @@ mod tests {
     #[tokio::test]
     async fn test_n_get_library_for_feature() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_get_library_for_feature(thread, Parameters::default()).await?;
+        let result = n_get_library_for_feature(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -75,7 +70,7 @@ mod tests {
     #[tokio::test]
     async fn test_n_is_big_endian() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_is_big_endian(thread, Parameters::default()).await?;
+        let result = n_is_big_endian(thread, Parameters::default())?;
         let big_endian = cfg!(target_endian = "big");
         assert_eq!(result, Some(Value::from(big_endian)));
         Ok(())
@@ -84,7 +79,7 @@ mod tests {
     #[tokio::test]
     async fn test_n_is_signed_8() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_is_signed_8(thread, Parameters::default()).await?;
+        let result = n_is_signed_8(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }

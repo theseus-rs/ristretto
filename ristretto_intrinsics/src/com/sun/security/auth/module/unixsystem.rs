@@ -5,7 +5,6 @@ use ristretto_classfile::VersionSpecification::Any;
 #[cfg(target_os = "windows")]
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -14,8 +13,7 @@ use std::sync::Arc;
 
 #[cfg(not(target_os = "windows"))]
 #[intrinsic_method("com/sun/security/auth/module/UnixSystem.getUnixInfo()V", Any)]
-#[async_method]
-pub async fn get_unix_info<T: Thread + 'static>(
+pub fn get_unix_info<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,8 +28,7 @@ pub async fn get_unix_info<T: Thread + 'static>(
     "com/sun/security/auth/module/UnixSystem.getUnixInfo()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_unix_info_windows_ge_v11<T: Thread + 'static>(
+pub fn get_unix_info_windows_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,7 +46,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_unix_info() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_unix_info(thread, Parameters::default()).await;
+        let result = get_unix_info(thread, Parameters::default());
         assert_eq!(
             "com.sun.security.auth.module.UnixSystem.getUnixInfo()V",
             result.unwrap_err().to_string()
@@ -60,7 +57,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_unix_info_windows_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_unix_info_windows_ge_v11(thread, Parameters::default()).await;
+        let result = get_unix_info_windows_ge_v11(thread, Parameters::default());
         assert_eq!(
             "com/sun/security/auth/module/UnixSystem.getUnixInfo()V",
             result.unwrap_err().to_string()

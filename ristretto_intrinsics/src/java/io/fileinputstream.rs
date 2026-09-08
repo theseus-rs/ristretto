@@ -8,7 +8,6 @@ use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_17, JAVA_25};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 #[cfg(all(target_family = "wasm", not(target_os = "wasi")))]
 use ristretto_types::JavaError::RuntimeException;
@@ -58,7 +57,6 @@ fn resolve_path<T: Thread + 'static>(thread: &Arc<T>, path: &str) -> Result<Path
 }
 
 #[intrinsic_method("java/io/FileInputStream.available0()I", Any)]
-#[async_method]
 pub async fn available_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -122,7 +120,6 @@ pub async fn available_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileInputStream.close0()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -131,8 +128,7 @@ pub async fn close_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileInputStream.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -143,7 +139,6 @@ pub async fn init_ids<T: Thread + 'static>(
     "java/io/FileInputStream.isRegularFile0(Ljava/io/FileDescriptor;)Z",
     GreaterThanOrEqual(JAVA_25)
 )]
-#[async_method]
 pub async fn is_regular_file_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -192,7 +187,6 @@ pub async fn is_regular_file_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileInputStream.length0()J", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn length_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -201,7 +195,6 @@ pub async fn length_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileInputStream.open0(Ljava/lang/String;)V", Any)]
-#[async_method]
 pub async fn open_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -302,7 +295,6 @@ pub async fn open_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileInputStream.position0()J", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn position_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -311,7 +303,6 @@ pub async fn position_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileInputStream.read0()I", Any)]
-#[async_method]
 pub async fn read_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -343,7 +334,6 @@ pub async fn read_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileInputStream.readBytes([BII)I", Any)]
-#[async_method]
 pub async fn read_bytes<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -450,7 +440,6 @@ pub async fn read_bytes<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/io/FileInputStream.skip0(J)J", Any)]
-#[async_method]
 pub async fn skip_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -525,7 +514,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await?;
+        let result = init_ids(thread, Parameters::default())?;
         assert_eq!(None, result);
         Ok(())
     }

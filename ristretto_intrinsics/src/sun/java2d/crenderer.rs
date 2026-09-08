@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -8,8 +7,7 @@ use ristretto_types::{Parameters, Result};
 use std::sync::Arc;
 
 #[intrinsic_method("sun/java2d/CRenderer.doArc(Lsun/java2d/SurfaceData;FFFFFFIZ)V", Any)]
-#[async_method]
-pub async fn do_arc<T: Thread + 'static>(
+pub fn do_arc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,8 +30,7 @@ pub async fn do_arc<T: Thread + 'static>(
     "sun/java2d/CRenderer.doImage(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V",
     Any
 )]
-#[async_method]
-pub async fn do_image<T: Thread + 'static>(
+pub fn do_image<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,8 +52,7 @@ pub async fn do_image<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/CRenderer.doLine(Lsun/java2d/SurfaceData;FFFF)V", Any)]
-#[async_method]
-pub async fn do_line<T: Thread + 'static>(
+pub fn do_line<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,8 +68,7 @@ pub async fn do_line<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/CRenderer.doOval(Lsun/java2d/SurfaceData;FFFFZ)V", Any)]
-#[async_method]
-pub async fn do_oval<T: Thread + 'static>(
+pub fn do_oval<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -90,8 +85,7 @@ pub async fn do_oval<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/CRenderer.doPoly(Lsun/java2d/SurfaceData;[I[IIZZ)V", Any)]
-#[async_method]
-pub async fn do_poly<T: Thread + 'static>(
+pub fn do_poly<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -108,8 +102,7 @@ pub async fn do_poly<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/CRenderer.doRect(Lsun/java2d/SurfaceData;FFFFZ)V", Any)]
-#[async_method]
-pub async fn do_rect<T: Thread + 'static>(
+pub fn do_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -129,8 +122,7 @@ pub async fn do_rect<T: Thread + 'static>(
     "sun/java2d/CRenderer.doRoundRect(Lsun/java2d/SurfaceData;FFFFFFZ)V",
     Any
 )]
-#[async_method]
-pub async fn do_round_rect<T: Thread + 'static>(
+pub fn do_round_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -152,8 +144,7 @@ pub async fn do_round_rect<T: Thread + 'static>(
     "sun/java2d/CRenderer.doShape(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V",
     Any
 )]
-#[async_method]
-pub async fn do_shape<T: Thread + 'static>(
+pub fn do_shape<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -168,8 +159,7 @@ pub async fn do_shape<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/CRenderer.init()V", Any)]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -196,8 +186,7 @@ mod tests {
                 Value::Int(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.CRenderer.doArc(Lsun/java2d/SurfaceData;FFFFFFIZ)V",
             result.unwrap_err().to_string()
@@ -225,8 +214,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.CRenderer.doImage(Lsun/java2d/SurfaceData;Lsun/java2d/SurfaceData;ZZIIIIIIIIII)V",
             result.unwrap_err().to_string()
@@ -245,8 +233,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::Float(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.CRenderer.doLine(Lsun/java2d/SurfaceData;FFFF)V",
             result.unwrap_err().to_string()
@@ -266,8 +253,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.CRenderer.doOval(Lsun/java2d/SurfaceData;FFFFZ)V",
             result.unwrap_err().to_string()
@@ -287,8 +273,7 @@ mod tests {
                 Value::from(false),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.CRenderer.doPoly(Lsun/java2d/SurfaceData;[I[IIZZ)V",
             result.unwrap_err().to_string()
@@ -308,8 +293,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.CRenderer.doRect(Lsun/java2d/SurfaceData;FFFFZ)V",
             result.unwrap_err().to_string()
@@ -331,8 +315,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.CRenderer.doRoundRect(Lsun/java2d/SurfaceData;FFFFFFZ)V",
             result.unwrap_err().to_string()
@@ -353,8 +336,7 @@ mod tests {
                 Value::from(false),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.CRenderer.doShape(Lsun/java2d/SurfaceData;ILjava/nio/FloatBuffer;Ljava/nio/IntBuffer;IZZ)V",
             result.unwrap_err().to_string()
@@ -364,7 +346,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = init(thread, Parameters::default()).await?;
+        let result = init(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

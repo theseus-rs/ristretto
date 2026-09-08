@@ -1,13 +1,11 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{JavaObject, Parameters, Result, VM};
 use std::sync::Arc;
 
 #[intrinsic_method("com/sun/media/sound/PortMixer.nClose(J)V", Any)]
-#[async_method]
-pub async fn n_close<T: ristretto_types::Thread + 'static>(
+pub fn n_close<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,8 +19,7 @@ pub async fn n_close<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/PortMixer.nControlGetFloatValue(J)F", Any)]
-#[async_method]
-pub async fn n_control_get_float_value<T: ristretto_types::Thread + 'static>(
+pub fn n_control_get_float_value<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,8 +29,7 @@ pub async fn n_control_get_float_value<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/PortMixer.nControlGetIntValue(J)I", Any)]
-#[async_method]
-pub async fn n_control_get_int_value<T: ristretto_types::Thread + 'static>(
+pub fn n_control_get_int_value<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -43,8 +39,7 @@ pub async fn n_control_get_int_value<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/PortMixer.nControlSetFloatValue(JF)V", Any)]
-#[async_method]
-pub async fn n_control_set_float_value<T: ristretto_types::Thread + 'static>(
+pub fn n_control_set_float_value<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -54,8 +49,7 @@ pub async fn n_control_set_float_value<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/PortMixer.nControlSetIntValue(JI)V", Any)]
-#[async_method]
-pub async fn n_control_set_int_value<T: ristretto_types::Thread + 'static>(
+pub fn n_control_set_int_value<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -68,8 +62,7 @@ pub async fn n_control_set_int_value<T: ristretto_types::Thread + 'static>(
     "com/sun/media/sound/PortMixer.nGetControls(JILjava/util/Vector;)V",
     Any
 )]
-#[async_method]
-pub async fn n_get_controls<T: ristretto_types::Thread + 'static>(
+pub fn n_get_controls<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -79,8 +72,7 @@ pub async fn n_get_controls<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/PortMixer.nGetPortCount(J)I", Any)]
-#[async_method]
-pub async fn n_get_port_count<T: ristretto_types::Thread + 'static>(
+pub fn n_get_port_count<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -100,7 +92,6 @@ pub async fn n_get_port_count<T: ristretto_types::Thread + 'static>(
     "com/sun/media/sound/PortMixer.nGetPortName(JI)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn n_get_port_name<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -128,8 +119,7 @@ pub async fn n_get_port_name<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/PortMixer.nGetPortType(JI)I", Any)]
-#[async_method]
-pub async fn n_get_port_type<T: ristretto_types::Thread + 'static>(
+pub fn n_get_port_type<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -141,9 +131,8 @@ pub async fn n_get_port_type<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/PortMixer.nOpen(I)J", Any)]
-#[async_method]
 #[cfg_attr(not(target_family = "wasm"), expect(clippy::cast_sign_loss))]
-pub async fn n_open<T: ristretto_types::Thread + 'static>(
+pub fn n_open<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -209,7 +198,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Long(0));
-        let result = n_close(thread, params).await?;
+        let result = n_close(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -219,7 +208,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Long(0));
-        let result = n_control_get_float_value(thread, params).await?;
+        let result = n_control_get_float_value(thread, params)?;
         assert_eq!(result, Some(Value::Float(1.0)));
         Ok(())
     }
@@ -229,7 +218,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Long(0));
-        let result = n_control_get_int_value(thread, params).await?;
+        let result = n_control_get_int_value(thread, params)?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -240,7 +229,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push(Value::Long(0));
         params.push(Value::Float(0.5));
-        let result = n_control_set_float_value(thread, params).await?;
+        let result = n_control_set_float_value(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -251,7 +240,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push(Value::Long(0));
         params.push(Value::Int(1));
-        let result = n_control_set_int_value(thread, params).await?;
+        let result = n_control_set_int_value(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -259,7 +248,7 @@ mod tests {
     #[tokio::test]
     async fn test_n_get_controls() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_get_controls(thread, Parameters::default()).await?;
+        let result = n_get_controls(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -269,7 +258,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Long(0));
-        let result = n_get_port_count(thread, params).await?;
+        let result = n_get_port_count(thread, params)?;
         assert_eq!(result, Some(Value::Int(0)));
         Ok(())
     }
@@ -291,7 +280,7 @@ mod tests {
         let mut params = Parameters::default();
         params.push(Value::Long(0));
         params.push(Value::Int(0));
-        let result = n_get_port_type(thread, params).await?;
+        let result = n_get_port_type(thread, params)?;
         assert_eq!(result, Some(Value::Int(1)));
         Ok(())
     }
@@ -301,7 +290,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Int(0));
-        let result = n_open(thread, params).await?;
+        let result = n_open(thread, params)?;
         assert!(result.is_some());
         Ok(())
     }

@@ -2,7 +2,6 @@ use portable_atomic::{AtomicI64, Ordering};
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThan, LessThanOrEqual};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, Thread, VM as _};
 use std::collections::{HashMap, HashSet};
@@ -44,8 +43,7 @@ fn state<T: Thread + 'static>(thread: &T) -> Result<Arc<KeychainState>> {
     "apple/security/KeychainStore._addItemToKeychain(Ljava/lang/String;Z[B[C)J",
     Any
 )]
-#[async_method]
-pub async fn add_item_to_keychain<T: Thread + 'static>(
+pub fn add_item_to_keychain<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -87,8 +85,7 @@ pub async fn add_item_to_keychain<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/security/KeychainStore._getEncodedKeyData(J[C)[B", Any)]
-#[async_method]
-pub async fn get_encoded_key_data<T: Thread + 'static>(
+pub fn get_encoded_key_data<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -120,8 +117,7 @@ pub async fn get_encoded_key_data<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/security/KeychainStore._releaseKeychainItemRef(J)V", Any)]
-#[async_method]
-pub async fn release_keychain_item_ref<T: Thread + 'static>(
+pub fn release_keychain_item_ref<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -142,8 +138,7 @@ pub async fn release_keychain_item_ref<T: Thread + 'static>(
 }
 
 #[intrinsic_method("apple/security/KeychainStore._removeItemFromKeychain(J)I", Any)]
-#[async_method]
-pub async fn remove_item_from_keychain<T: Thread + 'static>(
+pub fn remove_item_from_keychain<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -172,8 +167,7 @@ pub async fn remove_item_from_keychain<T: Thread + 'static>(
     "apple/security/KeychainStore._scanKeychain()V",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn scan_keychain_0<T: Thread + 'static>(
+pub fn scan_keychain_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -186,8 +180,7 @@ pub async fn scan_keychain_0<T: Thread + 'static>(
     "apple/security/KeychainStore._scanKeychain(Ljava/lang/String;)V",
     GreaterThan(JAVA_21)
 )]
-#[async_method]
-pub async fn scan_keychain_1<T: Thread + 'static>(
+pub fn scan_keychain_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -214,8 +207,7 @@ mod tests {
         let handle = add_item_to_keychain(
             thread.clone(),
             Parameters::new(vec![alias, Value::from(false), data, password]),
-        )
-        .await?
+        )?
         .expect("handle")
         .as_i64()?;
         assert!(handle > 0);
@@ -223,25 +215,22 @@ mod tests {
         let encoded = get_encoded_key_data(
             thread.clone(),
             Parameters::new(vec![Value::Long(handle), Value::Object(None)]),
-        )
-        .await?
+        )?
         .expect("encoded key");
         assert_eq!(&[1_i8, 2, 3], &*encoded.as_byte_vec_ref()?);
 
-        release_keychain_item_ref(thread.clone(), Parameters::new(vec![Value::Long(handle)]))
-            .await?;
+        release_keychain_item_ref(thread.clone(), Parameters::new(vec![Value::Long(handle)]))?;
         assert!(
             get_encoded_key_data(
                 thread.clone(),
                 Parameters::new(vec![Value::Long(handle), Value::Object(None)]),
-            )
-            .await?
+            )?
             .expect("released key")
             .is_null()
         );
         assert_eq!(
             Some(Value::Int(0)),
-            remove_item_from_keychain(thread, Parameters::new(vec![Value::Long(handle)])).await?
+            remove_item_from_keychain(thread, Parameters::new(vec![Value::Long(handle)]))?
         );
         Ok(())
     }
@@ -266,20 +255,17 @@ mod tests {
                 ]),
             )
         };
-        let first = add("first".to_object(&thread).await?, vec![1], password())
-            .await?
+        let first = add("first".to_object(&thread).await?, vec![1], password())?
             .expect("first handle")
             .as_i64()?;
-        let second = add("second".to_object(&thread).await?, vec![2], password())
-            .await?
+        let second = add("second".to_object(&thread).await?, vec![2], password())?
             .expect("second handle")
             .as_i64()?;
         assert_ne!(first, second);
         let encoded = get_encoded_key_data(
             thread,
             Parameters::new(vec![Value::Long(first), Value::Object(None)]),
-        )
-        .await?
+        )?
         .expect("first item");
         assert_eq!(&[1], &*encoded.as_byte_vec_ref()?);
         Ok(())
@@ -294,16 +280,15 @@ mod tests {
             thread.clone(),
             Parameters::new(vec![alias, Value::from(false), data, Value::Object(None)]),
         )
-        .await
         .expect("add passwordless item");
-        let result = scan_keychain_0(thread, Parameters::default()).await;
+        let result = scan_keychain_0(thread, Parameters::default());
         assert_eq!(None, result.expect("result"));
     }
 
     #[tokio::test]
     async fn test_scan_keychain_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = scan_keychain_1(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = scan_keychain_1(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(None, result.expect("result"));
     }
 }

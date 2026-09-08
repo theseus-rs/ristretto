@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual, LessThanOrEqual};
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/java2d/opengl/CGLGraphicsConfig.getCGLConfigInfo()J",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_cgl_config_info_0<T: Thread + 'static>(
+pub fn get_cgl_config_info_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,8 +25,7 @@ pub async fn get_cgl_config_info_0<T: Thread + 'static>(
     "sun/java2d/opengl/CGLGraphicsConfig.getCGLConfigInfo(III)J",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_cgl_config_info_1<T: Thread + 'static>(
+pub fn get_cgl_config_info_1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -42,8 +39,7 @@ pub async fn get_cgl_config_info_1<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.getOGLCapabilities(J)I", Any)]
-#[async_method]
-pub async fn get_ogl_capabilities<T: Thread + 'static>(
+pub fn get_ogl_capabilities<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,8 +51,7 @@ pub async fn get_ogl_capabilities<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.initCGL()Z", Any)]
-#[async_method]
-pub async fn init_cgl<T: Thread + 'static>(
+pub fn init_cgl<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -67,8 +62,7 @@ pub async fn init_cgl<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/opengl/CGLGraphicsConfig.nativeGetMaxTextureSize()I", Any)]
-#[async_method]
-pub async fn native_get_max_texture_size<T: Thread + 'static>(
+pub fn native_get_max_texture_size<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -85,7 +79,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_cgl_config_info_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_cgl_config_info_0(thread, Parameters::default()).await;
+        let result = get_cgl_config_info_0(thread, Parameters::default());
         assert_eq!(
             "sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo()J",
             result.unwrap_err().to_string()
@@ -98,8 +92,7 @@ mod tests {
         let result = get_cgl_config_info_1(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.opengl.CGLGraphicsConfig.getCGLConfigInfo(III)J",
             result.unwrap_err().to_string()
@@ -109,7 +102,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_ogl_capabilities() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_ogl_capabilities(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_ogl_capabilities(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.opengl.CGLGraphicsConfig.getOGLCapabilities(J)I",
             result.unwrap_err().to_string()
@@ -119,7 +112,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_cgl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_cgl(thread, Parameters::default()).await;
+        let result = init_cgl(thread, Parameters::default());
         assert_eq!(
             "sun.java2d.opengl.CGLGraphicsConfig.initCGL()Z",
             result.unwrap_err().to_string()
@@ -129,7 +122,7 @@ mod tests {
     #[tokio::test]
     async fn test_native_get_max_texture_size() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = native_get_max_texture_size(thread, Parameters::default()).await;
+        let result = native_get_max_texture_size(thread, Parameters::default());
         assert_eq!(
             "sun.java2d.opengl.CGLGraphicsConfig.nativeGetMaxTextureSize()I",
             result.unwrap_err().to_string()

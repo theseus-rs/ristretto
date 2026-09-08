@@ -9,7 +9,7 @@ use ristretto_classfile::VersionSpecification::LessThanOrEqual;
 #[cfg(target_os = "linux")]
 use ristretto_classloader::Reference;
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 #[cfg(target_os = "linux")]
 use ristretto_types::Error;
 #[cfg(target_os = "linux")]
@@ -570,7 +570,6 @@ async fn get_addresses<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.bindx(I[Ljava/net/InetAddress;IIZZ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn bindx<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -639,7 +638,6 @@ pub async fn bindx<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.branch0(II)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn branch_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -696,7 +694,6 @@ pub async fn branch_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.close0(I)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn close_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -722,7 +719,6 @@ pub async fn close_0<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.connect0(ILjava/net/InetAddress;I)I",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn connect_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -777,7 +773,6 @@ pub async fn connect_0<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.getInitMsgOption0(I[I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_init_msg_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -832,7 +827,6 @@ pub async fn get_init_msg_option_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.getIntOption0(II)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn get_int_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -917,7 +911,6 @@ pub async fn get_int_option_0<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.getLocalAddresses0(I)[Ljava/net/SocketAddress;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_local_addresses_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -939,7 +932,6 @@ pub async fn get_local_addresses_0<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.getPrimAddrOption0(II)Ljava/net/SocketAddress;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_prim_addr_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -989,7 +981,6 @@ pub async fn get_prim_addr_option_0<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.getRemoteAddresses0(II)[Ljava/net/SocketAddress;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_remote_addresses_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1009,8 +1000,7 @@ pub async fn get_remote_addresses_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.init()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1056,7 +1046,6 @@ pub async fn init<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.listen0(II)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn listen_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1084,7 +1073,6 @@ pub async fn listen_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.preClose0(I)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn pre_close_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1123,7 +1111,6 @@ pub async fn pre_close_0<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.setInitMsgOption0(III)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn set_init_msg_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1170,7 +1157,6 @@ pub async fn set_init_msg_option_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.setIntOption0(III)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn set_int_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1293,7 +1279,6 @@ async fn set_primary_address<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.setPeerPrimAddrOption0(IILjava/net/InetAddress;IZ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn set_peer_prim_addr_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1329,7 +1314,6 @@ pub async fn set_peer_prim_addr_option_0<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.setPrimAddrOption0(IILjava/net/InetAddress;I)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn set_prim_addr_option_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1415,7 +1399,6 @@ pub(super) fn control_buffer_size() -> usize {
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.shutdown0(II)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn shutdown_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1482,7 +1465,6 @@ pub async fn shutdown_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.socket0(Z)I", LessThanOrEqual(JAVA_8))]
-#[async_method]
 pub async fn socket_0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1514,7 +1496,6 @@ pub async fn socket_0<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.bindx(I[Ljava/net/InetAddress;IIZZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn bindx_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1524,7 +1505,6 @@ pub async fn bindx_linux_ge_v11<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.branch0(II)I", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn branch0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1534,7 +1514,6 @@ pub async fn branch0_linux_ge_v11<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.close0(I)V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn close0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1547,7 +1526,6 @@ pub async fn close0_linux_ge_v11<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.connect0(ILjava/net/InetAddress;I)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn connect0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1560,7 +1538,6 @@ pub async fn connect0_linux_ge_v11<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.getInitMsgOption0(I[I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_init_msg_option0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1573,7 +1550,6 @@ pub async fn get_init_msg_option0_linux_ge_v11<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.getIntOption0(II)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_int_option0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1586,7 +1562,6 @@ pub async fn get_int_option0_linux_ge_v11<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.getLocalAddresses0(I)[Ljava/net/SocketAddress;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_local_addresses0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1599,7 +1574,6 @@ pub async fn get_local_addresses0_linux_ge_v11<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.getPrimAddrOption0(II)Ljava/net/SocketAddress;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1612,7 +1586,6 @@ pub async fn get_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.getRemoteAddresses0(II)[Ljava/net/SocketAddress;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn get_remote_addresses0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1622,17 +1595,15 @@ pub async fn get_remote_addresses0_linux_ge_v11<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.init()V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn init_linux_ge_v11<T: Thread + 'static>(
+pub fn init_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
 ) -> Result<Option<Value>> {
-    init(thread, parameters).await
+    init(thread, parameters)
 }
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.listen0(II)V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn listen0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1642,7 +1613,6 @@ pub async fn listen0_linux_ge_v11<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.preClose0(I)V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn pre_close0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1655,7 +1625,6 @@ pub async fn pre_close0_linux_ge_v11<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.setInitMsgOption0(III)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn set_init_msg_option0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1668,7 +1637,6 @@ pub async fn set_init_msg_option0_linux_ge_v11<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.setIntOption0(III)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn set_int_option0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1681,7 +1649,6 @@ pub async fn set_int_option0_linux_ge_v11<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.setPeerPrimAddrOption0(IILjava/net/InetAddress;IZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn set_peer_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1694,7 +1661,6 @@ pub async fn set_peer_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
     "sun/nio/ch/sctp/SctpNet.setPrimAddrOption0(IILjava/net/InetAddress;I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn set_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1704,7 +1670,6 @@ pub async fn set_prim_addr_option0_linux_ge_v11<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.shutdown0(II)V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn shutdown0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1714,7 +1679,6 @@ pub async fn shutdown0_linux_ge_v11<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/ch/sctp/SctpNet.socket0(Z)I", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
 pub async fn socket0_linux_ge_v11<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -1771,10 +1735,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_delegates_for_java_11() -> Result<()> {
         let (_vm, thread) = crate::test::java11_thread().await?;
-        assert_eq!(
-            None,
-            init_linux_ge_v11(thread, Parameters::default()).await?
-        );
+        assert_eq!(None, init_linux_ge_v11(thread, Parameters::default())?);
         let pre_close_fd = *PRE_CLOSE_FD
             .get()
             .ok_or_else(|| InternalError("SCTP pre-close fd was not initialized".to_string()))?;

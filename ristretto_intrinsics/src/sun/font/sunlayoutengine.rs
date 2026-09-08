@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{GreaterThan, LessThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/font/SunLayoutEngine.createFace(Lsun/font/Font2D;J)J",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn create_face<T: Thread + 'static>(
+pub fn create_face<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn create_face<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/SunLayoutEngine.disposeFace(J)V", GreaterThan(JAVA_8))]
-#[async_method]
-pub async fn dispose_face<T: Thread + 'static>(
+pub fn dispose_face<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -39,8 +36,7 @@ pub async fn dispose_face<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/font/SunLayoutEngine.initGVIDs()V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn init_gv_ids<T: Thread + 'static>(
+pub fn init_gv_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -51,8 +47,7 @@ pub async fn init_gv_ids<T: Thread + 'static>(
     "sun/font/SunLayoutEngine.nativeLayout(Lsun/font/Font2D;Lsun/font/FontStrike;[FII[CIIIIIIILjava/awt/geom/Point2D$Float;Lsun/font/GlyphLayout$GVData;JJ)V",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
-pub async fn native_layout<T: Thread + 'static>(
+pub fn native_layout<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -80,8 +75,7 @@ pub async fn native_layout<T: Thread + 'static>(
     "sun/font/SunLayoutEngine.shape(Lsun/font/Font2D;Lsun/font/FontStrike;F[FJ[CLsun/font/GlyphLayout$GVData;IIIILjava/awt/geom/Point2D$Float;II)Z",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
-pub async fn shape<T: Thread + 'static>(
+pub fn shape<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -112,8 +106,7 @@ mod tests {
         let result = create_face(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.SunLayoutEngine.createFace(Lsun/font/Font2D;J)J",
             result.unwrap_err().to_string()
@@ -123,7 +116,7 @@ mod tests {
     #[tokio::test]
     async fn test_dispose_face() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = dispose_face(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = dispose_face(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.font.SunLayoutEngine.disposeFace(J)V",
             result.unwrap_err().to_string()
@@ -133,7 +126,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_gv_ids() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = init_gv_ids(thread, Parameters::default()).await;
+        let result = init_gv_ids(thread, Parameters::default());
         assert_eq!(
             "sun.font.SunLayoutEngine.initGVIDs()V",
             result.unwrap_err().to_string()
@@ -164,8 +157,7 @@ mod tests {
                 Value::Long(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.SunLayoutEngine.nativeLayout(Lsun/font/Font2D;Lsun/font/FontStrike;[FII[CIIIIIIILjava/awt/geom/Point2D$Float;Lsun/font/GlyphLayout$GVData;JJ)V",
             result.unwrap_err().to_string()
@@ -193,8 +185,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.font.SunLayoutEngine.shape(Lsun/font/Font2D;Lsun/font/FontStrike;F[FJ[CLsun/font/GlyphLayout$GVData;IIIILjava/awt/geom/Point2D$Float;II)Z",
             result.unwrap_err().to_string()

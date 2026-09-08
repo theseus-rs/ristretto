@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -11,8 +10,7 @@ use std::sync::Arc;
     "sun/awt/windows/WDataTransferer.dragQueryFile([B)[Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn drag_query_file<T: Thread + 'static>(
+pub fn drag_query_file<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn drag_query_file<T: Thread + 'static>(
     "sun/awt/windows/WDataTransferer.getClipboardFormatName(J)Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn get_clipboard_format_name<T: Thread + 'static>(
+pub fn get_clipboard_format_name<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -41,8 +38,7 @@ pub async fn get_clipboard_format_name<T: Thread + 'static>(
     "sun/awt/windows/WDataTransferer.imageDataToPlatformImageBytes([BIIJ)[B",
     Any
 )]
-#[async_method]
-pub async fn image_data_to_platform_image_bytes<T: Thread + 'static>(
+pub fn image_data_to_platform_image_bytes<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -59,8 +55,7 @@ pub async fn image_data_to_platform_image_bytes<T: Thread + 'static>(
     "sun/awt/windows/WDataTransferer.platformImageBytesToImageData([BJ)[I",
     Any
 )]
-#[async_method]
-pub async fn platform_image_bytes_to_image_data<T: Thread + 'static>(
+pub fn platform_image_bytes_to_image_data<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -75,8 +70,7 @@ pub async fn platform_image_bytes_to_image_data<T: Thread + 'static>(
     "sun/awt/windows/WDataTransferer.registerClipboardFormat(Ljava/lang/String;)J",
     Any
 )]
-#[async_method]
-pub async fn register_clipboard_format<T: Thread + 'static>(
+pub fn register_clipboard_format<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -95,7 +89,7 @@ mod tests {
     #[tokio::test]
     async fn test_drag_query_file() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = drag_query_file(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = drag_query_file(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WDataTransferer.dragQueryFile([B)[Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -106,7 +100,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_clipboard_format_name() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_clipboard_format_name(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_clipboard_format_name(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WDataTransferer.getClipboardFormatName(J)Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -125,8 +119,7 @@ mod tests {
                 Value::Int(0),
                 Value::Long(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WDataTransferer.imageDataToPlatformImageBytes([BIIJ)[B",
             result.unwrap_err().to_string()
@@ -140,8 +133,7 @@ mod tests {
         let result = platform_image_bytes_to_image_data(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WDataTransferer.platformImageBytesToImageData([BJ)[I",
             result.unwrap_err().to_string()
@@ -152,8 +144,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_clipboard_format() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            register_clipboard_format(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = register_clipboard_format(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WDataTransferer.registerClipboardFormat(Ljava/lang/String;)J",
             result.unwrap_err().to_string()

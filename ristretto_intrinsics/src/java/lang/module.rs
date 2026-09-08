@@ -2,7 +2,6 @@ use ahash::AHashSet;
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Equal, GreaterThan, GreaterThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::ModuleAccess;
 use ristretto_types::Thread;
@@ -34,8 +33,7 @@ fn get_module_name(module_value: &Value) -> Result<Option<String>> {
     "java/lang/Module.addExports0(Ljava/lang/Module;Ljava/lang/String;Ljava/lang/Module;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn add_exports_0<T: Thread + 'static>(
+pub fn add_exports_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,8 +70,7 @@ pub async fn add_exports_0<T: Thread + 'static>(
     "java/lang/Module.addExportsToAll0(Ljava/lang/Module;Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn add_exports_to_all_0<T: Thread + 'static>(
+pub fn add_exports_to_all_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -106,8 +103,7 @@ pub async fn add_exports_to_all_0<T: Thread + 'static>(
     "java/lang/Module.addExportsToAllUnnamed0(Ljava/lang/Module;Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn add_exports_to_all_unnamed_0<T: Thread + 'static>(
+pub fn add_exports_to_all_unnamed_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -139,8 +135,7 @@ pub async fn add_exports_to_all_unnamed_0<T: Thread + 'static>(
     "java/lang/Module.addReads0(Ljava/lang/Module;Ljava/lang/Module;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn add_reads_0<T: Thread + 'static>(
+pub fn add_reads_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -189,8 +184,7 @@ fn extract_packages(packages_value: &Value) -> Result<AHashSet<String>> {
     "java/lang/Module.defineModule0(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/String;)V",
     Equal(JAVA_11)
 )]
-#[async_method]
-pub async fn define_module_0_0<T: Thread + 'static>(
+pub fn define_module_0_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -239,8 +233,7 @@ pub async fn define_module_0_0<T: Thread + 'static>(
     "java/lang/Module.defineModule0(Ljava/lang/Module;ZLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
     GreaterThan(JAVA_11)
 )]
-#[async_method]
-pub async fn define_module_0_1<T: Thread + 'static>(
+pub fn define_module_0_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -293,7 +286,7 @@ mod tests {
         parameters.push(Value::Object(None)); // from module (null = unnamed)
         parameters.push(Value::Object(None)); // package name (null)
         parameters.push(Value::Object(None)); // to module (null = unnamed)
-        let result = add_exports_0(thread, parameters).await;
+        let result = add_exports_0(thread, parameters);
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
     }
@@ -305,7 +298,7 @@ mod tests {
         // Push parameters in reverse order (from, pn)
         parameters.push(Value::Object(None)); // from module (null = unnamed)
         parameters.push(Value::Object(None)); // package name (null)
-        let result = add_exports_to_all_0(thread, parameters).await;
+        let result = add_exports_to_all_0(thread, parameters);
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
     }
@@ -317,7 +310,7 @@ mod tests {
         // Push parameters in reverse order (from, pn)
         parameters.push(Value::Object(None)); // from module (null = unnamed)
         parameters.push(Value::Object(None)); // package name (null)
-        let result = add_exports_to_all_unnamed_0(thread, parameters).await;
+        let result = add_exports_to_all_unnamed_0(thread, parameters);
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
     }
@@ -329,7 +322,7 @@ mod tests {
         // Push parameters in reverse order (from, to)
         parameters.push(Value::Object(None)); // from module (null = unnamed)
         parameters.push(Value::Object(None)); // to module (null = unnamed)
-        let result = add_reads_0(thread, parameters).await;
+        let result = add_reads_0(thread, parameters);
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
     }
@@ -344,7 +337,7 @@ mod tests {
         parameters.push(Value::Object(None)); // version
         parameters.push(Value::Object(None)); // location
         parameters.push(Value::Object(None)); // packages
-        let result = define_module_0_0(thread, parameters).await;
+        let result = define_module_0_0(thread, parameters);
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
     }
@@ -359,7 +352,7 @@ mod tests {
         parameters.push(Value::Object(None)); // version
         parameters.push(Value::Object(None)); // location
         parameters.push(Value::Object(None)); // packages
-        let result = define_module_0_1(thread, parameters).await;
+        let result = define_module_0_1(thread, parameters);
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
     }

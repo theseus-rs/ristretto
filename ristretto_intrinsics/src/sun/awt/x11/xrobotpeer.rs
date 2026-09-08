@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::{Any, Equal, GreaterThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/awt/X11/XRobotPeer.getRGBPixelsImpl(Lsun/awt/X11GraphicsConfig;IIII[I)V",
     Equal(JAVA_8)
 )]
-#[async_method]
-pub async fn get_rgbpixels_impl<T: Thread + 'static>(
+pub fn get_rgbpixels_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -32,8 +30,7 @@ pub async fn get_rgbpixels_impl<T: Thread + 'static>(
     "sun/awt/X11/XRobotPeer.getRGBPixelsImpl(Lsun/awt/X11GraphicsConfig;IIII[IZ)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_rgbpixels_impl_linux_ge_v11<T: Thread + 'static>(
+pub fn get_rgbpixels_impl_linux_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -50,8 +47,7 @@ pub async fn get_rgbpixels_impl_linux_ge_v11<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XRobotPeer.keyPressImpl(I)V", Any)]
-#[async_method]
-pub async fn key_press_impl<T: Thread + 'static>(
+pub fn key_press_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -62,8 +58,7 @@ pub async fn key_press_impl<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XRobotPeer.keyReleaseImpl(I)V", Any)]
-#[async_method]
-pub async fn key_release_impl<T: Thread + 'static>(
+pub fn key_release_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -74,8 +69,7 @@ pub async fn key_release_impl<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XRobotPeer.loadNativeLibraries()V", Any)]
-#[async_method]
-pub async fn load_native_libraries<T: Thread + 'static>(
+pub fn load_native_libraries<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -88,8 +82,7 @@ pub async fn load_native_libraries<T: Thread + 'static>(
     "sun/awt/X11/XRobotPeer.mouseMoveImpl(Lsun/awt/X11GraphicsConfig;II)V",
     Any
 )]
-#[async_method]
-pub async fn mouse_move_impl<T: Thread + 'static>(
+pub fn mouse_move_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,8 +95,7 @@ pub async fn mouse_move_impl<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/X11/XRobotPeer.mousePressImpl(I)V", Any)]
-#[async_method]
-pub async fn mouse_press_impl<T: Thread + 'static>(
+pub fn mouse_press_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -114,8 +106,7 @@ pub async fn mouse_press_impl<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XRobotPeer.mouseReleaseImpl(I)V", Any)]
-#[async_method]
-pub async fn mouse_release_impl<T: Thread + 'static>(
+pub fn mouse_release_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -126,8 +117,7 @@ pub async fn mouse_release_impl<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XRobotPeer.mouseWheelImpl(I)V", Any)]
-#[async_method]
-pub async fn mouse_wheel_impl<T: Thread + 'static>(
+pub fn mouse_wheel_impl<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -138,8 +128,7 @@ pub async fn mouse_wheel_impl<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/X11/XRobotPeer.setup(I[I)V", Any)]
-#[async_method]
-pub async fn setup<T: Thread + 'static>(
+pub fn setup<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -166,8 +155,7 @@ mod tests {
                 Value::Int(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XRobotPeer.getRGBPixelsImpl(Lsun/awt/X11GraphicsConfig;IIII[I)V",
             result.unwrap_err().to_string()
@@ -189,8 +177,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XRobotPeer.getRGBPixelsImpl(Lsun/awt/X11GraphicsConfig;IIII[IZ)V",
             result.unwrap_err().to_string()
@@ -201,7 +188,7 @@ mod tests {
     #[tokio::test]
     async fn test_key_press_impl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = key_press_impl(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = key_press_impl(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XRobotPeer.keyPressImpl(I)V",
             result.unwrap_err().to_string()
@@ -212,7 +199,7 @@ mod tests {
     #[tokio::test]
     async fn test_key_release_impl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = key_release_impl(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = key_release_impl(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XRobotPeer.keyReleaseImpl(I)V",
             result.unwrap_err().to_string()
@@ -223,7 +210,7 @@ mod tests {
     #[tokio::test]
     async fn test_load_native_libraries() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = load_native_libraries(thread, Parameters::default()).await;
+        let result = load_native_libraries(thread, Parameters::default());
         assert_eq!(
             "sun/awt/X11/XRobotPeer.loadNativeLibraries()V",
             result.unwrap_err().to_string()
@@ -237,8 +224,7 @@ mod tests {
         let result = mouse_move_impl(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Int(0), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XRobotPeer.mouseMoveImpl(Lsun/awt/X11GraphicsConfig;II)V",
             result.unwrap_err().to_string()
@@ -249,7 +235,7 @@ mod tests {
     #[tokio::test]
     async fn test_mouse_press_impl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = mouse_press_impl(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = mouse_press_impl(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XRobotPeer.mousePressImpl(I)V",
             result.unwrap_err().to_string()
@@ -260,7 +246,7 @@ mod tests {
     #[tokio::test]
     async fn test_mouse_release_impl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = mouse_release_impl(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = mouse_release_impl(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XRobotPeer.mouseReleaseImpl(I)V",
             result.unwrap_err().to_string()
@@ -271,7 +257,7 @@ mod tests {
     #[tokio::test]
     async fn test_mouse_wheel_impl() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = mouse_wheel_impl(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = mouse_wheel_impl(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/X11/XRobotPeer.mouseWheelImpl(I)V",
             result.unwrap_err().to_string()
@@ -285,8 +271,7 @@ mod tests {
         let result = setup(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/X11/XRobotPeer.setup(I[I)V",
             result.unwrap_err().to_string()

@@ -6,7 +6,6 @@ use crate::sun::nio::fs::managed_files;
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::{Any, Equal};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -67,7 +66,6 @@ fn post_if_open<V: VM + ?Sized>(
     "sun/nio/ch/WindowsAsynchronousFileChannelImpl.close0(J)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn close0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -83,7 +81,6 @@ pub async fn close0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousFileChannelImpl.lockFile(JJJZJ)I", Any)]
-#[async_method]
 pub async fn lock_file<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -152,7 +149,6 @@ pub async fn lock_file<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousFileChannelImpl.readFile(JJIJJ)I", Any)]
-#[async_method]
 pub async fn read_file<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -197,7 +193,6 @@ pub async fn read_file<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/nio/ch/WindowsAsynchronousFileChannelImpl.writeFile(JJIJJ)I", Any)]
-#[async_method]
 pub async fn write_file<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

@@ -7,8 +7,6 @@ use ristretto_classloader::Reference;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_classloader::Value;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
-use ristretto_macros::async_method;
-#[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_macros::intrinsic_method;
 #[cfg(not(all(target_family = "wasm", not(target_os = "wasi"))))]
 use ristretto_types::Thread;
@@ -23,7 +21,6 @@ use zerocopy::transmute_ref;
 
 #[cfg(any(target_family = "unix", target_os = "wasi"))]
 #[intrinsic_method("java/lang/ProcessEnvironment.environ()[[B", Any)]
-#[async_method]
 pub async fn environ<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -54,7 +51,6 @@ pub async fn environ<T: Thread + 'static>(
     "java/lang/ProcessEnvironment.environmentBlock()Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn environment_block<T: Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,

@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "com/sun/java/accessibility/internal/AccessBridge.caretUpdate(Ljavax/swing/event/CaretEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn caret_update<T: Thread + 'static>(
+pub fn caret_update<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -25,8 +23,7 @@ pub async fn caret_update<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.focusGained(Ljava/awt/event/FocusEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn focus_gained<T: Thread + 'static>(
+pub fn focus_gained<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -38,8 +35,7 @@ pub async fn focus_gained<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.focusLost(Ljava/awt/event/FocusEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn focus_lost<T: Thread + 'static>(
+pub fn focus_lost<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -51,8 +47,7 @@ pub async fn focus_lost<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.isSysWow()Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn is_sys_wow<T: Thread + 'static>(
+pub fn is_sys_wow<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -65,8 +60,7 @@ pub async fn is_sys_wow<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.javaShutdown()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn java_shutdown<T: Thread + 'static>(
+pub fn java_shutdown<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -79,8 +73,7 @@ pub async fn java_shutdown<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.jawtGetComponentFromNativeWindowHandle(I)Ljava/awt/Component;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn jawt_get_component_from_native_window_handle<T: Thread + 'static>(
+pub fn jawt_get_component_from_native_window_handle<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -91,8 +84,7 @@ pub async fn jawt_get_component_from_native_window_handle<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.jawtGetNativeWindowHandleFromComponent(Ljava/awt/Component;)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn jawt_get_native_window_handle_from_component<T: Thread + 'static>(
+pub fn jawt_get_native_window_handle_from_component<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -103,8 +95,7 @@ pub async fn jawt_get_native_window_handle_from_component<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.menuCanceled(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn menu_canceled<T: Thread + 'static>(
+pub fn menu_canceled<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -116,8 +107,7 @@ pub async fn menu_canceled<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.menuDeselected(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn menu_deselected<T: Thread + 'static>(
+pub fn menu_deselected<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -129,8 +119,7 @@ pub async fn menu_deselected<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.menuSelected(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn menu_selected<T: Thread + 'static>(
+pub fn menu_selected<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -142,8 +131,7 @@ pub async fn menu_selected<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.mouseClicked(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn mouse_clicked<T: Thread + 'static>(
+pub fn mouse_clicked<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -155,8 +143,7 @@ pub async fn mouse_clicked<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.mouseEntered(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn mouse_entered<T: Thread + 'static>(
+pub fn mouse_entered<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -168,8 +155,7 @@ pub async fn mouse_entered<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.mouseExited(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn mouse_exited<T: Thread + 'static>(
+pub fn mouse_exited<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -181,8 +167,7 @@ pub async fn mouse_exited<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.mousePressed(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn mouse_pressed<T: Thread + 'static>(
+pub fn mouse_pressed<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -194,8 +179,7 @@ pub async fn mouse_pressed<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.mouseReleased(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn mouse_released<T: Thread + 'static>(
+pub fn mouse_released<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -207,8 +191,7 @@ pub async fn mouse_released<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.popupMenuCanceled(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn popup_menu_canceled<T: Thread + 'static>(
+pub fn popup_menu_canceled<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -220,8 +203,7 @@ pub async fn popup_menu_canceled<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.popupMenuWillBecomeInvisible(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn popup_menu_will_become_invisible<T: Thread + 'static>(
+pub fn popup_menu_will_become_invisible<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -233,8 +215,7 @@ pub async fn popup_menu_will_become_invisible<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.popupMenuWillBecomeVisible(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn popup_menu_will_become_visible<T: Thread + 'static>(
+pub fn popup_menu_will_become_visible<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -246,8 +227,7 @@ pub async fn popup_menu_will_become_visible<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.propertyActiveDescendentChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn property_active_descendent_change<T: Thread + 'static>(
+pub fn property_active_descendent_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -261,8 +241,7 @@ pub async fn property_active_descendent_change<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.propertyCaretChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;II)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn property_caret_change<T: Thread + 'static>(
+pub fn property_caret_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -276,8 +255,7 @@ pub async fn property_caret_change<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.propertyChildChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn property_child_change<T: Thread + 'static>(
+pub fn property_child_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -291,8 +269,7 @@ pub async fn property_child_change<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.propertyDescriptionChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn property_description_change<T: Thread + 'static>(
+pub fn property_description_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -306,8 +283,7 @@ pub async fn property_description_change<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.propertyNameChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn property_name_change<T: Thread + 'static>(
+pub fn property_name_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -321,8 +297,7 @@ pub async fn property_name_change<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.propertySelectionChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn property_selection_change<T: Thread + 'static>(
+pub fn property_selection_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -334,8 +309,7 @@ pub async fn property_selection_change<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.propertyStateChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn property_state_change<T: Thread + 'static>(
+pub fn property_state_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -349,8 +323,7 @@ pub async fn property_state_change<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.propertyTextChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn property_text_change<T: Thread + 'static>(
+pub fn property_text_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -362,8 +335,7 @@ pub async fn property_text_change<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.propertyValueChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn property_value_change<T: Thread + 'static>(
+pub fn property_value_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -377,8 +349,7 @@ pub async fn property_value_change<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.propertyVisibleDataChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn property_visible_data_change<T: Thread + 'static>(
+pub fn property_visible_data_change<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -390,8 +361,7 @@ pub async fn property_visible_data_change<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.runDLL()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn run_dll<T: Thread + 'static>(
+pub fn run_dll<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -404,8 +374,7 @@ pub async fn run_dll<T: Thread + 'static>(
     "com/sun/java/accessibility/internal/AccessBridge.sendDebugString(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn send_debug_string<T: Thread + 'static>(
+pub fn send_debug_string<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -428,8 +397,7 @@ mod tests {
         let result = caret_update(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.caretUpdate(Ljavax/swing/event/CaretEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -443,8 +411,7 @@ mod tests {
         let result = focus_gained(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.focusGained(Ljava/awt/event/FocusEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -458,8 +425,7 @@ mod tests {
         let result = focus_lost(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.focusLost(Ljava/awt/event/FocusEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -470,7 +436,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_sys_wow() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_sys_wow(thread, Parameters::default()).await;
+        let result = is_sys_wow(thread, Parameters::default());
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.isSysWow()Z",
             result.unwrap_err().to_string()
@@ -481,7 +447,7 @@ mod tests {
     #[tokio::test]
     async fn test_java_shutdown() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = java_shutdown(thread, Parameters::default()).await;
+        let result = java_shutdown(thread, Parameters::default());
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.javaShutdown()V",
             result.unwrap_err().to_string()
@@ -495,8 +461,7 @@ mod tests {
         let result = jawt_get_component_from_native_window_handle(
             thread,
             Parameters::new(vec![Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.jawtGetComponentFromNativeWindowHandle(I)Ljava/awt/Component;",
             result.unwrap_err().to_string()
@@ -510,8 +475,7 @@ mod tests {
         let result = jawt_get_native_window_handle_from_component(
             thread,
             Parameters::new(vec![Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.jawtGetNativeWindowHandleFromComponent(Ljava/awt/Component;)I",
             result.unwrap_err().to_string()
@@ -525,8 +489,7 @@ mod tests {
         let result = menu_canceled(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.menuCanceled(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -540,8 +503,7 @@ mod tests {
         let result = menu_deselected(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.menuDeselected(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -555,8 +517,7 @@ mod tests {
         let result = menu_selected(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.menuSelected(Ljavax/swing/event/MenuEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -570,8 +531,7 @@ mod tests {
         let result = mouse_clicked(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.mouseClicked(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -585,8 +545,7 @@ mod tests {
         let result = mouse_entered(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.mouseEntered(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -600,8 +559,7 @@ mod tests {
         let result = mouse_exited(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.mouseExited(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -615,8 +573,7 @@ mod tests {
         let result = mouse_pressed(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.mousePressed(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -630,8 +587,7 @@ mod tests {
         let result = mouse_released(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.mouseReleased(Ljava/awt/event/MouseEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -645,8 +601,7 @@ mod tests {
         let result = popup_menu_canceled(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.popupMenuCanceled(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -660,8 +615,7 @@ mod tests {
         let result = popup_menu_will_become_invisible(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.popupMenuWillBecomeInvisible(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -675,8 +629,7 @@ mod tests {
         let result = popup_menu_will_become_visible(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.popupMenuWillBecomeVisible(Ljavax/swing/event/PopupMenuEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -695,8 +648,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.propertyActiveDescendentChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -715,8 +667,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.propertyCaretChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;II)V",
             result.unwrap_err().to_string()
@@ -735,8 +686,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.propertyChildChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -755,8 +705,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.propertyDescriptionChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -775,8 +724,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.propertyNameChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -790,8 +738,7 @@ mod tests {
         let result = property_selection_change(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.propertySelectionChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -810,8 +757,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.propertyStateChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -825,8 +771,7 @@ mod tests {
         let result = property_text_change(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.propertyTextChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -845,8 +790,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.propertyValueChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;Ljava/lang/String;Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -860,8 +804,7 @@ mod tests {
         let result = property_visible_data_change(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.propertyVisibleDataChange(Ljava/beans/PropertyChangeEvent;Ljavax/accessibility/AccessibleContext;)V",
             result.unwrap_err().to_string()
@@ -872,7 +815,7 @@ mod tests {
     #[tokio::test]
     async fn test_run_dll() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = run_dll(thread, Parameters::default()).await;
+        let result = run_dll(thread, Parameters::default());
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.runDLL()V",
             result.unwrap_err().to_string()
@@ -883,7 +826,7 @@ mod tests {
     #[tokio::test]
     async fn test_send_debug_string() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = send_debug_string(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = send_debug_string(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "com/sun/java/accessibility/internal/AccessBridge.sendDebugString(Ljava/lang/String;)V",
             result.unwrap_err().to_string()

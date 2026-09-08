@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::VM;
@@ -13,7 +12,6 @@ use std::sync::Arc;
 /// This implements the native method `java.lang.StringCoding.err(Ljava/lang/String;)V`
 /// which is used internally by `StringCoding` to report encoding/decoding errors.
 #[intrinsic_method("java/lang/StringCoding.err(Ljava/lang/String;)V", Equal(JAVA_11))]
-#[async_method]
 pub async fn err<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

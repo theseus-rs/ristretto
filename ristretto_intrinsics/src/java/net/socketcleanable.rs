@@ -1,7 +1,6 @@
 use ristretto_classfile::VersionSpecification::Between;
 use ristretto_classfile::{JAVA_11, JAVA_17};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use ristretto_types::{Parameters, Result};
@@ -11,7 +10,6 @@ use std::sync::Arc;
     "java/net/SocketCleanable.cleanupClose0(I)V",
     Between(JAVA_11, JAVA_17)
 )]
-#[async_method]
 pub async fn cleanup_close_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

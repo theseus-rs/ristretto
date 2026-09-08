@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::{Any, GreaterThanOrEqual};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/awt/windows/WPrinterJob._startDoc(Ljava/lang/String;Ljava/lang/String;)Z",
     Any
 )]
-#[async_method]
-pub async fn start_doc<T: Thread + 'static>(
+pub fn start_doc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -25,8 +23,7 @@ pub async fn start_doc<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.abortDoc()V", Any)]
-#[async_method]
-pub async fn abort_doc<T: Thread + 'static>(
+pub fn abort_doc<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -36,8 +33,7 @@ pub async fn abort_doc<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.beginPath(J)V", Any)]
-#[async_method]
-pub async fn begin_path<T: Thread + 'static>(
+pub fn begin_path<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -48,8 +44,7 @@ pub async fn begin_path<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.closeFigure(J)V", Any)]
-#[async_method]
-pub async fn close_figure<T: Thread + 'static>(
+pub fn close_figure<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -60,8 +55,7 @@ pub async fn close_figure<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.deleteDC(JJJ)V", Any)]
-#[async_method]
-pub async fn delete_dc<T: Thread + 'static>(
+pub fn delete_dc<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -77,8 +71,7 @@ pub async fn delete_dc<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.deviceEndPage(Ljava/awt/print/PageFormat;Ljava/awt/print/Printable;I)V",
     Any
 )]
-#[async_method]
-pub async fn device_end_page<T: Thread + 'static>(
+pub fn device_end_page<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -91,8 +84,7 @@ pub async fn device_end_page<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.deviceStartPage(Ljava/awt/print/PageFormat;Ljava/awt/print/Printable;IZ)V",
     Any
 )]
-#[async_method]
-pub async fn device_start_page<T: Thread + 'static>(
+pub fn device_start_page<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -103,8 +95,7 @@ pub async fn device_start_page<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WPrinterJob.deviceStartPage(Ljava/awt/print/PageFormat;Ljava/awt/print/Printable;IZ)V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.drawDIBImage(J[BFFFFFFFFI[B)V", Any)]
-#[async_method]
-pub async fn draw_dibimage<T: Thread + 'static>(
+pub fn draw_dibimage<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -126,16 +117,14 @@ pub async fn draw_dibimage<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.endDoc()V", Any)]
-#[async_method]
-pub async fn end_doc<T: Thread + 'static>(
+pub fn end_doc<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WPrinterJob.endDoc()V".to_string()).into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.endPath(J)V", Any)]
-#[async_method]
-pub async fn end_path<T: Thread + 'static>(
+pub fn end_path<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -146,8 +135,7 @@ pub async fn end_path<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.fillPath(J)V", Any)]
-#[async_method]
-pub async fn fill_path<T: Thread + 'static>(
+pub fn fill_path<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -158,8 +146,7 @@ pub async fn fill_path<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.fillRect(JFFFFIII)V", Any)]
-#[async_method]
-pub async fn fill_rect<T: Thread + 'static>(
+pub fn fill_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -177,8 +164,7 @@ pub async fn fill_rect<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.frameRect(JFFFF)V", Any)]
-#[async_method]
-pub async fn frame_rect<T: Thread + 'static>(
+pub fn frame_rect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -196,8 +182,7 @@ pub async fn frame_rect<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.getDefaultPage(Ljava/awt/print/PageFormat;)V",
     Any
 )]
-#[async_method]
-pub async fn get_default_page<T: Thread + 'static>(
+pub fn get_default_page<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -208,8 +193,7 @@ pub async fn get_default_page<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.getGDIAdvance(JLjava/lang/String;)I", Any)]
-#[async_method]
-pub async fn get_gdiadvance<T: Thread + 'static>(
+pub fn get_gdiadvance<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -224,8 +208,7 @@ pub async fn get_gdiadvance<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.getNativePrintService()Ljava/lang/String;",
     Any
 )]
-#[async_method]
-pub async fn get_native_print_service<T: Thread + 'static>(
+pub fn get_native_print_service<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -235,8 +218,7 @@ pub async fn get_native_print_service<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.getPenX(J)I", Any)]
-#[async_method]
-pub async fn get_pen_x<T: Thread + 'static>(
+pub fn get_pen_x<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -247,8 +229,7 @@ pub async fn get_pen_x<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.getPenY(J)I", Any)]
-#[async_method]
-pub async fn get_pen_y<T: Thread + 'static>(
+pub fn get_pen_y<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -262,8 +243,7 @@ pub async fn get_pen_y<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.getWorldTransform(J[D)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_world_transform<T: Thread + 'static>(
+pub fn get_world_transform<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -275,8 +255,7 @@ pub async fn get_world_transform<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.initIDs()V", Any)]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -286,8 +265,7 @@ pub async fn init_ids<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.initPrinter()V", Any)]
-#[async_method]
-pub async fn init_printer<T: Thread + 'static>(
+pub fn init_printer<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -300,8 +278,7 @@ pub async fn init_printer<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.jobSetup(Ljava/awt/print/Pageable;Z)Z",
     Any
 )]
-#[async_method]
-pub async fn job_setup<T: Thread + 'static>(
+pub fn job_setup<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -313,8 +290,7 @@ pub async fn job_setup<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.lineTo(JFF)V", Any)]
-#[async_method]
-pub async fn line_to<T: Thread + 'static>(
+pub fn line_to<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -327,8 +303,7 @@ pub async fn line_to<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.moveTo(JFF)V", Any)]
-#[async_method]
-pub async fn move_to<T: Thread + 'static>(
+pub fn move_to<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -341,8 +316,7 @@ pub async fn move_to<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.polyBezierTo(JFFFFFF)V", Any)]
-#[async_method]
-pub async fn poly_bezier_to<T: Thread + 'static>(
+pub fn poly_bezier_to<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -359,8 +333,7 @@ pub async fn poly_bezier_to<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.printBand([BIIII)V", Any)]
-#[async_method]
-pub async fn print_band<T: Thread + 'static>(
+pub fn print_band<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -375,8 +348,7 @@ pub async fn print_band<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.scale(JDD)V", GreaterThanOrEqual(JAVA_11))]
-#[async_method]
-pub async fn scale<T: Thread + 'static>(
+pub fn scale<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -389,8 +361,7 @@ pub async fn scale<T: Thread + 'static>(
     )
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.selectClipPath(J)V", Any)]
-#[async_method]
-pub async fn select_clip_path<T: Thread + 'static>(
+pub fn select_clip_path<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -401,8 +372,7 @@ pub async fn select_clip_path<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.selectPen(JFIII)V", Any)]
-#[async_method]
-pub async fn select_pen<T: Thread + 'static>(
+pub fn select_pen<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -417,8 +387,7 @@ pub async fn select_pen<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.selectSolidBrush(JIII)V", Any)]
-#[async_method]
-pub async fn select_solid_brush<T: Thread + 'static>(
+pub fn select_solid_brush<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -432,8 +401,7 @@ pub async fn select_solid_brush<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.selectStylePen(JJJFIII)Z", Any)]
-#[async_method]
-pub async fn select_style_pen<T: Thread + 'static>(
+pub fn select_style_pen<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -453,8 +421,7 @@ pub async fn select_style_pen<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.setAdvancedGraphicsMode(J)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_advanced_graphics_mode<T: Thread + 'static>(
+pub fn set_advanced_graphics_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -465,8 +432,7 @@ pub async fn set_advanced_graphics_mode<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.setFont(JLjava/lang/String;FZZIF)Z", Any)]
-#[async_method]
-pub async fn set_font<T: Thread + 'static>(
+pub fn set_font<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -486,8 +452,7 @@ pub async fn set_font<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.setGraphicsMode(JI)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_graphics_mode<T: Thread + 'static>(
+pub fn set_graphics_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -499,8 +464,7 @@ pub async fn set_graphics_mode<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.setNativeCopies(I)V", Any)]
-#[async_method]
-pub async fn set_native_copies<T: Thread + 'static>(
+pub fn set_native_copies<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -514,8 +478,7 @@ pub async fn set_native_copies<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.setNativePrintService(Ljava/lang/String;)V",
     Any
 )]
-#[async_method]
-pub async fn set_native_print_service<T: Thread + 'static>(
+pub fn set_native_print_service<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -526,8 +489,7 @@ pub async fn set_native_print_service<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.setPolyFillMode(JI)V", Any)]
-#[async_method]
-pub async fn set_poly_fill_mode<T: Thread + 'static>(
+pub fn set_poly_fill_mode<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -539,8 +501,7 @@ pub async fn set_poly_fill_mode<T: Thread + 'static>(
     .into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.setTextColor(JIII)V", Any)]
-#[async_method]
-pub async fn set_text_color<T: Thread + 'static>(
+pub fn set_text_color<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -557,8 +518,7 @@ pub async fn set_text_color<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.setWorldTransform(J[D)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn set_world_transform<T: Thread + 'static>(
+pub fn set_world_transform<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -573,8 +533,7 @@ pub async fn set_world_transform<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.showDocProperties(JLjavax/print/attribute/PrintRequestAttributeSet;ISSSSSSSSS)Z",
     Any
 )]
-#[async_method]
-pub async fn show_doc_properties<T: Thread + 'static>(
+pub fn show_doc_properties<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -593,8 +552,7 @@ pub async fn show_doc_properties<T: Thread + 'static>(
     Err(JavaError::UnsatisfiedLinkError("sun/awt/windows/WPrinterJob.showDocProperties(JLjavax/print/attribute/PrintRequestAttributeSet;ISSSSSSSSS)Z".to_string()).into())
 }
 #[intrinsic_method("sun/awt/windows/WPrinterJob.textOut(JLjava/lang/String;IZFF[F)V", Any)]
-#[async_method]
-pub async fn text_out<T: Thread + 'static>(
+pub fn text_out<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -614,8 +572,7 @@ pub async fn text_out<T: Thread + 'static>(
     "sun/awt/windows/WPrinterJob.validatePaper(Ljava/awt/print/Paper;Ljava/awt/print/Paper;)V",
     Any
 )]
-#[async_method]
-pub async fn validate_paper<T: Thread + 'static>(
+pub fn validate_paper<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -639,8 +596,7 @@ mod tests {
         let result = start_doc(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob._startDoc(Ljava/lang/String;Ljava/lang/String;)Z",
             result.unwrap_err().to_string()
@@ -651,7 +607,7 @@ mod tests {
     #[tokio::test]
     async fn test_abort_doc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = abort_doc(thread, Parameters::default()).await;
+        let result = abort_doc(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WPrinterJob.abortDoc()V",
             result.unwrap_err().to_string()
@@ -662,7 +618,7 @@ mod tests {
     #[tokio::test]
     async fn test_begin_path() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = begin_path(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = begin_path(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.beginPath(J)V",
             result.unwrap_err().to_string()
@@ -673,7 +629,7 @@ mod tests {
     #[tokio::test]
     async fn test_close_figure() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close_figure(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = close_figure(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.closeFigure(J)V",
             result.unwrap_err().to_string()
@@ -687,8 +643,7 @@ mod tests {
         let result = delete_dc(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Long(0), Value::Long(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.deleteDC(JJJ)V",
             result.unwrap_err().to_string()
@@ -706,8 +661,7 @@ mod tests {
                 Value::Object(None),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.deviceEndPage(Ljava/awt/print/PageFormat;Ljava/awt/print/Printable;I)V",
             result.unwrap_err().to_string()
@@ -726,8 +680,7 @@ mod tests {
                 Value::Int(0),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.deviceStartPage(Ljava/awt/print/PageFormat;Ljava/awt/print/Printable;IZ)V",
             result.unwrap_err().to_string()
@@ -754,8 +707,7 @@ mod tests {
                 Value::Int(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.drawDIBImage(J[BFFFFFFFFI[B)V",
             result.unwrap_err().to_string()
@@ -766,7 +718,7 @@ mod tests {
     #[tokio::test]
     async fn test_end_doc() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = end_doc(thread, Parameters::default()).await;
+        let result = end_doc(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WPrinterJob.endDoc()V",
             result.unwrap_err().to_string()
@@ -777,7 +729,7 @@ mod tests {
     #[tokio::test]
     async fn test_end_path() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = end_path(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = end_path(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.endPath(J)V",
             result.unwrap_err().to_string()
@@ -788,7 +740,7 @@ mod tests {
     #[tokio::test]
     async fn test_fill_path() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = fill_path(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = fill_path(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.fillPath(J)V",
             result.unwrap_err().to_string()
@@ -811,8 +763,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.fillRect(JFFFFIII)V",
             result.unwrap_err().to_string()
@@ -832,8 +783,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::Float(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.frameRect(JFFFF)V",
             result.unwrap_err().to_string()
@@ -844,7 +794,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_default_page() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_default_page(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_default_page(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.getDefaultPage(Ljava/awt/print/PageFormat;)V",
             result.unwrap_err().to_string()
@@ -858,8 +808,7 @@ mod tests {
         let result = get_gdiadvance(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.getGDIAdvance(JLjava/lang/String;)I",
             result.unwrap_err().to_string()
@@ -870,7 +819,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_native_print_service() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_native_print_service(thread, Parameters::default()).await;
+        let result = get_native_print_service(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WPrinterJob.getNativePrintService()Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -881,7 +830,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_pen_x() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_pen_x(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_pen_x(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.getPenX(J)I",
             result.unwrap_err().to_string()
@@ -892,7 +841,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_pen_y() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_pen_y(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_pen_y(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.getPenY(J)I",
             result.unwrap_err().to_string()
@@ -906,8 +855,7 @@ mod tests {
         let result = get_world_transform(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.getWorldTransform(J[D)V",
             result.unwrap_err().to_string()
@@ -918,7 +866,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WPrinterJob.initIDs()V",
             result.unwrap_err().to_string()
@@ -929,7 +877,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_printer() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_printer(thread, Parameters::default()).await;
+        let result = init_printer(thread, Parameters::default());
         assert_eq!(
             "sun/awt/windows/WPrinterJob.initPrinter()V",
             result.unwrap_err().to_string()
@@ -943,8 +891,7 @@ mod tests {
         let result = job_setup(
             thread,
             Parameters::new(vec![Value::Object(None), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.jobSetup(Ljava/awt/print/Pageable;Z)Z",
             result.unwrap_err().to_string()
@@ -958,8 +905,7 @@ mod tests {
         let result = line_to(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Float(0.0), Value::Float(0.0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.lineTo(JFF)V",
             result.unwrap_err().to_string()
@@ -973,8 +919,7 @@ mod tests {
         let result = move_to(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Float(0.0), Value::Float(0.0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.moveTo(JFF)V",
             result.unwrap_err().to_string()
@@ -996,8 +941,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::Float(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.polyBezierTo(JFFFFFF)V",
             result.unwrap_err().to_string()
@@ -1017,8 +961,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.printBand([BIIII)V",
             result.unwrap_err().to_string()
@@ -1032,8 +975,7 @@ mod tests {
         let result = scale(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Double(0.0), Value::Double(0.0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.scale(JDD)V",
             result.unwrap_err().to_string()
@@ -1044,7 +986,7 @@ mod tests {
     #[tokio::test]
     async fn test_select_clip_path() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = select_clip_path(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = select_clip_path(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.selectClipPath(J)V",
             result.unwrap_err().to_string()
@@ -1064,8 +1006,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.selectPen(JFIII)V",
             result.unwrap_err().to_string()
@@ -1084,8 +1025,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.selectSolidBrush(JIII)V",
             result.unwrap_err().to_string()
@@ -1107,8 +1047,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.selectStylePen(JJJFIII)Z",
             result.unwrap_err().to_string()
@@ -1119,8 +1058,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_advanced_graphics_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            set_advanced_graphics_mode(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = set_advanced_graphics_mode(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.setAdvancedGraphicsMode(J)I",
             result.unwrap_err().to_string()
@@ -1142,8 +1080,7 @@ mod tests {
                 Value::Int(0),
                 Value::Float(0.0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.setFont(JLjava/lang/String;FZZIF)Z",
             result.unwrap_err().to_string()
@@ -1155,7 +1092,7 @@ mod tests {
     async fn test_set_graphics_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            set_graphics_mode(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+            set_graphics_mode(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.setGraphicsMode(JI)V",
             result.unwrap_err().to_string()
@@ -1166,7 +1103,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_native_copies() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = set_native_copies(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = set_native_copies(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.setNativeCopies(I)V",
             result.unwrap_err().to_string()
@@ -1177,8 +1114,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_native_print_service() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            set_native_print_service(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = set_native_print_service(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.setNativePrintService(Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -1190,7 +1126,7 @@ mod tests {
     async fn test_set_poly_fill_mode() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            set_poly_fill_mode(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+            set_poly_fill_mode(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun/awt/windows/WPrinterJob.setPolyFillMode(JI)V",
             result.unwrap_err().to_string()
@@ -1209,8 +1145,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.setTextColor(JIII)V",
             result.unwrap_err().to_string()
@@ -1224,8 +1159,7 @@ mod tests {
         let result = set_world_transform(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.setWorldTransform(J[D)V",
             result.unwrap_err().to_string()
@@ -1252,8 +1186,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.showDocProperties(JLjavax/print/attribute/PrintRequestAttributeSet;ISSSSSSSSS)Z",
             result.unwrap_err().to_string()
@@ -1275,8 +1208,7 @@ mod tests {
                 Value::Float(0.0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.textOut(JLjava/lang/String;IZFF[F)V",
             result.unwrap_err().to_string()
@@ -1290,8 +1222,7 @@ mod tests {
         let result = validate_paper(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/awt/windows/WPrinterJob.validatePaper(Ljava/awt/print/Paper;Ljava/awt/print/Paper;)V",
             result.unwrap_err().to_string()

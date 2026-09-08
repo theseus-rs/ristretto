@@ -16,7 +16,6 @@ use ristretto_classfile::{
     MethodAccessFlags,
 };
 use ristretto_classloader::{Class, Method, Object, Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Thread;
 use std::sync::Arc;
@@ -70,8 +69,7 @@ pub async fn get_class_no_init<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.desiredAssertionStatus0(Ljava/lang/Class;)Z", Any)]
-#[async_method]
-pub async fn desired_assertion_status_0<T: Thread + 'static>(
+pub fn desired_assertion_status_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -153,7 +151,6 @@ fn is_class_not_found_exception(throwable: &Value) -> bool {
     "java/lang/Class.forName0(Ljava/lang/String;ZLjava/lang/ClassLoader;Ljava/lang/Class;)Ljava/lang/Class;",
     Any
 )]
-#[async_method]
 pub async fn for_name_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -287,7 +284,6 @@ pub async fn for_name_0<T: Thread + 'static>(
     "java/lang/Class.getClassAccessFlagsRaw0()I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn get_class_access_flags_raw_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -302,7 +298,6 @@ pub async fn get_class_access_flags_raw_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getClassFileVersion0()I", GreaterThanOrEqual(JAVA_21))]
-#[async_method]
 pub async fn get_class_file_version_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -323,7 +318,6 @@ pub async fn get_class_file_version_0<T: Thread + 'static>(
     "java/lang/Class.getComponentType()Ljava/lang/Class;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_component_type<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -353,7 +347,6 @@ pub async fn get_component_type<T: Thread + 'static>(
     "java/lang/Class.getConstantPool()Lsun/reflect/ConstantPool;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_constant_pool_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -372,7 +365,6 @@ pub async fn get_constant_pool_0<T: Thread + 'static>(
     "java/lang/Class.getConstantPool()Ljdk/internal/reflect/ConstantPool;",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
 pub async fn get_constant_pool_1<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -388,7 +380,6 @@ pub async fn get_constant_pool_1<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getDeclaredClasses0()[Ljava/lang/Class;", Any)]
-#[async_method]
 pub async fn get_declared_classes_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -446,7 +437,6 @@ pub async fn get_declared_classes_0<T: Thread + 'static>(
     Any
 )]
 #[expect(clippy::too_many_lines)]
-#[async_method]
 pub async fn get_declared_constructors_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -562,7 +552,6 @@ pub async fn get_declared_constructors_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getDeclaredFields0(Z)[Ljava/lang/reflect/Field;", Any)]
-#[async_method]
 pub async fn get_declared_fields_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -676,7 +665,6 @@ pub async fn get_declared_fields_0<T: Thread + 'static>(
     Any
 )]
 #[expect(clippy::too_many_lines)]
-#[async_method]
 pub async fn get_declared_methods_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -818,7 +806,6 @@ pub async fn get_declared_methods_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getDeclaringClass0()Ljava/lang/Class;", Any)]
-#[async_method]
 pub async fn get_declaring_class_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -858,7 +845,6 @@ pub async fn get_declaring_class_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getEnclosingMethod0()[Ljava/lang/Object;", Any)]
-#[async_method]
 pub async fn get_enclosing_method_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -937,7 +923,6 @@ pub async fn get_exceptions<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getGenericSignature0()Ljava/lang/String;", Any)]
-#[async_method]
 pub async fn get_generic_signature_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -962,7 +947,6 @@ pub async fn get_generic_signature_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getInterfaces0()[Ljava/lang/Class;", Any)]
-#[async_method]
 pub async fn get_interfaces_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -989,7 +973,6 @@ pub async fn get_interfaces_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getModifiers()I", Any)]
-#[async_method]
 pub async fn get_modifiers<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1037,7 +1020,6 @@ pub async fn get_modifiers<T: Thread + 'static>(
     "java/lang/Class.getName0()Ljava/lang/String;",
     LessThanOrEqual(JAVA_8)
 )]
-#[async_method]
 pub async fn get_name_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1050,7 +1032,6 @@ pub async fn get_name_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getNestHost0()Ljava/lang/Class;", GreaterThan(JAVA_8))]
-#[async_method]
 pub async fn get_nest_host_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1077,7 +1058,6 @@ pub async fn get_nest_host_0<T: Thread + 'static>(
     "java/lang/Class.getNestMembers0()[Ljava/lang/Class;",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
 pub async fn get_nest_members_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1110,7 +1090,6 @@ pub async fn get_nest_members_0<T: Thread + 'static>(
     "java/lang/Class.getPermittedSubclasses0()[Ljava/lang/Class;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_permitted_subclasses_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1125,7 +1104,6 @@ pub async fn get_permitted_subclasses_0<T: Thread + 'static>(
     "java/lang/Class.getPrimitiveClass(Ljava/lang/String;)Ljava/lang/Class;",
     Any
 )]
-#[async_method]
 pub async fn get_primitive_class<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1141,7 +1119,6 @@ pub async fn get_primitive_class<T: Thread + 'static>(
     "java/lang/Class.getProtectionDomain0()Ljava/security/ProtectionDomain;",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn get_protection_domain_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1175,7 +1152,6 @@ pub async fn get_protection_domain_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getRawAnnotations()[B", Any)]
-#[async_method]
 pub async fn get_raw_annotations<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1209,7 +1185,6 @@ pub async fn get_raw_annotations<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getRawTypeAnnotations()[B", Any)]
-#[async_method]
 pub async fn get_raw_type_annotations<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1249,7 +1224,6 @@ pub async fn get_raw_type_annotations<T: Thread + 'static>(
     "java/lang/Class.getRecordComponents0()[Ljava/lang/reflect/RecordComponent;",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
 pub async fn get_record_components_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1505,8 +1479,7 @@ async fn create_accessor_method<T: Thread + 'static>(
     "java/lang/Class.getSigners()[Ljava/lang/Object;",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn get_signers<T: Thread + 'static>(
+pub fn get_signers<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1518,7 +1491,6 @@ pub async fn get_signers<T: Thread + 'static>(
     "java/lang/Class.getSimpleBinaryName0()Ljava/lang/String;",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
 pub async fn get_simple_binary_name_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1576,7 +1548,6 @@ pub async fn get_simple_binary_name_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.getSuperclass()Ljava/lang/Class;", Any)]
-#[async_method]
 pub async fn get_superclass<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1600,7 +1571,6 @@ pub async fn get_superclass<T: Thread + 'static>(
     "java/lang/Class.initClassName()Ljava/lang/String;",
     GreaterThan(JAVA_8)
 )]
-#[async_method]
 pub async fn init_class_name<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1614,7 +1584,6 @@ pub async fn init_class_name<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.isArray()Z", LessThanOrEqual(JAVA_21))]
-#[async_method]
 pub async fn is_array<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1629,7 +1598,6 @@ pub async fn is_array<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.isAssignableFrom(Ljava/lang/Class;)Z", Any)]
-#[async_method]
 pub async fn is_assignable_from<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1649,7 +1617,6 @@ pub async fn is_assignable_from<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.isHidden()Z", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn is_hidden<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1660,7 +1627,6 @@ pub async fn is_hidden<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.isInstance(Ljava/lang/Object;)Z", Any)]
-#[async_method]
 pub async fn is_instance<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1688,7 +1654,6 @@ pub async fn is_instance<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.isInterface()Z", LessThanOrEqual(JAVA_21))]
-#[async_method]
 pub async fn is_interface<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1703,7 +1668,6 @@ pub async fn is_interface<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.isPrimitive()Z", LessThanOrEqual(JAVA_21))]
-#[async_method]
 pub async fn is_primitive<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1718,7 +1682,6 @@ pub async fn is_primitive<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.isRecord0()Z", GreaterThanOrEqual(JAVA_17))]
-#[async_method]
 pub async fn is_record_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -1734,8 +1697,7 @@ pub async fn is_record_0<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/lang/Class.registerNatives()V", Any)]
-#[async_method]
-pub async fn register_natives<T: Thread + 'static>(
+pub fn register_natives<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1746,8 +1708,7 @@ pub async fn register_natives<T: Thread + 'static>(
     "java/lang/Class.setSigners([Ljava/lang/Object;)V",
     LessThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn set_signers<T: Thread + 'static>(
+pub fn set_signers<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -1766,7 +1727,7 @@ mod tests {
     #[tokio::test]
     async fn test_desired_assertion_status_0() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = desired_assertion_status_0(thread, Parameters::default()).await?;
+        let result = desired_assertion_status_0(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::from(false)));
         Ok(())
     }
@@ -2759,7 +2720,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_signers() -> Result<()> {
         let (_vm, thread) = crate::test::java21_thread().await?;
-        let result = get_signers(thread, Parameters::default()).await?;
+        let result = get_signers(thread, Parameters::default())?;
         assert_eq!(result, Some(Value::Object(None)));
         Ok(())
     }
@@ -3047,7 +3008,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_natives() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await?;
-        let result = register_natives(thread, Parameters::default()).await?;
+        let result = register_natives(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -3055,7 +3016,7 @@ mod tests {
     #[tokio::test]
     async fn test_set_signers() -> Result<()> {
         let (_vm, thread) = crate::test::java21_thread().await?;
-        let result = set_signers(thread, Parameters::default()).await?;
+        let result = set_signers(thread, Parameters::default())?;
         assert_eq!(result, None);
         Ok(())
     }

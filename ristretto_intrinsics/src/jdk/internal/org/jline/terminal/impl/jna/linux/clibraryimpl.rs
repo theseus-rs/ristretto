@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.initIDs()V",
     Equal(JAVA_21)
 )]
-#[async_method]
-pub async fn init_ids<T: Thread + 'static>(
+pub fn init_ids<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -26,8 +24,7 @@ pub async fn init_ids<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.ioctl0(IILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$winsize;)V",
     Equal(JAVA_21)
 )]
-#[async_method]
-pub async fn ioctl0<T: Thread + 'static>(
+pub fn ioctl0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -40,8 +37,7 @@ pub async fn ioctl0<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.isatty(I)I",
     Equal(JAVA_21)
 )]
-#[async_method]
-pub async fn isatty<T: Thread + 'static>(
+pub fn isatty<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -55,8 +51,7 @@ pub async fn isatty<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.tcgetattr(ILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$termios;)V",
     Equal(JAVA_21)
 )]
-#[async_method]
-pub async fn tcgetattr<T: Thread + 'static>(
+pub fn tcgetattr<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -68,8 +63,7 @@ pub async fn tcgetattr<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.tcsetattr(IILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$termios;)V",
     Equal(JAVA_21)
 )]
-#[async_method]
-pub async fn tcsetattr<T: Thread + 'static>(
+pub fn tcsetattr<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,8 +76,7 @@ pub async fn tcsetattr<T: Thread + 'static>(
     "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.ttyname_r(I[BI)V",
     Equal(JAVA_21)
 )]
-#[async_method]
-pub async fn ttyname_r<T: Thread + 'static>(
+pub fn ttyname_r<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -104,7 +97,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_ids() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_ids(thread, Parameters::default()).await;
+        let result = init_ids(thread, Parameters::default());
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.initIDs()V",
             result.unwrap_err().to_string()
@@ -118,8 +111,7 @@ mod tests {
         let result = ioctl0(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.ioctl0(IILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$winsize;)V",
             result.unwrap_err().to_string()
@@ -130,7 +122,7 @@ mod tests {
     #[tokio::test]
     async fn test_isatty() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = isatty(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = isatty(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.isatty(I)I",
             result.unwrap_err().to_string()
@@ -144,8 +136,7 @@ mod tests {
         let result = tcgetattr(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.tcgetattr(ILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$termios;)V",
             result.unwrap_err().to_string()
@@ -159,8 +150,7 @@ mod tests {
         let result = tcsetattr(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.tcsetattr(IILjdk/internal/org/jline/terminal/impl/jna/linux/CLibrary$termios;)V",
             result.unwrap_err().to_string()
@@ -174,8 +164,7 @@ mod tests {
         let result = ttyname_r(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None), Value::Int(0)]),
-        )
-        .await;
+        );
         assert_eq!(
             "jdk/internal/org/jline/terminal/impl/jna/linux/CLibraryImpl.ttyname_r(I[BI)V",
             result.unwrap_err().to_string()

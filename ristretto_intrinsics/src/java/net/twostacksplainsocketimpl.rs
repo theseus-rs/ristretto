@@ -7,7 +7,7 @@ use crate::net_helpers::{
 use ristretto_classfile::JAVA_8;
 use ristretto_classfile::VersionSpecification::Equal;
 use ristretto_classloader::Value;
-use ristretto_macros::{async_method, intrinsic_method};
+use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, Thread, VM};
 use std::sync::Arc;
 
@@ -15,8 +15,7 @@ const SO_BINDADDR: i32 = 0x000f;
 const SO_TIMEOUT: i32 = 0x1006;
 
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.initProto()V", Equal(JAVA_8))]
-#[async_method]
-pub async fn init_proto<T: Thread + 'static>(
+pub fn init_proto<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -27,7 +26,6 @@ pub async fn init_proto<T: Thread + 'static>(
     "java/net/TwoStacksPlainSocketImpl.socketAccept(Ljava/net/SocketImpl;)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn socket_accept<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -49,7 +47,6 @@ pub async fn socket_accept<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.socketAvailable()I", Equal(JAVA_8))]
-#[async_method]
 pub async fn socket_available<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -64,7 +61,6 @@ pub async fn socket_available<T: Thread + 'static>(
     "java/net/TwoStacksPlainSocketImpl.socketBind(Ljava/net/InetAddress;IZ)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn socket_bind<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -91,7 +87,6 @@ pub async fn socket_bind<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.socketClose0(Z)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn socket_close0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -110,7 +105,6 @@ pub async fn socket_close0<T: Thread + 'static>(
     "java/net/TwoStacksPlainSocketImpl.socketConnect(Ljava/net/InetAddress;II)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn socket_connect<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -139,7 +133,6 @@ pub async fn socket_connect<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.socketCreate(Z)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn socket_create<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -162,7 +155,6 @@ pub async fn socket_create<T: Thread + 'static>(
     "java/net/TwoStacksPlainSocketImpl.socketGetOption(ILjava/lang/Object;)I",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn socket_get_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -192,7 +184,6 @@ pub async fn socket_get_option<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.socketListen(I)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn socket_listen<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -207,7 +198,6 @@ pub async fn socket_listen<T: Thread + 'static>(
     "java/net/TwoStacksPlainSocketImpl.socketNativeSetOption(IZLjava/lang/Object;)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn socket_native_set_option<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -242,7 +232,6 @@ pub async fn socket_native_set_option<T: Thread + 'static>(
     "java/net/TwoStacksPlainSocketImpl.socketSendUrgentData(I)V",
     Equal(JAVA_8)
 )]
-#[async_method]
 pub async fn socket_send_urgent_data<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -254,7 +243,6 @@ pub async fn socket_send_urgent_data<T: Thread + 'static>(
 }
 
 #[intrinsic_method("java/net/TwoStacksPlainSocketImpl.socketShutdown(I)V", Equal(JAVA_8))]
-#[async_method]
 pub async fn socket_shutdown<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,

@@ -15,7 +15,6 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_classloader::Value;
 #[cfg(not(target_family = "wasm"))]
-use ristretto_macros::async_method;
 #[cfg(not(target_family = "wasm"))]
 use ristretto_macros::intrinsic_method;
 #[cfg(not(target_family = "wasm"))]
@@ -32,8 +31,7 @@ use std::sync::Arc;
     "sun/tools/attach/VirtualMachineImpl.checkPermissions(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn check_permissions<T: Thread + 'static>(
+pub fn check_permissions<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -49,8 +47,7 @@ pub async fn check_permissions<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.close(I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn close<T: Thread + 'static>(
+pub fn close<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +63,7 @@ pub async fn close<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.connect(ILjava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn connect<T: Thread + 'static>(
+pub fn connect<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -84,8 +80,7 @@ pub async fn connect<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.createAttachFile0(Ljava/lang/String;)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn create_attach_file_0<T: Thread + 'static>(
+pub fn create_attach_file_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -101,8 +96,7 @@ pub async fn create_attach_file_0<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.getTempDir()Ljava/lang/String;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_temp_dir<T: Thread + 'static>(
+pub fn get_temp_dir<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -117,8 +111,7 @@ pub async fn get_temp_dir<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.read(I[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn read<T: Thread + 'static>(
+pub fn read<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -137,8 +130,7 @@ pub async fn read<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.sendQuitTo(I)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn send_quit_to<T: Thread + 'static>(
+pub fn send_quit_to<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -151,8 +143,7 @@ pub async fn send_quit_to<T: Thread + 'static>(
 
 #[cfg(target_os = "macos")]
 #[intrinsic_method("sun/tools/attach/VirtualMachineImpl.sendQuitTo(I)V", Equal(JAVA_11))]
-#[async_method]
-pub async fn send_quit_to_macos<T: Thread + 'static>(
+pub fn send_quit_to_macos<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -168,8 +159,7 @@ pub async fn send_quit_to_macos<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.socket()I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn socket<T: Thread + 'static>(
+pub fn socket<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -184,8 +174,7 @@ pub async fn socket<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.write(I[BII)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn write<T: Thread + 'static>(
+pub fn write<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -204,8 +193,7 @@ pub async fn write<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.checkCatchesAndSendQuitTo(IZ)Z",
     GreaterThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn check_catches_and_send_quit_to<T: Thread + 'static>(
+pub fn check_catches_and_send_quit_to<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -222,8 +210,7 @@ pub async fn check_catches_and_send_quit_to<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.closePipe(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn close_pipe<T: Thread + 'static>(
+pub fn close_pipe<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -239,8 +226,7 @@ pub async fn close_pipe<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.closeProcess(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn close_process<T: Thread + 'static>(
+pub fn close_process<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -256,8 +242,7 @@ pub async fn close_process<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.connectPipe(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn connect_pipe<T: Thread + 'static>(
+pub fn connect_pipe<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -273,8 +258,7 @@ pub async fn connect_pipe<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.createPipe(ILjava/lang/String;)J",
     Equal(JAVA_25)
 )]
-#[async_method]
-pub async fn create_pipe<T: Thread + 'static>(
+pub fn create_pipe<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -291,8 +275,7 @@ pub async fn create_pipe<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.createPipe(Ljava/lang/String;)J",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn create_pipe_windows_v11_v21_v1<T: Thread + 'static>(
+pub fn create_pipe_windows_v11_v21_v1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -308,8 +291,7 @@ pub async fn create_pipe_windows_v11_v21_v1<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.enqueue(J[BILjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
     Equal(JAVA_25)
 )]
-#[async_method]
-pub async fn enqueue<T: Thread + 'static>(
+pub fn enqueue<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -327,8 +309,7 @@ pub async fn enqueue<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.enqueue(J[BLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn enqueue_windows_v11_v21_v1<T: Thread + 'static>(
+pub fn enqueue_windows_v11_v21_v1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -345,8 +326,7 @@ pub async fn enqueue_windows_v11_v21_v1<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.generateStub()[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn generate_stub<T: Thread + 'static>(
+pub fn generate_stub<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -361,8 +341,7 @@ pub async fn generate_stub<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.init()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -377,8 +356,7 @@ pub async fn init<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.openProcess(I)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn open_process<T: Thread + 'static>(
+pub fn open_process<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -394,8 +372,7 @@ pub async fn open_process<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.readPipe(J[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn read_pipe<T: Thread + 'static>(
+pub fn read_pipe<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -414,8 +391,7 @@ pub async fn read_pipe<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.writePipe(J[BII)V",
     Equal(JAVA_25)
 )]
-#[async_method]
-pub async fn write_pipe<T: Thread + 'static>(
+pub fn write_pipe<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -434,8 +410,7 @@ pub async fn write_pipe<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.closePipe(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn close_pipe_windows_ge_v11<T: Thread + 'static>(
+pub fn close_pipe_windows_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -451,8 +426,7 @@ pub async fn close_pipe_windows_ge_v11<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.closeProcess(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn close_process_windows_ge_v11<T: Thread + 'static>(
+pub fn close_process_windows_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -468,8 +442,7 @@ pub async fn close_process_windows_ge_v11<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.connectPipe(J)V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn connect_pipe_windows_ge_v11<T: Thread + 'static>(
+pub fn connect_pipe_windows_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -485,8 +458,7 @@ pub async fn connect_pipe_windows_ge_v11<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.createPipe(ILjava/lang/String;)J",
     Equal(JAVA_25)
 )]
-#[async_method]
-pub async fn create_pipe_windows_v25<T: Thread + 'static>(
+pub fn create_pipe_windows_v25<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -503,8 +475,7 @@ pub async fn create_pipe_windows_v25<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.createPipe(Ljava/lang/String;)J",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn create_pipe_windows_v11_v21_v2<T: Thread + 'static>(
+pub fn create_pipe_windows_v11_v21_v2<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -520,8 +491,7 @@ pub async fn create_pipe_windows_v11_v21_v2<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.enqueue(J[BILjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
     Equal(JAVA_25)
 )]
-#[async_method]
-pub async fn enqueue_windows_v25<T: Thread + 'static>(
+pub fn enqueue_windows_v25<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -539,8 +509,7 @@ pub async fn enqueue_windows_v25<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.enqueue(J[BLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
     Between(JAVA_11, JAVA_21)
 )]
-#[async_method]
-pub async fn enqueue_windows_v11_v21_v2<T: Thread + 'static>(
+pub fn enqueue_windows_v11_v21_v2<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -557,8 +526,7 @@ pub async fn enqueue_windows_v11_v21_v2<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.generateStub()[B",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn generate_stub_windows_ge_v11<T: Thread + 'static>(
+pub fn generate_stub_windows_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -573,8 +541,7 @@ pub async fn generate_stub_windows_ge_v11<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.init()V",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn init_windows_ge_v11<T: Thread + 'static>(
+pub fn init_windows_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -589,8 +556,7 @@ pub async fn init_windows_ge_v11<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.openProcess(I)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn open_process_windows_ge_v11<T: Thread + 'static>(
+pub fn open_process_windows_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -606,8 +572,7 @@ pub async fn open_process_windows_ge_v11<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.readPipe(J[BII)I",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn read_pipe_windows_ge_v11<T: Thread + 'static>(
+pub fn read_pipe_windows_ge_v11<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -626,8 +591,7 @@ pub async fn read_pipe_windows_ge_v11<T: Thread + 'static>(
     "sun/tools/attach/VirtualMachineImpl.writePipe(J[BII)V",
     Equal(JAVA_25)
 )]
-#[async_method]
-pub async fn write_pipe_windows_v25<T: Thread + 'static>(
+pub fn write_pipe_windows_v25<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -649,7 +613,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_permissions() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = check_permissions(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = check_permissions(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.tools.attach.VirtualMachineImpl.checkPermissions(Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -660,7 +624,7 @@ mod tests {
     #[tokio::test]
     async fn test_close() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = close(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun.tools.attach.VirtualMachineImpl.close(I)V",
             result.unwrap_err().to_string()
@@ -674,8 +638,7 @@ mod tests {
         let result = connect(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.tools.attach.VirtualMachineImpl.connect(ILjava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -686,7 +649,7 @@ mod tests {
     #[tokio::test]
     async fn test_create_attach_file_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = create_attach_file_0(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = create_attach_file_0(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.tools.attach.VirtualMachineImpl.createAttachFile0(Ljava/lang/String;)V",
             result.unwrap_err().to_string()
@@ -697,7 +660,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_temp_dir() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_temp_dir(thread, Parameters::default()).await;
+        let result = get_temp_dir(thread, Parameters::default());
         assert_eq!(
             "sun.tools.attach.VirtualMachineImpl.getTempDir()Ljava/lang/String;",
             result.unwrap_err().to_string()
@@ -716,8 +679,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.tools.attach.VirtualMachineImpl.read(I[BII)I",
             result.unwrap_err().to_string()
@@ -728,7 +690,7 @@ mod tests {
     #[tokio::test]
     async fn test_send_quit_to() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = send_quit_to(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = send_quit_to(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun.tools.attach.VirtualMachineImpl.sendQuitTo(I)V",
             result.unwrap_err().to_string()
@@ -739,7 +701,7 @@ mod tests {
     #[tokio::test]
     async fn test_socket() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = socket(thread, Parameters::default()).await;
+        let result = socket(thread, Parameters::default());
         assert_eq!(
             "sun.tools.attach.VirtualMachineImpl.socket()I",
             result.unwrap_err().to_string()
@@ -758,8 +720,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.tools.attach.VirtualMachineImpl.write(I[BII)V",
             result.unwrap_err().to_string()
@@ -773,8 +734,7 @@ mod tests {
         let result = check_catches_and_send_quit_to(
             thread,
             Parameters::new(vec![Value::Int(0), Value::from(false)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.tools.attach.VirtualMachineImpl.checkCatchesAndSendQuitTo(IZ)Z",
             result.unwrap_err().to_string()
@@ -785,7 +745,7 @@ mod tests {
     #[tokio::test]
     async fn test_close_pipe() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close_pipe(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = close_pipe(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.closePipe(J)V",
             result.unwrap_err().to_string()
@@ -796,7 +756,7 @@ mod tests {
     #[tokio::test]
     async fn test_close_process() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close_process(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = close_process(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.closeProcess(J)V",
             result.unwrap_err().to_string()
@@ -807,7 +767,7 @@ mod tests {
     #[tokio::test]
     async fn test_connect_pipe() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = connect_pipe(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = connect_pipe(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.connectPipe(J)V",
             result.unwrap_err().to_string()
@@ -821,8 +781,7 @@ mod tests {
         let result = create_pipe(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.createPipe(ILjava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -834,8 +793,7 @@ mod tests {
     async fn test_create_pipe_windows_v11_v21_v1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            create_pipe_windows_v11_v21_v1(thread, Parameters::new(vec![Value::Object(None)]))
-                .await;
+            create_pipe_windows_v11_v21_v1(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.createPipe(Ljava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -856,8 +814,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.enqueue(J[BILjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
             result.unwrap_err().to_string()
@@ -877,8 +834,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.enqueue(J[BLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
             result.unwrap_err().to_string()
@@ -889,7 +845,7 @@ mod tests {
     #[tokio::test]
     async fn test_generate_stub() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = generate_stub(thread, Parameters::default()).await;
+        let result = generate_stub(thread, Parameters::default());
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.generateStub()[B",
             result.unwrap_err().to_string()
@@ -900,7 +856,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init(thread, Parameters::default()).await;
+        let result = init(thread, Parameters::default());
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.init()V",
             result.unwrap_err().to_string()
@@ -911,7 +867,7 @@ mod tests {
     #[tokio::test]
     async fn test_open_process() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = open_process(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = open_process(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.openProcess(I)J",
             result.unwrap_err().to_string()
@@ -930,8 +886,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.readPipe(J[BII)I",
             result.unwrap_err().to_string()
@@ -950,8 +905,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.writePipe(J[BII)V",
             result.unwrap_err().to_string()
@@ -962,7 +916,7 @@ mod tests {
     #[tokio::test]
     async fn test_close_pipe_windows_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = close_pipe_windows_ge_v11(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = close_pipe_windows_ge_v11(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.closePipe(J)V",
             result.unwrap_err().to_string()
@@ -973,8 +927,7 @@ mod tests {
     #[tokio::test]
     async fn test_close_process_windows_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            close_process_windows_ge_v11(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = close_process_windows_ge_v11(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.closeProcess(J)V",
             result.unwrap_err().to_string()
@@ -985,8 +938,7 @@ mod tests {
     #[tokio::test]
     async fn test_connect_pipe_windows_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            connect_pipe_windows_ge_v11(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = connect_pipe_windows_ge_v11(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.connectPipe(J)V",
             result.unwrap_err().to_string()
@@ -1000,8 +952,7 @@ mod tests {
         let result = create_pipe_windows_v25(
             thread,
             Parameters::new(vec![Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.createPipe(ILjava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -1013,8 +964,7 @@ mod tests {
     async fn test_create_pipe_windows_v11_v21_v2() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let result =
-            create_pipe_windows_v11_v21_v2(thread, Parameters::new(vec![Value::Object(None)]))
-                .await;
+            create_pipe_windows_v11_v21_v2(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.createPipe(Ljava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -1035,8 +985,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.enqueue(J[BILjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
             result.unwrap_err().to_string()
@@ -1056,8 +1005,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.enqueue(J[BLjava/lang/String;Ljava/lang/String;[Ljava/lang/Object;)V",
             result.unwrap_err().to_string()
@@ -1068,7 +1016,7 @@ mod tests {
     #[tokio::test]
     async fn test_generate_stub_windows_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = generate_stub_windows_ge_v11(thread, Parameters::default()).await;
+        let result = generate_stub_windows_ge_v11(thread, Parameters::default());
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.generateStub()[B",
             result.unwrap_err().to_string()
@@ -1079,7 +1027,7 @@ mod tests {
     #[tokio::test]
     async fn test_init_windows_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init_windows_ge_v11(thread, Parameters::default()).await;
+        let result = init_windows_ge_v11(thread, Parameters::default());
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.init()V",
             result.unwrap_err().to_string()
@@ -1090,8 +1038,7 @@ mod tests {
     #[tokio::test]
     async fn test_open_process_windows_ge_v11() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            open_process_windows_ge_v11(thread, Parameters::new(vec![Value::Int(0)])).await;
+        let result = open_process_windows_ge_v11(thread, Parameters::new(vec![Value::Int(0)]));
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.openProcess(I)J",
             result.unwrap_err().to_string()
@@ -1110,8 +1057,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.readPipe(J[BII)I",
             result.unwrap_err().to_string()
@@ -1130,8 +1076,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun/tools/attach/VirtualMachineImpl.writePipe(J[BII)V",
             result.unwrap_err().to_string()

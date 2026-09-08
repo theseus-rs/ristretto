@@ -3,7 +3,6 @@ use ristretto_classfile::VersionSpecification::{
 };
 use ristretto_classfile::{JAVA_8, JAVA_11, JAVA_17, JAVA_21};
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -14,8 +13,7 @@ use std::sync::Arc;
     "sun/java2d/cmm/lcms/LCMS.colorConvert(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn color_convert_0<T: Thread + 'static>(
+pub fn color_convert_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -29,8 +27,7 @@ pub async fn color_convert_0<T: Thread + 'static>(
     "sun/java2d/cmm/lcms/LCMS.colorConvert(JLsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V",
     Equal(JAVA_17)
 )]
-#[async_method]
-pub async fn color_convert_1<T: Thread + 'static>(
+pub fn color_convert_1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -44,8 +41,7 @@ pub async fn color_convert_1<T: Thread + 'static>(
     "sun/java2d/cmm/lcms/LCMS.colorConvert(JIIIIIILjava/lang/Object;Ljava/lang/Object;II)V",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn color_convert_2<T: Thread + 'static>(
+pub fn color_convert_2<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -71,8 +67,7 @@ pub async fn color_convert_2<T: Thread + 'static>(
     "sun/java2d/cmm/lcms/LCMS.createNativeTransform([JIIZIZLjava/lang/Object;)J",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn create_native_transform_0<T: Thread + 'static>(
+pub fn create_native_transform_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -93,8 +88,7 @@ pub async fn create_native_transform_0<T: Thread + 'static>(
     "sun/java2d/cmm/lcms/LCMS.createNativeTransform([JIIILjava/lang/Object;)J",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn create_native_transform_1<T: Thread + 'static>(
+pub fn create_native_transform_1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -110,8 +104,7 @@ pub async fn create_native_transform_1<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/cmm/lcms/LCMS.freeTransform(J)V", LessThanOrEqual(JAVA_8))]
-#[async_method]
-pub async fn free_transform<T: Thread + 'static>(
+pub fn free_transform<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -126,8 +119,7 @@ pub async fn free_transform<T: Thread + 'static>(
     "sun/java2d/cmm/lcms/LCMS.getProfileDataNative(J[B)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_profile_data_native_0<T: Thread + 'static>(
+pub fn get_profile_data_native_0<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -143,8 +135,7 @@ pub async fn get_profile_data_native_0<T: Thread + 'static>(
     "sun/java2d/cmm/lcms/LCMS.getProfileDataNative(J)[B",
     GreaterThan(JAVA_11)
 )]
-#[async_method]
-pub async fn get_profile_data_native_1<T: Thread + 'static>(
+pub fn get_profile_data_native_1<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -159,8 +150,7 @@ pub async fn get_profile_data_native_1<T: Thread + 'static>(
     "sun/java2d/cmm/lcms/LCMS.getProfileID(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn get_profile_id<T: Thread + 'static>(
+pub fn get_profile_id<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -172,8 +162,7 @@ pub async fn get_profile_id<T: Thread + 'static>(
     "sun/java2d/cmm/lcms/LCMS.getProfileSizeNative(J)I",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn get_profile_size_native<T: Thread + 'static>(
+pub fn get_profile_size_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -185,8 +174,7 @@ pub async fn get_profile_size_native<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/cmm/lcms/LCMS.getTagNative(JI)[B", Any)]
-#[async_method]
-pub async fn get_tag_native<T: Thread + 'static>(
+pub fn get_tag_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -202,8 +190,7 @@ pub async fn get_tag_native<T: Thread + 'static>(
     "sun/java2d/cmm/lcms/LCMS.initLCMS(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V",
     LessThanOrEqual(JAVA_17)
 )]
-#[async_method]
-pub async fn init_lcms<T: Thread + 'static>(
+pub fn init_lcms<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -221,8 +208,7 @@ pub async fn init_lcms<T: Thread + 'static>(
     "sun/java2d/cmm/lcms/LCMS.loadProfileNative([BLjava/lang/Object;)J",
     Any
 )]
-#[async_method]
-pub async fn load_profile_native<T: Thread + 'static>(
+pub fn load_profile_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -235,8 +221,7 @@ pub async fn load_profile_native<T: Thread + 'static>(
 }
 
 #[intrinsic_method("sun/java2d/cmm/lcms/LCMS.setTagDataNative(JI[B)V", Any)]
-#[async_method]
-pub async fn set_tag_data_native<T: Thread + 'static>(
+pub fn set_tag_data_native<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -263,8 +248,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.colorConvert(Lsun/java2d/cmm/lcms/LCMSTransform;Lsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V",
             result.unwrap_err().to_string()
@@ -281,8 +265,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.colorConvert(JLsun/java2d/cmm/lcms/LCMSImageLayout;Lsun/java2d/cmm/lcms/LCMSImageLayout;)V",
             result.unwrap_err().to_string()
@@ -307,8 +290,7 @@ mod tests {
                 Value::Int(0),
                 Value::Int(0),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.colorConvert(JIIIIIILjava/lang/Object;Ljava/lang/Object;II)V",
             result.unwrap_err().to_string()
@@ -329,8 +311,7 @@ mod tests {
                 Value::from(false),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.createNativeTransform([JIIZIZLjava/lang/Object;)J",
             result.unwrap_err().to_string()
@@ -349,8 +330,7 @@ mod tests {
                 Value::Int(0),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.createNativeTransform([JIIILjava/lang/Object;)J",
             result.unwrap_err().to_string()
@@ -360,7 +340,7 @@ mod tests {
     #[tokio::test]
     async fn test_free_transform() {
         let (_vm, thread) = crate::test::java8_thread().await.expect("thread");
-        let result = free_transform(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = free_transform(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.freeTransform(J)V",
             result.unwrap_err().to_string()
@@ -373,8 +353,7 @@ mod tests {
         let result = get_profile_data_native_0(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.getProfileDataNative(J[B)V",
             result.unwrap_err().to_string()
@@ -384,7 +363,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_profile_data_native_1() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = get_profile_data_native_1(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_profile_data_native_1(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.getProfileDataNative(J)[B",
             result.unwrap_err().to_string()
@@ -394,7 +373,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_profile_id() {
         let (_vm, thread) = crate::test::java17_thread().await.expect("thread");
-        let result = get_profile_id(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = get_profile_id(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.getProfileID(Ljava/awt/color/ICC_Profile;)Lsun/java2d/cmm/lcms/LCMSProfile;",
             result.unwrap_err().to_string()
@@ -404,7 +383,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_profile_size_native() {
         let (_vm, thread) = crate::test::java11_thread().await.expect("thread");
-        let result = get_profile_size_native(thread, Parameters::new(vec![Value::Long(0)])).await;
+        let result = get_profile_size_native(thread, Parameters::new(vec![Value::Long(0)]));
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.getProfileSizeNative(J)I",
             result.unwrap_err().to_string()
@@ -414,8 +393,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_tag_native() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            get_tag_native(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)])).await;
+        let result = get_tag_native(thread, Parameters::new(vec![Value::Long(0), Value::Int(0)]));
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.getTagNative(JI)[B",
             result.unwrap_err().to_string()
@@ -432,8 +410,7 @@ mod tests {
                 Value::Object(None),
                 Value::Object(None),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.initLCMS(Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;)V",
             result.unwrap_err().to_string()
@@ -446,8 +423,7 @@ mod tests {
         let result = load_profile_native(
             thread,
             Parameters::new(vec![Value::Object(None), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.loadProfileNative([BLjava/lang/Object;)J",
             result.unwrap_err().to_string()
@@ -460,8 +436,7 @@ mod tests {
         let result = set_tag_data_native(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Int(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.java2d.cmm.lcms.LCMS.setTagDataNative(JI[B)V",
             result.unwrap_err().to_string()

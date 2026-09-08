@@ -1,13 +1,11 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{Parameters, Result, VM};
 use std::sync::Arc;
 
 #[intrinsic_method("com/sun/media/sound/MidiOutDevice.nClose(J)V", Any)]
-#[async_method]
-pub async fn n_close<T: ristretto_types::Thread + 'static>(
+pub fn n_close<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -21,9 +19,8 @@ pub async fn n_close<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiOutDevice.nGetTimeStamp(J)J", Any)]
-#[async_method]
 #[expect(clippy::cast_possible_truncation)]
-pub async fn n_get_time_stamp<T: ristretto_types::Thread + 'static>(
+pub fn n_get_time_stamp<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -72,7 +69,6 @@ fn register_midi_out<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiOutDevice.nOpen(I)J", Any)]
-#[async_method]
 #[cfg_attr(not(target_family = "wasm"), expect(clippy::cast_sign_loss))]
 pub async fn n_open<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
@@ -190,9 +186,8 @@ pub async fn n_open<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiOutDevice.nSendLongMessage(J[BIJ)V", Any)]
-#[async_method]
 #[cfg_attr(not(target_os = "wasi"), expect(clippy::cast_sign_loss))]
-pub async fn n_send_long_message<T: ristretto_types::Thread + 'static>(
+pub fn n_send_long_message<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -252,9 +247,8 @@ pub async fn n_send_long_message<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiOutDevice.nSendShortMessage(JIJ)V", Any)]
-#[async_method]
 #[cfg_attr(not(target_os = "wasi"), expect(clippy::cast_sign_loss))]
-pub async fn n_send_short_message<T: ristretto_types::Thread + 'static>(
+pub fn n_send_short_message<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -321,7 +315,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Long(0));
-        let result = n_close(thread, params).await?;
+        let result = n_close(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -331,7 +325,7 @@ mod tests {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
         let mut params = Parameters::default();
         params.push(Value::Long(0));
-        let result = n_get_time_stamp(thread, params).await?;
+        let result = n_get_time_stamp(thread, params)?;
         assert_eq!(result, Some(Value::Long(0)));
         Ok(())
     }
@@ -354,7 +348,7 @@ mod tests {
         params.push(Value::Object(None)); // byte array
         params.push(Value::Int(0)); // length
         params.push(Value::Long(0)); // timestamp
-        let result = n_send_long_message(thread, params).await?;
+        let result = n_send_long_message(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }
@@ -366,7 +360,7 @@ mod tests {
         params.push(Value::Long(0)); // handle
         params.push(Value::Int(0)); // packed message
         params.push(Value::Long(0)); // timestamp
-        let result = n_send_short_message(thread, params).await?;
+        let result = n_send_short_message(thread, params)?;
         assert_eq!(result, None);
         Ok(())
     }

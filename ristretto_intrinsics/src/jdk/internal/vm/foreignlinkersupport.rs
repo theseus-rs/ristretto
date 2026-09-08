@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_21;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "jdk/internal/vm/ForeignLinkerSupport.isSupported0()Z",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn is_supported_0<T: Thread + 'static>(
+pub fn is_supported_0<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -30,7 +28,7 @@ mod tests {
     #[tokio::test]
     async fn test_is_supported_0() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = is_supported_0(thread, Parameters::default()).await;
+        let result = is_supported_0(thread, Parameters::default());
         assert_eq!(
             "jdk.internal.vm.ForeignLinkerSupport.isSupported0()Z",
             result.unwrap_err().to_string()

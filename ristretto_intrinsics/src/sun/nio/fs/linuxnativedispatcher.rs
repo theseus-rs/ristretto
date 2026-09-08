@@ -4,7 +4,6 @@ use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classfile::VersionSpecification::{Equal, LessThanOrEqual};
 use ristretto_classfile::{JAVA_8, JAVA_11};
 use ristretto_classloader::{Reference, Value};
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::Error::InternalError;
 #[cfg(target_os = "linux")]
@@ -51,8 +50,7 @@ unsafe fn cstr_field_to_bytes(ptr: *const libc::c_char) -> Vec<u8> {
 /// implementation, so this is a no-op.
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.init()V", Any)]
-#[async_method]
-pub async fn init<T: Thread + 'static>(
+pub fn init<T: Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,7 +64,6 @@ pub async fn init<T: Thread + 'static>(
 /// returns a `FILE *` cast to `long`. Throws a `UnixException` on failure.
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.setmntent0(JJ)J", Any)]
-#[async_method]
 pub async fn setmntent_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -109,7 +106,6 @@ pub async fn setmntent_0<T: Thread + 'static>(
     "sun/nio/fs/LinuxNativeDispatcher.getmntent0(JLsun/nio/fs/UnixMountEntry;JI)I",
     Any
 )]
-#[async_method]
 pub async fn getmntent_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -196,7 +192,6 @@ fn unsafe_zeroed_mntent() -> libc::mntent {
 /// Closes the mount file previously opened with `setmntent0`.
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.endmntent(J)V", Any)]
-#[async_method]
 pub async fn endmntent<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -227,8 +222,7 @@ pub async fn endmntent<T: Thread + 'static>(
     "sun/nio/fs/LinuxNativeDispatcher.posix_fadvise(IJJI)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
-pub async fn posix_fadvise<T: Thread + 'static>(
+pub fn posix_fadvise<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -260,7 +254,6 @@ pub async fn posix_fadvise<T: Thread + 'static>(
     "sun/nio/fs/LinuxNativeDispatcher.directCopy0(IIJ)I",
     GreaterThanOrEqual(JAVA_21)
 )]
-#[async_method]
 pub async fn direct_copy_0<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -368,7 +361,6 @@ pub async fn direct_copy_0<T: Thread + 'static>(
     "sun/nio/fs/LinuxNativeDispatcher.fgetxattr0(IJJI)I",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn fgetxattr0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -381,7 +373,6 @@ pub async fn fgetxattr0<T: Thread + 'static>(
     "sun/nio/fs/LinuxNativeDispatcher.flistxattr(IJI)I",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn flistxattr<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -394,7 +385,6 @@ pub async fn flistxattr<T: Thread + 'static>(
     "sun/nio/fs/LinuxNativeDispatcher.fremovexattr0(IJ)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn fremovexattr0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -407,7 +397,6 @@ pub async fn fremovexattr0<T: Thread + 'static>(
     "sun/nio/fs/LinuxNativeDispatcher.fsetxattr0(IJJI)V",
     LessThanOrEqual(JAVA_11)
 )]
-#[async_method]
 pub async fn fsetxattr0<T: Thread + 'static>(
     thread: Arc<T>,
     parameters: Parameters,
@@ -417,7 +406,6 @@ pub async fn fsetxattr0<T: Thread + 'static>(
 
 #[cfg(target_os = "linux")]
 #[intrinsic_method("sun/nio/fs/LinuxNativeDispatcher.getlinelen(J)I", Equal(JAVA_8))]
-#[async_method]
 pub async fn getlinelen<T: Thread + 'static>(
     thread: Arc<T>,
     mut parameters: Parameters,
@@ -459,7 +447,7 @@ mod tests {
     #[tokio::test]
     async fn test_init() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = init(thread, Parameters::default()).await.expect("init");
+        let result = init(thread, Parameters::default()).expect("init");
         assert!(result.is_none());
     }
 
@@ -471,14 +459,14 @@ mod tests {
         params.push_long(0); // offset
         params.push_long(0); // len
         params.push_int(0); // advice
-        let result = posix_fadvise(thread, params).await.expect("posix_fadvise");
+        let result = posix_fadvise(thread, params).expect("posix_fadvise");
         assert!(matches!(result, Some(Value::Int(_))));
     }
 
     #[tokio::test]
     async fn test_posix_fadvise_underflow() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = posix_fadvise(thread, Parameters::default()).await;
+        let result = posix_fadvise(thread, Parameters::default());
         assert!(matches!(result, Err(Error::ParametersUnderflow)));
     }
 

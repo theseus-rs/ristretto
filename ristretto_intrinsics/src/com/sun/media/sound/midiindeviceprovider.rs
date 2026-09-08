@@ -1,6 +1,5 @@
 use ristretto_classfile::VersionSpecification::Any;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::{JavaObject, Parameters, Result};
 use std::sync::Arc;
@@ -9,7 +8,6 @@ use std::sync::Arc;
     "com/sun/media/sound/MidiInDeviceProvider.nGetDescription(I)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 #[cfg_attr(not(target_family = "wasm"), expect(clippy::cast_sign_loss))]
 pub async fn n_get_description<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
@@ -34,7 +32,6 @@ pub async fn n_get_description<T: ristretto_types::Thread + 'static>(
     "com/sun/media/sound/MidiInDeviceProvider.nGetName(I)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 #[cfg_attr(not(target_family = "wasm"), expect(clippy::cast_sign_loss))]
 pub async fn n_get_name<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
@@ -56,12 +53,11 @@ pub async fn n_get_name<T: ristretto_types::Thread + 'static>(
 }
 
 #[intrinsic_method("com/sun/media/sound/MidiInDeviceProvider.nGetNumDevices()I", Any)]
-#[async_method]
 #[cfg_attr(
     not(target_family = "wasm"),
     expect(clippy::cast_possible_truncation, clippy::cast_possible_wrap)
 )]
-pub async fn n_get_num_devices<T: ristretto_types::Thread + 'static>(
+pub fn n_get_num_devices<T: ristretto_types::Thread + 'static>(
     _thread: Arc<T>,
     _parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -80,7 +76,6 @@ pub async fn n_get_num_devices<T: ristretto_types::Thread + 'static>(
     "com/sun/media/sound/MidiInDeviceProvider.nGetVendor(I)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn n_get_vendor<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -99,7 +94,6 @@ pub async fn n_get_vendor<T: ristretto_types::Thread + 'static>(
     "com/sun/media/sound/MidiInDeviceProvider.nGetVersion(I)Ljava/lang/String;",
     Any
 )]
-#[async_method]
 pub async fn n_get_version<T: ristretto_types::Thread + 'static>(
     thread: Arc<T>,
     _parameters: Parameters,
@@ -121,7 +115,7 @@ mod tests {
     #[tokio::test]
     async fn test_n_get_num_devices() -> Result<()> {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = n_get_num_devices(thread, Parameters::default()).await?;
+        let result = n_get_num_devices(thread, Parameters::default())?;
         match result {
             Some(Value::Int(count)) => assert!(count >= 0),
             _ => panic!("Expected Value::Int"),

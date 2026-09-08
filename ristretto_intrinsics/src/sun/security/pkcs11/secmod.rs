@@ -1,7 +1,6 @@
 use ristretto_classfile::JAVA_11;
 use ristretto_classfile::VersionSpecification::GreaterThanOrEqual;
 use ristretto_classloader::Value;
-use ristretto_macros::async_method;
 use ristretto_macros::intrinsic_method;
 use ristretto_types::JavaError;
 use ristretto_types::Thread;
@@ -12,8 +11,7 @@ use std::sync::Arc;
     "sun/security/pkcs11/Secmod.nssGetLibraryHandle(Ljava/lang/String;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn nss_get_library_handle<T: Thread + 'static>(
+pub fn nss_get_library_handle<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -28,8 +26,7 @@ pub async fn nss_get_library_handle<T: Thread + 'static>(
     "sun/security/pkcs11/Secmod.nssGetModuleList(JLjava/lang/String;)Ljava/lang/Object;",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn nss_get_module_list<T: Thread + 'static>(
+pub fn nss_get_module_list<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -46,8 +43,7 @@ pub async fn nss_get_module_list<T: Thread + 'static>(
     "sun/security/pkcs11/Secmod.nssInitialize(Ljava/lang/String;JLjava/lang/String;Z)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn nss_initialize<T: Thread + 'static>(
+pub fn nss_initialize<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -66,8 +62,7 @@ pub async fn nss_initialize<T: Thread + 'static>(
     "sun/security/pkcs11/Secmod.nssLoadLibrary(Ljava/lang/String;)J",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn nss_load_library<T: Thread + 'static>(
+pub fn nss_load_library<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -82,8 +77,7 @@ pub async fn nss_load_library<T: Thread + 'static>(
     "sun/security/pkcs11/Secmod.nssVersionCheck(JLjava/lang/String;)Z",
     GreaterThanOrEqual(JAVA_11)
 )]
-#[async_method]
-pub async fn nss_version_check<T: Thread + 'static>(
+pub fn nss_version_check<T: Thread + 'static>(
     _thread: Arc<T>,
     mut parameters: Parameters,
 ) -> Result<Option<Value>> {
@@ -102,8 +96,7 @@ mod tests {
     #[tokio::test]
     async fn test_nss_get_library_handle() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result =
-            nss_get_library_handle(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = nss_get_library_handle(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.security.pkcs11.Secmod.nssGetLibraryHandle(Ljava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -116,8 +109,7 @@ mod tests {
         let result = nss_get_module_list(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.pkcs11.Secmod.nssGetModuleList(JLjava/lang/String;)Ljava/lang/Object;",
             result.unwrap_err().to_string()
@@ -135,8 +127,7 @@ mod tests {
                 Value::Object(None),
                 Value::from(false),
             ]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.pkcs11.Secmod.nssInitialize(Ljava/lang/String;JLjava/lang/String;Z)Z",
             result.unwrap_err().to_string()
@@ -146,7 +137,7 @@ mod tests {
     #[tokio::test]
     async fn test_nss_load_library() {
         let (_vm, thread) = crate::test::thread().await.expect("thread");
-        let result = nss_load_library(thread, Parameters::new(vec![Value::Object(None)])).await;
+        let result = nss_load_library(thread, Parameters::new(vec![Value::Object(None)]));
         assert_eq!(
             "sun.security.pkcs11.Secmod.nssLoadLibrary(Ljava/lang/String;)J",
             result.unwrap_err().to_string()
@@ -159,8 +150,7 @@ mod tests {
         let result = nss_version_check(
             thread,
             Parameters::new(vec![Value::Long(0), Value::Object(None)]),
-        )
-        .await;
+        );
         assert_eq!(
             "sun.security.pkcs11.Secmod.nssVersionCheck(JLjava/lang/String;)Z",
             result.unwrap_err().to_string()
