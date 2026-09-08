@@ -243,6 +243,31 @@ async fn receiver_identity_polymorphism_and_overflow() -> Result<()> {
 }
 
 #[tokio::test]
+async fn private_receiver_methods_do_not_override_virtual_targets() -> Result<()> {
+    let (vm, thread) = crate::test::thread().await?;
+    let base = target("VirtualBase", Some(MethodAccessFlags::PUBLIC), false)?;
+    thread.register_class(base.clone()).await?;
+    let private = target("PrivateReceiver", Some(MethodAccessFlags::PRIVATE), false)?;
+    private.set_parent(Some(base.clone()))?;
+    let child = target("PrivateChild", None, false)?;
+    child.set_parent(Some(private.clone()))?;
+    let (frame, index) = caller(&thread, &base)?;
+    for receiver in [&private, &child] {
+        for sync in [false, true] {
+            let call = dispatch(
+                &frame,
+                &mut arguments(&vm, Some(receiver))?,
+                Instruction::Invokevirtual(index),
+                sync,
+            )
+            .await?;
+            assert!(Arc::ptr_eq(&call.class, &base));
+        }
+    }
+    Ok(())
+}
+
+#[tokio::test]
 async fn interface_default_override_and_rejected_targets() -> Result<()> {
     let (vm, thread) = crate::test::thread().await?;
     let interface = target("DefaultInterface", Some(MethodAccessFlags::PUBLIC), true)?;
@@ -258,7 +283,16 @@ async fn interface_default_override_and_rejected_targets() -> Result<()> {
     defaults.set_interfaces(vec![child_interface.clone()])?;
     let overrides = target("OverrideReceiver", Some(MethodAccessFlags::PUBLIC), false)?;
     overrides.set_interfaces(vec![child_interface.clone()])?;
-    for (receiver, expected) in [(&defaults, &interface), (&overrides, &overrides)] {
+    let private = target("PrivateReceiver", Some(MethodAccessFlags::PRIVATE), false)?;
+    private.set_interfaces(vec![child_interface.clone()])?;
+    let private_child = target("PrivateChild", None, false)?;
+    private_child.set_parent(Some(private.clone()))?;
+    for (receiver, expected) in [
+        (&defaults, &interface),
+        (&overrides, &overrides),
+        (&private, &interface),
+        (&private_child, &interface),
+    ] {
         for sync in [false, true] {
             let call = dispatch(
                 &frame,
@@ -284,7 +318,15 @@ async fn interface_default_override_and_rejected_targets() -> Result<()> {
             1,
         ),
         (
-            target("PrivateReceiver", Some(MethodAccessFlags::PRIVATE), false)?,
+            target("PackageReceiver", Some(MethodAccessFlags::empty()), false)?,
+            2,
+        ),
+        (
+            target(
+                "ProtectedReceiver",
+                Some(MethodAccessFlags::PROTECTED),
+                false,
+            )?,
             2,
         ),
         (

@@ -219,19 +219,19 @@ async fn interface_field_precedes_superclass_field() -> Result<()> {
 #[tokio::test]
 async fn final_writes_are_checked_in_each_frame_on_cache_hits() -> Result<()> {
     let (_vm, thread) = crate::test::thread().await?;
-    for is_static in [false, true] {
+    for (version, is_static) in [
+        (ristretto_classfile::JAVA_8, false),
+        (ristretto_classfile::JAVA_8, true),
+        (ristretto_classfile::JAVA_9, false),
+        (ristretto_classfile::JAVA_9, true),
+    ] {
         let mut flags = FieldAccessFlags::PUBLIC | FieldAccessFlags::FINAL;
         if is_static {
             flags |= FieldAccessFlags::STATIC;
         }
-        let (caller, index) = reference(
-            &thread,
-            definition("Target", &[("value", "I", flags)], None)?,
-            "Target",
-            "value",
-            "I",
-        )
-        .await?;
+        let mut target = definition("Target", &[("value", "I", flags)], None)?;
+        target.version = version;
+        let (caller, index) = reference(&thread, target, "Target", "value", "I").await?;
         let initializer = frame(
             &thread,
             caller.class(),
@@ -243,6 +243,11 @@ async fn final_writes_are_checked_in_each_frame_on_cache_hits() -> Result<()> {
             &resolved,
             &resolve_field_ref(&caller, index).await?
         ));
+        if caller.class().class_file().version < ristretto_classfile::JAVA_9 {
+            // Legacy class files may write final fields from other declaring-class methods.
+            resolved.check_write(&caller)?;
+            continue;
+        }
         assert!(matches!(
             resolved.check_write(&caller),
             Err(JavaError(IllegalAccessError(_)))

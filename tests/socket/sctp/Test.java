@@ -142,8 +142,10 @@ public class Test {
         try {
             exerciseSctp();
         } catch (UnsupportedOperationException unavailable) {
-            // The reference JDK dynamically loads libsctp.so.1, which is optional on Linux.
-            if ("ristretto".equals(System.getProperty("java.vm.vendor"))) {
+            // Ristretto implements SCTP on Linux only. The reference JDK also requires
+            // the optional libsctp.so.1 library on Linux.
+            if ("Linux".equals(System.getProperty("os.name"))
+                    && "ristretto".equals(System.getProperty("java.vm.vendor"))) {
                 throw unavailable;
             }
         }

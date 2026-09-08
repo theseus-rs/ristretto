@@ -29,6 +29,7 @@
 pub(crate) mod test;
 
 /// Methods from the Apple-specific packages
+#[cfg(target_os = "macos")]
 pub mod apple;
 /// Filesystem helpers with platform-appropriate async backends.
 mod async_fs;

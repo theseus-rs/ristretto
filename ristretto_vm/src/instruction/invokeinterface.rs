@@ -5,7 +5,8 @@ use crate::JavaError::{
 use crate::Result;
 use crate::assignable::Assignable;
 use crate::frame::{ExecutionResult, Frame, MethodCall};
-use crate::instruction::{lookup_method, receiver_class, resolve_method_ref};
+use crate::instruction::method_resolver::lookup_virtual_method;
+use crate::instruction::{receiver_class, resolve_method_ref};
 use crate::method_ref_cache::{InvokeKind, ReceiverTarget};
 use crate::operand_stack::OperandStack;
 use ristretto_classloader::Value;
@@ -70,7 +71,7 @@ pub(crate) async fn invokeinterface(
             resolution.method.clone(),
         )
     } else {
-        lookup_method(
+        lookup_virtual_method(
             &object_class,
             &resolution.method_name,
             &resolution.method_descriptor,

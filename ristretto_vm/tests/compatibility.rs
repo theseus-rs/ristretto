@@ -320,6 +320,13 @@ fn build_test_cases(tests_root_dir: &Path, test_dirs: &[PathBuf]) -> Result<Vec<
             continue;
         }
         let properties = parse_runtime_properties(&properties_file)?;
+        //  Skip platform specific fixtures before runtime setup and compilation
+        if let Some(os) = properties.get("os")
+            && os != std::env::consts::OS
+        {
+            info!("Skipping test {}: requires {os}", relative_dir.display());
+            continue;
+        }
         let versions = properties
             .get("java.versions")
             .ok_or_else(|| {

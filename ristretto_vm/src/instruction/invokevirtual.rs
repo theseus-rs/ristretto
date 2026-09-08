@@ -2,7 +2,8 @@ use crate::Error::InternalError;
 use crate::JavaError::NullPointerException;
 use crate::Result;
 use crate::frame::{ExecutionResult, Frame, MethodCall};
-use crate::instruction::{lookup_method, receiver_class, resolve_method_ref};
+use crate::instruction::method_resolver::lookup_virtual_method;
+use crate::instruction::{receiver_class, resolve_method_ref};
 use crate::method_ref_cache::{InvokeKind, ReceiverTarget};
 use crate::operand_stack::OperandStack;
 use ristretto_classloader::Value;
@@ -60,7 +61,7 @@ pub(crate) async fn invokevirtual(
                 has_return_type: resolution.has_return_type,
             }));
         }
-        let target = match lookup_method(
+        let target = match lookup_virtual_method(
             &object_class,
             &resolution.method_name,
             &resolution.method_descriptor,
@@ -70,7 +71,7 @@ pub(crate) async fn invokevirtual(
                 // Per JVMS §5.4.6, interfaces implicitly extend java.lang.Object.
                 // If the method isn't found on the interface hierarchy, check Object.
                 let object_class = thread.class("java/lang/Object").await?;
-                lookup_method(
+                lookup_virtual_method(
                     &object_class,
                     &resolution.method_name,
                     &resolution.method_descriptor,
@@ -118,6 +119,7 @@ mod test {
     use crate::Error::JavaError;
     use crate::JavaError::NoSuchMethodError;
     use crate::VM;
+    use crate::instruction::lookup_method;
 
     #[tokio::test]
     async fn test_lookup_method_in_hierarchy() -> Result<()> {

@@ -351,15 +351,38 @@ pub fn lookup_method(
     name: &str,
     descriptor: &str,
 ) -> Result<(Arc<Class>, Arc<Method>)> {
+    lookup_method_with_private(class, name, descriptor, true)
+}
+
+/// Select an override for virtual dispatch. Private receiver methods cannot override the
+/// resolved method (JVMS 5.4.5); resolved private methods are handled directly by the caller.
+pub(crate) fn lookup_virtual_method(
+    class: &Arc<Class>,
+    name: &str,
+    descriptor: &str,
+) -> Result<(Arc<Class>, Arc<Method>)> {
+    lookup_method_with_private(class, name, descriptor, false)
+}
+
+fn lookup_method_with_private(
+    class: &Arc<Class>,
+    name: &str,
+    descriptor: &str,
+    include_private: bool,
+) -> Result<(Arc<Class>, Arc<Method>)> {
     // First check the class itself
-    if let Some(method) = class.method(name, descriptor) {
+    if let Some(method) = class.method(name, descriptor)
+        && (include_private || !method.is_private())
+    {
         return Ok((class.clone(), method));
     }
 
     // Search superclasses
     let mut current = class.parent()?;
     while let Some(parent) = current {
-        if let Some(method) = parent.method(name, descriptor) {
+        if let Some(method) = parent.method(name, descriptor)
+            && (include_private || !method.is_private())
+        {
             return Ok((parent, method));
         }
         current = parent.parent()?;

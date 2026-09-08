@@ -338,6 +338,7 @@ mod tests {
             "java/lang/System.setSecurityManager(Ljava/lang/SecurityManager;)V".to_string(),
             "jdk/internal/module/ModuleBootstrap.boot()Ljava/lang/ModuleLayer;".to_string(),
         ];
+
         if version_major >= 11 {
             required_methods.push(
                 "jdk/internal/loader/BootLoader.findResourceAsStream(Ljava/lang/String;Ljava/lang/String;)Ljava/io/InputStream;"
